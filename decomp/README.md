@@ -20,7 +20,7 @@ stack leaks totalling 235 bytes.
 |---|---|
 | Milestone 1 — one object end to end | ✅ **done** (`McdPrimitives/IxBoxBox`) |
 | Milestone 2 — `MdtKea` C++/vtable spike | ✅ **done — no blocker** |
-| Milestone 3 — scale validation | ⬜ next |
+| Milestone 3 — scale validation | 🔶 **in progress** — batch driver + type db done; 15% of objects compile unattended |
 | Milestone 4 — the grind (~2,100 functions) | ⬜ |
 | Milestone 5 — wasm + Android bring-up | ⬜ |
 
@@ -76,6 +76,43 @@ Two independent cross-checks corroborate the recovery, which is what makes it tr
   `keaPoolAlloc` with the field it fills — `"A"`, `"Achol"`, `"rsD"`, `"NAZ"`, `"NCZ"`, `"NR"`,
   `"NC"` — and those labels land on exactly the DWARF members at `+0xc`, `+0x10`, `+0x18`, `+0x1c`,
   `+0x20`, `+0x2c`, `+0x30`. The original authors annotated their own layout.
+
+### Milestone 3 status — batch measurement (in progress)
+
+`tools/recover.py` runs the whole recipe over every object and classifies the outcome. First honest
+numbers, over the 96 hot-path objects that have a Ghidra dump:
+
+```
+compiled, prelude has TODOs     :   14 / 96
+did not compile                 :   82 / 96
+-> 14.6% of attempted objects compile
+```
+
+**That is far worse than `IxBoxBox` alone suggested, and the gap is the point of running the batch.**
+But the 82 failures are not 82 distinct problems — they cluster into a handful of systematic causes,
+and each tooling fix moves the whole frontier at once. Fixing function-name deduplication and adding
+asm labels for exported functions took the "conflicting declaration" class from **17 objects to 1**.
+
+Current first-error distribution across the 82:
+
+| count | cause | nature |
+|---:|---|---|
+| 29 | missing type declaration | mostly C++ derived classes with no DWARF layout (`keaFunctions_Vanilla`, `keaMatrix_pcSparse_vanilla`) — a bounded set, hand-written once like `keaMatrix.h` |
+| 15 | call-site arity vs header prototype | Ghidra's inferred arity disagrees with the public header |
+| 14 | undeclared identifier | header macros/inlines Ghidra saw as symbols (`_McdGeometryDeinit`) |
+| 14 | missing function declaration | an unfilled prelude TODO |
+| 10 | misc | genuine Ghidra artifacts (`stack0xffffffb4`), `fcos`, redefinitions |
+
+The two decisions this drove, both now in the tooling:
+
+- **Exported functions get an asm label.** Ghidra recovers the parameter types the *code* uses, which
+  often isn't how the public header spells them — `McdBoxGetXYAABB` really takes an `lsTransform *`,
+  but `McdBox.h` declares `MeMatrix4`. Same 64 bytes, same ABI, incompatible C types. Defining it as
+  `kd_McdBoxGetXYAABB` with `__asm__("McdBoxGetXYAABB")` emits the identical symbol and sidesteps the
+  C type system entirely. Only the ABI has to match, and it does.
+- **A stale object must never look like a pass.** `recover.py` deletes the output object before
+  compiling. This bit twice during Milestone 3: a failed rebuild left the previous `.o` in place and
+  the acceptance gate happily re-reported a PASS for code that no longer compiled.
 
 ## The recipe
 

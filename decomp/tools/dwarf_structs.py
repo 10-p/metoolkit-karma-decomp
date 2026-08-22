@@ -23,9 +23,40 @@ import sys
 
 DIE_RE = re.compile(r'^\s*<(\d+)><([0-9a-f]+)>:\s+Abbrev Number:\s+\d+\s+\((\w+)\)')
 ATTR_RE = re.compile(r'^\s*<[0-9a-f]+>\s+(DW_AT_\w+)\s*:\s*(.*)$')
-STR_RE = re.compile(r'\(indirect string, offset: 0x[0-9a-f]+\):\s*(.*)$')
+STR_RE = re.compile(r'\(indirect string, offset:\s*(?:0x)?[0-9a-f]+\):\s*(.*)$')
 REF_RE = re.compile(r'<0x([0-9a-f]+)>')
 OFF_RE = re.compile(r'DW_OP_plus_uconst:\s*(\d+)')
+
+# Types that come from the system headers the recovered sources already include.
+# Emitting our own copy would collide.
+SYSTEM_TYPES = {
+    '_IO_FILE', '_IO_marker', '_IO_wide_data', '_IO_codecvt',
+    'timeval', 'timespec', 'tm', '__jmp_buf_tag', '__sigset_t',
+    'sigaction', 'sigcontext', 'div_t', 'ldiv_t', 'lconv', 'FILE',
+}
+
+
+def array_extent(dies, ref):
+    """For a DW_TAG_array_type DIE, return its element count (or None)."""
+    d = dies.get(ref)
+    if d is None or d['tag'] != 'DW_TAG_array_type':
+        return None
+    for c in d['children']:
+        if c['tag'] != 'DW_TAG_subrange_type':
+            continue
+        ub = c['attrs'].get('DW_AT_upper_bound')
+        if ub is not None:
+            try:
+                return int(ub.split()[0]) + 1
+            except ValueError:
+                return None
+        cnt = c['attrs'].get('DW_AT_count')
+        if cnt is not None:
+            try:
+                return int(cnt.split()[0])
+            except ValueError:
+                return None
+    return None
 
 
 def parse(obj):
@@ -67,7 +98,38 @@ def type_name(dies, ref, depth=0):
     tag = d['tag']
     sub = a.get('DW_AT_type')
     subref = int(REF_RE.search(sub).group(1), 16) if sub and REF_RE.search(sub) else None
-    if tag in ('DW_TAG_base_type', 'DW_TAG_typedef'):
+    if tag == 'DW_TAG_base_type':
+        return nm or 'int'
+    if tag == 'DW_TAG_typedef':
+        # If this typedef aliases a struct/union, spell it as `struct Tag` so a
+        # forward declaration suffices. Otherwise keep the typedef name (MeReal,
+        # MeU8, ...), which the public headers provide.
+        u, hops = subref, 0
+        while u is not None and hops < 8:
+            hops += 1
+            d2 = dies.get(u)
+            if d2 is None:
+                break
+            if d2['tag'] in ('DW_TAG_structure_type', 'DW_TAG_class_type',
+                             'DW_TAG_union_type'):
+                un = d2['attrs'].get('DW_AT_name')
+                if un:
+                    kw = 'union' if d2['tag'] == 'DW_TAG_union_type' else 'struct'
+                    return f'{kw} {un}'
+                break
+            if d2['tag'] == 'DW_TAG_pointer_type':
+                inner = d2['attrs'].get('DW_AT_type')
+                mi = REF_RE.search(inner) if inner else None
+                if mi:
+                    t2 = type_name(dies, int(mi.group(1), 16), depth + 1)
+                    if t2.startswith(('struct ', 'union ')):
+                        return t2 + ' *'
+                break
+            if d2['tag'] == 'DW_TAG_base_type':
+                break
+            nxt = d2['attrs'].get('DW_AT_type')
+            m2 = REF_RE.search(nxt) if nxt else None
+            u = int(m2.group(1), 16) if m2 else None
         return nm or 'int'
     if tag == 'DW_TAG_pointer_type':
         return type_name(dies, subref, depth + 1) + ' *'
@@ -88,12 +150,52 @@ def type_name(dies, ref, depth=0):
     return nm or 'void'
 
 
+def declarator(dies, ref, name, depth=0):
+    """Build a correct C declaration for `name` of the type at `ref`.
+
+    C declarator syntax wraps the name rather than prefixing a type string, so
+    naive concatenation produces nonsense for pointer-to-array (`int [] *p`
+    instead of `int (*p)[3]`) and function pointers. This walks the type chain
+    outward-in, parenthesising where precedence requires it."""
+    if ref is None or depth > 16:
+        return f'void {name}'
+    d = dies.get(ref)
+    if d is None:
+        return f'void {name}'
+    tag = d['tag']
+    sub = d['attrs'].get('DW_AT_type')
+    subref = int(REF_RE.search(sub).group(1), 16) if sub and REF_RE.search(sub) else None
+
+    if tag == 'DW_TAG_pointer_type':
+        inner = dies.get(subref, {}).get('tag') if subref is not None else None
+        # `*` binds looser than `[]` and `()`, so those need parentheses.
+        star = f'(*{name})' if inner in ('DW_TAG_array_type', 'DW_TAG_subroutine_type') \
+               else f'*{name}'
+        return declarator(dies, subref, star, depth + 1)
+    if tag == 'DW_TAG_array_type':
+        n = array_extent(dies, ref)
+        return declarator(dies, subref, f'{name}[{n if n else ""}]', depth + 1)
+    if tag == 'DW_TAG_subroutine_type':
+        return declarator(dies, subref, f'{name}()', depth + 1)
+    if tag in ('DW_TAG_const_type', 'DW_TAG_volatile_type'):
+        q = 'const' if tag == 'DW_TAG_const_type' else 'volatile'
+        inner = dies.get(subref, {}).get('tag') if subref is not None else None
+        if inner == 'DW_TAG_pointer_type':          # `T * const p`
+            return declarator(dies, subref, f'{q} {name}', depth + 1)
+        return f'{q} ' + declarator(dies, subref, name, depth + 1)
+
+    spelling = type_name(dies, ref)
+    sep = '' if spelling.endswith('*') else ' '
+    return f'{spelling}{sep}{name}'
+
+
 def emit(dies, die):
     a = die['attrs']
     name = a.get('DW_AT_name', '<anon>')
     size = a.get('DW_AT_byte_size', '?')
+    kw = 'union' if die['tag'] == 'DW_TAG_union_type' else 'struct'
     lines = [f'/* {name} — {size} bytes, recovered from DWARF */',
-             f'typedef struct {name} {{']
+             f'{kw} {name} {{']
     has_vptr = False
     first_off = None
     for c in die['children']:
@@ -115,11 +217,10 @@ def emit(dies, die):
                          (f'/* +0x{off:x} */' if off is not None else ''))
             continue
         mn = re.sub(r'[^A-Za-z0-9_]', '_', mn)
-        t = type_name(dies, mref)
-        star = '' if t.endswith('*') else ' '
-        lines.append(f'    {t}{star}{mn};'.ljust(52) +
+        decl = declarator(dies, mref, mn) + ';'
+        lines.append(f'    {decl}'.ljust(52) +
                      (f'/* +0x{off:x} */' if off is not None else '/* +? */'))
-    lines.append(f'}} {name};')
+    lines.append('};')
     if first_off:
         lines.append(f'/* NOTE: first member is at +0x{first_off:x}, not 0 — {name} DERIVES from a')
         lines.append(f' * base class occupying [0, 0x{first_off:x}). Embed the base as the first')

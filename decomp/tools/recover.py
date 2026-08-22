@@ -1,0 +1,138 @@
+#!/usr/bin/env python3
+"""
+recover.py — run the whole recovery recipe over many objects and report status.
+
+For each object: generate the prelude, clean the Ghidra dump into C, compile it,
+and classify the outcome. The point is to measure how much of Karma comes back
+with no human intervention, so the remaining manual work can be sized honestly.
+
+  ./recover.py --dump-dir <ghidra-out> --obj-dir <extracted .o> --out-dir src \\
+               --metoolkit ../Thirdparty/metoolkit [--only libMdt]
+
+Outcomes:
+  OK        compiled, and the generated prelude had no TODOs
+  TODO      compiled, but the prelude has TODOs a human must fill in
+            (usually a .bss static whose value comes from a C++ static ctor)
+  FAIL      did not compile — first error is reported
+
+Nothing here edits a prelude that already exists on disk; hand-completed
+preludes are preserved and reused.
+"""
+import argparse
+import glob
+import os
+import re
+import subprocess
+import sys
+
+# gcc-3.2 C++ static-constructor scaffolding. It only ever runs file-scope
+# initialisers, which the prelude expresses as plain C initialisers instead.
+DROP_ALWAYS = re.compile(r'^(__static_initialization_and_destruction_\d+|_GLOBAL__[ID]_)')
+
+
+def run(cmd, **kw):
+    return subprocess.run(cmd, capture_output=True, text=True, **kw)
+
+
+def dump_functions(path):
+    return re.findall(r'/\* ==== (\S+) ==== \*/', open(path, errors='ignore').read())
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument('--dump-dir', required=True, help='Ghidra .c dumps')
+    ap.add_argument('--obj-dir', required=True, help='root of extracted .o files')
+    ap.add_argument('--out-dir', required=True, help='where recovered .c/.prelude.h go')
+    ap.add_argument('--metoolkit', required=True, help='metoolkit root (include/ + lib.*)')
+    ap.add_argument('--only', help='substring filter on the archive directory name')
+    ap.add_argument('--build-dir', default='/tmp/kd_build')
+    args = ap.parse_args()
+
+    here = os.path.dirname(os.path.abspath(__file__))
+    root = os.path.dirname(here)
+    inc = os.path.join(args.metoolkit, 'include')
+    iflags = ['-I' + os.path.join(root, 'include'), '-I' + inc] + [
+        '-I' + os.path.join(inc, d) for d in
+        ('McdCommon', 'McdPrimitives', 'McdFrame', 'MeGlobals',
+         'MdtBcl', 'MdtKea', 'Mst', 'MeApp')]
+    os.makedirs(args.build_dir, exist_ok=True)
+
+    objs = sorted(glob.glob(os.path.join(args.obj_dir, '**', '*.o'), recursive=True))
+    if args.only:
+        objs = [o for o in objs if args.only in o]
+
+    rows, counts = [], {'OK': 0, 'TODO': 0, 'FAIL': 0, 'SKIP': 0}
+    for obj in objs:
+        base = os.path.basename(obj)[:-2]
+        archive = os.path.basename(os.path.dirname(obj))
+        dump = os.path.join(args.dump_dir, base + '.o.c')
+        if not os.path.exists(dump):
+            rows.append((archive, base, 'SKIP', 'no Ghidra dump')); counts['SKIP'] += 1
+            continue
+        fns = dump_functions(dump)
+        if not fns:
+            rows.append((archive, base, 'SKIP', 'dump has no functions')); counts['SKIP'] += 1
+            continue
+
+        outdir = os.path.join(args.out_dir, archive.replace('lib', ''))
+        os.makedirs(outdir, exist_ok=True)
+        prelude = os.path.join(outdir, base + '.prelude.h')
+        if not os.path.exists(prelude):          # never clobber hand-edited work
+            r = run([sys.executable, os.path.join(here, 'gen_prelude.py'), obj,
+                     '--include-dir', inc, '-o', prelude])
+            if r.returncode != 0:
+                rows.append((archive, base, 'FAIL', 'gen_prelude: ' + r.stderr.strip()[:90]))
+                counts['FAIL'] += 1
+                continue
+        todos = open(prelude, errors='ignore').read().count('TODO')
+
+        csrc = os.path.join(outdir, base + '.c')
+        drops = []
+        for f in fns:
+            if DROP_ALWAYS.match(f):
+                drops += ['--drop', f]
+        r = run([sys.executable, os.path.join(here, 'ghidra_clean.py'), dump,
+                 '-o', csrc, '--object', obj, '--prelude', prelude] + drops)
+        if r.returncode != 0:
+            rows.append((archive, base, 'FAIL', 'clean: ' + r.stderr.strip()[:90]))
+            counts['FAIL'] += 1
+            continue
+
+        o = os.path.join(args.build_dir, base + '.o')
+        if os.path.exists(o):
+            os.unlink(o)                          # a stale object must never look like a pass
+        r = run(['gcc', '-m32', '-O2', '-fno-pic', '-std=gnu99', '-w',
+                 '-Wno-int-conversion', '-DLINUX', '-c', '-o', o, csrc] + iflags)
+        if not os.path.exists(o):
+            first = next((l for l in r.stderr.splitlines() if ' error' in l), r.stderr[:90])
+            rows.append((archive, base, 'FAIL', first.strip()[:110]))
+            counts['FAIL'] += 1
+            continue
+
+        status = 'TODO' if todos else 'OK'
+        rows.append((archive, base, status,
+                     f'{len(fns)} fns' + (f', {todos} prelude TODO(s)' if todos else '')))
+        counts[status] += 1
+
+    width = max((len(r[1]) for r in rows), default=10)
+    cur = None
+    for archive, base, status, note in rows:
+        if archive != cur:
+            print(f'\n{archive}'); cur = archive
+        mark = {'OK': '  ok  ', 'TODO': ' todo ', 'FAIL': ' FAIL ', 'SKIP': ' skip '}[status]
+        print(f'  [{mark}] {base:<{width}}  {note}')
+
+    total = sum(counts.values())
+    print(f'\n{"="*66}')
+    print(f'  compiled, no human input needed : {counts["OK"]:4d} / {total}')
+    print(f'  compiled, prelude has TODOs     : {counts["TODO"]:4d} / {total}')
+    print(f'  did not compile                 : {counts["FAIL"]:4d} / {total}')
+    print(f'  skipped (no dump)               : {counts["SKIP"]:4d} / {total}')
+    ok = counts['OK'] + counts['TODO']
+    if total - counts['SKIP']:
+        print(f'  -> {100.0*ok/(total-counts["SKIP"]):.1f}% of attempted objects compile')
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

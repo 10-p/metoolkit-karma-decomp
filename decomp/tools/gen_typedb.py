@@ -1,0 +1,282 @@
+#!/usr/bin/env python3
+"""
+gen_typedb.py — build one C header of all Karma-internal types, by unioning the
+DWARF across every object in the SDK.
+
+Why a union is necessary: gcc 3.2 emits a class's full layout only in the
+compilation unit that defines it. Every other CU that merely *uses* the class
+carries a declaration-only DIE — same name, no members, and often a bogus
+byte_size. `keaMatrix` appears as 4 bytes in keaMatrix_tester.o and as its real
+20 bytes in keaMatrix.o. Reading any single object therefore gives you a partly
+wrong picture; reading all of them and keeping the richest definition gives you
+the right one.
+
+Types already declared in metoolkit's public headers are skipped, since the
+recovered sources include those headers directly and redefining them is an error.
+
+  ./gen_typedb.py <objdir>... --public-headers ../Thirdparty/metoolkit/include \
+                  -o include/kd_types.h
+"""
+import argparse
+import glob
+import os
+import re
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from dwarf_structs import (parse, emit, declarator, REF_RE,  # noqa: E402
+                           SYSTEM_TYPES)
+
+
+def public_type_names(include_dir):
+    """Struct/union/class names that metoolkit's own headers already define."""
+    names = set()
+    if not include_dir:
+        return names
+    pat = re.compile(r'\b(?:struct|union|class)\s+([A-Za-z_]\w*)\s*\{')
+    # Deliberately does NOT require the trailing `;`: metoolkit writes
+    #     } MdtKeaTransformation
+    #     #ifdef PS2
+    #     __attribute__((aligned(16)))
+    #     #endif
+    #     ;
+    # so anything anchored on `;` misses it, and we then redefine the typedef
+    # and collide. Over-detecting is safe here — the cost is only that we skip
+    # emitting a type the public headers already provide.
+    tpat = re.compile(r'\}\s*\**\s*([A-Za-z_]\w*)\b')
+    # Every typedef in a public header, struct-based or not: `typedef MeReal
+    # MeMatrix4[4][4];` must be recognised too, or we redefine it and clash.
+    anytd = re.compile(r'\btypedef\b[^;{}]*?([A-Za-z_]\w*)\s*(?:\[[^\]]*\]\s*)*;')
+    for root, _, files in os.walk(include_dir):
+        for f in files:
+            if not f.endswith('.h'):
+                continue
+            try:
+                txt = open(os.path.join(root, f), errors='ignore').read()
+            except OSError:
+                continue
+            names.update(pat.findall(txt))
+            names.update(tpat.findall(txt))
+            names.update(anytd.findall(txt))
+    return names
+
+
+def value_deps(dies, die):
+    """Names of struct/union types this one embeds BY VALUE (or as an array of).
+
+    Pointer members need only a forward declaration, so they are not deps —
+    which is what keeps the graph acyclic even though Karma's types point at
+    each other freely."""
+    deps = set()
+    for c in die['children']:
+        if c['tag'] != 'DW_TAG_member':
+            continue
+        t = c['attrs'].get('DW_AT_type')
+        if not t:
+            continue
+        m = REF_RE.search(t)
+        if not m:
+            continue
+        ref, hops = int(m.group(1), 16), 0
+        while ref is not None and hops < 12:
+            hops += 1
+            d = dies.get(ref)
+            if d is None:
+                break
+            if d['tag'] == 'DW_TAG_pointer_type':
+                break                       # forward decl suffices
+            if d['tag'] in ('DW_TAG_structure_type', 'DW_TAG_class_type',
+                            'DW_TAG_union_type'):
+                n = d['attrs'].get('DW_AT_name')
+                if n:
+                    deps.add(n)
+                break
+            sub = d['attrs'].get('DW_AT_type')   # typedef/const/array/volatile
+            sm = REF_RE.search(sub) if sub else None
+            ref = int(sm.group(1), 16) if sm else None
+    return deps
+
+
+def referenced_typedefs(dies, die, public, acc):
+    """Collect typedef DIEs a struct's members depend on.
+
+    Members are spelled with whatever name DWARF gives them, so a typedef that
+    metoolkit's public headers do NOT declare (an internal one like
+    McdUpdateAABBFnPtr) has to be emitted by us or the header won't compile.
+    Struct-aliasing typedefs are already resolved to `struct Tag` by
+    dwarf_structs.type_name, so they never reach here."""
+    for c in die['children']:
+        if c['tag'] != 'DW_TAG_member':
+            continue
+        t = c['attrs'].get('DW_AT_type')
+        m = REF_RE.search(t) if t else None
+        ref, hops = (int(m.group(1), 16) if m else None), 0
+        while ref is not None and hops < 12:
+            hops += 1
+            d = dies.get(ref)
+            if d is None:
+                break
+            if d['tag'] == 'DW_TAG_typedef':
+                n = d['attrs'].get('DW_AT_name')
+                if n and n not in public and n not in SYSTEM_TYPES and n not in acc:
+                    acc[n] = (d, dies)
+                break
+            nxt = d['attrs'].get('DW_AT_type')
+            nm2 = REF_RE.search(nxt) if nxt else None
+            ref = int(nm2.group(1), 16) if nm2 else None
+
+
+def toposort(names, depmap):
+    """Emit order: a type appears after everything it embeds by value."""
+    out, state = [], {}
+    def visit(n):
+        st = state.get(n)
+        if st == 2:
+            return
+        if st == 1:                          # cycle: only possible via a bug
+            return
+        state[n] = 1
+        for d in sorted(depmap.get(n, ())):
+            if d in depmap:
+                visit(d)
+        state[n] = 2
+        out.append(n)
+    for n in sorted(names):
+        visit(n)
+    return out
+
+
+def richness(die):
+    """How complete is this DIE? More members wins; ties broken by byte_size."""
+    n = sum(1 for c in die['children'] if c['tag'] == 'DW_TAG_member')
+    try:
+        size = int(die['attrs'].get('DW_AT_byte_size', 0))
+    except ValueError:
+        size = 0
+    return (n, size)
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument('objdirs', nargs='+', help='directories of extracted .o files')
+    ap.add_argument('--public-headers', help='metoolkit include/ root — types here are skipped')
+    ap.add_argument('-o', '--output', required=True)
+    ap.add_argument('--quiet', action='store_true')
+    ap.add_argument('--exclude', action='append', default=[],
+                    help='skip objects whose path contains this substring (repeatable). '
+                         'Use for archives that are never linked, so their types '
+                         '(and their unresolvable dependencies) stay out of the db.')
+    ap.add_argument('--include', action='append', default=[],
+                    help='public header the generated types depend on (repeatable)')
+    args = ap.parse_args()
+
+    public = public_type_names(args.public_headers)
+    best = {}        # name -> (richness, die, dies, source object)
+    conflicts = {}   # name -> set of (nmembers, size) seen
+
+    objs = []
+    for d in args.objdirs:
+        objs.extend(sorted(glob.glob(os.path.join(d, '**', '*.o'), recursive=True)))
+    if args.exclude:
+        objs = [o for o in objs if not any(x in o for x in args.exclude)]
+    if not objs:
+        print('no objects found', file=sys.stderr)
+        sys.exit(1)
+
+    for obj in objs:
+        try:
+            dies = parse(obj)
+        except Exception as e:                                  # noqa: BLE001
+            print(f'  ! {obj}: {e}', file=sys.stderr)
+            continue
+        for die in dies.values():
+            if die['tag'] not in ('DW_TAG_structure_type', 'DW_TAG_class_type',
+                                  'DW_TAG_union_type'):
+                continue
+            name = die['attrs'].get('DW_AT_name')
+            if not name or name in public or name in SYSTEM_TYPES:
+                continue
+            if not any(c['tag'] == 'DW_TAG_member' for c in die['children']):
+                continue                                        # declaration only
+            r = richness(die)
+            conflicts.setdefault(name, set()).add(r)
+            if name not in best or r > best[name][0]:
+                best[name] = (r, die, dies, obj)
+
+    # A name seen with two DIFFERENT non-zero member counts is a genuine problem
+    # (two distinct types sharing a name), not just decl-vs-def.
+    real_conflicts = {n: v for n, v in conflicts.items()
+                      if len({m for m, _ in v if m}) > 1}
+
+    out = ['/* kd_types.h — Karma-internal types recovered from DWARF.',
+           ' *',
+           ' * Generated by tools/gen_typedb.py by unioning .debug_info across every',
+           ' * object in the SDK: a class layout is only complete in the CU that',
+           ' * DEFINES it, so no single object gives the full picture.',
+           ' *',
+           ' * Types that metoolkit\'s public headers already define are omitted.',
+           ' */',
+           '#ifndef KD_TYPES_H',
+           '#define KD_TYPES_H',
+           '',
+           '#include "kd_compat.h"',
+           '']
+    # The recovered types reference public Karma typedefs (MeReal, MeU8, MeI32,
+    # McdFramework, ...). Those come from metoolkit's own headers, which we skip
+    # emitting but must include.
+    out.append('#include <stdbool.h>')
+    for h in args.include:
+        out.append(f'#include <{h}>')
+    if args.include:
+        out.append('')
+
+    depmap = {n: value_deps(best[n][2], best[n][1]) for n in best}
+    names = toposort(sorted(best), depmap)
+    out.append('/* ---- forward declarations (so pointer members need no ordering) ---- */')
+    for n in sorted(names):
+        kw = 'union' if best[n][1]['tag'] == 'DW_TAG_union_type' else 'struct'
+        # Both spellings: the tag (so pointer members need no ordering) and the
+        # typedef alias, because the recovered sources use the bare name.
+        out.append(f'{kw} {n};')
+        out.append(f'typedef {kw} {n} {n};')
+    out.append('')
+
+    if real_conflicts:
+        out.append('/* ---- WARNING: conflicting layouts seen for these names ---- */')
+        for n, v in sorted(real_conflicts.items()):
+            out.append(f'/*   {n}: {sorted(v)} — richest kept; verify by hand */')
+        out.append('')
+
+    aux = {}
+    for n in names:
+        referenced_typedefs(best[n][2], best[n][1], public, aux)
+    if aux:
+        out.append('/* ---- internal typedefs the recovered structs depend on ---- */')
+        for n, (d, dd) in sorted(aux.items()):
+            if n in best:          # already aliased in the forward section
+                continue
+            sub = d['attrs'].get('DW_AT_type')
+            m = REF_RE.search(sub) if sub else None
+            ref = int(m.group(1), 16) if m else None
+            out.append(f'typedef {declarator(dd, ref, n)};')
+        out.append('')
+
+    out.append('/* ---- definitions ---- */')
+    for n in names:
+        _, die, dies, obj = best[n]
+        out.append(f'/* from {os.path.basename(obj)} */')
+        out.append(emit(dies, die))
+        out.append('')
+
+    out.append('#endif /* KD_TYPES_H */')
+    open(args.output, 'w').write('\n'.join(out) + '\n')
+
+    if not args.quiet:
+        print(f'{args.output}: {len(names)} types from {len(objs)} objects '
+              f'({len(public)} skipped as public)')
+        if real_conflicts:
+            print(f'  {len(real_conflicts)} name(s) with conflicting layouts — see header')
+
+
+if __name__ == '__main__':
+    main()

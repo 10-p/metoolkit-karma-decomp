@@ -2,6 +2,7 @@
  * source object: /tmp/karmaprobe/members/libMcdPrimitives/IxBoxBox.o
  */
 #include "kd_compat.h"
+#include "kd_types.h"
 #include <stdbool.h>
 
 /* ---- hand-written prelude ---- */

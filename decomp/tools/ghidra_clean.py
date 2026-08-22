@@ -119,6 +119,46 @@ def rename_exported(sig, name):
     return f'kd_{decl}', sig[:m.start(2)] + f'kd_{decl}' + sig[m.end(2):]
 
 
+STACK_SYM = re.compile(r'\bstack0x([0-9a-f]{8})\b')
+
+
+def materialise_alloca_frame(body, fname):
+    """Give Ghidra's `stack0xNNNN` pseudo-symbols a real backing buffer.
+
+    These appear where the original used a VARIABLE-LENGTH stack allocation:
+
+        iVar15 = -((int)count * 0x18 + 0xfU & 0xfffffff0);   /* round up, negate */
+        ptr    = (McdGeometryID)(&stack0xfffffeb4 + iVar15); /* sp -= size      */
+
+    Ghidra cannot model a frame whose size changes at runtime, so it names the
+    stack location instead of allocating it, and the result does not compile.
+    The addresses are meaningful RELATIVE to each other, so one buffer plus a
+    per-symbol offset reproduces the layout exactly.
+
+    The buffer is a local, so it is per-invocation like the original. Its size is
+    a cap the original did not have — see KD_ALLOCA_FRAME in kd_compat.h."""
+    syms = sorted(set(STACK_SYM.findall(body)))
+    if not syms:
+        return body, 0
+    vals = {h: int(h, 16) - (1 << 32) if int(h, 16) >= (1 << 31) else int(h, 16)
+            for h in syms}
+    base = max(vals.values())
+    decls = ['    char kd_frame_[KD_ALLOCA_FRAME];',
+             '    char *const kd_frame_top_ = kd_frame_ + KD_ALLOCA_FRAME;']
+    for h in syms:
+        d = vals[h] - base
+        decls.append(f'    char *const kd_stack_{h} = kd_frame_top_ '
+                     f'{"+" if d >= 0 else "-"} {abs(d)};')
+    body = STACK_SYM.sub(lambda m: f'(*kd_stack_{m.group(1)})', body)
+    # `&stack0xNNNN` was an address-of; after substitution that reads
+    # `&(*kd_stack_N)`, which is just the pointer. Leave it: it is correct C and
+    # keeps the diff to Ghidra's output minimal.
+    brace = body.find('\n{')
+    if brace < 0:
+        return body, 0
+    return body[:brace + 2] + '\n' + '\n'.join(decls) + '\n' + body[brace + 2:], len(syms)
+
+
 def signature_of(body):
     """Extract the declarator text preceding the function's opening brace."""
     brace = body.find('\n{')
@@ -155,13 +195,44 @@ def main():
         if name not in by_name or len(body) > len(by_name[name]):
             by_name[name] = body
 
+    # PASS 1: decide the renames. An exported function becomes kd_<name> with an
+    # asm label carrying the real ELF symbol.
+    renames = {}
+    for name, body in by_name.items():
+        if name in args.drop or name in internal or name not in exported:
+            continue
+        b = cxx_names_to_c(ghidra_type_quirks(strip_comments(body).strip('\n')))
+        sig = signature_of(b)
+        if sig is None:
+            continue
+        d = declarator_name(sig)
+        if d:
+            renames[d] = 'kd_' + d
+
+    def apply_renames(text):
+        """Rewrite every REFERENCE to a renamed function, not just its definition.
+
+        Missing this is subtle: the definition gets its asm label and the symbol
+        is right, but a sibling in the same file still calls the old name, which
+        C then treats as an implicit declaration of an unrelated function.
+        IxSphylPrimitives — 36,828 calls in real gameplay — failed exactly this
+        way on AccumulateSphylContacts."""
+        for old, new in renames.items():
+            text = re.sub(r'(?<![\w.>])' + re.escape(old) + r'\b(?=\s*[(,);&\]])',
+                          new, text)
+        return text
+
     decls, defs, dropped = [], [], []
+    n_alloca_fns = 0
     for name, body in by_name.items():
         if name in args.drop:
             dropped.append(name)
             continue
         body = strip_comments(body).strip('\n')
         body = cxx_names_to_c(ghidra_type_quirks(body))
+        body, nalloca = materialise_alloca_frame(body, name)
+        if nalloca:
+            n_alloca_fns += 1
         sig = signature_of(body)
         if sig is None:
             print(f'  ! skipping {name}: no body found', file=sys.stderr)
@@ -170,17 +241,17 @@ def main():
         # `static` in the original source. Keep it that way.
         is_static = name not in exported
         if is_static:
-            decls.append(f'static {sig};')
-            defs.append(f'/* ---- {name} (static) ---- */\nstatic {body}\n')
+            decls.append(f'static {apply_renames(sig)};')
+            defs.append(f'/* ---- {name} (static) ---- */\nstatic {apply_renames(body)}\n')
             continue
         newname, newsig = rename_exported(sig, name)
         if newname is None:                    # could not parse; emit as-is
             decls.append(f'{sig};')
-            defs.append(f'/* ---- {name} (exported) ---- */\n{body}\n')
+            defs.append(f'/* ---- {name} (exported) ---- */\n{apply_renames(body)}\n')
             continue
         # Use the REAL ELF symbol, which for C++ is the mangled form.
         symbol = real_symbol_of.get(name, name)
-        decls.append(f'{newsig} KD_MANGLED("{symbol}");')
+        decls.append(f'{apply_renames(newsig)} KD_MANGLED("{symbol}");')
         # `sig` is whitespace-normalised, so it will not match the raw body.
         # Rewrite the declarator in place instead: the name is the identifier
         # immediately before the first '(' in the text preceding the body.
@@ -189,7 +260,7 @@ def main():
         decl = declarator_name(sig) or name
         head = re.sub(r'\b' + re.escape(decl) + r'\b(?=\s*\()',
                       f'kd_{decl}', head, count=1)
-        body = head + rest
+        body = apply_renames(head + rest)
         defs.append(f'/* ---- {name} (exported as {newname}, asm label "{symbol}") ---- */\n'
                     f'{body}\n')
 
@@ -218,6 +289,8 @@ def main():
             f.write('\n')
         f.write('\n'.join(defs))
 
+    if n_alloca_fns:
+        print(f'  {n_alloca_fns} function(s) needed an alloca frame')
     print(f'{args.output}: {len(defs)} functions '
           f'({sum(1 for d in decls if d.startswith("static"))} static)'
           + (f', dropped {dropped}' if dropped else ''))

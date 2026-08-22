@@ -92,6 +92,15 @@ typedef double              longdouble;
    accepts any argument list, which is exactly what those call sites need. */
 typedef void code();
 
+/* Backing size for Ghidra's `stack0xNNNN` pseudo-symbols, which stand in for a
+   variable-length stack allocation the decompiler could not model. The original
+   sized these by triangle or contact count with no fixed cap; this is a cap.
+   64 KB is far above anything a single collision query allocates (McdBatch caps
+   contacts per pair well below that), but it IS an assumption — if a recovered
+   function ever writes past it, the shadow harness will show divergence rather
+   than the original's silent success. */
+#define KD_ALLOCA_FRAME 65536
+
 /* ---- calling-convention annotations ------------------------------------
     Ghidra tags recovered C++ methods with MSVC's `__thiscall`. On GCC's i386
     C++ ABI `this` is passed on the STACK as the first argument — plain cdecl,

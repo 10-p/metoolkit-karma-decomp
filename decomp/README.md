@@ -212,7 +212,62 @@ all calls. `IxBoxBox` — the object polished first, proven on 300k *synthetic* 
 **zero** times. Effort should follow the census, not the alphabet: `IxSphereTriList` is the next
 object to recover, not whatever comes next in the archive.
 
-##### Open: getting bots into a headless match
+##### The census, with vehicles and ragdolls running
+
+The blocker below was a travel-URL problem, not a harness one (see "Travel URLs"). With a complete
+URL, ONS-Torlan exercises **9 of 37** pairs instead of 0. Combined across both maps, by source object:
+
+| calls | object | status |
+|---:|---|---|
+| **941,805** | `IxSphereTriList` | not yet recovered |
+| 122,527 | `IxSphereSphere` | ✅ recovered, **0 structural divergence** |
+| 36,828 | `IxSphylPrimitives` (ragdolls) | not yet recovered |
+| 6,290 | `IxConvexPrimitives` (vehicles) | not yet recovered |
+| 1,522 | `IxBoxBox` | ✅ recovered, **0 structural divergence** |
+
+Both recovered functions hold up on real vehicle-and-ragdoll gameplay with zero divergence in any
+discrete field.
+
+And the priority is unambiguous: **two objects carry 89% of all collision traffic**, and both failed
+on the same Ghidra error — `stack0xNNNNNNNN undeclared`.
+
+##### The alloca pattern — 89% of traffic, one cause
+
+That error marks a VARIABLE-LENGTH stack allocation:
+
+```c
+iVar15 = -((int)count * 0x18 + 0xfU & 0xfffffff0);   /* round up to 16, negate */
+ptr    = (McdGeometryID)(&stack0xfffffeb4 + iVar15); /* sp -= size             */
+```
+
+Ghidra cannot model a frame whose size changes at runtime, so it names the stack location instead of
+allocating it. **21 objects** hit this, including both top-traffic ones.
+
+`ghidra_clean.py` now materialises a backing buffer per function. The addresses are meaningful
+*relative to each other*, so one local buffer plus a per-symbol offset reproduces the layout exactly,
+and being a local it stays per-invocation like the original. The one thing it adds that the original
+did not have is a size cap (`KD_ALLOCA_FRAME`, 64 KB) — an assumption, but one the shadow harness
+will expose as divergence rather than hide.
+
+##### Travel URLs
+
+A map loading with the right gametype is not enough. UT2004's travel URL carries **two** kinds of
+option, and both matter:
+
+* **game options**, parsed by `GameInfo.InitGame()` — `Game=`, `bAutoNumBots=`, `QuickStart=`,
+  `bPlayerMustBeReady=`
+* **per-player login options**, consumed in `PreLogin`/`Login` — `Name=`, `Class=`, `Character=`,
+  `team=`
+
+Supplying only the first leaves the match parked before kickoff: the level loads, the process burns
+CPU at full tilt, and **nothing ticks**. A complete URL is what unblocked it:
+
+```
+ONS-Torlan.ut2?Name=Player-43ce41?Class=Engine.Pawn?Character=Jakob?team=255
+  ?bAutoNumBots=True?Game=Onslaught.ONSOnslaughtGame?QuickStart=True?bPlayerMustBeReady=False
+```
+
+##### Still open
 
 `test-karma-1` works because its KActors fall under gravity with no agent involved. `ONS-Torlan` and
 `DM-BB-VehicleWar` load correctly, with the right gametype, and then **never tick at all** — 0 Octree

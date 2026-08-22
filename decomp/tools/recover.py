@@ -85,9 +85,11 @@ def main():
         outdir = os.path.join(args.out_dir, archive.replace('lib', ''))
         os.makedirs(outdir, exist_ok=True)
         prelude = os.path.join(outdir, base + '.prelude.h')
+        exports = os.path.join(outdir, base + '.exports.h')
         if not os.path.exists(prelude):          # never clobber hand-edited work
             cmd = [sys.executable, os.path.join(here, 'gen_prelude.py'), obj,
-                   '--include-dir', inc, '--dump', dump, '-o', prelude]
+                   '--include-dir', inc, '--dump', dump, '-o', prelude,
+                   '--exports-out', exports]
             if args.protos:
                 cmd += ['--protos', args.protos]
             r = run(cmd)
@@ -106,7 +108,8 @@ def main():
             if DROP_ALWAYS.match(f):
                 drops += ['--drop', f]
         r = run([sys.executable, os.path.join(here, 'ghidra_clean.py'), dump,
-                 '-o', csrc, '--object', obj, '--prelude', prelude] + drops)
+                 '-o', csrc, '--object', obj, '--prelude', prelude,
+                 '--exports', exports] + drops)
         if r.returncode != 0:
             rows.append((archive, base, 'FAIL', 'clean: ' + r.stderr.strip()[:90]))
             counts['FAIL'] += 1

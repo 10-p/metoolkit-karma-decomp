@@ -76,6 +76,63 @@ def section_bytes(obj, section):
     return data
 
 
+def section_relocs(obj, section):
+    """{offset: symbol} for a section's relocation records."""
+    out = run('objdump', '-r', f'--section={section}', obj)
+    rel = {}
+    for line in out.splitlines():
+        p = line.split()
+        if len(p) >= 3 and re.match(r'^[0-9a-f]{8}$', p[0]):
+            rel[int(p[0], 16)] = p[2]
+    return rel
+
+
+def text_symbol_at(obj, offset):
+    """Which .text function starts at `offset`? (for R_386_32 against .text)"""
+    best = None
+    for value, size, kind, name in nm_rows(obj):
+        if kind in 'tT' and value == offset:
+            if best is None or kind == 'T':
+                best = name
+    return best
+
+
+def exported_data_definition(obj, name, value, size, sect, data, c_name):
+    """Rebuild an EXPORTED data symbol as a C definition.
+
+    These are globals the object publishes — MeMemoryAPI, MeDebugDrawAPI,
+    MdtContactInvalidID. Dropping them makes the archive lose the symbol and
+    every user of it fails to link, which is exactly what happened.
+
+    Raw bytes are not enough: MeMemoryAPI is 24 bytes of ZEROES plus six
+    R_386_32 relocations against .text, i.e. a table of function pointers whose
+    targets live only in the relocation records. So read those too."""
+    rel = section_relocs(obj, sect)
+    entries, has_ptr = [], False
+    for off in range(value, value + (size or 0), 4):
+        if off in rel:
+            has_ptr = True
+            addend = struct.unpack('<I', data[off:off + 4])[0] if off + 4 <= len(data) else 0
+            target = rel[off]
+            if target == '.text':
+                fn = text_symbol_at(obj, addend)
+                entries.append(f'(void *)&{fn}' if fn else f'/* .text+0x{addend:x} */ 0')
+            else:
+                entries.append(f'(void *)&{target}')
+        else:
+            word = struct.unpack('<I', data[off:off + 4])[0] if off + 4 <= len(data) else 0
+            entries.append(f'(void *)0x{word:x}u')
+    n = len(entries)
+    lines = [f'/* {name} — EXPORTED {sect} symbol, {size} bytes'
+             + (', rebuilt from relocations */' if has_ptr else ' */')]
+    # An asm label keeps our spelling from clashing with the public header's
+    # declaration, exactly as for exported functions.
+    lines.append(f'void *kd_{c_name}[{n}] KD_MANGLED("{name}") = {{')
+    lines.append('    ' + ', '.join(entries))
+    lines.append('};')
+    return '\n'.join(lines)
+
+
 def header_declaring(name, include_dir):
     """Which metoolkit header declares `name`? (cheap grep; good enough)"""
     if not include_dir:
@@ -162,6 +219,10 @@ def main():
                                    'from the C++ static constructor')
     ap.add_argument('--protos', help='kd_protos.h from tools/gen_protos.py, used to '
                                      'give C++-mangled imports a real signature')
+    ap.add_argument('--exports-out', help='write exported DATA symbols here instead of '
+                                          'into the prelude. They initialise from function '
+                                          'addresses, so they must be emitted AFTER the '
+                                          'forward declarations, not before them.')
     args = ap.parse_args()
 
     obj = args.object
@@ -232,8 +293,13 @@ def main():
 
     # ---- file-scope statics ----------------------------------------------
     data = {s: section_bytes(obj, s) for s in ('.data', '.rodata', '.bss')}
-    kind_to_section = {'d': '.data', 'r': '.rodata', 'b': '.bss'}
+    kind_to_section = {'d': '.data', 'r': '.rodata', 'b': '.bss',
+                       'D': '.data', 'R': '.rodata', 'B': '.bss'}
     statics = [r for r in rows if r[2] in 'drb']
+    # Uppercase kinds are GLOBAL data the object exports. They were being
+    # skipped entirely, so the recovered object published no such symbol and
+    # every reference to it failed to link.
+    exported_data = [r for r in rows if r[2] in 'DRB']
     if statics:
         w('/* --- file-scope statics --- */')
         if ctor_messy:
@@ -277,6 +343,36 @@ def main():
         else:
             w(f'/* TODO: {c_name} — tool could not render a literal */')
         w('')
+
+    exp_out = []
+    if exported_data:
+        w2 = exp_out.append if args.exports_out else w
+        prev_w = w
+        w = w2
+        w('/* --- exported data symbols --- */')
+        for value, size, kind, name in sorted(exported_data, key=lambda r: (r[2], r[0])):
+            sect = kind_to_section[kind]
+            c_name = re.sub(r'[^A-Za-z0-9_]', '_', demangle(name))
+            if kind == 'B':
+                inits = ctor_inits.get(c_name) or ctor_inits.get(name)
+                n = max(1, (size or 4)) // 4
+                w(f'/* {name} — EXPORTED {sect} symbol, {size} bytes */')
+                if inits:
+                    vals = ['0.0f'] * n
+                    for i, (_, v) in enumerate(inits[:n]):
+                        vals[i] = v if v.lower().endswith('f') else v + 'f'
+                    w(f'float kd_{c_name}[{n}] KD_MANGLED("{name}") = {{ '
+                      + ', '.join(vals) + ' };')
+                else:
+                    w(f'float kd_{c_name}[{n}] KD_MANGLED("{name}");')
+            else:
+                w(exported_data_definition(obj, name, value, size, sect,
+                                           data.get(sect, b''), c_name))
+            w('')
+        w = prev_w
+
+    if args.exports_out:
+        open(args.exports_out, 'w').write('\n'.join(exp_out) + '\n')
 
     text = '\n'.join(out)
     if args.output:

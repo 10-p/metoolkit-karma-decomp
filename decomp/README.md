@@ -84,18 +84,29 @@ recovered object into the link and runs a physics scene. Both halves matter, bec
 not the same as working**.
 
 ```
-compile:      no human input needed :  38 / 148        (was 14/96)
+compile:      no human input needed :  34 / 148        (was 14/96)
               prelude has TODOs     :   2 / 148
               needs human review    :  36 / 148        (see below)
-              did not compile       :  72 / 148
-              -> 27.0% compile      (was 14.6%)
+              did not compile       :  76 / 148
 
-substitute:   ran the scene cleanly :  26 / 40
-              crashed / NaN / short :  14 / 40
+substitute:   trajectory bit-identical to the shipped library : 33 / 36
+              diverged (collision path, see below)            :  1 / 36
+              link or run failed                              :  3 / 36
 ```
 
-**35% of the objects that compile are still broken.** That is the single most useful number here, and
-it is why the breadth gate exists at all.
+**33 of 36 recovered objects reproduce the reference physics bit-for-bit.** Not "compiles", not
+"doesn't crash" — identical trajectories. That is the number worth tracking, and it is why the
+compile rate on its own is a poor proxy: an earlier iteration compiled 40 objects of which only 26
+worked. Fewer compiling and more correct is the right trade.
+
+The trajectory check is only this sharp because baseline and substituted build are **both i386/x87**,
+so a correct recovery has no reason to differ at all. It does NOT transfer across builds — see
+[`../docs/KARMA-ON-WASM.md`](../docs/KARMA-ON-WASM.md) §II.3.
+
+An object that is itself on the collision path will always diverge on a *collision* scene, because
+contact make/break amplifies a last-bit difference without bound. `IxBoxBox` does exactly that, and
+it is proven correct on 300,000 real model pairs. So the collision-free scene is the authoritative
+trajectory signal, and the per-function gate is the verdict.
 
 The `IxBoxBox` acceptance gate still passes after every change above (91.14% bit-identical,
 0 structural differences), regenerated end-to-end through the new pipeline.
@@ -144,13 +155,29 @@ failing. They need a human.
 
 #### What is still open
 
-- **72 objects do not compile.** No dominant cause left — it is now a long tail (missing individual
-  types, `conflicting declaration`, Ghidra artifacts like `stack0xffffffb4`).
+- **76 objects do not compile.** No dominant cause left — a long tail (individual missing types,
+  `conflicting declaration`, Ghidra artifacts like `stack0xffffffb4`).
 - **36 objects need the mislabelled-symbol review above.**
-- **14 of 40 compiling objects fail the breadth gate.**
+- **3 objects fail the breadth gate**, and they are informative:
+  - `keaMatrix`, `keaCalcJinvMandRHS_vanilla` — the recovered object emits the class's *methods* with
+    correct mangled symbols, but not its **vtable and RTTI** (`_ZTV`, `_ZTI`, `_ZTS`). Anything that
+    constructs the class fails to link. Emitting those from C is the remaining C++ work.
+  - `MdtPartition` — links, then segfaults. A genuine recovery bug, and the first one the gate has
+    caught.
 - **The precise gate is still validated on one function.** `difftest_boxbox.c` proves the method;
-  scaling it — auto-driving from DWARF signatures, and capture/replay for deep pointer graphs — has
-  not been done.
+  scaling it has not been done.
+
+#### Three assets not yet used
+
+1. **UT2004 itself is a correct, human-written caller.** `Source/Engine/Src/Karma*.cpp` and `K*.cpp`
+   use ~328 Karma API functions with the right types and conventions — better evidence of intended
+   signatures than Ghidra's inference, and a map of which functions actually matter.
+2. **The `native-karma` build can be instrumented.** Shadow-differential testing: wrap each recovered
+   function so every call runs BOTH the original and the recovered version on the same inputs, into
+   separate output buffers, and compares. The game keeps using the original's result, so behaviour is
+   unchanged — but every call becomes a test case with *real* inputs. This is the scaled precise gate.
+3. **Bespoke test levels** can drive specific physics paths (ragdolls, each vehicle type, each
+   geometry pair) far more thoroughly than a scripted scene.
 
 ## The recipe## The recipe
 

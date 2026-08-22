@@ -20,6 +20,7 @@ What it does, and what it deliberately does NOT do:
     it is small (~10 lines for IxBoxBox).
 """
 import argparse
+import os
 import re
 import subprocess
 import sys
@@ -28,18 +29,30 @@ BANNER = re.compile(r'/\* ==== (\S+) ==== \*/')
 
 
 def object_symbols(obj):
-    """Return (exported, internal) function-name sets from the original .o."""
+    """(exported, internal, real_symbol_of) for the original object.
+
+    `real_symbol_of` maps the name Ghidra displays to the actual ELF symbol.
+    They differ for C++: Ghidra shows `MovingBoxBoxIntersect` while the object
+    exports `_Z21MovingBoxBoxIntersectPKfPK11lsTransform...`. Emitting the
+    displayed name in the asm label produces a symbol nothing links against —
+    which is precisely why MovingBoxBoxIntersect and PolynomialRoots came out
+    as undefined references."""
     out = subprocess.run(['nm', '--defined-only', obj],
                          capture_output=True, text=True).stdout
-    exported, internal = set(), set()
+    exported, internal, real = set(), set(), {}
+    rows = []
     for line in out.splitlines():
         p = line.split()
-        if len(p) < 3:
-            continue
-        kind, name = p[1], p[2]
-        if kind in 'Tt':
-            (exported if kind == 'T' else internal).add(name)
-    return exported, internal
+        if len(p) >= 3 and p[-2] in 'TtWw':
+            rows.append((p[-2], p[-1]))
+    if rows:
+        dem = subprocess.run(['c++filt'] + [n for _, n in rows],
+                             capture_output=True, text=True).stdout.split('\n')
+        for (kind, mangled), d in zip(rows, dem):
+            short = re.sub(r'.*::', '', d.split('(')[0]).strip() or mangled
+            (exported if kind in 'TW' else internal).add(short)
+            real.setdefault(short, mangled)
+    return exported, internal, real
 
 
 def split_functions(text):
@@ -78,6 +91,12 @@ def cxx_names_to_c(body):
 RET_NAME_RE = re.compile(r'^(.*?\b)([A-Za-z_]\w*)\s*\(')
 
 
+def declarator_name(sig):
+    """The identifier immediately before the parameter list."""
+    m = RET_NAME_RE.match(sig)
+    return m.group(2) if m else None
+
+
 def rename_exported(sig, name):
     """Give an exported function an internal C name plus an asm label.
 
@@ -91,9 +110,13 @@ def rename_exported(sig, name):
     symbol while sidestepping the C type system. Only the ABI has to match, and
     it does."""
     m = RET_NAME_RE.match(sig)
-    if not m or m.group(2) != name:
+    if not m:
         return None, sig
-    return f'kd_{name}', sig[:m.start(2)] + f'kd_{name}' + sig[m.end(2):]
+    # For a C++ method the banner says `writebackMatrixChol` but the declarator
+    # (after Foo::bar was flattened) reads `keaMatrix__writebackMatrixChol`.
+    # Rename whatever the declarator actually says, not the banner name.
+    decl = m.group(2)
+    return f'kd_{decl}', sig[:m.start(2)] + f'kd_{decl}' + sig[m.end(2):]
 
 
 def signature_of(body):
@@ -111,11 +134,13 @@ def main():
     ap.add_argument('--object', required=True,
                     help='original .o, used to decide exported vs static')
     ap.add_argument('--prelude', help='hand-written extern declarations to inline')
+    ap.add_argument('--exports', help='exported DATA symbols, emitted after the forward '
+                                      'declarations because they take function addresses')
     ap.add_argument('--drop', action='append', default=[],
                     help='function to omit entirely (repeatable)')
     args = ap.parse_args()
 
-    exported, internal = object_symbols(args.object)
+    exported, internal, real_symbol_of = object_symbols(args.object)
     text = open(args.input, errors='ignore').read()
 
     # A Ghidra dump can contain the same name twice — typically a small import
@@ -150,16 +175,19 @@ def main():
             decls.append(f'{sig};')
             defs.append(f'/* ---- {name} (exported) ---- */\n{body}\n')
             continue
-        decls.append(f'{newsig} KD_MANGLED("{name}");')
+        # Use the REAL ELF symbol, which for C++ is the mangled form.
+        symbol = real_symbol_of.get(name, name)
+        decls.append(f'{newsig} KD_MANGLED("{symbol}");')
         # `sig` is whitespace-normalised, so it will not match the raw body.
         # Rewrite the declarator in place instead: the name is the identifier
         # immediately before the first '(' in the text preceding the body.
         brace = body.find('\n{')
         head, rest = body[:brace], body[brace:]
-        head = re.sub(r'\b' + re.escape(name) + r'\b(?=\s*\()',
-                      f'kd_{name}', head, count=1)
+        decl = declarator_name(sig) or name
+        head = re.sub(r'\b' + re.escape(decl) + r'\b(?=\s*\()',
+                      f'kd_{decl}', head, count=1)
         body = head + rest
-        defs.append(f'/* ---- {name} (exported as {newname}, asm label "{name}") ---- */\n'
+        defs.append(f'/* ---- {name} (exported as {newname}, asm label "{symbol}") ---- */\n'
                     f'{body}\n')
 
     with open(args.output, 'w') as f:
@@ -177,6 +205,10 @@ def main():
         f.write('/* ---- forward declarations ---- */\n')
         f.write('\n'.join(decls))
         f.write('\n\n')
+        if args.exports and os.path.exists(args.exports):
+            f.write('/* ---- exported data symbols (need the declarations above) ---- */\n')
+            f.write(open(args.exports).read())
+            f.write('\n')
         f.write('\n'.join(defs))
 
     print(f'{args.output}: {len(defs)} functions '

@@ -19,8 +19,8 @@ stack leaks totalling 235 bytes.
 | | |
 |---|---|
 | Milestone 1 — one object end to end | ✅ **done** (`McdPrimitives/IxBoxBox`) |
-| Milestone 2 — `MdtKea` C++/vtable spike | ⬜ next |
-| Milestone 3 — scale validation | ⬜ |
+| Milestone 2 — `MdtKea` C++/vtable spike | ✅ **done — no blocker** |
+| Milestone 3 — scale validation | ⬜ next |
 | Milestone 4 — the grind (~2,100 functions) | ⬜ |
 | Milestone 5 — wasm + Android bring-up | ⬜ |
 
@@ -43,6 +43,40 @@ RESULT: PASS -- every discrete decision matches; deltas are FP rounding only
 Every discrete decision — overlap yes/no, contact count, contact dimensionality — matches exactly.
 The residual is float last-bits, at micrometre scale.
 
+### Milestone 2 result — C++ and vtables are not a blocker
+
+`MdtKea` is the hottest 68.5 KB *and* the only C++-with-vtables code in Karma (`keaMatrix`,
+`keaMatrix_pcSparse`, `keaMatrix_pcSparse_vanilla`, `keaLCPSolver`, `keaFunctions_Vanilla`). It was
+attacked second precisely because it was the most likely place to find a blocker. There isn't one.
+
+1. **`this` is stack-passed cdecl.** GCC's i386 C++ ABI passes `this` as the first stack argument —
+   unlike MSVC, which uses `ecx`. Verified in the disassembly of `keaMatrix_tester::factorize`:
+   `mov 0x8(%ebp),%ebx`. **A C function with an explicit `this` parameter is ABI-identical** to the
+   original method — no thunks, no wrappers.
+2. **Virtual dispatch is explicit and mechanical.** Ghidra renders it as
+   `(**(code **)(*(int *)obj + N))(obj, ...)`. The vptr points at C++ slot 2 (Itanium ABI reserves
+   slot 0 for offset-to-top and slot 1 for the typeinfo pointer), so `N` is a plain byte offset into
+   a C `struct ..._vtbl` of function pointers.
+3. **All class layouts are in DWARF** — but only in the CU that *defines* each class, not the ones
+   that use it. `keaMatrix_PcSparse_vanilla.o` shows `field_0x14`; `keaMatrix_PcSparse.o` has the
+   names. **Union DWARF across all objects to build the type database.**
+4. **We own the vtables.** Only `libMdtKea` references `_ZTV*kea*` / `_ZTI*kea*`, so no other
+   archive constrains the layout.
+5. **All 20 `MdtKea` objects decompile, with zero x87 stack leaks.**
+
+The recovered hierarchy is in [`src/MdtKea/keaMatrix.h`](src/MdtKea/keaMatrix.h), with
+`_Static_assert`s on every size and offset — they pass, so the layout is byte-identical to the
+shipped one.
+
+Two independent cross-checks corroborate the recovery, which is what makes it trustworthy:
+
+- **Vtable slots vs. call sites.** `keaMatrix_tester::factorize` calls `vptr+0x0c` and `::solve`
+  calls `vptr+0x10`; the vtable relocations put `factorize()` and `solve()` at exactly those offsets.
+- **Field offsets vs. string literals.** `keaMatrix_pcSparse_vanilla::allocate` labels each
+  `keaPoolAlloc` with the field it fills — `"A"`, `"Achol"`, `"rsD"`, `"NAZ"`, `"NCZ"`, `"NR"`,
+  `"NC"` — and those labels land on exactly the DWARF members at `+0xc`, `+0x10`, `+0x18`, `+0x1c`,
+  `+0x20`, `+0x2c`, `+0x30`. The original authors annotated their own layout.
+
 ## The recipe
 
 Per object, three automated steps and one small manual one.
@@ -59,13 +93,20 @@ KARMA_OUTDIR=/path/to/out \
 
 Emits one `.c` per object plus `stats.csv` with per-function quality metrics.
 
-### 2. Write the prelude (manual — the only hand step)
+### 2. Write the prelude (mostly generated)
 
-Declare what the object imports, plus its file-scope statics. `nm --undefined-only` gives the import
-list; `nm --defined-only` distinguishes exported (`T`) from static (`t`).
+`tools/gen_prelude.py` produces the skeleton, reading everything it can out of the object:
 
-**Read constants out of the object. Never infer them.** Both values guessed while building the
-`IxBoxBox` prelude were wrong:
+```bash
+python3 tools/gen_prelude.py <obj>.o --include-dir ../Thirdparty/metoolkit/include -o <obj>.prelude.h
+```
+
+It finds which metoolkit header declares each import, emits `KD_MANGLED()` asm labels with the
+**exact** mangled name for C++ imports, reads static initialisers straight out of `.data`/`.rodata`,
+and marks `.bss` statics TODO (their values come from a C++ static constructor, not the section
+bytes). Anything it can't determine is marked TODO. **Nothing it emits is a guess.**
+
+That matters, because both values guessed by hand while building the `IxBoxBox` prelude were wrong:
 
 ```bash
 # function-local statics live in .data — read the bytes
@@ -79,8 +120,14 @@ nm --undefined-only IxBoxBox.o | grep Moving
 #      (guessed ...S1_S4_S7_...)
 ```
 
-This step is the obvious next automation target: imports, their DWARF types, and `.data` constants
-are all machine-readable. See "Known gaps" below.
+For structs — especially C++ classes, where Ghidra may leave `field_0x14` — recover the real layout:
+
+```bash
+python3 tools/dwarf_structs.py <obj>.o --list          # what types does this CU define?
+python3 tools/dwarf_structs.py <obj>.o --type keaMatrix
+```
+
+A class layout lives only in the CU that **defines** the class, so search across all objects.
 
 ### 3. Clean (automated)
 
@@ -118,12 +165,16 @@ its inputs — so the shipped archive is an oracle for its own replacement.**
 ## Layout
 
 ```
-include/kd_compat.h                  Ghidra type/macro vocabulary; the longdouble decision
+include/kd_compat.h                  Ghidra type/macro vocabulary; the longdouble + ROUND decisions
+tools/gscripts/DumpDecomp.java       Ghidra headless decompile + per-function quality stats
 tools/ghidra_clean.py                Ghidra dump -> compilable C
-tools/gscripts/DumpDecomp.java       Ghidra headless decompile + quality stats
+tools/gen_prelude.py                 per-object prelude skeleton, read from the binary
+tools/dwarf_structs.py               C struct/class layouts recovered from .debug_info
 src/<Archive>/<Object>.c             generated — do not edit by hand
-src/<Archive>/<Object>.prelude.h     hand-written imports + statics
+src/<Archive>/<Object>.prelude.h     imports + statics (generated, then completed by hand)
+src/MdtKea/keaMatrix.h               recovered C++ hierarchy + explicit vtable (Milestone 2)
 test/difftest_<object>.c             differential gate vs the shipped binary
+test/scene_*.c                       whole-simulation scenes for coarse regression
 ```
 
 ## Load-bearing decisions
@@ -152,9 +203,14 @@ diffing cannot validate a replacement; differential testing per function can.
 - **`-Wno-int-conversion` is required.** Ghidra types some pointer-valued locals as `undefined4`.
   Harmless on any 32-bit-pointer target (i386, wasm32) but latent, and worth fixing properly by
   retyping pointer-valued `undefined4` locals in `ghidra_clean.py`.
-- **Prelude generation is manual.** Should be generated from `nm` + DWARF + `.data`.
-- **C++/vtable code is unvalidated.** Everything proven so far is C. `MdtKea` (the LCP solver,
-  68.5 KB, the hottest code) uses virtual dispatch and RTTI — Milestone 2.
+- **Prelude generation is partly automated.** `gen_prelude.py` handles imports, mangled names and
+  `.data` statics; `.bss` statics initialised by a C++ static constructor still need a human.
+- **No project-wide type database yet.** Class layouts live only in the CU that defines them, so
+  `dwarf_structs.py` must currently be pointed at the right object by hand. Unioning DWARF across all
+  192 objects into one header set is the obvious Milestone 3 tool.
+- **`keaMatrix.h` is a layout proof, not yet a build input.** The hierarchy, vtable and offsets are
+  recovered and assert-checked, but no `MdtKea` object has been recovered and differential-tested end
+  to end the way `IxBoxBox` was.
 - **Two x87 stack leaks** remain, both unnamed helpers in `MdtBcl.o` (143 and 92 bytes).
 - `writeKeaInputToFile` / `readKeaInputFromFile` (~22 KB) are solver debug serialisation — stub them
   rather than recover them. `MeViewer2` and `MeApp` (74 KB) are already unused; skip entirely.

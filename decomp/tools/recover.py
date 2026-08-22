@@ -183,8 +183,18 @@ def main():
         # different spelling. These two diagnostics are about spelling, so they
         # are downgraded here rather than fought one cast at a time. Both are
         # safe only because every target is 32-bit-pointer (i386 and wasm32).
-        r = run(['gcc', '-m32', '-O2', '-fno-pic', '-std=gnu99', '-w',
-                 '-Wno-int-conversion', '-Wno-incompatible-pointer-types',
+        # -fno-strict-aliasing is REQUIRED, not a nicety. Decompiled code
+        # type-puns constantly: Ghidra recovers a stack slot as `MeReal x[2]`
+        # and the code stores a pointer through it. Under -O2 strict aliasing
+        # GCC is entitled to assume those accesses cannot alias, and it deletes
+        # the stores — which is exactly what happened to IxSphereTriList.
+        # KTriListGenerator received (pair, 0, 0, 0, 0): the first argument
+        # survived because it went through a register, and the four passed via
+        # punned stack slots were optimised away. The engine's own build already
+        # uses this flag for the same reason (root CMakeLists.txt).
+        r = run(['gcc', '-m32', '-O2', '-fno-pic', '-fno-strict-aliasing',
+                 '-std=gnu99', '-w', '-Wno-int-conversion',
+                 '-Wno-incompatible-pointer-types',
                  '-DLINUX', '-c', '-o', o, csrc] + iflags)
         if not os.path.exists(o):
             first = next((l for l in r.stderr.splitlines() if ' error' in l), r.stderr[:90])

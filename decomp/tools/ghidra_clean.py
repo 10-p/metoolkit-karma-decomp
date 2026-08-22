@@ -136,6 +136,9 @@ def main():
     ap.add_argument('--prelude', help='hand-written extern declarations to inline')
     ap.add_argument('--exports', help='exported DATA symbols, emitted after the forward '
                                       'declarations because they take function addresses')
+    ap.add_argument('--vtables', help='C++ ABI data (vtable/typeinfo/type string) from '
+                                      'tools/gen_vtables.py; emitted after the forward '
+                                      'declarations because the slots take method addresses')
     ap.add_argument('--drop', action='append', default=[],
                     help='function to omit entirely (repeatable)')
     args = ap.parse_args()
@@ -205,6 +208,10 @@ def main():
         f.write('/* ---- forward declarations ---- */\n')
         f.write('\n'.join(decls))
         f.write('\n\n')
+        if args.vtables and os.path.exists(args.vtables):
+            f.write('/* ---- C++ ABI data (needs the declarations above) ---- */\n')
+            f.write(open(args.vtables).read())
+            f.write('\n')
         if args.exports and os.path.exists(args.exports):
             f.write('/* ---- exported data symbols (need the declarations above) ---- */\n')
             f.write(open(args.exports).read())

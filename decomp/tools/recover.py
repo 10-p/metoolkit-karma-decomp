@@ -69,6 +69,19 @@ def main():
     # declaration, so it must not be papered over — flag it for a human.
     MISLABELLED_CALL = re.compile(r"error: ['\u2018]_(\w+)['\u2019] undeclared")
 
+    # Ghidra sometimes fails to model a function's stack frame and invents a
+    # local array, then routes CALL ARGUMENTS through it at computed offsets:
+    #
+    #   *(MeDict **)((int)aiStack_50 + iVar8 + iVar16 + 4) = dict;
+    #   pMVar9 = MeDictFirst(*(void **)((int)aiStack_50 + iVar8 + iVar16 + 4));
+    #
+    # The offsets are wrong, so the callee receives garbage. This COMPILES and
+    # LINKS with a symbol set identical to the original — MdtPartition did, then
+    # segfaulted in MeDictNext(dict, NULL). Silently-wrong code is the worst
+    # outcome available, so detect the shape and refuse to call it recovered.
+    GHIDRA_STACK_GUESS = re.compile(
+        r'\(int\)a[a-z]Stack_[0-9a-f]+\s*\+\s*[A-Za-z_]\w*')
+
     rows, counts = [], {'OK': 0, 'TODO': 0, 'REVIEW': 0, 'FAIL': 0, 'SKIP': 0}
     for obj in objs:
         base = os.path.basename(obj)[:-2]
@@ -86,6 +99,7 @@ def main():
         os.makedirs(outdir, exist_ok=True)
         prelude = os.path.join(outdir, base + '.prelude.h')
         exports = os.path.join(outdir, base + '.exports.h')
+        vtables = os.path.join(outdir, base + '.vtables.h')
         if not os.path.exists(prelude):          # never clobber hand-edited work
             cmd = [sys.executable, os.path.join(here, 'gen_prelude.py'), obj,
                    '--include-dir', inc, '--dump', dump, '-o', prelude,
@@ -100,6 +114,9 @@ def main():
         # Count only real markers. The generated file's own header comment
         # contains the word TODO, which otherwise makes every object look as if
         # it needs a human and pins the OK count at zero.
+        # C++ ABI data is pure derivation from the object, so always regenerate.
+        run([sys.executable, os.path.join(here, 'gen_vtables.py'), obj, '-o', vtables])
+
         todos = open(prelude, errors='ignore').read().count('/* TODO')
 
         csrc = os.path.join(outdir, base + '.c')
@@ -109,7 +126,7 @@ def main():
                 drops += ['--drop', f]
         r = run([sys.executable, os.path.join(here, 'ghidra_clean.py'), dump,
                  '-o', csrc, '--object', obj, '--prelude', prelude,
-                 '--exports', exports] + drops)
+                 '--exports', exports, '--vtables', vtables] + drops)
         if r.returncode != 0:
             rows.append((archive, base, 'FAIL', 'clean: ' + r.stderr.strip()[:90]))
             counts['FAIL'] += 1
@@ -136,6 +153,17 @@ def main():
             else:
                 rows.append((archive, base, 'FAIL', first.strip()[:110]))
                 counts['FAIL'] += 1
+            continue
+
+        src = open(csrc, errors='ignore').read()
+        nguess = len(GHIDRA_STACK_GUESS.findall(src))
+        if nguess:
+            # Drop the object: it compiled, but it must not reach the validated
+            # set or downstream tooling will treat broken code as recovered.
+            os.unlink(o)
+            rows.append((archive, base, 'REVIEW',
+                         f'{nguess} call arg(s) routed through a guessed stack frame'))
+            counts['REVIEW'] += 1
             continue
 
         status = 'TODO' if todos else 'OK'

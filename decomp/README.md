@@ -84,17 +84,17 @@ recovered object into the link and runs a physics scene. Both halves matter, bec
 not the same as working**.
 
 ```
-compile:      no human input needed :  34 / 148        (was 14/96)
+compile:      no human input needed :  33 / 148        (was 14/96)
               prelude has TODOs     :   2 / 148
-              needs human review    :  36 / 148        (see below)
+              needs human review    :  37 / 148        (see below)
               did not compile       :  76 / 148
 
-substitute:   trajectory bit-identical to the shipped library : 33 / 36
-              diverged (collision path, see below)            :  1 / 36
-              link or run failed                              :  3 / 36
+substitute:   trajectory bit-identical to the shipped library : 35 / 35
+              (collision scene: 34 bit-identical, 1 diverged — see below)
+              link or run failed                              :  0 / 35
 ```
 
-**33 of 36 recovered objects reproduce the reference physics bit-for-bit.** Not "compiles", not
+**Every object that reaches the validated set reproduces the reference physics bit-for-bit.** Not "compiles", not
 "doesn't crash" — identical trajectories. That is the number worth tracking, and it is why the
 compile rate on its own is a poor proxy: an earlier iteration compiled 40 objects of which only 26
 worked. Fewer compiling and more correct is the right trade.
@@ -158,12 +158,22 @@ failing. They need a human.
 - **76 objects do not compile.** No dominant cause left — a long tail (individual missing types,
   `conflicting declaration`, Ghidra artifacts like `stack0xffffffb4`).
 - **36 objects need the mislabelled-symbol review above.**
-- **3 objects fail the breadth gate**, and they are informative:
-  - `keaMatrix`, `keaCalcJinvMandRHS_vanilla` — the recovered object emits the class's *methods* with
-    correct mangled symbols, but not its **vtable and RTTI** (`_ZTV`, `_ZTI`, `_ZTS`). Anything that
-    constructs the class fails to link. Emitting those from C is the remaining C++ work.
-  - `MdtPartition` — links, then segfaults. A genuine recovery bug, and the first one the gate has
-    caught.
+- **37 objects need review**, 36 for the mislabelled-symbol issue above and one for a second,
+  nastier pattern found by the gate:
+
+  `MdtPartition` compiled, linked, and exported a symbol set **identical to the original** — then
+  segfaulted in `MeDictNext(dict, NULL)`. Ghidra had failed to model the function's stack frame and
+  invented a local array, routing call arguments through it at computed offsets:
+
+  ```c
+  *(MeDict **)((int)aiStack_50 + iVar8 + iVar16 + 4) = dict;
+  pMVar9 = MeDictFirst(*(void **)((int)aiStack_50 + iVar8 + iVar16 + 4));   /* garbage */
+  ```
+
+  It is the same failure as the call-arity bug, one level deeper. `recover.py` now detects the shape
+  (`aiStack_NN + var`), classifies the object REVIEW, and **deletes the object file** so broken code
+  cannot reach the validated set. Silently-wrong code is the worst outcome available; this converts
+  it into a flagged one.
 - **The precise gate is still validated on one function.** `difftest_boxbox.c` proves the method;
   scaling it has not been done.
 

@@ -265,6 +265,42 @@ outgoing call arguments it failed to model; substituting there would hand out a
 fresh block per store. Leaving them unresolved is deliberate — the object fails
 to compile and is held back, which is the honest outcome.
 
+##### Why IxSphereTriList is still held back — the real root cause
+
+The alloca was a symptom, not the cause. With it restored correctly the object
+compiles, and it still crashes a real match in the same place. The actual line is:
+
+```c
+count = (*pcVar11)();          /* Karma calling the ENGINE's KTriListGenerator */
+```
+
+**An indirect call emitted with no arguments.** Ghidra has no signature for a call
+through a function pointer, so it drops every argument; the callee then reads
+whatever is on the stack. `kd_protos.h` cannot help — it resolves calls by NAME,
+and this call has none.
+
+That is what killed it: Karma calls back into `KTriListGenerator` through
+`McdTriangleListFnPtr`, got garbage for `pos`, and died in `KME2UPosition`. It
+compiled, and it passed the substitute gate, because the scripted scenes never
+reach `Sphere × TriangleList`.
+
+Levers tried and exhausted:
+
+| lever | result |
+|---|---|
+| DWARF-derived prototypes (`gen_protos.py`) | fixes NAMED calls; cannot reach a call through a pointer |
+| "Decompiler Parameter ID" analyzer | no effect on arity |
+| Alternate simplification styles (`normalize`, `firstpass`, `register`, `paramid`) | none produce C at all; only `decompile` works |
+| Real `alloca()` instead of a fixed buffer | correct, and necessary — but not the cause |
+
+What remains is a Ghidra **call-site signature override**
+(`HighFunctionDBUtil.writeOverride`) applied per indirect call site, or hand
+reconstruction of the argument list from the assembly. Both are per-site work.
+Only 2 objects hit this, so the blast radius is small — but they are the two that
+carry most of the game's collision traffic.
+
+`recover.py` detects the shape and holds such objects back.
+
 ##### The old alloca note
 
 That error marks a VARIABLE-LENGTH stack allocation:

@@ -224,6 +224,33 @@ def materialise_alloca_frame(body, fname):
         body = re.sub(r'(=\s*\([^()]*\)\s*)\(\s*&stack0x([0-9a-f]{8})\s*\+\s*(\w+)\s*\)',
                       sub_alloca, body)
 
+    if n:
+        # After the real alloca is restored, every REMAINING reference of the
+        # form `<base> + negVar` is outgoing-argument scratch: Ghidra renders a
+        # push as a store to the shifted frame and the matching read as a load
+        # from the same place. Store and load pair up, so the semantics are
+        # already right — the address just has to be valid and consistent.
+        #
+        # `negVar` is the (negative) alloca size, so keeping it would index far
+        # outside the local it is added to. Dropping it collapses each slot onto
+        # its own base local, which preserves the pairing exactly. This is only
+        # safe BECAUSE the alloca is now a separate real allocation and can no
+        # longer alias these slots.
+        for var in neg:
+            body = re.sub(r'\s*\+\s*' + re.escape(var) + r'\b(?=\s*[\)\,])', '', body)
+            body = re.sub(r'\(int\)(&?\w+)\s*\+\s*' + re.escape(var) + r'\b',
+                          r'(int)\1', body)
+        # Any stack0xNNNN still standing is a scratch slot with no named local
+        # behind it; give it one.
+        leftover = sorted(set(STACK_SYM.findall(body)))
+        if leftover:
+            decls = [f'    void *kd_argslot_{h}[2];' for h in leftover]
+            body = STACK_SYM.sub(lambda m: f'(*kd_argslot_{m.group(1)})', body)
+            brace = body.find('\n{')
+            if brace >= 0:
+                body = (body[:brace + 2] + '\n' + '\n'.join(decls) + '\n'
+                        + body[brace + 2:])
+
     return body, n
 
 

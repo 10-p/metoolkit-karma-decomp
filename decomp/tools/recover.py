@@ -96,6 +96,19 @@ def main():
     # Any function needing it is REVIEW.
     GHIDRA_ALLOCA_FRAME = re.compile(r'\bkd_frame_top_\b')
 
+    # An indirect call emitted with NO arguments: `count = (*pcVar11)();`
+    #
+    # Ghidra has no signature for a call through a function pointer, so it drops
+    # every argument. The callee then reads whatever happens to be on the stack.
+    # Prototypes cannot fix this — kd_protos.h resolves calls by NAME, and this
+    # call has none.
+    #
+    # This is what actually crashed IxSphereTriList: Karma calls the engine's own
+    # KTriListGenerator through McdTriangleListFnPtr, got garbage for `pos`, and
+    # died in KME2UPosition. It compiled, and it passed the substitute gate,
+    # because the scripted scenes never reach Sphere x TriangleList.
+    GHIDRA_ARGLESS_INDIRECT = re.compile(r'\(\*\w+\)\(\)')
+
     rows, counts = [], {'OK': 0, 'TODO': 0, 'REVIEW': 0, 'FAIL': 0, 'SKIP': 0}
     for obj in objs:
         base = os.path.basename(obj)[:-2]
@@ -173,6 +186,14 @@ def main():
         src = open(csrc, errors='ignore').read()
         nguess = len(GHIDRA_STACK_GUESS.findall(src))
         nalloca = len(GHIDRA_ALLOCA_FRAME.findall(src))
+        nind = len(GHIDRA_ARGLESS_INDIRECT.findall(src))
+        if nind:
+            os.unlink(o)
+            rows.append((archive, base, 'REVIEW',
+                         f'{nind} indirect call(s) emitted with no arguments — '
+                         f'Ghidra had no signature for the function pointer'))
+            counts['REVIEW'] += 1
+            continue
         if nalloca and not nguess:
             os.unlink(o)
             rows.append((archive, base, 'REVIEW',

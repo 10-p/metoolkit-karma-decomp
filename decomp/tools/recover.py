@@ -109,6 +109,20 @@ def main():
     # because the scripted scenes never reach Sphere x TriangleList.
     GHIDRA_ARGLESS_INDIRECT = re.compile(r'\(\*\w+\)\(\)')
 
+    # `kd_argslot_` marks a frame this pipeline RECONSTRUCTED by inference:
+    # Ghidra lost the stack pointer after a variable-length allocation, and the
+    # outgoing-argument slots were collapsed back onto their base locals.
+    #
+    # That reconstruction can be textually perfect and still wrong. IxSphereTriList
+    # is the proof: with a Ghidra call-site signature override its
+    # McdTriangleListFnPtr call regained all five arguments, every store pairs
+    # with its load, and it STILL segfaults in a live match. Something about the
+    # frame is off in a way reading the C does not reveal.
+    #
+    # So a reconstructed frame is a hypothesis, not a result. It stays out of the
+    # validated set until a real match proves it.
+    GHIDRA_RECONSTRUCTED_FRAME = re.compile(r'\bkd_argslot_\w+\b')
+
     rows, counts = [], {'OK': 0, 'TODO': 0, 'REVIEW': 0, 'FAIL': 0, 'SKIP': 0}
     for obj in objs:
         base = os.path.basename(obj)[:-2]
@@ -186,6 +200,13 @@ def main():
         src = open(csrc, errors='ignore').read()
         nguess = len(GHIDRA_STACK_GUESS.findall(src))
         nalloca = len(GHIDRA_ALLOCA_FRAME.findall(src))
+        nrecon = len(GHIDRA_RECONSTRUCTED_FRAME.findall(src))
+        if nrecon:
+            os.unlink(o)
+            rows.append((archive, base, 'REVIEW',
+                         'frame reconstructed by inference — unproven in a real match'))
+            counts['REVIEW'] += 1
+            continue
         nind = len(GHIDRA_ARGLESS_INDIRECT.findall(src))
         if nind:
             os.unlink(o)

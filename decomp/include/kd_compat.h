@@ -97,14 +97,10 @@ typedef double              longdouble;
    is correct for both kinds of site while void is correct for only one. */
 typedef int code();
 
-/* Backing size for Ghidra's `stack0xNNNN` pseudo-symbols, which stand in for a
-   variable-length stack allocation the decompiler could not model. The original
-   sized these by triangle or contact count with no fixed cap; this is a cap.
-   64 KB is far above anything a single collision query allocates (McdBatch caps
-   contacts per pair well below that), but it IS an assumption — if a recovered
-   function ever writes past it, the shadow harness will show divergence rather
-   than the original's silent success. */
-#define KD_ALLOCA_FRAME 65536
+/* Variable-length stack allocations are restored as real alloca() calls; see
+   materialise_alloca_frame() in tools/ghidra_clean.py for why a fixed-size
+   buffer was the wrong answer. */
+#include <alloca.h>
 
 /* ---- calling-convention annotations ------------------------------------
     Ghidra tags recovered C++ methods with MSVC's `__thiscall`. On GCC's i386

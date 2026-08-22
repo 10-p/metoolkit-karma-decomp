@@ -172,40 +172,59 @@ STACK_SYM = re.compile(r'\bstack0x([0-9a-f]{8})\b')
 
 
 def materialise_alloca_frame(body, fname):
-    """Give Ghidra's `stack0xNNNN` pseudo-symbols a real backing buffer.
+    """Restore a variable-length stack allocation as a real alloca().
 
-    These appear where the original used a VARIABLE-LENGTH stack allocation:
+    The shipped code does exactly what alloca does, and the assembly says so
+    plainly (McdSphereTriangleListIntersect):
 
-        iVar15 = -((int)count * 0x18 + 0xfU & 0xfffffff0);   /* round up, negate */
-        ptr    = (McdGeometryID)(&stack0xfffffeb4 + iVar15); /* sp -= size      */
+        mov 0x28(%ecx),%edx        ; count = geom->maxTriangles
+        lea (%edx,%edx,2),%eax     ; x3
+        lea 0xf(,%eax,8),%edx      ; x8  -> count*24 + 15
+        and $0xfffffff0,%edx       ; round up to 16
+        sub %edx,%esp              ; alloca(count * 24)
 
-    Ghidra cannot model a frame whose size changes at runtime, so it names the
-    stack location instead of allocating it, and the result does not compile.
-    The addresses are meaningful RELATIVE to each other, so one buffer plus a
-    per-symbol offset reproduces the layout exactly.
+    Ghidra renders it as a negative size plus a named stack address:
 
-    The buffer is a local, so it is per-invocation like the original. Its size is
-    a cap the original did not have — see KD_ALLOCA_FRAME in kd_compat.h."""
-    syms = sorted(set(STACK_SYM.findall(body)))
-    if not syms:
-        return body, 0
-    vals = {h: int(h, 16) - (1 << 32) if int(h, 16) >= (1 << 31) else int(h, 16)
-            for h in syms}
-    base = max(vals.values())
-    decls = ['    char kd_frame_[KD_ALLOCA_FRAME];',
-             '    char *const kd_frame_top_ = kd_frame_ + KD_ALLOCA_FRAME;']
-    for h in syms:
-        d = vals[h] - base
-        decls.append(f'    char *const kd_stack_{h} = kd_frame_top_ '
-                     f'{"+" if d >= 0 else "-"} {abs(d)};')
-    body = STACK_SYM.sub(lambda m: f'(*kd_stack_{m.group(1)})', body)
-    # `&stack0xNNNN` was an address-of; after substitution that reads
-    # `&(*kd_stack_N)`, which is just the pointer. Leave it: it is correct C and
-    # keeps the diff to Ghidra's output minimal.
-    brace = body.find('\n{')
-    if brace < 0:
-        return body, 0
-    return body[:brace + 2] + '\n' + '\n'.join(decls) + '\n' + body[brace + 2:], len(syms)
+        iVar15 = -((int)EXPR * 0x18 + 0xfU & 0xfffffff0);
+        dest   = (T)(&stack0xfffffeb4 + iVar15);
+
+    An earlier attempt here substituted a fixed 64 KB buffer. That was wrong in
+    the worst way: it COMPILED, passed the substitute gate, and then segfaulted
+    on its first call in a real match, handing a wild pointer to the engine's own
+    KTriListGenerator callback. A real alloca reproduces the original exactly and
+    needs no size assumption.
+
+    Any `stack0xNNNN` NOT part of this idiom is left alone. Those are references
+    into the shifted frame — usually outgoing call arguments Ghidra failed to
+    model — and inventing storage for them would repeat the same mistake.
+    recover.py keeps such objects out of the validated set."""
+    # `dest = (T)(&stack0xHHHH + negVar);` where negVar = -(EXPR * K + 15 & ~15)
+    neg = {}
+    for m in re.finditer(r'(\w+)\s*=\s*-\(\(int\)(.+?)\s*\*\s*(0x[0-9a-f]+|\d+)'
+                         r'\s*\+\s*0xfU?\s*&\s*0xfffffff0\)\s*;', body):
+        neg[m.group(1)] = (m.group(2).strip(), m.group(3))
+
+    n = 0
+    if neg:
+        def sub_alloca(m):
+            nonlocal n
+            var = m.group(3)
+            if var not in neg:
+                return m.group(0)
+            expr, mult = neg[var]
+            n += 1
+            return f'{m.group(1)}((char *)alloca((size_t)({expr}) * {mult}))'
+        # ONLY the defining use: the alloca'd pointer appearing as the RHS of an
+        # assignment, i.e. `dest = (T)(&stack0xH + negVar);`. Other
+        # `&stack0xH + negVar` sites are STORES into the shifted frame — Ghidra's
+        # rendering of outgoing call arguments — and substituting an alloca there
+        # would hand out a fresh block per store, which is nonsense. Leaving them
+        # unresolved is deliberate: the object then fails to compile and
+        # recover.py holds it back, which is the honest outcome.
+        body = re.sub(r'(=\s*\([^()]*\)\s*)\(\s*&stack0x([0-9a-f]{8})\s*\+\s*(\w+)\s*\)',
+                      sub_alloca, body)
+
+    return body, n
 
 
 def signature_of(body):

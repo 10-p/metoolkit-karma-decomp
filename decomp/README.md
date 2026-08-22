@@ -231,7 +231,41 @@ discrete field.
 And the priority is unambiguous: **two objects carry 89% of all collision traffic**, and both failed
 on the same Ghidra error — `stack0xNNNNNNNN undeclared`.
 
-##### The alloca pattern — 89% of traffic, one cause
+##### The alloca pattern — and the wrong fix for it
+
+Two objects carry 89% of collision traffic and both failed on the same Ghidra
+error, `stack0xNNNNNNNN undeclared`. It marks a variable-length stack allocation.
+The assembly says exactly what it is:
+
+```
+mov 0x28(%ecx),%edx        ; count = geom->maxTriangles
+lea (%edx,%edx,2),%eax     ; x3
+lea 0xf(,%eax,8),%edx      ; x8  -> count*24 + 15
+and $0xfffffff0,%edx       ; round up to 16
+sub %edx,%esp              ; alloca(count * 24)
+```
+
+**The first fix was a fixed 64 KB buffer, and it was wrong in the worst possible
+way.** It compiled. It passed the substitute gate bit-identically — because the
+scripted scenes never exercise `Sphere × TriangleList`. Then a real match
+segfaulted on the *first* call into recovered code, handing a wild pointer
+straight into the engine's own `KTriListGenerator` callback:
+
+```
+rec_McdSphereTriangleListIntersect+0x205
+  -> KTriListGenerator(McdModelPair*, McdUserTriangle*, ...)
+     -> KME2UPosition(FVector*, const float*)   <- SIGSEGV
+```
+
+A turned-into-a-crash compile error is worse than a compile error. The fix now
+emits a **real `alloca()`**, which reproduces the original exactly and needs no
+size assumption — and only at the *defining* use, `dest = (T)(&stack0xH + negVar)`.
+Other `stack0xH` sites are stores into the shifted frame, Ghidra's rendering of
+outgoing call arguments it failed to model; substituting there would hand out a
+fresh block per store. Leaving them unresolved is deliberate — the object fails
+to compile and is held back, which is the honest outcome.
+
+##### The old alloca note
 
 That error marks a VARIABLE-LENGTH stack allocation:
 

@@ -177,7 +177,54 @@ failing. They need a human.
 - **The precise gate is still validated on one function.** `difftest_boxbox.c` proves the method;
   scaling it has not been done.
 
-#### Three assets not yet used
+#### Shadow testing against the real game
+
+`test/kd_shadow.c` + `test/make_shadow_metoolkit.sh` + `test/run_map.sh` run UT2004 headless under
+Xvfb with a shadow of the recovered code. Every collision call in real gameplay becomes a test case;
+the engine only ever consumes the ORIGINAL's result, so behaviour is unchanged.
+
+**Hook the registration, not the functions.** The first design renamed each intersection function to
+`orig_*` and defined a replacement under the original name. It never ran — nothing calls
+`McdBoxBoxIntersect` by name. Karma installs it as a function POINTER in an interaction table, so
+renaming the symbol also rewrote the table's own reference. Interposing
+`McdFrameworkSetInteractions` instead sees every `(geometry type, geometry type)` pair the engine
+installs: one hook for the whole collision matrix, no per-function code, and new pairs are picked up
+automatically as more objects are recovered.
+
+Recovered objects are staged with **every** defined symbol prefixed `rec_`, not just the one under
+test — otherwise their siblings collide with the shipped archive and the linker silently picks one of
+the two, which would mean measuring a half-recovered build.
+
+##### Result: the census is the finding
+
+`test-karma-1`, 150 s (10 KActors, 2 hinges, a cone limit, a ball-socket joint, an ONSRV):
+
+| pair | calls | identical | fp-only | **structural diffs** | worst delta |
+|---|---:|---:|---:|---:|---:|
+| Sphere × Sphere *(recovered)* | 121,691 | 92,365 | 29,326 | **0** | 5.96e-08 |
+| Sphere × TriangleList | 935,762 | — | — | — | *not recovered* |
+
+`McdSphereSphereIntersect` is validated on 121k real inputs with zero divergence in any discrete
+field and a worst numeric delta of one ULP of f32.
+
+**37 interaction pairs are registered; the map exercises two.** Sphere × TriangleList alone is 88% of
+all calls. `IxBoxBox` — the object polished first, proven on 300k *synthetic* pairs — is called
+**zero** times. Effort should follow the census, not the alphabet: `IxSphereTriList` is the next
+object to recover, not whatever comes next in the archive.
+
+##### Open: getting bots into a headless match
+
+`test-karma-1` works because its KActors fall under gravity with no agent involved. `ONS-Torlan` and
+`DM-BB-VehicleWar` load correctly, with the right gametype, and then **never tick at all** — 0 Octree
+events against 598,571 for `test-karma-1`. One player joins, no bots, so the match presumably never
+leaves its pre-match state. `?NumBots`, `?MinPlayers`, `?bAutoNumBots=False` and `?QuickStart` made
+no difference.
+
+Until that is solved, vehicle and ragdoll paths (cylinder, sphyl, convex mesh) stay unexercised — and
+those are exactly the ones the census says matter.
+
+#### Three assets, one still unused
+
 
 1. **UT2004 itself is a correct, human-written caller.** `Source/Engine/Src/Karma*.cpp` and `K*.cpp`
    use ~328 Karma API functions with the right types and conventions — better evidence of intended

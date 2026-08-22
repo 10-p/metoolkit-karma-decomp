@@ -24,8 +24,8 @@ import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from dwarf_structs import (parse, emit, declarator, REF_RE,  # noqa: E402
-                           SYSTEM_TYPES)
+from dwarf_structs import (parse, emit, declarator, rtti_bases,  # noqa: E402
+                           REF_RE, SYSTEM_TYPES)
 
 
 def public_type_names(include_dir):
@@ -266,6 +266,32 @@ def main():
         _, die, dies, obj = best[n]
         out.append(f'/* from {os.path.basename(obj)} */')
         out.append(emit(dies, die))
+        out.append('')
+
+    # ---- C++ classes with no DWARF layout ---------------------------------
+    # A derived class that adds no data members gets no member list of its own,
+    # and for Karma's "_vanilla" implementation classes the defining CU is not
+    # in the SDK at all. The Itanium ABI's typeinfo still records the base, so
+    # the inheritance graph is recoverable even when the layout is not.
+    inherit = {}
+    for obj in objs:
+        inherit.update(rtti_bases(obj))
+    aliased = [(d, b) for d, b in sorted(inherit.items())
+               if d not in best and b in best]
+    if aliased:
+        out.append('/* ---- polymorphic classes with no DWARF layout ---- */')
+        out.append('/*')
+        out.append(' * Each of these has a vtable but no member list. Its base is read from')
+        out.append(' * RTTI (the _ZTI relocation), and it is aliased to that base on the')
+        out.append(' * assumption that it adds no data members — true for an override-only')
+        out.append(' * subclass, which is what these are.')
+        out.append(' *')
+        out.append(' * TO VERIFY: the highest field offset the class\'s own methods touch must')
+        out.append(' * be inside the base. If a recovered method reads past sizeof(base), the')
+        out.append(' * assumption is wrong for that class and it needs a hand-written layout.')
+        out.append(' */')
+        for d, b in aliased:
+            out.append(f'typedef {b} {d};   /* base from RTTI */')
         out.append('')
 
     out.append('#endif /* KD_TYPES_H */')

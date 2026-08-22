@@ -19,7 +19,15 @@ public class DumpDecomp extends GhidraScript {
         FunctionIterator it = currentProgram.getFunctionManager().getFunctions(true);
         while (it.hasNext()) {
             Function f = it.next();
-            if (f.isExternal() || f.getBody().getNumAddresses() <= 8) continue; // skip PLT-ish stubs
+            // Skip only Ghidra's synthetic import placeholders, NOT small real
+            // functions. An earlier size test (<= 8 addresses) also dropped
+            // genuine tiny functions, which then showed up downstream as
+            // "undeclared identifier" errors (e.g. _McdGeometryDeinit).
+            if (f.isExternal() || f.isThunk()) continue;
+            ghidra.program.model.mem.MemoryBlock blk =
+                currentProgram.getMemory().getBlock(f.getEntryPoint());
+            if (blk == null || !blk.isInitialized()
+                || blk.getName().toUpperCase().contains("EXTERNAL")) continue;
             DecompileResults r = di.decompileFunction(f, 180, monitor);
             boolean ok = r != null && r.decompileCompleted() && r.getDecompiledFunction()!=null;
             String c = ok ? r.getDecompiledFunction().getC() : "";

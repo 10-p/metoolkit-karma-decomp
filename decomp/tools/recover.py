@@ -46,6 +46,7 @@ def main():
     ap.add_argument('--metoolkit', required=True, help='metoolkit root (include/ + lib.*)')
     ap.add_argument('--only', help='substring filter on the archive directory name')
     ap.add_argument('--build-dir', default='/tmp/kd_build')
+    ap.add_argument('--protos', help='kd_protos.h — gives C++-mangled imports real signatures')
     args = ap.parse_args()
 
     here = os.path.dirname(os.path.abspath(__file__))
@@ -61,7 +62,14 @@ def main():
     if args.only:
         objs = [o for o in objs if args.only in o]
 
-    rows, counts = [], {'OK': 0, 'TODO': 0, 'FAIL': 0, 'SKIP': 0}
+    # Ghidra sometimes resolves a relocation-with-addend against a DATA symbol to
+    # the wrong name, and emits an indirect call through it:
+    #     (*_McdGeometryDeinit)(0x1c, 0x10)      <- actually an allocator call
+    # The call target is simply wrong. That is a semantic defect, not a missing
+    # declaration, so it must not be papered over — flag it for a human.
+    MISLABELLED_CALL = re.compile(r"error: ['\u2018]_(\w+)['\u2019] undeclared")
+
+    rows, counts = [], {'OK': 0, 'TODO': 0, 'REVIEW': 0, 'FAIL': 0, 'SKIP': 0}
     for obj in objs:
         base = os.path.basename(obj)[:-2]
         archive = os.path.basename(os.path.dirname(obj))
@@ -78,13 +86,19 @@ def main():
         os.makedirs(outdir, exist_ok=True)
         prelude = os.path.join(outdir, base + '.prelude.h')
         if not os.path.exists(prelude):          # never clobber hand-edited work
-            r = run([sys.executable, os.path.join(here, 'gen_prelude.py'), obj,
-                     '--include-dir', inc, '-o', prelude])
+            cmd = [sys.executable, os.path.join(here, 'gen_prelude.py'), obj,
+                   '--include-dir', inc, '--dump', dump, '-o', prelude]
+            if args.protos:
+                cmd += ['--protos', args.protos]
+            r = run(cmd)
             if r.returncode != 0:
                 rows.append((archive, base, 'FAIL', 'gen_prelude: ' + r.stderr.strip()[:90]))
                 counts['FAIL'] += 1
                 continue
-        todos = open(prelude, errors='ignore').read().count('TODO')
+        # Count only real markers. The generated file's own header comment
+        # contains the word TODO, which otherwise makes every object look as if
+        # it needs a human and pins the OK count at zero.
+        todos = open(prelude, errors='ignore').read().count('/* TODO')
 
         csrc = os.path.join(outdir, base + '.c')
         drops = []
@@ -101,12 +115,24 @@ def main():
         o = os.path.join(args.build_dir, base + '.o')
         if os.path.exists(o):
             os.unlink(o)                          # a stale object must never look like a pass
+        # Decompiled code has an EXACT ABI but only approximate types: Ghidra
+        # recovers the type a value is used as, which is often not the type the
+        # public header names for it. Same layout, same calling convention,
+        # different spelling. These two diagnostics are about spelling, so they
+        # are downgraded here rather than fought one cast at a time. Both are
+        # safe only because every target is 32-bit-pointer (i386 and wasm32).
         r = run(['gcc', '-m32', '-O2', '-fno-pic', '-std=gnu99', '-w',
-                 '-Wno-int-conversion', '-DLINUX', '-c', '-o', o, csrc] + iflags)
+                 '-Wno-int-conversion', '-Wno-incompatible-pointer-types',
+                 '-DLINUX', '-c', '-o', o, csrc] + iflags)
         if not os.path.exists(o):
             first = next((l for l in r.stderr.splitlines() if ' error' in l), r.stderr[:90])
-            rows.append((archive, base, 'FAIL', first.strip()[:110]))
-            counts['FAIL'] += 1
+            if MISLABELLED_CALL.search(first):
+                rows.append((archive, base, 'REVIEW',
+                             'indirect call through a mislabelled symbol: ' + first.strip()[:70]))
+                counts['REVIEW'] += 1
+            else:
+                rows.append((archive, base, 'FAIL', first.strip()[:110]))
+                counts['FAIL'] += 1
             continue
 
         status = 'TODO' if todos else 'OK'
@@ -119,13 +145,15 @@ def main():
     for archive, base, status, note in rows:
         if archive != cur:
             print(f'\n{archive}'); cur = archive
-        mark = {'OK': '  ok  ', 'TODO': ' todo ', 'FAIL': ' FAIL ', 'SKIP': ' skip '}[status]
+        mark = {'OK': '  ok  ', 'TODO': ' todo ', 'REVIEW': 'review',
+                'FAIL': ' FAIL ', 'SKIP': ' skip '}[status]
         print(f'  [{mark}] {base:<{width}}  {note}')
 
     total = sum(counts.values())
     print(f'\n{"="*66}')
     print(f'  compiled, no human input needed : {counts["OK"]:4d} / {total}')
     print(f'  compiled, prelude has TODOs     : {counts["TODO"]:4d} / {total}')
+    print(f'  needs human review (bad symbol) : {counts["REVIEW"]:4d} / {total}')
     print(f'  did not compile                 : {counts["FAIL"]:4d} / {total}')
     print(f'  skipped (no dump)               : {counts["SKIP"]:4d} / {total}')
     ok = counts['OK'] + counts['TODO']

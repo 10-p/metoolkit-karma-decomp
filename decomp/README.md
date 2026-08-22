@@ -20,7 +20,7 @@ stack leaks totalling 235 bytes.
 |---|---|
 | Milestone 1 — one object end to end | ✅ **done** (`McdPrimitives/IxBoxBox`) |
 | Milestone 2 — `MdtKea` C++/vtable spike | ✅ **done — no blocker** |
-| Milestone 3 — scale validation | 🔶 **in progress** — batch driver + type db done; 15% of objects compile unattended |
+| Milestone 3 — scale validation | 🔶 **advanced, not finished** — 27% compile, 26/40 pass the breadth gate |
 | Milestone 4 — the grind (~2,100 functions) | ⬜ |
 | Milestone 5 — wasm + Android bring-up | ⬜ |
 
@@ -77,44 +77,82 @@ Two independent cross-checks corroborate the recovery, which is what makes it tr
   `"NC"` — and those labels land on exactly the DWARF members at `+0xc`, `+0x10`, `+0x18`, `+0x1c`,
   `+0x20`, `+0x2c`, `+0x30`. The original authors annotated their own layout.
 
-### Milestone 3 status — batch measurement (in progress)
+### Milestone 3 status — batch recovery + breadth gate (advanced, not finished)
 
-`tools/recover.py` runs the whole recipe over every object and classifies the outcome. First honest
-numbers, over the 96 hot-path objects that have a Ghidra dump:
+`tools/recover.py` runs the whole recipe over every object; `test/substitute_test.sh` then swaps each
+recovered object into the link and runs a physics scene. Both halves matter, because **compiling is
+not the same as working**.
 
 ```
-compiled, prelude has TODOs     :   14 / 96
-did not compile                 :   82 / 96
--> 14.6% of attempted objects compile
+compile:      no human input needed :  38 / 148        (was 14/96)
+              prelude has TODOs     :   2 / 148
+              needs human review    :  36 / 148        (see below)
+              did not compile       :  72 / 148
+              -> 27.0% compile      (was 14.6%)
+
+substitute:   ran the scene cleanly :  26 / 40
+              crashed / NaN / short :  14 / 40
 ```
 
-**That is far worse than `IxBoxBox` alone suggested, and the gap is the point of running the batch.**
-But the 82 failures are not 82 distinct problems — they cluster into a handful of systematic causes,
-and each tooling fix moves the whole frontier at once. Fixing function-name deduplication and adding
-asm labels for exported functions took the "conflicting declaration" class from **17 objects to 1**.
+**35% of the objects that compile are still broken.** That is the single most useful number here, and
+it is why the breadth gate exists at all.
 
-Current first-error distribution across the 82:
+The `IxBoxBox` acceptance gate still passes after every change above (91.14% bit-identical,
+0 structural differences), regenerated end-to-end through the new pipeline.
 
-| count | cause | nature |
-|---:|---|---|
-| 29 | missing type declaration | mostly C++ derived classes with no DWARF layout (`keaFunctions_Vanilla`, `keaMatrix_pcSparse_vanilla`) — a bounded set, hand-written once like `keaMatrix.h` |
-| 15 | call-site arity vs header prototype | Ghidra's inferred arity disagrees with the public header |
-| 14 | undeclared identifier | header macros/inlines Ghidra saw as symbols (`_McdGeometryDeinit`) |
-| 14 | missing function declaration | an unfilled prelude TODO |
-| 10 | misc | genuine Ghidra artifacts (`stack0xffffffb4`), `fcos`, redefinitions |
+#### What moved the compile rate
 
-The two decisions this drove, both now in the tooling:
+Each fix shifted the whole batch at once, which is why batching was worth it over hand-fixing:
 
-- **Exported functions get an asm label.** Ghidra recovers the parameter types the *code* uses, which
-  often isn't how the public header spells them — `McdBoxGetXYAABB` really takes an `lsTransform *`,
-  but `McdBox.h` declares `MeMatrix4`. Same 64 bytes, same ABI, incompatible C types. Defining it as
-  `kd_McdBoxGetXYAABB` with `__asm__("McdBoxGetXYAABB")` emits the identical symbol and sidesteps the
-  C type system entirely. Only the ABI has to match, and it does.
-- **A stale object must never look like a pass.** `recover.py` deletes the output object before
-  compiling. This bit twice during Milestone 3: a failed rebuild left the previous `.o` in place and
-  the acceptance gate happily re-reported a PASS for code that no longer compiled.
+| fix | effect |
+|---|---|
+| deduplicate functions + asm labels for exports | "conflicting declaration" 17 objects → 1 |
+| feed Ghidra DWARF-derived prototypes | "missing function declaration" 28 → 7 |
+| `kd_protos.h` for plain imports, data decls in `header_declaring` | closed the `BaseConstraint*` / `MeMemoryAPI` TODOs |
+| downgrade pointer/int type-spelling diagnostics | +18 objects |
 
-## The recipe
+**Giving Ghidra prototypes was the important one, and not for the reason expected.** Without a
+signature for an imported function, Ghidra guesses the arity from the call site and gets it wrong —
+in `IxBoxTriList` it decided `McdModelGetGeometry` takes no arguments and emitted the pushed
+arguments as writes to unrelated stack variables:
+
+```c
+pMStack_25c = p->model1;
+fStack_260  = 9.18817e-41;              /* a pointer misread as a denormal float */
+boxgeom = (McdBoxID)McdModelGetGeometry();
+```
+
+That is a correctness defect, not a cosmetic one. Enabling "Decompiler Parameter ID" does not fix it.
+Feeding metoolkit's own headers to Ghidra's C parser does not work either — they are layered with
+`MEAPI`/`MEPUBLIC` macros it rejects. So `tools/gen_protos.py` generates 2218 prototypes from the
+same DWARF instead, with simplified types, and `gscripts/ParseKarmaHeaders.java` applies them. After
+that the call reads `McdModelGetGeometry(p->model1)` — and the spurious `longdouble` disappears too,
+because the return type is finally known.
+
+#### The REVIEW category — do not paper over this one
+
+36 objects contain an indirect call through a symbol Ghidra resolved to the **wrong name**:
+
+```c
+pMVar2 = (McdCylinderID)(*_McdGeometryDeinit)(0x1c, 0x10);   /* size, alignment */
+```
+
+`McdGeometryDeinit` is a real function, but those arguments are obviously an allocator call — Ghidra
+mis-resolved a relocation-with-addend against a data symbol. Declaring the symbol to make it compile
+would produce silently wrong code, so `recover.py` classifies these separately and leaves them
+failing. They need a human.
+
+#### What is still open
+
+- **72 objects do not compile.** No dominant cause left — it is now a long tail (missing individual
+  types, `conflicting declaration`, Ghidra artifacts like `stack0xffffffb4`).
+- **36 objects need the mislabelled-symbol review above.**
+- **14 of 40 compiling objects fail the breadth gate.**
+- **The precise gate is still validated on one function.** `difftest_boxbox.c` proves the method;
+  scaling it — auto-driving from DWARF signatures, and capture/replay for deep pointer graphs — has
+  not been done.
+
+## The recipe## The recipe
 
 Per object, three automated steps and one small manual one.
 

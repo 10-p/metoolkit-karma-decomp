@@ -88,9 +88,50 @@ def header_declaring(name, include_dir):
                 txt = open(os.path.join(root, f), errors='ignore').read()
             except OSError:
                 continue
-            if re.search(r'\b' + re.escape(name) + r'\s*\(', txt):
+            # Match a data declaration too, not just a function: MeMemoryAPI is
+            # `extern MeMemoryAPIStruct MeMemoryAPI;` and an anchor on `NAME(`
+            # misses it entirely, which then reads as an undeclared import.
+            if re.search(r'\b' + re.escape(name) + r'\s*[;(\[]', txt):
                 return f
     return None
+
+
+CTOR_RE = re.compile(r'void\s+__static_initialization_and_destruction_0\b.*?\n\{(.*?)\n\}',
+                     re.S)
+STORE_RE = re.compile(r'^\s*([A-Za-z_]\w*)((?:\.\w+|\[\d+\])*)\s*=\s*([^;]+);\s*$')
+
+
+def ctor_initialisers(dump_path):
+    """Recover .bss statics' values from the C++ static constructor.
+
+    gcc puts a file-scope object with a non-trivial initialiser in .bss and
+    fills it at load time from __static_initialization_and_destruction_0, so the
+    section bytes are all zero and the real values only exist as stores in that
+    function. Returns {name: [(subscript, value), ...]} plus a flag for anything
+    that is not a plain constant store."""
+    try:
+        txt = open(dump_path, errors='ignore').read()
+    except OSError:
+        return {}, False
+    m = CTOR_RE.search(txt)
+    if not m:
+        return {}, False
+    out, messy = {}, False
+    for line in m.group(1).split('\n'):
+        line = line.strip()
+        if not line or line.startswith(('if', '}', '{', 'return', '/*')):
+            continue
+        sm = STORE_RE.match(line)
+        if not sm:
+            messy = True
+            continue
+        name, subscript, value = sm.group(1), sm.group(2), sm.group(3).strip()
+        # Only plain numeric constants are safe to turn into an initialiser.
+        if not re.fullmatch(r'-?[0-9.]+(?:[eE][-+]?\d+)?[fF]?', value):
+            messy = True
+            continue
+        out.setdefault(name, []).append((subscript, value))
+    return out, messy
 
 
 def render_value(data, off, size):
@@ -117,10 +158,22 @@ def main():
     ap.add_argument('object')
     ap.add_argument('-o', '--output')
     ap.add_argument('--include-dir', help='metoolkit include/ root, for #include hints')
+    ap.add_argument('--dump', help='Ghidra .c dump, used to recover .bss statics '
+                                   'from the C++ static constructor')
+    ap.add_argument('--protos', help='kd_protos.h from tools/gen_protos.py, used to '
+                                     'give C++-mangled imports a real signature')
     args = ap.parse_args()
 
     obj = args.object
     rows = nm_rows(obj)
+    ctor_inits, ctor_messy = ctor_initialisers(args.dump) if args.dump else ({}, False)
+    protos = {}
+    if args.protos:
+        # `float Foo(void *, int);` -> protos['Foo'] = the whole line
+        for line in open(args.protos, errors='ignore'):
+            m = re.match(r'\s*([\w \*]+?)\s*\b([A-Za-z_]\w*)\s*\(', line)
+            if m:
+                protos[m.group(2)] = line.strip()
     out = []
     w = out.append
 
@@ -133,6 +186,7 @@ def main():
 
     # ---- imports ----------------------------------------------------------
     imports = undefined(obj)
+    _ = protos  # parsed above; used for both mangled and plain imports
     hdrs = set()
     decls = []
     for name in imports:
@@ -157,11 +211,23 @@ def main():
         for name, dem, mangled in decls:
             w(f'/* {dem} */')
             if mangled:
-                w('/* TODO: fill in the C signature matching the demangled form above. */')
-                w(f'extern int {re.sub(r"[^A-Za-z0-9_]", "_", dem.split("(")[0])}()')
-                w(f'    KD_MANGLED("{name}");')
+                # The demangled form is `Ns::Foo(int, float&)`; the DWARF-derived
+                # prototype database is keyed on the bare name.
+                short = re.sub(r'.*::', '', dem.split('(')[0]).strip()
+                proto = protos.get(short)
+                if proto:
+                    w(f'extern {proto[:-1].strip()}')
+                    w(f'    KD_MANGLED("{name}");')
+                else:
+                    w('/* TODO: fill in the C signature matching the demangled form above. */')
+                    w(f'extern int {re.sub(r"[^A-Za-z0-9_]", "_", dem.split("(")[0])}()')
+                    w(f'    KD_MANGLED("{name}");')
             else:
-                w(f'/* TODO: declare {name} */')
+                proto = protos.get(name)
+                if proto:
+                    w(f'extern {proto[:-1].strip()};')
+                else:
+                    w(f'/* TODO: declare {name} */')
             w('')
 
     # ---- file-scope statics ----------------------------------------------
@@ -170,6 +236,9 @@ def main():
     statics = [r for r in rows if r[2] in 'drb']
     if statics:
         w('/* --- file-scope statics --- */')
+        if ctor_messy:
+            w('/* NOTE: the static constructor contains stores the tool could not read as')
+            w(' * plain constants. Re-check it by hand before trusting this section. */')
     for value, size, kind, name in sorted(statics, key=lambda r: (r[2], r[0])):
         sect = kind_to_section[kind]
         c_name = re.sub(r'[^A-Za-z0-9_]', '_', demangle(name))
@@ -181,9 +250,20 @@ def main():
             c_name = f'{m.group(1)}__{m.group(2)}'
         if kind == 'b':
             w(f'/* {name}  ({sect}, {size} bytes) */')
-            w('/* TODO: zero in the object — value comes from the C++ static constructor.')
-            w(' * Check __static_initialization_and_destruction_0 in the decompiled dump. */')
-            w(f'static float {c_name}[{max(1, (size or 4)) // 4}]; /* TODO: initializer */')
+            inits = ctor_inits.get(c_name) or ctor_inits.get(name)
+            n = max(1, (size or 4)) // 4
+            if inits:
+                # Stores are `Name.v[0] = -1.0;` etc; index by position.
+                vals = ['0.0f'] * n
+                for i, (_, v) in enumerate(inits[:n]):
+                    vals[i] = v if v.lower().endswith('f') else v + 'f'
+                w(f'/* recovered from __static_initialization_and_destruction_0 */')
+                w(f'static float {c_name}[{n}] = {{ ' + ', '.join(vals) + ' };')
+            else:
+                w('/* TODO: zero in the object — value comes from the C++ static constructor,')
+                w(' * which the tool could not read. Check')
+                w(' * __static_initialization_and_destruction_0 in the decompiled dump. */')
+                w(f'static float {c_name}[{n}]; /* TODO: initializer */')
             w('')
             continue
         lit, note = render_value(data.get(sect, b''), value, size or 0)

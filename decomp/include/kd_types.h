@@ -430,4 +430,18 @@ struct lsVec3 {
     MeReal v[3];                                    /* +0x0 */
 };
 
+/* ---- polymorphic classes with no DWARF layout ---- */
+/*
+ * Each of these has a vtable but no member list. Its base is read from
+ * RTTI (the _ZTI relocation), and it is aliased to that base on the
+ * assumption that it adds no data members — true for an override-only
+ * subclass, which is what these are.
+ *
+ * TO VERIFY: the highest field offset the class's own methods touch must
+ * be inside the base. If a recovered method reads past sizeof(base), the
+ * assumption is wrong for that class and it needs a hand-written layout.
+ */
+typedef keaFunctions keaFunctions_Vanilla;   /* base from RTTI */
+typedef keaMatrix_pcSparse keaMatrix_pcSparse_vanilla;   /* base from RTTI */
+
 #endif /* KD_TYPES_H */

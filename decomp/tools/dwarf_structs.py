@@ -278,3 +278,41 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+# ---------------------------------------------------------------------------
+# C++ inheritance recovered from RTTI
+# ---------------------------------------------------------------------------
+def rtti_bases(obj):
+    """{class: base} for polymorphic classes in `obj`, read from RTTI.
+
+    A derived class that adds no data members gets no DW_TAG_member list of its
+    own — gcc emits the layout only where the class is DEFINED, and for these
+    "_vanilla" implementation classes that CU may not exist at all. But the
+    Itanium ABI's typeinfo object for a single-inheritance class contains a
+    pointer to its base's typeinfo, and that relocation is right there in the
+    object. So the inheritance graph is machine-readable even when the layout
+    is not."""
+    import subprocess as _sp
+    out = _sp.run(['readelf', '-S', '--wide', obj], capture_output=True, text=True).stdout
+    bases = {}
+    for sect in re.findall(r'(\.gnu\.linkonce\.[dr]\._ZTI\S+)', out):
+        cls = sect.split('._ZTI', 1)[1]
+        rel = _sp.run(['objdump', '-r', f'--section={sect}', obj],
+                      capture_output=True, text=True).stdout
+        for line in rel.splitlines():
+            # Only relocation ROWS; the "RELOCATION RECORDS FOR [...]" header
+            # names the section itself and would match the class as its own base.
+            if not re.match(r'^[0-9a-f]{8}\s', line):
+                continue
+            m = re.search(r'_ZTI(\S+)', line)
+            if m and m.group(1) != cls:
+                bases[demangle_tag(cls)] = demangle_tag(m.group(1))
+                break
+    return bases
+
+
+def demangle_tag(mangled_len_name):
+    """`26keaMatrix_pcSparse_vanilla` -> `keaMatrix_pcSparse_vanilla`."""
+    m = re.match(r'(\d+)(.*)', mangled_len_name)
+    return m.group(2)[:int(m.group(1))] if m else mangled_len_name

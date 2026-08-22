@@ -28,6 +28,33 @@ import sys
 BANNER = re.compile(r'/\* ==== (\S+) ==== \*/')
 
 
+MEINLINE_RE = re.compile(r'\bMeINLINE\b[\s\w\*]*?\b([A-Za-z_]\w*)\s*\(', re.S)
+
+
+def header_inline_names(include_dir):
+    """Functions the public headers define as MeINLINE.
+
+    gcc 3.2 also emits an out-of-line LOCAL copy of each one it could not inline
+    away, so the same function appears in the object AND in the header. Emitting
+    our recovered copy then collides with the header's definition:
+    "redefinition of MeVector3Normalize". The header's version is the same code,
+    so drop ours and let the header win — which also means the compiler gets to
+    inline it, as originally intended."""
+    names = set()
+    if not include_dir or not os.path.isdir(include_dir):
+        return names
+    for root, _, files in os.walk(include_dir):
+        for f in files:
+            if not f.endswith('.h'):
+                continue
+            try:
+                txt = open(os.path.join(root, f), errors='ignore').read()
+            except OSError:
+                continue
+            names.update(MEINLINE_RE.findall(txt))
+    return names
+
+
 def object_symbols(obj):
     """(exported, internal, real_symbol_of) for the original object.
 
@@ -79,6 +106,28 @@ def ghidra_type_quirks(body):
     this for McdModelID / MdtContactID / MdtContactGroupID, whose typedefs
     appear in several CUs."""
     return re.sub(r'\b([A-Za-z_]\w*)_conflict\b', r'\1', body)
+
+
+ANON_CAST = re.compile(
+    r'([A-Za-z_][\w.\->\[\]]*)\s*=\s*\*\(\s*anon_\w+\s*\*\)', re.S)
+ANON_STORE = re.compile(
+    r'\*\(\s*anon_\w+\s*\*\)(\([^;]*?\))\s*=\s*([A-Za-z_][\w.\->\[\]]*)')
+
+
+def resolve_anon_types(body):
+    """Replace Ghidra's invented anonymous-aggregate type names.
+
+    Karma has several `union { void *ptr; int tag; }` members — McdContact's
+    element1/element2, McdUserTriangle's triangleData — and Ghidra names their
+    type `anon_union_4_2_<hash>_for_<field>`, which exists nowhere.
+
+    Every use is a copy to or from a member of exactly that type, so
+    __typeof__ of the other side names it precisely, with no table of hashes to
+    maintain and nothing to keep in sync."""
+    body = ANON_CAST.sub(lambda m: f'{m.group(1)} = *(__typeof__({m.group(1)}) *)', body)
+    body = ANON_STORE.sub(
+        lambda m: f'*(__typeof__({m.group(2)}) *){m.group(1)} = {m.group(2)}', body)
+    return body
 
 
 def cxx_names_to_c(body):
@@ -179,11 +228,15 @@ def main():
     ap.add_argument('--vtables', help='C++ ABI data (vtable/typeinfo/type string) from '
                                       'tools/gen_vtables.py; emitted after the forward '
                                       'declarations because the slots take method addresses')
+    ap.add_argument('--metoolkit-include',
+                    help='metoolkit include/ root; functions the headers define as '
+                         'MeINLINE are dropped, since the header already supplies them')
     ap.add_argument('--drop', action='append', default=[],
                     help='function to omit entirely (repeatable)')
     args = ap.parse_args()
 
     exported, internal, real_symbol_of = object_symbols(args.object)
+    hdr_inlines = header_inline_names(args.metoolkit_include)
     text = open(args.input, errors='ignore').read()
 
     # A Ghidra dump can contain the same name twice — typically a small import
@@ -201,7 +254,7 @@ def main():
     for name, body in by_name.items():
         if name in args.drop or name in internal or name not in exported:
             continue
-        b = cxx_names_to_c(ghidra_type_quirks(strip_comments(body).strip('\n')))
+        b = resolve_anon_types(cxx_names_to_c(ghidra_type_quirks(strip_comments(body).strip('\n'))))
         sig = signature_of(b)
         if sig is None:
             continue
@@ -224,12 +277,16 @@ def main():
 
     decls, defs, dropped = [], [], []
     n_alloca_fns = 0
+    n_inline_dropped = 0
     for name, body in by_name.items():
         if name in args.drop:
             dropped.append(name)
             continue
+        if name in hdr_inlines and name not in exported:
+            n_inline_dropped += 1
+            continue
         body = strip_comments(body).strip('\n')
-        body = cxx_names_to_c(ghidra_type_quirks(body))
+        body = resolve_anon_types(cxx_names_to_c(ghidra_type_quirks(body)))
         body, nalloca = materialise_alloca_frame(body, name)
         if nalloca:
             n_alloca_fns += 1
@@ -289,6 +346,8 @@ def main():
             f.write('\n')
         f.write('\n'.join(defs))
 
+    if n_inline_dropped:
+        print(f'  {n_inline_dropped} header-inline function(s) dropped')
     if n_alloca_fns:
         print(f'  {n_alloca_fns} function(s) needed an alloca frame')
     print(f'{args.output}: {len(defs)} functions '

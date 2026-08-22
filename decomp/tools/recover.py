@@ -82,6 +82,20 @@ def main():
     GHIDRA_STACK_GUESS = re.compile(
         r'\(int\)a[a-z]Stack_[0-9a-f]+\s*\+\s*[A-Za-z_]\w*')
 
+    # `stack0xNNNN` marks a variable-length stack allocation Ghidra could not
+    # model. ghidra_clean.py materialises a buffer so it COMPILES, but that is
+    # not the same as being correct: the allocation SIZE is read from the same
+    # mis-modelled frame, so it can be garbage.
+    #
+    # IxSphereTriList proved the point. It compiled, passed the substitute gate
+    # (the scenes never exercise Sphere x TriangleList), and then segfaulted on
+    # its FIRST call in a real match, passing a wild triangle-buffer pointer
+    # into the engine's own KTriListGenerator callback.
+    #
+    # So materialising is for readability and compilation, never a certificate.
+    # Any function needing it is REVIEW.
+    GHIDRA_ALLOCA_FRAME = re.compile(r'\bkd_frame_top_\b')
+
     rows, counts = [], {'OK': 0, 'TODO': 0, 'REVIEW': 0, 'FAIL': 0, 'SKIP': 0}
     for obj in objs:
         base = os.path.basename(obj)[:-2]
@@ -126,7 +140,8 @@ def main():
                 drops += ['--drop', f]
         r = run([sys.executable, os.path.join(here, 'ghidra_clean.py'), dump,
                  '-o', csrc, '--object', obj, '--prelude', prelude,
-                 '--exports', exports, '--vtables', vtables] + drops)
+                 '--exports', exports, '--vtables', vtables,
+                 '--metoolkit-include', inc] + drops)
         if r.returncode != 0:
             rows.append((archive, base, 'FAIL', 'clean: ' + r.stderr.strip()[:90]))
             counts['FAIL'] += 1
@@ -157,6 +172,14 @@ def main():
 
         src = open(csrc, errors='ignore').read()
         nguess = len(GHIDRA_STACK_GUESS.findall(src))
+        nalloca = len(GHIDRA_ALLOCA_FRAME.findall(src))
+        if nalloca and not nguess:
+            os.unlink(o)
+            rows.append((archive, base, 'REVIEW',
+                         f'{nalloca} materialised alloca frame(s) — size comes from '
+                         f'the same frame Ghidra could not model'))
+            counts['REVIEW'] += 1
+            continue
         if nguess:
             # Drop the object: it compiled, but it must not reach the validated
             # set or downstream tooling will treat broken code as recovered.

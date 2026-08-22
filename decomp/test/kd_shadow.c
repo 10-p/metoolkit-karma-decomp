@@ -123,7 +123,15 @@ static void kd_init(void)
     X(McdBoxSphereIntersect)             \
     X(McdSpherePlaneIntersect)           \
     X(McdSphereSphereIntersect)          \
-    X(McdCylinderPlaneIntersect)
+    X(McdCylinderPlaneIntersect)         \
+    /* the two objects the census says carry 89% of collision traffic */ \
+    X(McdSphereTriangleListIntersect)    \
+    X(McdSphylSphylIntersect)            \
+    X(McdSphylTriangleListIntersect)     \
+    X(McdSphylSphereIntersect)           \
+    X(McdSphylBoxIntersect)              \
+    X(McdSphylPlaneIntersect)            \
+    X(McdSphylCylinderIntersect)
 
 #define KD_DECL(fn) \
     extern int MEAPI fn(McdModelPair *, McdIntersectResult *); \
@@ -173,17 +181,49 @@ static void kd_compare(kd_pair *s, int a, int b,
     if (bad) {
         if (kd_log && kd_logged < KD_LOG_MAX) {
             kd_logged++;
-            fprintf(kd_log, "%s (%s vs %s): ret %d/%d touch %d/%d count %d/%d\n",
+            fprintf(kd_log, "%s (%s vs %s): ret %d/%d touch %d/%d count %d/%d maxCount %d\n",
                     s->name ? s->name : "?", kd_typename(s->t1), kd_typename(s->t2),
-                    a, b, ra->touch, rb->touch, ra->contactCount, rb->contactCount);
+                    a, b, ra->touch, rb->touch,
+                    ra->contactCount, rb->contactCount, ra->contactMaxCount);
+            /* Dump the INPUTS, so the case can be replayed deterministically in
+               test/difftest_*.c. A divergence found in a live match is useless
+               if it cannot be reproduced — the match never plays the same way
+               twice. */
+            if (ra->pair) {
+                MeMatrix4Ptr t1 = McdModelGetTransformPtr(ra->pair->model1);
+                MeMatrix4Ptr t2 = McdModelGetTransformPtr(ra->pair->model2);
+                fprintf(kd_log, "  tm1:");
+                for (int i = 0; i < 4; i++) for (int j = 0; j < 4; j++)
+                    fprintf(kd_log, " %.9g", (double)t1[i][j]);
+                fprintf(kd_log, "\n  tm2:");
+                for (int i = 0; i < 4; i++) for (int j = 0; j < 4; j++)
+                    fprintf(kd_log, " %.9g", (double)t2[i][j]);
+                fprintf(kd_log, "\n  tol: %.9g %.9g\n",
+                        (double)McdModelGetContactTolerance(ra->pair->model1),
+                        (double)McdModelGetContactTolerance(ra->pair->model2));
+            }
+            fflush(kd_log);
         }
     } else if (worst == 0.0) s->identical++;
     else                     s->fp_only++;
 }
 
+/* KD_SELFTEST=1 runs the ORIGINAL as both sides.
+   Any divergence it reports is a bug in this harness, not in the recovered code:
+   these functions are supposed to write only through their output parameter, and
+   if calling one twice on identical inputs gives two answers then something else
+   is shared — a per-frame pool, framework scratch, a cache on the pair — and the
+   comparison is meaningless for that function. Always run this before believing
+   a divergence. */
+static int kd_selftest = -1;
+
 static int kd_dispatch(int slot, McdModelPair *p, McdIntersectResult *r)
 {
     kd_pair *s = &kd_pairs[slot];
+    if (kd_selftest < 0) {
+        const char *e = getenv("KD_SELFTEST");
+        kd_selftest = (e && *e == '1') ? 1 : 0;
+    }
     s->calls++;
     if (++kd_since_flush >= KD_FLUSH_EVERY) { kd_since_flush = 0; kd_flush(); }
 
@@ -198,7 +238,7 @@ static int kd_dispatch(int slot, McdModelPair *p, McdIntersectResult *r)
         scratch.contactMaxCount = cap;
         scratch.contactCount = 0;
         scratch.touch = 0;
-        int b = s->rec(p, &scratch);
+        int b = kd_selftest ? s->orig(p, &scratch) : s->rec(p, &scratch);
         kd_compare(s, a, b, r, &scratch);
     }
     return a;                       /* the engine always sees the original */

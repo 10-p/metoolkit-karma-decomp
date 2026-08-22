@@ -87,10 +87,15 @@ typedef double              longdouble;
 #define SEXT48(x)        ((long long)(int)(x))
 
 /* Ghidra's generic "some function" type, used for indirect calls through a
-   vtable: `(**(code **)(*(int *)obj + N))(obj, ...)`. Spelling it as an
-   unprototyped function type makes `code *` a callable function pointer that
-   accepts any argument list, which is exactly what those call sites need. */
-typedef void code();
+   vtable or a stored callback: `(**(code **)(*(int *)obj + N))(obj, ...)`.
+   An unprototyped function type makes `code *` a callable pointer accepting any
+   argument list, which is what those call sites need.
+
+   It returns int, not void: some call sites USE the result
+   (`count = (*pcVar11)();` in IxSphereTriList), and a void return makes those
+   "invalid use of void expression". Discarding an int return is legal C, so int
+   is correct for both kinds of site while void is correct for only one. */
+typedef int code();
 
 /* Backing size for Ghidra's `stack0xNNNN` pseudo-symbols, which stand in for a
    variable-length stack allocation the decompiler could not model. The original

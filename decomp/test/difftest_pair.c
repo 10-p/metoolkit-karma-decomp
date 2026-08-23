@@ -42,6 +42,8 @@
 #include <McdSphere.h>
 #include <McdSphyl.h>
 #include <McdPlane.h>
+#include <McdTriangleList.h>
+#include <McdGeometryTypes.h>
 #include <McdConvexMesh.h>
 #include <MstTypes.h>
 #include <MstUniverse.h>
@@ -67,8 +69,12 @@ IX(SphylSphere,     "McdSphylSphereIntersect")
 IX(SphylBox,        "McdSphylBoxIntersect")
 IX(SphylPlane,      "McdSphylPlaneIntersect")
 IX(GjkCg,           "McdGjkCgIntersect")
+IX(SphereTriList,   "McdSphereTriangleListIntersect")
+IX(SphylTriList,    "McdSphylTriangleListIntersect")
+IX(BoxTriList,      "McdBoxTriangleListIntersect")
 
 /* ---- geometry factories -------------------------------------------------- */
+static float kd_spread = 1.0f;
 static uint32_t rs = 0xC0FFEEu;
 static float frnd(float lo, float hi)
 {
@@ -97,6 +103,91 @@ static McdGeometryID mk_plane(McdFrameworkID fw, int seed)
 static McdGeometryID mk_sphere(McdFrameworkID fw, int seed)
 {
     return (McdGeometryID)McdSphereCreate(fw, seed ? 0.6f : 0.9f);
+}
+
+/* ---- a triangle-list geometry, which is what a UT2004 level IS ------------
+   TriangleList is the busiest geometry in the game by a wide margin —
+   McdSphereTriangleListIntersect alone is 1.8 M calls — and until now it could
+   only be reached through the shadow harness, because the triangles come from a
+   CALLBACK the engine owns rather than from the geometry. So the two busiest
+   functions in Karma had no reproducible test at all.
+
+   The callback contract is simple enough to satisfy honestly: fill in pointers
+   to vertices and a normal, return how many. This builds a bumpy patch rather
+   than a flat one, so the sphere lands on faces, edges and vertices instead of
+   only faces — the edge and vertex cases are where the contact-dimension
+   classification has to be right. */
+#define NTRI 32
+static MeVector3 kd_vert[NTRI][3];
+static MeVector3 kd_norm[NTRI];
+
+static void build_mesh(void)
+{
+    for (int t = 0; t < NTRI; t++) {
+        int gx = t % 8, gy = t / 8;
+        float x0 = -2.0f + gx * 0.5f, y0 = -1.0f + gy * 0.5f;
+        /* a deterministic bump, so faces are not coplanar */
+        float h[4];
+        for (int k = 0; k < 4; k++) {
+            float px = x0 + (k & 1) * 0.5f, py = y0 + ((k >> 1) & 1) * 0.5f;
+            h[k] = 0.18f * sinf(2.1f * px) * cosf(1.7f * py);
+        }
+        int flip = (t & 1);
+        int idx[3] = { 0, flip ? 3 : 1, flip ? 1 : 2 };
+        for (int v = 0; v < 3; v++) {
+            int k = idx[v];
+            kd_vert[t][v][0] = x0 + (k & 1) * 0.5f;
+            kd_vert[t][v][1] = y0 + ((k >> 1) & 1) * 0.5f;
+            kd_vert[t][v][2] = h[k];
+        }
+        /* KD_SKEW=1 nudges the grid off its exact axis-aligned lines. Real
+           level geometry is not on a 0.5 grid; this mesh was, which made a
+           sphere land exactly on a shared edge far more often than anything in
+           a game would. Use it to tell "disagrees at an exact feature boundary"
+           from "disagrees". */
+        if (getenv("KD_SKEW")) {
+            for (int v = 0; v < 3; v++) {
+                kd_vert[t][v][0] += 0.037f * sinf(3.3f * t + 1.7f * v);
+                kd_vert[t][v][1] += 0.041f * cosf(2.9f * t + 2.3f * v);
+            }
+        }
+        MeVector3 e1, e2;
+        for (int j = 0; j < 3; j++) {
+            e1[j] = kd_vert[t][1][j] - kd_vert[t][0][j];
+            e2[j] = kd_vert[t][2][j] - kd_vert[t][0][j];
+        }
+        kd_norm[t][0] = e1[1] * e2[2] - e1[2] * e2[1];
+        kd_norm[t][1] = e1[2] * e2[0] - e1[0] * e2[2];
+        kd_norm[t][2] = e1[0] * e2[1] - e1[1] * e2[0];
+        float n = sqrtf(kd_norm[t][0] * kd_norm[t][0] + kd_norm[t][1] * kd_norm[t][1]
+                      + kd_norm[t][2] * kd_norm[t][2]);
+        if (n < 1e-9f) n = 1.0f;
+        for (int j = 0; j < 3; j++) kd_norm[t][j] /= n;
+        if (kd_norm[t][2] < 0) for (int j = 0; j < 3; j++) kd_norm[t][j] = -kd_norm[t][j];
+    }
+}
+
+static int MEAPI kd_trigen(McdModelPair *pair, McdUserTriangle *tri,
+                           MeVector3 pos, MeReal radius, int maxTriangles)
+{
+    (void)pair; (void)pos; (void)radius;
+    int n = NTRI < maxTriangles ? NTRI : maxTriangles;
+    for (int t = 0; t < n; t++) {
+        tri[t].vertices[0] = &kd_vert[t][0];
+        tri[t].vertices[1] = &kd_vert[t][1];
+        tri[t].vertices[2] = &kd_vert[t][2];
+        tri[t].normal      = &kd_norm[t];
+        tri[t].triangleData.tag = t;
+        tri[t].flags = (McdTriangleFlags)0;
+    }
+    return n;
+}
+
+static McdGeometryID mk_trilist(McdFrameworkID fw, int seed)
+{
+    (void)seed;
+    MeVector3 lo = { -2.5f, -1.5f, -0.5f }, hi = { 2.5f, 1.5f, 0.5f };
+    return (McdGeometryID)McdTriangleListCreate(fw, lo, hi, 64, kd_trigen);
 }
 
 /* A random convex polyhedron: points scattered on an ellipsoid, hulled. This is
@@ -146,6 +237,15 @@ static const struct {
        not a reason to skip it. */
     { "McdGjkCgIntersect",           ix_orig_GjkCg,           ix_rec_GjkCg,
       mk_box,   mk_convex, 1.8f },
+    /* The two busiest functions in the game, and a third that has never had any
+       test at all. The trilist is fixed at the origin; only the other body
+       moves, which is what happens in a level. */
+    { "McdSphereTriangleListIntersect", ix_orig_SphereTriList, ix_rec_SphereTriList,
+      mk_sphere, mk_trilist, 1.0f },
+    { "McdSphylTriangleListIntersect",  ix_orig_SphylTriList,  ix_rec_SphylTriList,
+      mk_sphyl,  mk_trilist, 1.0f },
+    { "McdBoxTriangleListIntersect",    ix_orig_BoxTriList,    ix_rec_BoxTriList,
+      mk_box,    mk_trilist, 1.0f },
 };
 #define NPAIRS ((int)(sizeof PAIRS / sizeof PAIRS[0]))
 
@@ -202,6 +302,18 @@ static void rand_tm(MeMatrix4Ptr tm, float spread)
 
 int main(int argc, char **argv)
 {
+    /* KD_SELFTEST=1 runs the ORIGINAL as both sides. Any divergence it reports
+       is a fault in THIS driver, not in the recovered code — these functions are
+       supposed to write only through their output parameter, so calling one
+       twice on identical inputs must give the same answer. The shadow harness
+       has had this switch from the start and it has already caught one wrong
+       conclusion today; a driver without it is a machine for generating
+       confident nonsense. */
+    const char *sp = getenv("KD_SPREAD");
+    kd_spread = sp ? (float)atof(sp) : 1.0f;
+    if (!(kd_spread > 0)) kd_spread = 1.0f;
+    const char *e = getenv("KD_SELFTEST");
+    int selftest = (e && *e == '1');
     const char *want = (argc > 1 && strcmp(argv[1], "all")) ? argv[1] : NULL;
     int N = argc > 2 ? atoi(argv[2]) : 200000;
     int failures = 0, ran = 0;
@@ -211,6 +323,7 @@ int main(int argc, char **argv)
     McdFrameworkID fw = MstUniverseGetFramework(u);
     McdPrimitivesRegisterTypes(fw);
     McdPrimitivesRegisterInteractions(fw);
+    build_mesh();
     McdConvexMeshRegisterType(fw);
     McdConvexMeshPrimitivesRegisterInteractions(fw);
 
@@ -226,9 +339,17 @@ int main(int argc, char **argv)
         double worst_ok = 0.0;
         int dumped = 0;
 
+        int fixed2 = (PAIRS[k].g2 == mk_trilist);   /* a level does not move */
         for (int t = 0; t < N; t++) {
-            rand_tm(McdModelGetTransformPtr(m1), PAIRS[k].spread);
-            rand_tm(McdModelGetTransformPtr(m2), PAIRS[k].spread);
+            /* KD_SPREAD scales how far apart the bodies are scattered, which
+               is how you move between contact REGIMES. The default puts the
+               trilist tests at 92% touching with six to eleven contacts each —
+               deep interpenetration. A real level is shallow resting contact,
+               one or two contacts, ~20% touching. They are different tests and
+               they find different things. */
+            rand_tm(McdModelGetTransformPtr(m1), PAIRS[k].spread * kd_spread);
+            if (!fixed2) rand_tm(McdModelGetTransformPtr(m2),
+                                 PAIRS[k].spread * kd_spread);
 
             McdModelPair pair;  memset(&pair, 0, sizeof pair);
             pair.model1 = m1; pair.model2 = m2;
@@ -241,7 +362,8 @@ int main(int argc, char **argv)
             rB.pair = &pair; rB.contacts = cB; rB.contactMaxCount = MAXC;
 
             int a = PAIRS[k].orig(&pair, &rA);
-            int b = PAIRS[k].rec (&pair, &rB);
+            int b = selftest ? PAIRS[k].orig(&pair, &rB)
+                             : PAIRS[k].rec (&pair, &rB);
 
             if (rA.touch) touching++;
             if (a != b || rA.touch != rB.touch) {
@@ -290,8 +412,9 @@ int main(int argc, char **argv)
 
         int bad = retdiff + countdiff + dimsdiff;
         failures += bad;
-        printf("%s: %d pairs, %d touching (%.1f%%)\n",
-               PAIRS[k].name, N, touching, 100.0 * touching / N);
+        printf("%s%s: %d pairs, %d touching (%.1f%%)\n",
+               PAIRS[k].name, selftest ? " [SELFTEST: original vs original]" : "",
+               N, touching, 100.0 * touching / N);
         printf("  bit-identical          : %d (%.3f%%)\n", exact, 100.0 * exact / N);
         printf("  DIFFERENT ret/touch    : %d\n", retdiff);
         printf("  DIFFERENT contact count: %d\n", countdiff);

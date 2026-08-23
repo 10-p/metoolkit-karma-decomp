@@ -321,7 +321,16 @@ def materialise_alloca_frame(body, fname):
         # recover.py holds it back, which is the honest outcome.
         # Ghidra writes the address either as `&stack0xH` or, when it wants an
         # integer, `(int)&stack0xH`. Both are the same defining use.
-        body = re.sub(r'(=\s*\([^()]*\)\s*)\(\s*(?:\(int\)\s*)?&stack0x([0-9a-f]{8})'
+        #
+        # The base is not always a stack0x name. When Ghidra did manage to name
+        # SOME local at the right place it uses that instead —
+        # `(McdGeometryID)((int)&MStack_24c + iVar5)` in IxBoxTriList — and an
+        # earlier version of this pattern only recognised the stack0x spelling,
+        # so three TriangleList objects never got their alloca restored and
+        # failed to compile on the leftover slot names. What identifies the
+        # idiom is `negVar`, which is only in `neg` if it was assigned the
+        # rounded negative size; the base is incidental.
+        body = re.sub(r'(=\s*\([^()]*\)\s*)\(\s*(?:\(int\)\s*)?&(\w+)'
                       r'\s*\+\s*(\w+)\s*\)',
                       sub_alloca, body)
 

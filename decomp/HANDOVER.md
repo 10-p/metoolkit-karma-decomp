@@ -163,6 +163,22 @@ factories are shared, so most new interactions need no new code. It seeds its RN
 divergence it reports is reproducible — which is what makes it useful, and is exactly what
 the shadow harness cannot promise.
 
+Three switches, and the middle one is not optional:
+
+- **`KD_SELFTEST=1`** — run the ORIGINAL as both sides. Anything it reports is a fault in
+  the driver. Run it before believing a divergence, every time; the shadow harness has had
+  this from the start and skipping its equivalent has already produced one wrong conclusion.
+- **`KD_SPREAD=<n>`** — scale how far apart the bodies are scattered, which moves between
+  contact **regimes**. This matters more than it sounds. At the default the TriangleList
+  tests run at 92% touching with six to eleven simultaneous contacts — deep
+  interpenetration. A body resting on level geometry is one or two contacts at ~6%. They
+  are different tests and they find different things: `McdSphereTriangleListIntersect` has
+  40 feature-classification divergences in 50,000 at the deep end and **none** at the
+  shallow end, which is why 1.76 M real calls never saw one. Report which regime a number
+  came from.
+- **`KD_SKEW=1`** — nudge the test mesh off its axis-aligned grid, to tell "disagrees at an
+  exact feature boundary" from "disagrees".
+
 ### Regenerate the type database (after any DWARF-side change)
 
 ```bash

@@ -27,6 +27,23 @@ public class DumpDecomp extends GhidraScript {
         // passes the arguments properly.
         applyCallsiteOverrides();
 
+        // Ghidra decides a calling convention per function during analysis, and
+        // for this corpus it decides wrong: 19 functions across 9 objects come
+        // out tagged __regparm1 or __regparm2. gcc 3.2 on i386 passes everything
+        // on the stack here — the prologues say so, and the DWARF says so.
+        //
+        // The tag is not the damage. Ghidra LAYS THE PARAMETER LIST OUT to match
+        // the convention it chose, so in a __regparmN function every parameter
+        // in the body is shifted by N and the last incoming argument falls off
+        // the end. McdGeometryGetMassProperties passed three of its four
+        // arguments, each one position off, and segfaulted in a live match.
+        //
+        // Forcing __cdecl before decompiling fixes it at the source rather than
+        // downstream, where the shift is not reliably repairable: renaming the
+        // parameters recovers the ones Ghidra did model, and the argument it
+        // dropped at an inner call site is simply gone.
+        forceCdecl();
+
         DecompInterface di = new DecompInterface();
         di.setOptions(new DecompileOptions());
         di.openProgram(currentProgram);
@@ -62,6 +79,34 @@ public class DumpDecomp extends GhidraScript {
         println("DONE " + base);
     }
     /** int (McdModelPair*, McdUserTriangle*, MeVector3, MeReal, int) */
+    /** Make every function plain cdecl, and say how many had to be changed. */
+    private void forceCdecl() {
+        int changed = 0, failed = 0;
+        FunctionIterator it = currentProgram.getFunctionManager().getFunctions(true);
+        while (it.hasNext()) {
+            Function f = it.next();
+            String cc = f.getCallingConventionName();
+            // ONLY the misdetection. A first attempt forced __cdecl on
+            // everything and made things worse: gcc's i386 C++ ABI passes
+            // `this` as the first stack argument, so __thiscall is already
+            // right, and overriding it cost five kea objects that had been
+            // compiling. __regparm is the one Ghidra gets wrong here — the
+            // prologues read arguments from ebp+8 upwards, and the DWARF
+            // agrees.
+            if (cc == null || !cc.startsWith("__regparm")) continue;
+            try {
+                // Custom storage pins parameters to the locations the wrong
+                // convention chose, so it has to go first or the change is
+                // cosmetic.
+                f.setCustomVariableStorage(false);
+                f.setCallingConvention("__cdecl");
+                changed++;
+            } catch (Exception e) { failed++; }
+        }
+        println("KARMAHDR: __regparm -> __cdecl on " + changed + " function(s), "
+                + failed + " refused");
+    }
+
     private FunctionDefinitionDataType triListFnSig() {
         FunctionDefinitionDataType sig = new FunctionDefinitionDataType("McdTriangleListFn");
         sig.setReturnType(IntegerDataType.dataType);

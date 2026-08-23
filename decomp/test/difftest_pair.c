@@ -193,19 +193,65 @@ static void build_mesh(void)
 static McdTriangleFlags kd_triflags =
     (McdTriangleFlags)(kMcdTriangleUseSmallestPenetration | kMcdTriangleUseEdges);
 
+/* What the interaction handed the generator, per side. A TriangleList
+   interaction works out a bounding sphere for the other body and asks the
+   engine for triangles near it, so `pos` and `radius` are an OUTPUT of the
+   recovered code that the contact comparison cannot see: if a recovery queries
+   the wrong part of the level it gets the wrong triangles and every downstream
+   number is wrong for a reason that never appears in the contacts.
+
+   KD_GENARGS=1 compares them directly rather than through their consequences,
+   which is the difference between "the recovery diverges" and knowing where. */
+static int kd_gen_side, kd_gen_check;
+static MeVector3 kd_gen_pos[2];
+static MeReal kd_gen_radius[2];
+static int kd_gen_n[2], kd_gen_calls[2];
+
 static int MEAPI kd_trigen(McdModelPair *pair, McdUserTriangle *tri,
                            MeVector3 pos, MeReal radius, int maxTriangles)
 {
-    (void)pair; (void)pos; (void)radius;
-    int n = NTRI < maxTriangles ? NTRI : maxTriangles;
-    for (int t = 0; t < n; t++) {
-        tri[t].vertices[0] = &kd_vert[t][0];
-        tri[t].vertices[1] = &kd_vert[t][1];
-        tri[t].vertices[2] = &kd_vert[t][2];
-        tri[t].normal      = &kd_norm[t];
-        tri[t].triangleData.tag = t;
-        tri[t].flags = kd_triflags;
+    (void)pair;
+    /* Cull to the query sphere, because the engine's generator does
+       (KTriListQuery in KTriListGen.cpp) and because ignoring pos and radius
+       makes the driver blind to how they were computed. Every TriangleList
+       interaction works out a bounding sphere for the other body and hands it
+       over here; with an ignore-the-arguments generator both sides get the
+       same 32 triangles regardless and the error cannot show up.
+
+       Cull on the triangle's centroid against radius plus the triangle's own
+       extent, so the test is a real filter without being a knife edge that
+       turns a last-bit difference in radius into a whole triangle appearing. */
+    int n = 0;
+    for (int t = 0; t < NTRI && n < maxTriangles; t++) {
+        float cx = 0, cy = 0, cz = 0, ext = 0;
+        for (int v = 0; v < 3; v++) {
+            cx += kd_vert[t][v][0]; cy += kd_vert[t][v][1]; cz += kd_vert[t][v][2];
+        }
+        cx /= 3.0f; cy /= 3.0f; cz /= 3.0f;
+        for (int v = 0; v < 3; v++) {
+            float dx = kd_vert[t][v][0] - cx, dy = kd_vert[t][v][1] - cy,
+                  dz = kd_vert[t][v][2] - cz;
+            float d = dx * dx + dy * dy + dz * dz;
+            if (d > ext) ext = d;
+        }
+        ext = sqrtf(ext);
+        float dx = cx - pos[0], dy = cy - pos[1], dz = cz - pos[2];
+        float lim = radius + ext;
+        if (dx * dx + dy * dy + dz * dz > lim * lim) continue;
+        tri[n].vertices[0] = &kd_vert[t][0];
+        tri[n].vertices[1] = &kd_vert[t][1];
+        tri[n].vertices[2] = &kd_vert[t][2];
+        tri[n].normal      = &kd_norm[t];
+        tri[n].triangleData.tag = t;
+        tri[n].flags = kd_triflags;
+        n++;
     }
+    if (kd_gen_check && kd_gen_calls[kd_gen_side] == 0) {
+        for (int j = 0; j < 3; j++) kd_gen_pos[kd_gen_side][j] = pos[j];
+        kd_gen_radius[kd_gen_side] = radius;
+        kd_gen_n[kd_gen_side] = n;
+    }
+    kd_gen_calls[kd_gen_side]++;
     return n;
 }
 
@@ -350,6 +396,7 @@ int main(int argc, char **argv)
     if (!(kd_spread > 0)) kd_spread = 1.0f;
     const char *tf = getenv("KD_TRIFLAGS");
     if (tf) kd_triflags = (McdTriangleFlags)strtol(tf, NULL, 0);
+    kd_gen_check = getenv("KD_GENARGS") != NULL;
     const char *e = getenv("KD_SELFTEST");
     int selftest = (e && *e == '1');
     const char *want = (argc > 1 && strcmp(argv[1], "all")) ? argv[1] : NULL;
@@ -374,6 +421,7 @@ int main(int argc, char **argv)
         McdModelID m2 = MstModelAndBodyCreate(u, PAIRS[k].g2(fw, 1), 1.0f);
 
         int retdiff = 0, countdiff = 0, dimsdiff = 0, exact = 0, touching = 0;
+        int genargs = 0;
         double worst_ok = 0.0;
         int dumped = 0;
 
@@ -399,10 +447,29 @@ int main(int argc, char **argv)
             rA.pair = &pair; rA.contacts = cA; rA.contactMaxCount = MAXC;
             rB.pair = &pair; rB.contacts = cB; rB.contactMaxCount = MAXC;
 
+            kd_gen_side = 0; kd_gen_calls[0] = kd_gen_calls[1] = 0;
             int a = PAIRS[k].orig(&pair, &rA);
+            kd_gen_side = 1;
             int b = selftest ? PAIRS[k].orig(&pair, &rB)
                              : PAIRS[k].rec (&pair, &rB);
 
+            if (kd_gen_check && kd_gen_calls[0] && kd_gen_calls[1]) {
+                int off = (kd_gen_radius[0] != kd_gen_radius[1]
+                           || kd_gen_n[0] != kd_gen_n[1]);
+                for (int j = 0; j < 3; j++)
+                    if (kd_gen_pos[0][j] != kd_gen_pos[1][j]) off = 1;
+                if (off) {
+                    genargs++;
+                    if (genargs <= 4)
+                        printf("  GENARGS %s iter %d: orig pos %.9g %.9g %.9g r "
+                               "%.9g -> %d tri | rec pos %.9g %.9g %.9g r %.9g "
+                               "-> %d tri\n", PAIRS[k].name, t,
+                               kd_gen_pos[0][0], kd_gen_pos[0][1], kd_gen_pos[0][2],
+                               kd_gen_radius[0], kd_gen_n[0],
+                               kd_gen_pos[1][0], kd_gen_pos[1][1], kd_gen_pos[1][2],
+                               kd_gen_radius[1], kd_gen_n[1]);
+                }
+            }
             if (rA.touch) touching++;
             if (a != b || rA.touch != rB.touch) {
                 retdiff++; dump(&dumped, PAIRS[k].name, "ret/touch", t, m1, m2,

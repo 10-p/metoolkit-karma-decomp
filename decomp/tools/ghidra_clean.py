@@ -1436,6 +1436,82 @@ def _split_arguments(s):
     return out
 
 
+CODE_PTR_DECL = re.compile(r'^\s*code\s*\*\s*(\w+)\s*;\s*$', re.M)
+# `*(float *)(expr)`, `*(void **)(expr)` — the cast Ghidra puts on an argument
+# it loaded out of the frame, and the only statement of that argument's type
+# there is. One star is the dereference; the rest belong to the type.
+ARG_CAST = re.compile(r'^\s*\*\s*\(\s*([A-Za-z_]\w*(?:\s+[A-Za-z_]\w*)*)'
+                      r'\s*(\*+)\s*\)')
+# Types narrower than int/double, i.e. exactly the ones default argument
+# promotion changes.
+NARROW = {'float', 'MeReal', 'short', 'ushort', 'undefined2', 'MeI16', 'MeU16',
+          'char', 'byte', 'undefined1', 'MeI8', 'MeU8', 'bool'}
+
+
+def prototype_indirect_calls(body):
+    """Give `(*pcVar)(...)` a prototype when an argument is narrower than int.
+
+    `code` is `typedef int code();` — a function type with NO parameter list —
+    so a call through `code *` is unprototyped and C applies the default
+    argument promotions. A `float` argument is pushed as an 8-byte double, and
+    the callee, which does have a prototype, reads the low half as its float
+    and the high half as the argument after it.
+
+    Not theoretical, and not small. All four TriangleList interactions call the
+    engine's McdTriangleListFnPtr this way, handing it the bounding-sphere
+    radius of the other body:
+
+        pair                        radius the generator received
+        Sphere     x TriangleList   2048         (should be 0.91)
+        Sphyl      x TriangleList   8.796e+12    (should be 0.91)
+        Box        x TriangleList   6.019e-36    (should be 0.939)
+        ConvexMesh x TriangleList   -0           (should be 1.019)
+
+    UT2004's KTriListGenerator turns that into a sphere query against the
+    level, so a radius landing too LARGE is harmless — the query returns a
+    superset and the same contacts come out — and one landing too SMALL returns
+    nothing. That is the whole of IxConvexTriList's in-game divergence, and it
+    is why IxSphereTriList and IxSphylPrimitives passed 1.76 M and 74,921 real
+    calls with the same defect: their garbage radius happened to be enormous.
+
+    Nothing in the pipeline could see it. The code reads correctly, every store
+    pairs with its load, it compiles clean, all three substitute scenes pass,
+    and difftest_pair's generator ignored pos and radius, so the argument was
+    never looked at. It took making that generator cull to the query sphere and
+    then printing what each side passed.
+
+    The prototype is synthesised from the casts Ghidra already wrote on the
+    arguments, so it needs no outside knowledge of the callee. Only calls with
+    a narrow argument are rewritten: promotion is a no-op for int and pointer,
+    so touching those would be churn with a chance of being wrong."""
+    ptrs = set(CODE_PTR_DECL.findall(body))
+    if not ptrs:
+        return body, 0
+    out, i, n = [], 0, 0
+    for m in re.finditer(r'\(\s*\*\s*(\w+)\s*\)\s*\(', body):
+        if m.group(1) not in ptrs or m.start() < i:
+            continue
+        close = _match_bracket(body, m.end() - 1)
+        if close < 0:
+            continue
+        types = []
+        for a in _split_arguments(body[m.end():close]):
+            c = ARG_CAST.match(a)
+            if not c:
+                types = None
+                break
+            types.append(c.group(1).strip() + ' ' + c.group(2)[:-1])
+        if not types or not any(t.strip() in NARROW for t in types):
+            continue
+        proto = 'int (*)(' + ', '.join(t.strip() for t in types) + ')'
+        out.append(body[i:m.start()])
+        out.append(f'(*({proto}){m.group(1)})(')
+        i = m.end()
+        n += 1
+    out.append(body[i:])
+    return ''.join(out), n
+
+
 # Each entry: (diagnostic pattern the rule claims, rewrite function).
 # A rule is offered a line only when GCC reported that exact kind of error on
 # it, so the pattern here is half of the rule's safety argument.
@@ -1711,6 +1787,7 @@ def main():
 
     decls, defs, dropped = [], [], []
     n_alloca_fns = 0
+    n_proto_calls = 0
     n_saved_elems = 0
     n_inline_dropped = 0
     n_vararg_fns = 0
@@ -1731,6 +1808,8 @@ def main():
         body, nalloca = materialise_alloca_frame(body, name)
         if nalloca:
             n_alloca_fns += 1
+        body, nproto = prototype_indirect_calls(body)
+        n_proto_calls += nproto
         sig = signature_of(body)
         if sig is None:
             print(f'  ! skipping {name}: no body found', file=sys.stderr)
@@ -1806,6 +1885,9 @@ def main():
         print(f'  {n_vararg_fns} variadic function(s) given a real va_list')
     if n_alloca_fns:
         print(f'  {n_alloca_fns} function(s) needed an alloca frame')
+    if n_proto_calls:
+        print(f'  {n_proto_calls} indirect call(s) given a prototype '
+              f'(a float argument was being promoted to double)')
     if n_saved_elems:
         print(f'  {n_saved_elems} save-and-restore(s) of an array element reordered')
     if n_data:

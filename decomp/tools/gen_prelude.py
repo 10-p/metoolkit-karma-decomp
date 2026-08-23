@@ -97,7 +97,7 @@ def text_symbol_at(obj, offset):
     return best
 
 
-def exported_data_definition(obj, name, value, size, sect, data, c_name):
+def exported_data_definition(obj, name, value, size, sect, data, c_name, sections):
     """Rebuild an EXPORTED data symbol as a C definition.
 
     These are globals the object publishes — MeMemoryAPI, MeDebugDrawAPI,
@@ -106,7 +106,13 @@ def exported_data_definition(obj, name, value, size, sect, data, c_name):
 
     Raw bytes are not enough: MeMemoryAPI is 24 bytes of ZEROES plus six
     R_386_32 relocations against .text, i.e. a table of function pointers whose
-    targets live only in the relocation records. So read those too."""
+    targets live only in the relocation records. So read those too.
+
+    A relocation can also point at a SECTION rather than a symbol, which is what
+    the linker gets for a string or float constant that never had a name of its
+    own. `(void *)&.rodata` is not C. The bytes are in the object and the addend
+    says where, so the section is materialised alongside the table and the entry
+    points into it. `sections` collects what has to be emitted."""
     rel = section_relocs(obj, sect)
     entries, has_ptr = [], False
     for off in range(value, value + (size or 0), 4):
@@ -117,6 +123,10 @@ def exported_data_definition(obj, name, value, size, sect, data, c_name):
             if target == '.text':
                 fn = text_symbol_at(obj, addend)
                 entries.append(f'(void *)&{fn}' if fn else f'/* .text+0x{addend:x} */ 0')
+            elif target.startswith('.'):
+                c = 'kd_exp' + re.sub(r'\W', '_', target)
+                sections[target] = c
+                entries.append(f'(void *)&{c}[0x{addend:x}]')
             else:
                 entries.append(f'(void *)&{target}')
         else:
@@ -406,6 +416,7 @@ def main():
         w('')
 
     exp_out = []
+    exp_sections = {}
     if exported_data:
         w2 = exp_out.append if args.exports_out else w
         prev_w = w
@@ -428,9 +439,21 @@ def main():
                     w(f'float kd_{c_name}[{n}] KD_MANGLED("{name}");')
             else:
                 w(exported_data_definition(obj, name, value, size, sect,
-                                           data.get(sect, b''), c_name))
+                                           data.get(sect, b''), c_name,
+                                           exp_sections))
             w('')
         w = prev_w
+
+    if exp_sections:
+        # Emitted BEFORE the tables that index them, and read straight out of
+        # the object — these are the unnamed constants gcc parked in .rodata.
+        head = []
+        for sname, cname in sorted(exp_sections.items()):
+            raw = section_bytes(obj, sname)
+            head.append(f'/* {sname}: {len(raw)} bytes, for the tables below */')
+            head.append(f'static const unsigned char {cname}[{max(len(raw), 1)}] = {{ '
+                        + ', '.join('0x%02x' % b for b in raw) + ' };')
+        exp_out = head + [''] + exp_out
 
     if args.exports_out:
         open(args.exports_out, 'w').write('\n'.join(exp_out) + '\n')

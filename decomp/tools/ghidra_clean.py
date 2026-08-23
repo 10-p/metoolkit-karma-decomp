@@ -105,8 +105,15 @@ def ghidra_type_quirks(body):
     `Foo_conflict` is what Ghidra calls a type it saw defined more than once
     with differing definitions; the underlying type is just `Foo`. Karma hits
     this for McdModelID / MdtContactID / MdtContactGroupID, whose typedefs
-    appear in several CUs."""
-    return re.sub(r'\b([A-Za-z_]\w*)_conflict\b', r'\1', body)
+    appear in several CUs.
+
+    `NAN(x)` is Ghidra's NaN test, and C99 already has NAN as a float CONSTANT,
+    so the call form expands to `(0.0f/0.0f)(x)`. Both spellings appear in this
+    corpus — McdGjk assigns the bare constant and tests with the call in the same
+    object — so the call form is rewritten here and the constant is left to
+    <math.h>. `NAN` followed by `(` is never the constant, so this is exact."""
+    body = re.sub(r'\b([A-Za-z_]\w*)_conflict\b', r'\1', body)
+    return re.sub(r'\bNAN\s*\(', 'isnan(', body)
 
 
 ANON_CAST = re.compile(

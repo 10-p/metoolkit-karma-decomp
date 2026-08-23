@@ -166,11 +166,11 @@ typedef double              longdouble;
 #define fyl2x(y, x)    ((y) * log2(x))
 #define frndint(x)     rint(x)
 
-/* Ghidra's NaN test. C99's <math.h> already defines NAN as a float CONSTANT,
-   so the call site `NAN(x)` expands to `(0.0f/0.0f)(x)` and fails with "called
-   object is not a function". Ghidra never emits the constant, only the test. */
-#undef NAN
-#define NAN(x)     isnan(x)
+/* Ghidra's NaN TEST is `NAN(x)`, which collides with C99's NAN constant —
+   `(0.0f/0.0f)(x)` fails with "called object is not a function". It also emits
+   the bare constant, in the same corpus, so neither spelling can simply win:
+   ghidra_clean rewrites the call form to isnan() and leaves the constant to
+   <math.h>. This alias is kept because the dumps use it too. */
 #define NAN_f(x)   isnan(x)
 
 /* Ghidra's generic "some function" type, used for indirect calls through a

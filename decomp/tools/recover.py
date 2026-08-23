@@ -141,6 +141,67 @@ def main():
     # validated set until a real match proves it.
     GHIDRA_RECONSTRUCTED_FRAME = re.compile(r'\bkd_argslot_\w+\b')
 
+    # `__regparmN` means Ghidra decided the first N arguments arrive in
+    # registers, and then LAID OUT THE PARAMETER LIST TO MATCH. The annotation
+    # itself is a no-op — GCC's i386 C++ ABI is plain cdecl here — but the body
+    # Ghidra generated under the assumption is shifted by N and one incoming
+    # argument falls off the end:
+    #
+    #   MeI16 __regparm1 McdGeometryGetMassProperties(g, relTM, m, volume)
+    #   { return (**vtable)(relTM, m, volume); }        <- should be (g, relTM, m, volume)
+    #
+    # The original pushes four arguments; the recovery passes three, with every
+    # one of them shifted. This compiled, it linked, it passed the collision-free
+    # scene, and it segfaulted in McdGeometryGetMassProperties on the FIRST
+    # collision scene — which is how it was found.
+    #
+    # Every instance examined is shifted the same way (McdConvexMeshCreate reads
+    # `fatness` as a pointer; McdGeometryInstanceDestroy and MePoolMallocGetStruct
+    # never touch their declared parameters at all and read `in_stack_*` instead),
+    # so this is unconditional rather than a heuristic.
+    GHIDRA_REGPARM = re.compile(r'__regparm[1-9]')
+
+    # Ghidra's names for a value it could not account for: an incoming stack
+    # argument outside the frame it modelled, a register left live by a call it
+    # did not model, a callee-saved register it lost track of. Reading one is
+    # reading whatever happened to be there.
+    #
+    # Not all of them are live. gcc 3.2 sets up argument slots that a later
+    # optimisation pass abandoned, and Ghidra faithfully recovers the dead store:
+    # McdAggregate's `uVar7 = extraout_ECX;` assigns to a variable nothing ever
+    # reads. Those are noise. MdtConstraint's `unaff_ESI` is assigned before its
+    # use, so the name is misleading but the dataflow is complete. Only a read
+    # that reaches something is a defect, so that is what this looks for.
+    GHIDRA_UNMODELLED = re.compile(
+        r'\b(in_stack_[0-9a-f]+|extraout_[A-Z]+[0-9]*|unaff_[A-Z]+[0-9]*)\b')
+
+    def live_unmodelled(src):
+        """Unmodelled-value names that are READ BEFORE anything assigns them.
+
+        Order matters and scope matters, so this walks each function's lines in
+        turn. MdtConstraintDisable declares `MeDictNode *unaff_ESI`, assigns it
+        `(c->head).bodyNode`, and only then passes it to MeDictDelete: the name
+        records where gcc kept the value, not a gap in the recovery. Reading one
+        that nothing has assigned is the actual defect."""
+        live = []
+        for region in re.split(r'^/\* ---- ', src, flags=re.M):
+            names = set(m.group(1) for m in GHIDRA_UNMODELLED.finditer(region))
+            for name in sorted(names):
+                word = r'\b' + re.escape(name) + r'\b'
+                for line in region.split('\n'):
+                    if not re.search(word, line):
+                        continue
+                    if re.match(r'\s*\w[\w \*]*' + word + r'\s*;\s*$', line):
+                        continue                  # its own declaration
+                    if re.match(r'\s*' + word + r'\s*=[^=]', line):
+                        break                     # assigned first; dataflow intact
+                    m = re.match(r'\s*(\w+)\s*=\s*' + word + r'\s*;\s*$', line)
+                    if m and len(re.findall(r'\b' + m.group(1) + r'\b', region)) <= 2:
+                        continue                  # dead store: nothing reads it
+                    live.append(name)
+                    break
+        return sorted(set(live))
+
     # Objects a real match has proven, with the evidence recorded alongside.
     proven = set()
     pf = os.path.join(root, 'proven.txt')
@@ -227,6 +288,22 @@ def main():
             continue
 
         src = open(csrc, errors='ignore').read()
+        nregparm = len(GHIDRA_REGPARM.findall(src))
+        if nregparm:
+            os.unlink(o)
+            rows.append((archive, base, 'REVIEW',
+                         f'{nregparm} function(s) tagged __regparmN — Ghidra shifted '
+                         f'the parameter list and dropped an argument'))
+            counts['REVIEW'] += 1
+            continue
+        unmodelled = live_unmodelled(src)
+        if unmodelled:
+            os.unlink(o)
+            rows.append((archive, base, 'REVIEW',
+                         'reads a value Ghidra could not account for: '
+                         + ', '.join(unmodelled[:3])))
+            counts['REVIEW'] += 1
+            continue
         nguess = len(GHIDRA_STACK_GUESS.findall(src))
         nalloca = len(GHIDRA_ALLOCA_FRAME.findall(src))
         nrecon = len(GHIDRA_RECONSTRUCTED_FRAME.findall(src))

@@ -22,6 +22,7 @@ What it does, and what it deliberately does NOT do:
 import argparse
 import os
 import re
+import struct
 import subprocess
 import sys
 
@@ -347,6 +348,159 @@ def materialise_alloca_frame(body, fname):
     return body, n
 
 
+# ---- Ghidra's EXTERNAL block, inverted ------------------------------------
+#
+# A relocatable .o has no addresses for its imports, so Ghidra invents them: it
+# gives every undefined symbol a four-byte slot in a synthetic EXTERNAL block,
+# in ELF symbol-table order. That is fine until a relocation carries an ADDEND,
+# because the addend then lands in a neighbouring symbol's slot and Ghidra
+# reports the neighbour. McdNull.o is the clearest case:
+#
+#     5b:  ff 15 08 00 00 00     call *0x8
+#          5d: R_386_32 MeMemoryAPI          <- MeMemoryAPI.createAligned
+#
+# comes back as
+#
+#     (*_McdGeometryDeinit)(0x20,0x10)
+#
+# because McdGeometryDeinit happens to sit two slots after MeMemoryAPI. The
+# name is wrong, but nothing is lost: the relocation records the true base and
+# the addend is sitting in the instruction. Reading both back inverts the
+# mangling exactly, and the result is checkable — if the slot arithmetic did not
+# reproduce the name Ghidra printed, the assumption is wrong and the rule stays
+# out of it.
+
+def undefined_symbols(obj):
+    """Undefined symbols in ELF symbol-table order — Ghidra's slot order."""
+    out = subprocess.run(['readelf', '-sW', obj], capture_output=True, text=True).stdout
+    syms = []
+    for line in out.splitlines():
+        m = re.match(r'\s*\d+:\s+\S+\s+\S+\s+\S+\s+\S+\s+\S+\s+(\S+)\s+(\S+)', line)
+        if m and m.group(1) == 'UND' and m.group(2):
+            syms.append(m.group(2))
+    return syms
+
+
+def relocation_targets(obj, per_function=False):
+    """{ghidra_name: {(real_symbol, addend), ...}} for relocated data references.
+
+    A name can have more than one candidate, and they are NOT interchangeable.
+    Ghidra's block is a fiction, so two relocations that land on the same slot
+    in it — `MeMemoryAPI + 12` and `MePoolAPI + 0` in MdtWorld.o — describe two
+    completely unrelated addresses at link time, and Ghidra prints the SAME name
+    at both. Which one a given site meant has to be decided from where the site
+    is, not from a preference between them.
+
+    With per_function, the result is {function: {ghidra_name: {...}}}, keyed on
+    which function's byte range the relocation falls in. That is usually enough
+    to leave one candidate standing: MdtWorldCreate relocates against MePoolAPI
+    and MdtWorldDestroy against MeMemoryAPI, so inside either one the name is
+    unambiguous even though it is not across the file.
+
+    The addend is the implicit one i386 REL relocations keep in the instruction
+    stream, so it is read out of the section bytes rather than the relocation
+    record."""
+    und = undefined_symbols(obj)
+    slot = {s: i for i, s in enumerate(und)}
+    if not und:
+        return {}
+    extents = function_extents(obj) if per_function else []
+
+    out = subprocess.run(['readelf', '-rW', obj], capture_output=True, text=True).stdout
+    cache, found = {}, {}
+    sect = None
+    for line in out.splitlines():
+        m = re.match(r"Relocation section '(\S+)'", line)
+        if m:
+            sect = m.group(1)[4:] if m.group(1).startswith('.rel') else m.group(1)
+            continue
+        m = re.match(r'([0-9a-f]{8})\s+\S+\s+(\S+)\s+[0-9a-f]{8}\s+(\S+)', line)
+        if not (m and sect and m.group(2) == 'R_386_32'):
+            continue
+        sym, off = m.group(3), int(m.group(1), 16)
+        if sym not in slot:
+            continue
+        if sect not in cache:
+            cache[sect] = _section_bytes(obj, sect)
+        data = cache[sect]
+        if off + 4 > len(data):
+            continue
+        addend = struct.unpack('<i', data[off:off + 4])[0]
+        if addend % 4:
+            continue
+        target = slot[sym] + addend // 4
+        if not 0 <= target < len(und):
+            continue
+        name = '_' + und[target]
+        if not per_function:
+            found.setdefault(name, set()).add((sym, addend))
+            continue
+        if sect != '.text':
+            continue
+        fn = next((n for n, lo, hi in extents if lo <= off < hi), None)
+        if fn:
+            found.setdefault(fn, {}).setdefault(name, set()).add((sym, addend))
+    return found
+
+
+def function_extents(obj):
+    """[(short_name, start, end)] for every function the object defines."""
+    out = subprocess.run(['nm', '--print-size', '--defined-only', obj],
+                         capture_output=True, text=True).stdout
+    rows = []
+    for line in out.splitlines():
+        p = line.split()
+        if len(p) == 4 and p[2] in 'tTwW':
+            rows.append((int(p[0], 16), int(p[1], 16), p[3]))
+    if not rows:
+        return []
+    dem = subprocess.run(['c++filt'] + [n for _, _, n in rows],
+                         capture_output=True, text=True).stdout.split('\n')
+    ext = []
+    for (value, size, _mangled), d in zip(rows, dem):
+        short = re.sub(r'.*::', '', d.split('(')[0]).strip()
+        if short:
+            ext.append((short, value, value + size))
+    return ext
+
+
+def _section_bytes(obj, section):
+    tmp = f'/tmp/.kd_sec_{os.getpid()}.bin'
+    r = subprocess.run(['objcopy', '-O', 'binary', f'--only-section={section}',
+                        obj, tmp], capture_output=True)
+    if r.returncode != 0 or not os.path.exists(tmp):
+        return b''
+    data = open(tmp, 'rb').read()
+    os.unlink(tmp)
+    return data
+
+
+EXTERN_VAR = re.compile(
+    r'^\s*(?:MEPUBLIC\s+)?extern\s+(?:const\s+)?((?:struct\s+)?[A-Za-z_]\w*)\s+'
+    r'([A-Za-z_]\w*)\s*;', re.M)
+
+
+def extern_var_types(include_dir):
+    """{variable: type} for every `extern T name;` the public headers declare.
+
+    Only the ones spelled out in a header are usable, which is the point: the
+    type is read, never inferred."""
+    types = {}
+    if not include_dir or not os.path.isdir(include_dir):
+        return types
+    for root, _, files in os.walk(include_dir):
+        for f in files:
+            if not f.endswith('.h'):
+                continue
+            try:
+                txt = open(os.path.join(root, f), errors='ignore').read()
+            except OSError:
+                continue
+            for typ, name in EXTERN_VAR.findall(txt):
+                types.setdefault(name, typ.replace('struct ', '').strip())
+    return types
+
+
 def signature_of(body):
     """Extract the declarator text preceding the function's opening brace."""
     brace = body.find('\n{')
@@ -518,7 +672,7 @@ FLOAT_TYPES = ('float', 'double', 'MeReal', 'longdouble')
 CAST_TO_FLOAT = re.compile(r'\((%s)\)' % '|'.join(FLOAT_TYPES))
 
 
-def fix_pointer_as_float(line, diag):
+def fix_pointer_as_float(line, diag, ctx):
     """`(float)x->member` where `member` is a POINTER.
 
     The original loaded four bytes into an FP register. Ghidra typed the memory
@@ -549,7 +703,7 @@ SUBFIELD_WIDTH = {1: 'unsigned char', 2: 'unsigned short',
                   4: 'unsigned int', 8: 'unsigned long long'}
 
 
-def fix_subfield_access(line, diag):
+def fix_subfield_access(line, diag, ctx):
     """`x._0_1_` is Ghidra for "the byte at offset 0 of x".
 
     It appears wherever the original wrote a register subfield — `mov %al, ...`
@@ -574,6 +728,137 @@ def fix_subfield_access(line, diag):
     return None
 
 
+MISLABELLED = re.compile(r'\b_(\w+)\b')
+
+
+DEF_BANNER = re.compile(r'^/\* ---- (\S+) \(', re.M)
+
+
+def fix_mislabelled_external(text, diag, ctx):
+    """`(*_McdGeometryDeinit)(0x20, 0x10)` is `MeMemoryAPI.createAligned(...)`.
+
+    Ghidra printed the wrong name for the right address; see relocation_targets()
+    for the mechanism and the evidence. Two shapes come out of it:
+
+      * a CALL through the slot. Here the rewrite must name the struct member,
+        because that is what supplies the prototype: calling through an
+        unprototyped pointer would default-promote a float argument to double
+        and silently change the ABI. If the member cannot be named, the rule
+        declines and the object stays in review rather than being guessed at.
+      * a plain READ of the slot, which has no calling convention to get wrong,
+        so the exact four-byte access Ghidra meant is always available.
+
+    Resolution is per FUNCTION, because one name can stand for two addresses in
+    one file. It is not per line: GCC reports an undeclared name once per
+    function, so a line-at-a-time rule would need one compile per occurrence to
+    reach the same answer, and every occurrence within a function is the same
+    defect with the same fix."""
+    m = re.search(r'[‘\'"]_(\w+)[’\'"] undeclared', diag)
+    if not m:
+        return None
+    ghidra_name = '_' + m.group(1)
+
+    out, changed = [], False
+    for fn, region in _split_definitions(text):
+        cands = ctx.externals.get(fn, {}).get(ghidra_name) if fn else None
+        new = _resolve_external(region, ghidra_name, cands, ctx) if cands else None
+        out.append(new if new is not None else region)
+        changed = changed or new is not None
+    return ''.join(out) if changed else None
+
+
+fix_mislabelled_external.file_wide = True
+
+
+def _split_definitions(text):
+    """[(function or None, text)] — the file cut at ghidra_clean's own banners."""
+    parts, last, name = [], 0, None
+    for m in DEF_BANNER.finditer(text):
+        parts.append((name, text[last:m.start()]))
+        name, last = m.group(1), m.start()
+    parts.append((name, text[last:]))
+    return parts
+
+
+def _resolve_external(region, ghidra_name, candidates, ctx):
+    # Choose between candidates on evidence, never on preference. A base symbol
+    # the public headers declare as a struct WITH a member at this exact offset
+    # is a description of a function-pointer table slot, which is what an
+    # indirect call through a data symbol is. Nothing else in the candidate set
+    # explains the site at all.
+    named = []
+    for sym, addend in sorted(candidates):
+        typ = ctx.extern_types.get(sym)
+        if not typ:
+            continue
+        member = (ctx.fieldmap.get(typ, {}).get(str(addend))
+                  or ctx.fieldmap.get('_' + typ, {}).get(str(addend)))
+        if member:
+            named.append((sym, addend, member))
+
+    call = re.compile(r'\(\s*\*\s*' + re.escape(ghidra_name) + r'\s*\)\s*\(')
+    if len(named) == 1:
+        sym, _addend, member = named[0]
+        region = call.sub(f'({sym}.{member})(', region)
+        return re.sub(r'(?<![\w])' + re.escape(ghidra_name) + r'\b',
+                      f'{sym}.{member}', region)
+    if named:
+        return None                        # still ambiguous; a human should look
+    if call.search(region):
+        return None                        # a call with no prototype to give it
+    zero = [s for s, a in sorted(candidates) if a == 0]
+    if len(zero) != 1:
+        return None
+    return re.sub(r'(?<![\w])' + re.escape(ghidra_name) + r'\b', zero[0], region)
+
+
+def fix_too_many_arguments(line, diag, ctx):
+    """Drop the arguments past the end of a known prototype.
+
+    Ghidra counts a call's arguments from the pushes it can see before it, and
+    over-counts when the surrounding code adjusts the stack for its own reasons.
+    MdtBodyCreate's `MePoolAPI.init(pool, size, structSize, align)` came back
+    with eight.
+
+    On cdecl the CALLER cleans the stack and the callee reads only as far as its
+    prototype, so the extra pushes are invisible to it: cutting the list back to
+    the declared arity reproduces exactly what the original callee saw. This is
+    only safe because the arity comes from a real prototype — which is precisely
+    what GCC is complaining about, so the rule can never run without one."""
+    m = re.search(r'too many arguments to function', diag)
+    if not m:
+        return None
+    best = None
+    for call in re.finditer(r'\)\s*\(', line):        # `(x.y)(a, b, ...)`
+        open_paren = call.end() - 1
+        close = _match_bracket(line, open_paren)
+        if close is None:
+            continue
+        args = _split_arguments(line[open_paren + 1:close - 1])
+        if len(args) > 1 and (best is None or len(args) > best[2]):
+            best = (open_paren, close, len(args), args)
+    if best is None:
+        return None
+    open_paren, close, n, args = best
+    return (line[:open_paren + 1] + ', '.join(a.strip() for a in args[:n - 1])
+            + line[close - 1:])
+
+
+def _split_arguments(s):
+    """Top-level comma split, ignoring commas inside brackets."""
+    out, depth, start = [], 0, 0
+    for i, ch in enumerate(s):
+        if ch in _OPEN:
+            depth += 1
+        elif ch in _CLOSE:
+            depth -= 1
+        elif ch == ',' and depth == 0:
+            out.append(s[start:i])
+            start = i + 1
+    out.append(s[start:])
+    return out
+
+
 # Each entry: (diagnostic pattern the rule claims, rewrite function).
 # A rule is offered a line only when GCC reported that exact kind of error on
 # it, so the pattern here is half of the rule's safety argument.
@@ -587,15 +872,31 @@ REPAIR_RULES = [
     (re.compile(r'expected expression before ‘\.’ token|'
                 r"expected expression before '\.' token"),
      fix_subfield_access),
+    (re.compile(r'[‘\'"]_\w+[’\'"] undeclared'),
+     fix_mislabelled_external),
+    (re.compile(r'too many arguments to function'),
+     fix_too_many_arguments),
 ]
 
 
-def repair_loop(path, cc, cflags, max_rounds=12, verbose=True):
+class RepairContext:
+    """What the rules are allowed to consult. Everything here is READ from the
+    object, the public headers or the DWARF-derived type database — nothing in
+    it is inferred from the decompiled text."""
+
+    def __init__(self, obj=None, fieldmap=None, include_dir=None):
+        self.fieldmap = fieldmap or {}
+        self.externals = relocation_targets(obj, per_function=True) if obj else {}
+        self.extern_types = extern_var_types(include_dir)
+
+
+def repair_loop(path, cc, cflags, ctx=None, max_rounds=12, verbose=True):
     """Compile, rewrite the lines GCC rejected, recompile, until it settles.
 
     Returns (n_edits, remaining_errors, log). The file is left with whichever
     version compiled best; if no rule helped it is left exactly as generated,
     so a failure to repair can never make an object worse than not trying."""
+    ctx = ctx or RepairContext()
     original = open(path, errors='ignore').read()
     best_text, log = original, []
     diags = compile_diags(path, cc, cflags)
@@ -604,6 +905,7 @@ def repair_loop(path, cc, cflags, max_rounds=12, verbose=True):
         return 0, 0, log
 
     n_edits = 0
+    applied = set()                 # (line, text) pairs already tried; no loops
     for _ in range(max_rounds):
         lines = best_text.split('\n')
         by_line = {}
@@ -619,37 +921,69 @@ def repair_loop(path, cc, cflags, max_rounds=12, verbose=True):
                 rule = next((fn for pat, fn in REPAIR_RULES if pat.search(msg)), None)
                 if rule is None:
                     continue
-                new = rule(text, msg)
-                if new is not None and new != text:
+                if getattr(rule, 'file_wide', False):
+                    # A rule may resolve a name rather than a line, in which case
+                    # every occurrence in the unit is the same defect. Fold the
+                    # result back into per-line edits so the verification below
+                    # is unchanged; a file-wide rule must not add or remove
+                    # lines, and this asserts it.
+                    whole = rule('\n'.join(lines), msg, ctx)
+                    if whole is None:
+                        continue
+                    fixed = whole.split('\n')
+                    if len(fixed) != len(lines):
+                        continue
+                    changed = {i + 1: b for i, (a, b) in enumerate(zip(lines, fixed))
+                               if a != b and (i + 1, b) not in applied}
+                    if not changed:
+                        continue
+                    edits.update(changed)
+                    tried.append((lineno, rule.__name__, msg))
+                    break
+                new = rule(text, msg, ctx)
+                if new is not None and new != text and (lineno, new) not in applied:
                     edits[lineno] = new
                     tried.append((lineno, rule.__name__, msg))
                     break
         if not edits:
             break
 
+        # The verification, and the reason a wrong rule is harmless: an edit is
+        # kept only if the diagnostic it CLAIMED is gone and the total did not
+        # grow. Counting alone is not enough — GCC reports an undeclared name
+        # once per function ("first use in this function"), so repairing the
+        # first of several occurrences leaves the count unchanged while making
+        # real progress, and a count-only test would reject it forever.
+        #
+        # Rewrites never add or remove lines, so line numbers stay comparable
+        # across a round and (line, message) identifies a diagnostic exactly.
+        def verdict(new_diags, targets):
+            live = {(l, m) for l, _c, m in new_diags}
+            return (len(new_diags) <= best_n,
+                    sum(1 for t in targets if t not in live))
+
+        targets = [(l, m) for l, _r, m in tried]
         candidate = list(lines)
         for lineno, new in edits.items():
             candidate[lineno - 1] = new
         candidate_text = '\n'.join(candidate)
         open(path, 'w').write(candidate_text)
         new_diags = compile_diags(path, cc, cflags)
+        no_worse, resolved = verdict(new_diags, targets)
 
-        # The verification. A batch is kept only if the compiler is happier for
-        # it. Anything else — a rule that misread the line, a rewrite that was
-        # valid C but not what the code meant *and* broke something downstream —
-        # shows up here as a count that did not fall, and is thrown away.
-        if len(new_diags) < best_n:
+        if no_worse and resolved == len(targets):
             best_text, best_n, diags = candidate_text, len(new_diags), new_diags
             n_edits += len(edits)
             log += tried
+            applied |= {(l, t) for l, t in edits.items()}
             if verbose:
                 for lineno, rule, msg in tried:
                     print(f'  fixed {os.path.basename(path)}:{lineno} [{rule}] {msg[:60]}')
             if best_n == 0:
                 break
         else:
-            # Batch rejected. Retry the edits one at a time: usually all but one
-            # were fine and a single bad rewrite masked them.
+            # Batch rejected. Retry one at a time: usually all but one were fine
+            # and a single bad rewrite masked them.
             progress = False
             for lineno, new in sorted(edits.items()):
                 one = best_text.split('\n')
@@ -657,11 +991,13 @@ def repair_loop(path, cc, cflags, max_rounds=12, verbose=True):
                 one_text = '\n'.join(one)
                 open(path, 'w').write(one_text)
                 d = compile_diags(path, cc, cflags)
-                if len(d) < best_n:
+                entry = next(t for t in tried if t[0] == lineno)
+                ok, res = verdict(d, [(entry[0], entry[2])])
+                if ok and res:
                     best_text, best_n, diags = one_text, len(d), d
                     n_edits += 1
                     progress = True
-                    entry = next(t for t in tried if t[0] == lineno)
+                    applied.add((lineno, new))
                     log.append(entry)
                     if verbose:
                         print(f'  fixed {os.path.basename(path)}:{lineno} '
@@ -829,7 +1165,8 @@ def main():
     if n_alloca_fns:
         print(f'  {n_alloca_fns} function(s) needed an alloca frame')
     if args.cflag:
-        n_edits, left, _log = repair_loop(args.output, args.cc, args.cflag)
+        ctx = RepairContext(args.object, fieldmap, args.metoolkit_include)
+        n_edits, left, _log = repair_loop(args.output, args.cc, args.cflag, ctx)
         if n_edits:
             print(f'  {n_edits} line(s) repaired from compiler feedback'
                   + (f', {left} error(s) left' if left else ', clean'))

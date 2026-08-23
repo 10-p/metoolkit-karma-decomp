@@ -188,19 +188,27 @@ typedef int code();
 #endif
 
 /* Ghidra also emits __regparmN, claiming the first N arguments arrive in
-   registers. It is a misdetection here. McdConvexMeshCreate(frame, poly,
-   fatness) is tagged __regparm1, but its prologue reads
+   registers. As a CALLING CONVENTION it is a misdetection, and defining it away
+   is right: gcc 3.2's i386 ABI passes everything on the stack here.
 
-       mov 0xc(%ebp),%esi        ; poly
+   But do not read that as "harmless". Ghidra does not just annotate — it lays
+   the parameter list out to match, so in a __regparmN function every parameter
+   name in the BODY is shifted by N and the last incoming argument falls off the
+   end entirely:
 
-   which is the CDECL position for argument 1 (arg0 at ebp+8, arg1 at ebp+0xc).
-   Under regparm(1) arg0 would be in %eax and poly would sit at ebp+8 instead.
-   So these are ordinary cdecl functions and the annotation is defined away.
+       MeI16 __regparm1 McdGeometryGetMassProperties(g, relTM, m, volume)
+       { return (**vtable)(relTM, m, volume); }
 
-   This is the one annotation where being wrong changes the ABI rather than just
-   the spelling, so it is worth stating the evidence: the substitute gate
-   compares trajectories bit-for-bit and would fail immediately if the calling
-   convention were mismatched. */
+   The original pushes four arguments starting with `g`; this passes three,
+   starting with the second. It compiled, it linked, it was bit-identical on the
+   collision-free scene, and it segfaulted on the first collision scene. Every
+   other instance is shifted the same way — McdConvexMeshCreate dereferences
+   `fatness` as a pointer, McdGeometryInstanceDestroy never touches either
+   declared parameter and reads `in_stack_*` instead.
+
+   So recover.py holds any object containing __regparmN out of the validated
+   set. The macro exists only so the file still parses; it is not a statement
+   that the function is correct. */
 #ifndef __regparm0
 #  define __regparm0
 #endif

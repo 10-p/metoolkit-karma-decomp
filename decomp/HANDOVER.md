@@ -34,11 +34,18 @@ Ghidra consumes it directly.
 ## 2. Current status
 
 ```
-compile:  54 objects  (51 clean + 3 with prelude TODOs)  = 36.5% of 148 attempted
-gate:     54 of 54 bit-identical trajectories, 0 failures
-review:   49 objects held back by four safety detectors
-fail:     45 objects do not compile
+compile:  72 objects  (69 clean + 3 with prelude TODOs)  = 48.6% of 148 attempted
+gate:     72 of 72 clean on BOTH scenes — bit-identical on scene_chain, and no
+          crash on scene_boxes_on_plane (the two divergences there are IxBoxBox
+          and IxBoxPlane, both on the collision path, both expected)
+review:   20 objects held back by six safety detectors
+fail:     56 objects do not compile
 ```
+
+**Run both scenes.** `scene_chain` is collision-free and is the authoritative *trajectory*
+signal; `scene_boxes_on_plane` diverges by design, but it is the only thing in the cheap
+tier that exercises the geometry dispatch, and it is what caught the `__regparm` parameter
+shift after the collision-free scene had passed it.
 
 **Validated against the real game:**
 
@@ -307,18 +314,70 @@ dims_diff,worst_delta`.
 
 ---
 
-## 8. The four detectors — why objects are held back
+## 7a. The compile-feedback loop
+
+`ghidra_clean.py` emits C, **compiles it, rewrites only the lines GCC rejected, and
+recompiles**, until it settles. This replaced a set of whole-file regexes, and the reason
+is dead end 6 in §9: `(float)x->member` is a legal conversion when the member is an int and
+a bit reinterpretation when it is a pointer. The text is identical. The compiler is the
+only thing in the pipeline that knows which is which.
+
+**The verification is the whole design.** An edit is kept only if the diagnostic the rule
+claimed is gone *and* the total error count did not grow. Otherwise it is reverted, and
+the batch is retried one edit at a time in case a single bad rewrite masked good ones. So a
+rule that misreads a line costs one compile and nothing else, and the file is never left
+worse than as generated. Counting alone is not enough, incidentally: GCC reports an
+undeclared name once per function, so fixing the first of several occurrences leaves the
+count unchanged while making real progress.
+
+Rules live in `REPAIR_RULES`, each paired with the diagnostic it claims. Adding one is
+cheap. **Removing the verification is not.**
+
+### The mislabelled-external rule — worth understanding before you touch it
+
+This is the one that freed most of the objects, and it is the one with a trap in it.
+
+A relocatable `.o` has no addresses for its imports, so Ghidra invents them: every
+undefined symbol gets a four-byte slot in a synthetic EXTERNAL block, in ELF symbol-table
+order. A relocation with an **addend** then lands in a neighbour's slot, and Ghidra reports
+the neighbour:
+
+```
+5b: ff 15 08 00 00 00   call *0x8
+    5d: R_386_32 MeMemoryAPI          ->  (*_McdGeometryDeinit)(0x20,0x10)
+```
+
+Nothing is lost — the relocation records the true base and the addend sits in the
+instruction stream — so reading both back inverts it exactly:
+`MeMemoryAPI.createAligned(0x20, 0x10)`, which is what McdNullCreate does.
+
+**The trap:** Ghidra's block is a fiction, so two relocations that collide in it describe
+two *unrelated* addresses at link time, and Ghidra prints the same name at both. `MdtWorld`
+has exactly this: `_MePoolAPI` means `MePoolAPI.init` in `MdtWorldCreate` and
+`MeMemoryAPI.destroy` in `MdtWorldDestroy`. So resolution is done **per function**, against
+the relocations inside that function's own byte range, and if two candidates survive the
+rule declines rather than picks.
+
+At a call site the rewrite must name a struct member, because that is what supplies the
+prototype — calling through an unprototyped pointer would default-promote a float argument
+to double and change the ABI silently. No member, no rewrite.
+
+---
+
+## 8. The detectors — why objects are held back
 
 `recover.py` refuses to put an object in the validated set when it matches any of these.
-All four exist for one reason: **code that compiles and crashes is worse than code that
+They all exist for one reason: **code that compiles and crashes is worse than code that
 does not compile.**
 
 | detector | pattern | why |
 |---|---|---|
-| mislabelled symbol | `(*_McdGeometryDeinit)(0x1c, 0x10)` | Ghidra mis-resolved a relocation-with-addend against a data symbol; the call target is simply wrong |
+| mislabelled symbol | `(*_McdGeometryDeinit)(0x1c, 0x10)` | Ghidra mis-resolved a relocation-with-addend against a data symbol. *Mostly repaired now* — see §7a; what remains is what the repair could not explain |
 | guessed stack frame | `(int)aiStack_50 + iVar8` | Ghidra invented a local array and routed call arguments through it at computed offsets |
 | argument-less indirect call | `(*fn)()` | no signature for a function pointer, so every argument is dropped and the callee reads the stack |
 | reconstructed frame | `kd_argslot_` | this pipeline rebuilt the frame by inference; it can read perfectly and still be wrong |
+| **shifted parameter list** | `__regparm1` | Ghidra laid the parameters out for a convention that is not in use; the body is off by N and loses an argument. Found by the collision scene, not by reading |
+| **unaccounted value** | `in_stack_0000000c`, `extraout_ECX` | a value read before anything assigns it — an incoming argument or a register Ghidra could not model. Dead stores are excluded; only a read that reaches something counts |
 
 `proven.txt` records which objects a real match has released from quarantine, **with the
 evidence on the line**. That is the only way out of quarantine. Do not remove a detector to
@@ -377,8 +436,15 @@ than relying on determinism (see §10).
 - `-fno-strict-aliasing` is **required**, not a nicety. Decompiled code type-puns
   constantly; under `-O2` GCC deleted argument stores and `KTriListGenerator` received
   `(pair, 0, 0, 0, 0)`.
-- `__thiscall` and `__regparmN` are both no-ops here — verified against prologues. GCC's
-  i386 C++ ABI passes `this` on the stack.
+- `__thiscall` is a no-op here — verified against prologues. GCC's i386 C++ ABI passes
+  `this` on the stack.
+- **`__regparmN` is NOT a no-op.** An earlier version of this file said it was, on the
+  strength of one prologue. That was wrong, and the collision scene proved it: Ghidra
+  lays the parameter list out to match the convention it detected, so in a `__regparmN`
+  function every parameter in the body is shifted by N and the last incoming argument is
+  dropped. `McdGeometryGetMassProperties` passed three of its four arguments, each one
+  position off, and segfaulted. 9 objects / 19 functions are affected; none of them are
+  on the collision path. `recover.py` now holds them back.
 
 ---
 

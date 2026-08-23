@@ -34,12 +34,12 @@ Ghidra consumes it directly.
 ## 2. Current status
 
 ```
-compile:  84 objects  (81 clean + 3 with prelude TODOs)  = 56.8% of 148 attempted
-gate:     84 of 84 clean on BOTH scenes — bit-identical on scene_chain, and no
+compile:  86 objects  (82 clean + 4 with prelude TODOs)  = 58.1% of 148 attempted
+gate:     86 of 86 clean on BOTH scenes — bit-identical on scene_chain, and no
           crash on scene_boxes_on_plane (the two divergences there are IxBoxBox
           and IxBoxPlane, both on the collision path, both expected)
-review:   10 objects held back by six safety detectors
-fail:     54 objects do not compile
+review:   14 objects held back by seven safety detectors
+fail:     48 objects do not compile
 ```
 
 **Run both scenes.** `scene_chain` is collision-free and is the authoritative *trajectory*
@@ -57,10 +57,10 @@ the only one using real gameplay.
 | object | evidence |
 |---|---|
 | `IxSphereTriList` | 1,763,276 real calls, 0 structural divergences, worst delta 5.7e-06. **Released** — see `proven.txt` |
-| `IxSphereSphere` | 120,275 real calls + 300k synthetic, 0 structural divergences |
-| `IxBoxBox` | 10,331 real calls + 300k synthetic, 0 structural divergences |
-| `IxConvexPrimitives` | 300k synthetic pairs, 0 structural divergences, worst 1.19e-07. **No real calls seen yet** — see `proven.txt` |
-| `IxSphylPrimitives` | quarantined. `McdSphylBoxIntersect` puts the contact in the wrong place — see §8 |
+| `IxSphereSphere` | 128,885 real calls + 300k synthetic, 0 structural divergences |
+| `IxBoxBox` | 35,427 real calls + 300k synthetic, 0 structural divergences |
+| `IxConvexPrimitives` | 1,685 real calls, **all 1,685 bit-identical**, plus 300k synthetic. **Validated** |
+| `IxSphylPrimitives` | 74,921 real calls, **1 structural divergence (0.0013%)** after the fix in §8. Quarantined pending one judgement call |
 
 ---
 
@@ -73,19 +73,20 @@ actually makes. Combined across both test maps, by source object:
 |---:|---|---|
 | 1,856,714 | `IxSphereTriList` | ✅ validated on real calls |
 | 128,885 | `IxSphereSphere` | ✅ validated on real calls |
-| 388,861 | `IxSphylPrimitives` (ragdolls) | ❌ quarantined — `McdSphylBoxIntersect` is wrong, §8 |
-| 11,853 | `IxBoxBox` | ✅ validated on real calls |
-| 6,290 | `IxConvexPrimitives` (vehicles) | ⚠ synthetic only; not once seen live |
+| 463,782 | `IxSphylPrimitives` (ragdolls) | ⚠ 1 divergence in 74,921 — a judgement call, §8 |
+| 77,424 | `McdGjk` — `McdGjkCgIntersect`, i.e. Box×ConvexMesh | ❌ not recovered; reads `unaff_ESI` |
+| 35,427 | `IxBoxBox` | ✅ validated on real calls |
+| 7,975 | `IxConvexPrimitives` (vehicles) | ✅ validated on real calls |
 
 **37 interaction pairs are registered; the maps exercise 9.** `IxBoxBox` — which was
 polished first and proven on 300k synthetic pairs — gets ~12k real calls. Re-run the
 census after any new map; it is cheap and it has repeatedly changed priorities.
 
-The ragdoll number moved by an order of magnitude once bots were actually spawning
-(`?NumBots=6?MinPlayers=7`, §6): `DM-BB-VehicleWar-test-physics` produces 350,000
-Sphyl×TriangleList calls in twenty minutes, which makes `IxSphylPrimitives` the second
-busiest thing in the game after the sphere/trilist path and the most valuable object still
-broken.
+Two things moved this table a long way, and neither was a code change. Spawning bots
+explicitly (`?NumBots=8?MinPlayers=9`, §6) turned the ragdoll path from 36,828 calls into
+463,782. Running a **community** map instead of a shipped one surfaced two pairs no Epic map
+had ever reached (§6) — including `Box×ConvexMesh`, which is now the busiest thing in the
+game that is not recovered at all.
 
 ---
 
@@ -566,16 +567,14 @@ it is the second busiest object in the game (§3), so it is worth the trouble.
 
 In order:
 
-1. **Fix `McdSphylBoxIntersect`.** This is now the single most valuable thing on the list.
-   `IxSphylPrimitives` is the ragdoll path and the census puts it second busiest in the
-   game; one of its four functions computes the contact position wrongly while getting the
-   separation right (§8), and it reproduces deterministically under
-   `test/difftest_pair.sh`. Everything else about the object measures clean.
-2. **Catch `IxConvexPrimitives` live.** It passes 300,000 synthetic pairs with a one-ULP
-   worst delta, but no real match has ever called it — ragdolls land on the level, not on
-   vehicles. That means getting `ONS-Torlan` to run a ticking match (§6), which is the real
-   blocker here and is not a Karma problem at all.
-3. **Grind the tail.** 54 objects. The biggest remaining class by far is `stack0xNNNN` —
+1. **Decide `IxSphylPrimitives`** (§8). It is the busiest thing in the game still held
+   back, the numbers are in `proven.txt`, and what is left really is a decision rather than
+   a measurement: one threshold flap in 74,921 real calls. It needs a person.
+2. **Recover `McdGjk`.** `McdGjkCgIntersect` handles Box×ConvexMesh, which the census now
+   puts at 77,424 calls — the busiest pair with nothing recovered behind it at all. The
+   object compiles; it is held because it reads `unaff_ESI` before anything assigns it,
+   which is one specific defect to chase rather than a wall.
+3. **Grind the tail.** 48 objects. The biggest remaining class by far is `stack0xNNNN` —
    30 references, an incoming argument Ghidra did not model — and that is a genuine defect,
    not a spelling problem, so it must not be papered over. After that: types
    `kd_types.h` does not emit (`MeASEObject`, `McdErrorDescription`, `Mesh2GeometryType`),

@@ -21,15 +21,14 @@
 # object              evidence
 IxSphereTriList       real: test-karma-1, 5 min, 1,763,276 calls of McdSphereTriangleListIntersect, 1,761,435 bit-identical, 0 structural divergences, worst delta 5.7e-06. (An earlier run of the same map gave 680,045 calls with the same verdict; the count varies with how the KActors settle, the verdict has not.) Also 93,438 calls on a 20-min DM-BB-VehicleWar-test-physics match, 0 structural. Self-test (original vs original) on test-karma-1: 1,763,102 calls, 0 divergence, so the harness is sound.
 IxSphereSphere        real: test-karma-1, 5 min, 120,275 calls, 90,540 bit-identical, 0 structural, worst 5.96e-08; plus 8,610 calls on the 20-min vehicle match, 0 structural. synth: 300,000 pairs, 72,614 touching, 0 structural, worst 5.96e-08.
-IxBoxBox              real: 10,331 calls on the 20-min vehicle match, 0 structural, worst 1.8e-04. synth: 300,000 pairs, 29,747 touching, 0 structural, worst 8.7e-06.
-IxConvexPrimitives    synth ONLY: 300,000 pairs of McdSphylConvexMeshIntersect against randomised 24-point convex hulls, 64,223 touching (21.4%), 282,774 bit-identical, 0 ret/touch, 0 count, 0 dims divergences, worst delta 1.19e-07 — one float ULP.
-#                     NOT yet seen in a real match. Twenty minutes of bots dying
-#                     on DM-BB-VehicleWar-test-physics produced 350,799 Sphyl x
-#                     TriangleList calls and ZERO Sphyl x ConvexMesh: ragdolls
-#                     land on the level, not on the vehicles. The census's 6,290
-#                     calls came from ONS-Torlan, which has so far refused to
-#                     start a ticking match (see HANDOVER.md 6). Someone should
-#                     still catch it live before this counts as finished.
+IxBoxBox              real: 23,611 calls on a 25-min ONS-CBP2-Tropica match plus 10,331 on a 20-min vehicle match, 0 structural, worst 3.3e-04. synth: 300,000 pairs, 29,747 touching, 0 structural, worst 8.7e-06.
+IxConvexPrimitives    real: 1,685 calls of McdSphylConvexMeshIntersect on ONS-CBP2-Tropica, ALL 1,685 bit-identical — 0 ret/touch, 0 count, 0 dims, and not even a float-noise difference. synth: 300,000 pairs against randomised 24-point convex hulls, 64,223 touching (21.4%), 0 structural, worst 1.19e-07 (one float ULP).
+#                     Getting a live call at all took the project owner pointing
+#                     out that Epic's maps are optimised and community ones are
+#                     not. DM-BB-VehicleWar-test-physics never produced one in an
+#                     hour — ragdolls land on the level, not on the vehicles —
+#                     and ONS-Torlan would not start a ticking match. CBP2 and
+#                     UCMP maps reach it in minutes. See HANDOVER.md 6.
 
 # --- NOT proven, with what was observed --------------------------------------
 # IxSphylPrimitives   HALF of what HANDOVER.md 8 left open is now closed, and
@@ -88,28 +87,36 @@ IxConvexPrimitives    synth ONLY: 300,000 pairs of McdSphylConvexMeshIntersect a
 #                     BEFORE believing anything the harness blames on recovered
 #                     code.
 #
-#                     Earlier real-match observation, kept because the numbers
-#                     are still the only in-game data for this object —
-#                     ONS-Torlan, 11 min:
+#                     IN-GAME, AFTER the fix. ONS-CBP2-Tropica, 25 min:
 #
-#                       McdSphylTriangleListIntersect   49282 calls  6 ret_diff  4 count_diff  worst 4.0e-04
-#                       McdSphylSphylIntersect          21461 calls  1 ret_diff  0 count_diff  worst 7.9e-05
-#                       McdSphylSphereIntersect          6459 calls  0 ret_diff  0 count_diff  worst 3.1e-05
+#                       McdSphylTriangleListIntersect  46,109 calls  1 ret_diff  0 count  0 dims  worst 1.53e-05
+#                       McdSphylSphylIntersect         19,195 calls  0 structural                worst 3.81e-06
+#                       McdSphylSphereIntersect         9,617 calls  0 structural                worst 3.42e-05
 #
-#                     and a later 20-min vehicle match with all four staged:
+#                     ONE structural divergence in 74,921 calls — 0.0013%. For
+#                     comparison, BEFORE the fix, ONS-Torlan over 11 min:
 #
-#                       McdSphylSphylIntersect            549 calls  0 structural  worst 5.96e-08
-#                       McdSphylSphereIntersect          1065 calls  0 structural  worst 6.11e-05
-#                       McdSphylTriangleListIntersect    2448 calls  0 structural  worst 0
+#                       McdSphylTriangleListIntersect  49,282 calls  6 ret_diff  4 count_diff  worst 4.0e-04
+#                       McdSphylSphylIntersect         21,461 calls  1 ret_diff  0 count_diff  worst 7.9e-05
+#                       McdSphylSphereIntersect         6,459 calls  0 structural              worst 3.1e-05
 #
-#                     Every captured McdSphylTriangleListIntersect case is a
-#                     BORDERLINE contact (ret 1/0 count 2/0, ret 0/1 count 0/2)
-#                     with dims_diff 0 throughout — the two never disagree about
-#                     what KIND of contact it is, only whether it exists. At
-#                     world coordinates ~250 with tolerance 0.00475, a 4.0e-04
-#                     delta is a relative error near 1.6e-06 — f32 noise landing
-#                     on a discrete threshold, and the same character as what is
-#                     left in McdSphylBoxIntersect.
+#                     Eleven divergences in 77,202 — 0.014%. So the fix took the
+#                     in-game rate down by a factor of ten and the worst delta
+#                     down by a factor of twenty-six.
 #
-#                     Those in-game numbers PREDATE the save-and-restore fix, so
-#                     re-measure before deciding anything on them.
+#                     The one that remains is the same shape as ever, a contact
+#                     right on the threshold:
+#
+#                       ret 0/1  touch 0/1  count 0/2   tol 0.00475
+#                       at world (135.2, -170.0, 21.8)
+#
+#                     dims_diff is 0 throughout — the two never disagree about
+#                     what KIND of contact it is, only whether it exists.
+#
+#                     SO THE DECISION IS: is one threshold flap in 75,000 calls
+#                     acceptable? The arguments for yes are that the engine
+#                     already tolerates contacts appearing and disappearing frame
+#                     to frame, and that UT2004 replicates KRigidBodyState rather
+#                     than relying on determinism (HANDOVER.md 10). The argument
+#                     for no is that nobody has watched a ragdoll through it.
+#                     That is a call for a person, not for this file.

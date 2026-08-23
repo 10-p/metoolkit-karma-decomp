@@ -33,10 +33,10 @@ complete types. That is what makes this tractable. Ghidra consumes it directly.
 ## 2. Status
 
 ```
-compile:  92 objects  (88 clean + 4 with prelude TODOs)  = 62.2% of 148 attempted
-gate:     92/92 clean on all three substitute scenes
-wasm32:   92/92 compile, 92/92 exported symbol sets byte-identical to i386
-review:   17 objects held back by seven safety detectors
+compile:  93 objects  (89 clean + 4 with prelude TODOs)  = 62.9% of 148 attempted
+gate:     93/93 clean on all three substitute scenes
+wasm32:   93/93 compile, 93/93 exported symbol sets byte-identical to i386
+review:   16 objects held back by eight safety detectors
 fail:     39 objects do not compile
 ```
 
@@ -50,16 +50,18 @@ in it is what releases an object from quarantine):
 | `IxSphereTriList` | 1,763,276 real calls, 0 structural divergences. Released. One known limit, §8 |
 | `IxSphylPrimitives` | 74,921 real calls, 1 structural divergence (0.0013%). Released, §8 |
 | `IxSphereSphere` | 128,885 real + 300k synthetic, 0 structural |
-| `McdGjk` | 16,457 real calls of `McdGjkCgIntersect`, 0 structural |
+| `McdGjk` | 16,457 real calls of `McdGjkCgIntersect`, 0 structural — but see §8, a much larger run since |
 | `IxConvexPrimitives` | 1,685 real calls, **all bit-identical**, + 300k synthetic |
 | `IxBoxBox` | 35,427 real + 500k synthetic, **1 count divergence**, §8 |
-| `IxConvexTriList` | ❌ **18% wrong in a live match.** Quarantined, §8 — this is the top task |
+| `IxBoxSphere` | 5,101 real calls, 0 structural. The census said this pair was never called |
+| `IxConvexTriList` | 6,857 real calls, 0 structural. **Released**, §8 — this was the top task |
+
 
 ---
 
 ## 3. The census — this decides what to work on
 
-**38 interaction pairs are registered. The game calls ten of them. Ever.**
+**38 interaction pairs are registered. The game calls eleven of them. Ever.**
 
 A sweep over 25+ runs and 18 maps, using `KD_CENSUS=1` so it perturbs nothing:
 
@@ -73,12 +75,13 @@ A sweep over 25+ runs and 18 maps, using `KD_CENSUS=1` so it perturbs nothing:
 | Box × Box | 167,649 | `IxBoxBox` | ✅ |
 | Sphyl × Sphere | 148,031 | `IxSphylPrimitives` | ✅ |
 | Sphyl × ConvexMesh | 11,280 | `IxConvexPrimitives` | ✅ |
-| ConvexMesh × TriangleList | 4,950 | `IxConvexTriList` | ❌ **broken** |
+| ConvexMesh × TriangleList | 4,950 | `IxConvexTriList` | ✅ |
+| Box × Sphere | 5,101 | `IxBoxSphere` | ✅ |
 | Sphere × ConvexMesh | 2,274 | `McdGjk` | ✅ |
 | ConvexMesh × ConvexMesh | 39 | `McdGjk` | ✅ |
 
 **Registered on every map and called ZERO times, across every run so far:** every
-`Aggregate` pair, every `Cylinder` pair, `Box×Plane`, `Box×Sphere`, `Box×TriangleList`,
+`Aggregate` pair, every `Cylinder` pair, `Box×Plane`, `Box×TriangleList`,
 `Sphere×Plane`, `Sphyl×Box`, `Sphyl×Plane`, `ConvexMesh×Plane`.
 
 Absorb that before picking up work. UT2004 gives its physics actors sphere, sphyl,
@@ -87,8 +90,11 @@ the "not compiling" pile are for collisions the game never makes.**
 
 Two cautions:
 
-- Read "zero times" as "not in 25 runs", not "impossible". `ConvexMesh×ConvexMesh` was on
-  that list until `ONS-UCMP-ABC-ECE` made 39 calls to it.
+- Read "zero times" as "not in 25 runs", not "impossible". **Two pairs have already come
+  off that list.** `ConvexMesh×ConvexMesh` did it with 39 calls on `ONS-UCMP-ABC-ECE`;
+  `Box×Sphere` did it on 2026-08-23 with **5,101 calls in a single match on the same map**,
+  after 25 runs across 18 maps had shown none. It was already recovered and clean, so it
+  cost nothing — this time.
 - It cuts both ways. `McdSphylBoxIntersect` had a real bug (§8) in a pair that is never
   called, and `IxSpherePlane` sits in the validated set for another. Neither was wasted —
   the sphyl bug was in shared code — but **"validated" is not "load-bearing"** without
@@ -96,6 +102,7 @@ Two cautions:
 
 Re-run the census after any new map. It is cheap, non-perturbing, and it has changed
 priorities every single time.
+
 
 ---
 
@@ -116,6 +123,7 @@ metoolkit .a
                                 │
                                 ▼
                         recover.py (drives all of the above, compiles, classifies)
+                                │            (check_frame_bounds.py is one of its detectors)
                                 │
         ┌───────────────────────┼───────────────────────┐
         ▼                       ▼                       ▼
@@ -158,6 +166,9 @@ LIB=$MT/lib.rel/linux_single_gcc3.2
 
 # portability: §12 item 6, the actual goal
 ./test/wasm_check.sh /tmp/kd_out/allobj /tmp/kd_build $MT
+
+# frame bounds: a defect no behavioural test can find, §8. Costs a second.
+python3 tools/check_frame_bounds.py /tmp/kd_out/allobj
 ```
 
 `scene_chain` is collision-free and is the authoritative *trajectory* signal.
@@ -166,11 +177,20 @@ the `__regparm` parameter shift after the collision-free scene had passed it.
 `scene_ragdoll` is a nine-capsule ragdoll on ball-socket joints dropped onto a plane and
 boxes, because the other two make **not one Sphyl call** between them.
 
-**`difftest_pair.sh` has four switches and the first is not optional:**
+**`difftest_pair.sh` has six switches and the first is not optional:**
 
 - **`KD_SELFTEST=1`** — run the ORIGINAL as both sides. Anything it reports is a fault in
   the driver. Run it before believing any divergence. Skipping the shadow harness's
   equivalent produced one wrong conclusion in a single day of work.
+- **`KD_GENARGS=1`** — print what each side handed the triangle-list generator when they
+  differ, rather than inferring it from the contacts. This is what found the `-0` radius in
+  §8 after everything else had been eliminated. Use it whenever a TriangleList pair
+  diverges: `pos` and `radius` are an output of the recovered code, and the contact
+  comparison cannot see them.
+- **`KD_TRIFLAGS=<n>`** — the flags the generated triangles carry. The default is what
+  UT2004 sets (`UseSmallestPenetration | UseEdges` = 29); `KD_TRIFLAGS=0` restores the old
+  behaviour, which skips the whole edge-contact path. Useful for telling "the edge path
+  diverges" from "the face path diverges", and for nothing else.
 - **`KD_SPREAD=<n>`** — scale how far apart the bodies scatter, which moves between contact
   **regimes**, and this matters more than it sounds. At the default the TriangleList tests
   run at 92% touching with six to eleven simultaneous contacts — deep interpenetration. A
@@ -184,6 +204,7 @@ boxes, because the other two make **not one Sphyl call** between them.
   uses.
 - **`KD_SKEW=1`** — nudge the test mesh off its axis-aligned grid, to tell "disagrees at an
   exact feature boundary" from "disagrees".
+
 
 Adding a pair is one `IX(...)` line and one table row; the geometry factories are shared.
 
@@ -546,35 +567,81 @@ compile.**
 | shifted parameter list | `__regparm1` | §10 |
 | unaccounted value | `in_stack_0000000c`, `extraout_ECX` | a value read before anything assigns it. Dead stores excluded; only a read that reaches something counts |
 | lost store | `x.f = x.f;` | a save-and-restore Ghidra reordered. See the sphyl entry below |
+| **out-of-range frame reference** | `(int)afStack_11c + -0x1c` | `tools/check_frame_bounds.py`. An address outside the local it names — GCC cannot see it through the cast, and the runtime symptom is corruption of an unrelated local |
 
 `proven.txt` records which objects a real match has released, **with the evidence on the
 line**. That is the only way out. Do not remove a detector to make a number go up.
 
-### `IxConvexTriList` — the top task, and why the detector matters
+### `IxConvexTriList` — released, and the argument nobody was looking at
 
-It compiles, passes all three substitute scenes, and is **18% wrong in a live match**:
+It was the last pair the game calls with nothing behind it, and it sat at 46%, then 18%,
+then 24% wrong across three sessions, always with the same signature: `ret 1/0 touch 1/0
+count 3/0`, the recovered code finding **no contacts** where the original finds three.
+
+It was one argument. `code` is `typedef int code();` — a function type with **no parameter
+list** — so the indirect call to the engine's `McdTriangleListFnPtr` was unprototyped, and C
+applied the default argument promotions. The `float` radius went across as an 8-byte double
+and the callee, which does have a prototype, read the low half:
+
+| pair | radius the generator received | should have been |
+|---|---|---|
+| Sphere × TriangleList | 2048 | 0.91 |
+| Sphyl × TriangleList | 8.796e+12 | 0.91 |
+| Box × TriangleList | 6.019e-36 | 0.939 |
+| ConvexMesh × TriangleList | **-0** | 1.019 |
+
+`KTriListGenerator` turns that into a sphere query against the level. A radius landing too
+**large** is harmless — the query returns a superset of the right triangles and a superset
+gives the same contacts — and one landing too **small** returns nothing at all. That is why
+`IxSphereTriList` and `IxSphylPrimitives` passed 1.76 M and 74,921 real calls carrying the
+identical defect, and why `IxConvexTriList` did not. The ~76% of its calls that agreed
+anyway are actors with a cached `KTriList`, where the generator skips the query and ignores
+radius entirely.
 
 ```
-McdConvexMeshTriangleListIntersect, ONS-UCMP-ABC-ECE
-  BEFORE  3,230 calls  642 ret_diff  852 count_diff  worst 7.79e-01
-  AFTER   1,548 calls   72 ret_diff  206 count_diff  worst 3.05e-05
+McdConvexMeshTriangleListIntersect, ONS-UCMP-ABC-ECE, 900 s
+  before  1,876 calls  272 ret_diff  172 count_diff
+  after   6,857 calls    0 ret_diff    0 count_diff  0 dims  0 overrun
+  and     2,369 more on a second match, same verdict
 ```
 
-The captured cases read `ret 1/0 touch 1/0 count 4/0` — the recovered code finds **no
-contacts** where the original finds four. That is a triangle buffer it cannot see, which is
-a mis-reconstructed alloca frame. Ten other functions in the same run are clean, so it is
-not the harness.
+**The lesson is about the test, not the code, and it is the reason this took three
+sessions.** Two blind spots in `difftest_pair.c` hid it completely, and both are now fixed:
 
-The BEFORE→AFTER came from one fix, and the shape is what to look for next. `base + negVar`
-is the allocated block, and the collapse was rewriting a *second* use of it to the bare
-base, handing out a pointer to an unrelated local. But only **non-negative** offsets from
-that base are inside the block — the original decremented `esp`, so the block sits at the
-bottom of the frame and anything below it is the outgoing-argument area for a call.
-`IxConvexTriList` uses both, ten lines apart. What is left is presumably more of the same.
+- **The generator ignored `pos` and `radius`.** Every TriangleList interaction computes a
+  bounding sphere for the other body and hands it over, so those two arguments are an
+  *output* of the recovered code that the contact comparison cannot see. With a generator
+  that returns the same 32 triangles regardless, a radius of `-0` is invisible. It now culls
+  to the query sphere, as `KTriListQuery` does, and **`KD_GENARGS=1` compares what each side
+  passed directly** — which is what actually found this, after a day of reading frames.
+- **The triangles carried `flags = 0`.** UT2004 sets `UseSmallestPenetration | UseEdges` on
+  every level triangle (`KTriListGen.cpp`), and with zero the entire edge-contact half of
+  `GenerateTriangleContact` — two of its three `AccumulateSphylContacts` sites, and
+  `ConvexHullNSegment` — never executed in any test ever run.
 
-Note `KD_CALLSITE_SIG=trilist` is already applied to this object, so the easy fix is spent.
+When a recovered function calls back into the engine, **its arguments are part of the
+answer.** Nothing downstream will tell you they were wrong.
+
+### The out-of-range frame reference — a defect no behavioural test can find
+
+`base + negVar - K` is the outgoing-argument area *below* an alloca'd block. Collapsing the
+frame shift left `(int)afStack_11c + -0x1c` — a write 28 bytes under an 8-byte array. Three
+of these existed: two in `IxConvexTriList` and one in `IxSphylPrimitives`, which had been
+**released** carrying it.
+
+What makes them worth a detector of their own is that nothing else could see them. The cast
+launders the bounds, so GCC says nothing. The substitute scenes pass. And `difftest_pair`
+produced **byte-identical results with and without the defect** over 200,000 pairs, because
+GCC happened to leave those eight bytes free in that build. Only a live match, where the
+frame is laid out differently, turns it into corruption — and then it presents as an
+unexplained divergence in some unrelated value.
+
+So the check is on the text: `tools/check_frame_bounds.py` reports every `(&)?NAME + K`
+where K falls outside what NAME declares. It finds exactly those three on the old output and
+nothing now. Run it after any change to `materialise_alloca_frame`.
 
 ### `IxSphylPrimitives` — released, and how the question got answered
+
 
 It sat quarantined as "is 0.02% threshold flapping acceptable?", which is a question with no
 answer because it has no yardstick in it. Two things resolved it.
@@ -629,6 +696,36 @@ synthetic pairs near the origin and 200,000 at `KD_ORIGIN=260` are both clean, t
 numeric spread rises 3.5× as coarser f32 spacing predicts. Distance alone is not it — the
 driver uses one fixed pair of box sizes and the game's evidently differ. Vary those next.
 
+### `McdGjk` — 18 divergences in the busiest pair, and the harness is the suspect
+
+The first long run of Box × ConvexMesh — 72,167 calls, four times any before it — found
+**3 ret_diff and 15 count_diff**, worst delta 2.057. All eighteen are the same two actors
+over consecutive frames of one persistent contact.
+
+That shape fits the harness. `McdGjkCgIntersect` keeps a cache on the `McdModelPair`
+(`McdCacheHello`/`Goodbye` are registered beside it), and `kd_shadow` gives the second call a
+**copy** of the pair (§7). So the original runs with its cache warm across frames and the
+recovered runs cold every time, its cache written into a copy that is discarded. For an
+iterative algorithm on a persistent contact that is a difference in *input*, not in code.
+`KD_SELFTEST` on the same map and length gave 29,899 calls with 0 divergence — but there
+both sides are the original, both start from the same copied cache and evolve together,
+which is exactly the case the hypothesis says should be clean. A second match gave 13,603
+calls with 0 divergence, so it is situational rather than a rate.
+
+**Not settled.** The way to settle it is to give the second call the real pair for this one
+function and see whether the divergences go — which is also the shared-state question in
+§7, so chase the two together.
+
+### `IxBoxTriList` — its clean synthetic result has been withdrawn
+
+`proven.txt` used to record it as clean in both regimes over 30,000 pairs. Both rows were
+measured with the old driver — same 32 triangles every call, `flags = 0`. Against a
+generator that culls to the query sphere and sets the flags the engine sets, it is
+**2,254 ret_diff, 118,129 count_diff and 11,691 dims_diff in 200,000**, with the driver
+self-testing 100% bit-identical on the same inputs. Not chased: the census has
+Box × TriangleList at zero calls. Recorded so nobody re-derives the old number.
+
+
 ---
 
 ## 9. Dead ends — do not repeat these
@@ -648,6 +745,12 @@ driver uses one fixed pair of box sizes and the game's evidently differ. Vary th
 7. **Forcing `__cdecl` on every function** — §5.
 8. **Trusting a clean synthetic run for anything holding `kd_argslot_`** — `IxConvexTriList`
    is the second object to prove this.
+9. **Trusting a test whose callback ignores its arguments.** `difftest_pair`'s triangle
+   generator ignored `pos` and `radius` and set `flags = 0`. That hid a `-0` radius in four
+   objects and left the entire edge-contact path of `GenerateTriangleContact` unexecuted, for
+   the whole life of the project. When a recovered function calls back into the engine, the
+   arguments it passes are part of its answer — make the stub depend on them (§8).
+
 
 ---
 
@@ -677,12 +780,21 @@ driver uses one fixed pair of box sizes and the game's evidently differ. Vary th
 
 ## 11. What to do next
 
-1. **Fix `IxConvexTriList`'s frame** (§8). Last pair the game calls with nothing behind it,
-   18% wrong, sharply characterised, reproduces on `ONS-UCMP-ABC-ECE`.
+**§12 item 1 is done.** Every pair the census shows the game calling is recovered and
+validated against a live match. What is left is the confidence around that, then the tail.
+
+1. **Settle the `McdGjk` divergences and the harness perturbation together** (§8, §7). They
+   are probably the same thing: the second call gets a *copy* of the `McdModelPair`, and
+   `McdGjkCgIntersect` keeps a cache on it. Give the second call the real pair for that one
+   function and re-measure — 18 divergences in 72,167 on the busiest pair in the game is the
+   largest open question about a released object. The shared-contact-pool hypothesis in §7
+   is the other half.
 2. **Chase the `IxBoxBox` count divergence** (§8) — vary the box dimensions in
    `difftest_pair.c`.
-3. **Find the harness perturbation** (§7) — the shared-contact-pool hypothesis, then a
-   proper `KD_ONLY` bisect.
+3. **Audit the other callbacks the way the triangle generator was audited** (§8). It is now
+   the only stub in `difftest_pair.c` that depends on its arguments. Anything else Karma
+   calls back into — the allocator, `McdCacheHello`/`Goodbye` — has the same exposure and
+   has never been checked.
 4. **Grind the tail.** 39 objects, but **read §3 first** — a large part of the pile is
    geometry the game never collides. What remains, by size: `stack0xNNNN` (~20 references,
    a real value Ghidra lost — do not paper over it), `too few arguments` (14, genuinely
@@ -696,6 +808,7 @@ driver uses one fixed pair of box sizes and the game's evidently differ. Vary th
    load-time only, open source. Swap in modern qhull. `MeAssetDB`/`MeXML`/`MeAssetFactory`
    (51 KB) is `.ka` XML parsing, not physics. `MeViewer2`/`MeApp` (74 KB) are never linked.
 
+
 ---
 
 ## 12. What "complete" looks like
@@ -703,7 +816,9 @@ driver uses one fixed pair of box sizes and the game's evidently differ. Vary th
 **Complete** is not "every object recovered". It is:
 
 1. Every object the census (§3) shows the game *actually calls* is recovered and validated.
-   **That is ten pairs, and nine of them are done.** The tenth is `IxConvexTriList`.
+   **That is eleven pairs, and all eleven are done** — the last, `IxConvexTriList`, on
+   2026-08-23. This is the item that was open for the whole project; treat any new entry in
+   the census (§3 has had two) as re-opening it.
 2. Validated means: 0 `ret_diff`, 0 `count_diff`, 0 `dims_diff`, 0 `overrun` across a
    multi-hour in-game session, with `KD_SELFTEST` clean on the same session, and
    `proven.txt` carrying the evidence.
@@ -711,12 +826,15 @@ driver uses one fixed pair of box sizes and the game's evidently differ. Vary th
 4. qhull and the asset loader replaced rather than recovered.
 5. No detector suppressed, no object released without a line in `proven.txt`.
 6. The whole set builds as ordinary C for **wasm32 and arm64/armv7**, not just i386.
-   **wasm32 is done** — 92/92 compile with byte-identical exported symbols
+   **wasm32 is done** — 93/93 compile with byte-identical exported symbols
    (`test/wasm_check.sh`). arm64 has not been tried; no cross-compiler is installed here.
    Nothing has been *executed* under wasm. See `HANDOVER-WEB.md`.
 7. The engine runs with `WITH_KARMA=1` against recovered Karma with **no shipped `.a` in the
    link at all**. `test/make_substituted_metoolkit.sh` does this per object; a 300 s
    ragdoll-heavy ONS match on recovered sphyl gave 0 crashes, 0 NaN, 0 Karma warnings.
 
-Getting to (7) with the ten pairs that matter beats getting to 90% coverage of objects
-nobody calls. §3 is the map.
+With (1) closed, **(7) is the next real milestone** and the one that actually delivers
+physics on the web. The shadow harness structurally cannot test it: it feeds the engine the
+original's answer every frame, so a recovered error never gets to compound. Item 2's
+in-game numbers say the recovered code *agrees*; item 7 asks whether it can *drive*.
+

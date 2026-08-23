@@ -22,11 +22,11 @@ freebie, the Android NDK), and to integrate the result into the engine's web bui
 
 What exists today:
 
-- **92 recovered objects**, all of them compiling for i386 *and* for wasm32.
+- **93 recovered objects**, all of them compiling for i386 *and* for wasm32.
 - Six of them validated against the real game over millions of live collision calls, with
   the evidence recorded per object in `karma-decomp/proven.txt`.
 - **The whole set already compiles under Emscripten**, and its exported symbol sets are
-  **byte-identical to the i386 build for all 92 objects** — same names, same bindings,
+  **byte-identical to the i386 build for all 93 objects** — same names, same bindings,
   nothing added or dropped. So the ABI surface the engine links against does not change
   between targets, which was the thing most likely to turn this into a rewrite. See §4.
 - **Nothing has ever been EXECUTED under wasm.** "It compiles" is not "it works", and the
@@ -211,14 +211,14 @@ physics.
    all of them: `scene_chain.c` (collision-free, the authoritative trajectory signal),
    `scene_boxes_on_plane.c` (exercises the geometry dispatch), `scene_ragdoll.c` (nine
    capsules on ball-socket joints — the other two make **not one Sphyl call** between them).
-   Currently **92/92 clean on all three** on i386. **Getting that under a wasm build is your
+   Currently **93/93 clean on all three** on i386. **Getting that under a wasm build is your
    first milestone.**
 2. **`test/difftest_pair.sh`** — drives one interaction directly over randomised transforms,
    seeded so anything it finds reproduces. Eleven pairs wired up. Four switches, and read
    `HANDOVER.md` §4 on `KD_SPREAD` before quoting any number from it: divergence rates here
    are a strong function of contact regime, and a figure without its regime is meaningless.
 3. **`test/wasm_check.sh`** — compiles the whole set for wasm32 and diffs the exported
-   symbols against the native build. Currently 92/92 and 92/92. **Run this after any change
+   symbols against the native build. Currently 93/93 and 93/93. **Run this after any change
    to the recovery pipeline**; it is the cheapest possible early warning that a change has
    broken portability.
 4. **`test/kd_shadow.c`** — the in-game shadow harness. Runs both implementations on the
@@ -272,14 +272,15 @@ gcc -m64 ... -o /tmp/rag_hx   test/scene_ragdoll.c  <linux_hx_single/*.a>
 - **Nothing has been RUN under wasm.** The whole set compiles and exports identical
   symbols, and that is all §4 hazards 2 and 3 settle. Hazards 1, 4 and 5 are runtime and
   entirely open.
-- **92 of ~150 objects compile**, 39 do not. But read `HANDOVER.md` §3 before reading that
+- **93 of ~150 objects compile**, 39 do not. But read `HANDOVER.md` §3 before reading that
   as 60% done — see the next bullet, it is the most important thing in this file for
   planning purposes.
-- **17 objects are deliberately quarantined** by seven safety detectors. They compile but
-  are known-or-suspected wrong. Do not include them to raise a coverage number. The most
-  recent proof of why: `IxConvexTriList` compiles, passes all three substitute scenes, and
-  is **18% wrong in a live match** — it returns *no contacts* where the original returns
-  four.
+- **16 objects are deliberately quarantined** by eight safety detectors. They compile but
+  are known-or-suspected wrong. Do not include them to raise a coverage number. The proof
+  of why: `IxConvexTriList` compiled, passed all three substitute scenes and 200,000
+  synthetic pairs, and was **46% wrong in a live match** for two sessions — returning *no
+  contacts* where the original returned three. It is fixed and released now, but it was
+  only ever the quarantine that kept it out of the validated set.
 - **`libMcdConvexCreateHull` is qhull 2.6 (1998)** — 186 KB, open source, load-time only.
   **Do not recover it; replace it** with modern qhull, which builds under Emscripten without
   drama. Better still, precompute convex hulls offline and ship them as data — that matches
@@ -292,20 +293,21 @@ That last three points remove ~36% of the total binary footprint without recover
 
 ### The number that should drive your planning
 
-**38 collision-interaction pairs are registered. The game calls TEN of them.** A census over
-25 runs and 18 maps (`HANDOVER.md` §3) found that UT2004 gives its physics actors sphere,
-sphyl, convex-mesh and triangle-list geometry and essentially nothing else. Every
-`Aggregate` pair, every `Cylinder` pair, `Box×Plane`, `Box×Sphere`, `Box×TriangleList`,
-`Sphere×Plane`, `Sphyl×Box`, `Sphyl×Plane` and `ConvexMesh×Plane` are registered on every
-map and called **zero** times.
+**38 collision-interaction pairs are registered. The game calls ELEVEN of them.** A census
+over 25 runs and 18 maps (`HANDOVER.md` §3) found that UT2004 gives its physics actors
+sphere, sphyl, convex-mesh and triangle-list geometry and essentially nothing else. Every
+`Aggregate` pair, every `Cylinder` pair, `Box×Plane`, `Box×TriangleList`, `Sphere×Plane`,
+`Sphyl×Box`, `Sphyl×Plane` and `ConvexMesh×Plane` are registered on every map and called
+**zero** times.
 
-Nine of those ten pairs are already validated against the real game. **One is not:**
-`ConvexMesh × TriangleList` (`IxConvexTriList`), which is broken and is the recovery side's
-top task.
+**All eleven are now validated against the real game** — the last, `ConvexMesh ×
+TriangleList`, on 2026-08-23. Treat the count as provisional though: two pairs have already
+moved off the never-called list, `Box×Sphere` most recently at 5,101 calls in one match
+after 25 runs had shown none.
 
 So "how much of Karma do I need for the web build to run" is not 150 objects and not even
-92 — it is the collision path for ten pairs, plus the solver (`libMdtKea`, untouched), plus
-the framework objects that hold them together. That is a much smaller target than the
+93 — it is the collision path for eleven pairs, plus the solver (`libMdtKea`, untouched),
+plus the framework objects that hold them together. That is a much smaller target than the
 compile count suggests, and it is the number to plan against.
 
 ---

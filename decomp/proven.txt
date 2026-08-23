@@ -49,7 +49,29 @@ IxSphereTriList       KNOWN LIMIT, found after release and worth reading before 
 #                     and that is where to look if ragdolls ever misbehave on penetration.
 #
 #                     real: test-karma-1, 5 min, 1,763,276 calls of McdSphereTriangleListIntersect, 1,761,435 bit-identical, 0 structural divergences, worst delta 5.7e-06. (An earlier run of the same map gave 680,045 calls with the same verdict; the count varies with how the KActors settle, the verdict has not.) Also 93,438 calls on a 20-min DM-BB-VehicleWar-test-physics match, 0 structural. Self-test (original vs original) on test-karma-1: 1,763,102 calls, 0 divergence, so the harness is sound.
+#
+#                     CORRECTION, 2026-08-23. All of the evidence above was gathered while
+#                     this object was handing KTriListGenerator a radius of 2048 instead of
+#                     0.91 — the float-to-double promotion described under IxConvexTriList
+#                     below, which every TriangleList object had. It passed anyway, and the
+#                     reason is worth keeping: a radius that lands too LARGE makes the
+#                     engine's sphere query return a superset of the right triangles, and a
+#                     superset gives the same contacts. It was luck, not correctness. Fixed
+#                     in ghidra_clean.prototype_indirect_calls(); the evidence above stands
+#                     and the object is now right for the right reason. Re-measured after
+#                     the fix: ONS-UCMP-ABC-ECE, 900 s, 15,242 calls, 0 structural.
 IxSphereSphere        real: test-karma-1, 5 min, 120,275 calls, 90,540 bit-identical, 0 structural, worst 5.96e-08; plus 8,610 calls on the 20-min vehicle match, 0 structural. synth: 300,000 pairs, 72,614 touching, 0 structural, worst 5.96e-08.
+IxBoxSphere           real: ONS-UCMP-ABC-ECE, 900 s, 5,101 calls of McdBoxSphereIntersect —
+#                     3,853 bit-identical, 1,248 float-noise, 0 ret/touch, 0 count, 0 dims,
+#                     0 overrun, worst 3.05e-05.
+#
+#                     Worth a line even though this object was never quarantined, because
+#                     the CENSUS was wrong about it. HANDOVER.md 3 listed Box x Sphere among
+#                     the pairs "registered on every map and called ZERO times", on 25 runs
+#                     across 18 maps. It is the second pair to come off that list — after
+#                     ConvexMesh x ConvexMesh — and it did so at 5,101 calls in a single
+#                     match, not a handful. Re-run the census after any new map.
+
 IxBoxBox              real: 23,611 + 10,331 + 1,299 calls across three matches. The first two
 #                     were 0 structural. The third was NOT: 1 count_diff in 1,299 —
 #                     ret 1/1, touch 1/1, count 2/4, at world (259.9, 8.0, 10.2) with
@@ -99,6 +121,41 @@ McdGjk                synth: Box x ConvexMesh through McdGjkCgIntersect, 50,000 
 #                     — McdGjkCgIntersect keeps a cache on the McdModelPair
 #                     (McdCacheHello/Goodbye are registered beside it) and
 #                     difftest_pair hands it a zeroed pair every iteration.
+#
+#                     2026-08-23: a live match with far more calls than any before it found
+#                     divergences, and the cache above is the likely reason.
+#
+#                       Box x ConvexMesh, ONS-UCMP-ABC-ECE, 900 s
+#                         72,167 calls  3 ret_diff  15 count_diff  0 dims  0 overrun
+#                         worst delta 2.057
+#
+#                     All eighteen are the same two actors — one box at ~(44.3, -127.3,
+#                     -122.0) against one static convex mesh at (40.56, -122.36, -127.64) —
+#                     over consecutive frames of a single persistent contact, reading
+#                     `count 3/4`, `count 4/3` and `ret 1/0 count 3/0`.
+#
+#                     That shape fits the harness rather than the recovery. kd_shadow gives
+#                     the second call a COPY of the McdModelPair (HANDOVER.md 7), so the
+#                     ORIGINAL runs with its cache warm across frames and the RECOVERED runs
+#                     cold every time, its cache written into a copy that is thrown away.
+#                     For an iterative algorithm on a persistent contact that is a real
+#                     difference in input, not in code. KD_SELFTEST on the same map, same
+#                     length, gave 29,899 Box x ConvexMesh calls with 0 divergence — but
+#                     both sides are the original there, so both start from the same copied
+#                     cache and evolve together, which is exactly the case this hypothesis
+#                     says should be clean.
+#
+#                     NOT SETTLED. The way to settle it is to let the second call have the
+#                     real pair for this one function and see whether the divergences go —
+#                     which is also the shared-state question in HANDOVER.md 7, so the two
+#                     should be chased together. Until then the release stands on 16,457 +
+#                     the synthetic evidence, with this recorded rather than dismissed.
+#
+#                     Also consistent with the cache hypothesis: a second 900 s match on the
+#                     same map gave 13,603 Box x ConvexMesh calls with 0 divergence. It is
+#                     situational, not a rate.
+
+
 IxSphylPrimitives     RELEASED. Held back since it was first recovered, on the grounds that
 #                     0.02% "threshold flapping" in McdSphylTriangleListIntersect might not
 #                     be acceptable. Two things settled it, in this order.
@@ -141,6 +198,28 @@ IxSphylPrimitives     RELEASED. Held back since it was first recovered, on the g
 #                     ret 0/1, count 0/2, at world (135.2, -170.0, 21.8) with tol 0.00475,
 #                     dims_diff 0 — i.e. the two never disagree about what KIND of contact
 #                     it is, only whether it exists at that instant.
+#
+#                     CORRECTION, 2026-08-23. Two defects were present throughout the
+#                     measurements above and are now fixed; both made this object's release
+#                     luckier than it looked.
+#
+#                     One: `*(McdGeometryID *)((int)tmp + -0x20)` wrote 32 bytes under a
+#                     12-byte local, in McdSphylTriangleListIntersect. See IxConvexTriList
+#                     below and check_frame_bounds.py, which reports it.
+#
+#                     Two: it handed KTriListGenerator a radius of 8.796e+12 instead of
+#                     0.91, the float-to-double promotion described under IxConvexTriList.
+#                     Harmless for the same reason it was harmless for IxSphereTriList — a
+#                     too-large radius returns a superset of triangles and a superset gives
+#                     the same contacts.
+#
+#                     Re-measured after both fixes, ONS-UCMP-ABC-ECE, 900 s: 50,270 calls of
+#                     McdSphylTriangleListIntersect, 2 count_diff, 0 ret, 0 dims, 0 overrun,
+#                     worst 1.46e-04 — the same tolerance-flapping rate as the 1 in 74,921
+#                     above, not a new failure. synth after the fixes, 200,000 pairs at
+#                     67.5% touching with the engine's real triangle flags and a culling
+#                     generator: 0 structural, worst 1.913e-04.
+
 IxConvexPrimitives    real: 1,685 calls of McdSphylConvexMeshIntersect on ONS-CBP2-Tropica, ALL 1,685 bit-identical — 0 ret/touch, 0 count, 0 dims, and not even a float-noise difference. synth: 300,000 pairs against randomised 24-point convex hulls, 64,223 touching (21.4%), 0 structural, worst 1.19e-07 (one float ULP).
 #                     Getting a live call at all took the project owner pointing
 #                     out that Epic's maps are optimised and community ones are
@@ -148,53 +227,76 @@ IxConvexPrimitives    real: 1,685 calls of McdSphylConvexMeshIntersect on ONS-CB
 #                     hour — ragdolls land on the level, not on the vehicles —
 #                     and ONS-Torlan would not start a ticking match. CBP2 and
 #                     UCMP maps reach it in minutes. See HANDOVER.md 6.
+IxConvexTriList       RELEASED 2026-08-23, and the tenth and last pair the census says the
+#                     game calls. It spent two sessions quarantined, at 46% then 18% then
+#                     24% wrong in a live match, always with the same signature:
+#                     `ret 1/0 touch 1/0 count 3/0` — the recovered code finding NO contacts
+#                     where the original finds three.
+#
+#                     The cause was one argument. `code` is `typedef int code();`, so the
+#                     indirect call to the engine's McdTriangleListFnPtr was unprototyped
+#                     and C promoted the float `radius` to a double. The callee, which does
+#                     have a prototype, read the low half:
+#
+#                       radius the generator received      -0     (should be 1.019)
+#
+#                     KTriListGenerator turns that into a sphere query against the level, so
+#                     a radius of zero returns no triangles and there is nothing to collide
+#                     with. The ~76% of calls that agreed anyway are the actors that carry a
+#                     cached KTriList, where KTriListGenerator skips the query and ignores
+#                     radius entirely. All four TriangleList objects had this; see the
+#                     CORRECTION notes on IxSphereTriList and IxSphylPrimitives above, whose
+#                     garbage radius happened to land enormous and therefore harmless.
+#
+#                     real: ONS-UCMP-ABC-ECE, 900 s, 6,857 calls of
+#                     McdConvexMeshTriangleListIntersect — 5,888 bit-identical, 969
+#                     float-noise, 0 ret_diff, 0 count_diff, 0 dims_diff, 0 overrun, worst
+#                     delta 3.05e-05. Ten other functions clean in the same run. A second,
+#                     independent match on the same map added 2,369 calls with the same
+#                     verdict and every other pair clean too — 9,226 real calls, 0
+#                     structural, against 272 ret_diff and 172 count_diff in 1,876 before
+#                     the fix.
+#
+#                     KD_SELFTEST on the SAME map and length, which this pair had never had:
+#                     7,150 calls, 0 divergence, everything 100% bit-identical, and the
+#                     match ran the full 900 s without the KHandleCollisions crash. So the
+#                     harness is sound for this pair on this map, and the 46/18/24% figures
+#                     were the recovery, not the measurement.
+#
+#                     synth: 200,000 pairs at 76.6% touching, with the engine's real
+#                     triangle flags and a generator that culls to the query sphere —
+#                     1 count divergence, 0 ret, 0 dims, worst 1.737e-05. Driver self-test
+#                     on the same 200,000: 100% bit-identical, worst delta exactly 0.
+#
+#                     TWO THINGS THIS OBJECT ESTABLISHED, both about the tests rather than
+#                     the code, and both now fixed in difftest_pair.c:
+#
+#                     The generator ignored `pos` and `radius`. Every TriangleList
+#                     interaction computes a bounding sphere for the other body and hands it
+#                     over, so those two arguments are an OUTPUT of the recovered code that
+#                     the contact comparison cannot see. With a generator that returns the
+#                     same 32 triangles regardless, a completely wrong radius is invisible.
+#                     KD_GENARGS=1 now compares them directly, which is what found this
+#                     after a day of reading frames.
+#
+#                     The triangles carried flags = 0. UT2004 sets
+#                     UseSmallestPenetration | UseEdges on every level triangle
+#                     (KTriListGen.cpp), and with 0 the entire edge-contact half of
+#                     GenerateTriangleContact — two of its three AccumulateSphylContacts
+#                     sites, and ConvexHullNSegment — never executed in any test.
+#
+#                     A separate defect was fixed in the same session and is worth not
+#                     re-introducing: `(int)afStack_11c + -0x1c` and `-0x20`, two writes 28
+#                     and 32 bytes below an 8-byte local, from collapsing the alloca frame
+#                     shift off a negative offset. See check_frame_bounds.py. It did not
+#                     cause the divergence above — difftest_pair gave byte-identical results
+#                     with and without it, because GCC happened to leave those eight bytes
+#                     free — which is precisely why it needs a text-level check rather than
+#                     a behavioural one.
+
 
 # --- NOT proven, with what was observed --------------------------------------
 # --- compiles, evidence gathered, NOT released ------------------------------
-# IxConvexTriList     Compiles, passes all three substitute scenes, and is 46% WRONG in a
-#                     live match. ONS-UCMP-ABC-ECE, 15 min:
-#
-#                       McdConvexMeshTriangleListIntersect, ONS-UCMP-ABC-ECE
-#                         BEFORE  3,230 calls   642 ret_diff   852 count_diff   worst 7.79e-01
-#                         AFTER   1,548 calls    72 ret_diff   206 count_diff   worst 3.05e-05
-#
-#                     The AFTER is with the alloca-base fix described below: 46%
-#                     wrong down to 18%, and the worst delta down by four orders
-#                     of magnitude. That confirms the diagnosis — it is the
-#                     frame, not the algorithm — and it is still broken.
-#
-#                     The fix that got it there, because it is the shape to look
-#                     for next: `base + negVar` is the allocated block, and the
-#                     collapse was rewriting a SECOND use of it to the bare
-#                     base, handing out a pointer to an unrelated local. But
-#                     only NON-NEGATIVE offsets from that base are inside the
-#                     block — the original decremented esp, so anything below it
-#                     is the outgoing-argument area for a call, and
-#                     IxConvexTriList uses both, ten lines apart. What is left
-#                     is presumably more of the same.
-#
-#                     Not subtly wrong. The captured cases read
-#                     `ret 1/0 touch 1/0 count 4/0` — the recovered code finds
-#                     NO CONTACTS where the original finds four. That is the
-#                     signature of a triangle buffer it cannot see, which is
-#                     exactly what a mis-reconstructed alloca frame produces.
-#
-#                     Ten other functions in the SAME run are clean, so the
-#                     harness is not at fault.
-#
-#                     This is the reconstructed-frame detector (kd_argslot_)
-#                     earning its place a second time. The object was made to
-#                     compile in this session by generalising the alloca
-#                     defining-store pattern; it would have gone straight into
-#                     the validated set on the strength of "compiles and passes
-#                     the scenes", which is precisely the mistake IxSphereTriList
-#                     taught. Do not release anything holding kd_argslot_ on
-#                     synthetic evidence.
-#
-#                     It also matters more than the other two held objects:
-#                     ConvexMesh x TriangleList is a pair the game DOES call
-#                     (HANDOVER.md 3), unlike Box x TriangleList and
-#                     Cylinder x TriangleList.
 # IxBoxTriList        Held by the reconstructed-frame detector (kd_argslot_), which exists
 #                     because IxSphereTriList compiled, passed the substitute gate and then
 #                     segfaulted on its first live call. So a clean synthetic run is not
@@ -208,3 +310,29 @@ IxConvexPrimitives    real: 1,685 calls of McdSphylConvexMeshIntersect on ONS-CB
 #                     diverges. What it lacks is a live match: Box x TriangleList shows 0
 #                     calls on every map run so far. Find a map that exercises it and this
 #                     is ready.
+#
+#                     WITHDRAWN, 2026-08-23. Both rows above were measured with a driver
+#                     that handed the interaction the same 32 triangles every time,
+#                     ignoring the query sphere, and with flags = 0 so the edge-contact
+#                     path never ran. Against a generator that culls to the query sphere
+#                     and sets the flags UT2004 sets:
+#
+#                       200,000 pairs, 71.7% touching
+#                         2,254 ret_diff   118,129 count_diff   11,691 dims_diff
+#                         worst delta 2.000
+#
+#                     Driver self-test on the same 200,000: 100% bit-identical. So this
+#                     object is badly wrong once the triangle set is a proper subset rather
+#                     than the whole mesh, and "clean in both regimes" was a statement about
+#                     the driver.
+#
+#                     It also had the promoted-double radius (6.019e-36 — the small,
+#                     fatal kind, like IxConvexTriList's), fixed in
+#                     ghidra_clean.prototype_indirect_calls(); the numbers above are AFTER
+#                     that fix, so there is a second defect here.
+#
+#                     Not chased, deliberately: the census has Box x TriangleList at zero
+#                     calls on every map so far (HANDOVER.md 3), and object count is the
+#                     wrong progress metric. Recorded so that nobody re-derives the old
+#                     clean result and releases it.
+

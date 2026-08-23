@@ -317,6 +317,12 @@ def materialise_alloca_frame(body, fname):
     # `base + negVar` denotes the same block and must not be collapsed to the
     # bare base; see the assignment below.
     alloca_base = {}
+    # negVars whose alloca() call has already been emitted. The block is
+    # allocated ONCE — `sub %edx,%esp` runs once — so every later
+    # `base + negVar` is the same address and must reuse the same pointer.
+    allocated = set()
+    # Invented storage for slots BELOW the block; see sub_below().
+    below = set()
     if neg:
         def sub_alloca(m):
             nonlocal n
@@ -324,8 +330,26 @@ def materialise_alloca_frame(body, fname):
             if var not in neg:
                 return m.group(0)
             expr, mult = neg[var]
+            base = m.group(2)
+            if var in allocated:
+                # A SECOND derivation of the block, not a second block. esp was
+                # decremented once, so `base + negVar` names one address. A
+                # fresh alloca() here hands out different storage each time —
+                # the code then writes into one block and reads from another,
+                # and where the derivation sits inside a loop (IxSphylPrimitives
+                # re-materialises it twice per triangle) the stack grows without
+                # bound.
+                #
+                # Only where the BASE matches. A different base is a different
+                # address — MstUtils derives both a 40 KB fixed array and the
+                # block itself off the same negVar — and this rule has nothing
+                # to say about it, so it keeps the older behaviour there.
+                if base == alloca_base.get(var):
+                    n += 1
+                    return f'{m.group(1)}kd_alloca_{var}'
             n += 1
-            alloca_base.setdefault(var, m.group(2))
+            allocated.add(var)
+            alloca_base.setdefault(var, base)
             return (f'{m.group(1)}(kd_alloca_{var} = '
                     f'(char *)alloca((size_t)({expr}) * {mult}))')
         # ONLY the defining use: the alloca'd pointer appearing as the RHS of an
@@ -364,8 +388,12 @@ def materialise_alloca_frame(body, fname):
         for var in neg:
             def sub_bare(m, var=var):
                 nonlocal n
+                if var in allocated and m.group(1) == alloca_base.get(var):
+                    n += 1
+                    return f'= kd_alloca_{var};'
                 expr, mult = neg[var]
                 n += 1
+                allocated.add(var)
                 alloca_base.setdefault(var, m.group(1))
                 return (f'= (kd_alloca_{var} = '
                         f'(char *)alloca((size_t)({expr}) * {mult}));')
@@ -374,6 +402,45 @@ def materialise_alloca_frame(body, fname):
                           sub_bare, body, count=1)
 
     if n:
+        # `base + negVar - K` is BELOW the block, so it is neither the
+        # allocation nor any local Ghidra named: the original decremented esp,
+        # so the bottom of the frame is the outgoing-argument area for a call
+        # and Ghidra had no variable there to attribute it to. It renders it
+        # against whichever local it could reach, at a negative offset.
+        #
+        # Dropping negVar the way the collapse below does leaves
+        # `(int)afStack_11c + -0x1c` — a write 28 bytes under an 8-byte array,
+        # i.e. a stack smash. That compiles, passes all three substitute
+        # scenes, and is 18% wrong in a live match, which is exactly what
+        # IxConvexTriList did. IxSphylPrimitives has the same shape against
+        # `MeReal tmp[3]` and was released carrying it.
+        #
+        # These slots are pure argument scratch — every one is written and then
+        # read back a few lines later — so, like the stack0xNNNN path below,
+        # all they need is storage of their own that nothing else can reach.
+        # Keyed on the whole spelling, base and shift vars included, because
+        # that is as far as the text can be trusted to identify an address: a
+        # function with two allocas shifts its frame twice and writes the slot
+        # as `buffer + iVar10 + iVar3 + -0x18` (MeAssetDBXMLOutput_1_0). Taking
+        # only the nearest term as the base there names two different addresses
+        # the same, and leaves `buffer +` dangling in front of a void*[2].
+        def sub_below(m):
+            shifts = re.findall(r'\w+', m.group(3))
+            if any(v not in neg for v in shifts):
+                return m.group(0)      # not a frame shift; leave it alone
+            slot = ('kd_frameslot_' + m.group(2) + '_' + '_'.join(shifts)
+                    + '_m' + m.group(4))
+            below.add(slot)
+            return (f'(int)({slot})' if m.group(1) else f'({slot})')
+        body = re.sub(r'(\(int\)\s*)?&?(?<![.>])\b(\w+)((?:\s*\+\s*\w+)+)'
+                      r'\s*\+\s*-0x([0-9a-f]+)\b', sub_below, body)
+        if below:
+            decls = [f'    void *{s}[2];' for s in sorted(below)]
+            brace = body.find('\n{')
+            if brace >= 0:
+                body = (body[:brace + 2] + '\n' + '\n'.join(decls) + '\n'
+                        + body[brace + 2:])
+
         # After the real alloca is restored, every REMAINING reference of the
         # form `<base> + negVar` is outgoing-argument scratch: Ghidra renders a
         # push as a store to the shifted frame and the matching read as a load
@@ -398,16 +465,8 @@ def materialise_alloca_frame(body, fname):
             # wrong memory. Point it at the block instead.
             ab = alloca_base.get(var)
             if ab:
-                # Only where the offset from the block is NON-NEGATIVE. A
-                # negative one is not inside the allocation: the original
-                # decremented esp, so the block sits at the bottom of the frame
-                # and anything below it is the outgoing-argument area for a
-                # call. Pointing that at `alloca() - 0x1c` would write under the
-                # block, which is worse than leaving it as the local Ghidra
-                # named. IxConvexTriList does both in the same function, ten
-                # lines apart.
                 body = re.sub(r'\(int\)\s*&?' + re.escape(ab) + r'\s*\+\s*'
-                              + re.escape(var) + r'\b(?!\s*\+\s*-)(?!\s*-)',
+                              + re.escape(var) + r'\b',
                               f'(int)(kd_alloca_{var})', body)
                 body = re.sub(r'&?' + re.escape(ab) + r'\s*\+\s*'
                               + re.escape(var) + r'\b(?=\s*[\)\,;])',

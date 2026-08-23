@@ -72,6 +72,7 @@ IX(GjkCg,           "McdGjkCgIntersect")
 IX(SphereTriList,   "McdSphereTriangleListIntersect")
 IX(SphylTriList,    "McdSphylTriangleListIntersect")
 IX(BoxTriList,      "McdBoxTriangleListIntersect")
+IX(ConvexTriList,   "McdConvexMeshTriangleListIntersect")
 
 /* ---- geometry factories -------------------------------------------------- */
 static float kd_spread = 1.0f;
@@ -175,6 +176,23 @@ static void build_mesh(void)
     }
 }
 
+/* The flags UT2004 puts on a level triangle. This is not decoration: they are
+   the switch on more than half of what a TriangleList interaction does.
+
+   KTriListGen.cpp sets `kMcdTriangleUseSmallestPenetration` plus all three
+   UseEdge bits on every triangle it hands to Karma. This driver used to pass 0,
+   and 0 means the edge-contact loop in McdConvexMeshTriangleListIntersect's
+   GenerateTriangleContact — the half that calls ConvexHullNSegment and two of
+   the three AccumulateSphylContacts sites — is skipped entirely, along with the
+   two-sided branch and the edge-flag swap in the caller. So the object could
+   pass 200,000 synthetic pairs while being a quarter wrong in a live match,
+   which is exactly what happened.
+
+   KD_TRIFLAGS overrides it, so the old all-zero behaviour is still reachable
+   for telling "the edge path diverges" from "the face path diverges". */
+static McdTriangleFlags kd_triflags =
+    (McdTriangleFlags)(kMcdTriangleUseSmallestPenetration | kMcdTriangleUseEdges);
+
 static int MEAPI kd_trigen(McdModelPair *pair, McdUserTriangle *tri,
                            MeVector3 pos, MeReal radius, int maxTriangles)
 {
@@ -186,7 +204,7 @@ static int MEAPI kd_trigen(McdModelPair *pair, McdUserTriangle *tri,
         tri[t].vertices[2] = &kd_vert[t][2];
         tri[t].normal      = &kd_norm[t];
         tri[t].triangleData.tag = t;
-        tri[t].flags = (McdTriangleFlags)0;
+        tri[t].flags = kd_triflags;
     }
     return n;
 }
@@ -254,6 +272,14 @@ static const struct {
       mk_sphyl,  mk_trilist, 1.0f },
     { "McdBoxTriangleListIntersect",    ix_orig_BoxTriList,    ix_rec_BoxTriList,
       mk_box,    mk_trilist, 1.0f },
+    /* ConvexMesh x TriangleList is the tenth and last pair the census says the
+       game calls, and the only one that had no entry here — which is exactly
+       why "compiles and passes the scenes" was all IxConvexTriList ever had.
+       Its in-game divergence is measured on ONS-UCMP-ABC-ECE, the one map found
+       that reaches it, over a match that is non-deterministic and crashes about
+       half the time. This row is the deterministic half of that evidence. */
+    { "McdConvexMeshTriangleListIntersect", ix_orig_ConvexTriList, ix_rec_ConvexTriList,
+      mk_convex, mk_trilist, 1.0f },
 };
 #define NPAIRS ((int)(sizeof PAIRS / sizeof PAIRS[0]))
 
@@ -322,6 +348,8 @@ int main(int argc, char **argv)
     const char *sp = getenv("KD_SPREAD");
     kd_spread = sp ? (float)atof(sp) : 1.0f;
     if (!(kd_spread > 0)) kd_spread = 1.0f;
+    const char *tf = getenv("KD_TRIFLAGS");
+    if (tf) kd_triflags = (McdTriangleFlags)strtol(tf, NULL, 0);
     const char *e = getenv("KD_SELFTEST");
     int selftest = (e && *e == '1');
     const char *want = (argc > 1 && strcmp(argv[1], "all")) ? argv[1] : NULL;

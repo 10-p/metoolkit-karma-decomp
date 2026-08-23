@@ -208,8 +208,14 @@ def main():
                 for line in region.split('\n'):
                     if not re.search(word, line):
                         continue
-                    if re.match(r'\s*\w[\w \*]*' + word + r'\s*;\s*$', line):
-                        continue                  # its own declaration
+                    # Its own declaration. The declarator can be a pointer to an
+                    # array — `MeReal (*unaff_ESI) [3];` — which a plainer
+                    # pattern misses, and then the DECLARATION reads as a stray
+                    # read and the object is held back for nothing. McdGjk was.
+                    if re.match(r'\s*(?:const\s+|struct\s+|unsigned\s+|signed\s+)*'
+                                r'[A-Za-z_]\w*\s*[\*\(\s]*' + word
+                                + r'\s*[\)\[\]\w\s\*]*;\s*$', line):
+                        continue
                     if re.match(r'\s*' + word + r'\s*=[^=]', line):
                         break                     # assigned first; dataflow intact
                     m = re.match(r'\s*(\w+)\s*=\s*' + word + r'\s*;\s*$', line)

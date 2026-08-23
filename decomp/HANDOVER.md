@@ -34,12 +34,12 @@ Ghidra consumes it directly.
 ## 2. Current status
 
 ```
-compile:  86 objects  (82 clean + 4 with prelude TODOs)  = 58.1% of 148 attempted
-gate:     86 of 86 clean on BOTH scenes — bit-identical on scene_chain, and no
+compile:  88 objects  (84 clean + 4 with prelude TODOs)  = 59.5% of 148 attempted
+gate:     88 of 88 clean on BOTH scenes — bit-identical on scene_chain, and no
           crash on scene_boxes_on_plane (the two divergences there are IxBoxBox
           and IxBoxPlane, both on the collision path, both expected)
-review:   14 objects held back by seven safety detectors
-fail:     48 objects do not compile
+review:   13 objects held back by seven safety detectors
+fail:     47 objects do not compile
 ```
 
 **Run both scenes.** `scene_chain` is collision-free and is the authoritative *trajectory*
@@ -74,7 +74,7 @@ actually makes. Combined across both test maps, by source object:
 | 1,856,714 | `IxSphereTriList` | ✅ validated on real calls |
 | 128,885 | `IxSphereSphere` | ✅ validated on real calls |
 | 463,782 | `IxSphylPrimitives` (ragdolls) | ⚠ 1 divergence in 74,921 — a judgement call, §8 |
-| 77,424 | `McdGjk` — `McdGjkCgIntersect`, i.e. Box×ConvexMesh | ❌ not recovered; reads `unaff_ESI` |
+| 77,424 | `McdGjk` — `McdGjkCgIntersect`, i.e. Box×ConvexMesh | ⚠ compiles and passes both scenes; never differentially tested |
 | 35,427 | `IxBoxBox` | ✅ validated on real calls |
 | 7,975 | `IxConvexPrimitives` (vehicles) | ✅ validated on real calls |
 
@@ -570,11 +570,12 @@ In order:
 1. **Decide `IxSphylPrimitives`** (§8). It is the busiest thing in the game still held
    back, the numbers are in `proven.txt`, and what is left really is a decision rather than
    a measurement: one threshold flap in 74,921 real calls. It needs a person.
-2. **Recover `McdGjk`.** `McdGjkCgIntersect` handles Box×ConvexMesh, which the census now
-   puts at 77,424 calls — the busiest pair with nothing recovered behind it at all. The
-   object compiles; it is held because it reads `unaff_ESI` before anything assigns it,
-   which is one specific defect to chase rather than a wall.
-3. **Grind the tail.** 48 objects. The biggest remaining class by far is `stack0xNNNN` —
+2. **Differentially test `McdGjk`.** `McdGjkCgIntersect` handles Box×ConvexMesh, which the
+   census puts at 77,424 calls — the busiest pair by far with no evidence behind it. The
+   object now compiles and passes both substitute scenes, which proves only that it does
+   not crash. Add it to `difftest_pair.c` (one `IX()` line, one table row — the box and
+   convex factories already exist) and run a CBP2 map to catch it live.
+3. **Grind the tail.** 47 objects. The biggest remaining class by far is `stack0xNNNN` —
    30 references, an incoming argument Ghidra did not model — and that is a genuine defect,
    not a spelling problem, so it must not be papered over. After that: types
    `kd_types.h` does not emit (`MeASEObject`, `McdErrorDescription`, `Mesh2GeometryType`),

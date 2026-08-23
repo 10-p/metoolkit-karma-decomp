@@ -235,6 +235,11 @@ def ctor_initialisers(dump_path):
     return out, messy
 
 
+def chunk_of(data, off, size):
+    """The section bytes a static occupies, or b'' if they are not there."""
+    return data[off:off + size] if size and off + size <= len(data) else b''
+
+
 def render_value(data, off, size):
     """Best-effort literal for a static's initializer."""
     chunk = data[off:off + size] if size else b''
@@ -411,6 +416,16 @@ def main():
             w(f'static {qual}float {c_name} = {lit};')
         elif lit:
             w(f'static {qual}float {c_name}[] = {lit};')
+        elif chunk_of(data.get(sect, b''), value, size):
+            # Too big for a float guess — McdGjk4Di is a 328-byte table of
+            # simplex indices. Emit the bytes, which are exact and carry no
+            # guess about the element type. If some object does use it as
+            # something other than bytes the compiler says so, which is better
+            # than a TODO nobody reads.
+            raw = chunk_of(data.get(sect, b''), value, size)
+            w(f'/* element type unknown; bytes are exact */')
+            w(f'static {qual}unsigned char {c_name}[{len(raw)}] = {{ '
+              + ', '.join('0x%02x' % b for b in raw) + ' };')
         else:
             w(f'/* TODO: {c_name} — tool could not render a literal */')
         w('')

@@ -78,7 +78,7 @@ actually makes. Combined across both test maps, by source object:
 | 1,856,714 | `IxSphereTriList` | ✅ validated on real calls |
 | 128,885 | `IxSphereSphere` | ✅ validated on real calls |
 | 463,782 | `IxSphylPrimitives` (ragdolls) | ✅ validated on real calls and a driving scene |
-| 77,424 | `McdGjk` — `McdGjkCgIntersect`, i.e. Box×ConvexMesh | ⚠ compiles and passes both scenes; never differentially tested |
+| 77,424 | `McdGjk` — `McdGjkCgIntersect`, i.e. Box×ConvexMesh | ✅ 16,457 real calls, 0 structural |
 | 35,427 | `IxBoxBox` | ✅ validated on real calls |
 | 7,975 | `IxConvexPrimitives` (vehicles) | ✅ validated on real calls |
 

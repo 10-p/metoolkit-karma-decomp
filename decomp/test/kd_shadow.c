@@ -26,7 +26,24 @@
     For each registered pair, the thunk runs the ORIGINAL into the caller's real
     result and, if a recovered implementation exists for that function, runs it
     into a scratch buffer and compares. The engine only ever consumes the
-    original's output, so gameplay is bit-for-bit unchanged.
+    original's output.
+
+    That is NOT the same as gameplay being unchanged, which this comment used to
+    claim. Running an intersection function a second time is only free if it
+    writes solely through its output parameter, and McdModelPair carries
+    m_cachedData, responseData and phase for it to write to. So the second call
+    gets a COPY of the pair (see kd_dispatch) and a scratch contact buffer with a
+    canary after it.
+
+    The harness IS implicated in an intermittent SIGSEGV in the engine's own
+    KHandleCollisions — 4 crashes in 14 harness runs against 0 in 4 stock runs
+    of the same map, and 0 in 5 with the second call off. The pair copy did not
+    fix that (1 in 6 afterwards, nothing at this sample size). The cause is
+    still open; HANDOVER.md §7 lists what has not been tried. The copy is kept
+    because the paragraph above is only true with it.
+
+    KD_CENSUS=1 turns the second call off entirely and KD_ONLY=<substring>
+    narrows it to one function. Reach for those first when a session misbehaves.
 
     Pairs with no recovered counterpart are still counted. That census answers
     the question that has to come first: which parts of the collision matrix
@@ -296,8 +313,28 @@ static int kd_dispatch(int slot, McdModelPair *p, McdIntersectResult *r)
            it. It is not a guarantee — a wild write far past the end still lands
            wherever it lands — but the overflow-by-a-few case is the common one
            and it is now caught at the call that caused it. */
+        /* The second call gets a COPY of the McdModelPair, not the caller's.
+           The harness header claims gameplay is bit-for-bit unchanged, and that
+           rests on these functions writing only through their output parameter.
+           They do not: McdModelPair carries m_cachedData, responseData and
+           phase, and a cached interaction is entitled to update them. Handing
+           the shadow call the real pair let it write into engine state twice
+           per frame.
+
+           Measured on ONS-UCMP-ABC, 240 s per run: stock 0 crashes in 4,
+           harness 3 in 8, and 0 in 5 with the second call suppressed
+           (KD_CENSUS=1) or narrowed to one function (KD_ONLY). Intermittent,
+           so none of those alone is proof, but the direction is consistent and
+           the mechanism is real whether or not it is the whole story.
+
+           A copy preserves everything an intersection function READS — the two
+           models, the request, the cache pointer — so the comparison is
+           unaffected, and anything it writes lands in the copy. Verified
+           against the known baseline on test-karma-1. */
         McdContact         scratch_c[KD_SCRATCH_MAX + KD_GUARD];
+        McdModelPair       pair_copy;
         McdIntersectResult scratch = *r;
+        if (r->pair) { pair_copy = *r->pair; scratch.pair = &pair_copy; }
         int cap = r->contactMaxCount;
         if (cap > KD_SCRATCH_MAX) cap = KD_SCRATCH_MAX;
         memset(scratch_c, 0, sizeof(McdContact) * KD_SCRATCH_MAX);

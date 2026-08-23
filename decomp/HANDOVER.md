@@ -372,12 +372,52 @@ Baseline: `test-karma-1` self-test gives **1,763,102 calls, 0 divergence**. The 
 sound. That is what let us treat the `McdSphereTriangleListIntersect` divergence as real
 and worth explaining rather than tolerating.
 
-It is also what settles crashes, and it was skipped once at real cost. A SIGSEGV in
-`McdModelGetGeometryType`, called from the engine's own `KHandleCollisions`, was written up
-as an overrun caused by `IxSphylPrimitives`. It is not: the same crash with the same
-backtrace reproduces under `KD_SELFTEST=1` on `ONS-UCMP-ABC`, with no recovered code
-executing at all. **Run the self-test before believing anything the harness blames on
-recovered code — crashes included, not just divergences.**
+It is also what settles crashes. A SIGSEGV in `McdModelGetGeometryType`, called from the
+engine's own `KHandleCollisions`, was first written up as an overrun caused by
+`IxSphylPrimitives`. It is not — it reproduces under `KD_SELFTEST=1` with no recovered code
+executing. **Run the self-test before believing anything the harness blames on recovered
+code, crashes included.**
+
+### The harness perturbs the engine, and the cause is still open
+
+**Do not treat a crash in a shadow session as a fact about the recovered code.** Alternating
+240 s runs on `ONS-UCMP-ABC`, counting SIGSEGVs in the engine's own `KHandleCollisions`:
+
+| build | crashes |
+|---|---|
+| stock Karma, no harness at all | **0 of 4** |
+| harness, second call live | **4 of 14** |
+| harness, second call suppressed (`KD_CENSUS=1`) or narrowed (`KD_ONLY`) | **0 of 5** |
+
+So the harness is implicated and the second call is where to look — but it is intermittent,
+none of those rows is significant alone, and **the mechanism has not been found.**
+
+One hypothesis was tested and **rejected**: that the shadow call was scribbling on the
+caller's `McdModelPair`, which carries `m_cachedData`, `responseData` and `phase` for a
+cached interaction to write to. Giving the second call a *copy* of the pair changed the rate
+from 3-in-8 to 1-in-6, which at that sample size is nothing. The copy is kept anyway,
+because the header's claim that gameplay is unchanged is only true if these functions write
+solely through their output parameter and they demonstrably may not — and because it is
+free: re-measured against the known baseline on `test-karma-1` afterwards, 1,738,521 calls,
+0 structural divergences, worst delta 5.722046e-06, the same figure to every digit.
+
+Still untried, roughly in order of promise:
+
+1. **Stack.** `kd_dispatch` puts `McdContact scratch_c[72]` — about 2.9 KB — on the stack of
+   every shadowed call, and aggregates dispatch to child pairs, so those frames nest. Shrink
+   `KD_SCRATCH_MAX` and see if the rate moves.
+2. **A shared contact pool.** If an intersection function bumps a per-frame allocator as
+   well as filling the caller's array, calling it twice double-counts it. That would corrupt
+   whatever is next in memory, which is what the backtrace looks like.
+3. **Bisect by function with `KD_ONLY`** over enough runs to mean something. Four runs each
+   was not enough; at a 1-in-3 base rate you need on the order of ten.
+
+Two switches exist for exactly this and are worth knowing about:
+
+- **`KD_CENSUS=1`** — count calls, run nothing twice. Perturbs nothing measurable. Use it
+  when you want a census from a map you do not trust.
+- **`KD_ONLY=<substring>`** — shadow only functions whose name contains it, no rebuild
+  needed between attempts.
 
 ### Reading the output
 

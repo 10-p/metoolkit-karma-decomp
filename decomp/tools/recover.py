@@ -37,6 +37,31 @@ def run(cmd, **kw):
     return subprocess.run(cmd, capture_output=True, text=True, **kw)
 
 
+def tool_error(stderr, limit=110):
+    """The useful line of a failing tool's stderr.
+
+    The first 90 characters of a Python traceback are "Traceback (most recent
+    call last):" and the start of a file path — every crash in the pipeline
+    therefore reported the same string and none of them said what went wrong.
+    keaMemory, one of the five libMdtKea objects blocking the solver, sat in the
+    FAIL column behind exactly that message. For a traceback the last line is
+    the exception; for a compiler it is the first line mentioning an error."""
+    lines = [l for l in stderr.strip().splitlines() if l.strip()]
+    if not lines:
+        return '(no stderr)'
+    if lines[0].startswith('Traceback'):
+        # Last line is the exception; the line before it is where it was raised.
+        where = ''
+        for l in reversed(lines[:-1]):
+            m = re.search(r'File "([^"]+)", line (\d+)', l)
+            if m:
+                where = ' at %s:%s' % (os.path.basename(m.group(1)), m.group(2))
+                break
+        return (lines[-1] + where)[:limit]
+    err = next((l for l in lines if ' error' in l or 'Error' in l), lines[0])
+    return err[:limit]
+
+
 def dump_functions(path):
     return re.findall(r'/\* ==== (\S+) ==== \*/', open(path, errors='ignore').read())
 
@@ -264,7 +289,7 @@ def main():
                 cmd += ['--protos', args.protos]
             r = run(cmd)
             if r.returncode != 0:
-                rows.append((archive, base, 'FAIL', 'gen_prelude: ' + r.stderr.strip()[:90]))
+                rows.append((archive, base, 'FAIL', 'gen_prelude: ' + tool_error(r.stderr)))
                 counts['FAIL'] += 1
                 continue
         # Count only real markers. The generated file's own header comment
@@ -290,7 +315,7 @@ def main():
                 # that starts with `-` as the next option and bails out.
                 + [f'--cflag={f}' for f in cflags] + drops)
         if r.returncode != 0:
-            rows.append((archive, base, 'FAIL', 'clean: ' + r.stderr.strip()[:90]))
+            rows.append((archive, base, 'FAIL', 'clean: ' + tool_error(r.stderr)))
             counts['FAIL'] += 1
             continue
         # ghidra_clean.py drives a compile-feedback repair loop; report what it

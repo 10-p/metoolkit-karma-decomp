@@ -49,7 +49,14 @@
 #include <MstUniverse.h>
 #include <MstUtils.h>
 
-#define MAXC 64
+/* The engine hands these functions a 400-contact result buffer (maxCount 400 in
+   every shadow-harness dump), and so does this driver. It was 64, which was
+   fine only because both boxes had one fixed size: once reshape() lets a box
+   reach 2.2 on a side it overlaps enough of the test mesh for
+   McdBoxTriangleListIntersect to write past the end, and the run dies with
+   "stack smashing detected" and no output, having discarded every result
+   printed before it. Match the engine rather than pick a number. */
+#define MAXC 400
 
 typedef int (MEAPI *ix_fn)(McdModelPair *, McdIntersectResult *);
 typedef McdGeometryID (*geom_fn)(McdFrameworkID, int seed);

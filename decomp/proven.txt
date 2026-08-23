@@ -184,17 +184,22 @@ McdGjk                synth: Box x ConvexMesh through McdGjkCgIntersect, 50,000 
 #                     m_cachedData is a pointer — both calls wrote the same 60-byte block.
 #                     kd_shadow now passes the copy as the first argument and rewinds the
 #                     cache block to what the original consumed, restoring what the original
-#                     left. Same map, same length:
+#                     left. Same map, same length, all GJK pairs:
 #
-#                       shared state   3 ret_diff + 15 count_diff in 72,167
-#                       isolated       0 in 23,315
+#                       shared state   3 ret_diff + 15 count_diff in 75,839
+#                       isolated       3 ret_diff +  2 count_diff in 65,975  (3 runs)
 #
-#                     NOT fully closed. Varying the box dimensions in difftest_pair (see the
-#                     IxBoxBox entry) also produced 2 count divergences in 200,000 synthetic
-#                     Box x ConvexMesh pairs, where a fixed box had given none at every
-#                     regime — and that driver hands a zeroed pair every iteration, so no
-#                     cache is involved. There is probably something underneath the harness
-#                     artifact. It is now reproducible without waiting for a match.
+#                     Most of it, not all of it: count_diff fell 15 -> 2 and ret_diff did
+#                     not move. So the cache sharing was real and it was not the whole
+#                     story.
+#
+#                     NOT closed, and there is now a reproducible handle on the rest.
+#                     Varying the box dimensions in difftest_pair (see the IxBoxBox entry)
+#                     produced 2 count divergences in 200,000 synthetic Box x ConvexMesh
+#                     pairs, where a fixed box had given none at every regime — and that
+#                     driver hands a zeroed pair every iteration, so no cache is involved.
+#                     Chase it there rather than waiting for a match.
+
 
 
 
@@ -304,11 +309,13 @@ IxConvexTriList       RELEASED 2026-08-23, and the tenth and last pair the censu
 #                     real: ONS-UCMP-ABC-ECE, 900 s, 6,857 calls of
 #                     McdConvexMeshTriangleListIntersect — 5,888 bit-identical, 969
 #                     float-noise, 0 ret_diff, 0 count_diff, 0 dims_diff, 0 overrun, worst
-#                     delta 3.05e-05. Ten other functions clean in the same run. A second,
-#                     independent match on the same map added 2,369 calls with the same
-#                     verdict and every other pair clean too — 9,226 real calls, 0
-#                     structural, against 272 ret_diff and 172 count_diff in 1,876 before
-#                     the fix.
+#                     delta 3.05e-05. Ten other functions clean in the same run. Three more
+#                     independent matches on the same map added 2,369, 5,393 and 6,172 calls
+#                     with the same verdict and every other pair clean too — 20,791 real
+#                     calls, 0 structural, against 272 ret_diff and 172 count_diff in 1,876
+#                     before the fix. (The last two of those ran with the harness cache
+#                     isolation described under McdGjk, so the result holds under both
+#                     harness configurations.)
 #
 #                     KD_SELFTEST on the SAME map and length, which this pair had never had:
 #                     7,150 calls, 0 divergence, everything 100% bit-identical, and the

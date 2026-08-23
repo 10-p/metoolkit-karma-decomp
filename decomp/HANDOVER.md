@@ -54,7 +54,7 @@ in it is what releases an object from quarantine):
 | `IxConvexPrimitives` | 1,685 real calls, **all bit-identical**, + 300k synthetic |
 | `IxBoxBox` | 35,427 real + 500k synthetic, **1 count divergence**, §8 |
 | `IxBoxSphere` | 5,101 real calls, 0 structural. The census said this pair was never called |
-| `IxConvexTriList` | 6,857 real calls, 0 structural. **Released**, §8 — this was the top task |
+| `IxConvexTriList` | 20,791 real calls over four matches, 0 structural. **Released**, §8 |
 
 
 ---
@@ -514,22 +514,25 @@ the original consumed and restored to what the original left. `McdCacheHello` is
 thing in the library that assigns `m_cachedData` and it takes the block from a fixed pool of
 `0x3c`-byte elements, so 60 is the size of every cache block there is, not a guess.
 
-What that changed, on `ONS-UCMP-ABC-ECE`, 900 s:
+What that changed, on `ONS-UCMP-ABC-ECE`, 900 s per run:
 
-| | Box × ConvexMesh divergences | ran the full 900 s |
+| | GJK divergences | ran the full 900 s |
 |---|---|---|
-| shared state | 3 ret + 15 count in 72,167 | no — 5 of 5 runs died in `KHandleCollisions` |
-| isolated | **0 in 23,315** | yes |
+| shared state | 3 ret + 15 count in 75,839 | **0 of 5** — all died in `KHandleCollisions` |
+| isolated | 3 ret + 2 count in 65,975 | **2 of 3** |
 
-Small samples, and `KD_SHARECACHE=1` exists to keep measuring. But the direction matches
-every earlier row, the mechanism is now named rather than guessed, and the GJK divergences
-recorded in `proven.txt` came from it.
+Read that carefully rather than as a fix. The count divergences dropped 15 → 2 and the
+crash stopped being universal, but `ret_diff` is unchanged at 3 and one isolated run still
+crashed. The mechanism was real and it was not the whole story. `KD_SHARECACHE=1` exists so
+the A/B stays cheap; the sample sizes here are three and five.
 
 **Still open**, and worth keeping in mind before declaring this closed:
 
 1. **A shared contact pool.** If an intersection function bumps a per-frame allocator as
-   well as filling the caller's array, calling it twice double-counts it. Never tested.
-2. **More isolated runs.** One clean 900 s run is one run.
+   well as filling the caller's array, calling it twice double-counts it. Never tested, and
+   now the leading candidate for what is left.
+2. **More runs.** Two clean runs out of three is not a result at this crash rate.
+
 
 Also **ruled out**: stack pressure. `kd_dispatch` puts ~2.9 KB on the stack per shadowed
 call and aggregates dispatch to child pairs, so the frames could nest. They do not — the
@@ -752,14 +755,18 @@ The same change also made `McdGjkCgIntersect` show **2 count divergences in 200,
 a fixed box had given none at every regime, which is a synthetic counterpart to the in-game
 GJK entry in `proven.txt`. A fixed shape was a blind spot for both.
 
-### `McdGjk` — 18 divergences on the busiest pair, and where they went
+### `McdGjk` — 18 divergences on the busiest pair, and where most of them went
 
 The first long run of Box × ConvexMesh — 72,167 calls, four times any before it — found
 **3 ret_diff and 15 count_diff**, worst delta 2.057, all of them the same two actors over
 consecutive frames of one persistent contact. GJK warm-starts from `m_cachedData`, and the
-harness was letting both implementations write that block (§7). With the cache isolated the
-same map gave **0 in 23,315**. See `proven.txt`; the synthetic 2-in-200,000 above says there
-is probably still something underneath, so this is not closed.
+harness was letting both implementations write that block (§7). Isolating it took the same
+map to **3 ret_diff and 2 count_diff in 65,975** across three runs — most of it, and not all
+of it. The synthetic driver agrees there is something left: 2 count divergences in 200,000
+Box × ConvexMesh pairs once the box dimensions vary, on a driver that hands a zeroed pair
+every iteration so no cache is involved at all. Reproducible now without waiting for a
+match. See `proven.txt`.
+
 
 ### `IxBoxTriList` — its clean synthetic result has been withdrawn
 

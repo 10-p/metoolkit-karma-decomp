@@ -56,6 +56,24 @@ def main():
         '-I' + os.path.join(inc, d) for d in
         ('McdCommon', 'McdPrimitives', 'McdFrame', 'MeGlobals',
          'MdtBcl', 'MdtKea', 'Mst', 'MeApp')]
+    # Decompiled code has an EXACT ABI but only approximate types: Ghidra
+    # recovers the type a value is used as, which is often not the type the
+    # public header names for it. Same layout, same calling convention,
+    # different spelling. These two diagnostics are about spelling, so they
+    # are downgraded here rather than fought one cast at a time. Both are
+    # safe only because every target is 32-bit-pointer (i386 and wasm32).
+    # -fno-strict-aliasing is REQUIRED, not a nicety. Decompiled code
+    # type-puns constantly: Ghidra recovers a stack slot as `MeReal x[2]`
+    # and the code stores a pointer through it. Under -O2 strict aliasing
+    # GCC is entitled to assume those accesses cannot alias, and it deletes
+    # the stores — which is exactly what happened to IxSphereTriList.
+    # KTriListGenerator received (pair, 0, 0, 0, 0): the first argument
+    # survived because it went through a register, and the four passed via
+    # punned stack slots were optimised away. The engine's own build already
+    # uses this flag for the same reason (root CMakeLists.txt).
+    cflags = ['-m32', '-O2', '-fno-pic', '-fno-strict-aliasing',
+              '-std=gnu99', '-w', '-Wno-int-conversion',
+              '-Wno-incompatible-pointer-types', '-DLINUX'] + iflags
     os.makedirs(args.build_dir, exist_ok=True)
 
     objs = sorted(glob.glob(os.path.join(args.obj_dir, '**', '*.o'), recursive=True))
@@ -180,34 +198,23 @@ def main():
                  '--exports', exports, '--vtables', vtables,
                  '--metoolkit-include', inc,
                  '--field-map', os.path.join(root, 'include',
-                                             'kd_types_fields.json')] + drops)
+                                             'kd_types_fields.json')]
+                # `--cflag=-m32`, not `--cflag -m32`: argparse reads a value
+                # that starts with `-` as the next option and bails out.
+                + [f'--cflag={f}' for f in cflags] + drops)
         if r.returncode != 0:
             rows.append((archive, base, 'FAIL', 'clean: ' + r.stderr.strip()[:90]))
             counts['FAIL'] += 1
             continue
+        # ghidra_clean.py drives a compile-feedback repair loop; report what it
+        # had to do, so a jump in repairs is visible rather than silent.
+        m = re.search(r'(\d+) line\(s\) repaired', r.stdout)
+        repaired = f', {m.group(1)} line(s) repaired' if m else ''
 
         o = os.path.join(args.build_dir, base + '.o')
         if os.path.exists(o):
             os.unlink(o)                          # a stale object must never look like a pass
-        # Decompiled code has an EXACT ABI but only approximate types: Ghidra
-        # recovers the type a value is used as, which is often not the type the
-        # public header names for it. Same layout, same calling convention,
-        # different spelling. These two diagnostics are about spelling, so they
-        # are downgraded here rather than fought one cast at a time. Both are
-        # safe only because every target is 32-bit-pointer (i386 and wasm32).
-        # -fno-strict-aliasing is REQUIRED, not a nicety. Decompiled code
-        # type-puns constantly: Ghidra recovers a stack slot as `MeReal x[2]`
-        # and the code stores a pointer through it. Under -O2 strict aliasing
-        # GCC is entitled to assume those accesses cannot alias, and it deletes
-        # the stores — which is exactly what happened to IxSphereTriList.
-        # KTriListGenerator received (pair, 0, 0, 0, 0): the first argument
-        # survived because it went through a register, and the four passed via
-        # punned stack slots were optimised away. The engine's own build already
-        # uses this flag for the same reason (root CMakeLists.txt).
-        r = run(['gcc', '-m32', '-O2', '-fno-pic', '-fno-strict-aliasing',
-                 '-std=gnu99', '-w', '-Wno-int-conversion',
-                 '-Wno-incompatible-pointer-types',
-                 '-DLINUX', '-c', '-o', o, csrc] + iflags)
+        r = run(['gcc'] + cflags + ['-c', '-o', o, csrc])
         if not os.path.exists(o):
             first = next((l for l in r.stderr.splitlines() if ' error' in l), r.stderr[:90])
             if MISLABELLED_CALL.search(first):
@@ -257,7 +264,8 @@ def main():
 
         status = 'TODO' if todos else 'OK'
         rows.append((archive, base, status,
-                     f'{len(fns)} fns' + (f', {todos} prelude TODO(s)' if todos else '')))
+                     f'{len(fns)} fns' + (f', {todos} prelude TODO(s)' if todos else '')
+                     + repaired))
         counts[status] += 1
 
     width = max((len(r[1]) for r in rows), default=10)

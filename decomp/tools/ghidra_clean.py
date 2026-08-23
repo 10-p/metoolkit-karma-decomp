@@ -181,18 +181,6 @@ def resolve_varargs(body, sig):
     return body, 1
 
 
-PTR_AS_FLOAT = re.compile(r'\((float|double|MeReal)\)\s*\(\s*&([^()]*(?:\([^()]*\))?[^()]*)\)\s*\[')
-
-
-def fix_pointer_as_float(body):
-    """`(float)(&x->contact)[2]` means "index that address as floats".
-
-    Ghidra emits a cast of the ADDRESS to a scalar type, which C rejects:
-    "pointer value used where a floating-point was expected". The intent is
-    plain: take the address, treat it as an array of that type, index it."""
-    return PTR_AS_FLOAT.sub(lambda m: f'(({m.group(1)} *)&{m.group(2)})[', body)
-
-
 def resolve_field_names(body, fieldmap):
     """Turn `this->field_0x14` into `this->m_blocks`.
 
@@ -367,6 +355,325 @@ def signature_of(body):
     return ' '.join(body[:brace].split())
 
 
+# ---------------------------------------------------------------------------
+#  Compile-feedback repair
+#
+#  Some of what Ghidra emits is not C, and the tempting fix is a regex over the
+#  whole file. That is how this pipeline nearly shipped a silent miscompile:
+#
+#      (float)x->member
+#
+#  is a legal *conversion* when `member` is an int, and a bit *reinterpretation*
+#  when it is a pointer. The two are indistinguishable by looking at the text,
+#  and rewriting every occurrence to `*(float *)&x->member` turns the first kind
+#  into garbage that still compiles. See HANDOVER.md §9 dead end 6.
+#
+#  The compiler already knows which is which — it says so, with a line number.
+#  So nothing below fires on a pattern alone. A rule fires only on a line GCC
+#  has ALREADY rejected, only when the diagnostic on that line is one the rule
+#  claims, and it rewrites that line and nothing else. Every batch of edits is
+#  then kept only if recompiling produces fewer errors than before; a rule that
+#  guesses wrong drives the count up and is reverted without anyone noticing it
+#  was tried.
+#
+#  Adding a rule is therefore cheap and safe. Removing the verification is not.
+# ---------------------------------------------------------------------------
+
+GCC_DIAG = re.compile(r'^(?P<file>.+?):(?P<line>\d+):(?P<col>\d+):\s+error:\s+(?P<msg>.*)$')
+
+# GCC quotes identifiers with typographic quotes under a UTF-8 locale and ASCII
+# ones otherwise; match either so the rules do not depend on the environment.
+Q = '[‘\'"]([^’\'"]+)[’\'"]'
+
+
+def compile_diags(path, cc, cflags):
+    """Errors GCC reports *in this file*, as (line, col, message).
+
+    Diagnostics from headers are deliberately dropped: they have no line in the
+    generated file to rewrite, and papering over them here would hide a real
+    problem in kd_types.h, which fails globally (HANDOVER.md §4)."""
+    r = subprocess.run([cc] + list(cflags) + ['-c', '-o', os.devnull, path],
+                       capture_output=True, text=True)
+    here = os.path.abspath(path)
+    diags = []
+    for line in r.stderr.splitlines():
+        m = GCC_DIAG.match(line)
+        if m and os.path.abspath(m.group('file')) == here:
+            diags.append((int(m.group('line')), int(m.group('col')), m.group('msg')))
+    return diags
+
+
+# ---- expression scanning -------------------------------------------------
+#
+# The rules need to know where an operand starts and ends. GCC's column number
+# points at the enclosing statement, not at the offending sub-expression, so it
+# cannot be used for this; these two scanners find the extent by matching
+# brackets, which is exact.
+
+_OPEN, _CLOSE = {'(': ')', '[': ']'}, {')': '(', ']': '['}
+
+
+def scan_unary_forward(s, i):
+    """End of the unary-expression starting at `s[i]`, or None.
+
+    A cast binds tighter than any binary operator, so `(float)a->b - c` casts
+    `a->b` and not `a->b - c`. Getting this boundary wrong is how a rewrite
+    silently changes the arithmetic."""
+    n = len(s)
+    while i < n and s[i] in ' \t':
+        i += 1
+    if i >= n:
+        return None
+    if s[i] in '-+!~':                 # not addressable; the caller must refuse
+        return None
+    while i < n and s[i] in '*& \t':   # dereference / address-of prefixes
+        i += 1
+    if i >= n:
+        return None
+    if s[i] == '(':
+        i = _match_bracket(s, i)
+        if i is None:
+            return None
+    elif s[i].isalnum() or s[i] == '_':
+        while i < n and (s[i].isalnum() or s[i] == '_'):
+            i += 1
+    else:
+        return None
+    while i < n:                       # postfix: [..] (..) .name ->name
+        if s[i] in '([':
+            j = _match_bracket(s, i)
+            if j is None:
+                return i
+            i = j
+        elif s[i] == '.' and i + 1 < n and (s[i + 1].isalpha() or s[i + 1] == '_'):
+            i += 1
+            while i < n and (s[i].isalnum() or s[i] == '_'):
+                i += 1
+        elif s.startswith('->', i) and i + 2 < n and (s[i + 2].isalpha() or s[i + 2] == '_'):
+            i += 2
+            while i < n and (s[i].isalnum() or s[i] == '_'):
+                i += 1
+        else:
+            break
+    return i
+
+
+def scan_postfix_backward(s, i):
+    """Start of the postfix-expression ending just before `s[i]`, or None."""
+    j = i
+    while True:
+        while j > 0 and s[j - 1] in ' \t':
+            j -= 1
+        if j > 0 and s[j - 1] in ')]':
+            k = _match_bracket_back(s, j - 1)
+            if k is None:
+                return None
+            j = k
+        elif j > 0 and (s[j - 1].isalnum() or s[j - 1] == '_'):
+            while j > 0 and (s[j - 1].isalnum() or s[j - 1] == '_'):
+                j -= 1
+        else:
+            return None
+        # keep walking left through member selectors
+        k = j
+        while k > 0 and s[k - 1] in ' \t':
+            k -= 1
+        if k > 0 and s[k - 1] == '.' and not s[k - 2:k - 1].isdigit():
+            j = k - 1
+        elif k > 1 and s[k - 2:k] == '->':
+            j = k - 2
+        else:
+            return j
+
+
+def _match_bracket(s, i):
+    """Index just past the bracket group opening at `s[i]`."""
+    close, depth = _OPEN[s[i]], 0
+    for j in range(i, len(s)):
+        if s[j] in _OPEN:
+            depth += 1
+        elif s[j] in _CLOSE:
+            depth -= 1
+            if depth == 0:
+                return j + 1 if s[j] == close else None
+    return None
+
+
+def _match_bracket_back(s, i):
+    """Index of the bracket opening the group that closes at `s[i]`."""
+    depth = 0
+    for j in range(i, -1, -1):
+        if s[j] in _CLOSE:
+            depth += 1
+        elif s[j] in _OPEN:
+            depth -= 1
+            if depth == 0:
+                return j
+    return None
+
+
+# ---- the rules -----------------------------------------------------------
+
+FLOAT_TYPES = ('float', 'double', 'MeReal', 'longdouble')
+CAST_TO_FLOAT = re.compile(r'\((%s)\)' % '|'.join(FLOAT_TYPES))
+
+
+def fix_pointer_as_float(line, diag):
+    """`(float)x->member` where `member` is a POINTER.
+
+    The original loaded four bytes into an FP register. Ghidra typed the memory
+    as a pointer, so it had to emit a cast, and C rejects casting a pointer to a
+    float. The intent is a reinterpretation of those four bytes, which is what
+    `*(float *)&expr` says.
+
+    This must NEVER run on a line GCC accepts: where `member` really is an int,
+    the same text is an ordinary int-to-float conversion and this rewrite would
+    replace the converted value with the bit pattern.
+
+    Only one cast is rewritten per pass. If a line holds two of them the next
+    round of the loop finds the second, so multi-cast lines converge without
+    this rule having to guess which one GCC meant."""
+    for m in CAST_TO_FLOAT.finditer(line):
+        end = scan_unary_forward(line, m.end())
+        if end is None or end <= m.end():
+            continue
+        operand = line[m.end():end].strip()
+        if not operand:
+            continue
+        return (line[:m.start()] + f'(*({m.group(1)} *)&({operand}))' + line[end:])
+    return None
+
+
+SUBFIELD = re.compile(r'\.\s*_(\d+)_(\d+)_')
+SUBFIELD_WIDTH = {1: 'unsigned char', 2: 'unsigned short',
+                  4: 'unsigned int', 8: 'unsigned long long'}
+
+
+def fix_subfield_access(line, diag):
+    """`x._0_1_` is Ghidra for "the byte at offset 0 of x".
+
+    It appears wherever the original wrote a register subfield — `mov %al, ...`
+    against a variable Ghidra typed as a whole word. The offset and the width
+    are both spelled out in the name, so the rewrite is a transcription rather
+    than an inference. Little-endian is assumed, which holds for every target
+    this project cares about (i386, x86-64, wasm32, arm64 and armv7 LE)."""
+    for m in SUBFIELD.finditer(line):
+        width = SUBFIELD_WIDTH.get(int(m.group(2)))
+        if width is None:
+            continue
+        start = scan_postfix_backward(line, m.start())
+        if start is None:
+            continue
+        expr = line[start:m.start()].strip()
+        if not expr:
+            continue
+        off = int(m.group(1))
+        return (line[:start]
+                + f'(*({width} *)((char *)&({expr}) + {off}))'
+                + line[m.end():])
+    return None
+
+
+# Each entry: (diagnostic pattern the rule claims, rewrite function).
+# A rule is offered a line only when GCC reported that exact kind of error on
+# it, so the pattern here is half of the rule's safety argument.
+REPAIR_RULES = [
+    (re.compile(r'pointer value used where a floating-point was expected'),
+     fix_pointer_as_float),
+    (re.compile(r'cannot convert to a pointer type'),
+     fix_pointer_as_float),
+    (re.compile(r'request for member ' + Q + r' in something not a structure'),
+     fix_subfield_access),
+    (re.compile(r'expected expression before ‘\.’ token|'
+                r"expected expression before '\.' token"),
+     fix_subfield_access),
+]
+
+
+def repair_loop(path, cc, cflags, max_rounds=12, verbose=True):
+    """Compile, rewrite the lines GCC rejected, recompile, until it settles.
+
+    Returns (n_edits, remaining_errors, log). The file is left with whichever
+    version compiled best; if no rule helped it is left exactly as generated,
+    so a failure to repair can never make an object worse than not trying."""
+    original = open(path, errors='ignore').read()
+    best_text, log = original, []
+    diags = compile_diags(path, cc, cflags)
+    best_n = len(diags)
+    if not best_n:
+        return 0, 0, log
+
+    n_edits = 0
+    for _ in range(max_rounds):
+        lines = best_text.split('\n')
+        by_line = {}
+        for lineno, _col, msg in diags:
+            by_line.setdefault(lineno, []).append(msg)
+
+        edits, tried = {}, []
+        for lineno, msgs in sorted(by_line.items()):
+            if not 1 <= lineno <= len(lines):
+                continue
+            text = lines[lineno - 1]
+            for msg in msgs:
+                rule = next((fn for pat, fn in REPAIR_RULES if pat.search(msg)), None)
+                if rule is None:
+                    continue
+                new = rule(text, msg)
+                if new is not None and new != text:
+                    edits[lineno] = new
+                    tried.append((lineno, rule.__name__, msg))
+                    break
+        if not edits:
+            break
+
+        candidate = list(lines)
+        for lineno, new in edits.items():
+            candidate[lineno - 1] = new
+        candidate_text = '\n'.join(candidate)
+        open(path, 'w').write(candidate_text)
+        new_diags = compile_diags(path, cc, cflags)
+
+        # The verification. A batch is kept only if the compiler is happier for
+        # it. Anything else — a rule that misread the line, a rewrite that was
+        # valid C but not what the code meant *and* broke something downstream —
+        # shows up here as a count that did not fall, and is thrown away.
+        if len(new_diags) < best_n:
+            best_text, best_n, diags = candidate_text, len(new_diags), new_diags
+            n_edits += len(edits)
+            log += tried
+            if verbose:
+                for lineno, rule, msg in tried:
+                    print(f'  fixed {os.path.basename(path)}:{lineno} [{rule}] {msg[:60]}')
+            if best_n == 0:
+                break
+        else:
+            # Batch rejected. Retry the edits one at a time: usually all but one
+            # were fine and a single bad rewrite masked them.
+            progress = False
+            for lineno, new in sorted(edits.items()):
+                one = best_text.split('\n')
+                one[lineno - 1] = new
+                one_text = '\n'.join(one)
+                open(path, 'w').write(one_text)
+                d = compile_diags(path, cc, cflags)
+                if len(d) < best_n:
+                    best_text, best_n, diags = one_text, len(d), d
+                    n_edits += 1
+                    progress = True
+                    entry = next(t for t in tried if t[0] == lineno)
+                    log.append(entry)
+                    if verbose:
+                        print(f'  fixed {os.path.basename(path)}:{lineno} '
+                              f'[{entry[1]}] {entry[2][:60]}')
+            open(path, 'w').write(best_text)
+            if not progress:
+                break
+
+    open(path, 'w').write(best_text)
+    return n_edits, best_n, log
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('input', help='Ghidra .c dump')
@@ -387,6 +694,12 @@ def main():
                          'MeINLINE are dropped, since the header already supplies them')
     ap.add_argument('--drop', action='append', default=[],
                     help='function to omit entirely (repeatable)')
+    ap.add_argument('--cc', default='gcc',
+                    help='compiler to drive the repair loop with')
+    ap.add_argument('--cflag', action='append', default=[],
+                    help='flag for the repair loop, exactly as the caller will '
+                         'later compile with (repeatable). Without any, the loop '
+                         'does not run and the output is the raw generated C.')
     args = ap.parse_args()
 
     exported, internal, real_symbol_of = object_symbols(args.object)
@@ -446,7 +759,7 @@ def main():
             continue
         body = strip_comments(body).strip('\n')
         body = resolve_anon_types(cxx_names_to_c(ghidra_type_quirks(body)))
-        body = fix_pointer_as_float(resolve_field_names(body, fieldmap))
+        body = resolve_field_names(body, fieldmap)
         body, nva = resolve_varargs(body, signature_of(body) or '')
         n_vararg_fns += nva
         body, nalloca = materialise_alloca_frame(body, name)
@@ -515,6 +828,11 @@ def main():
         print(f'  {n_vararg_fns} variadic function(s) given a real va_list')
     if n_alloca_fns:
         print(f'  {n_alloca_fns} function(s) needed an alloca frame')
+    if args.cflag:
+        n_edits, left, _log = repair_loop(args.output, args.cc, args.cflag)
+        if n_edits:
+            print(f'  {n_edits} line(s) repaired from compiler feedback'
+                  + (f', {left} error(s) left' if left else ', clean'))
     print(f'{args.output}: {len(defs)} functions '
           f'({sum(1 for d in decls if d.startswith("static"))} static)'
           + (f', dropped {dropped}' if dropped else ''))

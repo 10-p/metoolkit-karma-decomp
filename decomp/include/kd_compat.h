@@ -61,7 +61,6 @@ typedef double              longdouble;
 #define ABSF(x)    fabsf(x)
 #define ABSD(x)    fabs(x)
 #define SQRTF(x)   sqrtf(x)
-#define NAN_f(x)   isnan(x)
 
 /* ROUND is emitted for x87 `fistp`, which converts using the CURRENT rounding
    mode — by default round-to-nearest, ties-to-even. It is NOT truncation, so
@@ -75,7 +74,12 @@ typedef double              longdouble;
     ((unsigned long long)(unsigned int)(hi) << 32 | (unsigned int)(lo))
 #define CONCAT22(hi, lo) \
     ((unsigned int)(unsigned short)(hi) << 16 | (unsigned short)(lo))
-#define CONCAT13(hi, lo) CONCAT44(hi, lo)
+#define CONCAT31(hi, lo) \
+    ((unsigned int)((hi) & 0xffffffu) << 8 | (unsigned char)(lo))
+#define CONCAT13(hi, lo) \
+    ((unsigned int)(unsigned char)(hi) << 24 | ((lo) & 0xffffffu))
+#define CONCAT11(hi, lo) \
+    ((unsigned short)((unsigned char)(hi) << 8 | (unsigned char)(lo)))
 #define SUB84(x, n)      ((unsigned int)((unsigned long long)(x) >> ((n) * 8)))
 #define SUB41(x, n)      ((unsigned char)((unsigned int)(x) >> ((n) * 8)))
 #define SUB42(x, n)      ((unsigned short)((unsigned int)(x) >> ((n) * 8)))
@@ -85,6 +89,64 @@ typedef double              longdouble;
 #define SEXT14(x)        ((int)(signed char)(x))
 #define SEXT24(x)        ((int)(short)(x))
 #define SEXT48(x)        ((long long)(int)(x))
+
+/* ---- x86 flag computations ---------------------------------------------
+    Ghidra keeps the arithmetic flags as explicit expressions when the original
+    used one as a value — gcc 3.2 does this constantly for `a < b` on unsigned
+    types, and for the `sbb`/`adc` branchless-compare idiom. CARRYn is the carry
+    OUT of an n-byte unsigned add; SBORROWn is signed overflow of an n-byte
+    subtract, which is what `<` on signed ints compiles to together with the
+    sign flag.
+------------------------------------------------------------------------- */
+#define CARRY1(a, b)  ((unsigned int)((unsigned char)(a) + (unsigned char)(b)) > 0xffu)
+#define CARRY2(a, b)  ((unsigned int)((unsigned short)(a) + (unsigned short)(b)) > 0xffffu)
+#define CARRY4(a, b)  ((unsigned int)((unsigned int)(a) + (unsigned int)(b)) < (unsigned int)(a))
+#define SBORROW1(a, b) \
+    ((signed char)(((signed char)(a) ^ (signed char)(b)) \
+                   & ((signed char)(a) ^ (signed char)((a) - (b)))) < 0)
+#define SBORROW2(a, b) \
+    ((short)(((short)(a) ^ (short)(b)) & ((short)(a) ^ (short)((a) - (b)))) < 0)
+#define SBORROW4(a, b) \
+    ((int)(((int)(a) ^ (int)(b)) & ((int)(a) ^ (int)((a) - (b)))) < 0)
+
+/* The x86 LOCK prefix, which Ghidra brackets around the instruction it guards.
+   Karma is single-threaded within a world step and these appear only in the
+   inherited `MeAtomic` helpers, so the guarded statement stands alone. */
+#define LOCK()    ((void)0)
+#define UNLOCK()  ((void)0)
+
+/* ---- x87 transcendental instructions -----------------------------------
+    gcc 3.2 -O2 on i386 expands sin/cos/atan2 to the FPU instructions rather
+    than calling libm, so what comes back out of the decompiler is the
+    INSTRUCTION, not the function. Ghidra models each as a pcodeop of the same
+    name, and its arity/order is fixed by the sleigh definition — for FPATAN,
+
+        ia.sinc:5953   ST1 = fpatan(ST1, ST0);
+
+    and the instruction computes atan(ST1/ST0) over the full circle, which is
+    exactly atan2(ST1, ST0). So `fpatan(a, b)` is `atan2(a, b)`, in that order.
+    Confirmed at a call site: MeQuaternionSlerp computes
+    `fpatan(SQRT(1 - c*c), c)`, i.e. acos(c), which is what a slerp needs.
+
+    These take `longdouble` (= double) operands, so the double-precision libm
+    entry points are the right ones: they match x87's internal precision more
+    closely than the float ones would.
+------------------------------------------------------------------------- */
+#define fsin(x)        sin(x)
+#define fcos(x)        cos(x)
+#define fptan(x)       tan(x)
+#define fsqrt(x)       sqrt(x)
+#define fpatan(y, x)   atan2((y), (x))
+#define f2xm1(x)       (exp2(x) - 1.0)
+#define fyl2x(y, x)    ((y) * log2(x))
+#define frndint(x)     rint(x)
+
+/* Ghidra's NaN test. C99's <math.h> already defines NAN as a float CONSTANT,
+   so the call site `NAN(x)` expands to `(0.0f/0.0f)(x)` and fails with "called
+   object is not a function". Ghidra never emits the constant, only the test. */
+#undef NAN
+#define NAN(x)     isnan(x)
+#define NAN_f(x)   isnan(x)
 
 /* Ghidra's generic "some function" type, used for indirect calls through a
    vtable or a stored callback: `(**(code **)(*(int *)obj + N))(obj, ...)`.

@@ -102,6 +102,22 @@ def main():
     out.append(' * originals are COMDAT. */')
     out.append('')
 
+    # Which C++ ABI objects does THIS object define? A derived class's typeinfo
+    # points at its base's, which normally lives in a different object
+    # (keaMatrix_PcSparse references _ZTI9keaMatrix, defined in keaMatrix.o).
+    # Referencing it without a declaration is an undeclared identifier.
+    local_zti = set(sect['ZTI'])
+    local_zts = set(sect['ZTS'])
+    ext_abi = set()
+
+    def abi_ref(kind, cls):
+        """`kd_ZTI<cls>` / `kd_ZTS<cls>`, declaring it extern if not ours."""
+        if kind == 'ZTI' and cls not in local_zti:
+            ext_abi.add(('ZTI', cls))
+        elif kind == 'ZTS' and cls not in local_zts:
+            ext_abi.add(('ZTS', cls))
+        return f'kd_{kind}{cls}'
+
     def cname(sym):
         """C identifier to use for a symbol referenced by a slot."""
         if sym in defined:
@@ -128,9 +144,9 @@ def main():
                 # Points 8 bytes into the abi's own type_info vtable.
                 entries.append(f'(const void *)((const char *)&{cname(sym)}[0] + 8)')
             elif sym.startswith('_ZTS'):
-                entries.append(f'(const void *)kd_ZTS{sym[4:]}')
+                entries.append(f'(const void *){abi_ref("ZTS", sym[4:])}')
             elif sym.startswith('_ZTI'):
-                entries.append(f'(const void *)kd_ZTI{sym[4:]}')
+                entries.append(f'(const void *){abi_ref("ZTI", sym[4:])}')
             else:
                 entries.append(f'(const void *)&{cname(sym)}')
         body.append(f'__attribute__((weak)) const void *kd_ZTI{cls}[{len(entries)}]')
@@ -151,7 +167,7 @@ def main():
             if sym is None:
                 entries.append('(const void *)0')          # offset-to-top
             elif sym.startswith('_ZTI'):
-                entries.append(f'(const void *)kd_ZTI{sym[4:]}')
+                entries.append(f'(const void *){abi_ref("ZTI", sym[4:])}')
             else:
                 entries.append(f'(const void *)&{cname(sym)}')
         body.append(f'__attribute__((weak)) const void *kd_ZTV{cls}[{len(entries)}]')
@@ -160,6 +176,16 @@ def main():
         body.append('    };')
         body.append('')
         n += 1
+
+    if ext_abi:
+        out.append('/* C++ ABI objects defined in OTHER objects (a base class\'s'
+                   ' typeinfo) */')
+        for kind, cls in sorted(ext_abi):
+            if kind == 'ZTS':
+                out.append(f'extern const char kd_ZTS{cls}[] __asm__("_ZTS{cls}");')
+            else:
+                out.append(f'extern const void *kd_ZTI{cls}[] __asm__("_ZTI{cls}");')
+        out.append('')
 
     if externs:
         out.append('/* symbols the tables point at that this object does not define */')

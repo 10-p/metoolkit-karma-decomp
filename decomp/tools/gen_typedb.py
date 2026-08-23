@@ -246,6 +246,9 @@ def main():
     if args.include:
         out.append('')
 
+    inherit_pre = {}
+    for _o in objs:
+        inherit_pre.update(rtti_bases(_o))
     depmap = {n: value_deps(best[n][2], best[n][1]) for n in best}
     names = toposort(sorted(best), depmap)
     # Ghidra writes a struct tag bare — `(_McdIntersectResult *)result` — where C
@@ -310,8 +313,14 @@ def main():
     out.append('/* ---- definitions ---- */')
     for n in names:
         _, die, dies, obj = best[n]
+        # A derived class lists only its own members; splice the base in so the
+        # offsets line up and the base's fields exist. Inheritance from RTTI.
+        bname = inherit_pre.get(n)
+        bdie = bdies = None
+        if bname and bname in best:
+            _, bdie, bdies, _bo = best[bname]
         out.append(f'/* from {os.path.basename(obj)} */')
-        out.append(emit(dies, die))
+        out.append(emit(dies, die, bdie, bdies))
         out.append('')
 
     # ---- C++ classes with no DWARF layout ---------------------------------

@@ -211,7 +211,15 @@ def emit_enum(die):
     return '\n'.join(lines)
 
 
-def emit(dies, die):
+def emit(dies, die, base_die=None, base_dies=None):
+    """C definition. If `base_die` is given, its members are emitted first.
+
+    A derived class's DWARF lists only the members it ADDS, starting at the
+    offset where the base ends (keaMatrix_pcSparse begins at +0x14). Emitting
+    just those puts every field at the wrong offset AND leaves the base's fields
+    — m_numRows, matrix, matrixChol — with no declaration at all, so recovered
+    code referencing them fails with "has no member named". Splicing the base in
+    fixes both at once, and the inheritance comes from RTTI."""
     a = die['attrs']
     name = a.get('DW_AT_name', '<anon>')
     size = a.get('DW_AT_byte_size', '?')
@@ -220,12 +228,20 @@ def emit(dies, die):
              f'{kw} {name} {{']
     has_vptr = False
     first_off = None
-    for c in die['children']:
+    # Each member carries the DIE table it must be resolved against. DIE offsets
+    # are per-compilation-unit, so a base member's DW_AT_type refers into the
+    # BASE's table; merging the two tables lets same-numbered entries collide and
+    # silently mistypes fields (int m_numRows came out as long double).
+    members = [(c, dies) for c in die['children']]
+    if base_die is not None:
+        members = [(c, base_dies or dies) for c in base_die['children']] + members
+    for c, cdies in members:
         if c['tag'] != 'DW_TAG_member':
             continue
         mn = c['attrs'].get('DW_AT_name', '<anon>')
         mt = c['attrs'].get('DW_AT_type')
         mref = int(REF_RE.search(mt).group(1), 16) if mt and REF_RE.search(mt) else None
+        dies_here = cdies
         loc = c['attrs'].get('DW_AT_data_member_location', '')
         mo = OFF_RE.search(loc)
         off = int(mo.group(1)) if mo else None
@@ -239,11 +255,11 @@ def emit(dies, die):
                          (f'/* +0x{off:x} */' if off is not None else ''))
             continue
         mn = re.sub(r'[^A-Za-z0-9_]', '_', mn)
-        decl = declarator(dies, mref, mn) + ';'
+        decl = declarator(dies_here, mref, mn) + ';'
         lines.append(f'    {decl}'.ljust(52) +
                      (f'/* +0x{off:x} */' if off is not None else '/* +? */'))
     lines.append('};')
-    if first_off:
+    if first_off and base_die is None:
         lines.append(f'/* NOTE: first member is at +0x{first_off:x}, not 0 — {name} DERIVES from a')
         lines.append(f' * base class occupying [0, 0x{first_off:x}). Embed the base as the first')
         lines.append(' * member in C, or repeat its fields, to keep the layout identical. */')

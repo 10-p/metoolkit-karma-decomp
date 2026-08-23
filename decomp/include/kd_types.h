@@ -413,6 +413,11 @@ struct keaMatrix {
 /* from keaMatrix_PcSparse.o */
 /* keaMatrix_pcSparse — 52 bytes, recovered from DWARF */
 struct keaMatrix_pcSparse {
+    const struct keaMatrix_pcSparse_vtbl *vptr;     /* +0x0 */
+    int m_numRows;                                  /* +0x4 */
+    int m_padded;                                   /* +0x8 */
+    MeReal *matrix;                                 /* +0xc */
+    MeReal *matrixChol;                             /* +0x10 */
     int m_blocks;                                   /* +0x14 */
     MeReal *rsD;                                    /* +0x18 */
     MeReal **NAZ;                                   /* +0x1c */
@@ -422,13 +427,18 @@ struct keaMatrix_pcSparse {
     int *NR;                                        /* +0x2c */
     int *NC;                                        /* +0x30 */
 };
-/* NOTE: first member is at +0x14, not 0 — keaMatrix_pcSparse DERIVES from a
- * base class occupying [0, 0x14). Embed the base as the first
- * member in C, or repeat its fields, to keep the layout identical. */
+/* NOTE: keaMatrix_pcSparse is polymorphic. Ghidra renders virtual calls as
+ *   (**(code **)(*(int *)obj + N))(obj, ...)   i.e. vtable slot N/4.
+ * Declare `struct keaMatrix_pcSparse_vtbl` with one function pointer per slot. */
 
 /* from keaMatrix_tester.o */
 /* keaMatrix_tester — 68 bytes, recovered from DWARF */
 struct keaMatrix_tester {
+    const struct keaMatrix_tester_vtbl *vptr;       /* +0x0 */
+    int m_numRows;                                  /* +0x4 */
+    int m_padded;                                   /* +0x8 */
+    MeReal *matrix;                                 /* +0xc */
+    MeReal *matrixChol;                             /* +0x10 */
     struct keaMatrix *suspect;                      /* +0x14 */
     struct keaMatrix *correct;                      /* +0x18 */
     int *suspectCached;                             /* +0x1c */
@@ -442,9 +452,9 @@ struct keaMatrix_tester {
     MeReal *suspectAinv;                            /* +0x3c */
     MeReal *correctAinv;                            /* +0x40 */
 };
-/* NOTE: first member is at +0x14, not 0 — keaMatrix_tester DERIVES from a
- * base class occupying [0, 0x14). Embed the base as the first
- * member in C, or repeat its fields, to keep the layout identical. */
+/* NOTE: keaMatrix_tester is polymorphic. Ghidra renders virtual calls as
+ *   (**(code **)(*(int *)obj + N))(obj, ...)   i.e. vtable slot N/4.
+ * Declare `struct keaMatrix_tester_vtbl` with one function pointer per slot. */
 
 /* from keaCalcJinvMandRHS_vanilla.o */
 /* keaTempMemory — 36 bytes, recovered from DWARF */

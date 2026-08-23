@@ -474,9 +474,17 @@ def relocation_targets(obj, per_function=False):
         if not per_function:
             found.setdefault(name, set()).add((sym, addend))
             continue
-        if sect != '.text':
+        if not (sect.startswith('.text') or sect.startswith('.gnu.linkonce.t.')):
             continue
-        fn = next((n for n, lo, hi in extents if lo <= off < hi), None)
+        # gcc 3.2 emits an inlined local copy of a libc function into a section
+        # of its own — `.gnu.linkonce.t.putchar`, its pre-comdat mechanism.
+        # Offsets there are section-relative, so the byte-range lookup does not
+        # apply; key it on the section instead. It will not match a banner,
+        # which is correct — the per-function lookup misses and the file-wide
+        # identity fallback in fix_mislabelled_external picks it up. That is how
+        # keaDebug's inlined putchar finds `stdout`.
+        fn = (next((n for n, lo, hi in extents if lo <= off < hi), None)
+              if sect == '.text' else sect)
         if fn:
             found.setdefault(fn, {}).setdefault(name, set()).add((sym, addend))
     return found
@@ -1082,6 +1090,18 @@ def fix_mislabelled_external(text, diag, ctx):
     out, changed = [], False
     for fn, region in _split_definitions(text):
         cands = ctx.externals.get(fn, {}).get(ghidra_name) if fn else None
+        if not cands:
+            # gcc 3.2 inlines a LOCAL copy of putchar into objects that print,
+            # and its reference to `stdout` is not always attributable to a
+            # named function's byte range. Fall back to the whole file, but only
+            # when the file offers exactly one reading and it is the identity
+            # one — `_X` at X's own slot, addend 0. That cannot be the
+            # mislabelled case, which is by definition a non-zero addend from
+            # somewhere else.
+            cands = {c for d in ctx.externals.values()
+                     for c in d.get(ghidra_name, ())}
+            if len(cands) != 1 or next(iter(cands))[1] != 0:
+                cands = None
         new = _resolve_external(region, ghidra_name, cands, ctx) if cands else None
         out.append(new if new is not None else region)
         changed = changed or new is not None

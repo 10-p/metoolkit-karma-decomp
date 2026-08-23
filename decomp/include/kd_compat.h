@@ -13,6 +13,31 @@
 #include <math.h>
 #include <string.h>
 #include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
+
+/* ---- what gcc 3.2 turned the standard library into ----------------------
+    A call to strtol comes back out of the decompiler as __strtol_internal,
+    because that is the symbol gcc 3.2 emitted against glibc 2.x. Declaring the
+    glibc spelling would work on i386 and nowhere else, and this has to build
+    for wasm32 and arm64 (see HANDOVER.md 12), so map each one back to the
+    portable function it stands for.
+
+    Variadic, because Ghidra over-counts the arguments at these call sites —
+    MeCommandLine's __strtod_internal comes back with four. The extra ones are
+    invisible to the callee under caller-cleanup cdecl, and the named arguments
+    are the ones that matter.
+------------------------------------------------------------------------- */
+#define __strtol_internal(s, e, b, ...)  strtol((s), (e), (b))
+#define __strtoul_internal(s, e, b, ...) strtoul((s), (e), (b))
+#define __strtod_internal(s, e, ...)     strtod((s), (e))
+#define _IO_putc(c, f)                   putc((c), (f))
+#define _IO_getc(f)                      getc(f)
+#define builtin_strncpy(d, s, n)         strncpy((d), (s), (n))
+#define builtin_strcpy(d, s)             strcpy((d), (s))
+#define builtin_memcpy(d, s, n)          memcpy((d), (s), (n))
 
 /* ---- Ghidra integer vocabulary ---------------------------------------- */
 typedef unsigned int        uint;

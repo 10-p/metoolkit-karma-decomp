@@ -321,14 +321,23 @@ def main():
             if mangled:
                 # The demangled form is `Ns::Foo(int, float&)`; the DWARF-derived
                 # prototype database is keyed on the bare name.
-                short = re.sub(r'.*::', '', dem.split('(')[0]).strip()
+                qualified = dem.split('(')[0].strip()
+                short = re.sub(r'.*::', '', qualified)
+                # ghidra_clean flattens `Foo::bar` to `Foo__bar` in the BODY, so
+                # the declaration has to use the same spelling or the call is an
+                # implicit declaration of an unrelated function and the object
+                # fails to link. keaLCP_new lost seven keaLCPSolver methods this
+                # way.
+                cname = qualified.replace('::', '__')
                 proto = protos.get(short)
                 if proto:
-                    w(f'extern {proto[:-1].strip()}')
+                    decl = re.sub(r'\b' + re.escape(short) + r'\s*\(',
+                                  cname + '(', proto[:-1].strip(), count=1)
+                    w(f'extern {decl}')
                     w(f'    KD_MANGLED("{name}");')
                 else:
                     w('/* TODO: fill in the C signature matching the demangled form above. */')
-                    w(f'extern int {re.sub(r"[^A-Za-z0-9_]", "_", dem.split("(")[0])}()')
+                    w(f'extern int {re.sub(r"[^A-Za-z0-9_]", "_", cname)}()')
                     w(f'    KD_MANGLED("{name}");')
             else:
                 proto = protos.get(name)

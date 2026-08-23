@@ -68,7 +68,7 @@ static int           kd_npairs;
 static int           kd_logged;
 static FILE         *kd_log;
 static unsigned long kd_since_flush;
-#define KD_FLUSH_EVERY 100000
+#define KD_FLUSH_EVERY 10000    /* small enough to read a run in progress */
 
 static const char *kd_typename(int t)
 {

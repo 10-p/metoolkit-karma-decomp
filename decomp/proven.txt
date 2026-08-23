@@ -151,6 +151,35 @@ IxConvexPrimitives    real: 1,685 calls of McdSphylConvexMeshIntersect on ONS-CB
 
 # --- NOT proven, with what was observed --------------------------------------
 # --- compiles, evidence gathered, NOT released ------------------------------
+# IxConvexTriList     Compiles, passes all three substitute scenes, and is 46% WRONG in a
+#                     live match. ONS-UCMP-ABC-ECE, 15 min:
+#
+#                       McdConvexMeshTriangleListIntersect
+#                         3,230 calls   1,735 identical
+#                           642 ret_diff   852 count_diff   worst 7.79e-01
+#
+#                     Not subtly wrong. The captured cases read
+#                     `ret 1/0 touch 1/0 count 4/0` — the recovered code finds
+#                     NO CONTACTS where the original finds four. That is the
+#                     signature of a triangle buffer it cannot see, which is
+#                     exactly what a mis-reconstructed alloca frame produces.
+#
+#                     Ten other functions in the SAME run are clean, so the
+#                     harness is not at fault.
+#
+#                     This is the reconstructed-frame detector (kd_argslot_)
+#                     earning its place a second time. The object was made to
+#                     compile in this session by generalising the alloca
+#                     defining-store pattern; it would have gone straight into
+#                     the validated set on the strength of "compiles and passes
+#                     the scenes", which is precisely the mistake IxSphereTriList
+#                     taught. Do not release anything holding kd_argslot_ on
+#                     synthetic evidence.
+#
+#                     It also matters more than the other two held objects:
+#                     ConvexMesh x TriangleList is a pair the game DOES call
+#                     (HANDOVER.md 3), unlike Box x TriangleList and
+#                     Cylinder x TriangleList.
 # IxBoxTriList        Held by the reconstructed-frame detector (kd_argslot_), which exists
 #                     because IxSphereTriList compiled, passed the substitute gate and then
 #                     segfaulted on its first live call. So a clean synthetic run is not

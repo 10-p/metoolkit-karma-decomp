@@ -98,18 +98,25 @@ nothing:
 | Sphyl × Sphere | 148,031 | `IxSphylPrimitives` ✅ |
 | Sphyl × ConvexMesh | 11,280 | `IxConvexPrimitives` ✅ |
 | Sphere × ConvexMesh | 2,274 | `McdGjk` ✅ |
-| ConvexMesh × TriangleList | 1,720 | `IxConvexTriList` ⚠ compiles, quarantined |
+| ConvexMesh × TriangleList | 4,950 | `IxConvexTriList` ❌ **46% wrong** — see `proven.txt` |
+| ConvexMesh × ConvexMesh | 39 | `McdGjk` ✅ |
 
-**The other 25 pairs are registered on every map and called zero times**: every
+**The other 24 pairs were registered on every map and called zero times**: every
 `Aggregate` pair, every `Cylinder` pair, `Box×Plane`, `Box×Sphere`,
 `Box×TriangleList`, `Sphere×Plane`, `Sphyl×Box`, `Sphyl×Plane`,
-`ConvexMesh×ConvexMesh`, `ConvexMesh×Plane`.
+`ConvexMesh×Plane`.
+
+Read "zero times" as "not in 25 runs", not as "impossible". `ConvexMesh×ConvexMesh`
+was on that list until `ONS-UCMP-ABC-ECE` made 39 calls to it. The list is
+evidence about the maps tried, and it is worth re-running rather than trusting.
 
 That is worth absorbing before picking up work. UT2004 gives its physics actors
 sphere, sphyl, convex-mesh and triangle-list geometry and essentially nothing
 else, so whole objects in the "not compiling" pile are for collisions the game
 never makes. It also means §12 item 1 — "every object the census shows the game
-actually calls" — is **one object away**: `IxConvexTriList`.
+actually calls" — comes down to one object, `IxConvexTriList`, and that object is
+**46% wrong in a live match** (`proven.txt`). Close in object count is not close
+in work.
 
 It cuts both ways as a caution. `McdSphylBoxIntersect` had a real bug (§8) in a
 pair that is never called, and `IxSpherePlane` sits in the validated set for a

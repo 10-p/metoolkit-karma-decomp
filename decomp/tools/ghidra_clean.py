@@ -140,7 +140,10 @@ FIELD_REF = re.compile(r'\b(\w+)\s*->\s*field_0x([0-9a-f]+)')
 # `Type *var;` as a local, and `(Type *var, ...)` as a parameter. The parameter
 # form matters most: the object a method operates on is `this`, which is always a
 # parameter and never a local declaration.
-DECL_PTR = re.compile(r'(?:^\s*|[(,]\s*)(?:struct\s+)?(\w+)\s*\*\s*(\w+)\s*[;,)]', re.M)
+# The trailing delimiter is a LOOKAHEAD: consuming it would eat the comma that
+# separates this parameter from the next, so only every other parameter matched
+# (McdContactSimplify's `inContacts` was skipped, `outContacts` was not).
+DECL_PTR = re.compile(r'(?:^\s*|[(,]\s*)(?:struct\s+)?(\w+)\s*\*\s*(\w+)\s*(?=[;,)])', re.M)
 
 
 VARARG_STACK = re.compile(r'&stack0x0000([0-9a-f]{4})\b')
@@ -176,6 +179,18 @@ def resolve_varargs(body, sig):
     body = (body[:brace + 2] + '\n  va_list kd_ap;\n'
             f'  va_start(kd_ap, {last[0]});\n' + body[brace + 2:])
     return body, 1
+
+
+PTR_AS_FLOAT = re.compile(r'\((float|double|MeReal)\)\s*\(\s*&([^()]*(?:\([^()]*\))?[^()]*)\)\s*\[')
+
+
+def fix_pointer_as_float(body):
+    """`(float)(&x->contact)[2]` means "index that address as floats".
+
+    Ghidra emits a cast of the ADDRESS to a scalar type, which C rejects:
+    "pointer value used where a floating-point was expected". The intent is
+    plain: take the address, treat it as an array of that type, index it."""
+    return PTR_AS_FLOAT.sub(lambda m: f'(({m.group(1)} *)&{m.group(2)})[', body)
 
 
 def resolve_field_names(body, fieldmap):
@@ -431,7 +446,7 @@ def main():
             continue
         body = strip_comments(body).strip('\n')
         body = resolve_anon_types(cxx_names_to_c(ghidra_type_quirks(body)))
-        body = resolve_field_names(body, fieldmap)
+        body = fix_pointer_as_float(resolve_field_names(body, fieldmap))
         body, nva = resolve_varargs(body, signature_of(body) or '')
         n_vararg_fns += nva
         body, nalloca = materialise_alloca_frame(body, name)

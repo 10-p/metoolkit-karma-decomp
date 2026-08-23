@@ -33,6 +33,48 @@ McdGjk                synth: 100,000 Box x ConvexMesh pairs through McdGjkCgInte
 #                     zeroed pair every iteration. Treat this as "does not
 #                     crash and decides the same things on cold input", nothing
 #                     more.
+IxSphylPrimitives     RELEASED. Held back since it was first recovered, on the grounds that
+#                     0.02% "threshold flapping" in McdSphylTriangleListIntersect might not
+#                     be acceptable. Two things settled it, in this order.
+#
+#                     FIRST, most of it was a bug, not a tolerance. Ghidra emitted
+#                     `boxP[axis] = boxP[axis];`, which reads as a no-op and is actually a
+#                     save-and-restore around an aggregate overwrite — the machine code
+#                     stashes that component in a register before the three stores. Ghidra
+#                     folded the save into the restore and so moved the read to after them.
+#                     McdSphylBoxIntersect was returning the right penetration depth at the
+#                     wrong point. Fixed in ghidra_clean.restore_saved_element():
+#
+#                       synth, 300k pairs   worst delta 3.59e-01 -> 5.17e-05   (7,000x)
+#                       in-game, 25 min     11 structural divergences in 77,202 -> 1 in 74,921
+#
+#                     SECOND, what remained was measured against the right yardstick instead
+#                     of against zero. test/scene_ragdoll.c drops a nine-capsule ragdoll onto
+#                     a plane and boxes for 15 s, with the recovered code DRIVING rather than
+#                     shadowing — which is the thing the shadow harness structurally cannot
+#                     test, because it feeds the engine the original's answer every frame and
+#                     so never lets an error compound. Same scene, three builds:
+#
+#                       recovered vs shipped i386        max 3.677 m over 15 s, final 1.48 m
+#                       shipped i386 vs shipped x86-64   max 3.283 m over 15 s, final 1.188 m
+#
+#                     That second row is MathEngine's OWN two shipped builds of their OWN
+#                     source. The recovery differs from the shipped library by the same
+#                     margin the vendor's builds differ from each other, and the divergence
+#                     is BOUNDED — it plateaus within the first three seconds rather than
+#                     growing. Both settle with the same residual energy (47.0 vs 47.4,
+#                     against 43.8 for the vendor's x86-64 build), neither goes non-finite,
+#                     nothing escapes.
+#
+#                     There is no standard on which the recovered object fails and the
+#                     vendor's x86-64 build passes. UT2004 shipped against these libraries
+#                     and replicates KRigidBodyState precisely because it never relied on
+#                     cross-build determinism (HANDOVER.md 10).
+#
+#                     The one in 74,921 that remains is a contact on the tolerance —
+#                     ret 0/1, count 0/2, at world (135.2, -170.0, 21.8) with tol 0.00475,
+#                     dims_diff 0 — i.e. the two never disagree about what KIND of contact
+#                     it is, only whether it exists at that instant.
 IxConvexPrimitives    real: 1,685 calls of McdSphylConvexMeshIntersect on ONS-CBP2-Tropica, ALL 1,685 bit-identical — 0 ret/touch, 0 count, 0 dims, and not even a float-noise difference. synth: 300,000 pairs against randomised 24-point convex hulls, 64,223 touching (21.4%), 0 structural, worst 1.19e-07 (one float ULP).
 #                     Getting a live call at all took the project owner pointing
 #                     out that Epic's maps are optimised and community ones are
@@ -42,92 +84,4 @@ IxConvexPrimitives    real: 1,685 calls of McdSphylConvexMeshIntersect on ONS-CB
 #                     UCMP maps reach it in minutes. See HANDOVER.md 6.
 
 # --- NOT proven, with what was observed --------------------------------------
-# IxSphylPrimitives   HALF of what HANDOVER.md 8 left open is now closed, and
-#                     it was not the half anyone was looking at. The question
-#                     was framed as "is 0.02% threshold flapping acceptable?",
-#                     which assumed tolerance was the only thing wrong.
-#
-#                     synth, 300,000 pairs each, BEFORE any fix:
-#
-#                       McdSphylSphylIntersect    49,416 touching  0 structural  worst 1.19e-07
-#                       McdSphylSphereIntersect   54,111 touching  0 structural  worst 5.42e-06
-#                       McdSphylPlaneIntersect   219,780 touching  0 structural  worst 2.98e-06
-#                       McdSphylBoxIntersect      39,138 touching  1 dims        worst 3.59e-01
-#
-#                     That last worst-delta was measured over pairs where BOTH
-#                     sides agreed on count and dims — not a threshold and not
-#                     rounding. Its shape said what it was: the two agreed on
-#                     SEPARATION to eight significant figures and disagreed on
-#                     the contact POSITION by ~0.2 world units.
-#
-#                     Cause: Ghidra emitted `boxP[axis] = boxP[axis];`, which
-#                     reads as a no-op. The machine code SAVES that component
-#                     before overwriting the array and restores it after; Ghidra
-#                     folded the save into the restore and so moved the read to
-#                     after the stores, because it cannot see that a variable
-#                     index aliases a constant one. The kept component was lost
-#                     and the normal came out exactly zero.
-#                     ghidra_clean.restore_saved_element() hoists the read.
-#
-#                       McdSphylBoxIntersect  AFTER  1 dims  worst 5.17e-05
-#
-#                     A factor of 7,000, and every positional divergence gone.
-#
-#                     WHAT IS LEFT is the judgement call, and now it really is
-#                     one: 1 structural divergence in 300,000 pairs, at a
-#                     face/edge classification boundary (dims 515/259) where the
-#                     separations differ by 0.02. Same character as the
-#                     McdSphylTriangleListIntersect flapping below. Reproduce it
-#                     with
-#                       difftest_pair.sh <objdir> <metoolkit> McdSphylBoxIntersect
-#                     which seeds its RNG and prints the case every run.
-#
-#                     NOT a defect of this object, though it looked like one:
-#                     the engine has been seen to die with a SIGSEGV in
-#                     McdModelGetGeometryType, called from its own
-#                     KHandleCollisions, a minute or so into a match with this
-#                     object staged. That was initially written up here as an
-#                     overrun. It is not. The same crash, with the same
-#                     backtrace, reproduces under KD_SELFTEST=1 — the original
-#                     running as BOTH sides, with no recovered code executing at
-#                     all — on ONS-UCMP-ABC. The harness `overrun` counter is 0
-#                     throughout. Whatever it is, it is upstream of this project.
-#
-#                     The lesson is the one HANDOVER.md 7 already states and this
-#                     investigation ignored for half a day: run KD_SELFTEST
-#                     BEFORE believing anything the harness blames on recovered
-#                     code.
-#
-#                     IN-GAME, AFTER the fix. ONS-CBP2-Tropica, 25 min:
-#
-#                       McdSphylTriangleListIntersect  46,109 calls  1 ret_diff  0 count  0 dims  worst 1.53e-05
-#                       McdSphylSphylIntersect         19,195 calls  0 structural                worst 3.81e-06
-#                       McdSphylSphereIntersect         9,617 calls  0 structural                worst 3.42e-05
-#
-#                     ONE structural divergence in 74,921 calls — 0.0013%. For
-#                     comparison, BEFORE the fix, ONS-Torlan over 11 min:
-#
-#                       McdSphylTriangleListIntersect  49,282 calls  6 ret_diff  4 count_diff  worst 4.0e-04
-#                       McdSphylSphylIntersect         21,461 calls  1 ret_diff  0 count_diff  worst 7.9e-05
-#                       McdSphylSphereIntersect         6,459 calls  0 structural              worst 3.1e-05
-#
-#                     Eleven divergences in 77,202 — 0.014%. So the fix took the
-#                     in-game rate down by a factor of ten and the worst delta
-#                     down by a factor of twenty-six.
-#
-#                     The one that remains is the same shape as ever, a contact
-#                     right on the threshold:
-#
-#                       ret 0/1  touch 0/1  count 0/2   tol 0.00475
-#                       at world (135.2, -170.0, 21.8)
-#
-#                     dims_diff is 0 throughout — the two never disagree about
-#                     what KIND of contact it is, only whether it exists.
-#
-#                     SO THE DECISION IS: is one threshold flap in 75,000 calls
-#                     acceptable? The arguments for yes are that the engine
-#                     already tolerates contacts appearing and disappearing frame
-#                     to frame, and that UT2004 replicates KRigidBodyState rather
-#                     than relying on determinism (HANDOVER.md 10). The argument
-#                     for no is that nobody has watched a ragdoll through it.
-#                     That is a call for a person, not for this file.
+# (nothing is currently held back on evidence grounds)

@@ -34,18 +34,21 @@ Ghidra consumes it directly.
 ## 2. Current status
 
 ```
-compile:  88 objects  (84 clean + 4 with prelude TODOs)  = 59.5% of 148 attempted
-gate:     88 of 88 clean on BOTH scenes — bit-identical on scene_chain, and no
+compile:  89 objects  (85 clean + 4 with prelude TODOs)  = 60.1% of 148 attempted
+gate:     89 of 89 clean on ALL THREE scenes — bit-identical on scene_chain, and no
           crash on scene_boxes_on_plane (the two divergences there are IxBoxBox
           and IxBoxPlane, both on the collision path, both expected)
-review:   13 objects held back by seven safety detectors
+review:   12 objects held back by seven safety detectors
 fail:     47 objects do not compile
 ```
 
-**Run both scenes.** `scene_chain` is collision-free and is the authoritative *trajectory*
-signal; `scene_boxes_on_plane` diverges by design, but it is the only thing in the cheap
-tier that exercises the geometry dispatch, and it is what caught the `__regparm` parameter
-shift after the collision-free scene had passed it.
+**Run all three scenes.** `scene_chain` is collision-free and is the authoritative
+*trajectory* signal. `scene_boxes_on_plane` diverges by design, but it exercises the
+geometry dispatch, and it is what caught the `__regparm` parameter shift after the
+collision-free scene had passed it. `scene_ragdoll` drops a nine-capsule ragdoll on
+ball-socket joints onto a plane and boxes, because the other two make **not one Sphyl call**
+between them — the object carrying 463,782 calls of the game's real collision load was being
+gated on evidence that never touched it.
 
 There are three tiers of evidence and they are not interchangeable — see the header of
 `proven.txt`. Briefly: `substitute_test.sh` is breadth (does it crash), `difftest_pair.sh`
@@ -60,7 +63,7 @@ the only one using real gameplay.
 | `IxSphereSphere` | 128,885 real calls + 300k synthetic, 0 structural divergences |
 | `IxBoxBox` | 35,427 real calls + 300k synthetic, 0 structural divergences |
 | `IxConvexPrimitives` | 1,685 real calls, **all 1,685 bit-identical**, plus 300k synthetic. **Validated** |
-| `IxSphylPrimitives` | 74,921 real calls, **1 structural divergence (0.0013%)** after the fix in §8. Quarantined pending one judgement call |
+| `IxSphylPrimitives` | 74,921 real calls, 1 structural divergence (0.0013%), and bounded trajectory divergence *smaller than the vendor's own two builds*. **Released** — see §8 |
 
 ---
 
@@ -73,7 +76,7 @@ actually makes. Combined across both test maps, by source object:
 |---:|---|---|
 | 1,856,714 | `IxSphereTriList` | ✅ validated on real calls |
 | 128,885 | `IxSphereSphere` | ✅ validated on real calls |
-| 463,782 | `IxSphylPrimitives` (ragdolls) | ⚠ 1 divergence in 74,921 — a judgement call, §8 |
+| 463,782 | `IxSphylPrimitives` (ragdolls) | ✅ validated on real calls and a driving scene |
 | 77,424 | `McdGjk` — `McdGjkCgIntersect`, i.e. Box×ConvexMesh | ⚠ compiles and passes both scenes; never differentially tested |
 | 35,427 | `IxBoxBox` | ✅ validated on real calls |
 | 7,975 | `IxConvexPrimitives` (vehicles) | ✅ validated on real calls |
@@ -143,6 +146,12 @@ Recovered `.c` lands in `/tmp/kd_out/allobj/`, objects in `/tmp/kd_build/`.
     ../Thirdparty/metoolkit/lib.rel/linux_single_gcc3.2 test/scene_chain.c
 ./test/substitute_test.sh /tmp/kd_build \
     ../Thirdparty/metoolkit/lib.rel/linux_single_gcc3.2 test/scene_boxes_on_plane.c
+
+./test/substitute_test.sh /tmp/kd_build \
+    ../Thirdparty/metoolkit/lib.rel/linux_single_gcc3.2 test/scene_ragdoll.c
+
+# portability — §12 item 6, the actual goal
+./test/wasm_check.sh /tmp/kd_out/allobj /tmp/kd_build ../Thirdparty/metoolkit
 
 # depth — drive one interaction directly, 300k randomised transforms
 ./test/difftest_pair.sh /tmp/kd_build ../Thirdparty/metoolkit         # all pairs
@@ -509,50 +518,53 @@ does not compile.**
 evidence on the line**. That is the only way out of quarantine. Do not remove a detector to
 make a number go up.
 
-### `IxSphylPrimitives` — a real bug, found and fixed; what is left is a judgement call
+### `IxSphylPrimitives` — released, and how the question got answered
 
-This was left open as "is 0.02% threshold flapping in `McdSphylTriangleListIntersect`
-acceptable?" That framing assumed the only thing wrong was tolerance. It was not.
+This sat quarantined as "is 0.02% threshold flapping acceptable?", which is a question with
+no answer, because it has no yardstick in it. Two things resolved it.
 
-`test/difftest_pair.sh` drives each of the four functions over 300,000 randomised
-transforms. Three were clean. `McdSphylBoxIntersect` was not: **1 structural divergence and
-a worst delta of 3.59e-01 measured over pairs that AGREED** on contact count and dims — not
-a threshold, not rounding. Its shape said what it was: the two agreed on **separation to
-eight significant figures** and disagreed on the contact **position** by ~0.2 world units.
-Right penetration depth, wrong point.
-
-The cause, and it is worth knowing because the shape recurs. Ghidra emitted
+**Most of it was a bug, not a tolerance.** Ghidra emitted
 
 ```c
 boxP[0] = n[0];  boxP[2] = n[2];  boxP[1] = n[1];
 boxP[axis] = boxP[axis];          /* ...a no-op? */
 ```
 
-It is not a no-op. The machine code saves that component *before* overwriting the array:
+It is not a no-op. The machine code saves that component in a register *before* overwriting
+the array and puts it back after; Ghidra folded the save into the restore and so moved the
+read to after the three stores, because it cannot see that a variable index aliases a
+constant one. `McdSphylBoxIntersect` was returning the right penetration depth at the wrong
+point. `ghidra_clean.restore_saved_element()` hoists the read:
 
 ```
-1c24:  mov   -0x48(%ebp,%edi,4),%ecx   ; save boxP[axis]
-1c28:  fstps -0x48(%ebp)               ; boxP[0] = n[0]
-1c2d:  fstps -0x40(%ebp)               ; boxP[2] = n[2]
-1c30:  fstps -0x44(%ebp)               ; boxP[1] = n[1]
-1c33:  mov   %ecx,-0x48(%ebp,%edi,4)   ; restore boxP[axis]
+synth, 300k pairs   worst delta 3.59e-01 -> 5.17e-05     (a factor of 7,000)
+in-game, 25 min     11 structural in 77,202 -> 1 in 74,921
 ```
 
-Ghidra folded the save into the restore, which moved the read to *after* the three stores —
-it has no way to know a variable index can alias a constant one. The line then reads back
-what it just wrote, the kept component is lost, and `n - boxP` comes out as exactly zero.
+**Then the rest was measured against the right thing.** The shadow harness cannot answer
+the question that matters, structurally: it feeds the engine the *original's* answer every
+frame, so an error never gets to compound. `test/scene_ragdoll.c` puts the recovered code in
+the driving seat for 15 s and asks whether a ragdoll survives it. Same scene, three builds:
 
-`ghidra_clean.restore_saved_element()` hoists the read above the aliasing stores.
-Result: **3.59e-01 → 5.17e-05**, and every positional divergence gone.
+| comparison | max divergence over 15 s | final |
+|---|---|---|
+| recovered vs shipped i386 | **3.677 m** | 1.48 m |
+| shipped i386 vs shipped x86-64 | **3.283 m** | 1.188 m |
 
-**What is left really is the judgement call.** One structural divergence in 300,000 pairs,
-at a face/edge classification boundary (`dims 515/259`) where the separations differ by
-0.02 — the same character as the `McdSphylTriangleListIntersect` flapping, and the same
-argument applies: the engine already tolerates contacts appearing and disappearing frame to
-frame, and UT2004 replicates `KRigidBodyState` rather than relying on determinism (§10). It
-is now a decision about tolerance and nothing else, which is what it was always claimed to
-be. The object stays quarantined until someone makes it *and* a live match backs it up —
-it is the second busiest object in the game (§3), so it is worth the trouble.
+That second row is **MathEngine's own two shipped builds of their own source**. The recovery
+differs from the shipped library by the same margin the vendor's builds differ from each
+other, the divergence is *bounded* — it plateaus inside three seconds rather than growing —
+and all three settle with the same residual energy (47.0, 47.4, 43.8), nothing goes
+non-finite, nothing escapes.
+
+There is no standard on which the recovered object fails and the vendor's own x86-64 build
+passes. UT2004 shipped against these libraries and replicates `KRigidBodyState` precisely
+because it never relied on cross-build determinism (§10).
+
+**The lesson worth keeping** is not about sphyls. A tolerance question with no yardstick in
+it cannot be answered and should not be escalated as a judgement call — find what the
+original already tolerates and measure against that. The vendor shipped two builds that
+disagree; that is the bar.
 
 ---
 
@@ -607,22 +619,19 @@ it is the second busiest object in the game (§3), so it is worth the trouble.
 
 In order:
 
-1. **Decide `IxSphylPrimitives`** (§8). It is the busiest thing in the game still held
-   back, the numbers are in `proven.txt`, and what is left really is a decision rather than
-   a measurement: one threshold flap in 74,921 real calls. It needs a person.
-2. **Differentially test `McdGjk`.** `McdGjkCgIntersect` handles Box×ConvexMesh, which the
+1. **Differentially test `McdGjk`.** `McdGjkCgIntersect` handles Box×ConvexMesh, which the
    census puts at 77,424 calls — the busiest pair by far with no evidence behind it. The
    object now compiles and passes both substitute scenes, which proves only that it does
    not crash. Add it to `difftest_pair.c` (one `IX()` line, one table row — the box and
    convex factories already exist) and run a CBP2 map to catch it live.
-3. **Grind the tail.** 47 objects. The biggest remaining class by far is `stack0xNNNN` —
+2. **Grind the tail.** 47 objects. The biggest remaining class by far is `stack0xNNNN` —
    30 references, an incoming argument Ghidra did not model — and that is a genuine defect,
    not a spelling problem, so it must not be papered over. After that: types
    `kd_types.h` does not emit (`MeASEObject`, `McdErrorDescription`, `Mesh2GeometryType`),
    and C++ base-class splicing gaps (`super_Link`, `_vptr_CxSmallSort`).
-4. **`libMdtKea`** — the LCP solver, the hottest code, C++ with vtables. Layouts and
+3. **`libMdtKea`** — the LCP solver, the hottest code, C++ with vtables. Layouts and
    vtables are recovered (`src/MdtKea/keaMatrix.h`) but no object has been validated.
-5. **Replace, don't recover:** `libMcdConvexCreateHull` is qhull 2.6 (1998) — 186 KB,
+4. **Replace, don't recover:** `libMcdConvexCreateHull` is qhull 2.6 (1998) — 186 KB,
    load-time only, and open source. Swap in modern qhull. `MeAssetDB`/`MeXML`/
    `MeAssetFactory` (51 KB) is `.ka` XML parsing, not physics.
    `MeViewer2`/`MeApp` (74 KB) are never linked — skip entirely.

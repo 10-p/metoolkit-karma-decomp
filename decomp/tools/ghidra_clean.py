@@ -57,17 +57,24 @@ def header_inline_names(include_dir):
 
 
 def object_symbols(obj):
-    """(exported, internal, real_symbol_of) for the original object.
+    """(exported, internal, real_symbol_of, weak) for the original object.
 
     `real_symbol_of` maps the name Ghidra displays to the actual ELF symbol.
     They differ for C++: Ghidra shows `MovingBoxBoxIntersect` while the object
     exports `_Z21MovingBoxBoxIntersectPKfPK11lsTransform...`. Emitting the
     displayed name in the asm label produces a symbol nothing links against —
     which is precisely why MovingBoxBoxIntersect and PolynomialRoots came out
-    as undefined references."""
+    as undefined references.
+
+    `weak` is the subset of `exported` that the shipped object exports as W
+    rather than T, and it is kept separate because the binding is part of the
+    interface. Collapsing the two is how the recovered keaMatrix_tester came to
+    export a GLOBAL `putchar`: the shipped object's is weak so that libc wins,
+    and the recovered one silently took over stdio for the entire engine. See
+    KD_WEAK in kd_compat.h."""
     out = subprocess.run(['nm', '--defined-only', obj],
                          capture_output=True, text=True).stdout
-    exported, internal, real = set(), set(), {}
+    exported, internal, real, weak = set(), set(), {}, set()
     rows = []
     for line in out.splitlines():
         p = line.split()
@@ -79,8 +86,10 @@ def object_symbols(obj):
         for (kind, mangled), d in zip(rows, dem):
             short = re.sub(r'.*::', '', d.split('(')[0]).strip() or mangled
             (exported if kind in 'TW' else internal).add(short)
+            if kind in 'Ww':
+                weak.add(short)
             real.setdefault(short, mangled)
-    return exported, internal, real
+    return exported, internal, real, weak
 
 
 def split_functions(text):
@@ -1741,7 +1750,7 @@ def main():
                          'does not run and the output is the raw generated C.')
     args = ap.parse_args()
 
-    exported, internal, real_symbol_of = object_symbols(args.object)
+    exported, internal, real_symbol_of, weak_symbols = object_symbols(args.object)
     hdr_inlines = header_inline_names(args.metoolkit_include)
     fieldmap = {}
     if args.field_map and os.path.exists(args.field_map):
@@ -1828,7 +1837,10 @@ def main():
             continue
         # Use the REAL ELF symbol, which for C++ is the mangled form.
         symbol = real_symbol_of.get(name, name)
-        decls.append(f'{apply_renames(newsig)} KD_MANGLED("{symbol}");')
+        # Weak stays weak. The binding is part of the interface, not a detail
+        # of how gcc happened to emit the original — see KD_WEAK in kd_compat.h.
+        wk = ' KD_WEAK' if name in weak_symbols else ''
+        decls.append(f'{apply_renames(newsig)} KD_MANGLED("{symbol}"){wk};')
         # `sig` is whitespace-normalised, so it will not match the raw body.
         # Rewrite the declarator in place instead: the name is the identifier
         # immediately before the first '(' in the text preceding the body.

@@ -304,4 +304,19 @@ typedef struct MePoolMalloc        MePoolMalloc;
 /* Call a C++-mangled Karma symbol from C without a C++ compiler. */
 #define KD_MANGLED(sym) __asm__(sym)
 
+/* A symbol the shipped object exports WEAKLY has to stay weak, and this is not
+   cosmetic. gcc emits `putchar` weakly into keaDebug.o, keaMatrix_tester.o and
+   keaPrintBasicTypes.o — three separate members of libMdtKea.a — precisely so
+   that libc's strong definition wins and none of them is ever used. Recover the
+   same function as a GLOBAL definition and it stops being a decompiled
+   curiosity and becomes the putchar the whole engine calls; recover two of the
+   three and the link fails outright with a duplicate symbol.
+
+   The same applies to the C++ functions gcc emits weakly because they are
+   defined in a header (IxCylinderCylinder's CylPerpAndPara, Polynomial's
+   BracketedRootN): weak is how the ODR is enforced at link time, and a strong
+   definition silently wins over the copy the linker would otherwise have
+   chosen. */
+#define KD_WEAK __attribute__((weak))
+
 #endif /* KD_COMPAT_H */

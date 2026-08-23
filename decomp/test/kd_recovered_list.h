@@ -4,6 +4,7 @@
     X(McdBoxBoxIntersect, "McdBoxBoxIntersect", "rec_McdBoxBoxIntersect") \
     X(McdBoxCylinderIntersect, "McdBoxCylinderIntersect", "rec_McdBoxCylinderIntersect") \
     X(McdBoxPlaneIntersect, "McdBoxPlaneIntersect", "rec_McdBoxPlaneIntersect") \
+    X(McdCylinderCylinderIntersect, "McdCylinderCylinderIntersect", "rec_McdCylinderCylinderIntersect") \
     X(McdCylinderPlaneIntersect, "McdCylinderPlaneIntersect", "rec_McdCylinderPlaneIntersect") \
     X(McdCylinderSphereIntersect, "McdCylinderSphereIntersect", "rec_McdCylinderSphereIntersect") \
     X(McdSpherePlaneIntersect, "McdSpherePlaneIntersect", "rec_McdSpherePlaneIntersect") \

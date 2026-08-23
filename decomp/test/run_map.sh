@@ -35,7 +35,14 @@ timeout --signal=TERM "$SECS" xvfb-run -a -s "-screen 0 640x480x24" \
     ./ut2004-shadow.bin "$MAP?game=$GAME?TimeLimit=0$EXTRA" \
     -GL4ESRENDERER -nohomedir > "$LOG" 2>&1
 echo "exit=$? (124 = hit the time limit, which is normal)"
-echo "gametype actually used: $(grep -m1 -oE "Game class is '[^']+'" "$LOG" || echo '?')"
+# The LAST one, not the first. The first is always the Entry level's GameInfo,
+# which reads as a silent fallback to the wrong gametype and sent one
+# investigation down a blind alley.
+echo "gametype actually used: $(grep -oE "Game class is '[^']+'" "$LOG" | tail -1 || echo '?')"
+if grep -q 'SIGSEGV\|SIGBUS\|Critical Error' "$LOG"; then
+    echo "*** THE ENGINE CRASHED — the numbers below stop where it died ***"
+    grep -A16 -m1 'Signal:' "$LOG" | sed 's/^/  /'
+fi
 
 if [ -s "$KD_SHADOW_OUT" ]; then
     echo "--- interaction pairs the game actually called ---"

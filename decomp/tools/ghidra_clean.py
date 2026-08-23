@@ -594,6 +594,26 @@ def materialise_data_refs(obj, text):
     return '\n'.join(out) + '\n\n', len(defines)
 
 
+def _statement_bounds(lines, idx):
+    """[lo, hi) — the lines of the statement containing lines[idx].
+
+    Walks back over continuation lines, which are the ones whose predecessor
+    does not end a statement or open a block."""
+    lo = idx
+    while lo > 0 and not lines[lo - 1].rstrip().endswith((';', '{', '}', ':')):
+        lo -= 1
+        if idx - lo > 8:                   # a runaway is not a statement
+            lo = idx
+            break
+    hi = idx + 1
+    while hi < len(lines) and not lines[hi - 1].rstrip().endswith((';', '{', '}', ':')):
+        hi += 1
+        if hi - idx > 8:
+            hi = idx + 1
+            break
+    return lo, hi
+
+
 def signature_of(body):
 
     """Extract the declarator text preceding the function's opening brace."""
@@ -778,19 +798,39 @@ def fix_pointer_as_float(line, diag, ctx):
     the same text is an ordinary int-to-float conversion and this rewrite would
     replace the converted value with the bit pattern.
 
-    Only one cast is rewritten per pass. If a line holds two of them the next
-    round of the loop finds the second, so multi-cast lines converge without
-    this rule having to guess which one GCC meant."""
-    for m in CAST_TO_FLOAT.finditer(line):
+    All the casts in a statement are rewritten at once WHEN GCC reported exactly
+    as many errors as there are casts — then every one of them is a pointer and
+    there is nothing to choose between. `SQRT((float)a * (float)a + b * b +
+    (float)c * (float)c)` is four casts and four diagnostics. If the counts
+    disagree, some cast on that line is a legal conversion, so the rule falls
+    back to one per pass and lets the loop's verification decide."""
+    casts = []
+    pos = 0
+    while True:
+        m = CAST_TO_FLOAT.search(line, pos)
+        if not m:
+            break
         end = scan_unary_forward(line, m.end())
+        pos = m.end()
         if end is None or end <= m.end():
             continue
         operand = line[m.end():end].strip()
-        if not operand:
-            continue
-        return (line[:m.start()] + f'(*({m.group(1)} *)&({operand}))' + line[end:])
-    return None
+        if operand:
+            casts.append((m.start(), m.end(), end, m.group(1), operand))
+            pos = end
+    if not casts:
+        return None
+    chosen = casts if len(casts) == getattr(ctx, 'n_same', 0) else casts[:1]
+    out, last = [], 0
+    for start, mid, end, typ, operand in chosen:
+        out.append(line[last:start])
+        out.append(f'(*({typ} *)&({operand}))')
+        last = end
+    out.append(line[last:])
+    return ''.join(out)
 
+
+fix_pointer_as_float.multiline = True
 
 SUBFIELD = re.compile(r'\.\s*_(\d+)_(\d+)_')
 
@@ -825,6 +865,8 @@ def fix_float_as_pointer(line, diag, ctx):
             continue
         return (line[:m.end()] + f'KD_FBITS({operand})' + line[end:])
     return None
+
+fix_float_as_pointer.multiline = True
 
 SUBFIELD_WIDTH = {1: 'unsigned char', 2: 'unsigned short',
                   4: 'unsigned int', 8: 'unsigned long long'}
@@ -1015,9 +1057,10 @@ class RepairContext:
         self.fieldmap = fieldmap or {}
         self.externals = relocation_targets(obj, per_function=True) if obj else {}
         self.extern_types = extern_var_types(include_dir)
+        self.n_same = 0
 
 
-def repair_loop(path, cc, cflags, ctx=None, max_rounds=12, verbose=True):
+def repair_loop(path, cc, cflags, ctx=None, max_rounds=30, verbose=True):
     """Compile, rewrite the lines GCC rejected, recompile, until it settles.
 
     Returns (n_edits, remaining_errors, log). The file is left with whichever
@@ -1048,6 +1091,10 @@ def repair_loop(path, cc, cflags, ctx=None, max_rounds=12, verbose=True):
                 rule = next((fn for pat, fn in REPAIR_RULES if pat.search(msg)), None)
                 if rule is None:
                     continue
+                # How many times GCC said this about this line. A rule can use
+                # it to tell "every candidate here is wrong" from "one of them
+                # is"; see fix_pointer_as_float.
+                ctx.n_same = sum(1 for m2 in msgs if m2 == msg)
                 if getattr(rule, 'file_wide', False):
                     # A rule may resolve a name rather than a line, in which case
                     # every occurrence in the unit is the same defect. Fold the
@@ -1067,6 +1114,28 @@ def repair_loop(path, cc, cflags, ctx=None, max_rounds=12, verbose=True):
                     edits.update(changed)
                     tried.append((lineno, rule.__name__, msg))
                     break
+                if getattr(rule, 'multiline', False):
+                    # Ghidra wraps long expressions, so the construct GCC is
+                    # complaining about is often not on the line GCC names —
+                    # McdBoxCreate's `(McdFrameworkID)` sits a line above the
+                    # SQRT it casts. Offer the rule the whole statement. It
+                    # still may not add or remove lines.
+                    lo, hi = _statement_bounds(lines, lineno - 1)
+                    stmt = '\n'.join(lines[lo:hi])
+                    new = rule(stmt, msg, ctx)
+                    if new is None:
+                        continue
+                    fixed = new.split('\n')
+                    if len(fixed) != hi - lo:
+                        continue
+                    changed = {lo + i + 1: b for i, (a, b)
+                               in enumerate(zip(lines[lo:hi], fixed))
+                               if a != b and (lo + i + 1, b) not in applied}
+                    if not changed:
+                        continue
+                    edits.update(changed)
+                    tried.append((lineno, rule.__name__, msg))
+                    break
                 new = rule(text, msg, ctx)
                 if new is not None and new != text and (lineno, new) not in applied:
                     edits[lineno] = new
@@ -1076,18 +1145,31 @@ def repair_loop(path, cc, cflags, ctx=None, max_rounds=12, verbose=True):
             break
 
         # The verification, and the reason a wrong rule is harmless: an edit is
-        # kept only if the diagnostic it CLAIMED is gone and the total did not
-        # grow. Counting alone is not enough — GCC reports an undeclared name
-        # once per function ("first use in this function"), so repairing the
-        # first of several occurrences leaves the count unchanged while making
-        # real progress, and a count-only test would reject it forever.
+        # kept only if the diagnostic it CLAIMED got rarer and the total did not
+        # grow. Counting total errors alone is not enough — GCC reports an
+        # undeclared name once per function ("first use in this function"), so
+        # repairing the first of several occurrences leaves the count unchanged
+        # while making real progress.
+        #
+        # Occurrences, not presence: three `(float)ptr` casts in one expression
+        # are three diagnostics with the same line and the same text, and a rule
+        # that rewrites one of them has to be recognised as progress or the loop
+        # rejects its own work and stalls on the first line it meets.
         #
         # Rewrites never add or remove lines, so line numbers stay comparable
         # across a round and (line, message) identifies a diagnostic exactly.
+        def census(diaglist):
+            c = {}
+            for l, _col, m in diaglist:
+                c[(l, m)] = c.get((l, m), 0) + 1
+            return c
+
+        before = census(diags)
+
         def verdict(new_diags, targets):
-            live = {(l, m) for l, _c, m in new_diags}
+            live = census(new_diags)
             return (len(new_diags) <= best_n,
-                    sum(1 for t in targets if t not in live))
+                    sum(1 for t in targets if live.get(t, 0) < before.get(t, 0)))
 
         targets = [(l, m) for l, _r, m in tried]
         candidate = list(lines)

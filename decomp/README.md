@@ -108,6 +108,17 @@ substitute:   trajectory bit-identical to the shipped library : 35 / 35
 compile rate on its own is a poor proxy: an earlier iteration compiled 40 objects of which only 26
 worked. Fewer compiling and more correct is the right trade.
 
+> **CORRECTION, 2026-08-24 — do not cite the paragraph above.** The numbers in this
+> section are a historical snapshot (`33/148`; it is `94/148` now), but the *claim* is the
+> problem, not the arithmetic. `trajectory bit-identical` has three possible meanings and
+> this gate cannot separate them: the recovery is exact, the object never executed, or it
+> executed and nothing it computes is measured. Measured across all three scenes, **only
+> eight of 103 objects have demonstrated sensitivity on any scene** — for the rest, that
+> line is about the link, not the code. See `HANDOVER.md` §4a, and
+> `test/scene_census.sh` / `test/gate_sensitivity.sh`, which exist to tell the three apart.
+> The real evidence for the released collision objects is the shadow harness and
+> `difftest_pair`, recorded in `proven.txt`.
+
 The trajectory check is only this sharp because baseline and substituted build are **both i386/x87**,
 so a correct recovery has no reason to differ at all. It does NOT transfer across builds — see
 [`../docs/KARMA-ON-WASM.md`](../docs/KARMA-ON-WASM.md) §II.3.

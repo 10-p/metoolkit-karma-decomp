@@ -22,28 +22,37 @@ freebie, the Android NDK), and to integrate the result into the engine's web bui
 
 What exists today:
 
-- **93 recovered objects**, all of them compiling for i386 *and* for wasm32.
+- **94 recovered objects**, all of them compiling for i386 *and* for wasm32.
 - **The full collision-detection path the game actually uses is recovered and validated** —
   all twelve interaction pairs UT2004 calls, each measured against the shipped original on
   real inputs from a live match. Evidence per object in `karma-decomp/proven.txt`. §6 has
   the census that says "twelve" and why that is the number to plan against.
-- **The whole set already compiles under Emscripten**, and its exported symbol sets are
-  **byte-identical to the i386 build for all 93 objects** — same names, same bindings,
-  nothing added or dropped. So the ABI surface the engine links against does not change
-  between targets, which was the thing most likely to turn this into a rewrite. See §4.
+- **The whole set already compiles under Emscripten**, and its exported symbol NAMES are
+  **byte-identical to the i386 build for all 94 objects** — nothing added or dropped. So
+  the ABI surface the engine links against does not change between targets, which was the
+  thing most likely to turn this into a rewrite. See §4. (Names only: `wasm_check.sh`
+  discards the binding letter. That gap let a recovered object export a *global* `putchar`
+  for months — see "One thing that changed on your side of the fence" below.)
 
 What does **not** exist, and you need to know this before planning anything:
 
 - **Nothing has ever been EXECUTED under wasm.** "It compiles" is not "it works", and the
   runtime hazards in §4 are still open. That line is yours to cross, and it is §8 step 1.
-- **The solver is not recovered.** `libMdtKea` is Karma's LCP solver — the code that turns
-  contacts into motion. Zero objects validated, several do not compile. Collision detection
-  tells you what touched; without the solver nothing moves. **A wasm build cannot run on
-  recovered Karma alone today**, and closing that gap is recovery-side work, not yours.
-- **Nothing has run end to end even natively.** Everything called "validated" was measured
-  by a shadow harness that feeds the engine the ORIGINAL's answer every frame, so a
-  recovered error never compounds. Exactly one object has ever been in the driving seat
-  (sphyl, 300 s). Do not assume "validated" means "has been run on".
+- **The solver's control flow is not recovered.** `libMdtKea` is Karma's LCP solver — the
+  code that turns contacts into motion. Three of its compute kernels are now proven
+  bit-identical over 900 compounding steps, but the four objects that *call* them — the
+  driver, the allocator, the integrator and the LCP — still do not compile. Collision
+  detection tells you what touched; without the solver nothing moves. **A wasm build cannot
+  run on recovered Karma alone today**, and closing that gap is recovery-side work, not
+  yours. See "The gap that decides your schedule" below before planning around it.
+- **Nothing has run end to end under wasm.** Natively, the collision layer has: all eight
+  objects behind the twelve pairs the game calls were put in the driving seat — no shadow
+  harness, the engine consuming the recovered code's answer every frame — through full ONS
+  matches. The solver has not, and cannot until the four objects above compile. Everything
+  else called "validated" was measured by a shadow harness that feeds the engine the
+  ORIGINAL's answer every frame, so a recovered error never compounds. Do not assume
+  "validated" means "has been run on".
+
 
 Reproduce the wasm result in one command:
 
@@ -167,13 +176,18 @@ This had never been tried, so it was worth doing before anything else:
 
 ```
 emcc 5.0.7, no -m32, otherwise the same flags as the native build
-93 of 93 recovered objects compiled for wasm32.  0 failures.
+94 of 94 recovered objects compiled for wasm32.  0 failures.
 ```
 
-Stronger than that — the **exported symbol sets are byte-identical to i386 for
-all 93 objects**. Same names, same bindings, nothing added or dropped. So the ABI
-surface the engine links against does not change between the two targets, which
-was the thing most likely to turn this into a rewrite.
+Stronger than that — the **exported symbol names are byte-identical to i386 for
+all 94 objects**, nothing added or dropped. So the ABI surface the engine links
+against does not change between the two targets, which was the thing most likely
+to turn this into a rewrite.
+
+Read "names" literally. `wasm_check.sh` compares `awk '$2 ~ /^[TDBRWV]$/{print $3}'`
+— the binding letter in `$2` is used to filter and then thrown away, so a symbol
+that is weak on one target and global on the other passes. That is not
+hypothetical; see the note at the end of this section.
 
 Re-run it yourself with `test/wasm_check.sh` (§5). It takes seconds and it is the
 cheapest early warning that a recovery-side change has broken portability.
@@ -337,8 +351,10 @@ physics.
    all of them: `scene_chain.c` (collision-free, the authoritative trajectory signal),
    `scene_boxes_on_plane.c` (exercises the geometry dispatch), `scene_ragdoll.c` (nine
    capsules on ball-socket joints — the other two make **not one Sphyl call** between them).
-   Currently **93/93 clean on all three** on i386. **Getting that under a wasm build is your
-   first milestone.**
+   Currently **94/94 clean on all three** on i386 — but read `HANDOVER.md` §4a before
+   putting weight on that number: only eight of 103 objects have measurable sensitivity on
+   any of these scenes, and `test/scene_census.sh` and `test/gate_sensitivity.sh` exist to
+   say which. **Getting that under a wasm build is your first milestone.**
 2. **`test/difftest_pair.sh`** — drives one interaction directly over randomised transforms,
    seeded so anything it finds reproduces. **Twelve pairs wired up — every one the game
    calls.** Needs no solver and no engine, which makes it the natural basis for your first
@@ -347,9 +363,9 @@ physics.
    contact regime and a figure without its regime is meaningless. `KD_GENARGS=1` and
    `KD_FIXEDSHAPE=1` are the two that found real bugs most recently.
 3. **`test/wasm_check.sh`** — compiles the whole set for wasm32 and diffs the exported
-   symbols against the native build. Currently 93/93 and 93/93. **Run this after any change
+   symbols against the native build. Currently 94/94 and 94/94. **Run this after any change
    to the recovery pipeline**; it is the cheapest possible early warning that a change has
-   broken portability.
+   broken portability. It compares NAMES only — see the note at the end of §4.
 4. **`test/kd_shadow.c`** — the in-game shadow harness. Runs both implementations on the
    same inputs and compares. Structural fields (return value, contact count, contact
    dimensionality, buffer overrun) must match **exactly**; float deltas are expected.
@@ -411,10 +427,10 @@ gcc -m64 ... -o /tmp/rag_hx   test/scene_ragdoll.c  <linux_hx_single/*.a>
 - **Nothing has been RUN under wasm.** The whole set compiles and exports identical
   symbols, and that is all §4 hazards 2 and 3 settle. Hazards 1, 4 and 5 are runtime and
   entirely open.
-- **93 of ~150 objects compile**, 39 do not. But read `HANDOVER.md` §3 before reading that
+- **94 of ~150 objects compile**, 36 do not. But read `HANDOVER.md` §3 before reading that
   as 60% done — see the next bullet, it is the most important thing in this file for
   planning purposes.
-- **16 objects are deliberately quarantined** by eight safety detectors. They compile but
+- **18 objects are deliberately quarantined** by eight safety detectors. They compile but
   are known-or-suspected wrong. Do not include them to raise a coverage number. The proof
   of why: `IxConvexTriList` compiled, passed all three substitute scenes and 200,000
   synthetic pairs, and was **46% wrong in a live match** for two sessions — returning *no
@@ -445,18 +461,30 @@ moved off the never-called list, `Box×Sphere` most recently at 5,101 calls in o
 after 25 runs had shown none.
 
 So "how much of Karma do I need for the web build to run" is not 150 objects and not even
-93 — it is the collision path for twelve pairs, plus the solver, plus the framework objects
+94 — it is the collision path for twelve pairs, plus the solver, plus the framework objects
 that hold them together. That is a much smaller target than the compile count suggests, and
 it is the number to plan against.
 
 ### The gap that decides your schedule
 
-**The collision path is done. The solver is not started.**
+**The collision path is done and drives a real match. The solver's arithmetic is proven;
+its control flow is not recovered.**
 
 `libMdtKea` is Karma's LCP solver: it takes the contacts collision detection produced and
-works out how bodies actually move. Zero objects validated; several do not compile
-(`keaLCPSolver`, `keaLCP_new`, `keaIntegrate_pc`, `keaMemory`). Until that changes, **there
-is no configuration in which the engine runs on recovered Karma alone**, on any target.
+works out how bodies actually move. As of 2026-08-24 three of its compute kernels —
+`keaCalcJinvMandRHS_vanilla`, `keaCalcConstraintForces_vanilla`,
+`keaCalcIworldandNonInertialForceandVhmf_vanilla` — reproduce the shipped library
+bit-for-bit over 900 compounding solver steps, plus `MdtUtils`. That is real and it is new.
+
+**It does not change your schedule.** Four objects still do not compile, and they are the
+ones that *call* the kernels: the driver `keaRbdCore_unified`, the allocator `keaMemory`,
+the integrator `keaIntegrate_pc` and the LCP itself (`keaLCPSolver` + `keaLCP_new`). Each
+runs 900 times per 900 steps. Until they compile, **there is still no configuration in
+which the engine runs on recovered Karma alone**, on any target.
+
+The difference from the previous version of this section is the shape of the remaining
+work, not its existence: it is four named objects with each blocker diagnosed to the line
+(`HANDOVER.md` §11 items 1–3), not an open-ended expanse. Ask before assuming a date.
 
 This is recovery-side work, not yours, but it constrains you in two ways worth planning
 around:
@@ -473,9 +501,23 @@ around:
    construction, because the fix goes in the generator and the solver has not been generated
    yet. Front-load the hazard hunting in §4b.
 
-The honest one-line summary of the project's state: *the layer that could be proven
-function-by-function is proven; the layers that cannot be are untouched.* Do not read
-93-of-150 as 62%.
+### One thing that changed on your side of the fence
+
+`test/wasm_check.sh` compares each object's exported symbols between the wasm32 and i386
+builds, and it discards the binding letter — it compares names only. That is how a
+recovered object exporting a **global `putchar`** (weak in the shipped library, so that
+libc's wins) passed every gate for months. The recovery side now has
+`tools/check_symbol_bindings.py`, which compares the recovered object against the
+**shipped** one including binding and size.
+
+`wasm_check.sh` itself is unchanged and still name-only. If you extend it, comparing
+bindings between the two targets is worth doing: weak/COMDAT handling is exactly the area
+where `wasm-ld` and GNU `ld` differ, and §4b already flags COMDAT for `keaMatrix.o`.
+
+
+The honest one-line summary of the project's state: *the collision layer is proven and
+drives a real match; the solver's arithmetic is proven and cannot yet be reached; the
+solver's control flow is untouched.* Do not read 94-of-150 as 63%.
 
 ---
 

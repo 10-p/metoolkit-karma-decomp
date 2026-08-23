@@ -517,14 +517,15 @@ MdtUtils              Bit-identical on scene_ragdoll with 4.113e+00 m of
 #                     WRONG. It needs the per-function symbol inversion.
 # keaIntegrate_pc     MdtKeaIntegrateSystem, 900 calls/900 steps. Fails on
 #                     `stack0xffffffa0` — another lost frame.
-# keaLCPSolver        Fails on `implicit declaration of PrincipalSubmatrix`.
-#                     Diagnosed and NOT yet fixed: ghidra_clean's rename map is
-#                     keyed on the flattened declarator `keaLCPSolver__Principal
-#                     Submatrix`, because that is what the definition's banner
-#                     becomes, but Ghidra writes INTRA-CLASS call sites with the
-#                     bare method name. The map needs the short name as an alias
-#                     wherever it is unambiguous within the object. The same
-#                     object also has the `_vanillaQMatrix` vtable-slot
-#                     mislabelling that keaRbdCore_unified has.
+# keaLCPSolver        FIXED 2026-08-24, and now quarantined rather than failing.
+#                     It used to fail on `implicit declaration of
+#                     PrincipalSubmatrix`: ghidra_clean's rename map was keyed on
+#                     the flattened declarator, because that is what the
+#                     definition's banner becomes, while Ghidra writes
+#                     INTRA-CLASS call sites with the bare method name. 13 errors
+#                     -> 8, and CxSmallSort joined the validated set with it.
+#                     What holds it now is `_vanillaQMatrix`, the SAME vtable-slot
+#                     mislabelling keaRbdCore_unified has — so the driver and the
+#                     LCP are one shared fix apart, not two.
 # keaLCP_new          keaLCPSolver::solveLCP itself, 900 calls/900 steps. Fails
 #                     on `too few arguments to keaLCPSolver__setUpper`.

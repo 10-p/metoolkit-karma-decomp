@@ -33,11 +33,16 @@ complete types. That is what makes this tractable. Ghidra consumes it directly.
 ## 2. Status
 
 ```
-compile:  93 objects  (89 clean + 4 with prelude TODOs)  = 62.9% of 148 attempted
-gate:     93/93 clean on all three substitute scenes
-wasm32:   93/93 compile, 93/93 exported symbol sets byte-identical to i386
-review:   16 objects held back by eight safety detectors
-fail:     39 objects do not compile
+compile:  94 objects  (89 clean + 5 with prelude TODOs)  = 63.5% of 148 attempted
+scenes:   94/94 run clean on all three substitute scenes, and all 94 TOGETHER
+          are bit-identical on the collision-free one — but read §4a before
+          reading anything into that number
+wasm32:   94/94 compile, 94/94 exported symbol sets byte-identical to i386
+bindings: 94/94 export what the SHIPPED object exported, binding included (§8)
+review:   18 objects held back by recover.py's eight safety detectors (§8;
+          the ninth, symbol bindings, is a gate rather than a detector because
+          it needs the shipped object to compare against)
+fail:     36 objects do not compile
 ```
 
 Reproduce all of that with the commands in §4. The whole pipeline is about a minute.
@@ -55,6 +60,14 @@ in it is what releases an object from quarantine):
 | `IxBoxBox` | 35,427 real + 500k synthetic, **1 count divergence**, §8 |
 | `IxBoxSphere` | 5,101 real calls, 0 structural. The census said this pair was never called |
 | `IxConvexTriList` | 20,791 real calls over four matches, 0 structural. **Released**, §8 |
+
+**And, as of 2026-08-24, three solver kernels** — the first `libMdtKea` evidence in the
+project. `keaCalcJinvMandRHS_vanilla`, `keaCalcConstraintForces_vanilla` and
+`keaCalcIworldandNonInertialForceandVhmf_vanilla` reproduce the shipped library
+bit-for-bit over 900 compounding steps on all three scenes, on a gate measured to be
+sensitive to 4e-4 m (chain) and 2.8–113 m (ragdoll, boxes). Details and the four objects
+still blocking the solver are in `proven.txt` under "libMdtKea, the solver", and the
+honest summary is §12.
 
 
 ---
@@ -179,7 +192,7 @@ python3 tools/recover.py \
 Recovered `.c` lands in `/tmp/kd_out/allobj/`, objects in `/tmp/kd_build/`. `recover.py`
 prints a per-object table and a summary. **`out5` is the current dump directory** (§5).
 
-### Gate what came out — all four, every time
+### Gate what came out — all seven, every time
 
 ```bash
 MT=../Thirdparty/metoolkit
@@ -190,7 +203,7 @@ LIB=$MT/lib.rel/linux_single_gcc3.2
 ./test/substitute_test.sh /tmp/kd_build $LIB test/scene_boxes_on_plane.c
 ./test/substitute_test.sh /tmp/kd_build $LIB test/scene_ragdoll.c
 
-# depth: drive one interaction, 300k randomised transforms
+# depth: drive one interaction, 200k randomised transforms
 ./test/difftest_pair.sh /tmp/kd_build $MT            # all pairs
 ./test/difftest_pair.sh /tmp/kd_build $MT McdBoxBoxIntersect
 
@@ -199,6 +212,30 @@ LIB=$MT/lib.rel/linux_single_gcc3.2
 
 # frame bounds: a defect no behavioural test can find, §8. Costs a second.
 python3 tools/check_frame_bounds.py /tmp/kd_out/allobj
+
+# interface: does each object export what the SHIPPED one exported — name,
+# BINDING and size? §8. Costs two seconds and caught a global putchar.
+python3 tools/check_symbol_bindings.py /tmp/kd_build /home/ion/tools/karma-lab/allobj
+
+# and the two that say what the scene gate above actually proved — §4a
+./test/scene_census.sh     /tmp/kd_out/allobj $LIB test/scene_chain.c
+./test/gate_sensitivity.sh /tmp/kd_out/allobj $LIB test/scene_ragdoll.c
+```
+
+`difftest_pair.sh` needs the quarantined `IxBoxTriList` staged or it will not link
+(`undefined reference to rec_McdBoxTriangleListIntersect`). Compile it into a **copy** of
+`/tmp/kd_build` — not into `/tmp/kd_build` itself, or the other six gates start reporting
+on an object the detectors are holding back:
+
+```bash
+cp -a /tmp/kd_build /tmp/kd_build_dt
+INC=$MT/include
+gcc -m32 -O2 -fno-pic -fno-strict-aliasing -std=gnu99 -w \
+    -Wno-int-conversion -Wno-incompatible-pointer-types -DLINUX \
+    -Ikarma-decomp/include -I$INC -I$INC/McdCommon -I$INC/McdPrimitives \
+    -I$INC/McdFrame -I$INC/MeGlobals -I$INC/MdtBcl -I$INC/MdtKea -I$INC/Mst -I$INC/MeApp \
+    -c -o /tmp/kd_build_dt/IxBoxTriList.o /tmp/kd_out/allobj/IxBoxTriList.c
+./test/difftest_pair.sh /tmp/kd_build_dt $MT
 ```
 
 `scene_chain` is collision-free and is the authoritative *trajectory* signal.
@@ -206,6 +243,96 @@ python3 tools/check_frame_bounds.py /tmp/kd_out/allobj
 the `__regparm` parameter shift after the collision-free scene had passed it.
 `scene_ragdoll` is a nine-capsule ragdoll on ball-socket joints dropped onto a plane and
 boxes, because the other two make **not one Sphyl call** between them.
+
+**A collision-free scene is not a solver-free scene.** `scene_chain` drives
+`keaLCPSolver::solveLCP` 900 times, `MdtKeaAddConstraintForces` 900 times and
+`keaPoolAlloc` 14,400 times — measured with gdb breakpoint counts on the stock build, not
+assumed. It is the right instrument for `libMdtKea` and it reaches the LCP.
+
+---
+
+## 4a. What "trajectory bit-identical" does and does not mean
+
+`substitute_test.sh` printed `trajectory bit-identical` for all 93 objects on all three
+scenes, and §2 used to summarise that as "93/93 clean". That line has **three** possible
+meanings and the gate cannot tell them apart:
+
+1. the recovery reproduces the shipped code exactly;
+2. the object never executed in this scene;
+3. it executed, and nothing it computes reaches the numbers being compared.
+
+For nine decompiled `libMdtKea` objects reproducing 900 steps of a chaotic twelve-body
+chain to the last bit, (1) was not the likeliest reading. Two instruments separate them.
+
+**`test/scene_census.sh`** — `kd_instr.c` counts every function entry through GCC's
+`-finstrument-functions`, file-local functions included, with no sampling and no mutation
+of the code under test. It is `KD_CENSUS` for the offline scenes, and it answers "ran" vs
+"never ran" exactly. It also links every recovered object at once and diffs the result,
+which is the combined question `substitute_test.sh` (one object at a time, by design)
+never asks.
+
+**`test/gate_sensitivity.sh`** — rebuilds the object with float intermediates forced to
+storage precision and reports how far the trajectory then moves. That is roughly the
+smallest error the scene could have caught.
+
+**Read the sensitivity number as a ONE-SIDED test.** A non-zero delta proves the gate can
+see the object. A zero **proves nothing**, and the worked example is worth carrying:
+`keaCalcAcceleration_vanilla` reads zero under every rounding probe tried, and it is
+emphatically not irrelevant — it computes `accel[i] = invmass * force[i]` plus a torque
+dot product, and forcing those outputs to 7777 moves `scene_chain` by 8.8e5 m. One
+multiply rounds identically at any precision and most torque terms in these scenes are
+zero, so the arithmetic is exact and no rounding probe can reach it. Settle a zero by
+mutating that object's outputs by hand.
+
+### What the two instruments actually found
+
+**Of 103 objects probed across all three scenes, exactly eight have demonstrated
+sensitivity on any scene.** The scenes do not exercise most of the recovered set:
+
+| object | scene where it is proven | recovered | sensitivity |
+|---|---|---:|---:|
+| `keaCalcConstraintForces_vanilla` | all three | 0 | 4.3e-04 … 6.8e+01 |
+| `keaCalcIworldandNonInertialForceandVhmf_vanilla` | all three | 0 | 4.9e-04 … 1.1e+02 |
+| `keaCalcJinvMandRHS_vanilla` | all three | 0 | 3.7e-04 … 4.0e+00 |
+| `MdtUtils` | ragdoll | 0 | 4.1e+00 |
+| `IxSphylPrimitives` | ragdoll | 3.677 | 4.0e+00 |
+| `IxBoxBox` | boxes_on_plane | 69.8 | 2.0e+01 |
+| `GeomUtils` | ragdoll | 4.222 | 3.8e+00 |
+| `keaMatrix_PcSparse_vanilla` | chain | **4.28e-04** | 3.7e-04 |
+
+Six of the eight released collision objects — `IxSphereTriList`, `IxSphereSphere`,
+`McdGjk`, `IxConvexPrimitives`, `IxBoxSphere`, `IxConvexTriList` — are **not demonstrated
+on any scene**. That is not a problem: their evidence is the shadow harness and
+`difftest_pair`, which is the right tier for them. It does mean "93/93 clean on three
+scenes" was carrying far more weight in the summary than it can bear, which is why §2 now
+says what it says.
+
+The last row is the one to look at twice. `keaMatrix_PcSparse_vanilla` is the only kea
+object that does **not** reproduce the original: 4.28e-04 m of divergence against
+3.70e-04 m of sensitivity, i.e. about one rounding step wrong. It is quarantined
+(guessed stack frame) and must stay there.
+
+### The combined test, and what it says about the quarantine
+
+All 94 validated objects substituted **together**:
+
+| scene | result |
+|---|---|
+| `scene_chain` (collision-free) | **bit-identical** over 900 steps |
+| `scene_boxes_on_plane` | max delta 2.135e+01 m |
+| `scene_ragdoll` | max delta 4.127e+00 m |
+
+The two collision scenes are the documented unbounded post-contact divergence (§10), and
+4.13 m on the ragdoll sits beside the **3.283 m that MathEngine's own i386 and x86-64
+builds differ by on the same scene**. Nothing went non-finite; all three ran to
+completion.
+
+Adding the ten quarantined objects that compile turns `scene_chain` from bit-identical
+into an immediate SIGSEGV with zero rows of trajectory. Bisecting: it is **`MdtPartition`**
+— precisely the object §8 cites as the reason the guessed-stack-frame detector exists.
+Every other quarantined object that compiles is harmless on this scene. That is the first
+end-to-end measurement of the quarantine policy rather than an assertion about it.
+
 
 **`difftest_pair.sh` has six switches and the first is not optional:**
 
@@ -527,6 +654,17 @@ Alternating 240 s runs on `ONS-UCMP-ABC`, counting SIGSEGVs in the engine's own
 | harness, second call live | **4 of 14** |
 | harness, second call off (`KD_CENSUS=1`) or narrowed (`KD_ONLY`) | **0 of 5** |
 
+> **WITHDRAWN, 2026-08-24. That first row does not replicate.** Five 420 s runs of
+> stock Karma with no harness on `ONS-UCMP-ABC-ECE` crash **twice**, in
+> `McdModelGetGeometryType` under `KHandleCollisions` — the same site. The engine has a bug
+> of its own there and 0-of-4 at 240 s on a different map was luck. §7a has the numbers.
+>
+> The rest of this section still stands: `m_cachedData` really was shared between the two
+> implementations, and fixing it really did take the GJK count divergences from 15 to 2.
+> But **the crash-rate argument was measuring the map, not the harness**, so do not cite
+> "5-of-5 → 1-of-3" as evidence for anything.
+
+
 A "copy of the `McdModelPair`" was added in response and reported as not helping. **It was
 not doing anything.** The copy went into `scratch.pair` while the *real* pair was still
 passed as the first argument to the recovered function — which is the argument every
@@ -550,6 +688,11 @@ What that changed, on `ONS-UCMP-ABC-ECE`, 900 s per run:
 |---|---|---|
 | shared state | 3 ret + 15 count in 75,839 | **0 of 5** — all died in `KHandleCollisions` |
 | isolated | 3 ret + 2 count in 65,975 | **2 of 3** |
+
+**The right-hand column is now known to be confounded.** Stock Karma with no harness at
+all crashes in `KHandleCollisions` 2 times in 5 on this map (§7a), so "ran the full 900 s"
+was never a clean measure of the harness. The GJK column — 15 count divergences down to
+2 — is unaffected and is the part of this result to keep.
 
 Read that carefully rather than as a fix. The count divergences dropped 15 → 2 and the
 crash stopped being universal, but `ret_diff` is unchanged at 3 and one isolated run still
@@ -618,6 +761,85 @@ Rules live in `REPAIR_RULES`, each paired with the diagnostic it claims. Some ar
 `multiline` (offered the whole statement, because Ghidra wraps long expressions) or
 `file_wide` (resolve a *name* rather than a line).
 
+**One trap that took four objects out of the build at once.** A `multiline` or `file_wide`
+rule rewrites several lines from ONE diagnostic, but appended a single entry to `tried`,
+keyed to the line GCC named. When the batch was rejected, the retry loop looked the owning
+entry up by line number — and for every other line the rule touched there is no such
+entry, so it raised `StopIteration`. `keaMemory`, `McdBox`, `McdTriangleList` and `MdtLOD`
+all failed this way, and all four reported it identically because `recover.py` truncated
+the traceback to boilerplate. Edits are now grouped per rule application; retrying half a
+rewritten statement would have been wrong even where the lookup succeeded.
+
+---
+
+## 7a. Driving, not shadowing — the engine ON recovered Karma
+
+**Definition-of-done item 7, for the collision layer, done on 2026-08-24.**
+
+`test/make_substituted_metoolkit.sh` replaces archive members outright, so the engine
+consumes the recovered code's answer every frame with no original to fall back on. All
+eight objects behind the twelve pairs the census says the game calls went in together —
+`IxSphereTriList`, `IxSphylPrimitives`, `IxSphereSphere`, `McdGjk`, `IxConvexPrimitives`,
+`IxBoxBox`, `IxBoxSphere`, `IxConvexTriList`.
+
+Check the substitution took, and do not take the link's word for it. All eight export
+symbol sets identical to the shipped objects (only `sqrtf` and `__stack_chk_fail` newly
+imported), the archive index resolves `McdBoxBoxIntersect` to the substituted member, and
+— decisively — the *machine code* in the final binary differs for every interaction
+sampled:
+
+```
+McdBoxBoxIntersect                  stock 419 insns   substituted 1117
+McdSphereSphereIntersect            stock 241         substituted  205
+McdConvexMeshTriangleListIntersect  stock 700         substituted  610
+McdSphylTriangleListIntersect       stock 371         substituted  467
+```
+
+### The result, and a correction to §7
+
+`test/crash_ab.sh` alternates two builds on the same map and URL, A,B,A,B, and keeps every
+log. `ONS-UCMP-ABC-ECE`, 420 s per run, five runs each:
+
+| arm | runs | reached kickoff | crashed | crash site | ran the full 420 s |
+|---|---:|---:|---:|---|---:|
+| stock (shipped `.a`) | 5 | 5 | **2** | `McdModelGetGeometryType` | 3 |
+| substituted (recovered) | 5 | 5 | **2** | `McdModelGetGeometryType` | 3 |
+
+**Indistinguishable.** Recovered collision code drives a real Onslaught match with bots and
+vehicles exactly as well as the shipped library does.
+
+And the other half of that table is a correction. §7 recorded the `KHandleCollisions` →
+`McdModelGetGeometryType` SIGSEGV as something the shadow harness caused, on the strength
+of "stock Karma, no harness: 0 of 4". **It happens to stock, unmodified, shipped Karma
+with no harness at all, twice in five runs on this map.** The original measurement was
+four runs of 240 s on `ONS-UCMP-ABC`; this is five runs of 420 s on `ONS-UCMP-ABC-ECE`.
+
+That does not make §7's cache-isolation work wrong — `m_cachedData` really was shared, and
+the GJK count divergences really did fall from 15 to 2 when it stopped being. It does mean
+**the crash-rate half of that argument was measuring the map, not the harness**, and the
+"5-of-5 → 1-of-3" figure should not be cited as evidence for anything. The engine has a
+bug in its own `KHandleCollisions` and it is not ours.
+
+### If you re-run this
+
+- **`Signal:` is not a crash.** `timeout --signal=TERM` ends a clean run and the engine
+  logs `Signal: SIGTERM [terminate]`. Matching on `Signal:` alone marks every good run as
+  a crash — it did, for a whole sweep, and the numbers had to be re-derived afterwards.
+  Match `SIG(SEGV|BUS|ILL|FPE|ABRT)`.
+- Alternate the arms. The crash is situational: run 1 of both arms went the full distance
+  and run 5 of both crashed.
+- Keep every log (`crash_ab.sh` writes `/tmp/kd_ab_<arm>_<run>.log`) so a verdict can be
+  re-derived without re-running seventy minutes of matches.
+- Five runs per arm is enough to say "the same" and nowhere near enough to say "2 in 5 is
+  the rate".
+
+### What this does NOT show
+
+The **solver** is still shipped in that build. `libMdtKea`, `libMdt` and `libMst` are
+stock; only the collision objects are recovered. Item 7 asks for **no shipped `.a` in the
+link at all**, and that is blocked on §11 items 1–3. What is settled is that the recovered
+collision layer can drive, which the shadow harness structurally could not tell you.
+
 ---
 
 ## 8. The detectors — why objects are held back
@@ -636,9 +858,45 @@ compile.**
 | unaccounted value | `in_stack_0000000c`, `extraout_ECX` | a value read before anything assigns it. Dead stores excluded; only a read that reaches something counts |
 | lost store | `x.f = x.f;` | a save-and-restore Ghidra reordered. See the sphyl entry below |
 | **out-of-range frame reference** | `(int)afStack_11c + -0x1c` | `tools/check_frame_bounds.py`. An address outside the local it names — GCC cannot see it through the cast, and the runtime symptom is corruption of an unrelated local |
+| **changed symbol binding** | `putchar` shipped `W`, recovered `T` | `tools/check_symbol_bindings.py`. Not a `recover.py` detector — a gate, because it needs the shipped object to compare against. See below |
 
 `proven.txt` records which objects a real match has released, **with the evidence on the
 line**. That is the only way out. Do not remove a detector to make a number go up.
+
+**The quarantine has now been measured, not just argued for.** Substituting all 94
+validated objects into `scene_chain` at once is bit-identical over 900 steps; adding the
+ten quarantined objects that compile turns that into an immediate SIGSEGV. It is
+`MdtPartition` — the object the guessed-stack-frame detector was written for. §4a.
+
+### A weak symbol that comes back global takes over libc
+
+`gcc` emits `putchar` **weakly** into three separate members of `libMdtKea.a` —
+`keaDebug.o`, `keaMatrix_tester.o` and `keaPrintBasicTypes.o` — precisely so that libc's
+strong definition wins and none of them is ever used. `ghidra_clean.object_symbols()`
+collapsed `T` and `W` into one "exported" set, so the recovered `keaMatrix_tester`
+exported it **global**, and decompiled Karma silently became the `putchar` the whole
+engine calls. It was linked and executed 901 times in a scene census before anything
+noticed. Recover a *second* of the three and the link fails outright with a duplicate
+symbol — a latent blocker for §12 item 7.
+
+Two C++ functions had it for the same reason: `CylPerpAndPara` and `BracketedRootN` are
+defined in headers, so gcc emits them weakly in every translation unit, and weak is how
+the ODR gets enforced at link time. Fixed by carrying the binding through to the
+declaration as `KD_WEAK`.
+
+**`wasm_check.sh` had been comparing exported symbols for months and could never have
+caught this**, for two reasons worth remembering when adding a gate: it compared *names*
+with the binding letter thrown away, and it compared the recovered wasm build against the
+recovered native build — never against the object being replaced.
+
+`check_symbol_bindings.py` also audits the data-section moves rather than waving them
+through. Ten `IxCylinderCylinder` statics, `MdtContactInvalidID` and the four `MeMessage`
+levels all move `.data`/`.rodata` → `.bss`, which loses the initialiser if the shipped
+bytes are not zero. They are zero — but the tool checks the bytes **and** that no
+relocation targets the symbol, because `MeMessage`'s handler table is an all-zero `.data`
+filled in by ten `R_386_32` relocations at link time, and a bytes-only check would have
+called it benign. Two `.rodata` → `.data` moves are reported as tolerated.
+
 
 ### `IxConvexTriList` — released, and the argument nobody was looking at
 
@@ -865,46 +1123,75 @@ Box × TriangleList at zero calls. Recorded so nobody re-derives the old number.
 
 **§12 item 1 is done.** Every pair the census shows the game calling is recovered and
 validated against a live match. The next milestone is **§12 item 7 — the engine running ON
-recovered Karma**, because that is the one that delivers physics, and no amount of shadow
-testing gets you there.
+recovered Karma**, and as of 2026-08-24 the collision half of that has been measured
+(§7a). What blocks it now is the **solver**, and the solver's blockers are four named
+objects rather than a vague expanse.
 
 Ordered by what actually moves the project, not by what is easiest:
 
-1. **Drive, don't shadow.** `test/make_substituted_metoolkit.sh` puts recovered objects in
-   the archive *in place of* the shipped ones, so the engine runs on them. Exactly ONE object
-   has ever been through this (sphyl, 300 s, 0 crashes / 0 NaN / 0 warnings). Do it for the
-   twelve validated pairs together and run a long ONS match. The shadow harness feeds the
-   engine the original's answer every frame, so a recovered error never compounds — this is
-   the only test that asks whether the recovery can *drive*. Expect it to find things the
-   harness structurally cannot.
-2. **`libMdtKea`, the solver.** The largest untouched thing in the project and the reason
-   nothing can actually run yet. Layouts and vtables are recovered
-   (`src/MdtKea/keaMatrix.h`); no object has been validated and several do not compile
-   (`keaLCPSolver`, `keaLCP_new`, `keaIntegrate_pc`, `keaMemory`). Budget for it being
-   harder to validate than collision code: it is iterative, so errors compound rather than
-   showing up as a discrete decision you can diff. `scene_chain.c` (collision-free) is the
-   right first instrument — it isolates the solver from contact generation entirely.
-3. **Audit the other callbacks the way the triangle generator was audited** (§8, §12). The
-   triangle generator is now the only stub in `difftest_pair.c` that depends on its
+1. **`keaRbdCore_unified` — the solver driver.** This is now the single highest-value
+   object in the project and it did not look like it before. Three of the recovered kea
+   kernels are proven bit-identical (§2, `proven.txt`), and the reason they still cannot
+   drive anything is that the object which *calls* them does not compile. Ghidra lost its
+   frame completely: the body reconstructs `MdtKeaConstraints` and `MdtKeaParameters`
+   field by field out of a copied stack block, and every call into the recovered kernels
+   is `(**(code **)(_vanillaFunctions + 0x10))()` — a `keaFunctions_Vanilla` vtable
+   dispatch with **every argument dropped**.
+
+   That is a Ghidra-side problem with existing machinery pointed at it. `DumpDecomp.java`
+   already applies `McdTriangleListFnPtr` at indirect call sites by function-name match
+   (`KD_CALLSITE_SIG=trilist`, §5); the vtable slots of `keaFunctions_Vanilla` are known
+   (`gen_vtables.py` recovers C++ ABI data, and the kernels' own mangled names give the
+   signatures). Applying slot signatures at `(_vanillaFunctions + N)` call sites is the
+   same trick. Budget a Ghidra re-run (1–2 hours, §5, **new output directory**).
+
+2. **`keaMemory` — the allocator**, 14,400 calls per 900 solver steps. It used to crash
+   the pipeline; that is fixed and it now reports 13 real errors, twelve of which are one
+   defect. `pool_ptr`, `pool_max`, `poolstack` and `poolstack_ptr` are four **contiguous**
+   globals in `keaRbdCore_unified.o`'s `.bss` (offsets 0, 0xc, 0x10, 0x14) and Ghidra
+   resolved relocations-with-addend against the wrong neighbours — §5. Line 52 pushes to
+   `&poolstack + poolstack_ptr*4` and line 61 pops from `&pool_ptr + poolstack_ptr*4`:
+   the same address expression against two differently mis-resolved bases. **Declaring
+   the four symbols makes it compile and leaves it wrong** — it needs the per-function
+   symbol inversion, not a prelude entry.
+
+3. **`keaLCPSolver` — now one fix away from the same place as item 1.** It used to fail on
+   `implicit declaration of PrincipalSubmatrix`, because `ghidra_clean`'s rename map was
+   keyed on the flattened declarator while Ghidra writes intra-class call sites with the
+   bare method name. **Fixed**; the object moved FAIL → review (13 errors → 8) and
+   `CxSmallSort` came into the validated set with it. What holds `keaLCPSolver` now is
+   `_vanillaQMatrix` — the **same vtable-slot mislabelling as `keaRbdCore_unified`**, so
+   items 1 and 3 are one shared fix, not two.
+
+   `keaLCP_new` — `keaLCPSolver::solveLCP` itself — still fails on `too few arguments to
+   keaLCPSolver__setUpper`, which is a genuinely dropped argument, not a naming problem.
+
+4. **Audit the other callbacks the way the triangle generator was audited** (§8, §12). The
+   triangle generator is still the only stub in `difftest_pair.c` that depends on its
    arguments. The allocator and `McdCacheHello`/`Goodbye` have the same exposure and have
-   never been checked. This is cheap and it has a track record.
-4. **Finish the harness-perturbation measurement** (§7). Isolating the cache took the
-   `KHandleCollisions` crash from 5-of-5 to 1-of-3 and the GJK count divergences from 15 to
-   2. Both are reduced, neither is explained. `KD_SHARECACHE=1` makes the A/B cheap. The
-   shared-contact-pool hypothesis is still untried and is now the leading candidate.
-5. **Chase what is left of the `IxBoxBox` and `McdGjk` divergences** (§8). Both now
-   reproduce synthetically once box dimensions vary — 1 and 2 count divergences in 200,000 —
-   so they can be worked on deterministically, without waiting for a match.
-6. **Grind the tail.** 39 objects, but **read §3 first** — a large part of the pile is
+   never been checked. Cheap, with a track record.
+
+5. **Chase what is left of the `IxBoxBox` and `McdGjk` divergences** (§8). Both reproduce
+   synthetically once box dimensions vary — 1 and 2 count divergences in 200,000 — so they
+   can be worked on deterministically, without waiting for a match.
+
+6. **Settle the sensitivity zeros that matter.** §4a lists which objects the scenes cannot
+   see. For anything you intend to rely on, mutate its outputs and confirm the gate moves
+   before quoting a bit-identical result — `keaCalcAcceleration_vanilla` is the worked
+   example of a zero that means nothing.
+
+7. **Grind the tail.** 36 objects, but **read §3 first** — a large part of the pile is
    geometry the game never collides. What remains, by size: `stack0xNNNN` (~20 references,
    a real value Ghidra lost — do not paper over it), `too few arguments` (14, genuinely
    dropped arguments), types nothing defines (`MeASEObject`, `Mesh2GeometryType`,
    `BodyData` — they are in the DWARF, and `gen_typedb.py` takes object directories, so
    widening its input is the route), and `subscripted value` (16, all DebugDraw and XML —
    a file-scope static emitted as `float x[n]` and indexed `x[i][j]`).
-7. **Replace, don't recover:** `libMcdConvexCreateHull` is qhull 2.6 (1998) — 186 KB,
+
+8. **Replace, don't recover:** `libMcdConvexCreateHull` is qhull 2.6 (1998) — 186 KB,
    load-time only, open source. Swap in modern qhull. `MeAssetDB`/`MeXML`/`MeAssetFactory`
    (51 KB) is `.ka` XML parsing, not physics. `MeViewer2`/`MeApp` (74 KB) are never linked.
+
 
 ### What needs the project owner, and nothing else will do
 
@@ -940,21 +1227,26 @@ Everything else — code, tests, measurement, tooling — is self-service.
 2. Validated means: 0 `ret_diff`, 0 `count_diff`, 0 `dims_diff`, 0 `overrun` across a
    multi-hour in-game session, with `KD_SELFTEST` clean on the same session, and
    `proven.txt` carrying the evidence.
-3. All three `substitute_test.sh` scenes clean for every recovered object.
+3. All three `substitute_test.sh` scenes clean for every recovered object — **and, per
+   §4a, checked with `scene_census.sh` and `gate_sensitivity.sh`, because "clean" on a
+   scene that never ran the object is not a result.**
 4. qhull and the asset loader replaced rather than recovered.
 5. No detector suppressed, no object released without a line in `proven.txt`.
 6. The whole set builds as ordinary C for **wasm32 and arm64/armv7**, not just i386.
-   **wasm32 is done** — 93/93 compile with byte-identical exported symbols
+   **wasm32 is done** — 94/94 compile with byte-identical exported symbols
    (`test/wasm_check.sh`). arm64 has not been tried; no cross-compiler is installed here.
    Nothing has been *executed* under wasm. See `HANDOVER-WEB.md`.
 7. The engine runs with `WITH_KARMA=1` against recovered Karma with **no shipped `.a` in the
-   link at all**. `test/make_substituted_metoolkit.sh` does this per object; a 300 s
-   ragdoll-heavy ONS match on recovered sphyl gave 0 crashes, 0 NaN, 0 Karma warnings.
+   link at all**. `test/make_substituted_metoolkit.sh` builds that tree.
+   **The collision half is done** — all eight objects behind the twelve called pairs, in
+   the driving seat, through full ONS matches (§7a). The solver half is not, and cannot be
+   until §11 items 1–3 compile.
 
 With (1) closed, **(7) is the next real milestone** and the one that actually delivers
 physics on the web. The shadow harness structurally cannot test it: it feeds the engine the
 original's answer every frame, so a recovered error never gets to compound. Item 2's
 in-game numbers say the recovered code *agrees*; item 7 asks whether it can *drive*.
+
 
 ### Where the project actually stands — read this before estimating anything
 
@@ -962,42 +1254,54 @@ in-game numbers say the recovered code *agrees*; item 7 asks whether it can *dri
 pairs the game calls. Recovered, compiling for i386 and wasm32, each one measured against
 the shipped original on real inputs from a live match, evidence in `proven.txt`.
 
-**Not started in any meaningful sense: the solver.** `libMdtKea` is the LCP solver — the
-thing that takes contacts and makes bodies *move*. Zero objects validated. Several are in
-the 39-object fail pile (`keaLCPSolver`, `keaLCP_new`, `keaIntegrate_pc`, `keaMemory`), a
-few compile, none has ever been measured. It is also the hottest code, C++ with vtables, and
-iterative — which makes it harder to validate the same way, because "close enough" compounds
-across iterations instead of being a discrete decision you can diff. Collision detection was
-the part most amenable to function-by-function proof. That is the part that is done.
+**The solver is no longer "not started", and that is a correction to what this file used
+to say.** Three of `libMdtKea`'s compute kernels — `keaCalcJinvMandRHS_vanilla`,
+`keaCalcConstraintForces_vanilla`, `keaCalcIworldandNonInertialForceandVhmf_vanilla` —
+reproduce the shipped library **bit-for-bit over 900 compounding steps** on all three
+scenes, against a gate measured to be sensitive to 4e-4 m on the chain and 2.8–113 m on
+the ragdoll and the boxes. That is a stronger standard than the collision gate in one
+respect: it is 900 iterations of feedback, not a single discrete decision. `MdtUtils` is
+evidenced the same way on the ragdoll scene.
 
-**Never executed on wasm.** 93/93 compile with byte-identical exported symbols. Not one
+The earlier reading — "zero objects validated" — was not pessimism, it was the gate being
+unable to distinguish a bit-identical recovery from an object that never ran (§4a). Both
+statements were derived from the same green output.
+
+**What is genuinely still missing is the solver's plumbing, and it is four objects:**
+the driver (`keaRbdCore_unified`), the allocator (`keaMemory`), the integrator
+(`keaIntegrate_pc`) and the LCP (`keaLCPSolver` + `keaLCP_new`). Each runs 900 times per
+900 steps and none compiles. Until they do there is **no configuration in which the engine
+runs on recovered kea**, however good the kernels are. §11 items 1–3 are those objects,
+with each blocker diagnosed down to the line.
+
+**Never executed on wasm.** 94/94 compile with byte-identical exported symbols. Not one
 instruction has run. See `HANDOVER-WEB.md`.
 
-**Never run end to end.** Exactly one object has ever been in the driving seat in a real
-match (sphyl, 300 s, via `make_substituted_metoolkit.sh`). Everything else that says
-"validated" was validated while the original was still doing the actual work.
+**Run end to end, now, for the collision layer** — §7a. Not for the solver.
 
-So the honest summary is: **the layer that could be proven function-by-function is proven;
-the layers that cannot be are untouched.** Do not read 93/150 as 62% of the way there — the
-denominator is wrong in both directions (a third of those objects are for collisions the
-game never makes, and the solver is worth more than its object count).
+So the honest summary is: **the collision layer is proven and drives a real match; the
+solver's arithmetic is proven and cannot yet be reached; the solver's control flow is
+untouched.** Do not read 94/148 as 63% of the way there — the denominator is wrong in both
+directions (a third of those objects are for collisions the game never makes, and the four
+kea objects in §11 are worth more than the other 38 put together).
 
 ### The thing that should shape how you work
 
 The three biggest findings of 2026-08-23 — the promoted-double radius, the `IxBoxBox`
 divergence, the GJK divergence — were all invisible for the same reason: **the tests were
-not testing.** `difftest_pair`'s triangle generator ignored `pos` and `radius` and set
-`flags = 0`, so half of `GenerateTriangleContact` had never executed and a completely wrong
-radius could not show up. The boxes were one fixed size forever. The shadow harness's "pair
-copy" was written into the wrong field and had been recorded in this file as a *tested and
-rejected* hypothesis.
+not testing.** The three biggest findings of 2026-08-24 have the same shape:
 
-The object count barely moved that day (92 → 93). What moved is what the number means: two
-released objects turned out to be right by luck, one object's synthetic proof turned out to
-be worthless, and the harness was perturbing the thing it measured.
+- `substitute_test.sh` reported `trajectory bit-identical` for 93 objects, and for **95 of
+  103 probed** that line was about the link, not the code (§4a).
+- `wasm_check.sh` compared exported symbols for months while discarding the binding
+  letter, so a recovered object exporting a **global `putchar`** passed every gate and ran
+  901 times in a scene census (§8).
+- `recover.py` truncated tracebacks to 90 characters, so **four objects** — including the
+  solver's allocator — sat in the FAIL column behind an error message that was pure
+  boilerplate, all of them the same single bug in the repair loop's retry path.
 
-**Treat every remaining "validated" claim as provisional until its test stub has been
-checked for the same blindness.** Concretely, before trusting a green result, ask:
+None of these was a hard problem. All three were invisible because the output looked like
+success. Before trusting a green result, ask:
 
 - Does the stub the code calls back into actually *depend* on the arguments it is given?
   (`KD_GENARGS=1` answers this for the triangle generator. Nothing answers it for the
@@ -1006,6 +1310,12 @@ checked for the same blindness.** Concretely, before trusting a green result, as
   project's whole life. Hull vertex counts and triangle counts still are.)
 - Does the harness share mutable state with the thing it measures? (It did, through
   `m_cachedData`, for months.)
+- **Did the code under test even execute, and could the measurement have seen it if it
+  were wrong?** (`scene_census.sh` and `gate_sensitivity.sh` answer these two. Run them
+  before quoting a bit-identical result.)
+- **Does the failure message identify the failure?** (Four objects said "Traceback (most
+  recent call last):" and nothing else.)
 
 That checklist is worth more than the next ten objects.
+
 

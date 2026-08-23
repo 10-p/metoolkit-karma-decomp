@@ -343,6 +343,27 @@ def materialise_alloca_frame(body, fname):
         body = re.sub(r'(=\s*\([^()]*\)\s*)\(\s*(?:\(int\)\s*)?&(\w+)'
                       r'\s*\+\s*(\w+)\s*\)',
                       sub_alloca, body)
+        # The cast and the parentheses are not always there either. Ghidra
+        # writes the defining store as whatever is shortest:
+        #
+        #   trilistgeom[3].prev = (McdGeometryID)((int)&MStack_24c + iVar5);
+        #   *(undefined1 **)((int)pvVar22 + 0x34) = auStack_12c + iVar17;
+        #
+        # Both put the allocation into the triangle-list geometry, and only the
+        # second cost IxConvexTriList its alloca. What separates the DEFINING
+        # use from the frame stores is the shape of the statement: the defining
+        # one has `base + negVar` as the whole right-hand side, and a frame
+        # store has it inside a dereference on the LEFT. Anchoring on `= ... ;`
+        # says exactly that.
+        for var in neg:
+            def sub_bare(m, var=var):
+                nonlocal n
+                expr, mult = neg[var]
+                n += 1
+                return f'= (char *)alloca((size_t)({expr}) * {mult});'
+            body = re.sub(r'=\s*(?:\([^()]*\)\s*)?\(?\s*(?:\(int\)\s*)?'
+                          r'&?\w+\s*\+\s*' + re.escape(var) + r'\s*\)?\s*;',
+                          sub_bare, body, count=1)
 
     if n:
         # After the real alloca is restored, every REMAINING reference of the

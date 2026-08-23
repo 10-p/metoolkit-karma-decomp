@@ -39,8 +39,8 @@ gate:     92 of 92 clean on ALL THREE scenes; 92/92 compile for wasm32 with
           byte-identical exported symbols — bit-identical on scene_chain, and no
           crash on scene_boxes_on_plane (the two divergences there are IxBoxBox
           and IxBoxPlane, both on the collision path, both expected)
-review:   16 objects held back by seven safety detectors
-fail:     40 objects do not compile
+review:   17 objects held back by seven safety detectors
+fail:     39 objects do not compile
 ```
 
 **Run all three scenes.** `scene_chain` is collision-free and is the authoritative
@@ -82,15 +82,42 @@ actually makes. Combined across both test maps, by source object:
 | 35,427 | `IxBoxBox` | ✅ validated on real calls |
 | 7,975 | `IxConvexPrimitives` (vehicles) | ✅ validated on real calls |
 
-**37 interaction pairs are registered; the maps exercise 9.** `IxBoxBox` — which was
-polished first and proven on 300k synthetic pairs — gets ~12k real calls. Re-run the
-census after any new map; it is cheap and it has repeatedly changed priorities.
+### 38 pairs are registered. The game calls ten of them. Ever.
 
-Two things moved this table a long way, and neither was a code change. Spawning bots
-explicitly (`?NumBots=8?MinPlayers=9`, §6) turned the ragdoll path from 36,828 calls into
-463,782. Running a **community** map instead of a shipped one surfaced two pairs no Epic map
-had ever reached (§6) — including `Box×ConvexMesh`, which is now the busiest thing in the
-game that is not recovered at all.
+A census sweep over 25 runs and 17 maps, using `KD_CENSUS=1` so it perturbs
+nothing:
+
+| pair | total calls | object |
+|---|---:|---|
+| Sphere × TriangleList | 3,710,224 | `IxSphereTriList` ✅ |
+| Sphyl × TriangleList | 786,072 | `IxSphylPrimitives` ✅ |
+| Sphyl × Sphyl | 334,850 | `IxSphylPrimitives` ✅ |
+| Sphere × Sphere | 257,887 | `IxSphereSphere` ✅ |
+| Box × ConvexMesh | 185,067 | `McdGjk` ✅ |
+| Box × Box | 167,649 | `IxBoxBox` ✅ |
+| Sphyl × Sphere | 148,031 | `IxSphylPrimitives` ✅ |
+| Sphyl × ConvexMesh | 11,280 | `IxConvexPrimitives` ✅ |
+| Sphere × ConvexMesh | 2,274 | `McdGjk` ✅ |
+| ConvexMesh × TriangleList | 1,720 | `IxConvexTriList` ⚠ compiles, quarantined |
+
+**The other 25 pairs are registered on every map and called zero times**: every
+`Aggregate` pair, every `Cylinder` pair, `Box×Plane`, `Box×Sphere`,
+`Box×TriangleList`, `Sphere×Plane`, `Sphyl×Box`, `Sphyl×Plane`,
+`ConvexMesh×ConvexMesh`, `ConvexMesh×Plane`.
+
+That is worth absorbing before picking up work. UT2004 gives its physics actors
+sphere, sphyl, convex-mesh and triangle-list geometry and essentially nothing
+else, so whole objects in the "not compiling" pile are for collisions the game
+never makes. It also means §12 item 1 — "every object the census shows the game
+actually calls" — is **one object away**: `IxConvexTriList`.
+
+It cuts both ways as a caution. `McdSphylBoxIntersect` had a real bug (§8) in a
+pair that is never called, and `IxSpherePlane` sits in the validated set for a
+pair that is never called. Neither was wasted — the sphyl bug was in shared code
+— but do not read "validated" as "load-bearing" without checking this table.
+
+Re-run the census after any new map; it is cheap, non-perturbing, and it has
+changed priorities every single time.
 
 ---
 
@@ -669,9 +696,9 @@ In order:
    not a spelling problem, so it must not be papered over. After that: types
    `kd_types.h` does not emit (`MeASEObject`, `McdErrorDescription`, `Mesh2GeometryType`),
    and C++ base-class splicing gaps (`super_Link`, `_vptr_CxSmallSort`).
-3. **`libMdtKea`** — the LCP solver, the hottest code, C++ with vtables. Layouts and
+4. **`libMdtKea`** — the LCP solver, the hottest code, C++ with vtables. Layouts and
    vtables are recovered (`src/MdtKea/keaMatrix.h`) but no object has been validated.
-4. **Replace, don't recover:** `libMcdConvexCreateHull` is qhull 2.6 (1998) — 186 KB,
+5. **Replace, don't recover:** `libMcdConvexCreateHull` is qhull 2.6 (1998) — 186 KB,
    load-time only, and open source. Swap in modern qhull. `MeAssetDB`/`MeXML`/
    `MeAssetFactory` (51 KB) is `.ka` XML parsing, not physics.
    `MeViewer2`/`MeApp` (74 KB) are never linked — skip entirely.

@@ -383,10 +383,15 @@ def main():
         w(f'/* {name}  ({sect}+0x{value:x}, {size} bytes) */')
         if note:
             w(f'/* read from object: {note} */')
+        # `const` only for .rodata. A .data static is writable by definition, and
+        # several of them are file-scope scratch: IxCylinderCylinder keeps its
+        # dot products there, and marking them const made ten assignments in
+        # CylCylIntersect fail to compile.
+        qual = 'const ' if sect == '.rodata' else ''
         if lit and size == 4:
-            w(f'static const float {c_name} = {lit};')
+            w(f'static {qual}float {c_name} = {lit};')
         elif lit:
-            w(f'static const float {c_name}[] = {lit};')
+            w(f'static {qual}float {c_name}[] = {lit};')
         else:
             w(f'/* TODO: {c_name} — tool could not render a literal */')
         w('')

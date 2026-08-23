@@ -381,6 +381,40 @@ def undefined_symbols(obj):
     return syms
 
 
+GHIDRA_IMAGE_BASE = 0x10000
+
+
+def ghidra_memory_map(obj):
+    """([(section, start, end)], external_block_base) as Ghidra lays a .o out.
+
+    Ghidra gives a relocatable object addresses it invents: the allocatable
+    sections consecutively from 0x10000 in section-header order, each aligned to
+    its own sh_addralign, then the synthetic EXTERNAL block at the next 0x1000
+    boundary.
+
+    That is a claim about someone else's tool, so it is checked rather than
+    trusted. MeXMLOutput settles it: .text is 0x405 bytes, and the dump's
+    `MeStreamWrite(&DAT_00010405,1,1,...)` writes one byte from 0x10405 —
+    offset 0 of .rodata.str1.1, whose first byte is '<'. The next two writes are
+    '>' at +2 and "</" at +0x12, which is what an XML writer emits."""
+    out = subprocess.run(['readelf', '-SW', obj], capture_output=True, text=True).stdout
+    addr, secs = GHIDRA_IMAGE_BASE, []
+    for line in out.splitlines():
+        m = re.match(r'\s*\[\s*\d+\]\s+(\S+)\s+(\S+)\s+[0-9a-f]+\s+[0-9a-f]+\s+'
+                     r'([0-9a-f]+)\s+[0-9a-f]+\s+(\S*)\s+\d+\s+\d+\s+(\d+)', line)
+        if not m:
+            continue
+        name, typ, size, flags, align = (m.group(1), m.group(2), int(m.group(3), 16),
+                                         m.group(4), int(m.group(5)))
+        if 'A' not in flags:
+            continue
+        align = max(align, 1)
+        addr = (addr + align - 1) // align * align
+        secs.append((name, typ, addr, addr + size))
+        addr += size
+    return secs, (addr + 0xfff) // 0x1000 * 0x1000
+
+
 def relocation_targets(obj, per_function=False):
     """{ghidra_name: {(real_symbol, addend), ...}} for relocated data references.
 
@@ -405,6 +439,7 @@ def relocation_targets(obj, per_function=False):
     if not und:
         return {}
     extents = function_extents(obj) if per_function else []
+    _secs, extbase = ghidra_memory_map(obj)
 
     out = subprocess.run(['readelf', '-rW', obj], capture_output=True, text=True).stdout
     cache, found = {}, {}
@@ -429,9 +464,13 @@ def relocation_targets(obj, per_function=False):
         if addend % 4:
             continue
         target = slot[sym] + addend // 4
-        if not 0 <= target < len(und):
+        if target < 0:
             continue
-        name = '_' + und[target]
+        # A slot past the last undefined symbol has no name to borrow, so Ghidra
+        # falls back to the address: `_DAT_0001100c`. The address is the block
+        # base plus four bytes a slot, which the memory map gives exactly.
+        name = ('_' + und[target] if target < len(und)
+                else '_DAT_%08x' % (extbase + 4 * target))
         if not per_function:
             found.setdefault(name, set()).add((sym, addend))
             continue
@@ -501,7 +540,62 @@ def extern_var_types(include_dir):
     return types
 
 
+DATA_REF = re.compile(r'(?<![\w])DAT_([0-9a-f]{8})\b')
+
+
+def materialise_data_refs(obj, text):
+    """Give `DAT_00010405` the bytes it names.
+
+    Ghidra falls back to an address when a data reference has no symbol, which
+    is most of the time for string literals: gcc puts them in .rodata.str1.1
+    with no symbol at all. The bytes are right there in the object, and
+    ghidra_memory_map() says which offset the address is, so this is a
+    transcription rather than a reconstruction:
+
+        MeStreamWrite(&DAT_00010405,1,1,op->stream);   ->   writes '<'
+
+    Only .rodata and .data are eligible, and only when the section carries no
+    relocations. A relocated word is a POINTER whose value exists solely in the
+    relocation record, and emitting the zero that sits in the section bytes
+    would look right and be null. Anything not covered is left undefined, so
+    the object keeps failing to compile, which is the honest outcome."""
+    addrs = sorted(set(int(a, 16) for a in DATA_REF.findall(text)))
+    if not addrs:
+        return '', 0
+    secs, _ext = ghidra_memory_map(obj)
+    relocated = set(re.findall(r"Relocation section '\.rel(\S+)'",
+                               subprocess.run(['readelf', '-rW', obj],
+                                              capture_output=True, text=True).stdout))
+    used, defines = {}, []
+    for addr in addrs:
+        for name, typ, lo, hi in secs:
+            if not lo <= addr < hi or typ != 'PROGBITS':
+                continue
+            if not (name.startswith('.rodata') or name.startswith('.data')):
+                continue
+            if name in relocated:
+                continue
+            used.setdefault(name, (lo, hi))
+            defines.append((addr, name, addr - lo))
+            break
+    if not defines:
+        return '', 0
+
+    out = ['/* ---- unnamed object data, read from the original sections ---- */']
+    for name, (lo, hi) in sorted(used.items()):
+        data = _section_bytes(obj, name)[:hi - lo]
+        c = 'kd_sec' + re.sub(r'\W', '_', name)
+        rows = ', '.join('0x%02x' % b for b in data)
+        out.append(f'/* {name}: {len(data)} bytes at 0x{lo:x} */')
+        out.append(f'static const unsigned char {c}[{max(len(data), 1)}] = {{ {rows} }};')
+    for addr, name, off in defines:
+        c = 'kd_sec' + re.sub(r'\W', '_', name)
+        out.append(f'#define DAT_{addr:08x} ({c}[0x{off:x}])')
+    return '\n'.join(out) + '\n\n', len(defines)
+
+
 def signature_of(body):
+
     """Extract the declarator text preceding the function's opening brace."""
     brace = body.find('\n{')
     if brace < 0:
@@ -699,6 +793,39 @@ def fix_pointer_as_float(line, diag, ctx):
 
 
 SUBFIELD = re.compile(r'\.\s*_(\d+)_(\d+)_')
+
+SCALAR_KEYWORDS = {
+    'int', 'char', 'short', 'long', 'signed', 'unsigned', 'float', 'double',
+    'void', 'uint', 'ushort', 'uchar', 'byte', 'sbyte', 'bool', 'size_t',
+    'longlong', 'ulonglong', 'longdouble', 'MeReal', 'MeI16', 'MeU32', 'MeI32',
+    'undefined', 'undefined1', 'undefined2', 'undefined4', 'undefined8',
+}
+ANY_CAST = re.compile(r'\(\s*((?:struct\s+)?[A-Za-z_]\w*)\s*\)')
+
+
+def fix_float_as_pointer(line, diag, ctx):
+    """`p->member = (McdGeometryID)(dy * 0.5)` — the mirror of the case above.
+
+    Ghidra typed a four-byte slot as a pointer and the original stored a float
+    in it, so the cast has nothing to convert: the bytes are already what the
+    original wrote. KD_FBITS takes them across without arithmetic, and the
+    pointer cast that follows is then an ordinary integer-to-pointer conversion.
+
+    Casts to a scalar keyword are skipped, because `(int)f` is a legal
+    conversion and rewriting it would replace a rounded value with a bit
+    pattern — the same mistake as dead end 6, pointing the other way."""
+    for m in ANY_CAST.finditer(line):
+        if m.group(1).replace('struct ', '') in SCALAR_KEYWORDS:
+            continue
+        end = scan_unary_forward(line, m.end())
+        if end is None or end <= m.end():
+            continue
+        operand = line[m.end():end].strip()
+        if not operand or operand.startswith('KD_FBITS'):
+            continue
+        return (line[:m.end()] + f'KD_FBITS({operand})' + line[end:])
+    return None
+
 SUBFIELD_WIDTH = {1: 'unsigned char', 2: 'unsigned short',
                   4: 'unsigned int', 8: 'unsigned long long'}
 
@@ -866,7 +993,7 @@ REPAIR_RULES = [
     (re.compile(r'pointer value used where a floating-point was expected'),
      fix_pointer_as_float),
     (re.compile(r'cannot convert to a pointer type'),
-     fix_pointer_as_float),
+     fix_float_as_pointer),
     (re.compile(r'request for member ' + Q + r' in something not a structure'),
      fix_subfield_access),
     (re.compile(r'expected expression before ‘\.’ token|'
@@ -1132,6 +1259,9 @@ def main():
         defs.append(f'/* ---- {name} (exported as {newname}, asm label "{symbol}") ---- */\n'
                     f'{body}\n')
 
+    body_text = '\n'.join(defs)
+    data_block, n_data = materialise_data_refs(args.object, body_text)
+
     with open(args.output, 'w') as f:
         f.write('/* Generated by karma-decomp/tools/ghidra_clean.py — do not edit by hand.\n'
                 f' * source object: {args.object}\n'
@@ -1141,6 +1271,8 @@ def main():
         f.write('#include "kd_types.h"\n')
         f.write('#include <stdbool.h>\n')
         f.write('#include <stdarg.h>\n\n')
+        if data_block:
+            f.write(data_block)
         if args.prelude:
             f.write('/* ---- hand-written prelude ---- */\n')
             f.write(open(args.prelude).read())
@@ -1156,7 +1288,7 @@ def main():
             f.write('/* ---- exported data symbols (need the declarations above) ---- */\n')
             f.write(open(args.exports).read())
             f.write('\n')
-        f.write('\n'.join(defs))
+        f.write(body_text)
 
     if n_inline_dropped:
         print(f'  {n_inline_dropped} header-inline function(s) dropped')
@@ -1164,6 +1296,8 @@ def main():
         print(f'  {n_vararg_fns} variadic function(s) given a real va_list')
     if n_alloca_fns:
         print(f'  {n_alloca_fns} function(s) needed an alloca frame')
+    if n_data:
+        print(f'  {n_data} unnamed data reference(s) read from the object')
     if args.cflag:
         ctx = RepairContext(args.object, fieldmap, args.metoolkit_include)
         n_edits, left, _log = repair_loop(args.output, args.cc, args.cflag, ctx)

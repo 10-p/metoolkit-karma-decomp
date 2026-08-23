@@ -235,6 +235,24 @@ typedef int code();
 ------------------------------------------------------------------------- */
 /* see kd_types.h */
 
+/* Reinterpret a float's four bytes as an integer, for the case where Ghidra
+   typed a memory slot as a pointer and the original stored a float in it:
+
+       pMVar4[1].prev = (McdGeometryID)(dy * 0.5);
+
+   C rejects converting a float to a pointer, and there is nothing to convert —
+   the bytes are already what the original wrote. Going through the integer
+   preserves them exactly, and the pointer cast that follows is then an ordinary
+   integer-to-pointer conversion, which is well defined on every 32-bit-pointer
+   target this project builds for. */
+static __inline unsigned int KD_FBITS(double f)
+{
+    float v = (float)f;
+    unsigned int u;
+    __builtin_memcpy(&u, &v, sizeof u);
+    return u;
+}
+
 /* Call a C++-mangled Karma symbol from C without a C++ compiler. */
 #define KD_MANGLED(sym) __asm__(sym)
 

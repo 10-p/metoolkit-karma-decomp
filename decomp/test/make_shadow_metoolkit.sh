@@ -28,25 +28,27 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 # registration point instead covers the entire collision matrix with one rename.
 FNS=(McdFrameworkSetInteractions)
 
-# Recovered functions to compare against, parsed out of kd_shadow.c so the two
-# can never drift. These are NOT renamed in the shipped archives; the harness
-# identifies them by address at registration time.
-# Candidates come from the shadow list's own history; what actually gets
-# compared is decided below by which objects are present.
-RECFNS=(McdBoxBoxIntersect McdBoxSphereIntersect McdSpherePlaneIntersect
-        McdSphereSphereIntersect McdCylinderPlaneIntersect
-        McdSphereTriangleListIntersect McdSphylSphylIntersect
-        McdSphylTriangleListIntersect McdSphylSphereIntersect
-        McdSphylBoxIntersect McdSphylPlaneIntersect McdSphylCylinderIntersect)
-echo "interposing: ${FNS[*]}"
-echo "comparing ${#RECFNS[@]} recovered function(s): ${RECFNS[*]}"
-
 rm -rf "$OUT"; mkdir -p "$OUT/$SUBDIR"
 ln -s "$(cd "$SRC" && pwd)/include" "$OUT/include"
 cp "$SRC/$SUBDIR"/*.a "$OUT/$SUBDIR/"
 
+# Which functions can be compared is DERIVED, not listed. A hand-kept list goes
+# stale the moment an object is recovered or quarantined, and it silently
+# under-tests: IxConvexPrimitives compiled for a week before anyone noticed it
+# was not in the list, so the vehicle path was never exercised.
+#
+# An interaction function is one Karma installs in the collision matrix, and
+# Karma says which those are itself: `McdFooBarIntersect` is installed by
+# `McdFooBarRegisterInteraction`, so the presence of the sibling registrar in
+# the shipped archives is the test. That also rules out the same-shaped names
+# that are not interactions — McdIntersect is the public dispatcher,
+# McdPlaneIntersect is a geometry helper, and neither has a registrar.
+ALLSYMS=$(mktemp)
+nm --defined-only "$OUT/$SUBDIR"/*.a 2>/dev/null | awk '$2 ~ /^[TWD]$/ {print $3}' \
+    | sort -u > "$ALLSYMS"
+
 # 1. Rename the shipped definitions to orig_*.
-REDEF_ORIG=$(mktemp); REDEF_REC=$(mktemp)
+REDEF_ORIG=$(mktemp)
 for f in "${FNS[@]}"; do echo "$f orig_$f" >> "$REDEF_ORIG"; done
 for a in "$OUT/$SUBDIR"/*.a; do
     tmp=$(mktemp -d); (cd "$tmp" && ar x "$a")
@@ -62,45 +64,65 @@ for a in "$OUT/$SUBDIR"/*.a; do
     rm -rf "$tmp"
 done
 
-# 2. Recovered objects, with the same names renamed to rec_*.
+# 2. Recovered objects, with every defined symbol renamed to rec_*.
 STAGE=$(mktemp -d)
-PRESENT=()
+ENTRIES=$(mktemp)
 n=0
 for o in "$RECOVERED"/*.o; do
     [ -e "$o" ] || continue
-    for f in "${RECFNS[@]}"; do
-        if nm --defined-only "$o" 2>/dev/null | grep -qE "^[0-9a-f]+ T $f\$"; then
-            dst="$STAGE/rec_$(basename "$o")"
-            cp "$o" "$dst"
-            # Prefix EVERY symbol the object defines, not just the one under
-            # test. Otherwise its siblings (McdBoxBoxSafeTime,
-            # McdBoxBoxRegisterInteraction, ...) collide with the shipped
-            # archive's definitions and the linker silently picks one of the
-            # two — which would mean testing a build that is half recovered.
-            # Undefined symbols are deliberately left alone, so the object's
-            # imports still resolve to the originals.
-            nm --defined-only "$dst" | awk '$2 ~ /^[TDBRWV]$/ {print $3, "rec_" $3}' > "$REDEF_REC"
-            [ -s "$REDEF_REC" ] && objcopy --redefine-syms="$REDEF_REC" "$dst"
-            for g in "${RECFNS[@]}"; do
-                nm --defined-only "$o" 2>/dev/null | grep -qE "^[0-9a-f]+ T $g\$" && PRESENT+=("$g")
-            done
-            n=$((n+1)); break
-        fi
+    # Interaction functions this object defines, as (id, symbol) pairs. The
+    # symbol is not always the id: C++ ones are mangled, and the recovered
+    # object must be linked against the mangled spelling or it resolves to
+    # nothing. McdSphylConvexMeshIntersect — the vehicle path — is one of these.
+    found=""
+    while read -r sym; do
+        [ -n "$sym" ] || continue
+        id=$(c++filt "$sym" | sed 's/(.*//')
+        case "$id" in
+            Mcd*Intersect) ;;
+            *) continue ;;
+        esac
+        grep -qx "${id%Intersect}RegisterInteraction" "$ALLSYMS" || continue
+        found="$found $id:$sym"
+    done <<< "$(nm --defined-only "$o" 2>/dev/null | awk '$2=="T"{print $3}')"
+    [ -n "$found" ] || continue
+
+    dst="$STAGE/rec_$(basename "$o")"
+    cp "$o" "$dst"
+    # Prefix EVERY symbol the object defines, not just the one under
+    # test. Otherwise its siblings (McdBoxBoxSafeTime,
+    # McdBoxBoxRegisterInteraction, ...) collide with the shipped
+    # archive's definitions and the linker silently picks one of the
+    # two — which would mean testing a build that is half recovered.
+    # Undefined symbols are deliberately left alone, so the object's
+    # imports still resolve to the originals.
+    REDEF_REC=$(mktemp)
+    nm --defined-only "$dst" | awk '$2 ~ /^[TDBRWV]$/ {print $3, "rec_" $3}' > "$REDEF_REC"
+    [ -s "$REDEF_REC" ] && objcopy --redefine-syms="$REDEF_REC" "$dst"
+    rm -f "$REDEF_REC"
+    for pair in $found; do
+        echo "${pair%%:*} ${pair#*:}" >> "$ENTRIES"
     done
+    n=$((n+1))
 done
 echo "staged $n recovered object(s)"
 
-# 3. Emit the list of functions we can ACTUALLY compare. Hardcoding it means a
-#    quarantined object leaves a dangling rec_* reference and the whole engine
-#    fails to link.
+# 3. Emit the list of functions we can ACTUALLY compare. Deriving it means a
+#    quarantined object cannot leave a dangling rec_* reference at link time,
+#    and a newly recovered one is picked up with no edit anywhere.
 LIST="$HERE/kd_recovered_list.h"
 {
   echo "/* Generated by make_shadow_metoolkit.sh -- do not edit. */"
+  echo "/* X(id, original symbol, recovered symbol) */"
   echo "#define KD_RECOVERED_LIST(X) \\"
-  for f in "${PRESENT[@]}"; do echo "    X($f) \\"; done
+  sort -u "$ENTRIES" | while read -r id sym; do
+      echo "    X($id, \"$sym\", \"rec_$sym\") \\"
+  done
   echo ""
 } > "$LIST"
-echo "comparing ${#PRESENT[@]} function(s): ${PRESENT[*]}"
+echo "comparing $(sort -u "$ENTRIES" | wc -l) function(s):" \
+     "$(sort -u "$ENTRIES" | awk '{print $1}' | tr '\n' ' ')"
+rm -f "$ENTRIES" "$ALLSYMS"
 
 # 4. The shadow itself.
 INC="$SRC/include"
@@ -110,7 +132,7 @@ gcc -m32 -O2 -fno-pic -std=gnu99 -w -DLINUX -c -o "$STAGE/kd_shadow.o" "$HERE/kd
 
 # One archive, linked inside the engine's existing --start-group.
 ar rcs "$OUT/$SUBDIR/libKarmaShadow.a" "$STAGE"/*.o
-rm -rf "$STAGE" "$REDEF_ORIG" "$REDEF_REC"
+rm -rf "$STAGE" "$REDEF_ORIG"
 
 echo "shadow metoolkit ready: $OUT"
 echo "  configure the engine with -DMETOOLKIT_DIR=$OUT"

@@ -114,6 +114,9 @@ ANON_STORE = re.compile(
     r'\*\(\s*anon_\w+\s*\*\)(\([^;]*?\))\s*=\s*([A-Za-z_][\w.\->\[\]]*)')
 
 
+ANON_DECL = re.compile(r'\banon_(?:union|struct)_\w*?_for_(\w+)\b')
+
+
 def resolve_anon_types(body):
     """Replace Ghidra's invented anonymous-aggregate type names.
 
@@ -127,6 +130,9 @@ def resolve_anon_types(body):
     body = ANON_CAST.sub(lambda m: f'{m.group(1)} = *(__typeof__({m.group(1)}) *)', body)
     body = ANON_STORE.sub(
         lambda m: f'*(__typeof__({m.group(2)}) *){m.group(1)} = {m.group(2)}', body)
+    # Anything left — a local DECLARATION of the anon type, which __typeof__ of
+    # the other side cannot reach — becomes the exact typedef kd_types.h emits.
+    body = ANON_DECL.sub(lambda m: f'kd_anon_{m.group(1)}', body)
     return body
 
 
@@ -189,8 +195,24 @@ def resolve_field_names(body, fieldmap):
     def sub(m):
         var, off = m.group(1), int(m.group(2), 16)
         t = var_type.get(var)
-        name = fieldmap.get(t, {}).get(str(off)) if t else None
-        return f'{var}->{name}' if name else m.group(0)
+        if not t:
+            return m.group(0)
+        # DWARF keys the layout on the struct TAG (_McdContact) while the
+        # declaration uses the typedef (McdContact), so try both spellings.
+        name = (fieldmap.get(t, {}).get(str(off))
+                or fieldmap.get('_' + t, {}).get(str(off)))
+        if name:
+            return f'{var}->{name}'
+        known = t in fieldmap or ('_' + t) in fieldmap
+        if known:
+            # No member at this offset: Ghidra is touching PADDING. McdContact
+            # has `short dims` at 28 and a 4-aligned union at 32, so field_0x1e
+            # is the two bytes between them — the original copies them because
+            # the compiler moved the struct in wider chunks. Byte arithmetic
+            # says exactly that, and stays correct where a member name cannot
+            # exist. Written as a char lvalue so a surrounding `&` still works.
+            return f'(*(char *)((char *)({var}) + 0x{off:x}))'
+        return m.group(0)
 
     return FIELD_REF.sub(sub, body)
 

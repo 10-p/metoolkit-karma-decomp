@@ -1,4 +1,12 @@
 {
+ "Attribute": {
+  "0": "attr",
+  "4": "value"
+ },
+ "AttributeNode": {
+  "0": "current",
+  "4": "next"
+ },
  "CxSmallSort": {
   "0": "vptr",
   "4": "mNAxes",
@@ -45,11 +53,439 @@
  "LinkList": {
   "0": "mRoot"
  },
+ "McdAggregate": {
+  "0": "m_g",
+  "16": "elementTable",
+  "20": "elementCount",
+  "24": "elementCountMax"
+ },
+ "McdAggregateElement": {
+  "0": "mRelTM",
+  "64": "mGeometry"
+ },
+ "McdBatchContactPool": {
+  "0": "contacts",
+  "4": "contactCount",
+  "8": "contactMaxCount"
+ },
+ "McdBatchContext": {
+  "0": "state",
+  "4": "table",
+  "8": "frame",
+  "12": "typeCount",
+  "16": "tmArray",
+  "20": "tmTrack",
+  "24": "tmMaxCount",
+  "28": "nextTM",
+  "32": "entryArray",
+  "36": "maxEntryCount",
+  "40": "nextEntry",
+  "44": "pairData",
+  "48": "pairDataMaxCount",
+  "52": "nextPairData",
+  "56": "pools",
+  "60": "nextPool",
+  "64": "poolMaxCount",
+  "68": "nextFlattenPair",
+  "72": "nextSingleUnflattenPair",
+  "76": "nextAggregateUnflattenPair"
+ },
+ "McdBatchEntry": {
+  "0": "geometryData1",
+  "24": "geometryData2",
+  "48": "normal",
+  "60": "touch",
+  "64": "contactCount",
+  "68": "contacts",
+  "72": "ins1",
+  "76": "ins2",
+  "80": "pool",
+  "84": "flags",
+  "88": "next",
+  "92": "pairData"
+ },
+ "McdBatchGeometryData": {
+  "0": "min",
+  "4": "max",
+  "8": "eps",
+  "12": "tm",
+  "16": "geometry",
+  "20": "type"
+ },
+ "McdBatchPairData": {
+  "0": "pair",
+  "4": "start",
+  "8": "entries",
+  "12": "done",
+  "16": "status"
+ },
+ "McdBox": {
+  "0": "m_g",
+  "16": "mR",
+  "28": "mRadius"
+ },
+ "McdCnvEdge": {
+  "0": "invLength",
+  "4": "fromVert",
+  "8": "toVert",
+  "12": "rightFace",
+  "16": "leftFace"
+ },
+ "McdCnvFace": {
+  "0": "normal",
+  "12": "firstEdge"
+ },
+ "McdCnvVertex": {
+  "0": "position",
+  "12": "firstEdgeIndex"
+ },
  "McdContactList": {
   "0": "link",
   "4": "head",
   "8": "free",
   "12": "ct"
+ },
+ "McdConvexHull": {
+  "0": "vertex",
+  "4": "face",
+  "8": "edge",
+  "12": "edgeIndex",
+  "16": "numVertex",
+  "20": "numFace",
+  "24": "numEdge"
+ },
+ "McdConvexMesh": {
+  "0": "m_g",
+  "16": "mHull",
+  "44": "mFatness",
+  "48": "mBoundingSphereRadius",
+  "52": "mBoundingSphereCenter"
+ },
+ "McdCullingTable": {
+  "0": "size",
+  "4": "arraySize",
+  "8": "array"
+ },
+ "McdCylinder": {
+  "0": "m_g",
+  "16": "mR",
+  "20": "mRz",
+  "24": "mSphereRadius"
+ },
+ "McdErrorDescription": {
+  "0": "m_errNum",
+  "2": "m_errorLevel",
+  "4": "m_errorCount",
+  "8": "m_description"
+ },
+ "McdGeomMan": {
+  "0": "fwk",
+  "4": "name2geom",
+  "8": "geom2name",
+  "12": "nullGeom"
+ },
+ "McdGeometryVTable": {
+  "0": "destroy",
+  "4": "getAABB",
+  "8": "getBSphere",
+  "12": "maximumPoint",
+  "16": "getMassProperties",
+  "20": "getTypeName",
+  "24": "debugDraw",
+  "28": "lineSegIntersect",
+  "32": "name",
+  "36": "registered"
+ },
+ "McdModelPairManager": {
+  "0": "helloList",
+  "20": "goodbyeList",
+  "40": "hash",
+  "44": "pairPool",
+  "48": "linkPool",
+  "52": "poolFullHandler"
+ },
+ "McdModelPairManagerHash": {
+  "0": "bucket",
+  "4": "size",
+  "8": "bucketCount"
+ },
+ "McdModelPairManagerLink": {
+  "0": "phaseNext",
+  "4": "phasePrev",
+  "8": "key",
+  "12": "pair",
+  "16": "next"
+ },
+ "McdNull": {
+  "0": "m_g",
+  "16": "mR",
+  "28": "mRadius"
+ },
+ "McdPlane": {
+  "0": "m_g"
+ },
+ "McdSpaceModelIterator": {
+  "0": "it",
+  "4": "count"
+ },
+ "McdSpacePairIterator": {
+  "0": "count",
+  "4": "ptr"
+ },
+ "McdSphere": {
+  "0": "m_g",
+  "16": "mRadius"
+ },
+ "McdSphyl": {
+  "0": "m_g",
+  "16": "mRadius",
+  "20": "mHalfHeight"
+ },
+ "McdTermActionLink": {
+  "0": "action",
+  "4": "next"
+ },
+ "McdTriangleList": {
+  "0": "m_g",
+  "16": "center",
+  "28": "radius",
+  "40": "triangleMaxCount",
+  "44": "userData",
+  "48": "triangleListGenerator",
+  "52": "list"
+ },
+ "MdtAngular3": {
+  "0": "head",
+  "352": "bEnableRotation",
+  "356": "stiffness",
+  "360": "damping"
+ },
+ "MdtBSJoint": {
+  "0": "head"
+ },
+ "MdtBaseConstraint": {
+  "0": "head"
+ },
+ "MdtBclContactParams": {
+  "0": "type",
+  "4": "model1",
+  "8": "model2",
+  "12": "options",
+  "16": "restitution",
+  "20": "velThreshold",
+  "24": "softness",
+  "28": "max_adhesive_force",
+  "32": "friction1",
+  "36": "frictioncoeff1",
+  "40": "slip1",
+  "44": "friction2",
+  "48": "frictioncoeff2",
+  "52": "slip2",
+  "56": "slide1",
+  "60": "slide2",
+  "64": "pad"
+ },
+ "MdtBclLimit": {
+  "0": "bLimited",
+  "4": "bCalculatePosition",
+  "8": "bPositionInitialised",
+  "12": "bRelaxingToLimit",
+  "16": "overshoot",
+  "20": "position",
+  "24": "position_lock",
+  "28": "is_locked",
+  "32": "previous_position",
+  "36": "offset",
+  "40": "velocity",
+  "44": "damping_thresh",
+  "48": "limit",
+  "80": "bPowered",
+  "84": "desired_vel",
+  "88": "fmax"
+ },
+ "MdtBclSingleLimit": {
+  "0": "stop",
+  "4": "stiffness",
+  "8": "damping",
+  "12": "restitution"
+ },
+ "MdtBclSolverParameters": {
+  "0": "stepsize",
+  "4": "epsilon",
+  "8": "gamma"
+ },
+ "MdtBody": {
+  "0": "keaBody",
+  "240": "comTM",
+  "304": "bodyTM",
+  "368": "impulseLinear",
+  "384": "impulseAngular",
+  "400": "com",
+  "412": "useCom",
+  "416": "impulseAdded",
+  "420": "world",
+  "424": "sortKey",
+  "428": "worldNode",
+  "452": "worldEnabledNode",
+  "476": "userData",
+  "480": "partitionIndex",
+  "484": "arrayIdWorld",
+  "488": "arrayIdPartition",
+  "492": "flags",
+  "496": "mass",
+  "500": "damping",
+  "504": "angularDamping",
+  "508": "constraintDict",
+  "560": "enabledTime",
+  "564": "model",
+  "568": "safeTime",
+  "572": "LODpartIndex"
+ },
+ "MdtCarWheel": {
+  "0": "head",
+  "352": "skp",
+  "356": "skd",
+  "360": "svel",
+  "364": "sfmax",
+  "368": "hvel",
+  "372": "hfmax",
+  "376": "slock",
+  "380": "shi",
+  "384": "slo",
+  "388": "sref",
+  "392": "slsoft"
+ },
+ "MdtConeLimit": {
+  "0": "head",
+  "352": "cone_half_angle",
+  "356": "cos_cone_half_angle",
+  "360": "stiffness",
+  "364": "damping"
+ },
+ "MdtConstraintHeader": {
+  "0": "world",
+  "4": "sortKey",
+  "8": "worldNode",
+  "32": "bodyNode",
+  "80": "userData",
+  "84": "mdtbody",
+  "92": "flags",
+  "96": "bclFunction",
+  "100": "maxRows",
+  "104": "resultForce",
+  "136": "resultTorque",
+  "168": "setBodyFunc",
+  "172": "setAxisFunc",
+  "176": "tag",
+  "180": "bodyindex",
+  "188": "ref1",
+  "252": "ref2",
+  "316": "worldLinVel",
+  "328": "worldAngVel",
+  "340": "LODpartIndex",
+  "344": "rowBudget",
+  "348": "importance"
+ },
+ "MdtContact": {
+  "0": "head",
+  "352": "cpos",
+  "364": "normal",
+  "376": "penetration",
+  "380": "direction",
+  "392": "worldVel",
+  "404": "params",
+  "476": "nextContact",
+  "480": "prevContact",
+  "484": "contactGroup",
+  "488": "importance"
+ },
+ "MdtContactGroup": {
+  "0": "head",
+  "352": "count",
+  "356": "first",
+  "360": "last",
+  "364": "swapped",
+  "368": "normalForce",
+  "372": "generator"
+ },
+ "MdtFixedPath": {
+  "0": "head",
+  "352": "pos1",
+  "364": "pos2",
+  "376": "vel1",
+  "388": "vel2"
+ },
+ "MdtHinge": {
+  "0": "head",
+  "352": "limit"
+ },
+ "MdtKeaBody": {
+  "0": "tag",
+  "4": "len",
+  "8": "invmass",
+  "12": "flags",
+  "16": "force",
+  "32": "torque",
+  "48": "invI0",
+  "64": "invI1",
+  "80": "invI2",
+  "96": "I0",
+  "112": "I1",
+  "128": "I2",
+  "144": "vel",
+  "160": "velrot",
+  "176": "qrot",
+  "192": "accel",
+  "208": "accelrot",
+  "224": "fastSpinAxis"
+ },
+ "MdtKeaConstraints": {
+  "0": "num_partitions",
+  "4": "max_partitions",
+  "8": "num_rows_exc_padding_partition",
+  "12": "num_rows_inc_padding_partition",
+  "16": "num_constraints_partition",
+  "20": "num_rows_inc_padding",
+  "24": "num_rows_exc_padding",
+  "28": "max_rows_inc_padding",
+  "32": "max_rows_exc_padding",
+  "36": "num_constraints",
+  "40": "max_constraints",
+  "44": "Jstore",
+  "48": "xi",
+  "52": "c",
+  "56": "lo",
+  "60": "hi",
+  "64": "lambda",
+  "68": "force",
+  "72": "slipfactor",
+  "76": "xgamma",
+  "80": "Jsize",
+  "84": "Jofs",
+  "88": "Jbody"
+ },
+ "MdtKeaDebugDataRequest": {
+  "0": "writeKeaInputData",
+  "4": "writeKeaInputDataFilename",
+  "8": "readKeaInputData",
+  "12": "readKeaInputDataFilename",
+  "16": "writeKeaInterData",
+  "20": "writeKeaInterDataFilename",
+  "24": "writeKeaOutputData",
+  "28": "writeKeaOutputDataFilename",
+  "32": "frame",
+  "36": "badFrame",
+  "40": "badPartition"
+ },
+ "MdtKeaForce": {
+  "0": "force",
+  "12": "pad0",
+  "16": "torque",
+  "28": "pad1"
+ },
+ "MdtKeaForcePair": {
+  "0": "primary_body",
+  "32": "secondary_body"
  },
  "MdtKeaInputRowFactors": {
   "0": "xi",
@@ -59,12 +495,512 @@
   "16": "slipfactor",
   "20": "xgamma"
  },
+ "MdtKeaInverseMassMatrix": {
+  "0": "invI0",
+  "12": "invmass",
+  "16": "invI1",
+  "28": "pad1",
+  "32": "invI2",
+  "44": "pad2"
+ },
+ "MdtKeaJBlock": {
+  "0": "col"
+ },
+ "MdtKeaParameters": {
+  "0": "stepsize",
+  "4": "epsilon",
+  "8": "gamma",
+  "12": "max_iterations",
+  "16": "velocityZeroTol",
+  "20": "memory_pool",
+  "24": "memory_pool_size",
+  "28": "cpu_resources",
+  "32": "debug"
+ },
+ "MdtKeaTransformation": {
+  "0": "R0",
+  "16": "R1",
+  "32": "R2",
+  "48": "pos"
+ },
+ "MdtKeaVelocity": {
+  "0": "velocity",
+  "12": "pad0",
+  "16": "angVelocity",
+  "28": "pad1"
+ },
+ "MdtLODParams": {
+  "0": "frictionRatio",
+  "4": "zeroRowBonus",
+  "8": "toWorldBonus",
+  "12": "rowCountBias",
+  "16": "penetrationBias",
+  "20": "normVelBias",
+  "24": "nonAutoBonus"
+ },
  "MdtLODPartitionData": {
   "0": "rowCount",
   "4": "bodyArray",
   "8": "bodyCount",
   "12": "conArray",
   "16": "conCount"
+ },
+ "MdtLinear1": {
+  "0": "head",
+  "352": "pos1",
+  "364": "pos2",
+  "376": "displacement"
+ },
+ "MdtLinear2": {
+  "0": "head",
+  "352": "pos1",
+  "364": "pos2",
+  "376": "direction",
+  "388": "vec1",
+  "400": "vec2"
+ },
+ "MdtPartitionInfo": {
+  "0": "rowCount",
+  "4": "contactCount",
+  "8": "jointCount"
+ },
+ "MdtPartitionOutput": {
+  "0": "constraints",
+  "4": "constraintsStart",
+  "8": "constraintsSize",
+  "12": "totalConstraints",
+  "16": "maxConstraints",
+  "20": "bodies",
+  "24": "bodiesStart",
+  "28": "bodiesSize",
+  "32": "totalBodies",
+  "36": "maxBodies",
+  "40": "info",
+  "44": "nPartitions",
+  "48": "maxPartitions",
+  "52": "overallInfo"
+ },
+ "MdtPartitionParams": {
+  "0": "autoDisable",
+  "4": "vel_thresh",
+  "8": "velrot_thresh",
+  "12": "acc_thresh",
+  "16": "accrot_thresh",
+  "20": "alive_time_thresh",
+  "24": "maxMatrixSize",
+  "28": "lodParams",
+  "56": "debugOptions"
+ },
+ "MdtPrismatic": {
+  "0": "head",
+  "352": "limit"
+ },
+ "MdtRPROJoint": {
+  "0": "head",
+  "352": "q1",
+  "368": "use_q1",
+  "372": "q2",
+  "388": "use_q2",
+  "392": "p_rel",
+  "408": "v_rel",
+  "420": "q_rel",
+  "436": "omega",
+  "448": "angular_fmax",
+  "460": "linear_fmax"
+ },
+ "MdtSkeletal": {
+  "0": "head",
+  "352": "combinedLimits",
+  "356": "coneOption",
+  "360": "twistOption",
+  "364": "cos_half_twist_limit_angle",
+  "368": "cos_half_cone_limit_angle_1",
+  "372": "cos_half_cone_limit_angle_2",
+  "376": "twist_stiffness",
+  "380": "twist_damping",
+  "384": "cone_stiffness",
+  "388": "cone_damping"
+ },
+ "MdtSpring": {
+  "0": "head",
+  "352": "pos1",
+  "364": "pos2",
+  "376": "limit"
+ },
+ "MdtSpring6": {
+  "0": "head",
+  "352": "linearStiffness",
+  "364": "linearDamping",
+  "376": "angularStiffness",
+  "388": "angularDamping",
+  "400": "worldLinearVel",
+  "412": "worldAngularVel"
+ },
+ "MdtUniversal": {
+  "0": "head"
+ },
+ "MdtUserConstraint": {
+  "0": "head",
+  "352": "userConstraint"
+ },
+ "MdtWorld": {
+  "0": "bodyDict",
+  "52": "constraintDict",
+  "104": "enabledBodyDict",
+  "156": "keaPool",
+  "180": "maxBodies",
+  "184": "nBodies",
+  "188": "nEnabledBodies",
+  "192": "bodyPool",
+  "220": "keaTMChunk",
+  "244": "maxConstraints",
+  "248": "nEnabledConstraints",
+  "252": "constraintPool",
+  "280": "nodePool",
+  "308": "keaConstraintsChunk",
+  "332": "partOutChunk",
+  "356": "params",
+  "392": "constantGamma",
+  "396": "minSafeTime",
+  "400": "partitionParams",
+  "460": "bodyEnableCallback",
+  "464": "bodyDisableCallback",
+  "468": "contactGroupDestroyCallback",
+  "472": "toolkitVersionString",
+  "476": "keaParams",
+  "552": "simErrorCallback",
+  "556": "checkSim",
+  "560": "simErrorUserData"
+ },
+ "MdtWorldParams": {
+  "0": "gravity",
+  "16": "matrixSizeLog",
+  "20": "matrixSizeLogSize",
+  "24": "lengthScale",
+  "28": "massScale",
+  "32": "defaultDensity"
+ },
+ "MeAIGeomIt": {
+  "0": "hashIt"
+ },
+ "MeAIJointIt": {
+  "0": "hashIt"
+ },
+ "MeAIModelIt": {
+  "0": "hashIt"
+ },
+ "MeASEFace": {
+  "0": "vertexId",
+  "12": "normal",
+  "24": "vNormal",
+  "60": "map",
+  "84": "materialId",
+  "88": "subMaterialId"
+ },
+ "MeASEMaterial": {
+  "0": "numSubs",
+  "4": "subMaterials"
+ },
+ "MeASEMaterialStore": {
+  "0": "numMaterials",
+  "4": "materials"
+ },
+ "MeASEObject": {
+  "0": "isLoaded",
+  "4": "name",
+  "260": "numVerts",
+  "264": "numFaces",
+  "268": "numUvs",
+  "272": "verts",
+  "276": "faces",
+  "280": "uvs",
+  "284": "matStore",
+  "288": "nextObject"
+ },
+ "MeASESubMaterial": {
+  "0": "type",
+  "4": "ambient",
+  "20": "diffuse",
+  "36": "specular",
+  "52": "texFilename"
+ },
+ "MeASEUV": {
+  "0": "u",
+  "4": "v"
+ },
+ "MeAssetDB": {
+  "0": "nilAsset",
+  "4": "assetCount"
+ },
+ "MeAssetDBXMLInput": {
+  "0": "db",
+  "4": "IDPool"
+ },
+ "MeAssetDBXMLOutput": {
+  "0": "db",
+  "4": "fileHeader"
+ },
+ "MeAssetFactory": {
+  "0": "gm",
+  "4": "geometryPostCreateCB",
+  "8": "geometryPostCreateCBUserdata",
+  "12": "modelCreateFunc",
+  "16": "modelPostCreateCB",
+  "20": "modelPostCreateCBUserdata",
+  "24": "jointCreateFunc",
+  "28": "jointPostCreateCB",
+  "32": "jointPostCreateCBUserdata"
+ },
+ "MeAssetInstance": {
+  "0": "af",
+  "4": "world",
+  "8": "space",
+  "12": "bridge",
+  "16": "asset",
+  "20": "nameToGeometry",
+  "24": "nameToModel",
+  "28": "nameToJoint",
+  "32": "owner",
+  "36": "userdata"
+ },
+ "MeChunk": {
+  "0": "memBase",
+  "4": "memSize",
+  "8": "maxUsed",
+  "12": "alignment",
+  "16": "mode",
+  "20": "isInUse"
+ },
+ "MeCommandLineOptions": {
+  "0": "m_argc",
+  "4": "p_argv"
+ },
+ "MeDebugDrawAPIStruct": {
+  "0": "line"
+ },
+ "MeDict": {
+  "0": "nilnode",
+  "24": "nodecount",
+  "28": "maxcount",
+  "32": "compare",
+  "36": "allocnode",
+  "40": "freenode",
+  "44": "context",
+  "48": "dupes"
+ },
+ "MeDictLoad": {
+  "0": "dictptr",
+  "4": "nilnode"
+ },
+ "MeDictNode": {
+  "0": "left",
+  "4": "right",
+  "8": "parent",
+  "12": "color",
+  "16": "key",
+  "20": "data"
+ },
+ "MeFAsset": {
+  "0": "name",
+  "4": "db",
+  "8": "nilGeometry",
+  "12": "nilModel",
+  "16": "nilPart",
+  "20": "nilJoint",
+  "24": "nameToGeometry",
+  "28": "nameToModel",
+  "32": "nameToPart",
+  "36": "nameToJoint",
+  "40": "graphicHint",
+  "44": "refPart",
+  "48": "disabledColArray",
+  "52": "disabledColIndexPool",
+  "56": "id",
+  "60": "graphicScale",
+  "64": "geomCount",
+  "68": "modelCount",
+  "72": "jointCount",
+  "76": "partCount",
+  "80": "maxParts",
+  "84": "massScale",
+  "88": "lengthScale"
+ },
+ "MeFAssetIt": {
+  "0": "node"
+ },
+ "MeFAssetNode": {
+  "0": "prev",
+  "4": "current",
+  "8": "next"
+ },
+ "MeFAssetPart": {
+  "0": "id",
+  "4": "asset",
+  "8": "model",
+  "12": "graphicHint",
+  "16": "parent",
+  "20": "tm",
+  "84": "graphicScale",
+  "88": "graphicOffset",
+  "100": "index"
+ },
+ "MeFAssetPartIt": {
+  "0": "node"
+ },
+ "MeFAssetPartNode": {
+  "0": "prev",
+  "4": "current",
+  "8": "next"
+ },
+ "MeFGeometry": {
+  "0": "id",
+  "4": "asset",
+  "8": "nilPrimitive",
+  "12": "graphicHint",
+  "16": "graphicScale",
+  "20": "graphicOffset",
+  "32": "primCount"
+ },
+ "MeFGeometryIt": {
+  "0": "node"
+ },
+ "MeFGeometryNode": {
+  "0": "prev",
+  "4": "current",
+  "8": "next"
+ },
+ "MeFJoint": {
+  "0": "id",
+  "4": "part",
+  "12": "asset",
+  "16": "type",
+  "20": "pos",
+  "44": "pax",
+  "68": "oax",
+  "92": "stop",
+  "104": "stiff",
+  "128": "damp",
+  "152": "bLimited",
+  "156": "bMotorized",
+  "160": "strength",
+  "184": "desVel",
+  "192": "special_f",
+  "196": "special_i",
+  "204": "special_b"
+ },
+ "MeFJointIt": {
+  "0": "node"
+ },
+ "MeFJointNode": {
+  "0": "prev",
+  "4": "current",
+  "8": "next"
+ },
+ "MeFModel": {
+  "0": "id",
+  "4": "type",
+  "8": "asset",
+  "12": "geometry",
+  "16": "mass_offset",
+  "28": "mass",
+  "32": "density",
+  "36": "inertia",
+  "60": "linearDamp",
+  "64": "angularDamp",
+  "68": "fastSpin",
+  "80": "useFastSpin"
+ },
+ "MeFModelIt": {
+  "0": "node"
+ },
+ "MeFModelNode": {
+  "0": "prev",
+  "4": "current",
+  "8": "next"
+ },
+ "MeFPrimitive": {
+  "0": "id",
+  "4": "geometry",
+  "8": "vertices",
+  "12": "nVertices",
+  "16": "maxVertices",
+  "20": "type",
+  "24": "dims",
+  "36": "tm"
+ },
+ "MeFPrimitiveIt": {
+  "0": "node"
+ },
+ "MeFPrimitiveNode": {
+  "0": "prev",
+  "4": "current",
+  "8": "next"
+ },
+ "MeFVertexIt": {
+  "0": "currentVertex",
+  "4": "prim"
+ },
+ "MeHash": {
+  "0": "size",
+  "4": "population",
+  "8": "hash",
+  "12": "compare",
+  "16": "freeKey",
+  "20": "freeDatum",
+  "24": "table",
+  "28": "collisions"
+ },
+ "MeHashBucket": {
+  "0": "key",
+  "4": "datum",
+  "8": "next"
+ },
+ "MeHashIterator": {
+  "0": "table",
+  "4": "bucket",
+  "8": "index"
+ },
+ "MeIDPool": {
+  "0": "IDbitfield",
+  "4": "block",
+  "8": "maxBlocks",
+  "12": "maxIDs",
+  "16": "assignedIDs"
+ },
+ "MeMemoryAPIStruct": {
+  "0": "create",
+  "4": "createZeroed",
+  "8": "createAligned",
+  "12": "destroy",
+  "16": "destroyAligned",
+  "20": "resize"
+ },
+ "MePool": {
+  "0": "t",
+  "4": "u"
+ },
+ "MePoolAPI": {
+  "0": "init",
+  "4": "destroy",
+  "8": "deset",
+  "12": "getStruct",
+  "16": "putStruct",
+  "20": "getUsed",
+  "24": "getUnused"
+ },
+ "MePoolFixed": {
+  "0": "structArray",
+  "4": "freeStructStack",
+  "8": "nextFreeStruct",
+  "12": "structSize",
+  "16": "poolSize",
+  "20": "createdAligned"
+ },
+ "MePoolMalloc": {
+  "0": "usedStructs",
+  "4": "structSize",
+  "8": "poolSize",
+  "12": "alignment"
  },
  "MeProfileFrameData": {
   "0": "next",
@@ -93,6 +1029,56 @@
   "48": "count0StartValue",
   "56": "count1StartValue"
  },
+ "MeXMLOutput": {
+  "0": "stream",
+  "4": "depth",
+  "8": "tagHead"
+ },
+ "MstBridge": {
+  "0": "maxMaterials",
+  "4": "usedMaterials",
+  "8": "materialPairArray",
+  "12": "pairs",
+  "16": "context",
+  "20": "contacts",
+  "24": "contactsMaxCount"
+ },
+ "MstMaterialPair": {
+  "0": "cp",
+  "72": "contactCB",
+  "76": "pairCB",
+  "80": "intersectCB"
+ },
+ "MstUniverse": {
+  "0": "sizes",
+  "36": "world",
+  "40": "frame",
+  "44": "space",
+  "48": "bridge"
+ },
+ "MstUniverseSizes": {
+  "0": "dynamicBodiesMaxCount",
+  "4": "dynamicConstraintsMaxCount",
+  "8": "collisionUserGeometryTypesMaxCount",
+  "12": "collisionModelsMaxCount",
+  "16": "collisionPairsMaxCount",
+  "20": "collisionGeometryInstancesMaxCount",
+  "24": "materialsMaxCount",
+  "28": "lengthScale",
+  "32": "massScale"
+ },
+ "MyAABB": {
+  "0": "min",
+  "12": "max",
+  "24": "size",
+  "36": "centre"
+ },
+ "MyMesh": {
+  "0": "faceVertex",
+  "4": "verts",
+  "8": "numFaces",
+  "12": "numVerts"
+ },
  "NibbleArray": {
   "0": "mArray",
   "4": "mSize"
@@ -109,6 +1095,20 @@
   "48": "angularDamp",
   "52": "fastSpin",
   "64": "useFastSpin"
+ },
+ "PElement": {
+  "0": "type",
+  "4": "childHead",
+  "8": "cdata",
+  "12": "freeFunc",
+  "16": "attrHead"
+ },
+ "PElementIt": {
+  "0": "stackHead"
+ },
+ "PElementNode": {
+  "0": "current",
+  "4": "next"
  },
  "PJoint": {
   "0": "pos",
@@ -133,11 +1133,238 @@
   "24": "tempVertex",
   "36": "tm"
  },
+ "_McdCache": {
+  "0": "normal",
+  "12": "location",
+  "24": "offset",
+  "36": "fat1",
+  "40": "fat2",
+  "44": "padding",
+  "48": "separation",
+  "52": "ins1",
+  "56": "ins2"
+ },
+ "_McdContact": {
+  "0": "position",
+  "12": "normal",
+  "24": "separation",
+  "28": "dims",
+  "32": "element1",
+  "36": "element2"
+ },
  "_McdContactLink": {
   "0": "contact",
   "4": "area",
   "8": "next",
   "12": "prev"
+ },
+ "_McdFramework": {
+  "0": "geometryRegisteredCountMax",
+  "4": "geometryRegisteredCount",
+  "8": "firstModel",
+  "12": "firstGeometry",
+  "16": "modelCount",
+  "20": "geometryCount",
+  "24": "geometryVTableTable",
+  "28": "termActions",
+  "32": "interactionTable",
+  "36": "cachePool",
+  "64": "mHelloCallbackFnPtr",
+  "68": "modelPool",
+  "96": "instancePool",
+  "124": "mDefaultPadding",
+  "128": "mScale",
+  "132": "request",
+  "136": "defaultRequest",
+  "140": "toolkitVersionString"
+ },
+ "_McdGeometry": {
+  "0": "mRefCtAndID",
+  "4": "prev",
+  "8": "next",
+  "12": "frame"
+ },
+ "_McdGeometryInstance": {
+  "0": "mGeometry",
+  "4": "mTM",
+  "8": "min",
+  "20": "max",
+  "32": "mMaterial",
+  "36": "prev",
+  "40": "next",
+  "44": "parent",
+  "48": "child"
+ },
+ "_McdGjkFace": {
+  "0": "v",
+  "12": "v_len",
+  "16": "depth",
+  "20": "bits",
+  "24": "fi",
+  "40": "slant"
+ },
+ "_McdGjkFaceQueue": {
+  "0": "s",
+  "4": "face",
+  "20": "fpool",
+  "40": "lastpop",
+  "44": "nump",
+  "48": "maxp",
+  "52": "point",
+  "56": "si"
+ },
+ "_McdGjkPoint": {
+  "0": "w",
+  "12": "s2"
+ },
+ "_McdGjkSimplex": {
+  "0": "point",
+  "96": "lastw",
+  "120": "dot",
+  "184": "delta",
+  "440": "eps",
+  "444": "bits",
+  "448": "next_i",
+  "452": "next_bit",
+  "456": "inflate"
+ },
+ "_McdInteractions": {
+  "0": "helloFn",
+  "4": "goodbyeFn",
+  "8": "intersectFn",
+  "12": "safetimeFn",
+  "16": "swap",
+  "20": "cull",
+  "24": "warned"
+ },
+ "_McdIntersectResult": {
+  "0": "pair",
+  "4": "contacts",
+  "8": "contactMaxCount",
+  "12": "contactCount",
+  "16": "touch",
+  "20": "normal",
+  "32": "data"
+ },
+ "_McdLineSegIntersectResult": {
+  "0": "model",
+  "4": "position",
+  "16": "normal",
+  "28": "distance"
+ },
+ "_McdModel": {
+  "0": "frame",
+  "4": "prev",
+  "8": "next",
+  "12": "mSpace",
+  "16": "linearVelocity",
+  "20": "angularVelocity",
+  "24": "mPadding",
+  "28": "mSpaceID",
+  "32": "sortKey",
+  "36": "mBody",
+  "40": "mRequestID",
+  "44": "mTransformUpdateFn",
+  "48": "mRelTM",
+  "52": "mRefTM",
+  "56": "mIntersectFn",
+  "60": "flags",
+  "64": "mInstance",
+  "116": "mData"
+ },
+ "_McdModelPair": {
+  "0": "model1",
+  "4": "model2",
+  "8": "phase",
+  "12": "request",
+  "16": "userData",
+  "20": "m_cachedData",
+  "24": "responseData"
+ },
+ "_McdModelPairContainer": {
+  "0": "array",
+  "4": "size",
+  "8": "goodbyeFirst",
+  "12": "goodbyeEnd",
+  "16": "helloFirst",
+  "20": "helloEndStayingFirst",
+  "24": "stayingEnd"
+ },
+ "_McdModelPairContainerIterator": {
+  "0": "container",
+  "4": "count"
+ },
+ "_McdRequest": {
+  "0": "contactMaxCount",
+  "4": "faceNormalsFirst"
+ },
+ "_McdSafeTimeResult": {
+  "0": "pair",
+  "4": "time"
+ },
+ "_McdUserTriangle": {
+  "0": "vertices",
+  "12": "normal",
+  "16": "triangleData",
+  "20": "flags"
+ },
+ "_MeHeap": {
+  "0": "mem",
+  "4": "capacity",
+  "8": "used",
+  "12": "cmp"
+ },
+ "_MePoolx": {
+  "0": "mem",
+  "4": "isize",
+  "8": "numrec",
+  "12": "numfree",
+  "16": "ifree"
+ },
+ "_MeSet": {
+  "0": "dict",
+  "52": "nodepool",
+  "72": "next",
+  "76": "last"
+ },
+ "_MeStream": {
+  "0": "filename",
+  "4": "bUseMemblock",
+  "8": "handle",
+  "12": "buffer",
+  "16": "bGrowFast",
+  "20": "bufSize",
+  "24": "bufLength",
+  "28": "curIndex"
+ },
+ "_MeXMLElement": {
+  "0": "name",
+  "1024": "fi",
+  "1028": "level",
+  "1032": "attr"
+ },
+ "_MeXMLHandler": {
+  "0": "name",
+  "4": "type",
+  "8": "fn",
+  "12": "offset",
+  "16": "max",
+  "20": "maxstr",
+  "24": "called",
+  "28": "cb"
+ },
+ "_MeXMLInput": {
+  "0": "buffer",
+  "4096": "bufptr",
+  "4100": "bufmax",
+  "4104": "stack",
+  "4112": "top",
+  "4116": "stream",
+  "4120": "line",
+  "4124": "posn",
+  "4128": "eof",
+  "4132": "userdata",
+  "4136": "error"
  },
  "_weightingData": {
   "0": "next",
@@ -238,5 +1465,10 @@
  },
  "lsVec4": {
   "0": "v"
+ },
+ "tagNode": {
+  "0": "tag",
+  "4": "contents",
+  "8": "next"
  }
 }

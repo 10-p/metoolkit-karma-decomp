@@ -49,7 +49,6 @@ typedef struct _MeCPUResources _MeCPUResources;
 typedef struct _MeHeap _MeHeap;
 typedef struct _MePoolx _MePoolx;
 typedef struct _MeSet _MeSet;
-typedef struct _MeStream _MeStream;
 typedef struct _MeXMLElement _MeXMLElement;
 typedef struct _MeXMLHandler _MeXMLHandler;
 typedef struct _MeXMLInput _MeXMLInput;
@@ -116,6 +115,12 @@ struct lsVec3;
 typedef struct lsVec3 lsVec3;
 struct lsVec4;
 typedef struct lsVec4 lsVec4;
+
+/* ---- anonymous aggregate members, named exactly ---- */
+typedef __typeof__(((struct _McdContact *)0)->element1) kd_anon_element1;
+typedef __typeof__(((struct _McdContact *)0)->element2) kd_anon_element2;
+typedef __typeof__(((struct _McdUserTriangle *)0)->triangleData) kd_anon_triangleData;
+typedef __typeof__(((struct MePool *)0)->u) kd_anon_u;
 
 /* ---- internal typedefs the recovered structs depend on ---- */
 typedef struct _McdContactLink McdContactLink;

@@ -32,9 +32,9 @@ from dwarf_structs import (parse, emit, emit_enum, declarator,  # noqa: E402
 
 def public_type_names(include_dir):
     """Struct/union/class names that metoolkit's own headers already define."""
-    names = set()
+    names, tdnames = set(), set()
     if not include_dir:
-        return names
+        return names, tdnames
     # `enum` included: metoolkit declares plenty of them, and omitting it here
     # means we redefine every public enum and nothing compiles at all.
     pat = re.compile(r'\b(?:struct|union|class|enum)\s+([A-Za-z_]\w*)\s*\{')
@@ -67,7 +67,9 @@ def public_type_names(include_dir):
             names.update(tpat.findall(txt))
             names.update(anytd.findall(txt))
             names.update(tagdef.findall(txt))
-    return names
+            tdnames.update(tpat.findall(txt))
+            tdnames.update(anytd.findall(txt))
+    return names, tdnames
 
 
 def value_deps(dies, die):
@@ -179,8 +181,9 @@ def main():
                     help='public header the generated types depend on (repeatable)')
     args = ap.parse_args()
 
-    public = public_type_names(args.public_headers)
-    best = {}        # name -> (richness, die, dies, source object)
+    public, typedef_names = public_type_names(args.public_headers)
+    best = {}        # name -> (richness, die, dies, source object)  [emitted]
+    pub_layout = {}  # same, for PUBLIC types: field map only, never emitted
     enums = {}       # name -> (die, source object)
     conflicts = {}   # name -> set of (nmembers, size) seen
 
@@ -212,11 +215,19 @@ def main():
                                   'DW_TAG_union_type'):
                 continue
             name = die['attrs'].get('DW_AT_name')
-            if not name or name in public or name in SYSTEM_TYPES:
+            if not name or name in SYSTEM_TYPES:
                 continue
             if not any(c['tag'] == 'DW_TAG_member' for c in die['children']):
                 continue                                        # declaration only
             r = richness(die)
+            # PUBLIC types are recorded for the field map but never emitted: the
+            # header already defines them. Ghidra still writes field_0xNN for
+            # them, and mapping an offset back to a name needs the layout
+            # regardless of who declares it.
+            if name in public:
+                if name not in pub_layout or r > pub_layout[name][0]:
+                    pub_layout[name] = (r, die, dies, obj)
+                continue
             conflicts.setdefault(name, set()).add(r)
             if name not in best or r > best[name][0]:
                 best[name] = (r, die, dies, obj)
@@ -258,6 +269,15 @@ def main():
     # itself makes both spellings legal, with no edit to the recovered sources.
     tagalias = set()
     if args.public_headers:
+        # ONLY _-prefixed tags. Broadening this to every public tag takes the
+        # build to zero: `MePoolAPI` is a struct tag AND an ordinary identifier,
+        # so `typedef struct MePoolAPI MePoolAPI;` is "redeclared as a different
+        # kind of symbol". The _-prefixed names are safe precisely because
+        # metoolkit does not reuse them outside the tag namespace.
+        #
+        # The cost is that headers written in C++ style — McdMessage.h says
+        # `extern McdErrorDescription gMcdCoreErrorList[];` with no `struct` —
+        # still cannot compile as C, which is why they stay out of the umbrella.
         tagpat = re.compile(r'\b(?:struct|union)\s+(_\w+)')
         for r_, _d, fs in os.walk(args.public_headers):
             for f in fs:
@@ -270,7 +290,11 @@ def main():
                     pass
     if tagalias:
         out.append('/* ---- bare-tag aliases (Ghidra omits the `struct` keyword) ---- */')
-        for t in sorted(tagalias):
+        # Skip any tag that is ALREADY a typedef name pointing somewhere else:
+        # McdCTypes.h has `typedef struct _McdGeometry McdGeometry;`, so
+        # `typedef struct McdGeometry McdGeometry;` would be a conflicting
+        # redefinition. Emitting these unconditionally took the build to zero.
+        for t in sorted(tagalias - typedef_names):
             out.append(f'typedef struct {t} {t};')
         out.append('')
 
@@ -287,6 +311,42 @@ def main():
         out.append('/* ---- WARNING: conflicting layouts seen for these names ---- */')
         for n, v in sorted(real_conflicts.items()):
             out.append(f'/*   {n}: {sorted(v)} — richest kept; verify by hand */')
+        out.append('')
+
+    # Anonymous aggregate members: Ghidra names their type
+    # `anon_union_4_2_<hash>_for_<member>`, which exists nowhere. Emitting
+    #     typedef __typeof__(((struct Owner *)0)->member) kd_anon_<member>;
+    # gives it a name that is EXACTLY the right type, so declarations, casts and
+    # assignments all work without any special-casing downstream.
+    anon_owners = {}
+    for obj in objs:
+        try:
+            dies = parse(obj)
+        except Exception:                                       # noqa: BLE001
+            continue
+        for die in dies.values():
+            if die['tag'] not in ('DW_TAG_structure_type', 'DW_TAG_class_type'):
+                continue
+            owner = die['attrs'].get('DW_AT_name')
+            if not owner:
+                continue
+            for c in die['children']:
+                if c['tag'] != 'DW_TAG_member':
+                    continue
+                mn = c['attrs'].get('DW_AT_name')
+                mt = c['attrs'].get('DW_AT_type')
+                m = REF_RE.search(mt) if mt else None
+                if not (mn and m):
+                    continue
+                d = dies.get(int(m.group(1), 16))
+                if (d and d['tag'] in ('DW_TAG_union_type', 'DW_TAG_structure_type')
+                        and not d['attrs'].get('DW_AT_name')):
+                    anon_owners.setdefault(mn, owner)
+    if anon_owners:
+        out.append('/* ---- anonymous aggregate members, named exactly ---- */')
+        for mn, owner in sorted(anon_owners.items()):
+            out.append(f'typedef __typeof__(((struct {owner} *)0)->{mn}) '
+                       f'kd_anon_{mn};')
         out.append('')
 
     aux = {}
@@ -359,8 +419,9 @@ def main():
     # real name back. Emitted here because this is where the offsets are known.
     import json
     fieldmap = {}
-    for n in names:
-        _, die, dies, _o = best[n]
+    for n, src in list((k, best) for k in names) + \
+                  list((k, pub_layout) for k in pub_layout):
+        _, die, dies, _o = src[n]
         bname = inherit_pre.get(n)
         kids = list(die['children'])
         if bname and bname in best:

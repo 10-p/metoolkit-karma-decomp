@@ -38,11 +38,12 @@ CFLAGS="$CFLAGS -Wno-incompatible-pointer-types -DLINUX"
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 cp "$LIBDIR"/*.a "$WORK/"
+BASELIB="$WORK/orig"; mkdir -p "$BASELIB"; cp "$LIBDIR"/*.a "$BASELIB/"
 
 gcc -m32 -O2 -fno-pic -std=gnu99 -w -c -o "$WORK/kd_instr.o" "$HERE/kd_instr.c" || {
     echo "FATAL: kd_instr.c did not compile"; exit 1; }
 
-objs=""; n=0; skipped=0
+objs=""; n=0; skipped=0; notrecovered=0
 for c in "$CDIR"/*.c; do
     [ -e "$c" ] || continue
     base=$(basename "$c" .c)
@@ -60,20 +61,32 @@ for c in "$CDIR"/*.c; do
     done
     [ -n "$owner" ] || { skipped=$((skipped+1)); continue; }
 
+    # Distinguish "this object does not compile at all" — it is in recover.py's
+    # FAIL pile and is not part of the recovered set — from "it compiles but not
+    # under instrumentation", which would be a defect in this tool.
+    if ! gcc $CFLAGS $IFLAGS -c -o /dev/null "$c" 2>/dev/null; then
+        notrecovered=$((notrecovered+1)); continue
+    fi
     if ! gcc $CFLAGS -finstrument-functions $IFLAGS -c -o "$WORK/$base.o" "$c" 2>/dev/null; then
-        echo "  [ FAIL ] $base — did not compile with -finstrument-functions"
+        echo "  [ FAIL ] $base — compiles normally but NOT under -finstrument-functions"
         continue
     fi
     ar d "$owner" "$base.o" 2>/dev/null
     objs="$objs $WORK/$base.o"; n=$((n+1))
 done
-echo "instrumented $n object(s), $skipped not library members"
+echo "instrumented $n object(s), $skipped not library members, $notrecovered do not compile"
 [ "$n" -gt 0 ] || { echo "nothing to census"; exit 1; }
 
 if ! gcc -m32 -O2 -DLINUX -no-pie $IFLAGS -o "$WORK/t" "$SCENE" $objs "$WORK/kd_instr.o" \
         -Wl,--start-group "$WORK"/*.a -Wl,--end-group -lstdc++ -lm 2>"$WORK/link.err"; then
     echo "FATAL: link failed"; sed 's/^/  /' "$WORK/link.err" | head -20; exit 1
 fi
+
+# The baseline has to be built from the ORIGINAL archives, before any member
+# was deleted, so build it first and keep it.
+gcc -m32 -O2 -DLINUX -no-pie $IFLAGS -o "$WORK/baseline" "$SCENE" \
+    -Wl,--start-group "$BASELIB"/*.a -Wl,--end-group -lstdc++ -lm 2>/dev/null \
+    && "$WORK/baseline" > "$WORK/baseline.csv" 2>/dev/null
 
 OUT="${KD_INSTR_OUT:-/tmp/kd_instr.txt}"
 rm -f "$OUT"
@@ -82,6 +95,29 @@ rc=$?
 rows=$(wc -l < "$WORK/t.csv")
 echo "scene exit=$rc, $rows rows of trajectory"
 if grep -qiE 'nan|inf' "$WORK/t.csv"; then echo "*** the scene went non-finite ***"; fi
+
+# ALL of them at once, against stock. substitute_test.sh swaps one object at a
+# time by design, so it never asks whether the recovered set is consistent with
+# ITSELF — which is the question definition-of-done item 7 actually poses.
+if [ -s "$WORK/baseline.csv" ]; then
+    python3 - "$WORK/baseline.csv" "$WORK/t.csv" <<'PY'
+import csv, sys
+def load(p):
+    rows = list(csv.reader(open(p)))
+    return [[float(x) for x in r] for r in rows[1:]]
+a, b = load(sys.argv[1]), load(sys.argv[2])
+if len(a) != len(b):
+    print('all substituted TOGETHER: trajectory is SHORT (%d rows vs %d)'
+          % (len(b), len(a)))
+else:
+    w = max((abs(x - y) for r1, r2 in zip(a, b) for x, y in zip(r1[1:], r2[1:])),
+            default=0.0)
+    verdict = 'bit-identical' if w == 0.0 else 'max delta %.3e m' % w
+    print('all substituted TOGETHER vs stock: %s' % verdict)
+PY
+else
+    echo "(no baseline — could not link the stock scene)"
+fi
 [ -s "$OUT" ] || { echo "FATAL: no census written — did the scene reach exit()?"; exit 1; }
 
 if grep -q 'overflow=1' "$OUT"; then

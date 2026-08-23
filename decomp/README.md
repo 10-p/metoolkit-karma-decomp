@@ -14,6 +14,15 @@ line tables, parameter names, local names, complete types. Ghidra consumes that 
 over the entire hot path (100 objects, 381.5 KB), **1092 of 1092 functions decompile**, with two x87
 stack leaks totalling 235 bytes.
 
+## Start here
+
+* **[`HANDOVER.md`](HANDOVER.md)** — everything needed to resume the recovery work:
+  pipeline, Ghidra invocation, running and instrumenting the game, dead ends, and what
+  "complete" means. Read this first.
+* **[`HANDOVER-WEB.md`](HANDOVER-WEB.md)** — self-contained brief for the wasm/Android
+  integration, written for someone with no history on the project.
+* [`proven.txt`](proven.txt) — which objects a real match has validated, with the evidence.
+
 ## Status
 
 | | |

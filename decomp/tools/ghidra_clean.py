@@ -298,7 +298,10 @@ def materialise_alloca_frame(body, fname):
     recover.py keeps such objects out of the validated set."""
     # `dest = (T)(&stack0xHHHH + negVar);` where negVar = -(EXPR * K + 15 & ~15)
     neg = {}
-    for m in re.finditer(r'(\w+)\s*=\s*-\(\(int\)(.+?)\s*\*\s*(0x[0-9a-f]+|\d+)'
+    # The `(int)` cast is not always there — Ghidra omits it when the count is
+    # already an int, as in `-(triList->triangleMaxCount * 0x18 + 0xfU & ...)`.
+    # Requiring it cost IxCylinderTriList and IxConvexTriList their allocas.
+    for m in re.finditer(r'(\w+)\s*=\s*-\(\s*(?:\(int\)\s*)?(.+?)\s*\*\s*(0x[0-9a-f]+|\d+)'
                          r'\s*\+\s*0xfU?\s*&\s*0xfffffff0\)\s*;', body):
         neg[m.group(1)] = (m.group(2).strip(), m.group(3))
 

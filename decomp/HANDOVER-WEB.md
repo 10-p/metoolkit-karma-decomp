@@ -22,11 +22,24 @@ freebie, the Android NDK), and to integrate the result into the engine's web bui
 
 What exists today:
 
-- 54 recovered objects compiling for **i386** and producing bit-identical physics
-  trajectories against the shipped library.
-- Four of them validated against the real game over hundreds of thousands of live calls.
-- **Nothing has ever been compiled for wasm.** Not once. i386 is the proving ground; the
-  web is the actual goal. You are the first person to cross that line.
+- **92 recovered objects**, all of them compiling for i386 *and* for wasm32.
+- Six of them validated against the real game over millions of live collision calls, with
+  the evidence recorded per object in `karma-decomp/proven.txt`.
+- **The whole set already compiles under Emscripten**, and its exported symbol sets are
+  **byte-identical to the i386 build for all 92 objects** — same names, same bindings,
+  nothing added or dropped. So the ABI surface the engine links against does not change
+  between targets, which was the thing most likely to turn this into a rewrite. See §4.
+- **Nothing has ever been EXECUTED under wasm.** "It compiles" is not "it works", and the
+  runtime hazards in §4 are still open. That line is yours to cross.
+
+Reproduce the wasm result in one command:
+
+```bash
+cd karma-decomp
+./test/wasm_check.sh /tmp/kd_out/allobj /tmp/kd_build ../Thirdparty/metoolkit
+```
+
+(after running the recovery once — `HANDOVER.md` §4 — to populate those two directories).
 
 ---
 
@@ -189,17 +202,40 @@ runtime questions that compiling cannot answer. **Do not read "it compiles" as
 
 ## 5. Validation — use what exists, do not invent your own
 
-Three gates already exist and all of them work. Reuse them rather than eyeballing physics.
+**Five** gates already exist and all of them work. Reuse them rather than eyeballing
+physics.
 
 1. **`test/substitute_test.sh`** — swaps one recovered object into the link, runs a scripted
-   scene, and compares the **trajectory** against baseline. On a collision-free scene a
-   correct recovery is *bit-identical*; anything else is a bug. Currently 54/54 clean on
-   i386. **Getting this to 54/54 under a wasm build is your first milestone.**
-2. **`test/kd_shadow.c`** — the in-game shadow harness. Runs both implementations on the
+   scene, compares the **trajectory** against baseline. On a collision-free scene a correct
+   recovery is *bit-identical*; anything else is a bug. There are three scenes and you want
+   all of them: `scene_chain.c` (collision-free, the authoritative trajectory signal),
+   `scene_boxes_on_plane.c` (exercises the geometry dispatch), `scene_ragdoll.c` (nine
+   capsules on ball-socket joints — the other two make **not one Sphyl call** between them).
+   Currently **92/92 clean on all three** on i386. **Getting that under a wasm build is your
+   first milestone.**
+2. **`test/difftest_pair.sh`** — drives one interaction directly over randomised transforms,
+   seeded so anything it finds reproduces. Eleven pairs wired up. Four switches, and read
+   `HANDOVER.md` §4 on `KD_SPREAD` before quoting any number from it: divergence rates here
+   are a strong function of contact regime, and a figure without its regime is meaningless.
+3. **`test/wasm_check.sh`** — compiles the whole set for wasm32 and diffs the exported
+   symbols against the native build. Currently 92/92 and 92/92. **Run this after any change
+   to the recovery pipeline**; it is the cheapest possible early warning that a change has
+   broken portability.
+4. **`test/kd_shadow.c`** — the in-game shadow harness. Runs both implementations on the
    same inputs and compares. Structural fields (return value, contact count, contact
-   dimensionality) must match **exactly**; float deltas are expected.
-3. **`KD_SELFTEST=1`** — runs the *original* as both sides. Any divergence it reports is a
-   harness bug, not a recovery bug. Run it before believing any divergence you see.
+   dimensionality, buffer overrun) must match **exactly**; float deltas are expected.
+5. **`KD_SELFTEST=1`** — runs the *original* as both sides. Any divergence it reports is a
+   harness bug, not a recovery bug. **Run it before believing any divergence you see, and
+   before believing any crash** — a SIGSEGV was misattributed to recovered code for half a
+   day because this was skipped, and it reproduces with no recovered code executing.
+
+One warning that will bite you if you reuse the shadow harness naively: **it perturbs the
+engine.** Running an intersection function a second time is only free if it writes solely
+through its output parameter, and `McdModelPair` carries `m_cachedData`, `responseData` and
+`phase` for it to write to. Measured on one map: stock Karma 0 crashes in 4 runs, harness
+4 in 14, harness with the second call suppressed 0 in 5. The cause is not yet found.
+`KD_CENSUS=1` turns the second call off and perturbs nothing measurable — use it when you
+want call counts from a build you do not want to disturb.
 
 For wasm you cannot run the shadow harness against a native original in-process. Two options,
 in order of preference:
@@ -214,17 +250,36 @@ in order of preference:
 **Do not use the collision scene for trajectory comparison.** Past first contact, any two
 builds diverge without bound. That is physics, not a bug.
 
+**And do not demand bit-identity of your wasm build against anything.** The yardstick that
+matters is what the vendor already tolerated. On the ragdoll scene, MathEngine's own two
+shipped builds of their own source — i386/x87 and x86-64/SSE — diverge by **3.283 m over
+15 seconds**. The recovered code against the shipped i386 build diverges by 3.677 m on the
+same scene. If your wasm build lands in that neighbourhood and the divergence is *bounded*
+(it plateaus in the first three seconds rather than growing) with the same residual energy,
+that is a pass. That comparison is the single most useful calibration in this project and
+`scene_ragdoll.c` reproduces it in seconds:
+
+```bash
+# native i386 vs the vendor's own x86-64 build — your reference for "how much is normal"
+gcc -m32 ... -o /tmp/rag_i386 test/scene_ragdoll.c  <linux_single_gcc3.2/*.a>
+gcc -m64 ... -o /tmp/rag_hx   test/scene_ragdoll.c  <linux_hx_single/*.a>
+```
+
 ---
 
 ## 6. What is not done, and what you should not assume
 
-- **Nothing is wasm-tested.** Every number in `karma-decomp/README.md` is i386.
-- **54 of ~150 objects compile.** The recovery is incomplete. You will not be able to link a
-  full Karma from recovered sources yet. Plan to link recovered objects *alongside* the
-  shipped `.a` (the harness already does exactly this) until coverage is complete.
-- **49 objects are deliberately quarantined** by four safety detectors. They compile but are
-  known-or-suspected wrong. Do not include them to raise a coverage number — the detectors
-  exist because code that compiles and crashes is worse than code that does not compile.
+- **Nothing has been RUN under wasm.** The whole set compiles and exports identical
+  symbols, and that is all §4 hazards 2 and 3 settle. Hazards 1, 4 and 5 are runtime and
+  entirely open.
+- **92 of ~150 objects compile**, 39 do not. But read `HANDOVER.md` §3 before reading that
+  as 60% done — see the next bullet, it is the most important thing in this file for
+  planning purposes.
+- **17 objects are deliberately quarantined** by seven safety detectors. They compile but
+  are known-or-suspected wrong. Do not include them to raise a coverage number. The most
+  recent proof of why: `IxConvexTriList` compiles, passes all three substitute scenes, and
+  is **18% wrong in a live match** — it returns *no contacts* where the original returns
+  four.
 - **`libMcdConvexCreateHull` is qhull 2.6 (1998)** — 186 KB, open source, load-time only.
   **Do not recover it; replace it** with modern qhull, which builds under Emscripten without
   drama. Better still, precompute convex hulls offline and ship them as data — that matches
@@ -234,6 +289,24 @@ builds diverge without bound. That is physics, not a bug.
 - **`MeViewer2`/`MeApp`** (74 KB) are never linked by UT2004. Skip entirely.
 
 That last three points remove ~36% of the total binary footprint without recovering a line.
+
+### The number that should drive your planning
+
+**38 collision-interaction pairs are registered. The game calls TEN of them.** A census over
+25 runs and 18 maps (`HANDOVER.md` §3) found that UT2004 gives its physics actors sphere,
+sphyl, convex-mesh and triangle-list geometry and essentially nothing else. Every
+`Aggregate` pair, every `Cylinder` pair, `Box×Plane`, `Box×Sphere`, `Box×TriangleList`,
+`Sphere×Plane`, `Sphyl×Box`, `Sphyl×Plane` and `ConvexMesh×Plane` are registered on every
+map and called **zero** times.
+
+Nine of those ten pairs are already validated against the real game. **One is not:**
+`ConvexMesh × TriangleList` (`IxConvexTriList`), which is broken and is the recovery side's
+top task.
+
+So "how much of Karma do I need for the web build to run" is not 150 objects and not even
+92 — it is the collision path for ten pairs, plus the solver (`libMdtKea`, untouched), plus
+the framework objects that hold them together. That is a much smaller target than the
+compile count suggests, and it is the number to plan against.
 
 ---
 
@@ -250,17 +323,27 @@ so it can be taken down independently.
 
 ## 8. Suggested order of work
 
-1. Compile **one** validated object (`IxSphereSphere` — smallest, cleanest, 0 divergences on
-   120k+ real calls) under Emscripten. Nothing else. Find out what breaks.
-2. Get `scene_chain.c` building and running under node/wasm with that one object substituted.
-3. Widen to all 54 objects; get `substitute_test.sh` equivalent to 54/54.
-4. Wire into the engine's wasm build behind `WITH_KARMA`, still linking the shipped `.a` for
-   everything not yet recovered — except you cannot, because the `.a` is x86. **This is the
-   crux:** until recovery covers everything the game calls, the wasm build cannot run Karma
-   at all. Use the census in `HANDOVER.md` §3 to know exactly what "everything the game
-   calls" means — it is far smaller than "all of Karma".
-5. Feed anything you learn back to the recovery side. If a construct is unportable, it is
-   usually cheaper to fix the *generator* than to patch the output.
+Compilation is no longer step one — that is done. Start at execution.
+
+1. **Run `scene_chain.c` under node/wasm** with the recovered objects linked, and diff the
+   trajectory against the native i386 run of the same scene. This is the smallest thing that
+   proves the recovered code *executes* correctly, and it needs no engine at all — the scene
+   is a standalone `main()` against the metoolkit API. Expect float-level differences, not
+   bit-identity.
+2. **Then `scene_ragdoll.c`**, and calibrate against the vendor-vs-vendor number in §5. That
+   scene exercises the sphyl path, which is the second busiest thing in the game.
+3. **Then the runtime hazards in §4** in this order, because they are ordered by how hard
+   they are to debug after the fact: `alloca` stack sizing (hazard 1 — 12 objects use it,
+   including the two busiest functions in the game), then function-pointer signature
+   matching in the wasm table (hazard 4 — a mismatch is a *trap*, not a silently-wrong call,
+   which is a gift you should take).
+4. **Only then** wire into the engine's wasm build behind `WITH_KARMA`. Note the crux: you
+   cannot fall back to the shipped `.a` for what is not yet recovered, because it is x86.
+   Use the census (§6) to scope what "enough" means.
+5. **Feed anything you learn back to the recovery side.** If a construct is unportable it is
+   almost always cheaper to fix the *generator* than to patch the output — the whole
+   pipeline regenerates in about a minute, and `test/wasm_check.sh` tells you in one command
+   whether a generator change kept portability.
 
 Read `karma-decomp/HANDOVER.md` for how the recovery pipeline works, and
 `docs/KARMA-ON-WASM.md` Part I §2 for the full architectural analysis behind §2 above.

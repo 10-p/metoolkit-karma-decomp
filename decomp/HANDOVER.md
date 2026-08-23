@@ -4,127 +4,98 @@ You are resuming a project to recover Karma (MathEngine `metoolkit`, UT2004's ph
 library) from shipped binaries as portable C. Read this whole file before touching
 anything. It is written for someone with no memory of how any of it came to be.
 
-Branch: **`karma/decompile`**. `main` is untouched. 14 commits, most recent `daffc3e`.
+Branch: **`karma/decompile`**. `main` is untouched.
 
 ---
 
 ## 1. Why this project exists
 
 UT2004's physics is Karma, which ships as **binary-only static libraries**
-(`Thirdparty/metoolkit/lib.rel/...`). There is no source, anywhere — the
+(`Thirdparty/metoolkit/lib.rel/...`). There is no source anywhere — the
 `sigmaco/metoolkit-karma-v1.2` repo is headers and `.a`/`.lib` only. The web (wasm) and
-Android builds therefore ship with `NO_KARMA` and no vehicle/ragdoll physics.
+Android builds therefore ship with `NO_KARMA` and no vehicle or ragdoll physics.
 
-The full analysis of *why decompilation rather than emulation* is in
-[`../docs/KARMA-ON-WASM.md`](../docs/KARMA-ON-WASM.md). Read at least Part I §2 and
-Part II. The one-sentence version:
+The full argument for decompilation over emulation is in
+[`../docs/KARMA-ON-WASM.md`](../docs/KARMA-ON-WASM.md) (read at least Part I §2 and Part II).
+One sentence:
 
-> The engine and Karma **share one address space in both directions** — the engine holds
-> raw pointers into Karma's heap (`MdtBodyGetTransformPtr`) and Karma holds function
-> pointers into engine code (`KTriListGenerator`, the allocator). Any out-of-address-space
-> emulator (v86, QEMU, blink-as-a-VM) must marshal that traffic thousands of times per
-> frame, which is an integration rewrite, not a performance tax.
+> The engine and Karma **share one address space in both directions** — the engine holds raw
+> pointers into Karma's heap (`MdtBodyGetTransformPtr`) and Karma holds function pointers
+> into engine code (`KTriListGenerator`, the allocator). Any out-of-address-space emulator
+> must marshal that traffic thousands of times per frame, which is an integration rewrite,
+> not a performance tax.
 
-The libraries carry **full DWARF-2 debug info** — original file names, line tables,
-parameter names, local names, complete types. That is what makes this tractable at all.
-Ghidra consumes it directly.
+The libraries carry **full DWARF-2 debug info** — file names, line tables, parameter names,
+complete types. That is what makes this tractable. Ghidra consumes it directly.
 
 ---
 
-## 2. Current status
+## 2. Status
 
 ```
 compile:  92 objects  (88 clean + 4 with prelude TODOs)  = 62.2% of 148 attempted
-gate:     92 of 92 clean on ALL THREE scenes; 92/92 compile for wasm32 with
-          byte-identical exported symbols — bit-identical on scene_chain, and no
-          crash on scene_boxes_on_plane (the two divergences there are IxBoxBox
-          and IxBoxPlane, both on the collision path, both expected)
+gate:     92/92 clean on all three substitute scenes
+wasm32:   92/92 compile, 92/92 exported symbol sets byte-identical to i386
 review:   17 objects held back by seven safety detectors
 fail:     39 objects do not compile
 ```
 
-**Run all three scenes.** `scene_chain` is collision-free and is the authoritative
-*trajectory* signal. `scene_boxes_on_plane` diverges by design, but it exercises the
-geometry dispatch, and it is what caught the `__regparm` parameter shift after the
-collision-free scene had passed it. `scene_ragdoll` drops a nine-capsule ragdoll on
-ball-socket joints onto a plane and boxes, because the other two make **not one Sphyl call**
-between them — the object carrying 463,782 calls of the game's real collision load was being
-gated on evidence that never touched it.
+Reproduce all of that with the commands in §4. The whole pipeline is about a minute.
 
-There are three tiers of evidence and they are not interchangeable — see the header of
-`proven.txt`. Briefly: `substitute_test.sh` is breadth (does it crash), `difftest_pair.sh`
-is depth on synthetic inputs (does it decide the same things), and the shadow harness is
-the only one using real gameplay.
-
-**Validated against the real game:**
+**Validated against the real game** (evidence in `proven.txt`, which is the ledger — a line
+in it is what releases an object from quarantine):
 
 | object | evidence |
 |---|---|
-| `IxSphereTriList` | 1,763,276 real calls, 0 structural divergences, worst delta 5.7e-06. **Released** — see `proven.txt` |
-| `IxSphereSphere` | 128,885 real calls + 300k synthetic, 0 structural divergences |
-| `IxBoxBox` | 35,427 real calls + 300k synthetic, 0 structural divergences |
-| `IxConvexPrimitives` | 1,685 real calls, **all 1,685 bit-identical**, plus 300k synthetic. **Validated** |
-| `IxSphylPrimitives` | 74,921 real calls, 1 structural divergence (0.0013%), and bounded trajectory divergence *smaller than the vendor's own two builds*. **Released** — see §8 |
+| `IxSphereTriList` | 1,763,276 real calls, 0 structural divergences. Released. One known limit, §8 |
+| `IxSphylPrimitives` | 74,921 real calls, 1 structural divergence (0.0013%). Released, §8 |
+| `IxSphereSphere` | 128,885 real + 300k synthetic, 0 structural |
+| `McdGjk` | 16,457 real calls of `McdGjkCgIntersect`, 0 structural |
+| `IxConvexPrimitives` | 1,685 real calls, **all bit-identical**, + 300k synthetic |
+| `IxBoxBox` | 35,427 real + 500k synthetic, **1 count divergence**, §8 |
+| `IxConvexTriList` | ❌ **18% wrong in a live match.** Quarantined, §8 — this is the top task |
 
 ---
 
 ## 3. The census — this decides what to work on
 
-Do not work alphabetically. The shadow harness counts every collision call the game
-actually makes. Combined across both test maps, by source object:
+**38 interaction pairs are registered. The game calls ten of them. Ever.**
 
-| calls | object | status |
-|---:|---|---|
-| 1,856,714 | `IxSphereTriList` | ✅ validated on real calls |
-| 128,885 | `IxSphereSphere` | ✅ validated on real calls |
-| 463,782 | `IxSphylPrimitives` (ragdolls) | ✅ validated on real calls and a driving scene |
-| 77,424 | `McdGjk` — `McdGjkCgIntersect`, i.e. Box×ConvexMesh | ✅ 16,457 real calls, 0 structural |
-| 35,427 | `IxBoxBox` | ✅ validated on real calls |
-| 7,975 | `IxConvexPrimitives` (vehicles) | ✅ validated on real calls |
+A sweep over 25+ runs and 18 maps, using `KD_CENSUS=1` so it perturbs nothing:
 
-### 38 pairs are registered. The game calls ten of them. Ever.
+| pair | total calls | object | status |
+|---|---:|---|---|
+| Sphere × TriangleList | 3,710,224 | `IxSphereTriList` | ✅ |
+| Sphyl × TriangleList | 786,072 | `IxSphylPrimitives` | ✅ |
+| Sphyl × Sphyl | 334,850 | `IxSphylPrimitives` | ✅ |
+| Sphere × Sphere | 257,887 | `IxSphereSphere` | ✅ |
+| Box × ConvexMesh | 185,067 | `McdGjk` (`McdGjkCgIntersect`) | ✅ |
+| Box × Box | 167,649 | `IxBoxBox` | ✅ |
+| Sphyl × Sphere | 148,031 | `IxSphylPrimitives` | ✅ |
+| Sphyl × ConvexMesh | 11,280 | `IxConvexPrimitives` | ✅ |
+| ConvexMesh × TriangleList | 4,950 | `IxConvexTriList` | ❌ **broken** |
+| Sphere × ConvexMesh | 2,274 | `McdGjk` | ✅ |
+| ConvexMesh × ConvexMesh | 39 | `McdGjk` | ✅ |
 
-A census sweep over 25 runs and 17 maps, using `KD_CENSUS=1` so it perturbs
-nothing:
+**Registered on every map and called ZERO times, across every run so far:** every
+`Aggregate` pair, every `Cylinder` pair, `Box×Plane`, `Box×Sphere`, `Box×TriangleList`,
+`Sphere×Plane`, `Sphyl×Box`, `Sphyl×Plane`, `ConvexMesh×Plane`.
 
-| pair | total calls | object |
-|---|---:|---|
-| Sphere × TriangleList | 3,710,224 | `IxSphereTriList` ✅ |
-| Sphyl × TriangleList | 786,072 | `IxSphylPrimitives` ✅ |
-| Sphyl × Sphyl | 334,850 | `IxSphylPrimitives` ✅ |
-| Sphere × Sphere | 257,887 | `IxSphereSphere` ✅ |
-| Box × ConvexMesh | 185,067 | `McdGjk` ✅ |
-| Box × Box | 167,649 | `IxBoxBox` ✅ |
-| Sphyl × Sphere | 148,031 | `IxSphylPrimitives` ✅ |
-| Sphyl × ConvexMesh | 11,280 | `IxConvexPrimitives` ✅ |
-| Sphere × ConvexMesh | 2,274 | `McdGjk` ✅ |
-| ConvexMesh × TriangleList | 4,950 | `IxConvexTriList` ❌ **46% wrong** — see `proven.txt` |
-| ConvexMesh × ConvexMesh | 39 | `McdGjk` ✅ |
+Absorb that before picking up work. UT2004 gives its physics actors sphere, sphyl,
+convex-mesh and triangle-list geometry and essentially nothing else, so **whole objects in
+the "not compiling" pile are for collisions the game never makes.**
 
-**The other 24 pairs were registered on every map and called zero times**: every
-`Aggregate` pair, every `Cylinder` pair, `Box×Plane`, `Box×Sphere`,
-`Box×TriangleList`, `Sphere×Plane`, `Sphyl×Box`, `Sphyl×Plane`,
-`ConvexMesh×Plane`.
+Two cautions:
 
-Read "zero times" as "not in 25 runs", not as "impossible". `ConvexMesh×ConvexMesh`
-was on that list until `ONS-UCMP-ABC-ECE` made 39 calls to it. The list is
-evidence about the maps tried, and it is worth re-running rather than trusting.
+- Read "zero times" as "not in 25 runs", not "impossible". `ConvexMesh×ConvexMesh` was on
+  that list until `ONS-UCMP-ABC-ECE` made 39 calls to it.
+- It cuts both ways. `McdSphylBoxIntersect` had a real bug (§8) in a pair that is never
+  called, and `IxSpherePlane` sits in the validated set for another. Neither was wasted —
+  the sphyl bug was in shared code — but **"validated" is not "load-bearing"** without
+  checking this table.
 
-That is worth absorbing before picking up work. UT2004 gives its physics actors
-sphere, sphyl, convex-mesh and triangle-list geometry and essentially nothing
-else, so whole objects in the "not compiling" pile are for collisions the game
-never makes. It also means §12 item 1 — "every object the census shows the game
-actually calls" — comes down to one object, `IxConvexTriList`, and that object is
-**46% wrong in a live match** (`proven.txt`). Close in object count is not close
-in work.
-
-It cuts both ways as a caution. `McdSphylBoxIntersect` had a real bug (§8) in a
-pair that is never called, and `IxSpherePlane` sits in the validated set for a
-pair that is never called. Neither was wasted — the sphyl bug was in shared code
-— but do not read "validated" as "load-bearing" without checking this table.
-
-Re-run the census after any new map; it is cheap, non-perturbing, and it has
-changed priorities every single time.
+Re-run the census after any new map. It is cheap, non-perturbing, and it has changed
+priorities every single time.
 
 ---
 
@@ -141,20 +112,17 @@ metoolkit .a
    ├─► gen_typedb.py    ──► kd_types.h + kd_types_fields.json
    ├─► gen_prelude.py   ──► <obj>.prelude.h + <obj>.exports.h
    ├─► gen_vtables.py   ──► <obj>.vtables.h  (C++ ABI data)
-   └─► ghidra_clean.py  ──► <obj>.c          (compilable)
+   └─► ghidra_clean.py  ──► <obj>.c          (compilable, via the repair loop §7a)
                                 │
                                 ▼
                         recover.py (drives all of the above, compiles, classifies)
                                 │
-              ┌─────────────────┴─────────────────┐
-              ▼                                   ▼
-     substitute_test.sh                   kd_shadow.c (in-game)
-     (breadth: swap object in,            (precision: run both
-      run scene, diff trajectory)          impls on real inputs)
-                                                  ▲
-                                     difftest_pair.sh (depth: drive
-                                     one interaction over randomised
-                                     transforms, when the game will not)
+        ┌───────────────────────┼───────────────────────┐
+        ▼                       ▼                       ▼
+ substitute_test.sh      difftest_pair.sh         kd_shadow.c (in-game)
+ (breadth: does it       (depth: drive one        (truth: real inputs from
+  crash on a scene)       interaction over         a real match)
+                          randomised transforms)
 ```
 
 ### Run the whole thing
@@ -170,49 +138,54 @@ python3 tools/recover.py \
   --protos /home/ion/tools/karma-lab/kd_protos.h
 ```
 
-Recovered `.c` lands in `/tmp/kd_out/allobj/`, objects in `/tmp/kd_build/`.
-`recover.py` prints a per-object table and a summary.
+Recovered `.c` lands in `/tmp/kd_out/allobj/`, objects in `/tmp/kd_build/`. `recover.py`
+prints a per-object table and a summary. **`out5` is the current dump directory** (§5).
 
-### Gate what came out
+### Gate what came out — all four, every time
 
 ```bash
-# breadth — swap each object into a real scene and diff the trajectory
-./test/substitute_test.sh /tmp/kd_build \
-    ../Thirdparty/metoolkit/lib.rel/linux_single_gcc3.2 test/scene_chain.c
-./test/substitute_test.sh /tmp/kd_build \
-    ../Thirdparty/metoolkit/lib.rel/linux_single_gcc3.2 test/scene_boxes_on_plane.c
+MT=../Thirdparty/metoolkit
+LIB=$MT/lib.rel/linux_single_gcc3.2
 
-./test/substitute_test.sh /tmp/kd_build \
-    ../Thirdparty/metoolkit/lib.rel/linux_single_gcc3.2 test/scene_ragdoll.c
+# breadth: swap each object into a scene, diff the trajectory
+./test/substitute_test.sh /tmp/kd_build $LIB test/scene_chain.c
+./test/substitute_test.sh /tmp/kd_build $LIB test/scene_boxes_on_plane.c
+./test/substitute_test.sh /tmp/kd_build $LIB test/scene_ragdoll.c
 
-# portability — §12 item 6, the actual goal
-./test/wasm_check.sh /tmp/kd_out/allobj /tmp/kd_build ../Thirdparty/metoolkit
+# depth: drive one interaction, 300k randomised transforms
+./test/difftest_pair.sh /tmp/kd_build $MT            # all pairs
+./test/difftest_pair.sh /tmp/kd_build $MT McdBoxBoxIntersect
 
-# depth — drive one interaction directly, 300k randomised transforms
-./test/difftest_pair.sh /tmp/kd_build ../Thirdparty/metoolkit         # all pairs
-./test/difftest_pair.sh /tmp/kd_build ../Thirdparty/metoolkit McdBoxBoxIntersect
+# portability: §12 item 6, the actual goal
+./test/wasm_check.sh /tmp/kd_out/allobj /tmp/kd_build $MT
 ```
 
-Adding a pair to `difftest_pair.c` is one `IX(...)` line and one table row; the geometry
-factories are shared, so most new interactions need no new code. It seeds its RNG, so a
-divergence it reports is reproducible — which is what makes it useful, and is exactly what
-the shadow harness cannot promise.
+`scene_chain` is collision-free and is the authoritative *trajectory* signal.
+`scene_boxes_on_plane` diverges by design but exercises the geometry dispatch — it caught
+the `__regparm` parameter shift after the collision-free scene had passed it.
+`scene_ragdoll` is a nine-capsule ragdoll on ball-socket joints dropped onto a plane and
+boxes, because the other two make **not one Sphyl call** between them.
 
-Three switches, and the middle one is not optional:
+**`difftest_pair.sh` has four switches and the first is not optional:**
 
 - **`KD_SELFTEST=1`** — run the ORIGINAL as both sides. Anything it reports is a fault in
-  the driver. Run it before believing a divergence, every time; the shadow harness has had
-  this from the start and skipping its equivalent has already produced one wrong conclusion.
-- **`KD_SPREAD=<n>`** — scale how far apart the bodies are scattered, which moves between
-  contact **regimes**. This matters more than it sounds. At the default the TriangleList
-  tests run at 92% touching with six to eleven simultaneous contacts — deep
-  interpenetration. A body resting on level geometry is one or two contacts at ~6%. They
-  are different tests and they find different things: `McdSphereTriangleListIntersect` has
-  40 feature-classification divergences in 50,000 at the deep end and **none** at the
-  shallow end, which is why 1.76 M real calls never saw one. Report which regime a number
-  came from.
+  the driver. Run it before believing any divergence. Skipping the shadow harness's
+  equivalent produced one wrong conclusion in a single day of work.
+- **`KD_SPREAD=<n>`** — scale how far apart the bodies scatter, which moves between contact
+  **regimes**, and this matters more than it sounds. At the default the TriangleList tests
+  run at 92% touching with six to eleven simultaneous contacts — deep interpenetration. A
+  body resting on level geometry is one or two contacts at ~6%.
+  `McdSphereTriangleListIntersect` has 40 feature-classification divergences in 50,000 at
+  the deep end and **none** at the shallow end, which is why 1.76 M real calls never saw
+  one. **Always report which regime a number came from.**
+- **`KD_ORIGIN=<n>`** — shift the scene away from 0. f32 spacing at |x|=2 is ~2e-7 and at
+  |x|=260 — an ordinary UT2004 world coordinate — it is 1.5e-5, against a contact tolerance
+  of 0.00475. A test that only runs near the origin tests a precision regime the game never
+  uses.
 - **`KD_SKEW=1`** — nudge the test mesh off its axis-aligned grid, to tell "disagrees at an
   exact feature boundary" from "disagrees".
+
+Adding a pair is one `IX(...)` line and one table row; the geometry factories are shared.
 
 ### Regenerate the type database (after any DWARF-side change)
 
@@ -226,9 +199,14 @@ python3 tools/gen_typedb.py /tmp/karmaprobe/members \
   -o include/kd_types.h
 ```
 
-**`kd_types.h` fails GLOBALLY, not locally.** Twice this session a change to it took the
-build from 50+ objects to **zero**. Always re-run `recover.py` immediately after touching
-it, and never assume a change is safe because it looks additive.
+`/tmp/karmaprobe/members` is just extracted archive members — the same shape as
+`/home/ion/tools/karma-lab/allobj`, which is what to widen it with if a type is missing.
+
+**`kd_types.h` fails GLOBALLY, not locally.** Three times now a change to it took the build
+from 90+ objects to **zero**. Always re-run `recover.py` immediately after touching it, and
+never assume a change is safe because it looks additive. The most recent instance: adding a
+base class as a by-value member without adding inheritance to the dependency graph, so the
+derived type was emitted above its base.
 
 ---
 
@@ -238,63 +216,91 @@ Installed at `/home/ion/tools/ghidra_12.1.3_PUBLIC`. Java 21. Headless only.
 
 ```bash
 cd /home/ion/tools/karma-lab
+cp /home/ion/engines/engine-ut2004/karma-decomp/tools/gscripts/*.java gscripts/
 export KARMA_PROTOS=/home/ion/tools/karma-lab/kd_protos.h
-export KARMA_OUTDIR=/home/ion/tools/karma-lab/out5
-export KD_CALLSITE_SIG=trilist          # only when re-doing TriangleList objects
-rm -rf gproj && mkdir -p gproj
+export KARMA_OUTDIR=/home/ion/tools/karma-lab/out6      # a NEW directory
+export KD_CALLSITE_SIG=trilist
+rm -rf gproj6 && mkdir -p gproj6 out6
 timeout 7200 /home/ion/tools/ghidra_12.1.3_PUBLIC/support/analyzeHeadless \
-  gproj Proj -import /home/ion/tools/karma-lab/allobj \
+  gproj6 Proj -import /home/ion/tools/karma-lab/allobj \
   -scriptPath /home/ion/tools/karma-lab/gscripts \
   -preScript ParseKarmaHeaders.java \
   -postScript DumpDecomp.java -deleteProject
 ```
 
-Scripts live in `tools/gscripts/` and **must be copied** to
-`/home/ion/tools/karma-lab/gscripts/` before running — Ghidra reads them from there.
+Takes 1–2 hours. Scripts live in `tools/gscripts/` and **must be copied** to
+`/home/ion/tools/karma-lab/gscripts/` — Ghidra reads them from there. **Write to a NEW
+output directory** and keep the old one until the new dumps have passed all four gates; a
+re-run changes every object at once.
 
-### `ParseKarmaHeaders.java`
+### `ParseKarmaHeaders.java` (preScript)
 
 Parses `kd_protos.h` and applies the signatures. This matters enormously: without a
-prototype, Ghidra guesses a call's arity from the call site **and gets it wrong** — it
-decided `McdModelGetGeometry` took no arguments and emitted the pushed arguments as
-writes to unrelated stack variables, with a pointer misread as a denormal float.
+prototype Ghidra guesses a call's arity from the call site **and gets it wrong** — it
+decided `McdModelGetGeometry` took no arguments and emitted the pushed arguments as writes
+to unrelated stack variables, with a pointer misread as a denormal float.
 
-It also materialises a `Function` at each undefined symbol, because a relocatable `.o`
-has none and both `getFunctions()` and `getExternalFunctions()` miss them.
+It also materialises a `Function` at each undefined symbol, because a relocatable `.o` has
+none and both `getFunctions()` and `getExternalFunctions()` miss them.
 
-`KD_CALLSITE_SIG=trilist` additionally applies `McdTriangleListFnPtr` at indirect call
-sites **inside functions whose name contains `TriangleList`**. Scoped by function name,
-not by object, because other objects call different callbacks through pointers and the
-wrong signature is worse than none.
+### `DumpDecomp.java` (postScript)
 
-### `DumpDecomp.java` also repairs a convention Ghidra gets wrong
+Decompiles every function, and does two repairs first.
 
-Ghidra picks a calling convention per function during analysis, and for this corpus it
-picks `__regparm1`/`__regparm2` for 19 functions across 9 objects. That is wrong — gcc 3.2
-on i386 passes everything on the stack here, the prologues say so and the DWARF says so —
-and the tag is not the damage: **Ghidra lays the parameter list out to match**, so the body
-is shifted by N and the last incoming argument falls off the end (§8, §10).
+**`applyCallsiteOverrides()`** applies `McdTriangleListFnPtr` at indirect call sites inside
+functions whose name contains `TriangleList` (`KD_CALLSITE_SIG=trilist`). Without it Ghidra
+emits `(*fn)()` with every argument dropped. Scoped by function name, not by object, because
+other objects call different callbacks through pointers and a wrong signature is worse than
+none.
 
-`forceCdecl()` rewrites those, and only those, before decompiling. A first attempt forced
-`__cdecl` on *everything* and made things worse — gcc's i386 C++ ABI passes `this` as the
-first stack argument, so `__thiscall` is already right, and overriding it cost five kea
-objects that had been compiling. **Fix the misdetection, not the convention system.**
+**`forceCdecl()`** rewrites functions Ghidra tagged `__regparm1`/`__regparm2` to `__cdecl`.
+That misdetection is not cosmetic — see §10. A first attempt forced `__cdecl` on
+*everything* and made things worse (gcc's i386 C++ ABI passes `this` as the first stack
+argument, so `__thiscall` is already right), costing five kea objects that had been
+compiling. **Fix the misdetection, not the convention system.**
 
 ```
-out3 (before)  85 clean + 4 TODO,  46 fail
-out4 (all)     85 clean + 1 TODO,  47 fail   <- blanket __cdecl, worse
-out5 (targeted) 88 clean + 4 TODO, 43 fail   <- __regparm only
+out3 (before)     85 clean + 4 TODO,  46 fail
+out4 (blanket)    85 clean + 1 TODO,  47 fail   <- worse
+out5 (targeted)   88 clean + 4 TODO,  39 fail   <- current
 ```
 
-`out5` is the current dump directory. `__regparm` appears in none of its 153 dumps.
-
-### Things about Ghidra that are settled — do not re-test
+### Settled — do not re-test
 
 - Only the default `decompile` simplification style produces C. `normalize`, `firstpass`,
   `register`, `paramid` all fail outright.
 - The "Decompiler Parameter ID" analyzer does **not** fix call arity.
 - metoolkit's own headers do **not** survive Ghidra's C parser (MEAPI/MEPUBLIC macros).
-  That is why `gen_protos.py` generates a flat, dependency-free prototype header instead.
+  That is why `gen_protos.py` generates a flat, dependency-free prototype header.
+
+### Ghidra's invented memory map, inverted
+
+This is the single most useful piece of machinery here, so understand it before changing it.
+
+A relocatable `.o` has no addresses, so Ghidra invents them: allocatable sections
+consecutively from **0x10000** in section-header order, each aligned to its own
+`sh_addralign`, then a synthetic **EXTERNAL block at the next 0x1000 boundary** with one
+four-byte slot per undefined symbol in ELF symbol-table order. `ghidra_memory_map()`
+reproduces it.
+
+That inverts three whole classes of unresolvable name:
+
+- **`DAT_00010405`** — an unnamed data reference. Maps to a section offset; the bytes are
+  read from the object. Verified: MeXMLOutput's `.text` is 0x405 bytes, and
+  `MeStreamWrite(&DAT_00010405,1,1,...)` writes offset 0 of `.rodata.str1.1`, whose first
+  byte is `'<'`. The next two write `'>'` at +2 and `"</"` at +0x12 — an XML writer.
+- **`_McdGeometryDeinit`** — a relocation with an **addend** landed in a neighbour's EXTERNAL
+  slot and Ghidra reported the neighbour. `call *0x8` with `R_386_32 MeMemoryAPI` is
+  `MeMemoryAPI.createAligned`. Resolution is **per function**, because the block is a
+  fiction: two relocations that collide in it are unrelated addresses at link time and get
+  the same printed name. `MdtWorld` has exactly this — `_MePoolAPI` is `MePoolAPI.init` in
+  `MdtWorldCreate` and `MeMemoryAPI.destroy` in `MdtWorldDestroy`. Where two candidates
+  survive, the rule declines rather than picks. Checked across the corpus: all 291 named
+  external references resolve to a symbol that is actually undefined in that object.
+- **`PTR__CxSmallSort_00011f20`** — a pointer-sized slot at a known address, resolved to a
+  real symbol plus offset. This one is `_ZTV11CxSmallSort + 8`, the Itanium ABI address
+  point a constructor stores. Section-aware: a first attempt matched on offset alone and put
+  a vtable pointer on a constructor, because a `.text` offset can equal a `.rodata` one.
 
 ---
 
@@ -303,13 +309,15 @@ out5 (targeted) 88 clean + 4 TODO, 43 fail   <- __regparm only
 ### Sandbox
 
 `/home/ion/karma-run` — bulk content symlinked from the **read-only**
-`/home/ion/ut2004-assets`, with `System/` and `Maps/` copied so they are writable.
-Recreate with the recipe in `README.md` if lost. **Never write to `ut2004-assets`.**
+`/home/ion/ut2004-assets`, with `System/` and `Maps/` copied so they are writable. Recreate
+with the recipe in `README.md` if lost. **Never write to `ut2004-assets`.**
 
 ### Build the instrumented engine
 
 ```bash
 cd /home/ion/engines/engine-ut2004
+./karma-decomp/test/make_shadow_metoolkit.sh Thirdparty/metoolkit /tmp/kd_build \
+    /home/ion/karma-run/shadow-metoolkit
 cmake -S . -B build-shadow-karma \
   -DCMAKE_C_COMPILER=gcc-13 -DCMAKE_CXX_COMPILER=g++-13 \
   -DCMAKE_BUILD_TYPE=RelWithDebInfo -DUT_GFX_BACKEND=gl4es \
@@ -318,307 +326,268 @@ cmake -S . -B build-shadow-karma \
 cmake --build build-shadow-karma -j"$(nproc)"
 ```
 
-**`gcc-13`, not 14.** The UE2.5 code does not compile with GCC 14. This is set by the
-`native-karma` preset; a hand-rolled cmake invocation must set it explicitly.
+**`gcc-13`, not 14.** UE2.5 does not compile with GCC 14. Build takes ~3 min. The binary is
+`build-shadow-karma/Source/SDLLaunch/ut2004-karma-pixo.bin`.
 
-Build takes ~3 min. Run it **from the repo root** — a background job that inherits
-`karma-decomp/` as its cwd will fail on the relative path.
-
-### Travel URLs — this is subtle and cost hours
-
-Unreal's URL carries **two kinds of option** and you need both:
-
-- **Game options** → `GameInfo.InitGame()`: `Game=`, `bAutoNumBots=`, `QuickStart=`,
-  `bPlayerMustBeReady=`, `TimeLimit=`
-- **Per-player login options** → `PreLogin`/`Login`: `Name=`, `Class=`, `Character=`,
-  `team=`
-
-With only the game half, the match **parks before kickoff**: the level loads, the process
-burns CPU at full tilt, and *nothing ticks*. That reads exactly like a broken harness. The
-URL that works:
-
-```
-ONS-Torlan.ut2?Name=Player-43ce41?Class=Engine.Pawn?Character=Jakob?team=255
-  ?bAutoNumBots=True?Game=Onslaught.ONSOnslaughtGame?QuickStart=True?bPlayerMustBeReady=False
-```
-
-`test-karma-1` works on a bare URL only because its KActors fall under gravity with no
-agent involved.
-
-### Run headless
+To measure a **quarantined** object, compile it into `/tmp/kd_build/` by hand first (it is
+deliberately absent), then re-stage:
 
 ```bash
-cd /home/ion/karma-run/System
-export KD_SHADOW_OUT=/tmp/kd.csv KD_SHADOW_DIVERGENCES=/tmp/kd_div.txt
-timeout --signal=TERM 300 xvfb-run -a -s "-screen 0 640x480x24" \
-  ./ut2004-shadow.bin "<travel URL>" -GL4ESRENDERER -nohomedir > /tmp/run.log 2>&1
+INC=Thirdparty/metoolkit/include
+gcc -m32 -O2 -fno-pic -fno-strict-aliasing -std=gnu99 -w \
+    -Wno-int-conversion -Wno-incompatible-pointer-types -DLINUX \
+    -Ikarma-decomp/include -I$INC -I$INC/McdCommon -I$INC/McdPrimitives \
+    -I$INC/McdFrame -I$INC/MeGlobals -I$INC/MdtBcl -I$INC/MdtKea -I$INC/Mst -I$INC/MeApp \
+    -c -o /tmp/kd_build/IxConvexTriList.o /tmp/kd_out/allobj/IxConvexTriList.c
 ```
 
-`test/run_map.sh` wraps this and prints which gametype the engine *actually* used — a
-silent fallback to the wrong gametype is indistinguishable from a broken harness. It reads
-the **last** `Game class is` line: the first is always the Entry level's `GameInfo`, which
-reads exactly like that fallback and has already cost one investigation an hour.
+Two other build flavours, both used and both worth keeping:
 
-**Maps:** `test-karma-1` (10 KActors, 2 hinges, cone limit, ball-socket, an ONSRV — high
-volume, reliable, ~1.7 M sphere/trilist calls in five minutes),
-`DM-BB-VehicleWar-test-physics` (all 7 vehicle factories; with bots it is a good source of
-**ragdoll** traffic, but it never once produced Sphyl×ConvexMesh in an hour of running),
-`ONS-CBP2-Tropica` (**the one to use for coverage** — see below).
+- **stock control** — same engine, `-DMETOOLKIT_DIR=/home/ion/karma-run/stock-metoolkit`
+  (just a copy of the shipped `.a` files). This is how you tell "the harness did it" from
+  "the game does it". It settled the `KHandleCollisions` crash, §7.
+- **substituted** — `test/make_substituted_metoolkit.sh` puts recovered objects in the
+  archive *in place of* the shipped ones, so the engine actually runs on them. A different
+  and harder question than the shadow harness, which feeds the engine the original's answer
+  every frame so an error never gets to compound. Definition-of-done item 7 in miniature.
 
-### Community maps exercise more of the collision matrix than the shipped ones
+### Run a map
 
-This is the single most useful thing to know about running the harness, and it came from
-the project owner rather than from measurement. **Epic's own maps are optimised; community
-maps are not.** ONS-Torlan refused to start a ticking match three times running, and
-`DM-BB-VehicleWar-test-physics` never produced a single Sphyl×ConvexMesh call in an hour.
-`ONS-CBP2-Tropica` produced, in **five minutes**:
-
-```
-Sphyl  ConvexMesh   McdSphylConvexMeshIntersect    1,685   <- the vehicle path, at last
-Sphyl  TriangleList McdSphylTriangleListIntersect 27,170
-Sphyl  Sphyl        McdSphylSphylIntersect        14,203
-Box    ConvexMesh   (not yet recovered)           10,249
-Sphere TriangleList McdSphereTriangleListIntersect 5,871
+```bash
+cd /home/ion/engines/engine-ut2004/karma-decomp
+KD_BIN=/home/ion/engines/engine-ut2004/build-shadow-karma/Source/SDLLaunch/ut2004-karma-pixo.bin \
+KD_SHADOW_OUT=/tmp/kd.csv KD_SHADOW_DIVERGENCES=/tmp/kd_div.txt \
+./test/run_map.sh ONS-CBP2-Tropica 900 \
+  '?Name=Player1?Class=Engine.Pawn?Character=Jakob?team=0?NumBots=8?MinPlayers=9?bAutoNumBots=False?QuickStart=True?bPlayerMustBeReady=False'
 ```
 
-Nine of 37 pairs, including two that no shipped map had ever reached. `ONS-UCMP-ABC` also
-reaches `ConvexMesh×TriangleList`. If a pair is not being exercised, **try a CBP2, UCMP,
-BE- or SPAC- map before concluding the pair is unreachable.**
+Unreal's URL carries **two kinds of option** and you need both: game options (`Game=`,
+`NumBots=`, `QuickStart=`, `bPlayerMustBeReady=`, `TimeLimit=`) go to `GameInfo.InitGame()`,
+and per-player login options (`Name=`, `Class=`, `Character=`, `team=`) go to
+`PreLogin`/`Login`. With only the game half the match **parks before kickoff**: the level
+loads, the process burns CPU, and nothing ticks. Bots are what generate physics —
+`?NumBots=8?MinPlayers=9?bAutoNumBots=False`; `bAutoNumBots=True` alone has been seen to
+produce none.
 
-**A match that starts is not a match that ticks.** Both shipped maps above have been seen
-to load, print `START MATCH`, then burn 150 % CPU for ten minutes with **zero** collision
-calls and an empty `$KD_SHADOW_OUT`. The same binary and the same URL, run again, produced
-165,000 calls in the first two minutes. There is no known way to tell the two apart from
-the log, so:
+`run_map.sh` reads the **last** `Game class is` line. The first is always the Entry level's
+`GameInfo`, which reads exactly like a silent fallback to the wrong gametype and cost one
+investigation an hour.
 
-> Check `$KD_SHADOW_OUT` after two minutes. If it has no rows at all, the collision matrix
-> was never installed — kill it and start again rather than waiting out the timeout.
+### Which maps
 
-Bots are what generate physics. `?NumBots=8?MinPlayers=9?bAutoNumBots=False` starts them;
-`bAutoNumBots=True` alone has been seen to produce none.
+**Community maps exercise far more of the collision matrix than Epic's.** This came from the
+project owner and it is the single most useful operational fact here — Epic's maps are
+optimised, CBP2/UCMP/BE-/SPAC- ones are not.
 
-**ONS matches are non-deterministic.** Identical runs give 0 calls or 50,000. A 5-minute
-run showed *zero* structural divergences for the sphyl functions; the 11-minute run showed
-ten. **Always run longer than feels necessary before concluding anything is clean.**
+| map | what it gives |
+|---|---|
+| `test-karma-1` | ~1.7 M Sphere/TriangleList calls in five minutes, reliable, no bots needed |
+| `ONS-CBP2-Tropica` | the general workhorse: Sphyl×TriangleList, Sphyl×Sphyl, Box×ConvexMesh, Sphyl×ConvexMesh |
+| `ONS-UCMP-ABC-ECE` | the **only** map found that exercises ConvexMesh×TriangleList and ConvexMesh×ConvexMesh |
+| `DM-BE-Clearing`, `DM-CBP1-Arkanos`, `DM-BE-Ruins` | Sphere×ConvexMesh, Sphyl×ConvexMesh |
+| `DM-BB-VehicleWar-test-physics` | heavy ragdoll traffic; never once produced Sphyl×ConvexMesh in an hour |
+| `ONS-Torlan` | refused to start a ticking match three times. Do not rely on it |
+
+**A match that prints `START MATCH` is not a match that ticks.** The same binary and URL
+produced 165,000 collision calls in two minutes on one run and zero in ten minutes on the
+next, at 150% CPU, with an empty CSV. There is no way to tell from the log, so: **check
+`$KD_SHADOW_OUT` after two minutes. If it has no rows at all, kill it and start again.**
+
+### Census sweep
+
+`KD_CENSUS=1` counts calls and runs nothing twice, so it perturbs nothing and can be pointed
+at any map safely. That is how §3 was produced:
+
+```bash
+for m in ONS-CBP2-Yorda DM-BE-Clearing ONS-UCMP-ABC-ECE ...; do
+  KD_CENSUS=1 KD_BIN=$BIN KD_SHADOW_OUT=/tmp/sweep_$m.csv \
+    timeout 260 ./test/run_map.sh "$m" 200 "$COMMON_URL" >/dev/null 2>&1
+  awk -F, 'NR>1 && $5+0>0 {print $1"x"$2}' /tmp/sweep_$m.csv | tr '\n' ' '
+done
+```
 
 ---
 
 ## 7. Instrumenting the game — the shadow harness
 
-`test/kd_shadow.c`. Every collision call runs **both** implementations on the same inputs:
-the original into the caller's real result, the recovered one into a scratch buffer. The
-engine only ever consumes the original's output, so gameplay is bit-for-bit unchanged and
-a session can be played out normally.
+`test/kd_shadow.c`. Every collision call runs the original into the caller's real result
+and, if a recovered implementation exists, the recovered one into a scratch buffer, then
+compares.
 
 ### Hook the registration, not the functions
 
-The first design renamed each intersection function to `orig_*` and defined a replacement.
-**It never ran.** Nothing calls `McdBoxBoxIntersect` by name — Karma installs it as a
-function *pointer* in an interaction table, so renaming the symbol also rewrote the table's
-own reference. Interposing `McdFrameworkSetInteractions` sees every
-`(geometry type, geometry type)` pair the engine installs: one hook for the whole collision
-matrix, no per-function code, and new pairs appear automatically.
+The first design renamed each intersection function to `orig_*`. **It never ran.** Nothing
+calls `McdBoxBoxIntersect` by name — Karma installs it as a function *pointer* in an
+interaction table, so renaming the symbol also rewrote the table's own reference.
+Interposing `McdFrameworkSetInteractions` sees every pair the engine installs: one hook for
+the whole matrix, and new pairs appear automatically.
 
-### Build it
+### The comparison list is derived, not written
 
-```bash
-./test/make_shadow_metoolkit.sh ../Thirdparty/metoolkit /tmp/kd_build \
-    /home/ion/karma-run/shadow-metoolkit
-```
+`make_shadow_metoolkit.sh` works out which functions it can compare. An interaction function
+is one Karma installs, and Karma says which those are: `McdFooBarIntersect` is installed by
+`McdFooBarRegisterInteraction`. **But not always** — `McdGjkCgIntersect` is installed by five
+registrars that do not share its name, so the busiest pair in the game was silently never
+compared until it fell back to the DWARF prototype (`int f(void *, void *)`). A candidate
+that is never registered never matches at run time, so widening is safe where narrowing was
+not.
 
-Recovered objects are staged with **every** defined symbol prefixed `rec_`, not just the
-function under test — otherwise their siblings collide with the shipped archive and the
-linker silently picks one, meaning you would be measuring a half-recovered build. The
-comparison list is *generated* from the objects actually staged; hardcoding it leaves a
-dangling `rec_*` reference and the whole engine fails to link.
-
-To test a **quarantined** object, compile it into `/tmp/kd_build/` by hand first:
-
-```bash
-INC=../Thirdparty/metoolkit/include
-gcc -m32 -O2 -fno-pic -fno-strict-aliasing -std=gnu99 -w \
-    -Wno-int-conversion -Wno-incompatible-pointer-types -DLINUX \
-    -Iinclude -I$INC -I$INC/McdCommon -I$INC/McdPrimitives -I$INC/McdFrame \
-    -I$INC/MeGlobals -I$INC/MdtBcl -I$INC/MdtKea -I$INC/Mst -I$INC/MeApp \
-    -c -o /tmp/kd_build/IxSphylPrimitives.o /tmp/kd_out/allobj/IxSphylPrimitives.c
-```
-
-### `KD_SELFTEST=1` — run this before believing any divergence
-
-Runs the **original as both sides**. Any divergence it reports is a bug in the harness, not
-the recovery: these functions are supposed to write only through their output parameter, so
-if calling one twice on identical inputs gives two answers, something else is shared.
-
-Baseline: `test-karma-1` self-test gives **1,763,102 calls, 0 divergence**. The harness is
-sound. That is what let us treat the `McdSphereTriangleListIntersect` divergence as real
-and worth explaining rather than tolerating.
-
-It is also what settles crashes. A SIGSEGV in `McdModelGetGeometryType`, called from the
-engine's own `KHandleCollisions`, was first written up as an overrun caused by
-`IxSphylPrimitives`. It is not — it reproduces under `KD_SELFTEST=1` with no recovered code
-executing. **Run the self-test before believing anything the harness blames on recovered
-code, crashes included.**
-
-### The harness perturbs the engine, and the cause is narrowing
-
-**Do not treat a crash in a shadow session as a fact about the recovered code.** Alternating
-240 s runs on `ONS-UCMP-ABC`, counting SIGSEGVs in the engine's own `KHandleCollisions`:
-
-| build | crashes |
-|---|---|
-| stock Karma, no harness at all | **0 of 4** |
-| harness, second call live | **4 of 14** |
-| harness, second call suppressed (`KD_CENSUS=1`) or narrowed (`KD_ONLY`) | **0 of 5** |
-
-So the harness is implicated and the second call is where to look — but it is intermittent,
-none of those rows is significant alone, and **the mechanism has not been found.**
-
-One hypothesis was tested and **rejected**: that the shadow call was scribbling on the
-caller's `McdModelPair`, which carries `m_cachedData`, `responseData` and `phase` for a
-cached interaction to write to. Giving the second call a *copy* of the pair changed the rate
-from 3-in-8 to 1-in-6, which at that sample size is nothing. The copy is kept anyway,
-because the header's claim that gameplay is unchanged is only true if these functions write
-solely through their output parameter and they demonstrably may not — and because it is
-free: re-measured against the known baseline on `test-karma-1` afterwards, 1,738,521 calls,
-0 structural divergences, worst delta 5.722046e-06, the same figure to every digit.
-
-Still untried, roughly in order of promise:
-
-1. ~~**Stack.**~~ **Ruled out.** `kd_dispatch` puts about 2.9 KB on the stack per shadowed
-   call, and aggregates dispatch to child pairs, so the frames could nest. They do not:
-   `kd_shadow.c` now counts the nesting and a full ONS-CBP2-Tropica match reports **max
-   depth 1**, which the CSV records on every run. One 2.9 KB frame is not the problem, and
-   measuring that took four minutes against the half-hour a bisection trial costs.
-2. **A shared contact pool.** If an intersection function bumps a per-frame allocator as
-   well as filling the caller's array, calling it twice double-counts it. That would corrupt
-   whatever is next in memory, which is what the backtrace looks like.
-3. **Bisect by function with `KD_ONLY`** over enough runs to mean something. Four runs each
-   was not enough; at a 1-in-3 base rate you need on the order of ten.
-
-Two switches exist for exactly this and are worth knowing about:
-
-- **`KD_CENSUS=1`** — count calls, run nothing twice. Perturbs nothing measurable. Use it
-  when you want a census from a map you do not trust.
-- **`KD_ONLY=<substring>`** — shadow only functions whose name contains it, no rebuild
-  needed between attempts.
+Entries carry real ELF symbols, because the id is not always the symbol: the convex-mesh
+interactions are C++ and ship mangled.
 
 ### Reading the output
 
-`$KD_SHADOW_OUT` is a CSV rewritten periodically (not only at exit, so a crash still yields
-data). Columns: `type1,type2,function,shadowed,calls,identical,fp_only,ret_diff,count_diff,
-dims_diff,overrun,worst_delta`.
+`$KD_SHADOW_OUT` is a CSV rewritten every 10,000 dispatches (not only at exit, so a crash
+still yields data). Columns: `type1,type2,function,shadowed,calls,identical,fp_only,
+ret_diff,count_diff,dims_diff,overrun,worst_delta`, plus a trailing `# max thunk nesting
+depth` comment line.
 
 - `ret_diff` / `count_diff` / `dims_diff` are **decisions**. Any non-zero is a real defect.
-- `overrun` is worse than any of them: the recovered function wrote past the end of the
-  buffer it was handed. The scratch buffer carries a canary, because without one an
-  overflow does not fail at the call — it corrupts whatever is next and the engine dies
-  somewhere unrelated a few frames later. With `IxSphylPrimitives` staged that was a
-  SIGSEGV inside `McdModelGetGeometryType`, called from the engine's own
-  `KHandleCollisions`, walking a pair container the harness never touches. The canary is
-  what lets a **quarantined** object be measured without taking the session with it.
+- `overrun` is worse: the recovered function wrote past the buffer it was handed. The
+  scratch buffer carries a canary, because without one an overflow corrupts whatever is next
+  and the engine dies somewhere unrelated a few frames later.
 - `fp_only` with a small `worst_delta` is float noise and expected.
-- `$KD_SHADOW_DIVERGENCES` dumps the **full input transforms** for each divergence, so a
-  case found in a live match can be replayed. The match never plays the same way twice, so
-  a divergence you cannot reproduce is nearly worthless.
+- `$KD_SHADOW_DIVERGENCES` dumps the **full input transforms** for each divergence.
+
+### `KD_SELFTEST=1` — run this before believing anything
+
+Runs the **original as both sides**. Any divergence it reports is a bug in the harness.
+Baseline: `test-karma-1` gives 1,763,102 calls, 0 divergence.
+
+It settles crashes too, and skipping that cost half a day. A SIGSEGV in
+`McdModelGetGeometryType` was written up as an overrun caused by `IxSphylPrimitives`. It is
+not — it reproduces under `KD_SELFTEST=1` with no recovered code executing.
+
+### The harness perturbs the engine, and the cause is still open
+
+`kd_shadow.c` used to claim gameplay is bit-for-bit unchanged because the engine only
+consumes the original's output. That rests on these functions writing only through their
+output parameter, and **they do not**: `McdModelPair` carries `m_cachedData`, `responseData`
+and `phase`.
+
+Alternating 240 s runs on `ONS-UCMP-ABC`, counting SIGSEGVs in the engine's own
+`KHandleCollisions`:
+
+| build | crashes |
+|---|---|
+| stock Karma, no harness | **0 of 4** |
+| harness, second call live | **4 of 14** |
+| harness, second call off (`KD_CENSUS=1`) or narrowed (`KD_ONLY`) | **0 of 5** |
+
+So the harness is implicated and the second call is where to look. It is intermittent, no
+row is significant alone, and **the mechanism has not been found.**
+
+One hypothesis was tested and **rejected**: giving the second call a *copy* of the
+`McdModelPair` moved the rate from 3-in-8 to 1-in-6, which is nothing at that sample size.
+The copy is kept anyway because the claim above is only true with it, and it is free —
+re-measured against the baseline on `test-karma-1`, worst delta `5.722046e-06`, the same
+figure to every digit.
+
+Also **ruled out**: stack pressure. `kd_dispatch` puts ~2.9 KB on the stack per shadowed
+call and aggregates dispatch to child pairs, so the frames could nest. They do not — the
+harness counts the nesting and a full match reports **max depth 1**. Four minutes to measure
+against the half hour a bisection trial costs.
+
+Still untried, in order of promise:
+
+1. **A shared contact pool.** If an intersection function bumps a per-frame allocator as
+   well as filling the caller's array, calling it twice double-counts it. That would corrupt
+   whatever is next in memory, which is what the backtrace looks like.
+2. **A per-function bisect with `KD_ONLY`** over enough runs to mean something. Four each
+   was not; at a 1-in-3 base rate you need on the order of ten.
+
+Two switches exist for exactly this:
+
+- **`KD_CENSUS=1`** — count calls, run nothing twice. Perturbs nothing measurable.
+- **`KD_ONLY=<substring>`** — shadow only functions whose name contains it, no rebuild
+  needed between attempts.
 
 ---
 
 ## 7a. The compile-feedback loop
 
 `ghidra_clean.py` emits C, **compiles it, rewrites only the lines GCC rejected, and
-recompiles**, until it settles. This replaced a set of whole-file regexes, and the reason
-is dead end 6 in §9: `(float)x->member` is a legal conversion when the member is an int and
-a bit reinterpretation when it is a pointer. The text is identical. The compiler is the
-only thing in the pipeline that knows which is which.
+recompiles**, until it settles. This replaced whole-file regexes, and the reason is dead end
+6 in §9: `(float)x->member` is a legal conversion when the member is an int and a bit
+reinterpretation when it is a pointer. The text is identical. The compiler is the only thing
+in the pipeline that knows which.
 
 **The verification is the whole design.** An edit is kept only if the diagnostic the rule
-claimed is gone *and* the total error count did not grow. Otherwise it is reverted, and
-the batch is retried one edit at a time in case a single bad rewrite masked good ones. So a
-rule that misreads a line costs one compile and nothing else, and the file is never left
-worse than as generated. Counting alone is not enough, incidentally: GCC reports an
-undeclared name once per function, so fixing the first of several occurrences leaves the
-count unchanged while making real progress.
+claimed got rarer *and* the total error count did not grow. Otherwise it is reverted and the
+batch retried one edit at a time. A rule that misreads a line costs one compile.
 
-Rules live in `REPAIR_RULES`, each paired with the diagnostic it claims. Adding one is
-cheap. **Removing the verification is not.**
+Two things that were subtly wrong and are worth not re-introducing:
 
-### The mislabelled-external rule — worth understanding before you touch it
+- Counting *presence* of a diagnostic is not enough — three `(float)ptr` casts in one
+  expression are three diagnostics with identical text and line. It counts **occurrences**.
+- `max_rounds` was 30 and **binding**, silently. Most rules fix one construct per pass and
+  GCC reports an undeclared name once per function, so an object with thirty of something
+  needs thirty rounds. McdBox stopped at 29 errors; running the loop a second time took it
+  to 8. A cap that stops early looks exactly like a rule that does not work. It is 90 now.
 
-This is the one that freed most of the objects, and it is the one with a trap in it.
-
-A relocatable `.o` has no addresses for its imports, so Ghidra invents them: every
-undefined symbol gets a four-byte slot in a synthetic EXTERNAL block, in ELF symbol-table
-order. A relocation with an **addend** then lands in a neighbour's slot, and Ghidra reports
-the neighbour:
-
-```
-5b: ff 15 08 00 00 00   call *0x8
-    5d: R_386_32 MeMemoryAPI          ->  (*_McdGeometryDeinit)(0x20,0x10)
-```
-
-Nothing is lost — the relocation records the true base and the addend sits in the
-instruction stream — so reading both back inverts it exactly:
-`MeMemoryAPI.createAligned(0x20, 0x10)`, which is what McdNullCreate does.
-
-**The trap:** Ghidra's block is a fiction, so two relocations that collide in it describe
-two *unrelated* addresses at link time, and Ghidra prints the same name at both. `MdtWorld`
-has exactly this: `_MePoolAPI` means `MePoolAPI.init` in `MdtWorldCreate` and
-`MeMemoryAPI.destroy` in `MdtWorldDestroy`. So resolution is done **per function**, against
-the relocations inside that function's own byte range, and if two candidates survive the
-rule declines rather than picks.
-
-At a call site the rewrite must name a struct member, because that is what supplies the
-prototype — calling through an unprototyped pointer would default-promote a float argument
-to double and change the ABI silently. No member, no rewrite.
+Rules live in `REPAIR_RULES`, each paired with the diagnostic it claims. Some are marked
+`multiline` (offered the whole statement, because Ghidra wraps long expressions) or
+`file_wide` (resolve a *name* rather than a line).
 
 ---
 
 ## 8. The detectors — why objects are held back
 
 `recover.py` refuses to put an object in the validated set when it matches any of these.
-They all exist for one reason: **code that compiles and crashes is worse than code that
-does not compile.**
+They exist for one reason: **code that compiles and crashes is worse than code that does not
+compile.**
 
 | detector | pattern | why |
 |---|---|---|
-| mislabelled symbol | `(*_McdGeometryDeinit)(0x1c, 0x10)` | Ghidra mis-resolved a relocation-with-addend against a data symbol. *Mostly repaired now* — see §7a; what remains is what the repair could not explain |
-| guessed stack frame | `(int)aiStack_50 + iVar8` | Ghidra invented a local array and routed call arguments through it at computed offsets |
-| argument-less indirect call | `(*fn)()` | no signature for a function pointer, so every argument is dropped and the callee reads the stack |
-| reconstructed frame | `kd_argslot_` | this pipeline rebuilt the frame by inference; it can read perfectly and still be wrong |
-| **shifted parameter list** | `__regparm1` | Ghidra laid the parameters out for a convention that is not in use; the body is off by N and loses an argument. Found by the collision scene, not by reading |
-| **unaccounted value** | `in_stack_0000000c`, `extraout_ECX` | a value read before anything assigns it — an incoming argument or a register Ghidra could not model. Dead stores are excluded; only a read that reaches something counts |
+| mislabelled symbol | `(*_McdGeometryDeinit)(0x1c, 0x10)` | mostly repaired now (§5); what remains is what the inversion could not explain |
+| guessed stack frame | `(int)aiStack_50 + iVar8` | Ghidra invented a local array and routed call arguments through it |
+| argument-less indirect call | `(*fn)()` | no signature for a function pointer, so every argument is dropped |
+| reconstructed frame | `kd_argslot_` | rebuilt by inference; it can read perfectly and still be wrong |
+| shifted parameter list | `__regparm1` | §10 |
+| unaccounted value | `in_stack_0000000c`, `extraout_ECX` | a value read before anything assigns it. Dead stores excluded; only a read that reaches something counts |
+| lost store | `x.f = x.f;` | a save-and-restore Ghidra reordered. See the sphyl entry below |
 
-`proven.txt` records which objects a real match has released from quarantine, **with the
-evidence on the line**. That is the only way out of quarantine. Do not remove a detector to
-make a number go up.
+`proven.txt` records which objects a real match has released, **with the evidence on the
+line**. That is the only way out. Do not remove a detector to make a number go up.
+
+### `IxConvexTriList` — the top task, and why the detector matters
+
+It compiles, passes all three substitute scenes, and is **18% wrong in a live match**:
+
+```
+McdConvexMeshTriangleListIntersect, ONS-UCMP-ABC-ECE
+  BEFORE  3,230 calls  642 ret_diff  852 count_diff  worst 7.79e-01
+  AFTER   1,548 calls   72 ret_diff  206 count_diff  worst 3.05e-05
+```
+
+The captured cases read `ret 1/0 touch 1/0 count 4/0` — the recovered code finds **no
+contacts** where the original finds four. That is a triangle buffer it cannot see, which is
+a mis-reconstructed alloca frame. Ten other functions in the same run are clean, so it is
+not the harness.
+
+The BEFORE→AFTER came from one fix, and the shape is what to look for next. `base + negVar`
+is the allocated block, and the collapse was rewriting a *second* use of it to the bare
+base, handing out a pointer to an unrelated local. But only **non-negative** offsets from
+that base are inside the block — the original decremented `esp`, so the block sits at the
+bottom of the frame and anything below it is the outgoing-argument area for a call.
+`IxConvexTriList` uses both, ten lines apart. What is left is presumably more of the same.
+
+Note `KD_CALLSITE_SIG=trilist` is already applied to this object, so the easy fix is spent.
 
 ### `IxSphylPrimitives` — released, and how the question got answered
 
-This sat quarantined as "is 0.02% threshold flapping acceptable?", which is a question with
-no answer, because it has no yardstick in it. Two things resolved it.
+It sat quarantined as "is 0.02% threshold flapping acceptable?", which is a question with no
+answer because it has no yardstick in it. Two things resolved it.
 
-**Most of it was a bug, not a tolerance.** Ghidra emitted
+**Most of it was a bug.** Ghidra emitted `boxP[axis] = boxP[axis];`, which reads as a no-op
+and is a save-and-restore around an aggregate overwrite — the machine code stashes that
+component in a register before the three stores, and Ghidra folded the save into the restore
+so the read moved *after* them. `McdSphylBoxIntersect` returned the right penetration depth
+at the wrong point. Fixed: synthetic worst delta 3.59e-01 → 5.17e-05, in-game 11 structural
+divergences in 77,202 → 1 in 74,921.
 
-```c
-boxP[0] = n[0];  boxP[2] = n[2];  boxP[1] = n[1];
-boxP[axis] = boxP[axis];          /* ...a no-op? */
-```
-
-It is not a no-op. The machine code saves that component in a register *before* overwriting
-the array and puts it back after; Ghidra folded the save into the restore and so moved the
-read to after the three stores, because it cannot see that a variable index aliases a
-constant one. `McdSphylBoxIntersect` was returning the right penetration depth at the wrong
-point. `ghidra_clean.restore_saved_element()` hoists the read:
-
-```
-synth, 300k pairs   worst delta 3.59e-01 -> 5.17e-05     (a factor of 7,000)
-in-game, 25 min     11 structural in 77,202 -> 1 in 74,921
-```
-
-**Then the rest was measured against the right thing.** The shadow harness cannot answer
-the question that matters, structurally: it feeds the engine the *original's* answer every
-frame, so an error never gets to compound. `test/scene_ragdoll.c` puts the recovered code in
-the driving seat for 15 s and asks whether a ragdoll survives it. Same scene, three builds:
+**Then the rest was measured against the right thing.** `scene_ragdoll.c` puts the recovered
+code in the driving seat for 15 s:
 
 | comparison | max divergence over 15 s | final |
 |---|---|---|
@@ -627,37 +596,58 @@ the driving seat for 15 s and asks whether a ragdoll survives it. Same scene, th
 
 That second row is **MathEngine's own two shipped builds of their own source**. The recovery
 differs from the shipped library by the same margin the vendor's builds differ from each
-other, the divergence is *bounded* — it plateaus inside three seconds rather than growing —
-and all three settle with the same residual energy (47.0, 47.4, 43.8), nothing goes
-non-finite, nothing escapes.
+other, the divergence is *bounded*, and all three settle with the same residual energy.
+There is no standard on which the recovered object fails and the vendor's x86-64 build
+passes.
 
-There is no standard on which the recovered object fails and the vendor's own x86-64 build
-passes. UT2004 shipped against these libraries and replicates `KRigidBodyState` precisely
-because it never relied on cross-build determinism (§10).
+**The lesson is not about sphyls.** A tolerance question with no yardstick in it cannot be
+answered and should not be escalated as a judgement call — find what the original already
+tolerates and measure against that. The vendor shipped two builds that disagree; that is the
+bar.
 
-**The lesson worth keeping** is not about sphyls. A tolerance question with no yardstick in
-it cannot be answered and should not be escalated as a judgement call — find what the
-original already tolerates and measure against that. The vendor shipped two builds that
-disagree; that is the bar.
+### `IxSphereTriList` — a known limit, found after release
+
+The divergence rate is a function of **penetration depth**:
+
+| `KD_SPREAD` | touching | bit-identical | dims divergences |
+|---:|---:|---:|---:|
+| 1.0 | 91.8% | 9.3% | 40 |
+| 2.5 | 24.4% | 76.7% | 6 |
+| 4.0 | 6.4% | 93.8% | **0** |
+
+At shallow resting contact — what the game does — there are none, consistent with 0 in
+1.76 M real calls. Under deep interpenetration the two disagree about a contact's *feature*
+classification while agreeing on position to 1e-4 and separation exactly. Not axis-alignment
+degeneracy (`KD_SKEW=1` moved 40 to 38). The release stands; a body spawned inside geometry
+reaches the other regime.
+
+### `IxBoxBox` — one unreproduced divergence
+
+**1 count divergence in 1,299 real calls** — both agree the boxes touch, original says 2
+contacts, recovered says 4, at world (259.9, 8.0, 10.2). It does not reproduce: 300,000
+synthetic pairs near the origin and 200,000 at `KD_ORIGIN=260` are both clean, though the
+numeric spread rises 3.5× as coarser f32 spacing predicts. Distance alone is not it — the
+driver uses one fixed pair of box sizes and the game's evidently differ. Vary those next.
 
 ---
 
 ## 9. Dead ends — do not repeat these
 
 1. **Broadening bare-tag aliases to all public tags** → build goes to **zero**. `MePoolAPI`
-   is a struct tag *and* an ordinary identifier, so `typedef struct MePoolAPI MePoolAPI;`
-   is "redeclared as a different kind of symbol". Only `_`-prefixed tags are safe.
-2. **Adding enums without adding `enum` to public-type detection** → build goes to zero
-   (redefines `MePoolType`).
+   is a struct tag *and* an ordinary identifier, so `typedef struct MePoolAPI MePoolAPI;` is
+   "redeclared as a different kind of symbol". Only a checked list is safe — there are three
+   (`McdErrorDescription`, `MePoolFixed`, `MePoolMalloc`), found by scanning for tags that
+   are defined, never typedef'd, and then used bare. Those headers are C++-only, which is
+   why `McdFrame` — the collision framework — never compiled.
+2. **Adding enums without adding `enum` to public-type detection** → build goes to zero.
 3. **A fixed-size buffer for `alloca`** → compiles, passes the substitute gate, then
-   segfaults in a real match. The allocation *size* comes from the same frame Ghidra failed
-   to model. Use a real `alloca()`.
+   segfaults in a real match. Use a real `alloca()`.
 4. **`ucc-bin server`** hangs with no output. Use the real game binary.
 5. **Ghidra simplification styles other than `decompile`** — all fail.
-6. **Blind rewriting of `(float)x->member`** — if the member is genuinely an `int`,
-   `(float)i` is a legal *conversion* and rewriting it to `*(float*)&i` silently
-   reinterprets bits. Only rewrite lines the compiler actually flags. **This is the next
-   task; see §11.**
+6. **Blind rewriting of `(float)x->member`** — see §7a.
+7. **Forcing `__cdecl` on every function** — §5.
+8. **Trusting a clean synthetic run for anything holding `kd_argslot_`** — `IxConvexTriList`
+   is the second object to prove this.
 
 ---
 
@@ -665,75 +655,68 @@ disagree; that is the bar.
 
 - **`MeReal` is `float`.** f32 semantics are vendor-blessed: MathEngine shipped a pure-f32
   x86-64 build (`lib.rel/linux_hx_single`).
-- **x87 vs f32 diverges by 0.25 mm over 15 s** without collisions. With collisions it
-  diverges **without bound** (111 m at 15 s) — contact make/break is discontinuous.
-- **Bit-matching the reference was never achievable by anyone**, including MathEngine:
-  their own i386 and x86-64 builds disagree by 111 m after 15 s.
+- **x87 vs f32 diverges by 0.25 mm over 15 s** without collisions, and **without bound**
+  with them (111 m at 15 s) — contact make/break is discontinuous.
+- **Bit-matching the reference was never achievable by anyone**, including MathEngine: their
+  own i386 and x86-64 builds disagree by 111 m after 15 s.
 - **UT2004 knows this.** `Actor.uc` has `KRigidBodyState`, `KUpdateState()`,
   `bSmoothKarmaStateUpdates=True` — the server replicates rigid-body state and clients
   interpolate. It never relied on cross-machine determinism.
 - Therefore **trajectory diffing cannot validate a replacement past first contact**. Use a
-  collision-free scene for trajectory comparison, and the per-function gate for the verdict.
-- `-fno-strict-aliasing` is **required**, not a nicety. Decompiled code type-puns
-  constantly; under `-O2` GCC deleted argument stores and `KTriListGenerator` received
-  `(pair, 0, 0, 0, 0)`.
-- `__thiscall` is a no-op here — verified against prologues. GCC's i386 C++ ABI passes
-  `this` on the stack.
+  collision-free scene for trajectory comparison and the per-function gate for the verdict.
+- `-fno-strict-aliasing` is **required**. Under `-O2` GCC deleted argument stores and
+  `KTriListGenerator` received `(pair, 0, 0, 0, 0)`.
+- `__thiscall` is a no-op here — GCC's i386 C++ ABI passes `this` on the stack.
 - **`__regparmN` is NOT a no-op.** An earlier version of this file said it was, on the
-  strength of one prologue. That was wrong, and the collision scene proved it: Ghidra
-  lays the parameter list out to match the convention it detected, so in a `__regparmN`
-  function every parameter in the body is shifted by N and the last incoming argument is
-  dropped. `McdGeometryGetMassProperties` passed three of its four arguments, each one
-  position off, and segfaulted. 9 objects / 19 functions are affected; none of them are
-  on the collision path. `recover.py` now holds them back.
+  strength of one prologue. The collision scene disagreed: Ghidra lays the parameter list out
+  to match the convention it detected, so the body is shifted by N and the last incoming
+  argument is dropped. `McdGeometryGetMassProperties` passed three of its four arguments,
+  each one position off, and segfaulted. Now fixed at the source (§5).
 
 ---
 
 ## 11. What to do next
 
-In order:
+1. **Fix `IxConvexTriList`'s frame** (§8). Last pair the game calls with nothing behind it,
+   18% wrong, sharply characterised, reproduces on `ONS-UCMP-ABC-ECE`.
+2. **Chase the `IxBoxBox` count divergence** (§8) — vary the box dimensions in
+   `difftest_pair.c`.
+3. **Find the harness perturbation** (§7) — the shared-contact-pool hypothesis, then a
+   proper `KD_ONLY` bisect.
+4. **Grind the tail.** 39 objects, but **read §3 first** — a large part of the pile is
+   geometry the game never collides. What remains, by size: `stack0xNNNN` (~20 references,
+   a real value Ghidra lost — do not paper over it), `too few arguments` (14, genuinely
+   dropped arguments), types nothing defines (`MeASEObject`, `Mesh2GeometryType`,
+   `BodyData` — they are in the DWARF, and `gen_typedb.py` takes object directories, so
+   widening its input is the route), and `subscripted value` (16, all DebugDraw and XML —
+   a file-scope static emitted as `float x[n]` and indexed `x[i][j]`).
+5. **`libMdtKea`** — the LCP solver, the hottest code, C++ with vtables. Layouts and vtables
+   are recovered (`src/MdtKea/keaMatrix.h`) but no object has been validated.
+6. **Replace, don't recover:** `libMcdConvexCreateHull` is qhull 2.6 (1998) — 186 KB,
+   load-time only, open source. Swap in modern qhull. `MeAssetDB`/`MeXML`/`MeAssetFactory`
+   (51 KB) is `.ka` XML parsing, not physics. `MeViewer2`/`MeApp` (74 KB) are never linked.
 
-1. **Differentially test `McdGjk`.** `McdGjkCgIntersect` handles Box×ConvexMesh, which the
-   census puts at 77,424 calls — the busiest pair by far with no evidence behind it. The
-   object now compiles and passes both substitute scenes, which proves only that it does
-   not crash. Add it to `difftest_pair.c` (one `IX()` line, one table row — the box and
-   convex factories already exist) and run a CBP2 map to catch it live.
-2. **Grind the tail.** 47 objects. The biggest remaining class by far is `stack0xNNNN` —
-   30 references, an incoming argument Ghidra did not model — and that is a genuine defect,
-   not a spelling problem, so it must not be papered over. After that: types
-   `kd_types.h` does not emit (`MeASEObject`, `McdErrorDescription`, `Mesh2GeometryType`),
-   and C++ base-class splicing gaps (`super_Link`, `_vptr_CxSmallSort`).
-4. **`libMdtKea`** — the LCP solver, the hottest code, C++ with vtables. Layouts and
-   vtables are recovered (`src/MdtKea/keaMatrix.h`) but no object has been validated.
-5. **Replace, don't recover:** `libMcdConvexCreateHull` is qhull 2.6 (1998) — 186 KB,
-   load-time only, and open source. Swap in modern qhull. `MeAssetDB`/`MeXML`/
-   `MeAssetFactory` (51 KB) is `.ka` XML parsing, not physics.
-   `MeViewer2`/`MeApp` (74 KB) are never linked — skip entirely.
-
-Done since the last handover, so you do not redo it: the compile-feedback loop (§7a),
-Ghidra's memory map inverted so mislabelled externals and unnamed data resolve
-(§7a), the `__regparm` parameter shift found and detected (§8, §10), and
-`test/difftest_pair.sh`, which drives one interaction directly and is where the
-`McdSphylBoxIntersect` defect came from.
+---
 
 ## 12. What "complete" looks like
 
 **Complete** is not "every object recovered". It is:
 
-1. Every object the census shows the game *actually calls* is recovered and validated.
-2. Validated means: 0 `ret_diff`, 0 `count_diff`, 0 `dims_diff` across a multi-hour
-   in-game session, with `KD_SELFTEST` clean on the same session, and `proven.txt` carrying
-   the evidence.
-3. `substitute_test.sh` bit-identical on the collision-free scene for every recovered
-   object.
+1. Every object the census (§3) shows the game *actually calls* is recovered and validated.
+   **That is ten pairs, and nine of them are done.** The tenth is `IxConvexTriList`.
+2. Validated means: 0 `ret_diff`, 0 `count_diff`, 0 `dims_diff`, 0 `overrun` across a
+   multi-hour in-game session, with `KD_SELFTEST` clean on the same session, and
+   `proven.txt` carrying the evidence.
+3. All three `substitute_test.sh` scenes clean for every recovered object.
 4. qhull and the asset loader replaced rather than recovered.
-5. No detector suppressed, no object released from quarantine without a line in
-   `proven.txt`.
-6. The whole set builds as ordinary C for **wasm32 and arm64/armv7**, not just i386 — see
-   `HANDOVER-WEB.md`. Nobody has compiled any of this for wasm yet. That is the actual
-   goal; i386 is the proving ground.
-7. The engine runs with `WITH_KARMA=1` against recovered Karma with no shipped `.a` in the
-   link at all.
+5. No detector suppressed, no object released without a line in `proven.txt`.
+6. The whole set builds as ordinary C for **wasm32 and arm64/armv7**, not just i386.
+   **wasm32 is done** — 92/92 compile with byte-identical exported symbols
+   (`test/wasm_check.sh`). arm64 has not been tried; no cross-compiler is installed here.
+   Nothing has been *executed* under wasm. See `HANDOVER-WEB.md`.
+7. The engine runs with `WITH_KARMA=1` against recovered Karma with **no shipped `.a` in the
+   link at all**. `test/make_substituted_metoolkit.sh` does this per object; a 300 s
+   ragdoll-heavy ONS match on recovered sphyl gave 0 crashes, 0 NaN, 0 Karma warnings.
 
-Getting to (7) with 20 well-chosen objects beats getting to 90% coverage of objects nobody
-calls.
+Getting to (7) with the ten pairs that matter beats getting to 90% coverage of objects
+nobody calls. §3 is the map.

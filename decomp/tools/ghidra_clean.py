@@ -221,7 +221,10 @@ def materialise_alloca_frame(body, fname):
         # would hand out a fresh block per store, which is nonsense. Leaving them
         # unresolved is deliberate: the object then fails to compile and
         # recover.py holds it back, which is the honest outcome.
-        body = re.sub(r'(=\s*\([^()]*\)\s*)\(\s*&stack0x([0-9a-f]{8})\s*\+\s*(\w+)\s*\)',
+        # Ghidra writes the address either as `&stack0xH` or, when it wants an
+        # integer, `(int)&stack0xH`. Both are the same defining use.
+        body = re.sub(r'(=\s*\([^()]*\)\s*)\(\s*(?:\(int\)\s*)?&stack0x([0-9a-f]{8})'
+                      r'\s*\+\s*(\w+)\s*\)',
                       sub_alloca, body)
 
     if n:

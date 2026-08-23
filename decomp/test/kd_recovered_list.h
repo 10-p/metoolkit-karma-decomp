@@ -6,4 +6,10 @@
     X(McdSpherePlaneIntersect) \
     X(McdSphereSphereIntersect) \
     X(McdSphereTriangleListIntersect) \
+    X(McdSphylSphylIntersect) \
+    X(McdSphylTriangleListIntersect) \
+    X(McdSphylSphereIntersect) \
+    X(McdSphylBoxIntersect) \
+    X(McdSphylPlaneIntersect) \
+    X(McdSphylCylinderIntersect) \
 

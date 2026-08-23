@@ -7,3 +7,11 @@
 #
 # object              evidence
 IxSphereTriList       test-karma-1, 5 min: 680,045 calls of McdSphereTriangleListIntersect, 678,254 bit-identical, 0 structural divergences, worst delta 5.7e-06. Self-test (original vs original) on the same map: 1,763,102 calls, 0 divergence, so the harness is sound.
+
+# --- NOT proven, with what was observed --------------------------------------
+# IxSphylPrimitives   ONS-Torlan, 5 min: McdSphylSphylIntersect 502 calls,
+#                     McdSphylTriangleListIntersect 869, McdSphylSphereIntersect 86 —
+#                     ALL with 0 structural divergences and float-noise deltas
+#                     (6.0e-08 / 2.4e-07 / 4.8e-07). Then SIGSEGV inside
+#                     rec_McdSphylTriangleListIntersect+0x309, calling one of its
+#                     own statics. Mostly right, one bad path. Stays quarantined.

@@ -313,6 +313,10 @@ def materialise_alloca_frame(body, fname):
         neg[m.group(1)] = (m.group(2).strip(), m.group(3))
 
     n = 0
+    # negVar -> the base it was expressed against. Anything ELSE written as
+    # `base + negVar` denotes the same block and must not be collapsed to the
+    # bare base; see the assignment below.
+    alloca_base = {}
     if neg:
         def sub_alloca(m):
             nonlocal n
@@ -321,7 +325,9 @@ def materialise_alloca_frame(body, fname):
                 return m.group(0)
             expr, mult = neg[var]
             n += 1
-            return f'{m.group(1)}((char *)alloca((size_t)({expr}) * {mult}))'
+            alloca_base.setdefault(var, m.group(2))
+            return (f'{m.group(1)}(kd_alloca_{var} = '
+                    f'(char *)alloca((size_t)({expr}) * {mult}))')
         # ONLY the defining use: the alloca'd pointer appearing as the RHS of an
         # assignment, i.e. `dest = (T)(&stack0xH + negVar);`. Other
         # `&stack0xH + negVar` sites are STORES into the shifted frame — Ghidra's
@@ -360,9 +366,11 @@ def materialise_alloca_frame(body, fname):
                 nonlocal n
                 expr, mult = neg[var]
                 n += 1
-                return f'= (char *)alloca((size_t)({expr}) * {mult});'
+                alloca_base.setdefault(var, m.group(1))
+                return (f'= (kd_alloca_{var} = '
+                        f'(char *)alloca((size_t)({expr}) * {mult}));')
             body = re.sub(r'=\s*(?:\([^()]*\)\s*)?\(?\s*(?:\(int\)\s*)?'
-                          r'&?\w+\s*\+\s*' + re.escape(var) + r'\s*\)?\s*;',
+                          r'&?(\w+)\s*\+\s*' + re.escape(var) + r'\s*\)?\s*;',
                           sub_bare, body, count=1)
 
     if n:
@@ -378,9 +386,44 @@ def materialise_alloca_frame(body, fname):
         # safe BECAUSE the alloca is now a separate real allocation and can no
         # longer alias these slots.
         for var in neg:
+            # `base + negVar` where base is the one the ALLOCA was expressed
+            # against is not a scratch slot — it is the allocated block itself,
+            # written somewhere as a value. IxConvexTriList does exactly this:
+            #
+            #   pfVar15 = (float *)((int)afStack_11c + iVar16);      <- the block
+            #   *(int *)(&stack0x... + iVar16) = (int)afStack_11c + iVar16;
+            #
+            # Collapsing the second to `(int)afStack_11c` hands out a pointer to
+            # an unrelated local, and whatever consumes that slot reads the
+            # wrong memory. Point it at the block instead.
+            ab = alloca_base.get(var)
+            if ab:
+                # Only where the offset from the block is NON-NEGATIVE. A
+                # negative one is not inside the allocation: the original
+                # decremented esp, so the block sits at the bottom of the frame
+                # and anything below it is the outgoing-argument area for a
+                # call. Pointing that at `alloca() - 0x1c` would write under the
+                # block, which is worse than leaving it as the local Ghidra
+                # named. IxConvexTriList does both in the same function, ten
+                # lines apart.
+                body = re.sub(r'\(int\)\s*&?' + re.escape(ab) + r'\s*\+\s*'
+                              + re.escape(var) + r'\b(?!\s*\+\s*-)(?!\s*-)',
+                              f'(int)(kd_alloca_{var})', body)
+                body = re.sub(r'&?' + re.escape(ab) + r'\s*\+\s*'
+                              + re.escape(var) + r'\b(?=\s*[\)\,;])',
+                              f'kd_alloca_{var}', body)
             body = re.sub(r'\s*\+\s*' + re.escape(var) + r'\b(?=\s*[\)\,])', '', body)
             body = re.sub(r'\(int\)(&?\w+)\s*\+\s*' + re.escape(var) + r'\b',
                           r'(int)\1', body)
+        # The allocated block needs a name, because it is referred to in more
+        # than one place; see the collapse above.
+        if alloca_base:
+            decls = [f'    char *kd_alloca_{v};' for v in sorted(alloca_base)]
+            brace = body.find('\n{')
+            if brace >= 0:
+                body = (body[:brace + 2] + '\n' + '\n'.join(decls) + '\n'
+                        + body[brace + 2:])
+
         # Any stack0xNNNN still standing is a scratch slot with no named local
         # behind it; give it one.
         leftover = sorted(set(STACK_SYM.findall(body)))

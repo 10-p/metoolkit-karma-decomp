@@ -154,9 +154,24 @@ IxConvexPrimitives    real: 1,685 calls of McdSphylConvexMeshIntersect on ONS-CB
 # IxConvexTriList     Compiles, passes all three substitute scenes, and is 46% WRONG in a
 #                     live match. ONS-UCMP-ABC-ECE, 15 min:
 #
-#                       McdConvexMeshTriangleListIntersect
-#                         3,230 calls   1,735 identical
-#                           642 ret_diff   852 count_diff   worst 7.79e-01
+#                       McdConvexMeshTriangleListIntersect, ONS-UCMP-ABC-ECE
+#                         BEFORE  3,230 calls   642 ret_diff   852 count_diff   worst 7.79e-01
+#                         AFTER   1,548 calls    72 ret_diff   206 count_diff   worst 3.05e-05
+#
+#                     The AFTER is with the alloca-base fix described below: 46%
+#                     wrong down to 18%, and the worst delta down by four orders
+#                     of magnitude. That confirms the diagnosis — it is the
+#                     frame, not the algorithm — and it is still broken.
+#
+#                     The fix that got it there, because it is the shape to look
+#                     for next: `base + negVar` is the allocated block, and the
+#                     collapse was rewriting a SECOND use of it to the bare
+#                     base, handing out a pointer to an unrelated local. But
+#                     only NON-NEGATIVE offsets from that base are inside the
+#                     block — the original decremented esp, so anything below it
+#                     is the outgoing-argument area for a call, and
+#                     IxConvexTriList uses both, ten lines apart. What is left
+#                     is presumably more of the same.
 #
 #                     Not subtly wrong. The captured cases read
 #                     `ret 1/0 touch 1/0 count 4/0` — the recovered code finds

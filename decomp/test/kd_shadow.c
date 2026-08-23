@@ -255,6 +255,15 @@ static void kd_compare(kd_pair *s, int a, int b,
    a divergence. */
 static int kd_selftest = -1;
 
+/* KD_CENSUS=1 counts calls and runs NOTHING twice.
+   The point is bisection. If a session crashes with the harness in and not
+   without it, this says whether the fault is in interposing the registration
+   and routing every call through a thunk, or in calling the intersection
+   function a second time — which is an assumption, not a fact: these functions
+   are documented to write only through their output parameter, and a cached
+   interaction (GJK keeps state on the McdModelPair) would not. */
+static int kd_census = -1;
+
 static int kd_dispatch(int slot, McdModelPair *p, McdIntersectResult *r)
 {
     kd_pair *s = &kd_pairs[slot];
@@ -262,11 +271,15 @@ static int kd_dispatch(int slot, McdModelPair *p, McdIntersectResult *r)
         const char *e = getenv("KD_SELFTEST");
         kd_selftest = (e && *e == '1') ? 1 : 0;
     }
+    if (kd_census < 0) {
+        const char *e = getenv("KD_CENSUS");
+        kd_census = (e && *e == '1') ? 1 : 0;
+    }
     s->calls++;
     if (++kd_since_flush >= KD_FLUSH_EVERY) { kd_since_flush = 0; kd_flush(); }
 
     int a = s->orig(p, r);
-    if (s->rec) {
+    if (s->rec && !kd_census) {
         /* The scratch buffer carries a canary past its end.
            A recovered function that writes more contacts than it was given room
            for does not fail here — it smashes whatever is next, and the engine

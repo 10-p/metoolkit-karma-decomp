@@ -135,24 +135,48 @@ typedefs. Under Emscripten you will need to keep `-DLINUX` (metoolkit has no was
 and verify `MePrecision.h` picks a sane `MeUintPtr` — it uses `uintptr_t` on the `LINUX`
 branch, which is correct for wasm32.
 
+### It compiles. All of it.
+
+This had never been tried, so it was worth doing before anything else:
+
+```
+emcc 5.0.7, no -m32, otherwise the same flags as the native build
+89 of 89 recovered objects compiled for wasm32.  0 failures.
+```
+
+Stronger than that — the **exported symbol sets are byte-identical to i386 for
+all 89 objects**. Same names, same bindings, nothing added or dropped. So the ABI
+surface the engine links against does not change between the two targets, which
+was the thing most likely to turn this into a rewrite.
+
+Two of the five hazards below are settled by that, and the other three are
+runtime questions that compiling cannot answer. **Do not read "it compiles" as
+"it works"** — nothing below has been executed under wasm.
+
 ### Things that may bite under Emscripten specifically
 
-1. **`alloca`.** Recovered code uses real `alloca()` for variable-length stack allocations
+1. **`alloca` — 12 objects use it**, and the two that matter are `IxSphereTriList` (the
+   busiest function in the game) and `IxSphylPrimitives` (the second). The rest are pool
+   and kea code. Recovered code uses real `alloca()` for variable-length stack allocations
    (Karma sizes a triangle buffer by triangle count). Emscripten supports it, but the
    default wasm stack is small (64 KB unless `-sSTACK_SIZE` is raised). Karma's alloca is
    `triangleCount * 24` bytes and the count comes from map geometry. **Raise the stack and
    test with dense static meshes.** A stack overflow here will present as memory corruption,
    not a clean trap, unless you build with `-sASSERTIONS` / `-sSTACK_OVERFLOW_CHECK=2`.
-2. **`__asm__("symbol")` labels.** The recovered code exports functions under their real ELF
-   names via asm labels (`void kd_McdBoxBoxIntersect(...) __asm__("McdBoxBoxIntersect")`).
-   This is used because Ghidra recovers the parameter types the *code* uses, which often
-   differ from how the public header spells them — same ABI, incompatible C types. **Verify
-   `wasm-ld` honours asm labels the same way.** If it does not, the fallback is to rename in
-   the header instead, but that is a large mechanical change.
-3. **C++ ABI data emitted from C.** `gen_vtables.py` re-emits `_ZTV*`/`_ZTI*`/`_ZTS*` as C
-   arrays with asm labels and `__attribute__((weak))`, because the originals are COMDAT.
-   Emscripten's handling of weak symbols and its own C++ ABI may conflict. Only `libMdtKea`
-   needs this; if it fights you, consider hand-writing the four affected classes instead.
+2. **`__asm__("symbol")` labels — SETTLED, they work.** The recovered code exports functions
+   under their real ELF names via asm labels
+   (`void kd_McdBoxBoxIntersect(...) __asm__("McdBoxBoxIntersect")`), because Ghidra
+   recovers the parameter types the *code* uses rather than how the public header spells
+   them. LLVM honours this: `llvm-nm /tmp/kd_wasm/IxBoxBox.o` shows
+   `T McdBoxBoxIntersect`, not `kd_McdBoxBoxIntersect`. The feared large mechanical rename
+   is not needed.
+3. **C++ ABI data emitted from C — compiles, binding differs.** `gen_vtables.py` re-emits
+   `_ZTV*`/`_ZTI*`/`_ZTS*` as C arrays with asm labels and `__attribute__((weak))`, because
+   the originals are COMDAT. keaMatrix.o produces all three under both targets, but the
+   binding is not the same: i386 gives `V` (weak object, COMDAT-eligible) and wasm32 gives
+   plain `W`. That is unlikely to matter while nothing else defines them, and it will
+   matter the moment something does. **Check it at link time, not compile time**, and only
+   `libMdtKea` is affected.
 4. **Function pointers and the wasm table.** Karma stores engine callbacks as function
    pointers and calls them indirectly. In wasm those become table indices with **strict
    signature matching** — a mismatch is a runtime trap, not a silently-wrong call as on

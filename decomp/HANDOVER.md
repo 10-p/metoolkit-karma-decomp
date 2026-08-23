@@ -39,8 +39,8 @@ gate:     92 of 92 clean on ALL THREE scenes; 92/92 compile for wasm32 with
           byte-identical exported symbols — bit-identical on scene_chain, and no
           crash on scene_boxes_on_plane (the two divergences there are IxBoxBox
           and IxBoxPlane, both on the collision path, both expected)
-review:   13 objects held back by seven safety detectors
-fail:     43 objects do not compile
+review:   16 objects held back by seven safety detectors
+fail:     40 objects do not compile
 ```
 
 **Run all three scenes.** `scene_chain` is collision-free and is the authoritative

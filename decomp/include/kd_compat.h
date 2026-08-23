@@ -278,6 +278,29 @@ static __inline unsigned int KD_FBITS(double f)
     return u;
 }
 
+/* ---- tags metoolkit's own headers use C++-style -------------------------
+    A few public headers define `struct X { ... };` and then go on to use bare
+    `X` as a type name, which is C++ and not C:
+
+        struct McdErrorDescription { MeI16 m_errNum; ... };
+        void McdError(McdErrorDescription* ErrorList, ...);   <- needs `struct`
+
+    The header is what it is; these aliases make it parse. They must come BEFORE
+    kd_karma.h, which is why they live here rather than in the generated
+    kd_types.h — the typedef forward-declares the tag and the header completes
+    it later.
+
+    This is deliberately a LIST and not a rule. HANDOVER.md §9 dead end 1:
+    aliasing every public tag takes the build to zero, because `MePoolAPI` is a
+    struct tag AND an ordinary identifier and `typedef struct MePoolAPI
+    MePoolAPI;` is then "redeclared as a different kind of symbol". Every name
+    below was found by scanning the headers for a tag that is defined, never
+    typedef'd, and used bare — and each one checked to be a tag only.
+------------------------------------------------------------------------- */
+typedef struct McdErrorDescription McdErrorDescription;
+typedef struct MePoolFixed         MePoolFixed;
+typedef struct MePoolMalloc        MePoolMalloc;
+
 /* Call a C++-mangled Karma symbol from C without a C++ compiler. */
 #define KD_MANGLED(sym) __asm__(sym)
 

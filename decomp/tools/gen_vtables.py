@@ -77,7 +77,14 @@ def defined_symbols(obj):
     out = {}
     for mangled, d in zip(rows, dem):
         base = d.split('(')[0].strip()
-        out[mangled] = 'kd_' + re.sub(r'[^A-Za-z0-9_]', '_', base.replace('::', '__'))
+        # A destructor is `Foo::~Foo`. Replacing '::' first and then scrubbing
+        # non-identifier characters turns the tilde into a third underscore —
+        # `kd_CxSmallSort___CxSmallSort` — while ghidra_clean flattens the same
+        # name to `kd_CxSmallSort__dtor_CxSmallSort`, so the vtable slot
+        # referenced a function that does not exist. Use the same rule in both
+        # places.
+        flat = re.sub(r'\b([A-Za-z_]\w*)::~([A-Za-z_]\w*)', r'\1__dtor_\2', base)
+        out[mangled] = 'kd_' + re.sub(r'[^A-Za-z0-9_]', '_', flat.replace('::', '__'))
     return out
 
 

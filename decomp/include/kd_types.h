@@ -149,8 +149,16 @@ typedef enum VoronoiRegionType VoronoiRegionType;
 
 /* ---- definitions ---- */
 /* from CxSmallSort.o */
+/* Link — 8 bytes, recovered from DWARF */
+struct Link {
+    struct Link *mNext;                             /* +0x0 */
+    struct Link *mPrev;                             /* +0x4 */
+};
+
+/* from CxSmallSort.o */
 /* CxSmallSortMarker — 20 bytes, recovered from DWARF */
 struct CxSmallSortMarker {
+    struct Link super_Link;                         /* +0x0  base class */
     MeReal mOrdinate;                               /* +0x8 */
     struct CxSmallSortRep *mRep;                    /* +0xc */
     MeU8 mType;                                     /* +0x10 */
@@ -158,13 +166,6 @@ struct CxSmallSortMarker {
 /* NOTE: first member is at +0x8, not 0 — CxSmallSortMarker DERIVES from a
  * base class occupying [0, 0x8). Embed the base as the first
  * member in C, or repeat its fields, to keep the layout identical. */
-
-/* from CxSmallSort.o */
-/* Link — 8 bytes, recovered from DWARF */
-struct Link {
-    struct Link *mNext;                             /* +0x0 */
-    struct Link *mPrev;                             /* +0x4 */
-};
 
 /* from CxSmallSort.o */
 /* LinkList — 8 bytes, recovered from DWARF */
@@ -182,7 +183,7 @@ struct NibbleArray {
 /* from CxSmallSort.o */
 /* CxSmallSort — 212 bytes, recovered from DWARF */
 struct CxSmallSort {
-    const struct CxSmallSort_vtbl *vptr;            /* +0x0 */
+    code **_vptr_CxSmallSort;                       /* +0x0 */
     MeU8 mNAxes;                                    /* +0x4 */
     MeU8 mAxes;                                     /* +0x5 */
     struct _McdFramework *mFramework;               /* +0x8 */
@@ -204,11 +205,14 @@ struct CxSmallSort {
 };
 /* NOTE: CxSmallSort is polymorphic. Ghidra renders virtual calls as
  *   (**(code **)(*(int *)obj + N))(obj, ...)   i.e. vtable slot N/4.
- * Declare `struct CxSmallSort_vtbl` with one function pointer per slot. */
+ * The vptr is `code **` so those calls compile as written; the
+ * slot NUMBER carries the meaning, and gen_vtables.py re-emits the
+ * table itself from the object's relocations. */
 
 /* from CxSmallSort.o */
 /* CxSmallSortRep — 152 bytes, recovered from DWARF */
 struct CxSmallSortRep {
+    struct Link super_Link;                         /* +0x0  base class */
     MeI32 mID;                                      /* +0x8 */
     struct _McdModel *mModel;                       /* +0xc */
     bool mDynamic;                                  /* +0x10 */
@@ -372,11 +376,13 @@ struct blocktobodyandlen {
 /* from keaCalcJinvMandRHS_vanilla.o */
 /* keaFunctions — 4 bytes, recovered from DWARF */
 struct keaFunctions {
-    const struct keaFunctions_vtbl *vptr;           /* +0x0 */
+    code **_vptr_keaFunctions;                      /* +0x0 */
 };
 /* NOTE: keaFunctions is polymorphic. Ghidra renders virtual calls as
  *   (**(code **)(*(int *)obj + N))(obj, ...)   i.e. vtable slot N/4.
- * Declare `struct keaFunctions_vtbl` with one function pointer per slot. */
+ * The vptr is `code **` so those calls compile as written; the
+ * slot NUMBER carries the meaning, and gen_vtables.py re-emits the
+ * table itself from the object's relocations. */
 
 /* from keaLCPSolver.o */
 /* keaLCPSolver — 76 bytes, recovered from DWARF */
@@ -405,7 +411,7 @@ struct keaLCPSolver {
 /* from keaMatrix.o */
 /* keaMatrix — 20 bytes, recovered from DWARF */
 struct keaMatrix {
-    const struct keaMatrix_vtbl *vptr;              /* +0x0 */
+    code **_vptr_keaMatrix;                         /* +0x0 */
     int m_numRows;                                  /* +0x4 */
     int m_padded;                                   /* +0x8 */
     MeReal *matrix;                                 /* +0xc */
@@ -413,12 +419,14 @@ struct keaMatrix {
 };
 /* NOTE: keaMatrix is polymorphic. Ghidra renders virtual calls as
  *   (**(code **)(*(int *)obj + N))(obj, ...)   i.e. vtable slot N/4.
- * Declare `struct keaMatrix_vtbl` with one function pointer per slot. */
+ * The vptr is `code **` so those calls compile as written; the
+ * slot NUMBER carries the meaning, and gen_vtables.py re-emits the
+ * table itself from the object's relocations. */
 
 /* from keaMatrix_PcSparse.o */
 /* keaMatrix_pcSparse — 52 bytes, recovered from DWARF */
 struct keaMatrix_pcSparse {
-    const struct keaMatrix_pcSparse_vtbl *vptr;     /* +0x0 */
+    code **_vptr_keaMatrix_pcSparse;                /* +0x0 */
     int m_numRows;                                  /* +0x4 */
     int m_padded;                                   /* +0x8 */
     MeReal *matrix;                                 /* +0xc */
@@ -434,12 +442,14 @@ struct keaMatrix_pcSparse {
 };
 /* NOTE: keaMatrix_pcSparse is polymorphic. Ghidra renders virtual calls as
  *   (**(code **)(*(int *)obj + N))(obj, ...)   i.e. vtable slot N/4.
- * Declare `struct keaMatrix_pcSparse_vtbl` with one function pointer per slot. */
+ * The vptr is `code **` so those calls compile as written; the
+ * slot NUMBER carries the meaning, and gen_vtables.py re-emits the
+ * table itself from the object's relocations. */
 
 /* from keaMatrix_tester.o */
 /* keaMatrix_tester — 68 bytes, recovered from DWARF */
 struct keaMatrix_tester {
-    const struct keaMatrix_tester_vtbl *vptr;       /* +0x0 */
+    code **_vptr_keaMatrix_tester;                  /* +0x0 */
     int m_numRows;                                  /* +0x4 */
     int m_padded;                                   /* +0x8 */
     MeReal *matrix;                                 /* +0xc */
@@ -459,7 +469,9 @@ struct keaMatrix_tester {
 };
 /* NOTE: keaMatrix_tester is polymorphic. Ghidra renders virtual calls as
  *   (**(code **)(*(int *)obj + N))(obj, ...)   i.e. vtable slot N/4.
- * Declare `struct keaMatrix_tester_vtbl` with one function pointer per slot. */
+ * The vptr is `code **` so those calls compile as written; the
+ * slot NUMBER carries the meaning, and gen_vtables.py re-emits the
+ * table itself from the object's relocations. */
 
 /* from keaCalcJinvMandRHS_vanilla.o */
 /* keaTempMemory — 36 bytes, recovered from DWARF */

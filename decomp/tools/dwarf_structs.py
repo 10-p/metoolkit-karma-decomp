@@ -228,6 +228,29 @@ def emit(dies, die, base_die=None, base_dies=None):
              f'{kw} {name} {{']
     has_vptr = False
     first_off = None
+    # DWARF states the base class outright, in a DW_TAG_inheritance child. The
+    # RTTI route above only reaches POLYMORPHIC bases, so a plain one — Link,
+    # which CxSmallSortMarker derives from — was left as a comment saying
+    # "embed the base yourself", and 200 references to it across the corpus
+    # failed to compile.
+    #
+    # The member is named `super_<Base>` because that is what Ghidra calls it,
+    # so the recovered code needs no rewriting. It also puts the base at [0,
+    # sizeof(Base)) where it belongs, which the comment could not do.
+    inherit_name = None
+    if base_die is None:
+        for c in die['children']:
+            if c['tag'] != 'DW_TAG_inheritance':
+                continue
+            bt = c['attrs'].get('DW_AT_type', '')
+            m = REF_RE.search(bt)
+            if not m:
+                continue
+            bd = dies.get(int(m.group(1), 16))
+            bn = bd['attrs'].get('DW_AT_name') if bd else None
+            if bn:
+                inherit_name = re.sub(r'[^A-Za-z0-9_]', '_', bn)
+            break
     # Each member carries the DIE table it must be resolved against. DIE offsets
     # are per-compilation-unit, so a base member's DW_AT_type refers into the
     # BASE's table; merging the two tables lets same-numbered entries collide and
@@ -235,6 +258,9 @@ def emit(dies, die, base_die=None, base_dies=None):
     members = [(c, dies) for c in die['children']]
     if base_die is not None:
         members = [(c, base_dies or dies) for c in base_die['children']] + members
+    if inherit_name:
+        lines.append(f'    struct {inherit_name} super_{inherit_name};'.ljust(52)
+                     + '/* +0x0  base class */')
     for c, cdies in members:
         if c['tag'] != 'DW_TAG_member':
             continue
@@ -248,10 +274,19 @@ def emit(dies, die, base_die=None, base_dies=None):
         if first_off is None:
             first_off = off
         # gcc names the vtable pointer `_vptr.Klass`, which is not a legal C
-        # identifier. Rename it and give it a usable type.
+        # identifier. Ghidra names the same member `_vptr_Klass`, which is —
+        # and is what the recovered code references — so use that spelling
+        # rather than inventing a third one. Calling it `vptr` meant every
+        # `this->_vptr_CxSmallSort` failed with "has no member named".
         if mn.startswith('_vptr'):
             has_vptr = True
-            lines.append(f'    const struct {name}_vtbl *vptr;'.ljust(52) +
+            # `code **`, not a pointer to a named vtbl struct. Ghidra calls
+            # through this member directly — `(**this->_vptr_X)(this)` — and a
+            # struct nobody ever defines makes that "invalid use of undefined
+            # type". kd_compat.h's `code` is an unprototyped function type,
+            # which is exactly what a vtable slot is here, and the generated
+            # source includes kd_compat.h before this header.
+            lines.append(f'    code **_vptr_{name};'.ljust(52) +
                          (f'/* +0x{off:x} */' if off is not None else ''))
             continue
         mn = re.sub(r'[^A-Za-z0-9_]', '_', mn)
@@ -266,7 +301,9 @@ def emit(dies, die, base_die=None, base_dies=None):
     if has_vptr:
         lines.append(f'/* NOTE: {name} is polymorphic. Ghidra renders virtual calls as')
         lines.append(' *   (**(code **)(*(int *)obj + N))(obj, ...)   i.e. vtable slot N/4.')
-        lines.append(f' * Declare `struct {name}_vtbl` with one function pointer per slot. */')
+        lines.append(' * The vptr is `code **` so those calls compile as written; the')
+        lines.append(' * slot NUMBER carries the meaning, and gen_vtables.py re-emits the')
+        lines.append(' * table itself from the object\'s relocations. */')
     return '\n'.join(lines)
 
 

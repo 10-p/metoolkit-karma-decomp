@@ -231,7 +231,14 @@ def resolve_field_names(body, fieldmap):
 def cxx_names_to_c(body):
     """`Foo::bar` is how Ghidra renders a C++ function-local static or member.
     C has no `::`; flatten it to a legal identifier. The declaration itself is
-    supplied by the per-object prelude."""
+    supplied by the per-object prelude.
+
+    A destructor is `Foo::~Foo`, and `~` is not a word character, so an earlier
+    pattern left the `::` in place and then rename_exported inserted `kd_` after
+    the tilde — `CxSmallSort::~kd_CxSmallSort`, which is not anything. Handle it
+    first and give it a name that cannot collide with a method called
+    `dtor_Foo`."""
+    body = re.sub(r'\b([A-Za-z_]\w*)::~([A-Za-z_]\w*)', r'\1__dtor_\2', body)
     return re.sub(r'\b([A-Za-z_]\w*)::([A-Za-z_]\w*)', r'\1__\2', body)
 
 
@@ -744,6 +751,93 @@ def restore_saved_element(body):
         n += 1
         i += 1
     return '\n'.join(out), n
+
+
+PTR_REF = re.compile(r'(?<![\w])(PTR_[A-Za-z0-9_]*?_([0-9a-f]{8}))\b')
+
+
+def resolve_ptr_labels(obj, text):
+    """`PTR__CxSmallSort_00011f20` is a pointer-sized slot at a known address.
+
+    Ghidra names a data reference `PTR_<what it points at>_<address>` when the
+    slot holds a pointer. The address is in its invented memory map, which
+    ghidra_memory_map() reproduces, so it can be resolved to a real symbol plus
+    an offset — no different from the DAT_ case, except that the answer is a
+    location rather than bytes.
+
+    The one that matters is a class's own vtable pointer:
+
+        this->_vptr_CxSmallSort = (...)&PTR__CxSmallSort_00011f20;
+
+    which is the Itanium ABI address point, `&vtable[2]`. gen_vtables.py has
+    already re-emitted that vtable, so the define lands on it and the
+    constructor sets the right thing.
+
+    Only symbols the object actually defines are used, so nothing is invented."""
+    refs = {m.group(1): int(m.group(2), 16) for m in PTR_REF.finditer(text)}
+    if not refs:
+        return '', 0
+    secs, _ext = ghidra_memory_map(obj)
+    by_index = {}
+    out = subprocess.run(['readelf', '-SW', obj], capture_output=True, text=True).stdout
+    for line in out.splitlines():
+        m = re.match(r'\s*\[\s*(\d+)\]\s+(\S+)', line)
+        if m:
+            by_index[m.group(1)] = m.group(2)
+
+    # Symbols with their SECTION. nm gives an offset with no section, and a
+    # .text offset can equal a .rodata one — matching without the section put
+    # a vtable pointer on a constructor.
+    syms = []
+    out = subprocess.run(['readelf', '-sW', obj], capture_output=True, text=True).stdout
+    for line in out.splitlines():
+        m = re.match(r'\s*\d+:\s+([0-9a-f]+)\s+(\d+)\s+(\S+)\s+\S+\s+\S+\s+(\S+)\s+(\S+)', line)
+        if not m or m.group(4) in ('UND', 'ABS'):
+            continue
+        sec = by_index.get(m.group(4))
+        if sec and int(m.group(2)) > 0:
+            syms.append((sec, int(m.group(1), 16), int(m.group(2)), m.group(5)))
+    if not syms:
+        return '', 0
+    dem = subprocess.run(['c++filt'] + [n for _, _, _, n in syms],
+                         capture_output=True, text=True).stdout.split('\n')
+    short = {}
+    for i, (_sec, _v, _sz, n) in enumerate(syms):
+        d = dem[i].strip() if i < len(dem) else n
+        short[n] = re.sub(r'\(.*', '', d).strip() or n
+
+    lines, n = [], 0
+    for label, addr in sorted(refs.items()):
+        hit = None
+        for sname, _typ, lo, hi in secs:
+            if not lo <= addr < hi:
+                continue
+            off = addr - lo
+            for sec, value, size, sym in syms:
+                if sec == sname and value <= off < value + size:
+                    hit = (sym, off - value)
+                    break
+            break
+        if hit is None:
+            continue
+        sym, delta = hit
+        # Match whichever generator owns the symbol. gen_vtables emits the C++
+        # ABI objects as `kd` + the mangled name (`_ZTV11CxSmallSort` becomes
+        # `kd_ZTV11CxSmallSort`); everything else is `kd_` + the demangled name
+        # with `::` flattened. Demangling a vtable gives "vtable for X", which
+        # is not what anything is called.
+        if sym.startswith('_ZT'):
+            c = 'kd' + sym
+        else:
+            flat = re.sub(r'\b([A-Za-z_]\w*)::~([A-Za-z_]\w*)', r'\1__dtor_\2', short[sym])
+            c = 'kd_' + re.sub(r'[^A-Za-z0-9_]', '_', flat.replace('::', '__'))
+        lines.append(f'/* {label} -> {sym} + 0x{delta:x} */')
+        lines.append(f'#define {label} (*(void **)((char *)&{c} + 0x{delta:x}))')
+        n += 1
+    if not n:
+        return '', 0
+    return ('/* ---- pointer slots Ghidra named by address ---- */\n'
+            + '\n'.join(lines) + '\n\n'), n
 
 
 def signature_of(body):
@@ -1541,6 +1635,7 @@ def main():
     data_block, n_data = materialise_data_refs(args.object, body_text)
     # Forward declarations mention these types too, so scan both.
     ftype_block, n_ftype = ghidra_functype_typedefs(body_text + '\n'.join(decls))
+    ptr_block, n_ptr = resolve_ptr_labels(args.object, body_text)
 
     with open(args.output, 'w') as f:
         f.write('/* Generated by karma-decomp/tools/ghidra_clean.py — do not edit by hand.\n'
@@ -1566,6 +1661,8 @@ def main():
             f.write('/* ---- C++ ABI data (needs the declarations above) ---- */\n')
             f.write(open(args.vtables).read())
             f.write('\n')
+        if ptr_block:
+            f.write(ptr_block)
         if args.exports and os.path.exists(args.exports):
             f.write('/* ---- exported data symbols (need the declarations above) ---- */\n')
             f.write(open(args.exports).read())
@@ -1584,6 +1681,8 @@ def main():
         print(f'  {n_data} unnamed data reference(s) read from the object')
     if n_ftype:
         print(f'  {n_ftype} function type(s) declared from the name Ghidra gave them')
+    if n_ptr:
+        print(f'  {n_ptr} pointer slot(s) resolved from Ghidra addresses')
     if args.cflag:
         ctx = RepairContext(args.object, fieldmap, args.metoolkit_include)
         n_edits, left, _log = repair_loop(args.output, args.cc, args.cflag, ctx)

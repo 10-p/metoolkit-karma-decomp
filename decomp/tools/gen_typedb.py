@@ -77,10 +77,15 @@ def value_deps(dies, die):
 
     Pointer members need only a forward declaration, so they are not deps —
     which is what keeps the graph acyclic even though Karma's types point at
-    each other freely."""
+    each other freely.
+
+    A BASE CLASS counts. dwarf_structs embeds it as a `super_<Base>` member, so
+    it is every bit as by-value as a named field, and leaving it out of the
+    graph emitted CxSmallSortMarker above Link and took the whole build to zero
+    — the failure mode §4 warns about, reproduced exactly."""
     deps = set()
     for c in die['children']:
-        if c['tag'] != 'DW_TAG_member':
+        if c['tag'] not in ('DW_TAG_member', 'DW_TAG_inheritance'):
             continue
         t = c['attrs'].get('DW_AT_type')
         if not t:

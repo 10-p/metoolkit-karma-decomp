@@ -51,17 +51,30 @@ IxSphereTriList       KNOWN LIMIT, found after release and worth reading before 
 #                     real: test-karma-1, 5 min, 1,763,276 calls of McdSphereTriangleListIntersect, 1,761,435 bit-identical, 0 structural divergences, worst delta 5.7e-06. (An earlier run of the same map gave 680,045 calls with the same verdict; the count varies with how the KActors settle, the verdict has not.) Also 93,438 calls on a 20-min DM-BB-VehicleWar-test-physics match, 0 structural. Self-test (original vs original) on test-karma-1: 1,763,102 calls, 0 divergence, so the harness is sound.
 IxSphereSphere        real: test-karma-1, 5 min, 120,275 calls, 90,540 bit-identical, 0 structural, worst 5.96e-08; plus 8,610 calls on the 20-min vehicle match, 0 structural. synth: 300,000 pairs, 72,614 touching, 0 structural, worst 5.96e-08.
 IxBoxBox              real: 23,611 calls on a 25-min ONS-CBP2-Tropica match plus 10,331 on a 20-min vehicle match, 0 structural, worst 3.3e-04. synth: 300,000 pairs, 29,747 touching, 0 structural, worst 8.7e-06.
-McdGjk                synth: 100,000 Box x ConvexMesh pairs through McdGjkCgIntersect, 20,218 touching, 0 ret/touch, 0 count, 0 dims divergences. BUT worst numeric delta 2.75e-03 over pairs that agreed — three hundred times the spread of any other function measured here, which run between 1.2e-07 and 8.7e-06.
-#                     GJK is iterative, so the two builds plausibly stop at
-#                     different iterations and that is what the number is. It is
-#                     also the busiest pair in the census (77,424 real calls) and
-#                     it has NOT been shadow-tested in a live match, and this
-#                     driver only exercises the cold path — McdGjkCgIntersect
-#                     keeps a cache on the McdModelPair (McdCacheHello/Goodbye
-#                     are registered beside it) and difftest_pair hands it a
-#                     zeroed pair every iteration. Treat this as "does not
-#                     crash and decides the same things on cold input", nothing
-#                     more.
+McdGjk                synth: Box x ConvexMesh through McdGjkCgIntersect, 50,000 pairs per
+#                     regime, 0 ret/touch, 0 count, 0 dims divergences AT EVERY REGIME.
+#
+#                       KD_SPREAD  touching  bit-identical  worst delta
+#                       1.0          20.2%      93.3%        2.75e-03
+#                       2.0           3.5%      98.8%        1.26e-05
+#                       3.5           0.8%      99.8%        5.01e-06
+#
+#                     The 2.75e-03 that looked alarming when it was the only
+#                     number is penetration depth, not a defect: at shallow
+#                     contact the spread is 5e-06, in line with every other
+#                     function here. GJK is iterative, so a deeper overlap is
+#                     more iterations for a last-bit difference to grow through,
+#                     and it never changes a discrete decision.
+#
+#                     Driver self-test on the same 50,000 pairs: 100%
+#                     bit-identical, worst delta exactly 0.
+#
+#                     STILL MISSING: a live match. This is the busiest pair in
+#                     the census (77,424 real calls) and has never been
+#                     shadow-tested, and the driver only exercises the COLD path
+#                     — McdGjkCgIntersect keeps a cache on the McdModelPair
+#                     (McdCacheHello/Goodbye are registered beside it) and
+#                     difftest_pair hands it a zeroed pair every iteration.
 IxSphylPrimitives     RELEASED. Held back since it was first recovered, on the grounds that
 #                     0.02% "threshold flapping" in McdSphylTriangleListIntersect might not
 #                     be acceptable. Two things settled it, in this order.

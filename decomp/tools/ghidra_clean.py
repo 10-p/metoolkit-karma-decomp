@@ -92,6 +92,25 @@ def object_symbols(obj):
     return exported, internal, real, weak
 
 
+def imported_names(obj):
+    """Every name the object IMPORTS, mangled and demangled-short.
+
+    Distinct from undefined_symbols() below, which returns UND symbols in ELF
+    symbol-table ORDER because the EXTERNAL-block inversion depends on that
+    order. This one is an unordered membership test: a bare identifier that
+    appears here is a call into another translation unit, not to a sibling
+    method, and must not be renamed."""
+    out = subprocess.run(['nm', '-u', obj], capture_output=True, text=True).stdout
+    raw = [l.split()[-1] for l in out.splitlines() if l.strip()]
+    names = set(raw)
+    if raw:
+        dem = subprocess.run(['c++filt'] + raw, capture_output=True,
+                             text=True).stdout.split('\n')
+        for d in dem:
+            names.add(re.sub(r'.*::', '', d.split('(')[0]).strip())
+    return names
+
+
 def split_functions(text):
     """Yield (name, body) for each decompiled function, in file order."""
     parts = BANNER.split(text)
@@ -1783,6 +1802,7 @@ def main():
     # PASS 1: decide the renames. An exported function becomes kd_<name> with an
     # asm label carrying the real ELF symbol.
     renames = {}
+    banner_of = {}
     for name, body in by_name.items():
         if name in args.drop or name in internal or name not in exported:
             continue
@@ -1793,6 +1813,43 @@ def main():
         d = declarator_name(sig)
         if d:
             renames[d] = 'kd_' + d
+            # Remember the BANNER name too. For a C++ method Ghidra's banner is
+            # the bare `PrincipalSubmatrix` while the declarator, after
+            # cxx_names_to_c flattened `Class::method`, is
+            # `keaLCPSolver__PrincipalSubmatrix`. Deriving the short name back
+            # out of the declarator by splitting on '__' is wrong the moment a
+            # method's own name starts with an underscore: CxSmallSort::_Update
+            # flattens to `CxSmallSort___Update` and an rsplit yields `Update`.
+            # The banner already has the right answer.
+            if name != d:
+                banner_of.setdefault(name, []).append(d)
+
+    # Ghidra writes an INTRA-CLASS call site with the bare method name, while the
+    # definition's banner is `Class::method` and cxx_names_to_c flattens that to
+    # `Class__method`. The map above is keyed on the flattened declarator, so the
+    # call site was left calling an undeclared `method` and the object failed to
+    # compile. keaLCPSolver — the LCP solver — fails exactly this way on
+    # PrincipalSubmatrix, PrincipalPivotTransformMakeW and
+    # PrincipalPivotTransformMakeX.
+    #
+    # Add the short name as an alias, but only where it cannot mean anything else
+    # in this translation unit. A bare name that is ambiguous between two classes,
+    # or that the object also imports or defines in its own right, is left alone:
+    # a wrong rename here would silently redirect a call, which is worse than not
+    # compiling.
+    imported = imported_names(args.object)
+    n_short_alias = 0
+    for short, owners in banner_of.items():
+        if len(owners) != 1:
+            continue                       # ambiguous between classes
+        # NOT `short in exported`: object_symbols() already keys that set on the
+        # SHORT name, so every C++ method is in it and the guard would reject
+        # every alias. The real ambiguities are a sibling whose own declarator is
+        # that bare name, a file-static of the same name, and an import.
+        if short in renames or short in internal or short in imported:
+            continue
+        renames[short] = renames[owners[0]]
+        n_short_alias += 1
 
     def apply_renames(text):
         """Rewrite every REFERENCE to a renamed function, not just its definition.

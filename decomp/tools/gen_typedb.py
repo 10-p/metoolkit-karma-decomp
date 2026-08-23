@@ -23,6 +23,8 @@ import os
 import re
 import sys
 
+OFF_RE_TD = re.compile(r'DW_OP_plus_uconst:\s*(\d+)')
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from dwarf_structs import (parse, emit, emit_enum, declarator,  # noqa: E402
                            rtti_bases, REF_RE, SYSTEM_TYPES)
@@ -351,6 +353,32 @@ def main():
 
     out.append('#endif /* KD_TYPES_H */')
     open(args.output, 'w').write('\n'.join(out) + '\n')
+
+    # Side map: {type: {offset: member}}. Ghidra writes `this->field_0x14` for a
+    # class whose DWARF layout it did not apply; with the offsets we can put the
+    # real name back. Emitted here because this is where the offsets are known.
+    import json
+    fieldmap = {}
+    for n in names:
+        _, die, dies, _o = best[n]
+        bname = inherit_pre.get(n)
+        kids = list(die['children'])
+        if bname and bname in best:
+            kids = list(best[bname][1]['children']) + kids
+        m = {}
+        for c in kids:
+            if c['tag'] != 'DW_TAG_member':
+                continue
+            mn = c['attrs'].get('DW_AT_name')
+            mo = OFF_RE_TD.search(c['attrs'].get('DW_AT_data_member_location', ''))
+            if mn and mo:
+                m[int(mo.group(1))] = ('vptr' if mn.startswith('_vptr')
+                                       else re.sub(r'[^A-Za-z0-9_]', '_', mn))
+        if m:
+            fieldmap[n] = m
+    mp = os.path.splitext(args.output)[0] + '_fields.json'
+    json.dump(fieldmap, open(mp, 'w'), indent=1, sort_keys=True)
+    print(f'{mp}: field offsets for {len(fieldmap)} type(s)')
 
     if not args.quiet:
         print(f'{args.output}: {len(names)} types + {len(enums)} enums from '

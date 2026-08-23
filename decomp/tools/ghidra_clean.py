@@ -130,6 +130,36 @@ def resolve_anon_types(body):
     return body
 
 
+FIELD_REF = re.compile(r'\b(\w+)\s*->\s*field_0x([0-9a-f]+)')
+# `Type *var;` as a local, and `(Type *var, ...)` as a parameter. The parameter
+# form matters most: the object a method operates on is `this`, which is always a
+# parameter and never a local declaration.
+DECL_PTR = re.compile(r'(?:^\s*|[(,]\s*)(?:struct\s+)?(\w+)\s*\*\s*(\w+)\s*[;,)]', re.M)
+
+
+def resolve_field_names(body, fieldmap):
+    """Turn `this->field_0x14` into `this->m_blocks`.
+
+    Ghidra falls back to offset-named members for classes whose DWARF layout it
+    did not apply — the kea matrix hierarchy, mostly. Now that kd_types.h carries
+    the real layout, the offsets can be mapped back to names.
+
+    The variable's type comes from its own declaration in the same function, so
+    nothing is guessed: an offset is only renamed when the pointer's type is
+    known AND that type has a member at exactly that offset."""
+    if not fieldmap:
+        return body
+    var_type = {v: t for t, v in DECL_PTR.findall(body)}
+
+    def sub(m):
+        var, off = m.group(1), int(m.group(2), 16)
+        t = var_type.get(var)
+        name = fieldmap.get(t, {}).get(str(off)) if t else None
+        return f'{var}->{name}' if name else m.group(0)
+
+    return FIELD_REF.sub(sub, body)
+
+
 def cxx_names_to_c(body):
     """`Foo::bar` is how Ghidra renders a C++ function-local static or member.
     C has no `::`; flatten it to a legal identifier. The declaration itself is
@@ -277,6 +307,9 @@ def main():
     ap.add_argument('--vtables', help='C++ ABI data (vtable/typeinfo/type string) from '
                                       'tools/gen_vtables.py; emitted after the forward '
                                       'declarations because the slots take method addresses')
+    ap.add_argument('--field-map', help='kd_types_fields.json — offsets to member '
+                                        'names, for classes where Ghidra emitted '
+                                        'field_0xNN instead')
     ap.add_argument('--metoolkit-include',
                     help='metoolkit include/ root; functions the headers define as '
                          'MeINLINE are dropped, since the header already supplies them')
@@ -286,6 +319,10 @@ def main():
 
     exported, internal, real_symbol_of = object_symbols(args.object)
     hdr_inlines = header_inline_names(args.metoolkit_include)
+    fieldmap = {}
+    if args.field_map and os.path.exists(args.field_map):
+        import json
+        fieldmap = json.load(open(args.field_map))
     text = open(args.input, errors='ignore').read()
 
     # A Ghidra dump can contain the same name twice — typically a small import
@@ -336,6 +373,7 @@ def main():
             continue
         body = strip_comments(body).strip('\n')
         body = resolve_anon_types(cxx_names_to_c(ghidra_type_quirks(body)))
+        body = resolve_field_names(body, fieldmap)
         body, nalloca = materialise_alloca_frame(body, name)
         if nalloca:
             n_alloca_fns += 1

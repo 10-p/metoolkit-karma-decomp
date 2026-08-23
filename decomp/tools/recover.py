@@ -178,7 +178,9 @@ def main():
         r = run([sys.executable, os.path.join(here, 'ghidra_clean.py'), dump,
                  '-o', csrc, '--object', obj, '--prelude', prelude,
                  '--exports', exports, '--vtables', vtables,
-                 '--metoolkit-include', inc] + drops)
+                 '--metoolkit-include', inc,
+                 '--field-map', os.path.join(root, 'include',
+                                             'kd_types_fields.json')] + drops)
         if r.returncode != 0:
             rows.append((archive, base, 'FAIL', 'clean: ' + r.stderr.strip()[:90]))
             counts['FAIL'] += 1

@@ -1,0 +1,242 @@
+{
+ "CxSmallSort": {
+  "0": "vptr",
+  "4": "mNAxes",
+  "5": "mAxes",
+  "8": "mFramework",
+  "12": "mRepList",
+  "16": "mFreeIDs",
+  "20": "mReleasedIDs",
+  "24": "mModelMax",
+  "28": "mFreeIDCount",
+  "32": "mReleasedIDCount",
+  "36": "mPairState",
+  "44": "mManager",
+  "48": "mMinBound",
+  "108": "mMaxBound",
+  "168": "mSort",
+  "192": "mActiveList",
+  "200": "mAABBUpdateFn",
+  "204": "mChanging",
+  "208": "mUserData"
+ },
+ "CxSmallSortMarker": {
+  "8": "mOrdinate",
+  "12": "mRep",
+  "16": "mType"
+ },
+ "CxSmallSortRep": {
+  "8": "mID",
+  "12": "mModel",
+  "16": "mDynamic",
+  "20": "mCullingTable",
+  "24": "mCullingID",
+  "28": "mCullingIndex",
+  "32": "mAABBMarkers"
+ },
+ "FaceId": {
+  "0": "axis",
+  "2": "minside"
+ },
+ "Link": {
+  "0": "mNext",
+  "4": "mPrev"
+ },
+ "LinkList": {
+  "0": "mRoot"
+ },
+ "McdContactList": {
+  "0": "link",
+  "4": "head",
+  "8": "free",
+  "12": "ct"
+ },
+ "MdtKeaInputRowFactors": {
+  "0": "xi",
+  "4": "c",
+  "8": "lo",
+  "12": "hi",
+  "16": "slipfactor",
+  "20": "xgamma"
+ },
+ "MdtLODPartitionData": {
+  "0": "rowCount",
+  "4": "bodyArray",
+  "8": "bodyCount",
+  "12": "conArray",
+  "16": "conCount"
+ },
+ "MeProfileFrameData": {
+  "0": "next",
+  "4": "frameNumber",
+  "8": "firstfsi",
+  "12": "timings"
+ },
+ "MeProfileFrameSectionInfo": {
+  "0": "next",
+  "4": "codeSection",
+  "8": "timesCalled",
+  "12": "cpuCycles",
+  "20": "count0",
+  "28": "count1"
+ },
+ "MeProfileTimer": {
+  "0": "next",
+  "4": "codeSection",
+  "8": "timesCalled",
+  "12": "cpuCycles",
+  "20": "count0",
+  "28": "count1",
+  "36": "autoStop",
+  "37": "isRunning",
+  "40": "cpuCycleStartValue",
+  "48": "count0StartValue",
+  "56": "count1StartValue"
+ },
+ "NibbleArray": {
+  "0": "mArray",
+  "4": "mSize"
+ },
+ "PAssetPart": {
+  "0": "tm"
+ },
+ "PDynamics": {
+  "0": "mass_offset",
+  "12": "mass",
+  "16": "density",
+  "20": "inertia",
+  "44": "linearDamp",
+  "48": "angularDamp",
+  "52": "fastSpin",
+  "64": "useFastSpin"
+ },
+ "PJoint": {
+  "0": "pos",
+  "24": "pax",
+  "48": "oax",
+  "72": "stop",
+  "84": "stiff",
+  "108": "damp",
+  "132": "bLimited",
+  "136": "bMotorized",
+  "140": "strength",
+  "164": "desVel",
+  "172": "special_f",
+  "176": "special_i",
+  "184": "special_b"
+ },
+ "PPrimitive": {
+  "0": "dims",
+  "12": "nVertices",
+  "16": "vertices",
+  "20": "maxVertices",
+  "24": "tempVertex",
+  "36": "tm"
+ },
+ "_McdContactLink": {
+  "0": "contact",
+  "4": "area",
+  "8": "next",
+  "12": "prev"
+ },
+ "_weightingData": {
+  "0": "next",
+  "4": "timesCalled",
+  "12": "cpuCycles",
+  "20": "count0",
+  "28": "count1"
+ },
+ "blocktobodyandlen": {
+  "0": "len",
+  "12": "qwc",
+  "16": "blocktobody"
+ },
+ "keaFunctions": {
+  "0": "vptr"
+ },
+ "keaLCPSolver": {
+  "0": "AinvStride",
+  "4": "n",
+  "8": "n_blocks",
+  "12": "n_padded",
+  "16": "deadIndex",
+  "20": "c16c12n",
+  "24": "cpuType",
+  "28": "velocityZeroTol",
+  "32": "cached",
+  "36": "A",
+  "40": "Q",
+  "44": "x",
+  "48": "w",
+  "52": "upper",
+  "56": "lower",
+  "60": "initialSolve",
+  "64": "clampedValues",
+  "68": "Ainv",
+  "72": "Qrhs"
+ },
+ "keaMatrix": {
+  "0": "vptr",
+  "4": "m_numRows",
+  "8": "m_padded",
+  "12": "matrix",
+  "16": "matrixChol"
+ },
+ "keaMatrix_pcSparse": {
+  "0": "vptr",
+  "4": "m_numRows",
+  "8": "m_padded",
+  "12": "matrix",
+  "16": "matrixChol",
+  "20": "m_blocks",
+  "24": "rsD",
+  "28": "NAZ",
+  "32": "NCZ",
+  "36": "mLP",
+  "40": "mcLP",
+  "44": "NR",
+  "48": "NC"
+ },
+ "keaMatrix_tester": {
+  "0": "vptr",
+  "4": "m_numRows",
+  "8": "m_padded",
+  "12": "matrix",
+  "16": "matrixChol",
+  "20": "suspect",
+  "24": "correct",
+  "28": "suspectCached",
+  "32": "correctCached",
+  "36": "suspectQrhs",
+  "40": "correctQrhs",
+  "44": "suspectX",
+  "48": "correctX",
+  "52": "suspectB",
+  "56": "correctB",
+  "60": "suspectAinv",
+  "64": "correctAinv"
+ },
+ "keaTempMemory": {
+  "0": "invIworld",
+  "4": "vhmf",
+  "8": "jm",
+  "12": "rhs",
+  "16": "jlen_12padded",
+  "20": "bl2body_12padded",
+  "24": "jlen",
+  "28": "bl2body",
+  "32": "bl2cbody"
+ },
+ "lsTransform": {
+  "0": "row"
+ },
+ "lsTransformRow": {
+  "0": "v"
+ },
+ "lsVec3": {
+  "0": "v"
+ },
+ "lsVec4": {
+  "0": "v"
+ }
+}

@@ -661,6 +661,64 @@ def _statement_bounds(lines, idx):
     return lo, hi
 
 
+SELF_ASSIGN = re.compile(
+    r'^([ \t]*)([A-Za-z_]\w*)\[([A-Za-z_]\w*)\]\s*=\s*\2\[\3\]\s*;[ \t]*$', re.M)
+CONST_STORE = re.compile(r'^[ \t]*([A-Za-z_]\w*)\[(\d+)\]\s*=')
+
+
+def restore_saved_element(body):
+    """`boxP[axis] = boxP[axis];` is a SAVE AND RESTORE, not a no-op.
+
+    McdSphylBoxIntersect keeps one component of a point while overwriting the
+    other three, and gcc 3.2 does it by stashing the word in a register first:
+
+        1c24:  mov   -0x48(%ebp,%edi,4),%ecx   ; save boxP[axis]
+        1c28:  fstps -0x48(%ebp)               ; boxP[0] = n[0]
+        1c2d:  fstps -0x40(%ebp)               ; boxP[2] = n[2]
+        1c30:  fstps -0x44(%ebp)               ; boxP[1] = n[1]
+        1c33:  mov   %ecx,-0x48(%ebp,%edi,4)   ; restore boxP[axis]
+
+    Ghidra folds the save into the restore, which puts the READ after the three
+    stores instead of before them — because it has no way to know that a
+    variable index can alias a constant one. The line then reads the value it
+    just wrote and the component is lost.
+
+    That is not a cosmetic difference. It is why McdSphylBoxIntersect returns
+    the right penetration depth at the wrong point: the normal is computed as
+    `n - boxP`, and with boxP an exact copy of n it comes out as zero. Found by
+    test/difftest_pair.sh, 1 in 300,000 pairs structurally and ~0.2 world units
+    of position error on many more.
+
+    Only fires when the intervening stores use CONSTANT indices into the same
+    array, which is precisely the case Ghidra cannot see through. Where nothing
+    aliases, the self-assignment really is a no-op and is left alone."""
+    out, n = [], 0
+    lines = body.split('\n')
+    i = 0
+    while i < len(lines):
+        m = SELF_ASSIGN.match(lines[i])
+        if not m:
+            out.append(lines[i]); i += 1
+            continue
+        indent, base, idx = m.group(1), m.group(2), m.group(3)
+        # walk back over the run of constant-index stores to the same array
+        j = len(out)
+        while j > 0:
+            cm = CONST_STORE.match(out[j - 1])
+            if not cm or cm.group(1) != base:
+                break
+            j -= 1
+        if j == len(out):
+            out.append(lines[i]); i += 1      # nothing aliased; leave it alone
+            continue
+        tmp = f'kd_saved_{base}_{n}'
+        out.insert(j, f'{indent}__typeof__({base}[{idx}]) {tmp} = {base}[{idx}];')
+        out.append(f'{indent}{base}[{idx}] = {tmp};')
+        n += 1
+        i += 1
+    return '\n'.join(out), n
+
+
 def signature_of(body):
 
     """Extract the declarator text preceding the function's opening brace."""
@@ -1389,6 +1447,7 @@ def main():
 
     decls, defs, dropped = [], [], []
     n_alloca_fns = 0
+    n_saved_elems = 0
     n_inline_dropped = 0
     n_vararg_fns = 0
     for name, body in by_name.items():
@@ -1401,6 +1460,8 @@ def main():
         body = strip_comments(body).strip('\n')
         body = resolve_anon_types(cxx_names_to_c(ghidra_type_quirks(body)))
         body = resolve_field_names(body, fieldmap)
+        body, nsaved = restore_saved_element(body)
+        n_saved_elems += nsaved
         body, nva = resolve_varargs(body, signature_of(body) or '')
         n_vararg_fns += nva
         body, nalloca = materialise_alloca_frame(body, name)
@@ -1478,6 +1539,8 @@ def main():
         print(f'  {n_vararg_fns} variadic function(s) given a real va_list')
     if n_alloca_fns:
         print(f'  {n_alloca_fns} function(s) needed an alloca frame')
+    if n_saved_elems:
+        print(f'  {n_saved_elems} save-and-restore(s) of an array element reordered')
     if n_data:
         print(f'  {n_data} unnamed data reference(s) read from the object')
     if n_ftype:

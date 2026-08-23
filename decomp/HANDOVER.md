@@ -442,33 +442,50 @@ does not compile.**
 evidence on the line**. That is the only way out of quarantine. Do not remove a detector to
 make a number go up.
 
-### `IxSphylPrimitives` — the judgement call, now settled by measurement
+### `IxSphylPrimitives` — a real bug, found and fixed; what is left is a judgement call
 
 This was left open as "is 0.02% threshold flapping in `McdSphylTriangleListIntersect`
-acceptable?" — a question about tolerance, and one that could reasonably have gone either
-way. It is moot. The object has a defect that is not about tolerance at all.
+acceptable?" That framing assumed the only thing wrong was tolerance. It was not.
 
 `test/difftest_pair.sh` drives each of the four functions over 300,000 randomised
-transforms. Three are clean. The fourth is not:
+transforms. Three were clean. `McdSphylBoxIntersect` was not: **1 structural divergence and
+a worst delta of 3.59e-01 measured over pairs that AGREED** on contact count and dims — not
+a threshold, not rounding. Its shape said what it was: the two agreed on **separation to
+eight significant figures** and disagreed on the contact **position** by ~0.2 world units.
+Right penetration depth, wrong point.
 
-| function | touching | structural | worst delta |
-|---|---:|---:|---|
-| `McdSphylSphylIntersect` | 49,416 | 0 | 1.19e-07 |
-| `McdSphylSphereIntersect` | 54,111 | 0 | 5.42e-06 |
-| `McdSphylPlaneIntersect` | 219,780 | 0 | 2.98e-06 |
-| **`McdSphylBoxIntersect`** | 39,138 | **1 dims** | **3.59e-01** |
+The cause, and it is worth knowing because the shape recurs. Ghidra emitted
 
-That worst delta is measured **over pairs where both sides agreed** on contact count and
-dims, so it is not a threshold and it is not rounding. Its shape is specific: on the
-diverging pairs the two agree on **separation to eight significant figures** and disagree
-on the contact **position** by ~0.2 world units. The recovered code finds the right
-penetration depth at the wrong point. `AccumulateSphylContacts` is shared with the three
-functions that pass, so the fault is in `McdSphylBoxIntersect`'s own contact-point
-computation and not in the shared tail.
+```c
+boxP[0] = n[0];  boxP[2] = n[2];  boxP[1] = n[1];
+boxP[axis] = boxP[axis];          /* ...a no-op? */
+```
 
-It reproduces: the driver seeds its RNG, so the same four cases with their transforms print
-every run. That is the handle for fixing it. **Until it is fixed, the object stays
-quarantined, and the tolerance question does not need answering.**
+It is not a no-op. The machine code saves that component *before* overwriting the array:
+
+```
+1c24:  mov   -0x48(%ebp,%edi,4),%ecx   ; save boxP[axis]
+1c28:  fstps -0x48(%ebp)               ; boxP[0] = n[0]
+1c2d:  fstps -0x40(%ebp)               ; boxP[2] = n[2]
+1c30:  fstps -0x44(%ebp)               ; boxP[1] = n[1]
+1c33:  mov   %ecx,-0x48(%ebp,%edi,4)   ; restore boxP[axis]
+```
+
+Ghidra folded the save into the restore, which moved the read to *after* the three stores —
+it has no way to know a variable index can alias a constant one. The line then reads back
+what it just wrote, the kept component is lost, and `n - boxP` comes out as exactly zero.
+
+`ghidra_clean.restore_saved_element()` hoists the read above the aliasing stores.
+Result: **3.59e-01 → 5.17e-05**, and every positional divergence gone.
+
+**What is left really is the judgement call.** One structural divergence in 300,000 pairs,
+at a face/edge classification boundary (`dims 515/259`) where the separations differ by
+0.02 — the same character as the `McdSphylTriangleListIntersect` flapping, and the same
+argument applies: the engine already tolerates contacts appearing and disappearing frame to
+frame, and UT2004 replicates `KRigidBodyState` rather than relying on determinism (§10). It
+is now a decision about tolerance and nothing else, which is what it was always claimed to
+be. The object stays quarantined until someone makes it *and* a live match backs it up —
+it is the second busiest object in the game (§3), so it is worth the trouble.
 
 ---
 

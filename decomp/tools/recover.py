@@ -175,6 +175,23 @@ def main():
     GHIDRA_UNMODELLED = re.compile(
         r'\b(in_stack_[0-9a-f]+|extraout_[A-Z]+[0-9]*|unaff_[A-Z]+[0-9]*)\b')
 
+    # `x.f = x.f;` — a store Ghidra reordered past the thing it was saving from.
+    #
+    # An optimising compiler does not emit a self-assignment and a programmer
+    # does not write one, so when the decompiler produces one it is describing
+    # something else. In every case examined it is a SAVE AND RESTORE around an
+    # aggregate overwrite, with the read folded into the write and thereby moved
+    # to after the stores it was supposed to precede.
+    #
+    # ghidra_clean.restore_saved_element() repairs the form this pipeline can
+    # prove — a variable index into an array whose constant indices are stored
+    # just above, which is exactly the aliasing Ghidra cannot see through, and
+    # which is what McdSphylBoxIntersect does. This detector is the backstop for
+    # any other shape: the value is still being dropped, it still compiles and
+    # runs, and it is still silently wrong.
+    GHIDRA_LOST_STORE = re.compile(
+        r'^\s*([A-Za-z_]\w*(?:\[[A-Za-z0-9_]+\]|\.\w+|->\w+)*)\s*=\s*\1\s*;\s*$', re.M)
+
     def live_unmodelled(src):
         """Unmodelled-value names that are READ BEFORE anything assigns them.
 
@@ -288,6 +305,14 @@ def main():
             continue
 
         src = open(csrc, errors='ignore').read()
+        lost = GHIDRA_LOST_STORE.findall(src)
+        if lost:
+            os.unlink(o)
+            rows.append((archive, base, 'REVIEW',
+                         f'{len(lost)} self-assignment(s) — a save-and-restore '
+                         f'Ghidra reordered: ' + ', '.join(f'{x} = {x};' for x in lost[:2])))
+            counts['REVIEW'] += 1
+            continue
         nregparm = len(GHIDRA_REGPARM.findall(src))
         if nregparm:
             os.unlink(o)

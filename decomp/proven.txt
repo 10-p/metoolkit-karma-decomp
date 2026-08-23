@@ -32,40 +32,45 @@ IxConvexPrimitives    synth ONLY: 300,000 pairs of McdSphylConvexMeshIntersect a
 #                     still catch it live before this counts as finished.
 
 # --- NOT proven, with what was observed --------------------------------------
-# IxSphylPrimitives   The judgement call HANDOVER.md 8 left open is now settled,
-#                     and not the way it was leaning. It was framed as "is 0.02%
-#                     threshold flapping in McdSphylTriangleListIntersect
-#                     acceptable?" — a question about tolerance. The object has a
-#                     defect that is not about tolerance at all.
+# IxSphylPrimitives   HALF of what HANDOVER.md 8 left open is now closed, and
+#                     it was not the half anyone was looking at. The question
+#                     was framed as "is 0.02% threshold flapping acceptable?",
+#                     which assumed tolerance was the only thing wrong.
 #
-#                     synth, 300,000 pairs each:
+#                     synth, 300,000 pairs each, BEFORE any fix:
 #
 #                       McdSphylSphylIntersect    49,416 touching  0 structural  worst 1.19e-07
 #                       McdSphylSphereIntersect   54,111 touching  0 structural  worst 5.42e-06
 #                       McdSphylPlaneIntersect   219,780 touching  0 structural  worst 2.98e-06
 #                       McdSphylBoxIntersect      39,138 touching  1 dims        worst 3.59e-01
 #
-#                     That last worst-delta is over pairs where BOTH sides
-#                     returned the same contact count and the same dims — it is
-#                     not a threshold and it is not rounding. The shape of it is
-#                     specific: on the diverging pairs the two agree on
-#                     SEPARATION to eight significant figures and disagree on the
-#                     contact POSITION by ~0.2 world units.
+#                     That last worst-delta was measured over pairs where BOTH
+#                     sides agreed on count and dims — not a threshold and not
+#                     rounding. Its shape said what it was: the two agreed on
+#                     SEPARATION to eight significant figures and disagreed on
+#                     the contact POSITION by ~0.2 world units.
 #
-#                       iteration 2: sep -0.151157558 / -0.151157573
-#                                    pos  0.284026 1.08447 1.06895
-#                                       / 0.303336 0.888257 1.09479
+#                     Cause: Ghidra emitted `boxP[axis] = boxP[axis];`, which
+#                     reads as a no-op. The machine code SAVES that component
+#                     before overwriting the array and restores it after; Ghidra
+#                     folded the save into the restore and so moved the read to
+#                     after the stores, because it cannot see that a variable
+#                     index aliases a constant one. The kept component was lost
+#                     and the normal came out exactly zero.
+#                     ghidra_clean.restore_saved_element() hoists the read.
 #
-#                     So the recovered code finds the right penetration depth at
-#                     the wrong point. AccumulateSphylContacts is shared with the
-#                     three functions that pass, so the fault is in
-#                     McdSphylBoxIntersect's own contact-point computation, not
-#                     in the shared tail.
+#                       McdSphylBoxIntersect  AFTER  1 dims  worst 5.17e-05
 #
-#                     It is REPRODUCIBLE: difftest_pair.sh seeds its RNG, so
-#                     `difftest_pair.sh <objdir> <metoolkit> McdSphylBoxIntersect`
-#                     prints the same four cases with their transforms every run.
-#                     That is the handle for fixing it.
+#                     A factor of 7,000, and every positional divergence gone.
+#
+#                     WHAT IS LEFT is the judgement call, and now it really is
+#                     one: 1 structural divergence in 300,000 pairs, at a
+#                     face/edge classification boundary (dims 515/259) where the
+#                     separations differ by 0.02. Same character as the
+#                     McdSphylTriangleListIntersect flapping below. Reproduce it
+#                     with
+#                       difftest_pair.sh <objdir> <metoolkit> McdSphylBoxIntersect
+#                     which seeds its RNG and prints the case every run.
 #
 #                     Also observed: with this object staged, the engine died
 #                     with a SIGSEGV in McdModelGetGeometryType, called from the
@@ -94,6 +99,9 @@ IxConvexPrimitives    synth ONLY: 300,000 pairs of McdSphylConvexMeshIntersect a
 #                     with dims_diff 0 throughout — the two never disagree about
 #                     what KIND of contact it is, only whether it exists. At
 #                     world coordinates ~250 with tolerance 0.00475, a 4.0e-04
-#                     delta is a relative error near 1.6e-06. On its own that
-#                     really would have been a judgement call. It is moot while
-#                     McdSphylBoxIntersect is wrong.
+#                     delta is a relative error near 1.6e-06 — f32 noise landing
+#                     on a discrete threshold, and the same character as what is
+#                     left in McdSphylBoxIntersect.
+#
+#                     Those in-game numbers PREDATE the save-and-restore fix, so
+#                     re-measure before deciding anything on them.

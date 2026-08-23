@@ -59,52 +59,82 @@ in it is what releases an object from quarantine):
 
 ---
 
-## 3. The census — this decides what to work on
+## 3. The census — which collision pairs the game actually uses
 
-**38 interaction pairs are registered. The game calls eleven of them. Ever.**
+This is the single most useful table in the project. It decides what to work on, and it has
+changed priorities every time it has been re-run.
 
-A sweep over 25+ runs and 18 maps, using `KD_CENSUS=1` so it perturbs nothing:
+**37 interaction pairs are registered on a typical map. The game calls twelve of them.**
+25 of the 37 have a recovered counterpart staged; the twelve that are called all do.
 
-| pair | total calls | object | status |
-|---|---:|---|---|
-| Sphere × TriangleList | 3,710,224 | `IxSphereTriList` | ✅ |
-| Sphyl × TriangleList | 786,072 | `IxSphylPrimitives` | ✅ |
-| Sphyl × Sphyl | 334,850 | `IxSphylPrimitives` | ✅ |
-| Sphere × Sphere | 257,887 | `IxSphereSphere` | ✅ |
-| Box × ConvexMesh | 185,067 | `McdGjk` (`McdGjkCgIntersect`) | ✅ |
-| Box × Box | 167,649 | `IxBoxBox` | ✅ |
-| Sphyl × Sphere | 148,031 | `IxSphylPrimitives` | ✅ |
-| Sphyl × ConvexMesh | 11,280 | `IxConvexPrimitives` | ✅ |
-| ConvexMesh × TriangleList | 4,950 | `IxConvexTriList` | ✅ |
-| Box × Sphere | 5,101 | `IxBoxSphere` | ✅ |
-| Sphere × ConvexMesh | 2,274 | `McdGjk` | ✅ |
-| ConvexMesh × ConvexMesh | 39 | `McdGjk` | ✅ |
+Produced with `KD_CENSUS=1`, which counts calls and runs nothing twice, so it perturbs
+nothing and can be pointed at any map safely (§6). Call counts below are the running total
+over every instrumented match to date; treat the ORDER as solid and the absolute numbers as
+"how much traffic this pair gets", not as a constant.
 
-**Registered on every map and called ZERO times, across every run so far:** every
-`Aggregate` pair, every `Cylinder` pair, `Box×Plane`, `Box×TriangleList`,
-`Sphere×Plane`, `Sphyl×Box`, `Sphyl×Plane`, `ConvexMesh×Plane`.
+### Called — all twelve are recovered and validated
 
-Absorb that before picking up work. UT2004 gives its physics actors sphere, sphyl,
-convex-mesh and triangle-list geometry and essentially nothing else, so **whole objects in
-the "not compiling" pile are for collisions the game never makes.**
+| pair | calls observed | function | object | status |
+|---|---:|---|---|---|
+| Sphere × TriangleList | 11,018,910 | `McdSphereTriangleListIntersect` | `IxSphereTriList` | ✅ released, one known limit §8 |
+| Sphyl × TriangleList | 1,258,577 | `McdSphylTriangleListIntersect` | `IxSphylPrimitives` | ✅ released |
+| Sphere × Sphere | 866,203 | `McdSphereSphereIntersect` | `IxSphereSphere` | ✅ |
+| Box × ConvexMesh | 608,280 | `McdGjkCgIntersect` | `McdGjk` | ✅ released, open defect §8 |
+| Sphyl × Sphyl | 572,616 | `McdSphylSphylIntersect` | `IxSphylPrimitives` | ✅ |
+| Sphyl × Sphere | 218,426 | `McdSphylSphereIntersect` | `IxSphylPrimitives` | ✅ |
+| Box × Box | 150,146 | `McdBoxBoxIntersect` | `IxBoxBox` | ✅ released, 1-in-500k §8 |
+| Sphyl × ConvexMesh | 62,698 | `McdSphylConvexMeshIntersect` | `IxConvexPrimitives` | ✅ |
+| ConvexMesh × TriangleList | 49,064 | `McdConvexMeshTriangleListIntersect` | `IxConvexTriList` | ✅ released 2026-08-23 |
+| Sphere × ConvexMesh | 9,741 | `McdGjkCgIntersect` | `McdGjk` | ✅ |
+| Box × Sphere | 5,154 | `McdBoxSphereIntersect` | `IxBoxSphere` | ✅ |
+| ConvexMesh × ConvexMesh | 4,337 | `McdGjkCgIntersect` | `McdGjk` | ✅ |
 
-Two cautions:
+### Never called — zero, on every map, in every run so far
 
-- Read "zero times" as "not in 25 runs", not "impossible". **Two pairs have already come
-  off that list.** `ConvexMesh×ConvexMesh` did it with 39 calls on `ONS-UCMP-ABC-ECE`;
-  `Box×Sphere` did it on 2026-08-23 with **5,101 calls in a single match on the same map**,
-  after 25 runs across 18 maps had shown none. It was already recovered and clean, so it
-  cost nothing — this time.
-- It cuts both ways. `McdSphylBoxIntersect` had a real bug (§8) in a pair that is never
-  called, and `IxSpherePlane` sits in the validated set for another. Neither was wasted —
-  the sphyl bug was in shared code — but **"validated" is not "load-bearing"** without
-  checking this table.
+| pair | function | recovered? |
+|---|---|---|
+| Box × Plane | `McdBoxPlaneIntersect` | yes |
+| Box × Cylinder | `McdBoxCylinderIntersect` | yes |
+| Box × TriangleList | `McdBoxTriangleListIntersect` | quarantined, and **badly wrong**, §8 |
+| Sphere × Plane | `McdSpherePlaneIntersect` | yes |
+| Cylinder × Plane | `McdCylinderPlaneIntersect` | yes |
+| Cylinder × Sphere | `McdCylinderSphereIntersect` | yes |
+| Cylinder × Cylinder | `McdCylinderCylinderIntersect` | yes |
+| Cylinder × TriangleList | `McdCylinderTriangleListIntersect` | quarantined |
+| Cylinder × ConvexMesh | `McdGjkCgIntersect` | yes (same function as the called GJK pairs) |
+| Sphyl × Plane | `McdSphylPlaneIntersect` | yes |
+| Sphyl × Box | `McdSphylBoxIntersect` | yes — had a real bug, fixed, §8 |
+| Sphyl × Cylinder | `McdSphylCylinderIntersect` | yes |
+| ConvexMesh × Plane | `McdGjkCgIntersect` | yes |
+| Aggregate × {Null, Sphere, Box, Plane, Cylinder, Sphyl, TriangleList, ConvexMesh, Aggregate, …} | `McdAggregateGenericIntersect` + unidentified | no |
 
-Re-run the census after any new map. It is cheap, non-perturbing, and it has changed
-priorities every single time.
+**Why the shape of that list makes sense.** UT2004 gives its physics actors sphere, sphyl,
+convex-mesh and triangle-list geometry and essentially nothing else. It never uses Karma's
+`Cylinder` or `Aggregate` types at all, and `Plane` is registered but the level is a
+TriangleList, not a plane. So **whole objects in the "not compiling" pile are for collisions
+the game never makes**, and object count is the wrong progress metric.
 
+### How much to trust "never called"
 
----
+Read it as "not in 25+ runs across 18 maps", not "impossible". **Two pairs have already come
+off that list:**
+
+- `ConvexMesh × ConvexMesh` — appeared with 39 calls on `ONS-UCMP-ABC-ECE`.
+- `Box × Sphere` — appeared on 2026-08-23 with **5,101 calls in a single match**, on a map
+  that had been run before. Not a trickle; a pair the game genuinely uses.
+
+Both were already recovered and clean, so both cost nothing. That is luck, not a plan. The
+cheap insurance is: **re-run the census on any new map before doing anything else with it**,
+and if a pair moves, check whether its object is quarantined before trusting the match.
+
+It cuts the other way too. `McdSphylBoxIntersect` had a real bug in a pair that is never
+called — not wasted, because the fix was in shared code — and `IxSpherePlane` sits in the
+validated set for another. **"Validated" is not "load-bearing"** without checking this table.
+
+### Running a census sweep
+
+`KD_CENSUS=1` is safe on anything; see §6 for the loop. The CSV lists **every registered
+pair**, called or not, so the zero rows are evidence, not absence of evidence.
 
 ## 4. The pipeline
 
@@ -834,33 +864,68 @@ Box × TriangleList at zero calls. Recorded so nobody re-derives the old number.
 ## 11. What to do next
 
 **§12 item 1 is done.** Every pair the census shows the game calling is recovered and
-validated against a live match. What is left is the confidence around that, then the tail.
+validated against a live match. The next milestone is **§12 item 7 — the engine running ON
+recovered Karma**, because that is the one that delivers physics, and no amount of shadow
+testing gets you there.
 
-1. **Finish the harness-perturbation measurement** (§7). The shared-state mechanism is now
-   named and fixed — the copy had been going into the wrong field for two sessions — and the
-   first isolated 900 s run completed without the `KHandleCollisions` crash that took 5 of 5
-   shared-state runs before it. That is one run. `KD_SHARECACHE=1` makes the A/B cheap; get
-   the sample size up, and test the shared-contact-pool hypothesis, which is still untried.
-2. **Chase what is left of the `IxBoxBox` and `McdGjk` divergences** (§8). Both now
+Ordered by what actually moves the project, not by what is easiest:
+
+1. **Drive, don't shadow.** `test/make_substituted_metoolkit.sh` puts recovered objects in
+   the archive *in place of* the shipped ones, so the engine runs on them. Exactly ONE object
+   has ever been through this (sphyl, 300 s, 0 crashes / 0 NaN / 0 warnings). Do it for the
+   twelve validated pairs together and run a long ONS match. The shadow harness feeds the
+   engine the original's answer every frame, so a recovered error never compounds — this is
+   the only test that asks whether the recovery can *drive*. Expect it to find things the
+   harness structurally cannot.
+2. **`libMdtKea`, the solver.** The largest untouched thing in the project and the reason
+   nothing can actually run yet. Layouts and vtables are recovered
+   (`src/MdtKea/keaMatrix.h`); no object has been validated and several do not compile
+   (`keaLCPSolver`, `keaLCP_new`, `keaIntegrate_pc`, `keaMemory`). Budget for it being
+   harder to validate than collision code: it is iterative, so errors compound rather than
+   showing up as a discrete decision you can diff. `scene_chain.c` (collision-free) is the
+   right first instrument — it isolates the solver from contact generation entirely.
+3. **Audit the other callbacks the way the triangle generator was audited** (§8, §12). The
+   triangle generator is now the only stub in `difftest_pair.c` that depends on its
+   arguments. The allocator and `McdCacheHello`/`Goodbye` have the same exposure and have
+   never been checked. This is cheap and it has a track record.
+4. **Finish the harness-perturbation measurement** (§7). Isolating the cache took the
+   `KHandleCollisions` crash from 5-of-5 to 1-of-3 and the GJK count divergences from 15 to
+   2. Both are reduced, neither is explained. `KD_SHARECACHE=1` makes the A/B cheap. The
+   shared-contact-pool hypothesis is still untried and is now the leading candidate.
+5. **Chase what is left of the `IxBoxBox` and `McdGjk` divergences** (§8). Both now
    reproduce synthetically once box dimensions vary — 1 and 2 count divergences in 200,000 —
-   so they can be worked on without waiting for a match.
-3. **Audit the other callbacks the way the triangle generator was audited** (§8). It is now
-   the only stub in `difftest_pair.c` that depends on its arguments. Anything else Karma
-   calls back into — the allocator, `McdCacheHello`/`Goodbye` — has the same exposure and
-   has never been checked.
-4. **Grind the tail.** 39 objects, but **read §3 first** — a large part of the pile is
+   so they can be worked on deterministically, without waiting for a match.
+6. **Grind the tail.** 39 objects, but **read §3 first** — a large part of the pile is
    geometry the game never collides. What remains, by size: `stack0xNNNN` (~20 references,
    a real value Ghidra lost — do not paper over it), `too few arguments` (14, genuinely
    dropped arguments), types nothing defines (`MeASEObject`, `Mesh2GeometryType`,
    `BodyData` — they are in the DWARF, and `gen_typedb.py` takes object directories, so
    widening its input is the route), and `subscripted value` (16, all DebugDraw and XML —
    a file-scope static emitted as `float x[n]` and indexed `x[i][j]`).
-5. **`libMdtKea`** — the LCP solver, the hottest code, C++ with vtables. Layouts and vtables
-   are recovered (`src/MdtKea/keaMatrix.h`) but no object has been validated.
-6. **Replace, don't recover:** `libMcdConvexCreateHull` is qhull 2.6 (1998) — 186 KB,
+7. **Replace, don't recover:** `libMcdConvexCreateHull` is qhull 2.6 (1998) — 186 KB,
    load-time only, open source. Swap in modern qhull. `MeAssetDB`/`MeXML`/`MeAssetFactory`
    (51 KB) is `.ka` XML parsing, not physics. `MeViewer2`/`MeApp` (74 KB) are never linked.
 
+### What needs the project owner, and nothing else will do
+
+Almost everything here can be pushed on alone. **Maps cannot.** The census (§3) is only as
+good as the maps it has seen, and two pairs have already moved off the never-called list
+because someone ran a map nobody had tried. The specific asks, in order of value:
+
+- **A map that exercises `Box × TriangleList`.** `IxBoxTriList` is quarantined and, we now
+  know, badly wrong — 139,961 count divergences in 200,000 synthetic pairs. Zero calls on
+  every map run so far. If the game ever reaches it, that object is a live crash risk rather
+  than a curiosity, and right now there is no way to find out.
+- **A map that exercises `Cylinder` or `Aggregate` geometry**, if any exists. Those are
+  whole families of registered-but-never-called pairs. If the answer is "UT2004 never uses
+  them", that is worth knowing definitively, because it retires a large chunk of the
+  not-compiling pile permanently.
+- **More community maps generally.** `CBP2`/`UCMP`/`BE-`/`SPAC-` reach pairs Epic's
+  optimised maps never do; that fact came from the project owner and it has been the single
+  most productive operational input to this project. `ONS-UCMP-ABC-ECE` is still the ONLY
+  known map that reaches `ConvexMesh × TriangleList`.
+
+Everything else — code, tests, measurement, tooling — is self-service.
 
 ---
 
@@ -869,9 +934,9 @@ validated against a live match. What is left is the confidence around that, then
 **Complete** is not "every object recovered". It is:
 
 1. Every object the census (§3) shows the game *actually calls* is recovered and validated.
-   **That is eleven pairs, and all eleven are done** — the last, `IxConvexTriList`, on
+   **That is twelve pairs, and all twelve are done** — the last, `IxConvexTriList`, on
    2026-08-23. This is the item that was open for the whole project; treat any new entry in
-   the census (§3 has had two) as re-opening it.
+   the census (§3 has had two) as re-opening it, and re-run the census on any new map.
 2. Validated means: 0 `ret_diff`, 0 `count_diff`, 0 `dims_diff`, 0 `overrun` across a
    multi-hour in-game session, with `KD_SELFTEST` clean on the same session, and
    `proven.txt` carrying the evidence.
@@ -890,4 +955,57 @@ With (1) closed, **(7) is the next real milestone** and the one that actually de
 physics on the web. The shadow harness structurally cannot test it: it feeds the engine the
 original's answer every frame, so a recovered error never gets to compound. Item 2's
 in-game numbers say the recovered code *agrees*; item 7 asks whether it can *drive*.
+
+### Where the project actually stands — read this before estimating anything
+
+**Done, to a real standard:** the collision-detection *interaction* layer, for the twelve
+pairs the game calls. Recovered, compiling for i386 and wasm32, each one measured against
+the shipped original on real inputs from a live match, evidence in `proven.txt`.
+
+**Not started in any meaningful sense: the solver.** `libMdtKea` is the LCP solver — the
+thing that takes contacts and makes bodies *move*. Zero objects validated. Several are in
+the 39-object fail pile (`keaLCPSolver`, `keaLCP_new`, `keaIntegrate_pc`, `keaMemory`), a
+few compile, none has ever been measured. It is also the hottest code, C++ with vtables, and
+iterative — which makes it harder to validate the same way, because "close enough" compounds
+across iterations instead of being a discrete decision you can diff. Collision detection was
+the part most amenable to function-by-function proof. That is the part that is done.
+
+**Never executed on wasm.** 93/93 compile with byte-identical exported symbols. Not one
+instruction has run. See `HANDOVER-WEB.md`.
+
+**Never run end to end.** Exactly one object has ever been in the driving seat in a real
+match (sphyl, 300 s, via `make_substituted_metoolkit.sh`). Everything else that says
+"validated" was validated while the original was still doing the actual work.
+
+So the honest summary is: **the layer that could be proven function-by-function is proven;
+the layers that cannot be are untouched.** Do not read 93/150 as 62% of the way there — the
+denominator is wrong in both directions (a third of those objects are for collisions the
+game never makes, and the solver is worth more than its object count).
+
+### The thing that should shape how you work
+
+The three biggest findings of 2026-08-23 — the promoted-double radius, the `IxBoxBox`
+divergence, the GJK divergence — were all invisible for the same reason: **the tests were
+not testing.** `difftest_pair`'s triangle generator ignored `pos` and `radius` and set
+`flags = 0`, so half of `GenerateTriangleContact` had never executed and a completely wrong
+radius could not show up. The boxes were one fixed size forever. The shadow harness's "pair
+copy" was written into the wrong field and had been recorded in this file as a *tested and
+rejected* hypothesis.
+
+The object count barely moved that day (92 → 93). What moved is what the number means: two
+released objects turned out to be right by luck, one object's synthetic proof turned out to
+be worthless, and the harness was perturbing the thing it measured.
+
+**Treat every remaining "validated" claim as provisional until its test stub has been
+checked for the same blindness.** Concretely, before trusting a green result, ask:
+
+- Does the stub the code calls back into actually *depend* on the arguments it is given?
+  (`KD_GENARGS=1` answers this for the triangle generator. Nothing answers it for the
+  allocator or `McdCacheHello`/`Goodbye` yet.)
+- Is any input fixed for the whole run that the game varies? (Box dimensions were, for the
+  project's whole life. Hull vertex counts and triangle counts still are.)
+- Does the harness share mutable state with the thing it measures? (It did, through
+  `m_cachedData`, for months.)
+
+That checklist is worth more than the next ten objects.
 

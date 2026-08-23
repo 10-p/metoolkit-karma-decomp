@@ -50,7 +50,31 @@ IxSphereTriList       KNOWN LIMIT, found after release and worth reading before 
 #
 #                     real: test-karma-1, 5 min, 1,763,276 calls of McdSphereTriangleListIntersect, 1,761,435 bit-identical, 0 structural divergences, worst delta 5.7e-06. (An earlier run of the same map gave 680,045 calls with the same verdict; the count varies with how the KActors settle, the verdict has not.) Also 93,438 calls on a 20-min DM-BB-VehicleWar-test-physics match, 0 structural. Self-test (original vs original) on test-karma-1: 1,763,102 calls, 0 divergence, so the harness is sound.
 IxSphereSphere        real: test-karma-1, 5 min, 120,275 calls, 90,540 bit-identical, 0 structural, worst 5.96e-08; plus 8,610 calls on the 20-min vehicle match, 0 structural. synth: 300,000 pairs, 72,614 touching, 0 structural, worst 5.96e-08.
-IxBoxBox              real: 23,611 calls on a 25-min ONS-CBP2-Tropica match plus 10,331 on a 20-min vehicle match, 0 structural, worst 3.3e-04. synth: 300,000 pairs, 29,747 touching, 0 structural, worst 8.7e-06.
+IxBoxBox              real: 23,611 + 10,331 + 1,299 calls across three matches. The first two
+#                     were 0 structural. The third was NOT: 1 count_diff in 1,299 —
+#                     ret 1/1, touch 1/1, count 2/4, at world (259.9, 8.0, 10.2) with
+#                     tol 0.00475. The recovered code found four contacts where the
+#                     original found two.
+#
+#                     NOT REPRODUCED synthetically. 300,000 pairs near the origin: clean.
+#                     200,000 more with KD_ORIGIN=260, which is where the real case
+#                     happened: also clean, though the numeric spread rises from 8.7e-06 to
+#                     3.05e-05 exactly as coarser f32 spacing predicts. So the origin
+#                     distance is real but is not sufficient on its own — the box
+#                     dimensions and approach angle in the game evidently matter too, and
+#                     difftest_pair uses one fixed pair of box sizes.
+#
+#                     Recorded rather than dismissed. It is one event, the release rests on
+#                     35,000 other real calls and 500,000 synthetic pairs, and both sides
+#                     agreed that the boxes touch — but "found twice as many contacts" is a
+#                     structural disagreement and nobody should meet it fresh.
+McdGjkCgIntersect     real: 16,457 calls of Box x ConvexMesh on a 15-min ONS-CBP2-Tropica
+#                     match, 15,461 bit-identical, 996 float-noise, 0 ret/touch, 0 count,
+#                     0 dims, 0 overrun. This is the BUSIEST pair in the census and it had
+#                     never been shadow-tested, because make_shadow_metoolkit derived the
+#                     comparison list from name-matching registrars and McdGjkCgIntersect is
+#                     installed by five registrars that do not share its name. It now falls
+#                     back to the DWARF prototype. synth: see the McdGjk entry below.
 McdGjk                synth: Box x ConvexMesh through McdGjkCgIntersect, 50,000 pairs per
 #                     regime, 0 ret/touch, 0 count, 0 dims divergences AT EVERY REGIME.
 #

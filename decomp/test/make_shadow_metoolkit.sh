@@ -19,6 +19,7 @@ set -euo pipefail
 SRC="${1:?metoolkit source root (Thirdparty/metoolkit)}"
 RECOVERED="${2:?dir of recovered .o files}"
 OUT="${3:?output metoolkit root}"
+PROTOS="${4:-/home/ion/tools/karma-lab/kd_protos.h}"
 SUBDIR="lib.rel/linux_single_gcc3.2"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 
@@ -82,7 +83,22 @@ for o in "$RECOVERED"/*.o; do
             Mcd*Intersect) ;;
             *) continue ;;
         esac
-        grep -qx "${id%Intersect}RegisterInteraction" "$ALLSYMS" || continue
+        # Usually the registrar shares the function's name. Not always:
+        # McdGjkCgIntersect is installed by McdBoxConvexMeshRegisterInteraction,
+        # McdSphereConvexMeshRegisterInteraction and three more, so the
+        # name-matching test missed it — and it is the busiest pair in the
+        # census (77,424 real calls, Box x ConvexMesh), which had therefore
+        # never been shadow-tested at all.
+        #
+        # So fall back to the DWARF prototype: an interaction function is
+        # `int f(McdModelPair*, McdIntersectResult*)`, which kd_protos.h
+        # flattens to `int f(void *, void *)`. A candidate that is never
+        # actually registered simply never matches at run time and costs
+        # nothing, so widening here is safe in a way that narrowing is not.
+        if ! grep -qx "${id%Intersect}RegisterInteraction" "$ALLSYMS"; then
+            [ -n "$PROTOS" ] && [ -f "$PROTOS" ] \
+                && grep -qE "^int $id\\(void \\*, void \\*\\);" "$PROTOS" || continue
+        fi
         found="$found $id:$sym"
     done <<< "$(nm --defined-only "$o" 2>/dev/null | awk '$2=="T"{print $3}')"
     [ -n "$found" ] || continue

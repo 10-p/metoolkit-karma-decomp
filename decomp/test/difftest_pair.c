@@ -75,6 +75,14 @@ IX(BoxTriList,      "McdBoxTriangleListIntersect")
 
 /* ---- geometry factories -------------------------------------------------- */
 static float kd_spread = 1.0f;
+/* KD_ORIGIN shifts the whole scene away from 0. It matters more than it looks:
+   f32 spacing at |x|=2 is about 2e-7, and at |x|=260 — an ordinary UT2004 world
+   coordinate — it is 1.5e-5, seventy times coarser, against a contact tolerance
+   of 0.00475. A test that only ever runs near the origin is testing a precision
+   regime the game never uses. The first structural divergence ever seen in
+   IxBoxBox was at world (260, 8, 10), after 300,000 synthetic pairs near the
+   origin found none. */
+static float kd_origin = 0.0f;
 static uint32_t rs = 0xC0FFEEu;
 static float frnd(float lo, float hi)
 {
@@ -294,9 +302,9 @@ static void rand_tm(MeMatrix4Ptr tm, float spread)
     tm[0][0] = t*ax*ax + c;    tm[0][1] = t*ax*ay + s*az; tm[0][2] = t*ax*az - s*ay; tm[0][3] = 0;
     tm[1][0] = t*ax*ay - s*az; tm[1][1] = t*ay*ay + c;    tm[1][2] = t*ay*az + s*ax; tm[1][3] = 0;
     tm[2][0] = t*ax*az + s*ay; tm[2][1] = t*ay*az - s*ax; tm[2][2] = t*az*az + c;    tm[2][3] = 0;
-    tm[3][0] = frnd(-spread, spread);
-    tm[3][1] = frnd(-spread, spread);
-    tm[3][2] = frnd(-spread, spread);
+    tm[3][0] = kd_origin + frnd(-spread, spread);
+    tm[3][1] = kd_origin + frnd(-spread, spread);
+    tm[3][2] = kd_origin + frnd(-spread, spread);
     tm[3][3] = 1;
 }
 
@@ -309,6 +317,8 @@ int main(int argc, char **argv)
        has had this switch from the start and it has already caught one wrong
        conclusion today; a driver without it is a machine for generating
        confident nonsense. */
+    const char *og = getenv("KD_ORIGIN");
+    kd_origin = og ? (float)atof(og) : 0.0f;
     const char *sp = getenv("KD_SPREAD");
     kd_spread = sp ? (float)atof(sp) : 1.0f;
     if (!(kd_spread > 0)) kd_spread = 1.0f;

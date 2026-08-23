@@ -32,18 +32,26 @@
     claim. Running an intersection function a second time is only free if it
     writes solely through its output parameter, and McdModelPair carries
     m_cachedData, responseData and phase for it to write to. So the second call
-    gets a COPY of the pair (see kd_dispatch) and a scratch contact buffer with a
-    canary after it.
+    gets a COPY of the pair as its first argument, a scratch contact buffer with
+    a canary after it, and — since copying the pair only copies the cache
+    POINTER — the 60-byte cache block rewound to what the original consumed and
+    restored to what the original left.
+
+    Until 2026-08-23 the copy went into `scratch.pair` while the real pair was
+    still passed as the first argument, so it did not do the job it was
+    documented as doing: everything the recovered function wrote landed in
+    engine state, and for McdGjkCgIntersect, which warm-starts from the cache
+    block, the two implementations were feeding each other across frames.
 
     The harness IS implicated in an intermittent SIGSEGV in the engine's own
     KHandleCollisions — 4 crashes in 14 harness runs against 0 in 4 stock runs
-    of the same map, and 0 in 5 with the second call off. The pair copy did not
-    fix that (1 in 6 afterwards, nothing at this sample size). The cause is
-    still open; HANDOVER.md §7 lists what has not been tried. The copy is kept
-    because the paragraph above is only true with it.
+    of the same map, and 0 in 5 with the second call off. That was measured
+    before the isolation above; re-measure it rather than trusting it.
+    HANDOVER.md §7 lists what else has not been tried.
 
-    KD_CENSUS=1 turns the second call off entirely and KD_ONLY=<substring>
-    narrows it to one function. Reach for those first when a session misbehaves.
+    KD_CENSUS=1 turns the second call off entirely, KD_ONLY=<substring> narrows
+    it to one function, and KD_SHARECACHE=1 restores the old shared-state
+    behaviour for A/B. Reach for those first when a session misbehaves.
 
     Pairs with no recovered counterpart are still counted. That census answers
     the question that has to come first: which parts of the collision matrix
@@ -65,6 +73,14 @@
 #define KD_SCRATCH_MAX  64
 #define KD_GUARD        8       /* trailing contacts, filled with a canary */
 #define KD_CANARY       0xA5
+
+/* Bytes of McdModelPair::m_cachedData to snapshot around the second call.
+   McdCacheHello is the ONLY thing in the whole library that assigns
+   m_cachedData, and it takes the block from a fixed pool built with
+   `MePoolFixed(&frame->cachePool, 100, 0x3c, 0x10)` — 0x3c = 60 bytes per
+   element. So 60 is the size of every cache block there is, not a guess at
+   one. (McdBatch moves the pointer between pairs; it never allocates.) */
+#define KD_CACHE_BYTES  60
 #define KD_LOG_MAX      60
 
 typedef int (MEAPI *kd_intersect_fn)(McdModelPair *, McdIntersectResult *);
@@ -77,6 +93,7 @@ typedef struct {
     unsigned long    calls, identical, fp_only;
     unsigned long    ret_diff, count_diff, dims_diff;
     unsigned long    overrun;       /* wrote past the buffer it was handed */
+    unsigned long    nonfinite;     /* the engine's own input was NaN; see kd_compare */
     double           worst_delta;
 } kd_pair;
 
@@ -117,16 +134,16 @@ static void kd_flush(void)
     FILE *f = fopen(path, "w");
     if (!f) return;
     fprintf(f, "type1,type2,function,shadowed,calls,identical,fp_only,"
-               "ret_diff,count_diff,dims_diff,overrun,worst_delta\n");
+               "ret_diff,count_diff,dims_diff,overrun,nonfinite,worst_delta\n");
     for (int i = 0; i < kd_npairs; i++) {
         kd_pair *s = &kd_pairs[i];
-        fprintf(f, "%s,%s,%s,%s,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%.6e\n",
+        fprintf(f, "%s,%s,%s,%s,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%.6e\n",
                 kd_typename(s->t1), kd_typename(s->t2),
                 s->name ? s->name : "(unidentified)",
                 s->rec ? "yes" : "no",
                 s->calls, s->identical, s->fp_only,
                 s->ret_diff, s->count_diff, s->dims_diff, s->overrun,
-                s->worst_delta);
+                s->nonfinite, s->worst_delta);
     }
     fprintf(f, "# max thunk nesting depth: %d\n", kd_maxdepth);
     fclose(f);
@@ -165,6 +182,36 @@ static const struct { kd_intersect_fn orig, rec; const char *name; } kd_known[] 
     KD_RECOVERED_LIST(KD_ENTRY)
 };
 
+/* Did the engine hand this pair a non-finite transform?
+
+   It does. A 900 s ONS match produced 21 McdSphylSphylIntersect and
+   McdSphylSphereIntersect divergences in one early burst, all reading
+   `ret 1/0 touch 1/0 count 1/0`, and every one of them had tm1 and tm2 entirely
+   NaN — a ragdoll had gone non-finite in the engine, well upstream of Karma.
+
+   "Does this touch" has no right answer for a NaN transform, so two
+   implementations answering differently is not a defect in either. Counting it
+   as one is worse than useless: it is 21 fabricated structural divergences
+   against a released object, in exactly the shape a real tolerance bug takes,
+   and there is no way to tell them apart from the CSV. So count them in their
+   own column and leave the verdict columns alone. */
+static int kd_nonfinite_pair(const McdModelPair *p)
+{
+    if (!p) return 0;
+    MeMatrix4Ptr t[2];
+    t[0] = McdModelGetTransformPtr(p->model1);
+    t[1] = McdModelGetTransformPtr(p->model2);
+    for (int m = 0; m < 2; m++) {
+        if (!t[m]) continue;
+        for (int i = 0; i < 4; i++)
+            for (int j = 0; j < 4; j++) {
+                double v = (double)t[m][i][j];
+                if (v != v || v > 1e30 || v < -1e30) return 1;
+            }
+    }
+    return 0;
+}
+
 /* --- comparison ---------------------------------------------------------
    Discrete fields (return value, touch, contact count, dimensionality) are
    DECISIONS and must match exactly. Continuous fields get float last-bit
@@ -174,8 +221,15 @@ static void kd_compare(kd_pair *s, int a, int b,
                        const McdIntersectResult *ra, const McdIntersectResult *rb)
 {
     int bad = 0;
-    if (a != b || ra->touch != rb->touch)          { s->ret_diff++;   bad = 1; }
-    else if (ra->contactCount != rb->contactCount) { s->count_diff++; bad = 1; }
+
+    if (a != b || ra->touch != rb->touch)          { bad = 1; }
+    else if (ra->contactCount != rb->contactCount) { bad = 2; }
+    if (bad && kd_nonfinite_pair(ra->pair)) {
+        s->nonfinite++;
+        return;                 /* no answer is right; do not score it */
+    }
+    if (bad == 1) s->ret_diff++;
+    else if (bad == 2) s->count_diff++;
 
     double worst = 0.0;
     if (!bad) {
@@ -183,7 +237,10 @@ static void kd_compare(kd_pair *s, int a, int b,
         if (n > rb->contactMaxCount) n = rb->contactMaxCount;
         for (int i = 0; i < n; i++) {
             const McdContact *x = &ra->contacts[i], *y = &rb->contacts[i];
-            if (x->dims != y->dims) { s->dims_diff++; bad = 1; break; }
+            if (x->dims != y->dims) {
+                if (kd_nonfinite_pair(ra->pair)) { s->nonfinite++; return; }
+                s->dims_diff++; bad = 1; break;
+            }
             for (int k = 0; k < 3; k++) {
                 double d = fabs((double)x->position[k] - y->position[k]);
                 double e = fabs((double)x->normal[k]   - y->normal[k]);
@@ -289,6 +346,11 @@ static int kd_selftest = -1;
    interaction (GJK keeps state on the McdModelPair) would not. */
 static int kd_census = -1;
 
+/* KD_SHARECACHE=1 restores the pre-2026-08-23 behaviour: the second call gets
+   the engine's real McdModelPair and its cache block, and writes to both. Kept
+   only so the change can be measured against what it replaced. */
+static int kd_sharecache = -1;
+
 static int kd_dispatch(int slot, McdModelPair *p, McdIntersectResult *r)
 {
     kd_pair *s = &kd_pairs[slot];
@@ -300,8 +362,22 @@ static int kd_dispatch(int slot, McdModelPair *p, McdIntersectResult *r)
         const char *e = getenv("KD_CENSUS");
         kd_census = (e && *e == '1') ? 1 : 0;
     }
+    if (kd_sharecache < 0) {
+        const char *e = getenv("KD_SHARECACHE");
+        kd_sharecache = (e && *e == '1') ? 1 : 0;
+    }
     s->calls++;
     if (++kd_since_flush >= KD_FLUSH_EVERY) { kd_since_flush = 0; kd_flush(); }
+
+    /* Snapshot BEFORE the original runs, because that is the state the
+       original is about to consume and therefore the state the recovered has
+       to be given if the two are to be compared at all. See the cache note
+       below. */
+    McdModelPair  pair_before = *p;
+    unsigned char cache_before[KD_CACHE_BYTES];
+    int have_cache = (s->rec && !kd_census && !kd_sharecache
+                      && p->m_cachedData != 0);
+    if (have_cache) memcpy(cache_before, p->m_cachedData, KD_CACHE_BYTES);
 
     if (++kd_depth > kd_maxdepth) kd_maxdepth = kd_depth;
     int a = s->orig(p, r);
@@ -322,28 +398,62 @@ static int kd_dispatch(int slot, McdModelPair *p, McdIntersectResult *r)
            it. It is not a guarantee — a wild write far past the end still lands
            wherever it lands — but the overflow-by-a-few case is the common one
            and it is now caught at the call that caused it. */
-        /* The second call gets a COPY of the McdModelPair, not the caller's.
-           The harness header claims gameplay is bit-for-bit unchanged, and that
-           rests on these functions writing only through their output parameter.
-           They do not: McdModelPair carries m_cachedData, responseData and
-           phase, and a cached interaction is entitled to update them. Handing
-           the shadow call the real pair let it write into engine state twice
-           per frame.
+        /* The second call gets a COPY of the McdModelPair, not the caller's,
+           and — this is the part that was missing until 2026-08-23 — the copy
+           is passed as the FIRST ARGUMENT too, and the cache the pair points
+           at is rewound and restored around the call.
 
-           Measured on ONS-UCMP-ABC, 240 s per run: stock 0 crashes in 4,
-           harness 3 in 8, and 0 in 5 with the second call suppressed
-           (KD_CENSUS=1) or narrowed to one function (KD_ONLY). Intermittent,
-           so none of those alone is proof, but the direction is consistent and
-           the mechanism is real whether or not it is the whole story.
+           The harness header claims gameplay is bit-for-bit unchanged, and
+           that rests on these functions writing only through their output
+           parameter. They do not: McdModelPair carries m_cachedData,
+           responseData and phase, and a cached interaction is entitled to
+           update them. The old code copied the pair into `scratch.pair` but
+           still handed `p` — the engine's real pair — to the recovered
+           function, so everything the recovered wrote landed in engine state.
+           The copy was in the wrong place to do the job it was documented as
+           doing.
 
-           A copy preserves everything an intersection function READS — the two
-           models, the request, the cache pointer — so the comparison is
-           unaffected, and anything it writes lands in the copy. Verified
-           against the known baseline on test-karma-1. */
+           `m_cachedData` is worse than the struct fields, because copying the
+           struct copies the POINTER: both calls write the same 60-byte block.
+           McdGjkCgIntersect keeps its warm-start there, so on frame N the
+           original stepped the cache and then the recovered stepped it AGAIN,
+           and on frame N+1 the original read a cache the recovered had last
+           touched. That is a feedback loop between the two implementations
+           through engine state, and it showed: 3 ret_diff and 15 count_diff
+           in 72,167 Box x ConvexMesh calls, all of them the same two actors
+           over consecutive frames of one persistent contact.
+
+           So: rewind the block to what the original consumed, run the
+           recovered against that, then put back what the original left. The
+           recovered sees the same input, the engine sees only the original's
+           output, and the comparison means what it says.
+
+           KD_SHARECACHE=1 restores the old behaviour for A/B measurement.
+
+           Measured on ONS-UCMP-ABC, 240 s per run, before this change: stock
+           0 crashes in 4, harness 3 in 8, and 0 in 5 with the second call
+           suppressed (KD_CENSUS=1) or narrowed to one function (KD_ONLY).
+           Intermittent, so none of those alone is proof, but the direction was
+           consistent and this is the mechanism they pointed at. */
         McdContact         scratch_c[KD_SCRATCH_MAX + KD_GUARD];
-        McdModelPair       pair_copy;
+        McdModelPair       pair_copy = pair_before;
         McdIntersectResult scratch = *r;
-        if (r->pair) { pair_copy = *r->pair; scratch.pair = &pair_copy; }
+        unsigned char      cache_after[KD_CACHE_BYTES];
+        McdModelPair      *rec_pair = p;
+        if (!kd_sharecache) {
+            scratch.pair = &pair_copy;
+            rec_pair = &pair_copy;
+        } else if (r->pair) {
+            pair_copy = *r->pair;
+            scratch.pair = &pair_copy;
+        }
+        /* Only if the original left the pointer alone; if it allocated or
+           freed the block, cache_before describes something else. */
+        int restore = have_cache && p->m_cachedData == pair_before.m_cachedData;
+        if (restore) {
+            memcpy(cache_after, p->m_cachedData, KD_CACHE_BYTES);
+            memcpy(p->m_cachedData, cache_before, KD_CACHE_BYTES);
+        }
         int cap = r->contactMaxCount;
         if (cap > KD_SCRATCH_MAX) cap = KD_SCRATCH_MAX;
         memset(scratch_c, 0, sizeof(McdContact) * KD_SCRATCH_MAX);
@@ -353,7 +463,9 @@ static int kd_dispatch(int slot, McdModelPair *p, McdIntersectResult *r)
         scratch.contactMaxCount = cap;
         scratch.contactCount = 0;
         scratch.touch = 0;
-        int b = kd_selftest ? s->orig(p, &scratch) : s->rec(p, &scratch);
+        int b = kd_selftest ? s->orig(rec_pair, &scratch)
+                            : s->rec (rec_pair, &scratch);
+        if (restore) memcpy(p->m_cachedData, cache_after, KD_CACHE_BYTES);
 
         const unsigned char *g = (const unsigned char *)&scratch_c[KD_SCRATCH_MAX];
         size_t gn = sizeof(McdContact) * KD_GUARD, i;

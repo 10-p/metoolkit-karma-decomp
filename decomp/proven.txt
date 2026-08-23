@@ -90,6 +90,28 @@ IxBoxBox              real: 23,611 + 10,331 + 1,299 calls across three matches. 
 #                     35,000 other real calls and 500,000 synthetic pairs, and both sides
 #                     agreed that the boxes touch — but "found twice as many contacts" is a
 #                     structural disagreement and nobody should meet it fresh.
+#
+#                     REPRODUCED, 2026-08-23. The guess above was right: difftest_pair used
+#                     ONE fixed pair of box sizes for its whole life, and two boxes of fixed
+#                     proportion approaching at random angles is much narrower than it looks
+#                     — the ratio of the half-extents decides which features can meet at
+#                     all. The driver now resizes every box each iteration
+#                     (KD_FIXEDSHAPE=1 restores the old behaviour):
+#
+#                       KD_SPREAD  touching  count divergences in 500,000
+#                       1.0          18.6%       1
+#                       1.5           6.9%       1
+#                       2.5           1.8%       0
+#
+#                     Two shapes, one per regime. Deep: 10 contacts against 11, at
+#                     separations of about half a box, with the feature classification
+#                     differing. Shallow — which is the game's regime — `count 1/0`, one
+#                     grazing contact the original finds and the recovered does not, both
+#                     agreeing the bodies touch. That second one is the same
+#                     tolerance-flapping family as IxSphylPrimitives' remaining 1-in-74,921,
+#                     not a structural error. Driver self-test on the same inputs: 100%
+#                     bit-identical, worst delta exactly 0.
+
 McdGjkCgIntersect     real: 16,457 calls of Box x ConvexMesh on a 15-min ONS-CBP2-Tropica
 #                     match, 15,461 bit-identical, 996 float-noise, 0 ret/touch, 0 count,
 #                     0 dims, 0 overrun. This is the BUSIEST pair in the census and it had
@@ -145,15 +167,35 @@ McdGjk                synth: Box x ConvexMesh through McdGjkCgIntersect, 50,000 
 #                     cache and evolve together, which is exactly the case this hypothesis
 #                     says should be clean.
 #
-#                     NOT SETTLED. The way to settle it is to let the second call have the
-#                     real pair for this one function and see whether the divergences go —
-#                     which is also the shared-state question in HANDOVER.md 7, so the two
-#                     should be chased together. Until then the release stands on 16,457 +
+#                     The way to settle it is to stop the second call writing into the pair
+#                     at all — which is also the shared-state question in HANDOVER.md 7, so
+#                     the two get chased together. Until then the release stands on 16,457 +
 #                     the synthetic evidence, with this recorded rather than dismissed.
 #
 #                     Also consistent with the cache hypothesis: a second 900 s match on the
 #                     same map gave 13,603 Box x ConvexMesh calls with 0 divergence. It is
 #                     situational, not a rate.
+#
+#                     LARGELY SETTLED, same day. The harness WAS sharing the cache, and for
+#                     a worse reason than "the second call gets a copy": the copy went into
+#                     scratch.pair while the REAL pair was still passed as the first
+#                     argument, which is the one every intersection function uses. And
+#                     copying the struct would not have been enough anyway, because
+#                     m_cachedData is a pointer — both calls wrote the same 60-byte block.
+#                     kd_shadow now passes the copy as the first argument and rewinds the
+#                     cache block to what the original consumed, restoring what the original
+#                     left. Same map, same length:
+#
+#                       shared state   3 ret_diff + 15 count_diff in 72,167
+#                       isolated       0 in 23,315
+#
+#                     NOT fully closed. Varying the box dimensions in difftest_pair (see the
+#                     IxBoxBox entry) also produced 2 count divergences in 200,000 synthetic
+#                     Box x ConvexMesh pairs, where a fixed box had given none at every
+#                     regime — and that driver hands a zeroed pair every iteration, so no
+#                     cache is involved. There is probably something underneath the harness
+#                     artifact. It is now reproducible without waiting for a match.
+
 
 
 IxSphylPrimitives     RELEASED. Held back since it was first recovered, on the grounds that
@@ -219,6 +261,17 @@ IxSphylPrimitives     RELEASED. Held back since it was first recovered, on the g
 #                     above, not a new failure. synth after the fixes, 200,000 pairs at
 #                     67.5% touching with the engine's real triangle flags and a culling
 #                     generator: 0 structural, worst 1.913e-04.
+#
+#                     ONE MORE THING, and it is about reading the CSV rather than about this
+#                     object. A later 900 s run showed 16 McdSphylSphylIntersect and 5
+#                     McdSphylSphereIntersect ret_diffs — all in one early burst, all reading
+#                     `ret 1/0 touch 1/0 count 1/0`, which is exactly the shape a real
+#                     tolerance bug takes. Every one of them had tm1 and tm2 ENTIRELY NaN: a
+#                     ragdoll had gone non-finite in the ENGINE, upstream of Karma. "Does
+#                     this touch" has no right answer for a NaN transform. kd_shadow now
+#                     counts these in a `nonfinite` column instead of charging them to the
+#                     recovery. Check that column before believing a burst of divergences.
+
 
 IxConvexPrimitives    real: 1,685 calls of McdSphylConvexMeshIntersect on ONS-CBP2-Tropica, ALL 1,685 bit-identical — 0 ret/touch, 0 count, 0 dims, and not even a float-noise difference. synth: 300,000 pairs against randomised 24-point convex hulls, 64,223 touching (21.4%), 0 structural, worst 1.19e-07 (one float ULP).
 #                     Getting a live call at all took the project owner pointing

@@ -460,13 +460,15 @@ interactions are C++ and ship mangled.
 
 `$KD_SHADOW_OUT` is a CSV rewritten every 10,000 dispatches (not only at exit, so a crash
 still yields data). Columns: `type1,type2,function,shadowed,calls,identical,fp_only,
-ret_diff,count_diff,dims_diff,overrun,worst_delta`, plus a trailing `# max thunk nesting
-depth` comment line.
+ret_diff,count_diff,dims_diff,overrun,nonfinite,worst_delta`, plus a trailing `# max thunk
+nesting depth` comment line.
 
 - `ret_diff` / `count_diff` / `dims_diff` are **decisions**. Any non-zero is a real defect.
 - `overrun` is worse: the recovered function wrote past the buffer it was handed. The
   scratch buffer carries a canary, because without one an overflow corrupts whatever is next
   and the engine dies somewhere unrelated a few frames later.
+- `nonfinite` is a disagreement on an input the engine had already made NaN. Not a defect in
+  either implementation — see below — but a sign the engine has a problem of its own.
 - `fp_only` with a small `worst_delta` is float noise and expected.
 - `$KD_SHADOW_DIVERGENCES` dumps the **full input transforms** for each divergence.
 
@@ -479,7 +481,7 @@ It settles crashes too, and skipping that cost half a day. A SIGSEGV in
 `McdModelGetGeometryType` was written up as an overrun caused by `IxSphylPrimitives`. It is
 not — it reproduces under `KD_SELFTEST=1` with no recovered code executing.
 
-### The harness perturbs the engine, and the cause is still open
+### The harness perturbed the engine, and the copy was in the wrong place
 
 `kd_shadow.c` used to claim gameplay is bit-for-bit unchanged because the engine only
 consumes the original's output. That rests on these functions writing only through their
@@ -495,33 +497,66 @@ Alternating 240 s runs on `ONS-UCMP-ABC`, counting SIGSEGVs in the engine's own
 | harness, second call live | **4 of 14** |
 | harness, second call off (`KD_CENSUS=1`) or narrowed (`KD_ONLY`) | **0 of 5** |
 
-So the harness is implicated and the second call is where to look. It is intermittent, no
-row is significant alone, and **the mechanism has not been found.**
+A "copy of the `McdModelPair`" was added in response and reported as not helping. **It was
+not doing anything.** The copy went into `scratch.pair` while the *real* pair was still
+passed as the first argument to the recovered function — which is the argument every
+intersection function actually uses. Everything the recovered code wrote still landed in
+engine state. Read the code before trusting a negative result about it.
 
-One hypothesis was tested and **rejected**: giving the second call a *copy* of the
-`McdModelPair` moved the rate from 3-in-8 to 1-in-6, which is nothing at that sample size.
-The copy is kept anyway because the claim above is only true with it, and it is free —
-re-measured against the baseline on `test-karma-1`, worst delta `5.722046e-06`, the same
-figure to every digit.
+And copying the struct would not have been enough anyway, because `m_cachedData` is a
+**pointer**: both calls write the same 60-byte block. `McdGjkCgIntersect` warm-starts from
+that block, so on frame N the original stepped the cache and the recovered stepped it again,
+and on frame N+1 the original read a cache the recovered had last touched — a feedback loop
+between the two implementations through engine state.
+
+Fixed 2026-08-23: the copy is now the first argument, and the cache block is rewound to what
+the original consumed and restored to what the original left. `McdCacheHello` is the only
+thing in the library that assigns `m_cachedData` and it takes the block from a fixed pool of
+`0x3c`-byte elements, so 60 is the size of every cache block there is, not a guess.
+
+What that changed, on `ONS-UCMP-ABC-ECE`, 900 s:
+
+| | Box × ConvexMesh divergences | ran the full 900 s |
+|---|---|---|
+| shared state | 3 ret + 15 count in 72,167 | no — 5 of 5 runs died in `KHandleCollisions` |
+| isolated | **0 in 23,315** | yes |
+
+Small samples, and `KD_SHARECACHE=1` exists to keep measuring. But the direction matches
+every earlier row, the mechanism is now named rather than guessed, and the GJK divergences
+recorded in `proven.txt` came from it.
+
+**Still open**, and worth keeping in mind before declaring this closed:
+
+1. **A shared contact pool.** If an intersection function bumps a per-frame allocator as
+   well as filling the caller's array, calling it twice double-counts it. Never tested.
+2. **More isolated runs.** One clean 900 s run is one run.
 
 Also **ruled out**: stack pressure. `kd_dispatch` puts ~2.9 KB on the stack per shadowed
 call and aggregates dispatch to child pairs, so the frames could nest. They do not — the
 harness counts the nesting and a full match reports **max depth 1**. Four minutes to measure
 against the half hour a bisection trial costs.
 
-Still untried, in order of promise:
-
-1. **A shared contact pool.** If an intersection function bumps a per-frame allocator as
-   well as filling the caller's array, calling it twice double-counts it. That would corrupt
-   whatever is next in memory, which is what the backtrace looks like.
-2. **A per-function bisect with `KD_ONLY`** over enough runs to mean something. Four each
-   was not; at a 1-in-3 base rate you need on the order of ten.
-
-Two switches exist for exactly this:
+Three switches exist for exactly this:
 
 - **`KD_CENSUS=1`** — count calls, run nothing twice. Perturbs nothing measurable.
 - **`KD_ONLY=<substring>`** — shadow only functions whose name contains it, no rebuild
   needed between attempts.
+- **`KD_SHARECACHE=1`** — put the shared state back, for A/B against the isolation above.
+
+### `nonfinite` — the engine hands Karma NaN, and it is not a defect
+
+The CSV has a `nonfinite` column because a 900 s match produced 21 `McdSphylSphylIntersect`
+and `McdSphylSphereIntersect` divergences in one early burst, all reading
+`ret 1/0 touch 1/0 count 1/0` — the exact shape of a real tolerance bug — and every one of
+them had `tm1` and `tm2` **entirely NaN**. A ragdoll had gone non-finite in the engine, well
+upstream of Karma.
+
+"Does this touch" has no right answer for a NaN transform, so two implementations answering
+differently is not a defect in either, and scoring it as one manufactures structural
+divergences against a released object with no way to tell them apart from the CSV. They are
+counted separately now. **If `nonfinite` is non-zero, that is the engine's problem, not the
+recovery's** — but do look at it, because a NaN body is a real bug somewhere.
+
 
 ---
 
@@ -688,33 +723,43 @@ classification while agreeing on position to 1e-4 and separation exactly. Not ax
 degeneracy (`KD_SKEW=1` moved 40 to 38). The release stands; a body spawned inside geometry
 reaches the other regime.
 
-### `IxBoxBox` — one unreproduced divergence
+### `IxBoxBox` — reproduced, once the boxes stopped being the same shape
 
 **1 count divergence in 1,299 real calls** — both agree the boxes touch, original says 2
-contacts, recovered says 4, at world (259.9, 8.0, 10.2). It does not reproduce: 300,000
-synthetic pairs near the origin and 200,000 at `KD_ORIGIN=260` are both clean, though the
-numeric spread rises 3.5× as coarser f32 spacing predicts. Distance alone is not it — the
-driver uses one fixed pair of box sizes and the game's evidently differ. Vary those next.
+contacts, recovered says 4, at world (259.9, 8.0, 10.2). For two sessions it did not
+reproduce: 300,000 synthetic pairs near the origin and 200,000 at `KD_ORIGIN=260`, all
+clean. `proven.txt` guessed the reason and the guess was right — **the driver used one fixed
+pair of box sizes for its whole life.** Two boxes of fixed proportion approaching at random
+angles is narrower than it looks, because the ratio of the half-extents decides which
+features can meet at all.
 
-### `McdGjk` — 18 divergences in the busiest pair, and the harness is the suspect
+`difftest_pair.c` now resizes every box geometry each iteration (`KD_FIXEDSHAPE=1` restores
+the old behaviour), and the divergence class appears:
+
+| `KD_SPREAD` | touching | count divergences in 500,000 |
+|---:|---:|---:|
+| 1.0 | 18.6% | 1 |
+| 1.5 | 6.9% | 1 |
+| 2.5 | 1.8% | **0** |
+
+Two shapes, one per regime: a deep 10-vs-11 with different feature classification at
+separations of half a box, and — at the shallow end, which is the game's regime — a
+`count 1/0`, a single grazing contact the original finds and the recovered does not, both
+agreeing that the bodies touch. That second one is the same tolerance-flapping family as
+`IxSphylPrimitives`' remaining 1-in-74,921, not a structural error.
+
+The same change also made `McdGjkCgIntersect` show **2 count divergences in 200,000** where
+a fixed box had given none at every regime, which is a synthetic counterpart to the in-game
+GJK entry in `proven.txt`. A fixed shape was a blind spot for both.
+
+### `McdGjk` — 18 divergences on the busiest pair, and where they went
 
 The first long run of Box × ConvexMesh — 72,167 calls, four times any before it — found
-**3 ret_diff and 15 count_diff**, worst delta 2.057. All eighteen are the same two actors
-over consecutive frames of one persistent contact.
-
-That shape fits the harness. `McdGjkCgIntersect` keeps a cache on the `McdModelPair`
-(`McdCacheHello`/`Goodbye` are registered beside it), and `kd_shadow` gives the second call a
-**copy** of the pair (§7). So the original runs with its cache warm across frames and the
-recovered runs cold every time, its cache written into a copy that is discarded. For an
-iterative algorithm on a persistent contact that is a difference in *input*, not in code.
-`KD_SELFTEST` on the same map and length gave 29,899 calls with 0 divergence — but there
-both sides are the original, both start from the same copied cache and evolve together,
-which is exactly the case the hypothesis says should be clean. A second match gave 13,603
-calls with 0 divergence, so it is situational rather than a rate.
-
-**Not settled.** The way to settle it is to give the second call the real pair for this one
-function and see whether the divergences go — which is also the shared-state question in
-§7, so chase the two together.
+**3 ret_diff and 15 count_diff**, worst delta 2.057, all of them the same two actors over
+consecutive frames of one persistent contact. GJK warm-starts from `m_cachedData`, and the
+harness was letting both implementations write that block (§7). With the cache isolated the
+same map gave **0 in 23,315**. See `proven.txt`; the synthetic 2-in-200,000 above says there
+is probably still something underneath, so this is not closed.
 
 ### `IxBoxTriList` — its clean synthetic result has been withdrawn
 
@@ -724,6 +769,7 @@ generator that culls to the query sphere and sets the flags the engine sets, it 
 **2,254 ret_diff, 118,129 count_diff and 11,691 dims_diff in 200,000**, with the driver
 self-testing 100% bit-identical on the same inputs. Not chased: the census has
 Box × TriangleList at zero calls. Recorded so nobody re-derives the old number.
+
 
 
 ---
@@ -783,14 +829,14 @@ Box × TriangleList at zero calls. Recorded so nobody re-derives the old number.
 **§12 item 1 is done.** Every pair the census shows the game calling is recovered and
 validated against a live match. What is left is the confidence around that, then the tail.
 
-1. **Settle the `McdGjk` divergences and the harness perturbation together** (§8, §7). They
-   are probably the same thing: the second call gets a *copy* of the `McdModelPair`, and
-   `McdGjkCgIntersect` keeps a cache on it. Give the second call the real pair for that one
-   function and re-measure — 18 divergences in 72,167 on the busiest pair in the game is the
-   largest open question about a released object. The shared-contact-pool hypothesis in §7
-   is the other half.
-2. **Chase the `IxBoxBox` count divergence** (§8) — vary the box dimensions in
-   `difftest_pair.c`.
+1. **Finish the harness-perturbation measurement** (§7). The shared-state mechanism is now
+   named and fixed — the copy had been going into the wrong field for two sessions — and the
+   first isolated 900 s run completed without the `KHandleCollisions` crash that took 5 of 5
+   shared-state runs before it. That is one run. `KD_SHARECACHE=1` makes the A/B cheap; get
+   the sample size up, and test the shared-contact-pool hypothesis, which is still untried.
+2. **Chase what is left of the `IxBoxBox` and `McdGjk` divergences** (§8). Both now
+   reproduce synthetically once box dimensions vary — 1 and 2 count divergences in 200,000 —
+   so they can be worked on without waiting for a match.
 3. **Audit the other callbacks the way the triangle generator was audited** (§8). It is now
    the only stub in `difftest_pair.c` that depends on its arguments. Anything else Karma
    calls back into — the allocator, `McdCacheHello`/`Goodbye` — has the same exposure and

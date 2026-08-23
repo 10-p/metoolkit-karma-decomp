@@ -109,6 +109,29 @@ static McdGeometryID mk_plane(McdFrameworkID fw, int seed)
     return (McdGeometryID)McdPlaneCreate(fw);
 }
 
+/* Every box in this driver had ONE fixed size for its whole life, and that is
+   named in proven.txt as the likeliest reason IxBoxBox's single real divergence
+   never reproduced: 1 count_diff in 1,299 in-game calls at world
+   (259.9, 8.0, 10.2), against 300,000 synthetic pairs near the origin and
+   200,000 more at KD_ORIGIN=260, all clean. Two boxes of fixed proportion
+   approaching at random angles is a narrower test than it looks — the ratio of
+   the two half-extents decides which features can meet at all.
+
+   So resize every box geometry each iteration. KD_FIXEDSHAPE=1 restores the old
+   behaviour; note that varying the shape draws from the same RNG, so the whole
+   transform sequence differs and numbers either side of this switch are not
+   comparable iteration by iteration, only in aggregate. */
+static int kd_fixedshape;
+
+static void reshape(McdModelID m)
+{
+    if (kd_fixedshape) return;
+    McdGeometryID g = McdModelGetGeometry(m);
+    if (McdGeometryGetTypeId(g) == kMcdGeometryTypeBox)
+        McdBoxSetDimensions(g, frnd(0.3f, 2.2f), frnd(0.3f, 2.2f),
+                            frnd(0.3f, 2.2f));
+}
+
 static McdGeometryID mk_sphere(McdFrameworkID fw, int seed)
 {
     return (McdGeometryID)McdSphereCreate(fw, seed ? 0.6f : 0.9f);
@@ -397,6 +420,7 @@ int main(int argc, char **argv)
     const char *tf = getenv("KD_TRIFLAGS");
     if (tf) kd_triflags = (McdTriangleFlags)strtol(tf, NULL, 0);
     kd_gen_check = getenv("KD_GENARGS") != NULL;
+    kd_fixedshape = getenv("KD_FIXEDSHAPE") != NULL;
     const char *e = getenv("KD_SELFTEST");
     int selftest = (e && *e == '1');
     const char *want = (argc > 1 && strcmp(argv[1], "all")) ? argv[1] : NULL;
@@ -433,6 +457,7 @@ int main(int argc, char **argv)
                deep interpenetration. A real level is shallow resting contact,
                one or two contacts, ~20% touching. They are different tests and
                they find different things. */
+            reshape(m1); reshape(m2);
             rand_tm(McdModelGetTransformPtr(m1), PAIRS[k].spread * kd_spread);
             if (!fixed2) rand_tm(McdModelGetTransformPtr(m2),
                                  PAIRS[k].spread * kd_spread);

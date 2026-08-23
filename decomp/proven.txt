@@ -396,3 +396,135 @@ IxConvexTriList       RELEASED 2026-08-23, and the tenth and last pair the censu
 #                     wrong progress metric. Recorded so that nobody re-derives the old
 #                     clean result and releases it.
 
+
+# --- libMdtKea, the solver ---------------------------------------------------
+#
+# READ THIS FIRST if you have been told the solver is "not started in any
+# meaningful sense". That was the honest reading of the evidence available on
+# 2026-08-23, and it is now wrong in one direction and right in another.
+#
+# Three of the solver's compute kernels are recovered, execute, and reproduce
+# the shipped library BIT-FOR-BIT over 900 compounding steps. The solver's
+# DRIVER, ALLOCATOR, INTEGRATOR and LCP are still unrecovered, and until they
+# are there is no configuration in which the engine runs on recovered kea.
+#
+# How the evidence was obtained, because the old gate could not have produced
+# it. substitute_test.sh printed `trajectory bit-identical` for all nine
+# recovered kea objects, and that line could equally have meant "the recovery is
+# exact", "the object never executed", or "it executed and nothing it computes
+# is measured". Two instruments now separate those (HANDOVER.md 4):
+#
+#   test/scene_census.sh      counts every function entry, so "never ran" is a
+#                             distinct answer from "ran and agreed"
+#   test/gate_sensitivity.sh  rebuilds the object with intermediates rounded and
+#                             reports how far the trajectory then moves — i.e.
+#                             the smallest error the scene could have caught
+#
+# scene_chain.c is the right instrument for the solver and is better than it
+# looks: it has no collisions at all, and it still drives
+# keaLCPSolver::solveLCP 900 times, MdtKeaAddConstraintForces 900 times and
+# keaPoolAlloc 14,400 times (measured with gdb breakpoint counts on the stock
+# build). A collision-free scene is not a solver-free scene.
+
+keaCalcJinvMandRHS_vanilla       calcJinvMandRHS + Multiply46BlockByMBlock +
+#                     Multiply46BlockBy61Vector. Ran 62,100 times in 900 steps
+#                     of scene_chain and reproduced the shipped object exactly.
+#
+#                       scene                   ran      recovered   sensitivity
+#                       scene_chain           62,100    0.000e+00     3.700e-04
+#                       scene_boxes_on_plane       -    0.000e+00     6.962e-04
+#                       scene_ragdoll              -    0.000e+00     4.002e+00
+#
+#                     "recovered" is the trajectory delta against the shipped
+#                     library; "sensitivity" is the same recovered code with
+#                     float intermediates rounded to storage precision. So on
+#                     the ragdoll scene a one-ULP change moves the bodies four
+#                     METRES and the recovery moves them exactly nothing, over
+#                     900 steps that include 900 LCP solves.
+keaCalcConstraintForces_vanilla  calculateConstraintAndResultantForces +
+#                     Multiply4VectorWith46Matrix. Ran 31,500 times.
+#                       scene_chain           31,500    0.000e+00     4.300e-04
+#                       scene_boxes_on_plane       -    0.000e+00     6.777e+01
+#                       scene_ragdoll              -    0.000e+00     3.612e+00
+#
+#                     Positive control, done by hand before believing any of
+#                     this: perturbing lambda[0] by one part per million inside
+#                     this function moves scene_chain by 4.9e-04 m. The gate can
+#                     see a 1e-6 relative error in this object and reports the
+#                     recovery as exactly zero.
+keaCalcIworldandNonInertialForceandVhmf_vanilla
+#                       scene_chain              900    0.000e+00     4.900e-04
+#                       scene_boxes_on_plane       -    0.000e+00     1.129e+02
+#                       scene_ragdoll              -    0.000e+00     2.777e+00
+MdtUtils              Bit-identical on scene_ragdoll with 4.113e+00 m of
+#                     sensitivity. Not a kea object, but it is on the solver
+#                     path and this is the first evidence it has ever had.
+
+# --- kea objects that are NOT evidenced, and exactly why ---------------------
+#
+# These all print `trajectory bit-identical` and none of that is evidence.
+#
+# keaCalcAcceleration_vanilla   RAN 900 times, and the probe cannot see it. Its
+#                     arithmetic is accel[i] = invmass * force[i] plus a torque
+#                     dot product: one multiply rounds identically at any
+#                     precision, and in these scenes most torque terms are zero.
+#                     It is NOT irrelevant — forcing accel[]/accelrot[] to 7777
+#                     moves both scenes by 8.8e5 m. It needs a targeted
+#                     comparison, not a rounding probe. This is the worked
+#                     example for why gate_sensitivity.sh is one-sided.
+# keaFunctions        RAN 900 times. Zero float instructions (platformInit).
+# keaMakejlenandbl2body  RAN 900 times. Zero float instructions — index and
+#                     pointer bookkeeping only, so no rounding probe can reach
+#                     it either.
+# keaMatrix           writebackMatrixChol RAN 900 times, prefetchMatrixChol
+#                     never ran. Zero float instructions.
+# keaMatrix_PcSparse  NEVER RAN. Neither of its two functions is reached.
+# keaMatrix_tester    NEVER RAN, except the putchar it should never have
+#                     exported at all (see the KD_WEAK commit).
+# keaMatrix_PcSparse_vanilla   quarantined (guessed stack frame). Worth a line
+#                     because it is the only kea object that does NOT reproduce
+#                     the original: 4.280e-04 m of divergence on scene_chain
+#                     against 3.700e-04 m of sensitivity — about one rounding
+#                     step wrong, not bit-identical. Do not release it.
+#
+# --- what is actually blocking the solver ------------------------------------
+#
+# keaRbdCore_unified  THE DRIVER (MdtKeaAddConstraintForces, 900 calls/900
+#                     steps). Quarantined. Ghidra lost the frame completely:
+#                     the body is full of in_stack_fffffeNN and
+#                     register0x00000010, it reconstructs MdtKeaConstraints and
+#                     MdtKeaParameters field by field out of a copied stack
+#                     block, and every call into the recovered kernels goes
+#                     through `(**(code **)(_vanillaFunctions + 0x10))()` — a
+#                     vtable dispatch with EVERY ARGUMENT DROPPED. This is the
+#                     single object standing between the recovered kernels and
+#                     a solver that runs, and it is a Ghidra-side problem: it
+#                     wants callsite signatures for the keaFunctions_Vanilla
+#                     vtable slots, the same machinery KD_CALLSITE_SIG=trilist
+#                     already applies to McdTriangleListFnPtr.
+# keaMemory           THE ALLOCATOR (keaPoolAlloc, 14,400 calls/900 steps). Was
+#                     crashing the pipeline outright; that is fixed and it now
+#                     repairs 47 lines and reports 13 real errors. Twelve of the
+#                     thirteen are one defect: pool_ptr, pool_max, poolstack and
+#                     poolstack_ptr are four CONTIGUOUS globals in
+#                     keaRbdCore_unified.o's .bss, at offsets 0, 0xc, 0x10 and
+#                     0x14, and Ghidra resolved relocations-with-addend against
+#                     the wrong neighbours — HANDOVER.md 5. Line 52 pushes to
+#                     `&poolstack + poolstack_ptr*4` and line 61 pops from
+#                     `&pool_ptr + poolstack_ptr*4`; those are the same address
+#                     expression against two differently mis-resolved bases.
+#                     DECLARING the four symbols makes it compile and leaves it
+#                     WRONG. It needs the per-function symbol inversion.
+# keaIntegrate_pc     MdtKeaIntegrateSystem, 900 calls/900 steps. Fails on
+#                     `stack0xffffffa0` — another lost frame.
+# keaLCPSolver        Fails on `implicit declaration of PrincipalSubmatrix`.
+#                     Diagnosed and NOT yet fixed: ghidra_clean's rename map is
+#                     keyed on the flattened declarator `keaLCPSolver__Principal
+#                     Submatrix`, because that is what the definition's banner
+#                     becomes, but Ghidra writes INTRA-CLASS call sites with the
+#                     bare method name. The map needs the short name as an alias
+#                     wherever it is unambiguous within the object. The same
+#                     object also has the `_vanillaQMatrix` vtable-slot
+#                     mislabelling that keaRbdCore_unified has.
+# keaLCP_new          keaLCPSolver::solveLCP itself, 900 calls/900 steps. Fails
+#                     on `too few arguments to keaLCPSolver__setUpper`.

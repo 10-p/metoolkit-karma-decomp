@@ -137,6 +137,41 @@ FIELD_REF = re.compile(r'\b(\w+)\s*->\s*field_0x([0-9a-f]+)')
 DECL_PTR = re.compile(r'(?:^\s*|[(,]\s*)(?:struct\s+)?(\w+)\s*\*\s*(\w+)\s*[;,)]', re.M)
 
 
+VARARG_STACK = re.compile(r'&stack0x0000([0-9a-f]{4})\b')
+
+
+def resolve_varargs(body, sig):
+    """Turn Ghidra's `&stack0x0000000c` into a real va_list.
+
+    A variadic function's extra arguments sit just past the named ones, and
+    Ghidra names that stack location rather than recognising it:
+
+        void MeInfo(int level, char *format, ...)
+        { (*MeInfoHandler)(level, format, &stack0x0000000c); }
+
+    On i386 a va_list IS a pointer to the first vararg, so the address Ghidra
+    names and `ap` after va_start are the same thing. Only applied when the
+    signature actually ends in `...`, so a same-shaped name in a non-variadic
+    function is left alone."""
+    if '...' not in sig or not VARARG_STACK.search(body):
+        return body, 0
+    # Last named parameter: what va_start anchors on.
+    params = sig[sig.rfind('(') + 1:sig.rfind(')')].split(',')
+    named = [p.strip() for p in params if p.strip() and p.strip() != '...']
+    if not named:
+        return body, 0
+    last = re.findall(r'(\w+)\s*$', named[-1])
+    if not last:
+        return body, 0
+    body = VARARG_STACK.sub('kd_ap', body)
+    brace = body.find('\n{')
+    if brace < 0:
+        return body, 0
+    body = (body[:brace + 2] + '\n  va_list kd_ap;\n'
+            f'  va_start(kd_ap, {last[0]});\n' + body[brace + 2:])
+    return body, 1
+
+
 def resolve_field_names(body, fieldmap):
     """Turn `this->field_0x14` into `this->m_blocks`.
 
@@ -364,6 +399,7 @@ def main():
     decls, defs, dropped = [], [], []
     n_alloca_fns = 0
     n_inline_dropped = 0
+    n_vararg_fns = 0
     for name, body in by_name.items():
         if name in args.drop:
             dropped.append(name)
@@ -374,6 +410,8 @@ def main():
         body = strip_comments(body).strip('\n')
         body = resolve_anon_types(cxx_names_to_c(ghidra_type_quirks(body)))
         body = resolve_field_names(body, fieldmap)
+        body, nva = resolve_varargs(body, signature_of(body) or '')
+        n_vararg_fns += nva
         body, nalloca = materialise_alloca_frame(body, name)
         if nalloca:
             n_alloca_fns += 1
@@ -415,7 +453,8 @@ def main():
         f.write('#include "kd_compat.h"\n')
         f.write('#include "kd_karma.h"\n')
         f.write('#include "kd_types.h"\n')
-        f.write('#include <stdbool.h>\n\n')
+        f.write('#include <stdbool.h>\n')
+        f.write('#include <stdarg.h>\n\n')
         if args.prelude:
             f.write('/* ---- hand-written prelude ---- */\n')
             f.write(open(args.prelude).read())
@@ -435,6 +474,8 @@ def main():
 
     if n_inline_dropped:
         print(f'  {n_inline_dropped} header-inline function(s) dropped')
+    if n_vararg_fns:
+        print(f'  {n_vararg_fns} variadic function(s) given a real va_list')
     if n_alloca_fns:
         print(f'  {n_alloca_fns} function(s) needed an alloca frame')
     print(f'{args.output}: {len(defs)} functions '

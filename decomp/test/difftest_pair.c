@@ -66,6 +66,7 @@ IX(SphylSphyl,      "McdSphylSphylIntersect")
 IX(SphylSphere,     "McdSphylSphereIntersect")
 IX(SphylBox,        "McdSphylBoxIntersect")
 IX(SphylPlane,      "McdSphylPlaneIntersect")
+IX(GjkCg,           "McdGjkCgIntersect")
 
 /* ---- geometry factories -------------------------------------------------- */
 static uint32_t rs = 0xC0FFEEu;
@@ -137,6 +138,14 @@ static const struct {
       mk_sphyl, mk_box,    1.6f },
     { "McdSphylPlaneIntersect",      ix_orig_SphylPlane,      ix_rec_SphylPlane,
       mk_sphyl, mk_plane,  1.2f },
+    /* Box x ConvexMesh goes through GJK, and the census puts it at 77,424 real
+       calls — the busiest pair in the game. McdGjkCgIntersect keeps a cache on
+       the pair (McdCacheHello/Goodbye are registered alongside it), and this
+       driver hands it a zeroed McdModelPair every iteration, so it is being
+       exercised on the cold path only. That is a real limit on this evidence,
+       not a reason to skip it. */
+    { "McdGjkCgIntersect",           ix_orig_GjkCg,           ix_rec_GjkCg,
+      mk_box,   mk_convex, 1.8f },
 };
 #define NPAIRS ((int)(sizeof PAIRS / sizeof PAIRS[0]))
 

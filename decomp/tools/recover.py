@@ -123,6 +123,15 @@ def main():
     # validated set until a real match proves it.
     GHIDRA_RECONSTRUCTED_FRAME = re.compile(r'\bkd_argslot_\w+\b')
 
+    # Objects a real match has proven, with the evidence recorded alongside.
+    proven = set()
+    pf = os.path.join(root, 'proven.txt')
+    if os.path.exists(pf):
+        for line in open(pf):
+            line = line.strip()
+            if line and not line.startswith('#'):
+                proven.add(line.split()[0])
+
     rows, counts = [], {'OK': 0, 'TODO': 0, 'REVIEW': 0, 'FAIL': 0, 'SKIP': 0}
     for obj in objs:
         base = os.path.basename(obj)[:-2]
@@ -211,6 +220,8 @@ def main():
         nguess = len(GHIDRA_STACK_GUESS.findall(src))
         nalloca = len(GHIDRA_ALLOCA_FRAME.findall(src))
         nrecon = len(GHIDRA_RECONSTRUCTED_FRAME.findall(src))
+        if nrecon and base in proven:
+            nrecon = 0            # released on evidence; see proven.txt
         if nrecon:
             os.unlink(o)
             rows.append((archive, base, 'REVIEW',

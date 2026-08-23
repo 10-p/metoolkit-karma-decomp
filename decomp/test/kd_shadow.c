@@ -160,9 +160,20 @@ static void kd_compare(kd_pair *s, int a, int b,
             double sp = fabs((double)x->separation - y->separation);
             if (sp > worst) worst = sp;
         }
-        for (int k = 0; k < 3; k++) {
-            double d = fabs((double)ra->normal[k] - rb->normal[k]);
-            if (d > worst) worst = d;
+        /* result->normal is the AVERAGE contact normal. Its only consumer is
+           McdContactSimplify(result->normal, contacts, contactCount, ...) in
+           KFarfield.cpp, which is handed the count alongside it — so with zero
+           contacts the field cannot influence anything.
+           It differs there for a real reason: with no contacts the accumulator
+           stays {0,0,0}, and MeVector3Normalize maps a zero vector to {1,0,0},
+           so whether the function reached that call at all becomes visible in a
+           field nobody reads. Comparing it would report a divergence that has no
+           effect on the simulation. */
+        if (ra->contactCount > 0) {
+            for (int k = 0; k < 3; k++) {
+                double d = fabs((double)ra->normal[k] - rb->normal[k]);
+                if (d > worst) worst = d;
+            }
         }
     }
     if (worst > s->worst_delta) s->worst_delta = worst;
@@ -194,7 +205,37 @@ static void kd_compare(kd_pair *s, int a, int b,
             fflush(kd_log);
         }
     } else if (worst == 0.0) s->identical++;
-    else                     s->fp_only++;
+    else {
+        s->fp_only++;
+        /* A delta this large is not float noise — the same run gets 1 ULP on
+           Sphere x Sphere. Dump both sides in full so the wrong component is
+           identifiable rather than merely counted. */
+        if (worst > 1e-3 && kd_log && kd_logged < KD_LOG_MAX) {
+            kd_logged++;
+            fprintf(kd_log, "NUMERIC %s worst=%.6g count=%d\n",
+                    s->name ? s->name : "?", worst, ra->contactCount);
+            int n = ra->contactCount;
+            if (n > rb->contactMaxCount) n = rb->contactMaxCount;
+            if (n > 3) n = 3;
+            for (int i = 0; i < n; i++) {
+                const McdContact *x = &ra->contacts[i], *y = &rb->contacts[i];
+                fprintf(kd_log,
+                        "  [%d] pos  orig %.9g %.9g %.9g | rec %.9g %.9g %.9g\n"
+                        "      norm orig %.9g %.9g %.9g | rec %.9g %.9g %.9g\n"
+                        "      sep  orig %.9g | rec %.9g   dims %d/%d\n",
+                        i,
+                        (double)x->position[0], (double)x->position[1], (double)x->position[2],
+                        (double)y->position[0], (double)y->position[1], (double)y->position[2],
+                        (double)x->normal[0], (double)x->normal[1], (double)x->normal[2],
+                        (double)y->normal[0], (double)y->normal[1], (double)y->normal[2],
+                        (double)x->separation, (double)y->separation, x->dims, y->dims);
+            }
+            fprintf(kd_log, "  avgN orig %.9g %.9g %.9g | rec %.9g %.9g %.9g\n",
+                    (double)ra->normal[0], (double)ra->normal[1], (double)ra->normal[2],
+                    (double)rb->normal[0], (double)rb->normal[1], (double)rb->normal[2]);
+            fflush(kd_log);
+        }
+    }
 }
 
 /* KD_SELFTEST=1 runs the ORIGINAL as both sides.

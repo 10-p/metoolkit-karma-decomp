@@ -1,0 +1,9 @@
+# Objects whose recovered code has been PROVEN by a real match under the shadow
+# harness, and may therefore leave quarantine.
+#
+# A reconstructed frame (kd_argslot_) is a hypothesis by default: it can read
+# correctly and still be wrong. Only a real run settles it. Each line records
+# what was actually observed, so the claim can be re-checked rather than trusted.
+#
+# object              evidence
+IxSphereTriList       test-karma-1, 5 min: 680,045 calls of McdSphereTriangleListIntersect, 678,254 bit-identical, 0 structural divergences, worst delta 5.7e-06. Self-test (original vs original) on the same map: 1,763,102 calls, 0 divergence, so the harness is sound.

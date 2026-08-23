@@ -72,13 +72,21 @@ IxConvexPrimitives    synth ONLY: 300,000 pairs of McdSphylConvexMeshIntersect a
 #                       difftest_pair.sh <objdir> <metoolkit> McdSphylBoxIntersect
 #                     which seeds its RNG and prints the case every run.
 #
-#                     Also observed: with this object staged, the engine died
-#                     with a SIGSEGV in McdModelGetGeometryType, called from the
-#                     engine's own KHandleCollisions, about a minute into a
-#                     match. Nothing in the backtrace named a recovered function
-#                     because the one responsible had already returned. The
-#                     shadow harness now puts a canary past its scratch buffer so
-#                     that becomes a counted `overrun` instead of a crash.
+#                     NOT a defect of this object, though it looked like one:
+#                     the engine has been seen to die with a SIGSEGV in
+#                     McdModelGetGeometryType, called from its own
+#                     KHandleCollisions, a minute or so into a match with this
+#                     object staged. That was initially written up here as an
+#                     overrun. It is not. The same crash, with the same
+#                     backtrace, reproduces under KD_SELFTEST=1 — the original
+#                     running as BOTH sides, with no recovered code executing at
+#                     all — on ONS-UCMP-ABC. The harness `overrun` counter is 0
+#                     throughout. Whatever it is, it is upstream of this project.
+#
+#                     The lesson is the one HANDOVER.md 7 already states and this
+#                     investigation ignored for half a day: run KD_SELFTEST
+#                     BEFORE believing anything the harness blames on recovered
+#                     code.
 #
 #                     Earlier real-match observation, kept because the numbers
 #                     are still the only in-game data for this object —

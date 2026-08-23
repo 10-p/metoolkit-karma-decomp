@@ -279,12 +279,31 @@ reads exactly like that fallback and has already cost one investigation an hour.
 
 **Maps:** `test-karma-1` (10 KActors, 2 hinges, cone limit, ball-socket, an ONSRV — high
 volume, reliable, ~1.7 M sphere/trilist calls in five minutes),
-`DM-BB-VehicleWar-test-physics` (all 7 vehicle factories; with bots it is the best source
-of **ragdoll** traffic — 165 k Sphyl×TriangleList calls in seven minutes — but it does not
-reliably produce Sphyl×ConvexMesh, so it is not where `IxConvexPrimitives` gets validated),
-`ONS-Torlan` (ragdolls *and* driven vehicles, but the hardest to start).
+`DM-BB-VehicleWar-test-physics` (all 7 vehicle factories; with bots it is a good source of
+**ragdoll** traffic, but it never once produced Sphyl×ConvexMesh in an hour of running),
+`ONS-CBP2-Tropica` (**the one to use for coverage** — see below).
 
-**A match that starts is not a match that ticks.** Both non-ONS maps above have been seen
+### Community maps exercise more of the collision matrix than the shipped ones
+
+This is the single most useful thing to know about running the harness, and it came from
+the project owner rather than from measurement. **Epic's own maps are optimised; community
+maps are not.** ONS-Torlan refused to start a ticking match three times running, and
+`DM-BB-VehicleWar-test-physics` never produced a single Sphyl×ConvexMesh call in an hour.
+`ONS-CBP2-Tropica` produced, in **five minutes**:
+
+```
+Sphyl  ConvexMesh   McdSphylConvexMeshIntersect    1,685   <- the vehicle path, at last
+Sphyl  TriangleList McdSphylTriangleListIntersect 27,170
+Sphyl  Sphyl        McdSphylSphylIntersect        14,203
+Box    ConvexMesh   (not yet recovered)           10,249
+Sphere TriangleList McdSphereTriangleListIntersect 5,871
+```
+
+Nine of 37 pairs, including two that no shipped map had ever reached. `ONS-UCMP-ABC` also
+reaches `ConvexMesh×TriangleList`. If a pair is not being exercised, **try a CBP2, UCMP,
+BE- or SPAC- map before concluding the pair is unreachable.**
+
+**A match that starts is not a match that ticks.** Both shipped maps above have been seen
 to load, print `START MATCH`, then burn 150 % CPU for ten minutes with **zero** collision
 calls and an empty `$KD_SHADOW_OUT`. The same binary and the same URL, run again, produced
 165,000 calls in the first two minutes. There is no known way to tell the two apart from
@@ -293,8 +312,8 @@ the log, so:
 > Check `$KD_SHADOW_OUT` after two minutes. If it has no rows at all, the collision matrix
 > was never installed — kill it and start again rather than waiting out the timeout.
 
-Bots are what generate physics. `?NumBots=6?MinPlayers=7?bAutoNumBots=False` starts them
-on a DM map; `bAutoNumBots=True` alone has been seen to produce none.
+Bots are what generate physics. `?NumBots=8?MinPlayers=9?bAutoNumBots=False` starts them;
+`bAutoNumBots=True` alone has been seen to produce none.
 
 **ONS matches are non-deterministic.** Identical runs give 0 calls or 50,000. A 5-minute
 run showed *zero* structural divergences for the sphyl functions; the 11-minute run showed
@@ -351,6 +370,13 @@ if calling one twice on identical inputs gives two answers, something else is sh
 Baseline: `test-karma-1` self-test gives **1,763,102 calls, 0 divergence**. The harness is
 sound. That is what let us treat the `McdSphereTriangleListIntersect` divergence as real
 and worth explaining rather than tolerating.
+
+It is also what settles crashes, and it was skipped once at real cost. A SIGSEGV in
+`McdModelGetGeometryType`, called from the engine's own `KHandleCollisions`, was written up
+as an overrun caused by `IxSphylPrimitives`. It is not: the same crash with the same
+backtrace reproduces under `KD_SELFTEST=1` on `ONS-UCMP-ABC`, with no recovered code
+executing at all. **Run the self-test before believing anything the harness blames on
+recovered code — crashes included, not just divergences.**
 
 ### Reading the output
 

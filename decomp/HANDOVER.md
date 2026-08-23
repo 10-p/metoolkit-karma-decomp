@@ -34,12 +34,13 @@ Ghidra consumes it directly.
 ## 2. Current status
 
 ```
-compile:  89 objects  (85 clean + 4 with prelude TODOs)  = 60.1% of 148 attempted
-gate:     89 of 89 clean on ALL THREE scenes — bit-identical on scene_chain, and no
+compile:  92 objects  (88 clean + 4 with prelude TODOs)  = 62.2% of 148 attempted
+gate:     92 of 92 clean on ALL THREE scenes; 92/92 compile for wasm32 with
+          byte-identical exported symbols — bit-identical on scene_chain, and no
           crash on scene_boxes_on_plane (the two divergences there are IxBoxBox
           and IxBoxPlane, both on the collision path, both expected)
-review:   12 objects held back by seven safety detectors
-fail:     47 objects do not compile
+review:   13 objects held back by seven safety detectors
+fail:     43 objects do not compile
 ```
 
 **Run all three scenes.** `scene_chain` is collision-free and is the authoritative
@@ -128,7 +129,7 @@ metoolkit .a
 cd /home/ion/engines/engine-ut2004/karma-decomp
 rm -rf /tmp/kd_out /tmp/kd_build
 python3 tools/recover.py \
-  --dump-dir /home/ion/tools/karma-lab/out3 \
+  --dump-dir /home/ion/tools/karma-lab/out5 \
   --obj-dir  /home/ion/tools/karma-lab/allobj \
   --out-dir  /tmp/kd_out \
   --metoolkit ../Thirdparty/metoolkit \
@@ -204,7 +205,7 @@ Installed at `/home/ion/tools/ghidra_12.1.3_PUBLIC`. Java 21. Headless only.
 ```bash
 cd /home/ion/tools/karma-lab
 export KARMA_PROTOS=/home/ion/tools/karma-lab/kd_protos.h
-export KARMA_OUTDIR=/home/ion/tools/karma-lab/out3
+export KARMA_OUTDIR=/home/ion/tools/karma-lab/out5
 export KD_CALLSITE_SIG=trilist          # only when re-doing TriangleList objects
 rm -rf gproj && mkdir -p gproj
 timeout 7200 /home/ion/tools/ghidra_12.1.3_PUBLIC/support/analyzeHeadless \
@@ -231,6 +232,27 @@ has none and both `getFunctions()` and `getExternalFunctions()` miss them.
 sites **inside functions whose name contains `TriangleList`**. Scoped by function name,
 not by object, because other objects call different callbacks through pointers and the
 wrong signature is worse than none.
+
+### `DumpDecomp.java` also repairs a convention Ghidra gets wrong
+
+Ghidra picks a calling convention per function during analysis, and for this corpus it
+picks `__regparm1`/`__regparm2` for 19 functions across 9 objects. That is wrong — gcc 3.2
+on i386 passes everything on the stack here, the prologues say so and the DWARF says so —
+and the tag is not the damage: **Ghidra lays the parameter list out to match**, so the body
+is shifted by N and the last incoming argument falls off the end (§8, §10).
+
+`forceCdecl()` rewrites those, and only those, before decompiling. A first attempt forced
+`__cdecl` on *everything* and made things worse — gcc's i386 C++ ABI passes `this` as the
+first stack argument, so `__thiscall` is already right, and overriding it cost five kea
+objects that had been compiling. **Fix the misdetection, not the convention system.**
+
+```
+out3 (before)  85 clean + 4 TODO,  46 fail
+out4 (all)     85 clean + 1 TODO,  47 fail   <- blanket __cdecl, worse
+out5 (targeted) 88 clean + 4 TODO, 43 fail   <- __regparm only
+```
+
+`out5` is the current dump directory. `__regparm` appears in none of its 153 dumps.
 
 ### Things about Ghidra that are settled — do not re-test
 
@@ -403,7 +425,7 @@ engine's own `KHandleCollisions`, was first written up as an overrun caused by
 executing. **Run the self-test before believing anything the harness blames on recovered
 code, crashes included.**
 
-### The harness perturbs the engine, and the cause is still open
+### The harness perturbs the engine, and the cause is narrowing
 
 **Do not treat a crash in a shadow session as a fact about the recovered code.** Alternating
 240 s runs on `ONS-UCMP-ABC`, counting SIGSEGVs in the engine's own `KHandleCollisions`:
@@ -428,9 +450,11 @@ free: re-measured against the known baseline on `test-karma-1` afterwards, 1,738
 
 Still untried, roughly in order of promise:
 
-1. **Stack.** `kd_dispatch` puts `McdContact scratch_c[72]` — about 2.9 KB — on the stack of
-   every shadowed call, and aggregates dispatch to child pairs, so those frames nest. Shrink
-   `KD_SCRATCH_MAX` and see if the rate moves.
+1. ~~**Stack.**~~ **Ruled out.** `kd_dispatch` puts about 2.9 KB on the stack per shadowed
+   call, and aggregates dispatch to child pairs, so the frames could nest. They do not:
+   `kd_shadow.c` now counts the nesting and a full ONS-CBP2-Tropica match reports **max
+   depth 1**, which the CSV records on every run. One 2.9 KB frame is not the problem, and
+   measuring that took four minutes against the half-hour a bisection trial costs.
 2. **A shared contact pool.** If an intersection function bumps a per-frame allocator as
    well as filling the caller's array, calling it twice double-counts it. That would corrupt
    whatever is next in memory, which is what the backtrace looks like.

@@ -85,6 +85,13 @@ static int           kd_npairs;
 static int           kd_logged;
 static FILE         *kd_log;
 static unsigned long kd_since_flush;
+/* How deeply the thunks nest. Aggregates dispatch to their children's
+   interactions, so a shadowed call can sit inside another one, and each frame
+   carries a ~2.9 KB scratch buffer. Whether that is enough to matter is a
+   question about the maximum depth, which is cheaper to measure than to
+   bisect. */
+static int kd_depth, kd_maxdepth;
+
 #define KD_FLUSH_EVERY 10000    /* small enough to read a run in progress */
 
 static const char *kd_typename(int t)
@@ -121,6 +128,7 @@ static void kd_flush(void)
                 s->ret_diff, s->count_diff, s->dims_diff, s->overrun,
                 s->worst_delta);
     }
+    fprintf(f, "# max thunk nesting depth: %d\n", kd_maxdepth);
     fclose(f);
     if (kd_log) fflush(kd_log);
 }
@@ -295,6 +303,7 @@ static int kd_dispatch(int slot, McdModelPair *p, McdIntersectResult *r)
     s->calls++;
     if (++kd_since_flush >= KD_FLUSH_EVERY) { kd_since_flush = 0; kd_flush(); }
 
+    if (++kd_depth > kd_maxdepth) kd_maxdepth = kd_depth;
     int a = s->orig(p, r);
     if (s->rec && !kd_census) {
         /* The scratch buffer carries a canary past its end.
@@ -362,6 +371,7 @@ static int kd_dispatch(int slot, McdModelPair *p, McdIntersectResult *r)
             kd_compare(s, a, b, r, &scratch);
         }
     }
+    kd_depth--;
     return a;                       /* the engine always sees the original */
 }
 

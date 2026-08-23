@@ -238,11 +238,28 @@ timeout --signal=TERM 300 xvfb-run -a -s "-screen 0 640x480x24" \
 ```
 
 `test/run_map.sh` wraps this and prints which gametype the engine *actually* used — a
-silent fallback to the wrong gametype is indistinguishable from a broken harness.
+silent fallback to the wrong gametype is indistinguishable from a broken harness. It reads
+the **last** `Game class is` line: the first is always the Entry level's `GameInfo`, which
+reads exactly like that fallback and has already cost one investigation an hour.
 
 **Maps:** `test-karma-1` (10 KActors, 2 hinges, cone limit, ball-socket, an ONSRV — high
-volume, reliable), `DM-BB-VehicleWar-test-physics` (all 7 vehicle factories),
-`ONS-Torlan` (ragdolls + vehicles, but non-deterministic — see below).
+volume, reliable, ~1.7 M sphere/trilist calls in five minutes),
+`DM-BB-VehicleWar-test-physics` (all 7 vehicle factories; with bots it is the best source
+of **ragdoll** traffic — 165 k Sphyl×TriangleList calls in seven minutes — but it does not
+reliably produce Sphyl×ConvexMesh, so it is not where `IxConvexPrimitives` gets validated),
+`ONS-Torlan` (ragdolls *and* driven vehicles, but the hardest to start).
+
+**A match that starts is not a match that ticks.** Both non-ONS maps above have been seen
+to load, print `START MATCH`, then burn 150 % CPU for ten minutes with **zero** collision
+calls and an empty `$KD_SHADOW_OUT`. The same binary and the same URL, run again, produced
+165,000 calls in the first two minutes. There is no known way to tell the two apart from
+the log, so:
+
+> Check `$KD_SHADOW_OUT` after two minutes. If it has no rows at all, the collision matrix
+> was never installed — kill it and start again rather than waiting out the timeout.
+
+Bots are what generate physics. `?NumBots=6?MinPlayers=7?bAutoNumBots=False` starts them
+on a DM map; `bAutoNumBots=True` alone has been seen to produce none.
 
 **ONS matches are non-deterministic.** Identical runs give 0 calls or 50,000. A 5-minute
 run showed *zero* structural divergences for the sphyl functions; the 11-minute run showed
@@ -304,9 +321,16 @@ and worth explaining rather than tolerating.
 
 `$KD_SHADOW_OUT` is a CSV rewritten periodically (not only at exit, so a crash still yields
 data). Columns: `type1,type2,function,shadowed,calls,identical,fp_only,ret_diff,count_diff,
-dims_diff,worst_delta`.
+dims_diff,overrun,worst_delta`.
 
 - `ret_diff` / `count_diff` / `dims_diff` are **decisions**. Any non-zero is a real defect.
+- `overrun` is worse than any of them: the recovered function wrote past the end of the
+  buffer it was handed. The scratch buffer carries a canary, because without one an
+  overflow does not fail at the call — it corrupts whatever is next and the engine dies
+  somewhere unrelated a few frames later. With `IxSphylPrimitives` staged that was a
+  SIGSEGV inside `McdModelGetGeometryType`, called from the engine's own
+  `KHandleCollisions`, walking a pair container the harness never touches. The canary is
+  what lets a **quarantined** object be measured without taking the session with it.
 - `fp_only` with a small `worst_delta` is float noise and expected.
 - `$KD_SHADOW_DIVERGENCES` dumps the **full input transforms** for each divergence, so a
   case found in a live match can be replayed. The match never plays the same way twice, so

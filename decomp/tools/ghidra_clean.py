@@ -834,6 +834,53 @@ fix_pointer_as_float.multiline = True
 
 SUBFIELD = re.compile(r'\.\s*_(\d+)_(\d+)_')
 
+NO_MEMBER = re.compile(
+    r'[‘\'"]([^’\'"]+)[’\'"](?:\s*\{aka\s*[‘\'"]([^’\'"]+)[’\'"]\})?'
+    r'\s*has no member named\s*[‘\'"]field_0x([0-9a-f]+)[’\'"]')
+
+
+def fix_field_offset(line, diag, ctx):
+    """`this->field_0x8` when GCC knows what `this` points at.
+
+    resolve_field_names() already maps offsets back to member names, but it has
+    to work out the variable's type by reading its declaration, and that fails
+    for a parameter it cannot parse or a typedef it cannot follow. GCC has none
+    of those problems and puts the answer in the diagnostic:
+
+        ‘keaMatrix_pcSparse_vanilla’ {aka ‘keaMatrix_pcSparse’} has no member
+        named ‘field_0x8’
+
+    so the offset can be looked up against the type GCC actually resolved.
+    With no member at that offset the reference is to PADDING — McdContact has
+    `short dims` at 28 and a 4-aligned union at 32, and gcc copies the two bytes
+    between them because it moved the struct in wider chunks. Byte arithmetic
+    says exactly that and stays correct where no member name can exist."""
+    m = NO_MEMBER.search(diag)
+    if not m:
+        return None
+    spelled, aka, off = m.group(1), m.group(2), int(m.group(3), 16)
+    field = 'field_0x%x' % off
+    member = None
+    for t in (aka, spelled):
+        if not t:
+            continue
+        t = t.replace('struct ', '').strip()
+        member = (ctx.fieldmap.get(t, {}).get(str(off))
+                  or ctx.fieldmap.get('_' + t, {}).get(str(off)))
+        if member:
+            break
+    if member:
+        new = re.sub(r'\b' + field + r'\b', member, line)
+        return new if new != line else None
+
+    def byte_ref(mm):
+        return f'(*(char *)((char *)({mm.group(1)}) + 0x{off:x}))'
+    new = re.sub(r'([A-Za-z_]\w*)\s*->\s*' + field + r'\b', byte_ref, line)
+    new = re.sub(r'([A-Za-z_]\w*)\s*\.\s*' + field + r'\b',
+                 lambda mm: f'(*(char *)((char *)&({mm.group(1)}) + 0x{off:x}))', new)
+    return new if new != line else None
+
+
 SCALAR_KEYWORDS = {
     'int', 'char', 'short', 'long', 'signed', 'unsigned', 'float', 'double',
     'void', 'uint', 'ushort', 'uchar', 'byte', 'sbyte', 'bool', 'size_t',
@@ -1036,6 +1083,8 @@ REPAIR_RULES = [
      fix_pointer_as_float),
     (re.compile(r'cannot convert to a pointer type'),
      fix_float_as_pointer),
+    (re.compile(r'has no member named ' + Q.replace('([^', '(field_0x[^')),
+     fix_field_offset),
     (re.compile(r'request for member ' + Q + r' in something not a structure'),
      fix_subfield_access),
     (re.compile(r'expected expression before ‘\.’ token|'

@@ -10,5 +10,11 @@
     X(McdSpherePlaneIntersect, "McdSpherePlaneIntersect", "rec_McdSpherePlaneIntersect") \
     X(McdSphereSphereIntersect, "McdSphereSphereIntersect", "rec_McdSphereSphereIntersect") \
     X(McdSphereTriangleListIntersect, "McdSphereTriangleListIntersect", "rec_McdSphereTriangleListIntersect") \
+    X(McdSphylBoxIntersect, "McdSphylBoxIntersect", "rec_McdSphylBoxIntersect") \
     X(McdSphylConvexMeshIntersect, "_Z27McdSphylConvexMeshIntersectP13_McdModelPairP19_McdIntersectResult", "rec__Z27McdSphylConvexMeshIntersectP13_McdModelPairP19_McdIntersectResult") \
+    X(McdSphylCylinderIntersect, "McdSphylCylinderIntersect", "rec_McdSphylCylinderIntersect") \
+    X(McdSphylPlaneIntersect, "McdSphylPlaneIntersect", "rec_McdSphylPlaneIntersect") \
+    X(McdSphylSphereIntersect, "McdSphylSphereIntersect", "rec_McdSphylSphereIntersect") \
+    X(McdSphylSphylIntersect, "McdSphylSphylIntersect", "rec_McdSphylSphylIntersect") \
+    X(McdSphylTriangleListIntersect, "McdSphylTriangleListIntersect", "rec_McdSphylTriangleListIntersect") \
 

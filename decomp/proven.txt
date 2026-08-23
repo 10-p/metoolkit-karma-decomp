@@ -6,7 +6,8 @@
 # what was actually observed, so the claim can be re-checked rather than trusted.
 #
 # object              evidence
-IxSphereTriList       test-karma-1, 5 min: 680,045 calls of McdSphereTriangleListIntersect, 678,254 bit-identical, 0 structural divergences, worst delta 5.7e-06. Self-test (original vs original) on the same map: 1,763,102 calls, 0 divergence, so the harness is sound.
+IxSphereTriList       test-karma-1, 5 min: 1,763,276 calls of McdSphereTriangleListIntersect, 1,761,435 bit-identical, 0 structural divergences, worst delta 5.7e-06. (An earlier 5-min run of the same map gave 680,045 calls with the same verdict; the count varies with how the KActors settle, the verdict has not.) Self-test (original vs original) on the same map: 1,763,102 calls, 0 divergence, so the harness is sound.
+IxSphereSphere        test-karma-1, 5 min: 120,275 calls of McdSphereSphereIntersect, 90,540 bit-identical, 29,735 differing only in float last bits, 0 structural divergences, worst delta 5.96e-08. Same run as the line above, so the same self-test covers it.
 
 # --- NOT proven, with what was observed --------------------------------------
 # IxSphylPrimitives   ONS-Torlan, 11 min (the longer run matters — the 5-min run

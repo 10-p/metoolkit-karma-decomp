@@ -46,6 +46,8 @@
 
 #define KD_MAX_PAIRS    96      /* 9 built-in geometry types => <= 81 ordered pairs */
 #define KD_SCRATCH_MAX  64
+#define KD_GUARD        8       /* trailing contacts, filled with a canary */
+#define KD_CANARY       0xA5
 #define KD_LOG_MAX      60
 
 typedef int (MEAPI *kd_intersect_fn)(McdModelPair *, McdIntersectResult *);
@@ -57,6 +59,7 @@ typedef struct {
     const char      *name;         /* NULL when unidentified */
     unsigned long    calls, identical, fp_only;
     unsigned long    ret_diff, count_diff, dims_diff;
+    unsigned long    overrun;       /* wrote past the buffer it was handed */
     double           worst_delta;
 } kd_pair;
 
@@ -90,15 +93,16 @@ static void kd_flush(void)
     FILE *f = fopen(path, "w");
     if (!f) return;
     fprintf(f, "type1,type2,function,shadowed,calls,identical,fp_only,"
-               "ret_diff,count_diff,dims_diff,worst_delta\n");
+               "ret_diff,count_diff,dims_diff,overrun,worst_delta\n");
     for (int i = 0; i < kd_npairs; i++) {
         kd_pair *s = &kd_pairs[i];
-        fprintf(f, "%s,%s,%s,%s,%lu,%lu,%lu,%lu,%lu,%lu,%.6e\n",
+        fprintf(f, "%s,%s,%s,%s,%lu,%lu,%lu,%lu,%lu,%lu,%lu,%.6e\n",
                 kd_typename(s->t1), kd_typename(s->t2),
                 s->name ? s->name : "(unidentified)",
                 s->rec ? "yes" : "no",
                 s->calls, s->identical, s->fp_only,
-                s->ret_diff, s->count_diff, s->dims_diff, s->worst_delta);
+                s->ret_diff, s->count_diff, s->dims_diff, s->overrun,
+                s->worst_delta);
     }
     fclose(f);
     if (kd_log) fflush(kd_log);
@@ -263,17 +267,50 @@ static int kd_dispatch(int slot, McdModelPair *p, McdIntersectResult *r)
 
     int a = s->orig(p, r);
     if (s->rec) {
-        McdContact         scratch_c[KD_SCRATCH_MAX];
+        /* The scratch buffer carries a canary past its end.
+           A recovered function that writes more contacts than it was given room
+           for does not fail here — it smashes whatever is next, and the engine
+           dies somewhere unrelated a few frames later. That is exactly what
+           happened with IxSphylPrimitives staged: SIGSEGV inside
+           McdModelGetGeometryType, called from the engine's own
+           KHandleCollisions, walking a pair container this harness never
+           touches. Half an hour to attribute, and the answer was in a function
+           that had already returned.
+
+           Checking a canary turns that into a counted, attributed defect with
+           the inputs logged, which is the whole point of a shadow harness: a
+           quarantined object can be MEASURED without taking the session with
+           it. It is not a guarantee — a wild write far past the end still lands
+           wherever it lands — but the overflow-by-a-few case is the common one
+           and it is now caught at the call that caused it. */
+        McdContact         scratch_c[KD_SCRATCH_MAX + KD_GUARD];
         McdIntersectResult scratch = *r;
         int cap = r->contactMaxCount;
         if (cap > KD_SCRATCH_MAX) cap = KD_SCRATCH_MAX;
-        memset(scratch_c, 0, sizeof scratch_c);
+        memset(scratch_c, 0, sizeof(McdContact) * KD_SCRATCH_MAX);
+        memset(&scratch_c[KD_SCRATCH_MAX], KD_CANARY,
+               sizeof(McdContact) * KD_GUARD);
         scratch.contacts = scratch_c;
         scratch.contactMaxCount = cap;
         scratch.contactCount = 0;
         scratch.touch = 0;
         int b = kd_selftest ? s->orig(p, &scratch) : s->rec(p, &scratch);
-        kd_compare(s, a, b, r, &scratch);
+
+        const unsigned char *g = (const unsigned char *)&scratch_c[KD_SCRATCH_MAX];
+        size_t gn = sizeof(McdContact) * KD_GUARD, i;
+        for (i = 0; i < gn; i++) if (g[i] != KD_CANARY) break;
+        if (i < gn || scratch.contactCount < 0 || scratch.contactCount > cap) {
+            s->overrun++;
+            if (kd_log && kd_logged < KD_LOG_MAX) {
+                kd_logged++;
+                fprintf(kd_log, "OVERRUN %s: wrote past a %d-contact buffer "
+                                "(reported count %d)\n",
+                        s->name ? s->name : "?", cap, scratch.contactCount);
+                fflush(kd_log);
+            }
+        } else {
+            kd_compare(s, a, b, r, &scratch);
+        }
     }
     return a;                       /* the engine always sees the original */
 }

@@ -1585,7 +1585,11 @@ def repair_loop(path, cc, cflags, ctx=None, max_rounds=90, verbose=True):
         for lineno, _col, msg in diags:
             by_line.setdefault(lineno, []).append(msg)
 
-        edits, tried = {}, []
+        # `groups` is the same information as `edits`, kept per RULE
+        # APPLICATION rather than per line. A multiline or file-wide rule
+        # rewrites several lines from one diagnostic, so line -> entry is
+        # not a function, and the retry path below needs the entry.
+        edits, tried, groups = {}, [], []
         for lineno, msgs in sorted(by_line.items()):
             if not 1 <= lineno <= len(lines):
                 continue
@@ -1616,6 +1620,7 @@ def repair_loop(path, cc, cflags, ctx=None, max_rounds=90, verbose=True):
                         continue
                     edits.update(changed)
                     tried.append((lineno, rule.__name__, msg))
+                    groups.append((tried[-1], changed))
                     break
                 if getattr(rule, 'multiline', False):
                     # Ghidra wraps long expressions, so the construct GCC is
@@ -1638,11 +1643,13 @@ def repair_loop(path, cc, cflags, ctx=None, max_rounds=90, verbose=True):
                         continue
                     edits.update(changed)
                     tried.append((lineno, rule.__name__, msg))
+                    groups.append((tried[-1], changed))
                     break
                 new = rule(text, msg, ctx)
                 if new is not None and new != text and (lineno, new) not in applied:
                     edits[lineno] = new
                     tried.append((lineno, rule.__name__, msg))
+                    groups.append((tried[-1], {lineno: new}))
                     break
         if not edits:
             break
@@ -1697,22 +1704,28 @@ def repair_loop(path, cc, cflags, ctx=None, max_rounds=90, verbose=True):
             # Batch rejected. Retry one at a time: usually all but one were fine
             # and a single bad rewrite masked them.
             progress = False
-            for lineno, new in sorted(edits.items()):
+            # One RULE APPLICATION at a time. Retrying a single line of a
+            # multiline rewrite would apply half a rewritten statement, and
+            # there is no `tried` entry for the lines a multiline rule touched
+            # beyond the one GCC named — looking one up used to raise
+            # StopIteration and take the whole object out of the build with a
+            # traceback. keaMemory, in libMdtKea, failed exactly this way.
+            for entry, changed in groups:
                 one = best_text.split('\n')
-                one[lineno - 1] = new
+                for lineno, new in changed.items():
+                    one[lineno - 1] = new
                 one_text = '\n'.join(one)
                 open(path, 'w').write(one_text)
                 d = compile_diags(path, cc, cflags)
-                entry = next(t for t in tried if t[0] == lineno)
                 ok, res = verdict(d, [(entry[0], entry[2])])
                 if ok and res:
                     best_text, best_n, diags = one_text, len(d), d
                     n_edits += 1
                     progress = True
-                    applied.add((lineno, new))
+                    applied |= {(l, t) for l, t in changed.items()}
                     log.append(entry)
                     if verbose:
-                        print(f'  fixed {os.path.basename(path)}:{lineno} '
+                        print(f'  fixed {os.path.basename(path)}:{entry[0]} '
                               f'[{entry[1]}] {entry[2][:60]}')
             open(path, 'w').write(best_text)
             if not progress:

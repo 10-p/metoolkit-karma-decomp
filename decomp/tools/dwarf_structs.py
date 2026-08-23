@@ -189,6 +189,28 @@ def declarator(dies, ref, name, depth=0):
     return f'{spelling}{sep}{name}'
 
 
+def emit_enum(die):
+    """C definition for a DW_TAG_enumeration_type.
+
+    Enums were missing from the type database entirely, which is why
+    IxConvexPrimitives could not compile: VoronoiRegionType is an internal enum
+    with no declaration in metoolkit's public headers. There are 466
+    enumeration DIEs across the SDK, so this was not a one-off gap."""
+    name = die['attrs'].get('DW_AT_name', '<anon>')
+    lines = [f'/* {name} — enum, recovered from DWARF */', f'enum {name} {{']
+    vals = []
+    for c in die['children']:
+        if c['tag'] != 'DW_TAG_enumerator':
+            continue
+        n = c['attrs'].get('DW_AT_name')
+        v = c['attrs'].get('DW_AT_const_value', '0').split()[0]
+        if n:
+            vals.append(f'    {n} = {v},')
+    lines += vals or ['    /* no enumerators recorded */']
+    lines.append('};')
+    return '\n'.join(lines)
+
+
 def emit(dies, die):
     a = die['attrs']
     name = a.get('DW_AT_name', '<anon>')

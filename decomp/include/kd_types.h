@@ -22,6 +22,39 @@
 #include <MdtKea.h>
 #include <MeProfile.h>
 
+/* ---- bare-tag aliases (Ghidra omits the `struct` keyword) ---- */
+typedef struct _McdCache _McdCache;
+typedef struct _McdContact _McdContact;
+typedef struct _McdFramework _McdFramework;
+typedef struct _McdGeometry _McdGeometry;
+typedef struct _McdGeometryInstance _McdGeometryInstance;
+typedef struct _McdGjkFace _McdGjkFace;
+typedef struct _McdGjkFaceQueue _McdGjkFaceQueue;
+typedef struct _McdGjkPoint _McdGjkPoint;
+typedef struct _McdGjkSimplex _McdGjkSimplex;
+typedef struct _McdInteractionTable _McdInteractionTable;
+typedef struct _McdInteractions _McdInteractions;
+typedef struct _McdIntersectResult _McdIntersectResult;
+typedef struct _McdLineSegIntersectResult _McdLineSegIntersectResult;
+typedef struct _McdModel _McdModel;
+typedef struct _McdModelPair _McdModelPair;
+typedef struct _McdModelPairContainer _McdModelPairContainer;
+typedef struct _McdModelPairContainerIterator _McdModelPairContainerIterator;
+typedef struct _McdRequest _McdRequest;
+typedef struct _McdSafeTimeResult _McdSafeTimeResult;
+typedef struct _McdSpace _McdSpace;
+typedef struct _McdUserPolygon _McdUserPolygon;
+typedef struct _McdUserTriangle _McdUserTriangle;
+typedef struct _MeCPUResources _MeCPUResources;
+typedef struct _MeHeap _MeHeap;
+typedef struct _MePoolx _MePoolx;
+typedef struct _MeSet _MeSet;
+typedef struct _MeStream _MeStream;
+typedef struct _MeXMLElement _MeXMLElement;
+typedef struct _MeXMLHandler _MeXMLHandler;
+typedef struct _MeXMLInput _MeXMLInput;
+typedef struct _RRender _RRender;
+
 /* ---- forward declarations (so pointer members need no ordering) ---- */
 struct CxSmallSort;
 typedef struct CxSmallSort CxSmallSort;
@@ -87,6 +120,27 @@ typedef struct lsVec4 lsVec4;
 /* ---- internal typedefs the recovered structs depend on ---- */
 typedef struct _McdContactLink McdContactLink;
 typedef void (*McdUpdateAABBFnPtr)();
+
+/* ---- enums ---- */
+/* from IxPrimitiveLineSegment.o */
+/* OverlapStatus — enum, recovered from DWARF */
+enum OverlapStatus {
+    DISJOINT = 0,
+    INTERSECT = 1,
+    INSIDE = 2,
+};
+typedef enum OverlapStatus OverlapStatus;
+
+/* from ConvexGeomUtils.o */
+/* VoronoiRegionType — enum, recovered from DWARF */
+enum VoronoiRegionType {
+    kVertexRegion = 0,
+    kEdgeRegion = 1,
+    kFaceRegion = 2,
+    kInteriorRegion = 3,
+    kVoronoiRegionTypeCount = 4,
+};
+typedef enum VoronoiRegionType VoronoiRegionType;
 
 /* ---- definitions ---- */
 /* from CxSmallSort.o */

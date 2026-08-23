@@ -24,8 +24,8 @@ import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from dwarf_structs import (parse, emit, declarator, rtti_bases,  # noqa: E402
-                           REF_RE, SYSTEM_TYPES)
+from dwarf_structs import (parse, emit, emit_enum, declarator,  # noqa: E402
+                           rtti_bases, REF_RE, SYSTEM_TYPES)
 
 
 def public_type_names(include_dir):
@@ -33,7 +33,9 @@ def public_type_names(include_dir):
     names = set()
     if not include_dir:
         return names
-    pat = re.compile(r'\b(?:struct|union|class)\s+([A-Za-z_]\w*)\s*\{')
+    # `enum` included: metoolkit declares plenty of them, and omitting it here
+    # means we redefine every public enum and nothing compiles at all.
+    pat = re.compile(r'\b(?:struct|union|class|enum)\s+([A-Za-z_]\w*)\s*\{')
     # Deliberately does NOT require the trailing `;`: metoolkit writes
     #     } MdtKeaTransformation
     #     #ifdef PS2
@@ -47,6 +49,10 @@ def public_type_names(include_dir):
     # Every typedef in a public header, struct-based or not: `typedef MeReal
     # MeMatrix4[4][4];` must be recognised too, or we redefine it and clash.
     anytd = re.compile(r'\btypedef\b[^;{}]*?([A-Za-z_]\w*)\s*(?:\[[^\]]*\]\s*)*;')
+    # The TAG in `typedef struct _MeSet { ... } MeSet;` — without this we only
+    # learn about `MeSet` and go on to redefine `_MeSet`, which the header
+    # already declares.
+    tagdef = re.compile(r'\btypedef\s+(?:struct|union|enum)\s+([A-Za-z_]\w*)\s*\{')
     for root, _, files in os.walk(include_dir):
         for f in files:
             if not f.endswith('.h'):
@@ -58,6 +64,7 @@ def public_type_names(include_dir):
             names.update(pat.findall(txt))
             names.update(tpat.findall(txt))
             names.update(anytd.findall(txt))
+            names.update(tagdef.findall(txt))
     return names
 
 
@@ -172,6 +179,7 @@ def main():
 
     public = public_type_names(args.public_headers)
     best = {}        # name -> (richness, die, dies, source object)
+    enums = {}       # name -> (die, source object)
     conflicts = {}   # name -> set of (nmembers, size) seen
 
     objs = []
@@ -190,6 +198,14 @@ def main():
             print(f'  ! {obj}: {e}', file=sys.stderr)
             continue
         for die in dies.values():
+            if die['tag'] == 'DW_TAG_enumeration_type':
+                en = die['attrs'].get('DW_AT_name')
+                if (en and en not in public and en not in SYSTEM_TYPES
+                        and en not in enums
+                        and any(c['tag'] == 'DW_TAG_enumerator'
+                                for c in die['children'])):
+                    enums[en] = (die, obj)
+                continue
             if die['tag'] not in ('DW_TAG_structure_type', 'DW_TAG_class_type',
                                   'DW_TAG_union_type'):
                 continue
@@ -232,6 +248,27 @@ def main():
 
     depmap = {n: value_deps(best[n][2], best[n][1]) for n in best}
     names = toposort(sorted(best), depmap)
+    # Ghidra writes a struct tag bare — `(_McdIntersectResult *)result` — where C
+    # requires `struct _McdIntersectResult *`. Aliasing every public tag to
+    # itself makes both spellings legal, with no edit to the recovered sources.
+    tagalias = set()
+    if args.public_headers:
+        tagpat = re.compile(r'\b(?:struct|union)\s+(_\w+)')
+        for r_, _d, fs in os.walk(args.public_headers):
+            for f in fs:
+                if not f.endswith('.h'):
+                    continue
+                try:
+                    tagalias.update(tagpat.findall(
+                        open(os.path.join(r_, f), errors='ignore').read()))
+                except OSError:
+                    pass
+    if tagalias:
+        out.append('/* ---- bare-tag aliases (Ghidra omits the `struct` keyword) ---- */')
+        for t in sorted(tagalias):
+            out.append(f'typedef struct {t} {t};')
+        out.append('')
+
     out.append('/* ---- forward declarations (so pointer members need no ordering) ---- */')
     for n in sorted(names):
         kw = 'union' if best[n][1]['tag'] == 'DW_TAG_union_type' else 'struct'
@@ -260,6 +297,15 @@ def main():
             ref = int(m.group(1), 16) if m else None
             out.append(f'typedef {declarator(dd, ref, n)};')
         out.append('')
+
+    if enums:
+        out.append('/* ---- enums ---- */')
+        for n in sorted(enums):
+            die, obj = enums[n]
+            out.append(f'/* from {os.path.basename(obj)} */')
+            out.append(emit_enum(die))
+            out.append(f'typedef enum {n} {n};')
+            out.append('')
 
     out.append('/* ---- definitions ---- */')
     for n in names:
@@ -298,8 +344,8 @@ def main():
     open(args.output, 'w').write('\n'.join(out) + '\n')
 
     if not args.quiet:
-        print(f'{args.output}: {len(names)} types from {len(objs)} objects '
-              f'({len(public)} skipped as public)')
+        print(f'{args.output}: {len(names)} types + {len(enums)} enums from '
+              f'{len(objs)} objects ({len(public)} skipped as public)')
         if real_conflicts:
             print(f'  {len(real_conflicts)} name(s) with conflicting layouts — see header')
 

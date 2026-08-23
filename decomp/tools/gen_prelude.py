@@ -133,6 +133,40 @@ def exported_data_definition(obj, name, value, size, sect, data, c_name):
     return '\n'.join(lines)
 
 
+def declared_names(umbrella, include_dir):
+    """Every function name the umbrella declares, AFTER preprocessing.
+
+    Grepping header text is not enough: metoolkit declares whole families
+    through macros. McdBox.h contains only
+
+        MCD_DECLARE_GEOMETRY_TYPE(McdBox);
+
+    which expands to McdBoxGetBSphere, McdBoxGetMassProperties and friends. A
+    textual search finds none of them, so the prelude re-declares them with
+    simplified types and the translation unit fails with "conflicting types".
+
+    One preprocessor run over the umbrella settles it for every object; the
+    result is cached because it does not change between objects."""
+    if not umbrella or not os.path.exists(umbrella):
+        return set()
+    cache = f'/tmp/.kd_declared_{os.path.getmtime(umbrella):.0f}.txt'
+    if os.path.exists(cache):
+        return set(open(cache).read().split())
+    inc = include_dir or ''
+    args = ['gcc', '-m32', '-E', '-P', '-DLINUX', '-x', 'c', umbrella,
+            '-I' + os.path.dirname(umbrella), '-I' + inc]
+    for d in ('McdCommon', 'McdPrimitives', 'McdFrame', 'MeGlobals',
+              'MdtBcl', 'MdtKea', 'Mst', 'MeApp'):
+        args.append('-I' + os.path.join(inc, d))
+    out = subprocess.run(args, capture_output=True, text=True).stdout
+    names = set(re.findall(r'\b([A-Za-z_]\w*)\s*\(', out))
+    try:
+        open(cache, 'w').write('\n'.join(sorted(names)))
+    except OSError:
+        pass
+    return names
+
+
 def header_declaring(name, include_dir):
     """Which metoolkit header declares `name`? (cheap grep; good enough)"""
     if not include_dir:
@@ -219,6 +253,11 @@ def main():
                                    'from the C++ static constructor')
     ap.add_argument('--protos', help='kd_protos.h from tools/gen_protos.py, used to '
                                      'give C++-mangled imports a real signature')
+    ap.add_argument('--umbrella', help='kd_karma.h; headers it already includes are '
+                                       'NOT re-included here. Several metoolkit '
+                                       'headers (MeSet.h among them) have no include '
+                                       'guard at all, so including one twice redefines '
+                                       'everything in it.')
     ap.add_argument('--exports-out', help='write exported DATA symbols here instead of '
                                           'into the prelude. They initialise from function '
                                           'addresses, so they must be emitted AFTER the '
@@ -247,6 +286,7 @@ def main():
 
     # ---- imports ----------------------------------------------------------
     imports = undefined(obj)
+    declared = declared_names(args.umbrella, args.include_dir)
     _ = protos  # parsed above; used for both mangled and plain imports
     hdrs = set()
     decls = []
@@ -254,6 +294,8 @@ def main():
         dem = demangle(name)
         if dem != name:                       # C++ mangled
             decls.append((name, dem, True))
+        elif name in declared:
+            pass                     # the umbrella already declares it
         else:
             h = header_declaring(name, args.include_dir)
             if h:
@@ -261,8 +303,13 @@ def main():
             else:
                 decls.append((name, dem, False))
 
+    umbrella = set()
+    if args.umbrella and os.path.exists(args.umbrella):
+        umbrella = set(re.findall(r'#include\s+<([^>]+)>',
+                                  open(args.umbrella, errors='ignore').read()))
+    hdrs -= umbrella
     if hdrs:
-        w('/* --- imports declared by metoolkit headers --- */')
+        w('/* --- imports declared by headers the umbrella does not cover --- */')
         for h in sorted(hdrs):
             w(f'#include <{h}>')
         w('')

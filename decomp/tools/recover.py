@@ -153,7 +153,8 @@ def main():
         if not os.path.exists(prelude):          # never clobber hand-edited work
             cmd = [sys.executable, os.path.join(here, 'gen_prelude.py'), obj,
                    '--include-dir', inc, '--dump', dump, '-o', prelude,
-                   '--exports-out', exports]
+                   '--exports-out', exports,
+                   '--umbrella', os.path.join(root, 'include', 'kd_karma.h')]
             if args.protos:
                 cmd += ['--protos', args.protos]
             r = run(cmd)

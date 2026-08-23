@@ -1347,12 +1347,20 @@ class RepairContext:
         self.n_same = 0
 
 
-def repair_loop(path, cc, cflags, ctx=None, max_rounds=30, verbose=True):
+def repair_loop(path, cc, cflags, ctx=None, max_rounds=90, verbose=True):
     """Compile, rewrite the lines GCC rejected, recompile, until it settles.
 
     Returns (n_edits, remaining_errors, log). The file is left with whichever
     version compiled best; if no rule helped it is left exactly as generated,
-    so a failure to repair can never make an object worse than not trying."""
+    so a failure to repair can never make an object worse than not trying.
+
+    max_rounds is generous on purpose. Most rules fix one construct per pass,
+    and GCC reports an undeclared name once per function, so an object with
+    thirty of something needs thirty rounds. At 30 the cap was BINDING and
+    silently so — McdBox stopped at 29 errors, and simply running the loop a
+    second time took it to 8, which is the actual fixed point. A cap that stops
+    early looks exactly like a rule that does not work. One round is one
+    compile of one file; being wrong in this direction costs seconds."""
     ctx = ctx or RepairContext()
     original = open(path, errors='ignore').read()
     best_text, log = original, []

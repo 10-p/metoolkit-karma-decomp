@@ -675,6 +675,65 @@ IxConvexTriList       RELEASED 2026-08-23, and the tenth and last pair the censu
 #                     non-discriminating for this pair, the way `nonfinite` is
 #                     already read separately for NaN input.
 #
+#                     AND THEN THE STRONGER ANSWER, which is not statistical at
+#                     all: FOR THIS PAIR THE DIVERGING FIELD IS NEVER READ.
+#
+#                     `dims` has exactly three consumers, and they were found by
+#                     reading every one rather than by sampling:
+#
+#                     1. KarmaSupport.cpp:303  `triFlags = colC->dims & 0x00FF`
+#                        — inside `if(!a1)`, and the comment above it is explicit:
+#                        "NB: The ONLY model without an Actor must be the 'world',
+#                        which must be the tri-list." So: model1 is the level
+#                        TriangleList.
+#                     2. KarmaSupport.cpp:319  `triFlags = colC->dims>>8`
+#                        — the mirror case, model2 is the TriangleList.
+#                     3. KarmaSupport.cpp:535  inside `#if 0`. Dead.
+#
+#                     A Cylinder x Cylinder contact is two Actors and no
+#                     TriangleList, so neither live branch runs and `triFlags`
+#                     stays 0. For this pair UT2004 does not read `dims` at all.
+#                     (Note what the field actually carries there: the TRIANGLE
+#                     FLAGS, not the "0/1/2 point/line/surface" the header
+#                     documents. Karma overloads it per side.)
+#
+#                     AND INSIDE KARMA, across all 153 out10 dumps rather than
+#                     the 109 that compile, `dims` is written by the intersection
+#                     functions, copied by McdContactSimplify, and BRANCHED ON in
+#                     exactly one place — McdContactSimplify, under
+#                     `if (inFaceNormalsFirst != 0)`:
+#
+#                       if (((char)pMVar22->dims == '\x02') || (pMVar22->dims >> 8 == 2))
+#
+#                     i.e. "is either side a SURFACE contact". Evaluate it on the
+#                     values that actually diverge:
+#
+#                       dims   (char)dims  dims>>8   branch
+#                       0x103       3         1      false
+#                       0x301       1         3      false
+#                       0x303       3         3      false
+#
+#                     All three are false, so the branch takes the same path
+#                     whichever of them is produced. The six divergent
+#                     combinations KD_DIMSHIST reports are exactly
+#                     0x301<->0x303, 0x103<->0x303 and 0x103<->0x301 — nothing
+#                     else — so no divergence reaches a value the branch cares
+#                     about.
+#
+#                     BE PRECISE ABOUT THE SCOPE OF THAT. The branch IS live for
+#                     this pair in general: OverlapCylCyl can also emit `2` and
+#                     `0x200`, and both make it TRUE. The claim is only that the
+#                     DIVERGENCES never involve those values, which is a
+#                     statement about the measured histogram, not a proof about
+#                     all inputs. Re-check the histogram before re-using this.
+#
+#                     SO THE DISPOSITION FIRMS UP: the 925 dims_diff is a field
+#                     nothing reads for this pair, differing on values the one
+#                     branch that reads it treats identically. The whole charge
+#                     against IxCylinderCylinder is now the 3 count_diff in
+#                     24,111 real calls, and count is a decision the engine acts
+#                     on directly.
+#
 # IxBoxTriList        Held by the reconstructed-frame detector (kd_argslot_), which exists
 #                     because IxSphereTriList compiled, passed the substitute gate and then
 #                     segfaulted on its first live call. So a clean synthetic run is not

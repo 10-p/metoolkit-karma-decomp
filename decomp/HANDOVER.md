@@ -1719,9 +1719,19 @@ Also: **wasm32 compiles with a symbol set identical to i386**, clean under `-Wal
 The shipped archive additionally exports `dfacet`/`dvertex`, qhull's debugger helpers;
 nothing in any of the sixteen archives references them, so they are deliberately absent.
 
-**What is NOT done: it has never run in the game.** The difftest exercises synthetic hulls; a
-live match exercises the `.ka` collision volumes UT2004 actually ships, which is a different
-distribution. That is the next step for this item.
+**What is NOT done: it has never run in the game, and cannot be until the assets are back.**
+The difftest exercises synthetic hulls; a live match exercises the `.ka` collision volumes
+UT2004 actually ships, which is a different distribution. That is the next step for this
+item and it is **blocked by the empty asset tree — see the box at the top of §6.**
+
+The build side of it is already done and waiting: `build-newhull-karma` (stock Karma + the
+new hull, so the hull is the only variable) and `build-shadowhull-karma` (the shadow harness
++ the new hull, so `KD_CENSUS` can confirm the convex pairs are actually called). Both link
+and both contain **zero `qh_` symbols**, against 361 in the shadow build — verified, because
+"it linked" is not evidence the swap took. When assets return, run the second one with
+`KD_CENSUS=1` on a vehicle map: non-zero Box × ConvexMesh means the hulls were built and are
+colliding. **"The match ran" is NOT sufficient evidence** — if `McdComputeHull` returned 0
+for everything, the geometry would silently not exist and the match would run anyway.
 
 **Tier 1 exists: `test/hull_probe.sh`.** It runs the SHIPPED `McdComputeHull` and checks
 every claim the header makes in prose. **98,899 checks, 0 failures**, so the contract above

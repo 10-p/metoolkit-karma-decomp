@@ -1040,8 +1040,11 @@ against a callee that takes a `float`. The shipped `CxSmallSort.o` contains **ze
 - **Look for the third one.** The pattern is any place the pipeline emits a function type
   without a prototype. `dwarf_structs.type_name()` still returns the literal string
   `'void (*)()'` for a subroutine type used as a struct MEMBER — it has no name to build a
-  declarator around, so it has not been fixed, and a member called through with a float
-  argument would have exactly this bug.
+  declarator around. **Checked: zero occurrences in the emitted header today**, because
+  every such member in this corpus goes through a named typedef, which `declarator()`
+  handles. It is a latent hazard, not a live bug — `grep -c 'void (\*)()' include/kd_types.h`
+  should stay at 0, and if it ever does not, a member called through with a float argument
+  has exactly this defect.
 
 
 ### The out-of-range frame reference — a defect no behavioural test can find

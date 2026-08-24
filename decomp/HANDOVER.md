@@ -27,8 +27,9 @@ Branch: **`karma/decompile`**. `main` is untouched. **Do not merge.**
 - **What now blocks the solver is one thing: arguments that are genuinely missing, because
   the DWARF does not say where the frames live.** Not "Ghidra failed to use the debug info"
   — the `DW_AT_location` attributes are absent from the abbrevs those functions use. §11
-  item 2 has the readelf command that shows it. `MdtWorld` is now a **fifth** object blocked
-  on exactly this, and a much cheaper subject to validate a fix on than any kea object. §13.
+  item 2 has the readelf command that shows it. `MdtBcl`, `MeMath` and `MdtWorld` are now
+  blocked on exactly this too — at **one, one and ten** errors, far cheaper subjects to
+  validate a fix on than any kea object. §13.
 - **108 objects compile**, 26 are quarantined by detectors, 14 do not. Object count is a bad
   progress metric — read §3 before using it.
 - **All 108 go into the engine at once and it plays a match**, indistinguishable from stock
@@ -1744,6 +1745,16 @@ Box × TriangleList at zero calls. Recorded so nobody re-derives the old number.
    how MOST geometry reaches Karma. Cost: two sessions of believing `Cylinder` was
    unreachable while a map in the tree was calling it 59,366 times. **Follow the callee,
    not just the caller.**
+16. **Reading a wall of unknown identifiers as a vocabulary gap.** `MdtBcl` failed on
+   `undefined6`, `uint6`, `int3`, `SCARRY1`, `POPCOUNT`, `uleb128`, `bRam00000018`,
+   `func_0x08880001`, `swi` and `in` — a dozen `kd_compat.h` definitions away, apparently.
+   They were all in ONE function, `FUN_00021130`, and `swi` is an ARM instruction while
+   `in` is x86 port I/O: **neither can occur in an i386 object compiled from C.** The
+   address says why — `.text` ends at 0x21013 and 0x21130 is inside `.eh_frame`, so Ghidra
+   had decompiled exception-handling metadata as code. Defining the missing names would
+   have made noise compile and published bogus symbols. 22 of 31 errors, deleted by
+   deleting the non-function (`ghidra_clean.not_code`). **When the vocabulary looks alien,
+   check the ADDRESS before extending the vocabulary.**
 
 
 ---
@@ -1868,20 +1879,28 @@ Ordered by what actually moves the project, not by what is easiest:
    `this`, so it is a MIDDLE argument) and `keaLCP_new` (nine calls, each short by one, at
    non-uniform offsets).
 
-   **`MdtWorld` and `MeMath` belong to this item too, and `MdtWorld` is the best place to
-   start** — found 2026-08-24 after an unrelated fix stripped 18 of its 30 errors away and
-   left the shape visible. Its remaining 12 are 6 `stack0x` and 6 `incompatible type for
-   argument N of MdtKeaAddConstraintForces` / `MdtKeaIntegrateSystem`. That is the CALLER
-   side of the same by-value aggregate problem: at `MdtWorld.c:253` the copy loop writes 19
-   `MeReal` — 76 bytes, an `MdtKeaParameters` exactly — starting at `&stack0xffffff6c`,
-   where Ghidra declared `MeReal in_stack_ffffff6c;` and four bytes.
-   `fix_stack_address_name`'s size check refuses it, correctly.
+   **`MdtWorld` and `MeMath` and `MdtBcl` belong to this item too, and the cheapest
+   subjects are the last two — one error each.** `MdtBcl` reached that state on 2026-08-24
+   when 30 of its 31 errors turned out to be Ghidra decompiling `.eh_frame` and undecodable
+   bytes (dead end 16). `MdtWorld` is next at ten: 6 `stack0x` and 6
+   `incompatible type for argument N of MdtKeaAddConstraintForces` /
+   `MdtKeaIntegrateSystem`. That is the CALLER side of the same by-value aggregate problem:
+   at `MdtWorld.c:253` the copy loop writes 19 `MeReal` — 76 bytes, an `MdtKeaParameters`
+   exactly — starting at `&stack0xffffff6c`, where Ghidra declared
+   `MeReal in_stack_ffffff6c;` and four bytes. `fix_stack_address_name`'s size check
+   refuses it, correctly.
 
-   **Why start there rather than on a kea object:** `MdtWorld` is not in `libMdtKea`, it
-   has only twelve errors, and the same fix has to work on both — so it is a subject where
-   a wrong answer shows up cheaply. §12's standing lesson is that the object which
-   motivates a tool is the worst thing to validate it on; this is the alternative subject
-   that item did not have before.
+   **What the three cheap ones actually look like**, because they are not all one shape:
+   `MdtBcl`'s single site is Ghidra rendering the function EPILOGUE (`lea -0xc(%ebp),%esp`)
+   as a pointer assignment and then reading locals through it; `MeMath`'s is genuine loss —
+   Ghidra dropped the `fcos`/`fsin` results that build the matrix being read; `MdtWorld`'s
+   is outgoing argument marshalling. Only the third is the by-value aggregate case.
+
+   **Why start on these rather than on a kea object:** none of them is in `libMdtKea`,
+   `MdtBcl` and `MeMath` have one error each, and the same fix has to work on all of them —
+   so a wrong answer shows up cheaply. §12's standing lesson is that the object which
+   motivates a tool is the worst thing to validate it on; these are the alternative
+   subjects that item did not have before.
 
    **The one lead that is not a guess.** The by-value *incoming* parameters are pinned by
    the cdecl ABI, not by debug info, and Ghidra already has the signature:
@@ -1944,24 +1963,17 @@ Ordered by what actually moves the project, not by what is easiest:
    before quoting a bit-identical result — `keaCalcAcceleration_vanilla` is the worked
    example of a zero that means nothing.
 
-7. **Grind the tail.** 14 objects, but **read §13 first** — it is fully triaged, and only
-   5 are genuinely open, of which 2 are item 2 in disguise. The distribution over the 14,
-   re-measured after the 2026-08-24 (third session) fixes:
+7. **Grind the tail.** **DONE, as far as it goes — do not start here.** 14 objects and
+   271 errors remain, and §13 triages every one: 3 DEAD, 2 documented leave-alones, 3 dead
+   end 9, **4 the §11 item 2 frame problem**, 2 low-value profilers. There is no cheap
+   object left that is not one of those, so the next move is item 0 or item 2, not this.
+   The distribution over the 14, re-measured after the third session of 2026-08-24:
 
-   | diagnostic | count | what it is |
-   |---|---:|---|
-   | `request for member X in something not a structure` | 101 | almost all `McdSpace`, below |
-   | `X undeclared` (incl. "did you mean") | 53 | mixed; the `stack0x` family is in here |
-   | `too few arguments to function` | 35 | the lost-frame family; see §11 item 2 |
-   | `unknown type name` (incl. "did you mean") | 33 | mostly `MeASE*` — DEAD, §3b |
-   | `invalid use of undefined type` | 22 | all 22 `struct _McdSpace`, below |
-   | `expected expression before X` | 13 | mixed |
-   | `invalid operands to binary &` | 10 | all `MdtBcl` |
-
-   303 errors in total, and note the shape: **`MeASELoad`, `MeFGeometryFromMesh` and
+   271 errors in total, and note the shape: **`MeASELoad`, `MeFGeometryFromMesh` and
    `McduDebugDraw` account for 147 of them and all three are DEAD** (§3b), while `McdSpace`
-   is another 50 and is a documented leave-alone. So two thirds of the raw count belongs to
-   objects nobody should touch. Sort by §13's verdict column, never by error count.
+   is another 50 and is a documented leave-alone. So **197 of 271 belong to objects nobody
+   should touch**, and of the remaining 74, sixty are the two profilers. Sort by §13's
+   verdict column, never by error count — that is the whole lesson of this item.
 
    **Two corrections to what this section used to say.** `BodyData` is fixed — it was
    `typedef struct { ... } Foo;`, which has no `DW_AT_name` on the aggregate. And the
@@ -2242,8 +2254,9 @@ box.
 - **Two cylinder pairs, one of them quarantined.** New, and the cheapest real work on the
   list: a map that drives them is already in the tree. §3, §11 item 0.
 - **The solver's frames** — `keaRbdCore_unified`, `keaMemory`, `keaIntegrate_pc`,
-  `keaLCPSolver`+`keaLCP_new`, **and `MdtWorld`, which is new and is the cheapest subject
-  to validate a fix on.** Their virtual calls now carry arguments (§5a); what is left
+  `keaLCPSolver`+`keaLCP_new`, **and `MdtBcl`, `MeMath` and `MdtWorld`, which are new and
+  are the cheapest subjects to validate a fix on — one error, one error and ten.**
+  Their virtual calls now carry arguments (§5a); what is left
   is that **the DWARF carries no `DW_AT_location` for these functions' variables**, so the
   frame is not merely unmodelled but undescribed. This is the only thing between here and
   item 7. §11 item 2.
@@ -2252,9 +2265,9 @@ box.
   RECOVERABLE and is 9 of 9 (§8c).
 - **arm64** — untried, needs a cross-compiler.
 - **Executing anything on wasm** — the web agent's job. `HANDOVER-WEB.md`.
-- **The tail** — 14 objects, fully triaged in §13. 3 are unreachable, 3 are documented
-  leave-alones, and 3 are dead end 9. What is actually open is 5 objects, and 2 of those
-  are really the solver-frame problem wearing a different hat.
+- **The tail** — 14 objects, 271 errors, fully triaged in §13, and **effectively finished**:
+  3 unreachable, 2 documented leave-alones, 3 dead end 9, **4 the §11 item 2 frame problem**
+  and 2 low-value profilers. Nothing cheap is left in it.
 
 
 ### Where the project actually stands — read this before estimating anything
@@ -2375,20 +2388,22 @@ can reach it — §3b — so it is out of scope, not a to-do.**
 | `McdTriangleList` | live | 6 | **dead end 9, same shape.** `(float)g[1].prev` etc. |
 | `McdBox` | live | 2 | **dead end 9**, at lines 235/236. Not the cheap win the error count makes it look |
 | `keaLCP_new` | live | 10 | **solver, do not text-repair.** §11 item 2 — nine calls short by one argument at non-uniform frame offsets |
-| `MdtWorld` | live | **12** | **RECLASSIFIED — this is the solver-frame problem, §11 item 2, and it is the cheapest place to attack it.** 6 `stack0x` + 6 `incompatible type for argument N` of `MdtKeaAddConstraintForces`/`MdtKeaIntegrateSystem`. `fix_stack_address_name` refuses correctly: the copy at line 253 writes 19 `MeReal` = 76 bytes (an `MdtKeaParameters`) and Ghidra declared 4. Outgoing by-value aggregate passing, exactly as §11 item 2 predicts — but in a NON-kea object, so a fix can be validated somewhere cheap |
-| `MeMath` | live | **1** | one `stack0x` at line 495, and it is genuine frame loss, not a name: Ghidra also dropped the `fcos`/`fsin` results that build the matrix being read. Same family as `MdtWorld` |
-| `MeProfile_linux` | live | 13 | open — `rdtsc` is an inline-asm builtin; needs a `kd_compat.h` shim |
-| `MdtBcl` | live | 31 | open — `stack0x` family + 10 `invalid operands to binary &` + 5 Ghidra-vocabulary gaps (`undefined6`, `uint6`, `int3`, `SCARRY1`, `POPCOUNT`) |
-| `MeProfile` | live | **29** | open — 11 `request for member`, plus the exported-DATA rename gap (`frameTime`/`clockSpeed` vs `kd_frameTime`; dead end 10), `weightingData` (§11 item 7: a variable, not a type), and `__divdi3`/`__udivdi3` |
+| `MdtWorld` | live | **10** | **RECLASSIFIED — this is the solver-frame problem, §11 item 2, and it is the cheapest place to attack it.** 6 `stack0x` + 6 `incompatible type for argument N` of `MdtKeaAddConstraintForces`/`MdtKeaIntegrateSystem`. `fix_stack_address_name` refuses correctly: the copy at line 253 writes 19 `MeReal` = 76 bytes (an `MdtKeaParameters`) and Ghidra declared 4. Outgoing by-value aggregate passing, exactly as §11 item 2 predicts — but in a NON-kea object, so a fix can be validated somewhere cheap |
+| `MdtBcl` | live | **1** | **31 → 1** on 2026-08-24: 22 errors were `FUN_00021130`, which is `.eh_frame` decompiled as code, and 2 more were `halt_baddata`-only functions (see below). The one left is `&stack0xfffffff4` used as a base to read a locals block at −0x80…−0x68 — and it is Ghidra rendering the function's **epilogue** (`lea -0xc(%ebp),%esp`) as a pointer assignment. §11 item 2's family. **Tied with `MeMath` for the cheapest validation subject in the project** |
+| `MeMath` | live | **1** | one `stack0x` at line 495, genuine frame loss rather than a name: Ghidra also dropped the `fcos`/`fsin` results that build the matrix being read. Same family as `MdtBcl` and `MdtWorld` |
+| `MeProfile_linux` | live | 13 | open, **low value** (§3b puts it under platform/misc) — and §13 used to undersell it as "an `rdtsc` shim". It needs that, plus `struct timeval` as a bare tag, plus the §5 EXTERNAL-slot collision (`_select` and `_clockSpeed` are neighbours of `frameTime`, not real symbols). Four families for a profiler timer |
+| `MeProfile` | live | **29** | open, **low value** — 11 `request for member`, 5 `weightingData` (§11 item 7: a variable, not a type), 5 of the exported-DATA rename gap (`frameTime`/`clockSpeed` vs `kd_*`; dead end 10), 2 `__divdi3`/`__udivdi3` |
 
 **Recovered on 2026-08-24 (third session): `McdContact`, `McdMessage`, `McdBatch`,
-`mesffnmin`** — 17 failures down to 14, 106 objects up to 108. `McdContact` compiles but
-is now held by the `extraout_EAX` detector, which is a different and real defect: that is a
-**reclassification**, not a release.
+`mesffnmin`** — 17 failures down to 14, 106 objects up to 108, and **271 errors across the
+14**. `McdContact` compiles but is now held by the `extraout_EAX` detector, which is a
+different and real defect: that is a **reclassification**, not a release.
 
-**So the genuinely open list is 5 objects**, and two of them (`MdtWorld`, `MeMath`) are
-§11 item 2 in disguise. The cheapest *new* ground is `MeProfile_linux`'s `rdtsc` shim and
-`MdtBcl`'s Ghidra-vocabulary gaps — both are vocabulary, not inference.
+**The tail is now essentially exhausted, and that is the useful summary.** Of the 14:
+3 are DEAD, 2 are documented leave-alones, 3 are dead end 9, **4 are the §11 item 2 frame
+problem** (`MdtBcl` 1, `MeMath` 1, `MdtWorld` 10, `keaLCP_new` 10) and 2 are low-value
+profilers. There is no cheap object left that is not one of those. **Work item 2, or work
+the cylinder pairs (§11 item 0) — grinding the tail is done.**
 
 ### What has been working, and what has not
 

@@ -1593,9 +1593,73 @@ Ordered by what actually moves the project, not by what is easiest:
    and `-D_FORTIFY_SOURCE=0` makes it compile with three garbage arguments. Leave it
    failing — the compile error is the useful signal.
 
-8. **Replace, don't recover:** `libMcdConvexCreateHull` is qhull 2.6 (1998) — 186 KB,
-   load-time only, open source. Swap in modern qhull. `MeAssetDB`/`MeXML`/`MeAssetFactory`
-   (51 KB) is `.ka` XML parsing, not physics. `MeViewer2`/`MeApp` (74 KB) are never linked.
+8. **Replace, don't recover** — but scope it from §8a first, because "load-time only" is
+   **wrong** and it was the reason this looked cheap. `libMcdConvexCreateHull` is qhull 2.6
+   (1998), 186 KB, open source. `MeAssetDB`/`MeXML`/`MeAssetFactory` (51 KB) is `.ka` XML
+   parsing, not physics, and is still the easy one. `MeViewer2`/`MeApp` (74 KB) are never
+   linked.
+
+### 8a. What a qhull replacement actually has to reproduce
+
+Scoped 2026-08-24, before writing any code, and the scoping changed the plan twice.
+
+**The good news first.** The entire hull API has exactly **one** consumer in the whole
+library — `McdConvexMesh.o` — and only one call reaches qhull at all:
+
+```
+KUtils.cpp:819  McdConvexMeshCreateHull(fwk, verts, n, 0)
+                    -> McdComputeHull(&poly, n, verts)      <- the only reference in metoolkit
+```
+
+`IxConvexPrimitives`, `McdGjk`, `ConvexGeomUtils`, `IxConvexTriList` and
+`McdConvexMeshMassProps` import **zero** `McdCnv*` symbols.
+
+**The bad news, and why the "load-time only" framing is misleading.** The hull is *built*
+at load time and then **kept**. `McdConvexMeshCreateHull` stores the whole structure —
+`vertex`, `face`, `edge` *and* `edgeIndex` — straight into the geometry object:
+
+```c
+pMVar2[1].mRefCtAndID = (MeU32)poly.vertex;
+pMVar2[1].prev        = poly.face;
+pMVar2[1].next        = poly.edge;
+pMVar2[1].frame       = poly.edgeIndex;
+```
+
+and `McdConvexMeshMaximumPointLocal` — **the GJK support function** — hill-climbs it on
+every query via `McdCnvVertexGetNeighbor`, i.e.
+`edge[edgeIndex[vertex[v].firstEdgeIndex + i]].toVert`. Per the census that is Box ×
+ConvexMesh (608,280), Sphyl × ConvexMesh (62,698), Sphere × ConvexMesh (9,741) and
+ConvexMesh × ConvexMesh (4,337) — **the busiest pair in the game sits on this adjacency
+structure.** A replacement that gets the topology subtly wrong does not fail at load; it
+degrades GJK silently.
+
+So the deliverable is not "call a hull library". It is the **complete** structure
+documented in `McdQHullTypes.h`:
+
+- every edge stored **twice**, once per direction;
+- edges grouped by face and ordered **anti-clockwise** within each face;
+- `edgeIndex[]` giving each vertex's outgoing edges in ACW order;
+- `firstEdge` / `firstEdgeIndex` with the **sentinel** last face and vertex
+  (`firstEdge == numEdges`);
+- `rightFace`, `leftFace`, `invLength`, outward `normal`;
+- coplanar triangles **merged** into polygonal faces — Karma's faces are polygons.
+
+**How to validate it, since the usual gate cannot.** `difftest_pair` compares against the
+shipped library, and a differently-indexed but geometrically identical hull makes that
+comparison apples-to-oranges. Three tiers that do work:
+
+1. **Structural invariants on the hull alone** — every edge paired with its reverse, Euler
+   `V - E/2 + F == 2`, every face's edges forming a closed ACW ring, sentinels consistent,
+   normals outward, every input point inside or on the hull.
+2. **Geometric A/B against the shipped `McdComputeHull`** on the same point sets, compared
+   as *sets* of vertices and face planes rather than by index. Build the harness against
+   the shipped `.a` first — it is ground truth and it is sitting right there.
+3. **Then** the collision difftest, with the new hull on **both** sides, which isolates
+   "is the hull right" from "is the collision code right".
+
+That third point is the one to hold on to: with the same hull on both sides the existing
+convex difftest still works unchanged, so this is testable — it just cannot be tested by
+diffing against the shipped hull.
 
 
 ### What needs the project owner, and nothing else will do
@@ -1655,7 +1719,7 @@ Everything else — code, tests, measurement, tooling — is self-service.
 | 1 | every pair the census shows the game calling is recovered and validated | **DONE.** Twelve pairs, eight objects, evidence in `proven.txt`. Re-opens if the census moves — it has twice. |
 | 2 | validated = 0 ret/count/dims/overrun in a live match, `KD_SELFTEST` clean, evidence on the line | **DONE** for those twelve. |
 | 3 | all three scenes clean for every recovered object, *and* checked for sensitivity | **DONE**, and the sensitivity check (§4a) is what makes it mean anything. |
-| 4 | qhull and the asset loader **replaced**, not recovered | **NOT STARTED.** `libMcdConvexCreateHull` is qhull 2.6, 186 KB, load-time only, open source. `MeAssetDB`/`MeXML`/`MeAssetFactory` is `.ka` XML parsing. Neither is physics; both are swap-ins, not decompiles. §11 item 8. |
+| 4 | qhull and the asset loader **replaced**, not recovered | **NOT STARTED, and bigger than it looks — read §8a.** "Load-time only" is wrong: the hull is built once and KEPT, and GJK's support function hill-climbs its adjacency on every query, under the busiest pair in the census. The asset loader half (`MeAssetDB`/`MeXML`/`MeAssetFactory`, `.ka` XML parsing) really is a straight swap-in. §11 item 8. |
 | 5 | no detector suppressed, nothing released without evidence | **HOLDING.** 22 objects quarantined, and §4a now shows the quarantine is load-bearing (`MdtPartition` alone turns a bit-identical scene into a SIGSEGV). |
 | 6 | builds as ordinary C for wasm32 **and arm64/armv7** | **wasm32 DONE** (99/99, byte-identical symbol sets). **arm64 NOT TRIED** — no cross-compiler installed. Nothing has been *executed* on either. |
 | 7 | engine runs on recovered Karma with **no shipped `.a` in the link at all** | **COLLISION HALF DONE** (§7b, two maps, 11 runs/arm, indistinguishable from stock). **SOLVER HALF BLOCKED**, but on one problem now rather than four — the arguments are recovered (§5a) and what remains is the frames, §11 item 2. |
@@ -1667,8 +1731,10 @@ Everything else — code, tests, measurement, tooling — is self-service.
   is that **the DWARF carries no `DW_AT_location` for these functions' variables**, so the
   frame is not merely unmodelled but undescribed. This is the only thing between here and
   item 7. §11 item 2.
-- **qhull and the asset loader** — replace, do not recover. Bounded, unstarted, and needs
-  no Ghidra. §11 item 8.
+- **qhull and the asset loader** — replace, do not recover. Needs no Ghidra, but only the
+  asset loader is genuinely cheap: the hull carries the adjacency GJK hill-climbs, so it
+  has to be reproduced completely and cannot be validated by diffing against the shipped
+  library. §8a has the contract and the three tiers that do work.
 - **arm64** — untried, needs a cross-compiler.
 - **Executing anything on wasm** — the web agent's job. `HANDOVER-WEB.md`.
 - **The tail** — 27 objects, and read §11 item 7 first because two of the cheap-looking

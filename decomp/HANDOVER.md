@@ -33,16 +33,18 @@ complete types. That is what makes this tractable. Ghidra consumes it directly.
 ## 2. Status
 
 ```
-compile:  94 objects  (89 clean + 5 with prelude TODOs)  = 63.5% of 148 attempted
-scenes:   94/94 run clean on all three substitute scenes, and all 94 TOGETHER
+compile:  95 objects  (90 clean + 5 with prelude TODOs)  = 64.2% of 148 attempted
+scenes:   95/95 run clean on all three substitute scenes, and all 95 TOGETHER
           are bit-identical on the collision-free one — but read §4a before
           reading anything into that number
-wasm32:   94/94 compile, 94/94 exported symbol sets byte-identical to i386
-bindings: 94/94 export what the SHIPPED object exported, binding included (§8)
-review:   18 objects held back by recover.py's eight safety detectors (§8;
+wasm32:   95/95 compile, 95/95 exported symbol sets byte-identical to i386
+bindings: 95/95 export what the SHIPPED object exported, binding included (§8)
+difftest: self-test 12/12, and the real run reproduces the documented baseline
+          exactly (§8) — IxBoxBox 1 count, IxSphereTriList 137 dims, the rest 0
+review:   19 objects held back by recover.py's eight safety detectors (§8;
           the ninth, symbol bindings, is a gate rather than a detector because
           it needs the shipped object to compare against)
-fail:     36 objects do not compile
+fail:     34 objects do not compile
 ```
 
 Reproduce all of that with the commands in §4. The whole pipeline is about a minute.
@@ -316,7 +318,7 @@ object that does **not** reproduce the original: 4.28e-04 m of divergence agains
 
 ### The combined test, and what it says about the quarantine
 
-All 94 validated objects substituted **together**:
+All 95 validated objects substituted **together**:
 
 | scene | result |
 |---|---|
@@ -462,6 +464,10 @@ state, `keaMemory` 7 of 11, `keaIntegrate_pc` 1 of 3 — the objects blocking th
 | `out5` | (previous) | 602 | 71 | 94 |
 | **`out6`** | new protos + forced cdecl | **265** | 275 | **94** |
 | `out7` | new protos only | 602 | 275 | 93 |
+
+(The `compiles` column is what each dump set gave **at the time of the comparison**. Two
+later fixes — an anonymous-typedef name and `<ctype.h>` — took the current figure to 95;
+they are pipeline-side and apply equally to all three.)
 
 `out6` is adopted, and the strongest thing that can be said for it is not in that table:
 **all 94 compiled objects are byte-identical between the two dump sets.** 103 of 153
@@ -919,7 +925,7 @@ compile.**
 `proven.txt` records which objects a real match has released, **with the evidence on the
 line**. That is the only way out. Do not remove a detector to make a number go up.
 
-**The quarantine has now been measured, not just argued for.** Substituting all 94
+**The quarantine has now been measured, not just argued for.** Substituting all 95
 validated objects into `scene_chain` at once is bit-identical over 900 steps; adding the
 ten quarantined objects that compile turns that into an immediate SIGSEGV. It is
 `MdtPartition` — the object the guessed-stack-frame detector was written for. §4a.
@@ -1247,7 +1253,7 @@ work is Ghidra-side, in `DumpDecomp.java`.
    before quoting a bit-identical result — `keaCalcAcceleration_vanilla` is the worked
    example of a zero that means nothing.
 
-7. **Grind the tail.** 36 objects, but **read §3 first** — a large part of the pile is
+7. **Grind the tail.** 34 objects, but **read §3 first** — a large part of the pile is
    geometry the game never collides. What remains, by size: `stack0xNNNN` (~20 references,
    a real value Ghidra lost — do not paper over it), `too few arguments` (14, genuinely
    dropped arguments), types nothing defines (`MeASEObject`, `Mesh2GeometryType`,
@@ -1300,7 +1306,7 @@ Everything else — code, tests, measurement, tooling — is self-service.
 4. qhull and the asset loader replaced rather than recovered.
 5. No detector suppressed, no object released without a line in `proven.txt`.
 6. The whole set builds as ordinary C for **wasm32 and arm64/armv7**, not just i386.
-   **wasm32 is done** — 94/94 compile with byte-identical exported symbols
+   **wasm32 is done** — 95/95 compile with byte-identical exported symbols
    (`test/wasm_check.sh`). arm64 has not been tried; no cross-compiler is installed here.
    Nothing has been *executed* under wasm. See `HANDOVER-WEB.md`.
 7. The engine runs with `WITH_KARMA=1` against recovered Karma with **no shipped `.a` in the
@@ -1341,14 +1347,14 @@ the driver (`keaRbdCore_unified`), the allocator (`keaMemory`), the integrator
 runs on recovered kea**, however good the kernels are. §11 items 1–3 are those objects,
 with each blocker diagnosed down to the line.
 
-**Never executed on wasm.** 94/94 compile with byte-identical exported symbols. Not one
+**Never executed on wasm.** 95/95 compile with byte-identical exported symbols. Not one
 instruction has run. See `HANDOVER-WEB.md`.
 
 **Run end to end, now, for the collision layer** — §7a. Not for the solver.
 
 So the honest summary is: **the collision layer is proven and drives a real match; the
 solver's arithmetic is proven and cannot yet be reached; the solver's control flow is
-untouched.** Do not read 94/148 as 63% of the way there — the denominator is wrong in both
+untouched.** Do not read 95/148 as 64% of the way there — the denominator is wrong in both
 directions (a third of those objects are for collisions the game never makes, and the four
 kea objects in §11 are worth more than the other 38 put together).
 

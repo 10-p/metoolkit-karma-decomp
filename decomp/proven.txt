@@ -517,7 +517,14 @@ MdtUtils              Bit-identical on scene_ragdoll with 4.113e+00 m of
 #                     WRONG. It needs the per-function symbol inversion.
 # keaIntegrate_pc     MdtKeaIntegrateSystem, 900 calls/900 steps. Fails on
 #                     `stack0xffffffa0` — another lost frame.
-# keaLCPSolver        FIXED 2026-08-24, and now quarantined rather than failing.
+# keaLCPSolver        Fixing the vtable mislabelling alone would NOT unblock it:
+#                     it also has `too few arguments to
+#                     keaMatrix_pcSparse__makeFromPcSparsePSM; expected 10, have
+#                     9`, the same lost-frame family as keaLCP_new below. Checked
+#                     before building the vtable rewrite, which is why
+#                     tools/vtable_slots.py exists but is not wired in.
+#
+#                     FIXED 2026-08-24, and now quarantined rather than failing.
 #                     It used to fail on `implicit declaration of
 #                     PrincipalSubmatrix`: ghidra_clean's rename map was keyed on
 #                     the flattened declarator, because that is what the
@@ -527,8 +534,34 @@ MdtUtils              Bit-identical on scene_ragdoll with 4.113e+00 m of
 #                     What holds it now is `_vanillaQMatrix`, the SAME vtable-slot
 #                     mislabelling keaRbdCore_unified has — so the driver and the
 #                     LCP are one shared fix apart, not two.
-# keaLCP_new          keaLCPSolver::solveLCP itself, 900 calls/900 steps. Fails
-#                     on `too few arguments to keaLCPSolver__setUpper`.
+# keaLCP_new          keaLCPSolver::solveLCP itself, 900 calls/900 steps. Every
+#                     call in it is short by exactly ONE argument — setUpper 2/1,
+#                     setLower 2/1, getFirstBadIndex 1/0, copyXtoInitialSolve
+#                     1/0, getClampIndices 3/2, setClampedValues 7/6, makeXandW
+#                     6/5, blockMurtyChooseNewIndices 7/6, commonPivot 6/5.
+#
+#                     THAT IS NOT A DROPPED `this`, which is what an off-by-one
+#                     on nine C++ method calls looks like. Ghidra lost the alloca
+#                     frame and is emitting the call sequence's own stack effects
+#                     as C assignments:
+#
+#                       apMStack_48[0] = upper;      /* the argument */
+#                       iStackY_50 = 0x1025b;        /* the RETURN ADDRESS */
+#                       keaLCPSolver__setUpper((float *)this);
+#
+#                     The missing arguments are all present, written into a frame
+#                     Ghidra invented, and the mapping from frame offset to
+#                     argument position is not uniform: setUpper's missing
+#                     argument is at slot 0 and getClampIndices' is at slot +4,
+#                     the LAST parameter, not the first.
+#
+#                     So this is not repairable by a text rule, and it should not
+#                     be attempted — this is the exact shape the guessed-stack-
+#                     frame detector exists for, and the reason it exists is that
+#                     MdtPartition compiled with it and segfaulted. The fix is
+#                     upstream: Ghidra has to model the frame. solveLCP allocates
+#                     dynamically ((int)auStack_3c + uVar6 * -6), which is why it
+#                     cannot.
 
 # --- 2026-08-24: the synthetic tier stopped using one fixed shape --------------
 #

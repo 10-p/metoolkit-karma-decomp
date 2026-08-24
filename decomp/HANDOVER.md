@@ -463,7 +463,11 @@ state, `keaMemory` 7 of 11, `keaIntegrate_pc` 1 of 3 — the objects blocking th
 | **`out6`** | new protos + forced cdecl | **265** | 275 | **94** |
 | `out7` | new protos only | 602 | 275 | 93 |
 
-`out6` is adopted: classification-identical to `out5`, all seven gates identical, and
+`out6` is adopted, and the strongest thing that can be said for it is not in that table:
+**all 94 compiled objects are byte-identical between the two dump sets.** 103 of 153
+dumps changed and not one line of the code that actually compiles did. So every piece of
+in-game evidence in `proven.txt` — gathered before the re-run — still applies to exactly
+the objects it was gathered on. Classification-identical, all seven gates identical, and
 602 → 265 decompiler warnings.
 
 Two results in that table are worth carrying:
@@ -1215,8 +1219,19 @@ Ordered by what actually moves the project, not by what is easiest:
    `_vanillaQMatrix` — the **same vtable-slot mislabelling as `keaRbdCore_unified`**, so
    items 1 and 3 are one shared fix, not two.
 
-   `keaLCP_new` — `keaLCPSolver::solveLCP` itself — still fails on `too few arguments to
-   keaLCPSolver__setUpper`, which is a genuinely dropped argument, not a naming problem.
+   `keaLCP_new` — `keaLCPSolver::solveLCP` itself — is short by exactly one argument on
+   **nine** calls. That looks like a dropped `this` and is not: Ghidra lost the alloca
+   frame and emits the call sequence's own stack effects as C assignments, including the
+   return address. `proven.txt` has the worked example. **Do not write a text rule for
+   it** — the missing arguments are at non-uniform frame offsets, and this is the exact
+   shape the guessed-stack-frame detector exists for.
+
+**All four solver blockers are the same underlying problem: Ghidra cannot model these
+frames.** `keaRbdCore_unified` has by-value structs of 92 and 76 bytes plus all-`unknown`
+conventions; `keaIntegrate_pc` and `keaLCP_new` allocate dynamically; `keaMemory`'s
+globals collide in the EXTERNAL block. None is a text-level repair, and three separate
+attempts to make one are recorded above and in `proven.txt` so they are not repeated. The
+work is Ghidra-side, in `DumpDecomp.java`.
 
 4. **Audit the other callbacks the way the triangle generator was audited** (§8, §12). The
    triangle generator is still the only stub in `difftest_pair.c` that depends on its

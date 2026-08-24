@@ -22,7 +22,7 @@ Branch: **`karma/decompile`**. `main` is untouched. **Do not merge.**
   the DWARF does not say where the frames live.** Not "Ghidra failed to use the debug info"
   — the `DW_AT_location` attributes are absent from the abbrevs those functions use. §11
   item 2 has the readelf command that shows it.
-- **103 objects compile**, 23 are quarantined by detectors, 22 do not compile. Object count
+- **104 objects compile**, 25 are quarantined by detectors, 19 do not compile. Object count
   is a bad progress metric — read §3 before using it.
 - **Two whole families the engine never asks Karma about.** `Box × TriangleList` and every
   `Aggregate` pair are intercepted by UT2004's own dispatcher, so they are registered and
@@ -61,18 +61,18 @@ complete types. That is what makes this tractable. Ghidra consumes it directly.
 ## 2. Status
 
 ```
-compile:  103 objects (97 clean + 6 with prelude TODOs)  = 69.6% of 148 attempted
-scenes:   103/103 run clean on all three substitute scenes, and all 103 TOGETHER
+compile:  104 objects (97 clean + 7 with prelude TODOs)  = 70.3% of 148 attempted
+scenes:   104/104 run clean on all three substitute scenes, and all 104 TOGETHER
           are bit-identical on the collision-free one — but read §4a before
           reading anything into that number
-wasm32:   103/103 compile, exported symbol sets byte-identical to i386
-bindings: 103/103 export what the SHIPPED object exported, binding included (§8)
+wasm32:   104/104 compile, exported symbol sets byte-identical to i386
+bindings: 104/104 export what the SHIPPED object exported, binding included (§8)
 difftest: self-test 12/12, and the real run reproduces the documented baseline
           exactly (§8) — IxBoxBox 1 count, IxSphereTriList 137 dims, the rest 0
-review:   23 objects held back by recover.py's eight safety detectors (§8;
+review:   25 objects held back by recover.py's eight safety detectors (§8;
           the ninth, symbol bindings, is a gate rather than a detector because
           it needs the shipped object to compare against)
-fail:     22 objects do not compile
+fail:     19 objects do not compile
 dumps:    out9 is current (§5a). It differs from out8 in 52 of 153 dumps, and
           every object that already compiled is byte-identical.
 ```
@@ -280,10 +280,45 @@ That takes the failing pile from 27 to **24 genuinely in scope** (22 after `MeCh
 | group | objects | verdict |
 |---|---|---|
 | **core Karma** | `McdBatch` `McdBox` `McdContact` `McdSpace` `McdSphere` `McdSphyl` `McdTriangleList` `MdtBcl` `MdtWorld` `McdMessage` `MeMath` `MeProfile` (~~`MeChunk`~~ — fixed) | required — geometry types and dynamics core |
-| **`.ka` asset loading** | `MeAssetDBXMLIO` `MeAssetDBXMLInput_1_0` `MeAssetFactory` `MeFAsset` `MeXMLOutput` (~~`MeXMLParser`~~ — fixed, now quarantined) | **required, and §11 item 8 undersells it — see below** |
+| ~~**`.ka` asset loading**~~ | ~~`MeAssetDBXMLIO` `MeAssetDBXMLInput_1_0` `MeAssetFactory` `MeFAsset` `MeXMLOutput` `MeXMLParser`~~ | **DONE — all 9 compile**, and it turned out RECOVERABLE rather than replace-only. §8c |
 | solver | `keaLCP_new` | required, §11 item 2 |
 | platform / misc | `MeProfile_linux` `MeSimpleFile_linux` `mesffnmin` | low value |
 | unknown | `McdCylinder` | reachable (`KUtils.cpp:796` calls `McdCylinderCreate` from a cylinder collision element) but the census has never seen a cylinder pair called. Depends on whether any shipped asset defines one — this is the surviving map question |
+
+### 8c. The `.ka` asset cluster — recovered, not replaced
+
+**All nine objects compile**: `MeChunk`, `MeXMLParser`, `MeXMLTree`, `MeXMLOutput`,
+`MeAssetDB`, `MeAssetDBXMLIO`, `MeAssetDBXMLInput_1_0`, `MeAssetFactory`, `MeFAsset`.
+
+§11 item 8 called for replacing this. It turned out to be **recoverable**, and much more
+cheaply than replacing it: 37 compile errors across seven objects, but only ~5 distinct
+causes, each a generator fix that also helped elsewhere.
+
+| cause | fix | also fixed |
+|---|---|---|
+| calls through API structs dropped their arguments | §5a, 412 sites | `MdtLOD`, `MeProfile` |
+| `ghidra_memory_map` honoured empty sections' alignment | §5's own example disproved it | 4 objects' data refs |
+| `__ctype_b_loc` is glibc-only | portable table in `kd_compat.h` | wasm for the whole cluster |
+| the alloca idiom written across two statements | `materialise_alloca_frame` | `MdtLOD` |
+| `(MeFAsset *)` — an explicit star — never matched `ANY_CAST` | separate pattern | — |
+| relocated `.rodata` tables | `materialise_relocated_data` | — |
+| a zeroed static has no evidence of its own type | DWARF, not the bytes | — |
+
+**The last two are worth carrying**, because both are about where type information actually
+lives:
+
+- A **relocated** `.rodata` word's value is in the relocation record, not the bytes — the
+  section holds a zero. `materialise_data_refs` refuses such sections for exactly that
+  reason, so rebuilding them needed a sibling that applies the relocations. Karma's XML
+  handler tables are entirely this: `{"ASSET", MeXMLActionCallback, Handle_Asset_1_0, …}`
+  then an `MeXMLActionEnd` sentinel, verified word for word against the object.
+- A **zero-initialised static** carries no evidence of its own type, so guessing from the
+  bytes gave `static float x = 0.0f;` for what is really
+  `MeFAssetCreateFromFile MeFAssetCreateFunc[1]` — a function-pointer hook something
+  installs at run time. That is why Ghidra subscripts it. The object's own DWARF says so.
+
+**None of the nine is validated** — most are quarantined by the detectors, which is the
+right state. Compiling is the start of the evidence chain, not the end.
 
 ### The asset loader is not peripheral
 
@@ -1704,7 +1739,7 @@ Ordered by what actually moves the project, not by what is easiest:
    before quoting a bit-identical result — `keaCalcAcceleration_vanilla` is the worked
    example of a zero that means nothing.
 
-7. **Grind the tail.** 22 objects, but **read §3b first** — a third of the pile is
+7. **Grind the tail.** 19 objects, but **read §3b first** — a third of the pile is
    unreachable or replace-not-recover — and then §3 — a large part of the pile is
    geometry the game never collides, and **nine of the 34 are one error from
    compiling**, which is where to start. The distribution, re-measured 2026-08-24:
@@ -1973,7 +2008,7 @@ Everything else — code, tests, measurement, tooling — is self-service.
 | 2 | validated = 0 ret/count/dims/overrun in a live match, `KD_SELFTEST` clean, evidence on the line | **DONE** for those twelve. |
 | 3 | all three scenes clean for every recovered object, *and* checked for sensitivity | **DONE**, and the sensitivity check (§4a) is what makes it mean anything. |
 | 4 | qhull and the asset loader **replaced**, not recovered | **QHULL HALF DONE, all four tiers.** `src/McdConvexCreateHull/kd_convexhull.c` replaces all 15 exported functions — 1.4 MB → 10 KB: 100,633 invariant checks, identical geometry and volumes, a collision A/B differing on 2 borderline pairs in 2.4 M, and **a live ONS match with 15,425 real GJK calls and 0 structural divergences**. wasm32 clean with an identical symbol set. The asset-loader half is NOT STARTED and is **not** the straight swap-in §11 item 8 implies — see §3b. |
-| 5 | no detector suppressed, nothing released without evidence | **HOLDING.** 23 objects quarantined, and §4a now shows the quarantine is load-bearing (`MdtPartition` alone turns a bit-identical scene into a SIGSEGV). |
+| 5 | no detector suppressed, nothing released without evidence | **HOLDING.** 25 objects quarantined, and §4a now shows the quarantine is load-bearing (`MdtPartition` alone turns a bit-identical scene into a SIGSEGV). |
 | 6 | builds as ordinary C for wasm32 **and arm64/armv7** | **wasm32 DONE** (99/99, byte-identical symbol sets). **arm64 NOT TRIED** — no cross-compiler installed. Nothing has been *executed* on either. |
 | 7 | engine runs on recovered Karma with **no shipped `.a` in the link at all** | **COLLISION HALF DONE** (§7b, two maps, 11 runs/arm, indistinguishable from stock). **SOLVER HALF BLOCKED**, but on one problem now rather than four — the arguments are recovered (§5a) and what remains is the frames, §11 item 2. |
 
@@ -1990,9 +2025,8 @@ Everything else — code, tests, measurement, tooling — is self-service.
   library. §8a has the contract and the three tiers that do work.
 - **arm64** — untried, needs a cross-compiler.
 - **Executing anything on wasm** — the web agent's job. `HANDOVER-WEB.md`.
-- **The tail** — 22 objects, and read §3b first: 3 are unreachable, and the `.ka` cluster
-  is now 7 of 9 recovered rather than something to replace. Two of the cheap-looking ones
-  are traps (dead ends 9 and 10).
+- **The tail** — 19 objects, and read §3b first: 3 are unreachable, and the `.ka` cluster
+  is **done, 9 of 9**. Two of the cheap-looking ones left are traps (dead ends 9 and 10).
 
 
 ### Where the project actually stands — read this before estimating anything

@@ -182,7 +182,7 @@ metoolkit .a
 cd /home/ion/engines/engine-ut2004/karma-decomp
 rm -rf /tmp/kd_out /tmp/kd_build
 python3 tools/recover.py \
-  --dump-dir /home/ion/tools/karma-lab/out5 \
+  --dump-dir /home/ion/tools/karma-lab/out6 \
   --obj-dir  /home/ion/tools/karma-lab/allobj \
   --out-dir  /tmp/kd_out \
   --metoolkit ../Thirdparty/metoolkit \
@@ -190,7 +190,9 @@ python3 tools/recover.py \
 ```
 
 Recovered `.c` lands in `/tmp/kd_out/allobj/`, objects in `/tmp/kd_build/`. `recover.py`
-prints a per-object table and a summary. **`out5` is the current dump directory** (§5).
+prints a per-object table and a summary. **`out6` is the current dump directory** (§5).
+`out5` is the previous one and is kept deliberately — it is the fallback if a pipeline
+change ever has to be bisected against the dumps.
 
 ### Gate what came out — all seven, every time
 
@@ -396,20 +398,23 @@ Installed at `/home/ion/tools/ghidra_12.1.3_PUBLIC`. Java 21. Headless only.
 cd /home/ion/tools/karma-lab
 cp /home/ion/engines/engine-ut2004/karma-decomp/tools/gscripts/*.java gscripts/
 export KARMA_PROTOS=/home/ion/tools/karma-lab/kd_protos.h
-export KARMA_OUTDIR=/home/ion/tools/karma-lab/out6      # a NEW directory
+export KARMA_OUTDIR=/home/ion/tools/karma-lab/out8      # a NEW directory
 export KD_CALLSITE_SIG=trilist
-rm -rf gproj6 && mkdir -p gproj6 out6
-timeout 7200 /home/ion/tools/ghidra_12.1.3_PUBLIC/support/analyzeHeadless \
-  gproj6 Proj -import /home/ion/tools/karma-lab/allobj \
+rm -rf gproj8 && mkdir -p gproj8 out8
+timeout 9000 /home/ion/tools/ghidra_12.1.3_PUBLIC/support/analyzeHeadless \
+  gproj8 Proj -import /home/ion/tools/karma-lab/allobj \
   -scriptPath /home/ion/tools/karma-lab/gscripts \
   -preScript ParseKarmaHeaders.java \
   -postScript DumpDecomp.java -deleteProject
 ```
 
-Takes 1–2 hours. Scripts live in `tools/gscripts/` and **must be copied** to
-`/home/ion/tools/karma-lab/gscripts/` — Ghidra reads them from there. **Write to a NEW
-output directory** and keep the old one until the new dumps have passed all four gates; a
-re-run changes every object at once.
+Takes 1–2 hours (`out6` took about 75 minutes for 153 objects). Scripts live in
+`tools/gscripts/` and **must be copied** to `/home/ion/tools/karma-lab/gscripts/` —
+Ghidra reads them from there. **Write to a NEW output directory** and keep the old one
+until the new dumps have passed all **seven** gates; a re-run changes every object at
+once — `out6` differs from `out5` in 103 of 153 dumps.
+
+`out5`, `out6` and `out7` are all on disk. `out6` is current.
 
 ### `ParseKarmaHeaders.java` (preScript)
 
@@ -440,8 +445,55 @@ compiling. **Fix the misdetection, not the convention system.**
 ```
 out3 (before)     85 clean + 4 TODO,  46 fail
 out4 (blanket)    85 clean + 1 TODO,  47 fail   <- worse
-out5 (targeted)   88 clean + 4 TODO,  39 fail   <- current
+out5 (targeted)   88 clean + 4 TODO,  39 fail
 ```
+
+**A second, narrower widening IS on by default, and it is not the same thing.**
+`KD_FORCE_CDECL_UNKNOWN` forces `__cdecl` where Ghidra left the convention
+**`unknown`** — never where it decided `__thiscall` or `__cdecl`, which is what the
+blanket attempt got wrong. `keaRbdCore_unified` has all eleven of its functions in that
+state, `keaMemory` 7 of 11, `keaIntegrate_pc` 1 of 3 — the objects blocking the solver.
+`KD_FORCE_CDECL_UNKNOWN=0` turns it off for an A/B.
+
+### The three re-runs of 2026-08-24, so nobody repeats them
+
+| dump | what changed | WARNING | `in_stack_` | compiles |
+|---|---|---:|---:|---:|
+| `out5` | (previous) | 602 | 71 | 94 |
+| **`out6`** | new protos + forced cdecl | **265** | 275 | **94** |
+| `out7` | new protos only | 602 | 275 | 93 |
+
+`out6` is adopted: classification-identical to `out5`, all seven gates identical, and
+602 → 265 decompiler warnings.
+
+Two results in that table are worth carrying:
+
+- The `in_stack_` rise is the **aggregate prototypes**, not the convention — `out7` has
+  it without the forced cdecl. It is Ghidra modelling a by-value argument area honestly
+  as read-before-written. Nothing the gates measure moves because of it.
+- Forcing `__cdecl` on `unknown` is **load-bearing, not cosmetic**: `out7` shows that
+  without it the new prototypes *cost* `keaCalcJinvMandRHS_vanilla` and
+  `keaRbdCore_unified`.
+
+### Regenerating `kd_protos.h`
+
+Not previously written down, and there is a trap in it:
+
+```bash
+# Extract EVERY archive member first. allobj/ is NOT enough.
+rm -rf /tmp/kd_allmembers && mkdir -p /tmp/kd_allmembers
+for a in ../Thirdparty/metoolkit/lib.rel/linux_single_gcc3.2/*.a; do
+    b=$(basename "$a" .a); mkdir -p "/tmp/kd_allmembers/$b"
+    (cd "/tmp/kd_allmembers/$b" && ar x "$a")
+done
+python3 tools/gen_protos.py /tmp/kd_allmembers -o /home/ion/tools/karma-lab/kd_protos.h
+```
+
+**Generating it from `allobj/` alone silently loses 376 prototypes** — almost all qhull
+(`qh_*`, `facetT`, `McdComputeHull`) from `libMcdConvexCreateHull`, whose members exist
+only inside the `.a`. Every caller of those would go back to Ghidra guessing arity, which
+is the exact failure this header exists to prevent. From all sixteen archives it is 2487
+prototypes, a strict superset of what shipped: 0 lost, 269 gained.
 
 ### Settled — do not re-test
 

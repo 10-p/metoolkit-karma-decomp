@@ -529,3 +529,48 @@ MdtUtils              Bit-identical on scene_ragdoll with 4.113e+00 m of
 #                     LCP are one shared fix apart, not two.
 # keaLCP_new          keaLCPSolver::solveLCP itself, 900 calls/900 steps. Fails
 #                     on `too few arguments to keaLCPSolver__setUpper`.
+
+# --- 2026-08-24: the synthetic tier stopped using one fixed shape --------------
+#
+# difftest_pair.c varied only the BOX dimensions. Sphyl radius/height, sphere
+# radius and the convex hull (24 vertices, fixed axes) were constants for the
+# whole life of the driver. Varying the box is what reproduced IxBoxBox's single
+# real divergence after 500,000 fixed-shape pairs had missed it, so the same
+# question was overdue for the others. reshape() now varies sphyls
+# (r 0.15-1.1, h 0.3-2.6) and spheres (r 0.2-1.6) per iteration and swaps convex
+# meshes out of a pool of 24 hulls per side, vertex count swept 6-40.
+#
+# It found NOTHING NEW. That is the result, and it is worth having: these
+# objects now hold up across a range of shapes instead of one, and over 2 M of
+# the game's real calls are Sphyl x something.
+#
+#   200,000 pairs each, varying sphyl + sphere + hull, KD_SPREAD default
+#     McdSphylSphylIntersect              0 structural   worst 2.384e-07
+#     McdSphylSphereIntersect             0 structural   worst 2.623e-06
+#     McdSphylBoxIntersect                0 structural   worst 6.075e-05
+#     McdSphylPlaneIntersect              0 structural   worst 5.007e-06
+#     McdSphylConvexMeshIntersect         0 structural   worst 1.192e-07 (1 ULP)
+#     McdSphereSphereIntersect            0 structural   worst 5.960e-08
+#     McdConvexMeshTriangleListIntersect  0 structural   worst 2.089e-05
+#     McdGjkCgIntersect                   0 structural   worst 5.959e-02
+#     McdBoxBoxIntersect                  1 count        (unchanged)
+#     McdSphereTriangleListIntersect      137 dims       (the known limit above)
+#
+#   Driver self-test on the same inputs: 12/12 PASS, 100% bit-identical,
+#   worst delta exactly 0.
+#
+# TWO THINGS NOT TO OVER-READ.
+#
+# McdGjkCgIntersect reading 0 does NOT mean the two count divergences recorded
+# under McdGjk above are fixed. Varying the hull changes the inputs completely,
+# so this is a different 200,000 pairs; the honest reading is that the rate is
+# low and sample-dependent. Its worst numeric delta also rose to 5.959e-02,
+# which is penetration depth in an iterative algorithm and not a new defect —
+# quote the regime with the number.
+#
+# The hull pool is 24 shapes, not a fresh hull per iteration, because a convex
+# mesh cannot be resized in place and rebuilding one would put qhull in the
+# inner loop of a 200,000-iteration test. So hull VARIETY is bounded in a way
+# the box and sphyl variation is not.
+#
+# STILL FIXED, and still on the list: the triangle count (NTRI = 32).

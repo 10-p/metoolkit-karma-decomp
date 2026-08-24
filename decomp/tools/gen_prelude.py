@@ -396,6 +396,29 @@ def exported_data_definition(obj, name, value, size, sect, data, c_name, section
     own. `(void *)&.rodata` is not C. The bytes are in the object and the addend
     says where, so the section is materialised alongside the table and the entry
     points into it. `sections` collects what has to be emitted."""
+    entries, has_ptr = reloc_entries(obj, value, size, sect, data, sections,
+                                     'kd_exp')
+    n = len(entries)
+    lines = [f'/* {name} — EXPORTED {sect} symbol, {size} bytes'
+             + (', rebuilt from relocations */' if has_ptr else ' */')]
+    # An asm label keeps our spelling from clashing with the public header's
+    # declaration, exactly as for exported functions.
+    lines.append(f'void *kd_{c_name}[{n}] KD_MANGLED("{name}") = {{')
+    lines.append('    ' + ', '.join(entries))
+    lines.append('};')
+    return '\n'.join(lines)
+
+
+def reloc_entries(obj, value, size, sect, data, sections, prefix):
+    """One C initialiser per 4-byte slot, with relocations APPLIED.
+
+    A pointer table in `.data`/`.rodata` holds nothing useful in its bytes: the
+    addresses only exist in the relocation records, and the bytes are addends.
+    Emitting them raw produces a table of small integers that the code then
+    dereferences.
+
+    Factored out of exported_data_definition because file-scope STATICS need it
+    too and did not have it — see static_reloc_definition."""
     rel = section_relocs(obj, sect)
     entries, has_ptr = [], False
     for off in range(value, value + (size or 0), 4):
@@ -407,7 +430,7 @@ def exported_data_definition(obj, name, value, size, sect, data, c_name, section
                 fn = text_symbol_at(obj, addend)
                 entries.append(f'(void *)&{fn}' if fn else f'/* .text+0x{addend:x} */ 0')
             elif target.startswith('.'):
-                c = 'kd_exp' + re.sub(r'\W', '_', target)
+                c = prefix + re.sub(r'\W', '_', target)
                 sections[target] = c
                 entries.append(f'(void *)&{c}[0x{addend:x}]')
             else:
@@ -415,15 +438,53 @@ def exported_data_definition(obj, name, value, size, sect, data, c_name, section
         else:
             word = struct.unpack('<I', data[off:off + 4])[0] if off + 4 <= len(data) else 0
             entries.append(f'(void *)0x{word:x}u')
-    n = len(entries)
-    lines = [f'/* {name} — EXPORTED {sect} symbol, {size} bytes'
-             + (', rebuilt from relocations */' if has_ptr else ' */')]
-    # An asm label keeps our spelling from clashing with the public header's
-    # declaration, exactly as for exported functions.
-    lines.append(f'void *kd_{c_name}[{n}] KD_MANGLED("{name}") = {{')
-    lines.append('    ' + ', '.join(entries))
-    lines.append('};')
-    return '\n'.join(lines)
+    return entries, has_ptr
+
+
+def static_reloc_definition(obj, name, value, size, sect, data, c_name, sections):
+    """A file-scope static that is a POINTER TABLE, rebuilt from relocations.
+
+    THIS ONE CRASHED A REAL BUILD, which is why it is worth the words.
+    MeFileSearch's `MeDefaultFileLocations` is `const char *[22]`, the list of
+    directory prefixes every metoolkit file open searches. Its 88 bytes of
+    `.rodata` are 21 relocation addends —
+
+        00000000 01000000 0c000000 1a000000 ...
+
+    — string-table OFFSETS, not addresses. Emitted raw, as
+    `static const unsigned char MeDefaultFileLocations[88]`, the search loop
+    walks 0, 1, 0xc, 0x1a ... as if they were `char *`, hands them to the file
+    opener, and the engine segfaults inside `fread` while loading its `.ka`
+    assets — before a match starts, with a backtrace pointing at shipped code.
+
+    The exported-data path has done this correctly since the `.ka` cluster
+    landed; the statics path never did, because a static that is a pointer table
+    had not come up. Only ONE object in the corpus is affected in a build
+    (MeFileSearch); MeAssetDBXMLIO has four such statics and is quarantined,
+    version.o has one and has no dump.
+
+    Nothing is guessed: the target and addend both come from the relocation
+    records, exactly as for the exported case."""
+    entries, has_ptr = reloc_entries(obj, value, size, sect, data, sections,
+                                     'kd_rel')
+    if not has_ptr:
+        return None                      # not a pointer table; keep the bytes
+    qual = 'const ' if sect == '.rodata' else ''
+    head = [f'/* {name}  ({sect}+0x{value:x}, {size} bytes) — POINTER TABLE,',
+            ' * rebuilt from this object\'s relocation records. The bytes alone are',
+            ' * addends and dereferencing them segfaults; see static_reloc_definition. */']
+    # Prefer the DWARF's own declaration and give it the relocated initialiser.
+    # The two halves fix different things and BOTH are needed: MeAssetDBXMLIO's
+    # `MeFAssetCreateFunc` is a function-pointer hook, so a `void *` table makes
+    # `(*MeFAssetCreateFunc[0])(...)` "called object is not a function", while
+    # the DWARF declaration on its own has no initialiser and leaves the hook
+    # NULL — compiling, and then calling through it.
+    decl = dwarf_static_declaration(obj, name, size)
+    if decl:
+        return '\n'.join(head + [f'static {qual}{decl} = {{',
+                                 '    ' + ', '.join(entries), '};'])
+    return '\n'.join(head + [f'static {qual}void *{c_name}[{len(entries)}] = {{',
+                             '    ' + ', '.join(entries), '};'])
 
 
 def declared_names(umbrella, include_dir):
@@ -695,6 +756,8 @@ def main():
     # skipped entirely, so the recovered object published no such symbol and
     # every reference to it failed to link.
     exported_data = [r for r in rows if r[2] in 'DRB']
+    stat_sections = {}
+    stat_start = len(out)
     if statics:
         w('/* --- file-scope statics --- */')
         if ctor_messy:
@@ -766,6 +829,18 @@ def main():
             continue
         lit, note = render_value(data.get(sect, b''), value, size or 0)
         w(f'/* {name}  ({sect}+0x{value:x}, {size} bytes) */')
+        # A POINTER TABLE first: its bytes are relocation addends, so every
+        # other rendering below — float, alias, raw bytes — is wrong in the same
+        # way, and one of them crashed a real build. See static_reloc_definition.
+        # Checked BEFORE the banner above is any use, so it carries its own.
+        reloc_def = static_reloc_definition(obj, name, value, size, sect,
+                                            data.get(sect, b''), c_name,
+                                            stat_sections)
+        if reloc_def:
+            out.pop()                    # the generic one-line banner
+            w(reloc_def)
+            w('')
+            continue
         # An all-zero slot carries no evidence of its own type, so prefer what
         # the DWARF says over a guess from the bytes. See
         # dwarf_static_declaration: this is what makes a zeroed function-pointer
@@ -821,6 +896,20 @@ def main():
         else:
             w(f'/* TODO: {c_name} — tool could not render a literal */')
         w('')
+
+    if stat_sections:
+        # The unnamed constant pools a rebuilt pointer table indexes into —
+        # gcc's `.rodata.str1.1` and friends. Spliced in ABOVE the statics
+        # block rather than appended, because C needs the array declared before
+        # the initialiser that takes its address.
+        head = []
+        for sname, cname in sorted(stat_sections.items()):
+            raw = section_bytes(obj, sname)
+            head.append(f'/* {sname}: {len(raw)} bytes, indexed by the tables below */')
+            head.append(f'static const unsigned char {cname}[{max(len(raw), 1)}] = {{ '
+                        + ', '.join('0x%02x' % b for b in raw) + ' };')
+        head.append('')
+        out[stat_start:stat_start] = head
 
     exp_out = []
     exp_sections = {}

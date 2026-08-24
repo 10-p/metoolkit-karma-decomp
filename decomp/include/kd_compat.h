@@ -22,6 +22,60 @@
    declares it. MeXMLTree failed on nothing else. */
 #include <ctype.h>
 
+/* ...and <ctype.h> only declares it on GLIBC. Emscripten's musl has no such
+   function, so MeXMLTree, MeXMLParser and MeFAsset compile for i386 and not for
+   wasm32 — and all three are on the .ka path that instances every ragdoll
+   (HANDOVER.md 3b), so this is not an optional target.
+
+   The recovered code does not call isspace(); it does what the shipped object
+   does, which is index the table directly:
+
+       while (((*__ctype_b_loc())[*attr] & 0x2000) != 0) ++attr;   // isspace
+
+   So the shim has to be the TABLE, not the predicate. glibc's layout is fixed
+   and public: an array of unsigned short indexed by the character value, with
+   the pointer aimed at index 0 of a block that runs from -128 so a negative
+   `char` indexes correctly, and one bit per class:
+
+       _ISupper 0x0100  _ISlower 0x0200  _ISalpha 0x0400  _ISdigit 0x0800
+       _ISxdigit 0x1000 _ISspace 0x2000  _ISprint 0x4000  _ISgraph 0x8000
+       _ISblank 0x0001  _IScntrl 0x0002  _ISpunct 0x0004  _ISalnum 0x0008
+
+   Each entry is filled from the C library's own predicates rather than from a
+   hand-written character list, so the answer is whatever the target's locale
+   says and cannot drift from it. */
+#ifndef __GLIBC__
+static unsigned short kd_ctype_b_table[384];
+static const unsigned short *kd_ctype_b_ptr;
+static const unsigned short **__ctype_b_loc(void)
+{
+    if (!kd_ctype_b_ptr) {
+        int i;
+        for (i = -128; i < 256; i++) {
+            unsigned short f = 0;
+            int c = (i < 0) ? (i + 256) : i;   /* classify by unsigned value */
+            if (c < 256) {
+                if (isupper(c))  f |= 0x0100;
+                if (islower(c))  f |= 0x0200;
+                if (isalpha(c))  f |= 0x0400;
+                if (isdigit(c))  f |= 0x0800;
+                if (isxdigit(c)) f |= 0x1000;
+                if (isspace(c))  f |= 0x2000;
+                if (isprint(c))  f |= 0x4000;
+                if (isgraph(c))  f |= 0x8000;
+                if (c == ' ' || c == '\t') f |= 0x0001;
+                if (iscntrl(c))  f |= 0x0002;
+                if (ispunct(c))  f |= 0x0004;
+                if (isalnum(c))  f |= 0x0008;
+            }
+            kd_ctype_b_table[i + 128] = f;
+        }
+        kd_ctype_b_ptr = kd_ctype_b_table + 128;
+    }
+    return &kd_ctype_b_ptr;
+}
+#endif
+
 /* glibc's name for qsort's comparator, which Ghidra emits because that is what
    the object's DWARF calls it. It does not exist under Emscripten, so
    McdPolygonIntersection compiled for i386 and not for wasm32. The guard macro

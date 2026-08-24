@@ -13,10 +13,12 @@ Branch: **`karma/decompile`**. `main` is untouched. **Do not merge.**
 - **The collision layer drives a real match** — for the twelve pairs the census had seen.
   All twelve are recovered, measured against the shipped original on live inputs, and the
   engine has run on them with no shipped `.a` for those objects. §3, §7b, `proven.txt`.
-- **But the census moved again on 2026-08-24, and this time it moved onto a QUARANTINED
-  object.** `Cylinder × TriangleList` fired **59,366** times and `Cylinder × Cylinder`
-  **24,267** times on a map in the tree. `IxCylinderTriList` is held by the
-  reconstructed-frame detector and has never been measured. That re-opens §12 item 1. §3.
+- **The census moved again on 2026-08-24 — three more pairs — and both cylinder pairs have
+  now been MEASURED.** `IxCylinderTriList` came out of quarantine clean: 71,417 real calls
+  and 200,000 synthetic pairs, 0 structural divergences, self-test clean. **`IxCylinderCylinder`
+  came back WRONG** — 925 `dims_diff` in 24,111 real calls — **and no detector holds it, so
+  it is in the build.** That is the sharper finding: the quarantine only catches what a
+  detector recognises. §3, `proven.txt`.
 - **The cylinder map ask is answered and withdrawn** — not by finding a map to ask for, but
   by parsing the assets (`tools/find_cylinder_geom.py`): 114 cylinder collision elements
   ship, in stock maps. **There are no outstanding asks that need the project owner.** §3.
@@ -30,7 +32,7 @@ Branch: **`karma/decompile`**. `main` is untouched. **Do not merge.**
   item 2 has the readelf command that shows it. `MdtBcl`, `MeMath` and `MdtWorld` are now
   blocked on exactly this too — at **one, one and ten** errors, far cheaper subjects to
   validate a fix on than any kea object. §13.
-- **108 objects compile**, 26 are quarantined by detectors, 14 do not. Object count is a bad
+- **109 objects compile**, 25 are quarantined by detectors, 14 do not. Object count is a bad
   progress metric — read §3 before using it.
 - **All 108 go into the engine at once and it plays a match**, indistinguishable from stock
   on the same map. That is up from the eight of §7b, and getting there took one real fix: a
@@ -75,15 +77,17 @@ complete types. That is what makes this tractable. Ghidra consumes it directly.
 ## 2. Status
 
 ```
-compile:  108 objects (102 clean + 6 with prelude TODOs)  = 73.0% of 148 attempted
-scenes:   108/108 run clean on all three substitute scenes, and all 108 TOGETHER
+compile:  109 objects (103 clean + 6 with prelude TODOs)  = 73.6% of 148 attempted
+scenes:   109/109 run clean on all three substitute scenes, and all 109 TOGETHER
           are bit-identical on the collision-free one — but read §4a before
           reading anything into that number
-wasm32:   108/108 compile, exported symbol sets byte-identical to i386
-bindings: 108/108 export what the SHIPPED object exported, binding included (§8)
-difftest: self-test 12/12, and the real run reproduces the documented baseline
-          exactly (§8) — IxBoxBox 1 count, IxSphereTriList 137 dims, the rest 0
-review:   26 objects held back by recover.py's eight safety detectors (§8;
+wasm32:   109/109 compile, exported symbol sets byte-identical to i386
+bindings: 109/109 export what the SHIPPED object exported, binding included (§8)
+difftest: 14 pairs (Cylinder x Cylinder and Cylinder x TriangleList added
+          2026-08-24), reproducing the documented baseline exactly — IxBoxBox
+          1 count, IxSphereTriList 137 dims, IxCylinderCylinder 1 count + 20
+          dims, quarantined IxBoxTriList as documented, the rest 0
+review:   25 objects held back by recover.py's eight safety detectors (§8;
           the ninth, symbol bindings, is a gate rather than a detector because
           it needs the shipped object to compare against)
 fail:     14 objects do not compile
@@ -195,9 +199,10 @@ zero for that too. §4a's rule, applied to a search instead of a test.
 | Sphyl × Sphere | 218,426 | `McdSphylSphereIntersect` | `IxSphylPrimitives` | ✅ |
 | Box × Box | 150,146 | `McdBoxBoxIntersect` | `IxBoxBox` | ✅ released, 1-in-500k §8 |
 | Sphyl × ConvexMesh | 62,698 | `McdSphylConvexMeshIntersect` | `IxConvexPrimitives` | ✅ |
-| **Cylinder × TriangleList** | **59,366** | `McdCylinderTriangleListIntersect` | `IxCylinderTriList` | ⛔ **QUARANTINED and never measured — 2026-08-24** |
+| **Cylinder × TriangleList** | **71,417** | `McdCylinderTriangleListIntersect` | `IxCylinderTriList` | ✅ **RELEASED 2026-08-24** — 71,417 real + 200k synth, 0 structural |
 | ConvexMesh × TriangleList | 49,064 | `McdConvexMeshTriangleListIntersect` | `IxConvexTriList` | ✅ released 2026-08-23 |
-| **Cylinder × Cylinder** | **24,267** | `McdCylinderCylinderIntersect` | `IxCylinderCylinder` | ⚠ **compiles, never measured — 2026-08-24** |
+| **Cylinder × Cylinder** | **24,111** | `McdCylinderCylinderIntersect` | `IxCylinderCylinder` | ⛔ **MEASURED WRONG — 925 dims_diff in 24,111 real calls, and NOTHING HOLDS IT** |
+| **Cylinder × ConvexMesh** | **244** | `McdGjkCgIntersect` | `McdGjk` | ✅ already released; a fifth pair off the never-called list |
 | Sphere × ConvexMesh | 9,741 | `McdGjkCgIntersect` | `McdGjk` | ✅ |
 | Box × Sphere | 5,154 | `McdBoxSphereIntersect` | `IxBoxSphere` | ✅ |
 | ConvexMesh × ConvexMesh | 4,337 | `McdGjkCgIntersect` | `McdGjk` | ✅ |
@@ -1797,32 +1802,33 @@ in all four objects is the same single thing, and item 2 below is now the whole 
 
 Ordered by what actually moves the project, not by what is easiest:
 
-0. **FIRST: the two cylinder pairs.** Added 2026-08-24, ahead of everything else because
-   it re-opens §12 item 1 and because the hard part — finding content that drives it — is
-   already done. `Cylinder × TriangleList` fires **59,366** times and `Cylinder × Cylinder`
-   **24,267** times on `test-simple-physics`, and `IxCylinderTriList` is **quarantined by
-   the reconstructed-frame detector and has never been measured**. That detector exists
-   because `IxSphereTriList` compiled, passed the substitute gate, and then segfaulted on
-   its first live call.
+0. **The cylinder pairs — DONE for one, and the other is the open item.**
+   Both were measured on 2026-08-24 (third session) with a shadow build that stages
+   `IxCylinderTriList`, on `test-simple-physics`, with `KD_SELFTEST` clean on the same map
+   (186,750 and 45,169 calls, 100% bit-identical, so the harness is sound):
 
-   ```bash
-   BIN=…/build-shadow-karma/Source/SDLLaunch/ut2004-karma-pixo.bin
-   KD_CENSUS=1 KD_BIN=$BIN KD_SHADOW_OUT=/tmp/c.csv \
-     ./test/run_map.sh test-simple-physics 300 "$COMMON_URL"
-   ```
+   | pair | real calls | verdict |
+   |---|---:|---|
+   | `Cylinder × TriangleList` | 71,417 | 0 ret / 0 count / 0 dims / 0 overrun → **RELEASED** |
+   | `Cylinder × Cylinder` | 24,111 | 0 ret, **3 count, 925 dims** → **WRONG** |
+   | `Cylinder × ConvexMesh` | 244 | `McdGjkCgIntersect`, already released, 0 divergences |
 
-   **One thing to sort out before it can be measured:** the census reports
-   `Cylinder × TriangleList` with function `(unidentified)` and shadowed `no`, so the
-   harness cannot currently name that pair's `intersectFn` — probably because
-   `IxCylinderTriList` is excluded from the shadow build. `Cylinder × Cylinder` already
-   reads shadowed `yes`. Fix the naming, stage both objects, run without `KD_CENSUS`, and
-   the normal `proven.txt` standard applies.
+   **What is left here is `IxCylinderCylinder`, and the interesting part is not the bug.**
+   ret, touch, count, position and separation all agree; only `dims` differs — 259 vs 771,
+   one bit of the feature index — on grid-aligned transforms. That is the same shape as
+   `IxSphereTriList`'s released known limit, **but the comparison does not transfer**: that
+   one was released because the game's regime was the clean one (0 in 1.7 M), and here the
+   game's own inputs produce 925 in 24,111.
 
-   Note also that `test-simple-physics.ut2` is a custom test map. Whether *stock* gameplay
-   simulates a cylinder is still unknown — a 300 s census on the stock `DM-Insidious`,
-   which contains a cylinder collision element, ticked properly and produced zero cylinder
-   calls. That does not change the priority: the pair is reachable and the object is
-   unmeasured either way.
+   **And nothing is holding it.** It compiles, no detector objects, so it is in
+   `/tmp/kd_build` and in the 108/109-object build of §7c. The quarantine can only hold what
+   a detector recognises; an object that is simply never measured, and is wrong, walks
+   straight in. Decide whether to pull it before the next substituted build.
+
+   Reproduce with `test/make_shadow_metoolkit.sh` over a copy of `/tmp/kd_build` with
+   `IxCylinderTriList` compiled in, then `KD_RUNTIME=/tmp/kd_runtime ./test/run_map.sh
+   test-simple-physics 300 "$COMMON_URL"`. `KD_RUNTIME` keeps the run off
+   `/home/ion/karma-run`, which matters if someone else is using it.
 
 1. **DONE — the vtable call sites.** `tools/gen_vtable_callsites.py` +
    `DumpDecomp.applyVtableCallsiteOverrides()`, adopted as `out8`. §5a has the method, the
@@ -2241,18 +2247,19 @@ box.
 
 | # | item | state |
 |---|---|---|
-| 1 | every pair the census shows the game calling is recovered and validated | **RE-OPENED 2026-08-24.** Twelve of fourteen done, eight objects, evidence in `proven.txt`. The two new ones are Cylinder pairs: `Cylinder × TriangleList` 59,366 calls on a QUARANTINED object, `Cylinder × Cylinder` 24,267 on an unmeasured one. §3. |
+| 1 | every pair the census shows the game calling is recovered and validated | **RE-OPENED 2026-08-24, and now 14 of 15.** `IxCylinderTriList` was measured and released the same day (71,417 real calls, 0 structural). `Cylinder × ConvexMesh` was already covered by `McdGjk`. **The one open pair is `Cylinder × Cylinder`, measured WRONG at 925 dims_diff in 24,111 real calls.** §3, `proven.txt`. |
 | 2 | validated = 0 ret/count/dims/overrun in a live match, `KD_SELFTEST` clean, evidence on the line | **DONE** for those twelve, and it is the standard the two new pairs have to meet. |
 | 3 | all three scenes clean for every recovered object, *and* checked for sensitivity | **DONE**, and the sensitivity check (§4a) is what makes it mean anything. |
 | 4 | qhull and the asset loader **replaced**, not recovered | **DONE, both halves — but the asset half was RECOVERED, not replaced (§8c), which is a better outcome: exact rather than equivalent.** Qhull, all four tiers: `src/McdConvexCreateHull/kd_convexhull.c` replaces all 15 exported functions — 1.4 MB → 10 KB: 100,633 invariant checks, identical geometry and volumes, a collision A/B differing on 2 borderline pairs in 2.4 M, and **a live ONS match with 15,425 real GJK calls and 0 structural divergences**. wasm32 clean with an identical symbol set. The asset loader is 9 of 9 recovered (§8c) and needs no replacement. |
-| 5 | no detector suppressed, nothing released without evidence | **HOLDING, and it just earned its keep.** 26 objects quarantined; §4a shows the quarantine is load-bearing (`MdtPartition` alone turns a bit-identical scene into a SIGSEGV), and `IxCylinderTriList` was being held for a pair everyone believed was dead. |
-| 6 | builds as ordinary C for wasm32 **and arm64/armv7** | **wasm32 DONE** (108/108, byte-identical symbol sets). **arm64 NOT TRIED** — no cross-compiler installed. Nothing has been *executed* on either. |
+| 5 | no detector suppressed, nothing released without evidence | **HOLDING, and a NEW HOLE FOUND.** 25 objects quarantined and the quarantine is load-bearing (§4a: `MdtPartition` alone turns a bit-identical scene into a SIGSEGV). But `IxCylinderCylinder` is measured wrong on a live pair and **no detector holds it**, so it is in the build. The quarantine only catches what a detector recognises — "not held" is not "validated". §11 item 0. |
+| 6 | builds as ordinary C for wasm32 **and arm64/armv7** | **wasm32 DONE** (109/109, byte-identical symbol sets). **arm64 NOT POSSIBLE HERE** — checked 2026-08-24, there is no aarch64 or arm cross-compiler on this machine, so this needs a toolchain install before it can even be attempted. Nothing has been *executed* on either. |
 | 7 | engine runs on recovered Karma with **no shipped `.a` in the link at all** | **COLLISION HALF DONE for the twelve validated pairs** (§7b, two maps, 11 runs/arm, indistinguishable from stock) — but those runs were on maps with no cylinder traffic, so they do not cover the two new pairs. **SOLVER HALF BLOCKED**, on one problem — the arguments are recovered (§5a) and what remains is the frames, §11 item 2. |
 
 **So what is left, in one sentence each:**
 
-- **Two cylinder pairs, one of them quarantined.** New, and the cheapest real work on the
-  list: a map that drives them is already in the tree. §3, §11 item 0.
+- **One cylinder pair, measured wrong and unheld.** `IxCylinderCylinder`, 925 `dims_diff`
+  in 24,111 real calls, with no detector holding it out of the build. Its sibling
+  `IxCylinderTriList` was measured and released the same day. §3, §11 item 0.
 - **The solver's frames** — `keaRbdCore_unified`, `keaMemory`, `keaIntegrate_pc`,
   `keaLCPSolver`+`keaLCP_new`, **and `MdtBcl`, `MeMath` and `MdtWorld`, which are new and
   are the cheapest subjects to validate a fix on — one error, one error and ten.**

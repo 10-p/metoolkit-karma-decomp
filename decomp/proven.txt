@@ -285,6 +285,35 @@ IxConvexPrimitives    real: 1,685 calls of McdSphylConvexMeshIntersect on ONS-CB
 #                     hour — ragdolls land on the level, not on the vehicles —
 #                     and ONS-Torlan would not start a ticking match. CBP2 and
 #                     UCMP maps reach it in minutes. See HANDOVER.md 6.
+IxCylinderTriList     RELEASED 2026-08-24 (third session), on the pair the census had just
+#                     shown to be live. It had been quarantined since it was recovered, by
+#                     the reconstructed-frame detector — "frame reconstructed by inference,
+#                     unproven in a real match" — and the detector's own condition is what
+#                     is now satisfied.
+#
+#                     real: test-simple-physics, 300 s, 71,417 calls of
+#                     McdCylinderTriangleListIntersect — 9,898 bit-identical, 61,519 float
+#                     noise only, 0 ret_diff, 0 count_diff, 0 dims_diff, 0 overrun.
+#
+#                     synth: difftest_pair, 200,000 pairs, 165,267 touching (82.6%), 46,896
+#                     bit-identical, 0 ret/touch, 0 count, 0 dims, worst delta 4.292e-06.
+#                     The row did not exist before this session; the pair was believed
+#                     unreachable, so it had never been driven by anything.
+#
+#                     SELF-TEST on the same map, original against original: 186,750 calls,
+#                     100% bit-identical, 0 divergences of any kind. The harness is sound,
+#                     which is what makes the two zeros above mean something.
+#
+#                     Dead end 8 says a clean SYNTHETIC run is not enough for anything
+#                     holding kd_argslot_, and that is why the real tier was run rather
+#                     than the release being argued from the 200,000. This is the same
+#                     evidence shape IxConvexTriList was released on.
+#
+#                     CAVEAT ON THE MAP. test-simple-physics.ut2 is a custom test map, not
+#                     shipped content — real engine, real inputs, but not stock gameplay.
+#                     Cylinder collision elements DO ship (114 of them, in stock maps —
+#                     tools/find_cylinder_geom.py), and whether Epic's own maps simulate
+#                     one is still unmeasured. If one is ever found, re-run this.
 IxConvexTriList       RELEASED 2026-08-23, and the tenth and last pair the census says the
 #                     game calls. It spent two sessions quarantined, at 46% then 18% then
 #                     24% wrong in a live match, always with the same signature:
@@ -458,6 +487,42 @@ IxConvexTriList       RELEASED 2026-08-23, and the tenth and last pair the censu
 
 # --- NOT proven, with what was observed --------------------------------------
 # --- compiles, evidence gathered, NOT released ------------------------------
+# IxCylinderCylinder  MEASURED WRONG on a pair the game calls, and — read this part —
+#                     NOTHING IS HOLDING IT. It compiles clean, no detector objects, so it
+#                     is in /tmp/kd_build and in the 108-object substituted build (7c).
+#                     That is the gap this entry exists to flag: the quarantine can only
+#                     hold an object some DETECTOR recognises. An object that is simply
+#                     never measured, and is wrong, walks straight into the build.
+#
+#                     real: test-simple-physics, 300 s, 24,111 calls of
+#                     McdCylinderCylinderIntersect — 16,545 bit-identical, 6,638 float
+#                     noise, 0 ret_diff, but 3 count_diff and 925 dims_diff. That is a
+#                     3.8% structural divergence rate IN THE GAME'S OWN REGIME.
+#
+#                     synth: 200,000 pairs, 57,381 touching, 0 ret/touch, 1 count, 20 dims,
+#                     worst delta 6.914e-06.
+#
+#                     SELF-TEST, original against original, same map: 45,169 calls, 100%
+#                     bit-identical. So the 925 are real, not harness noise.
+#
+#                     WHAT THE DIVERGENCE IS. ret, touch, count, position and separation
+#                     all agree; only `dims` differs — 259 vs 771, i.e. 0x103 vs 0x303, one
+#                     bit of the feature index in the high byte. Same contact, same place,
+#                     different FEATURE LABEL. The logged cases are grid-aligned transforms
+#                     (rows of exactly 1/0/-1), the axis-aligned regime.
+#
+#                     WHY THIS IS WORSE THAN IxSphereTriList'S KNOWN LIMIT, which is the
+#                     same shape. That one was released because the game's regime was the
+#                     CLEAN one — 0 divergences in 1,763,276 real calls, with the
+#                     disagreement confined to deep interpenetration the game does not
+#                     reach. Here the game's own inputs produce 925 in 24,111. The
+#                     comparison that justified the earlier release does not transfer.
+#
+#                     dims feeds contact identity, so a label that flips frame to frame is
+#                     a warm-starting/caching question, not a position error. Whether that
+#                     matters is unmeasured. DO NOT RELEASE, and consider whether it should
+#                     be pulled from the substituted build until it is understood.
+#
 # IxBoxTriList        Held by the reconstructed-frame detector (kd_argslot_), which exists
 #                     because IxSphereTriList compiled, passed the substitute gate and then
 #                     segfaulted on its first live call. So a clean synthetic run is not

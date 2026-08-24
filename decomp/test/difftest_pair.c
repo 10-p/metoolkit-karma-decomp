@@ -80,6 +80,13 @@ IX(SphereTriList,   "McdSphereTriangleListIntersect")
 IX(SphylTriList,    "McdSphylTriangleListIntersect")
 IX(BoxTriList,      "McdBoxTriangleListIntersect")
 IX(ConvexTriList,   "McdConvexMeshTriangleListIntersect")
+/* Cylinder was believed unreachable until 2026-08-24, when a census measured
+   Cylinder x TriangleList at 59,366 calls and Cylinder x Cylinder at 24,267
+   (HANDOVER.md §3). Both pairs had no row here at all, which is precisely the
+   state IxConvexTriList was in before it was released — "compiles and passes
+   the scenes" and nothing else. These two rows are the deterministic half. */
+IX(CylCyl,          "McdCylinderCylinderIntersect")
+IX(CylTriList,      "McdCylinderTriangleListIntersect")
 
 /* ---- geometry factories -------------------------------------------------- */
 static float kd_spread = 1.0f;
@@ -114,6 +121,16 @@ static McdGeometryID mk_plane(McdFrameworkID fw, int seed)
 {
     (void)seed;
     return (McdGeometryID)McdPlaneCreate(fw);
+}
+
+/* Two shapes, for the same reason mk_box has two: a single fixed size hid the
+   IxBoxBox divergence for the project's whole life (§8). The dimensions are the
+   order of magnitude UT2004 ships — the cylinder collision elements in the
+   assets run from r=0.32 h=2.24 to r=2.6 h=33.28 (tools/find_cylinder_geom.py). */
+static McdGeometryID mk_cylinder(McdFrameworkID fw, int seed)
+{
+    return seed ? (McdGeometryID)McdCylinderCreate(fw, 0.40f, 1.7f)
+                : (McdGeometryID)McdCylinderCreate(fw, 0.72f, 1.1f);
 }
 
 /* Every box, sphyl and sphere in this driver had ONE fixed size for its whole
@@ -424,6 +441,14 @@ static const struct {
        half the time. This row is the deterministic half of that evidence. */
     { "McdConvexMeshTriangleListIntersect", ix_orig_ConvexTriList, ix_rec_ConvexTriList,
       mk_convex, mk_trilist, 1.0f },
+    /* The two Cylinder pairs the census caught executing on 2026-08-24 — 59,366
+       and 24,267 calls. IxCylinderTriList is QUARANTINED by the reconstructed-
+       frame detector and has never been measured by anything; IxCylinderCylinder
+       compiles and has never been measured either. Neither row existed before. */
+    { "McdCylinderCylinderIntersect",    ix_orig_CylCyl,    ix_rec_CylCyl,
+      mk_cylinder, mk_cylinder, 1.4f },
+    { "McdCylinderTriangleListIntersect", ix_orig_CylTriList, ix_rec_CylTriList,
+      mk_cylinder, mk_trilist,  1.0f },
 };
 #define NPAIRS ((int)(sizeof PAIRS / sizeof PAIRS[0]))
 

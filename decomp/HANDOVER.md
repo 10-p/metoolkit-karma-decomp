@@ -2110,7 +2110,7 @@ stdout on degenerate input. A replacement should simply be silent.)
 
 ### What needs the project owner, and nothing else will do
 
-**As of 2026-08-24 there are no outstanding content asks.** All three that stood here are
+**As of 2026-08-24 this list is empty.** All three content asks that stood here are
 answered. That is worth stating plainly, because "we need a map" was the standing excuse for
 several open questions and it turned out to be answerable from the repo twice and from the
 asset files once.
@@ -2128,10 +2128,6 @@ asset files once.
   `test-simple-physics` measured `Cylinder × TriangleList` at 59,366 calls. §3. It did not
   need a new map; it needed reading the serialiser instead of grepping for a field name
   that the format does not store.
-- **REMOUNT THE ASSETS after any reboot.** `/home/ion/ut2004-assets` unmounts and every
-  map-based gate dies until it is back — see the box at the top of §6. Only the owner can do
-  it, so flag it rather than diagnosing it; the symptom looks like an engine crash. **This
-  is now the only standing ask.**
 - **More community maps are still WELCOME but no longer blocking.** `CBP2`/`UCMP`/`BE-`/
   `SPAC-` reach pairs Epic's optimised maps never do; that fact came from the project owner
   and it has been the single most productive operational input to this project.
@@ -2140,6 +2136,15 @@ asset files once.
   gameplay ever simulates a cylinder, as opposed to merely shipping the geometry.
 
 Everything else — code, tests, measurement, tooling — is self-service.
+
+**Not an ask, but do the check anyway.** If `/home/ion/ut2004-assets` is empty the tree has
+unmounted, which happens on reboot and which only the owner can undo. Per the owner
+(2026-08-24) this is expected, unavoidable and rare — **so it is an operational note, not an
+outstanding dependency, and this section is empty without it.** The reason to keep checking
+is purely that the failure is misleading: an empty asset dir crashes the engine in a way
+that reads as an engine bug, and one session was spent debugging it as one. It costs one
+`ls` before any map run. If it is empty, say so and stop rather than diagnosing. §6 has the
+box.
 
 ---
 

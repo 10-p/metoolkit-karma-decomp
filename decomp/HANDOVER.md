@@ -4,7 +4,27 @@ You are resuming a project to recover Karma (MathEngine `metoolkit`, UT2004's ph
 library) from shipped binaries as portable C. Read this whole file before touching
 anything. It is written for someone with no memory of how any of it came to be.
 
-Branch: **`karma/decompile`**. `main` is untouched.
+Branch: **`karma/decompile`**. `main` is untouched. **Do not merge.**
+
+### Read this first — the thirty-second version
+
+- Karma is UT2004's physics library, shipped binary-only. We are recovering it as portable
+  C from the DWARF the shipped `.a` files carry. §1.
+- **The collision layer is done and drives a real match.** All twelve interaction pairs the
+  game actually calls are recovered, measured against the shipped original on live inputs,
+  and the engine has run on them with no shipped `.a` for those objects — indistinguishable
+  from stock over 11 alternating matches on two maps. §3, §7b, `proven.txt`.
+- **The solver is half done and blocked in one specific way.** Three `libMdtKea` compute
+  kernels reproduce the original bit-for-bit over 900 compounding steps. The four objects
+  that *call* them do not compile, all for the same reason: Ghidra cannot model their
+  frames. Nothing runs end to end on recovered Karma until they do. §11 items 1–3, §12.
+- **98 objects compile**, 19 are quarantined by detectors, 31 do not compile. Object count
+  is a bad progress metric — read §3 before using it.
+- **The most important habit here is checking that a test is testing.** Most of the real
+  bugs in this project were found that way, not by writing new code. §4a, §12's closing
+  section, and dead ends 9 and 10.
+
+Reproduce the whole state in about a minute with §4.
 
 ---
 
@@ -129,6 +149,22 @@ convex-mesh and triangle-list geometry and essentially nothing else. It never us
 TriangleList, not a plane. So **whole objects in the "not compiling" pile are for collisions
 the game never makes**, and object count is the wrong progress metric.
 
+### If one of those pairs ever fires, which are dangerous?
+
+Registered-but-never-called is not the same as harmless. Ranked by what happens on the
+first real call:
+
+| pair | if it fires |
+|---|---|
+| **Box × TriangleList** | **LIVE CRASH RISK.** `IxBoxTriList` is quarantined *and* measurably wrong: 2,254 ret / 139,961 count / 12,060 dims divergences in 200,000 synthetic pairs, against a driver that self-tests 100% bit-identical. It is not staged in `/tmp/kd_build`, so a substituted build falls back to the shipped object and is safe — but the moment someone stages it, it is a defect waiting for a map. §8. |
+| Cylinder × TriangleList | quarantined; never measured. Same posture, unknown magnitude. |
+| Sphyl × Box, Sphyl × Plane, Sphere × Plane, Box × Plane, Box × Cylinder, Cylinder × {Plane, Sphere, Cylinder}, ConvexMesh × Plane, Cylinder × ConvexMesh | recovered, compiling, clean on the synthetic driver — `McdSphylBoxIntersect`, `McdSphylPlaneIntersect` and the GJK variants are all in the difftest and read 0 structural. These would be fine. |
+| Aggregate × anything | **not recovered at all.** No object, no fallback beyond the shipped `.a`. A gap in coverage rather than a hazard — but the one family with nothing behind it. |
+
+The honest one-liner: **twelve pairs are used and all twelve are validated; of the
+twenty-five that are not used, one (Box × TriangleList) would be a real bug if it ever
+fired, one family (Aggregate) has no recovered code at all, and the rest would be fine.**
+
 ### How much to trust "never called"
 
 Read it as "not in 25+ runs across 18 maps", not "impossible". **Two pairs have already come
@@ -146,10 +182,23 @@ It cuts the other way too. `McdSphylBoxIntersect` had a real bug in a pair that 
 called — not wasted, because the fix was in shared code — and `IxSpherePlane` sits in the
 validated set for another. **"Validated" is not "load-bearing"** without checking this table.
 
-### Running a census sweep
+### Running a census sweep — how to answer "is this pair used?" from scratch
 
 `KD_CENSUS=1` is safe on anything; see §6 for the loop. The CSV lists **every registered
 pair**, called or not, so the zero rows are evidence, not absence of evidence.
+
+```bash
+BIN=/home/ion/engines/engine-ut2004/build-shadow-karma/Source/SDLLaunch/ut2004-karma-pixo.bin
+KD_CENSUS=1 KD_BIN=$BIN KD_SHADOW_OUT=/tmp/census_$MAP.csv \
+  timeout 260 ./test/run_map.sh "$MAP" 200 "$COMMON_URL" >/dev/null 2>&1
+awk -F, 'NR>1 && $5+0>0 {print $1"x"$2, $5}' /tmp/census_$MAP.csv
+```
+
+Column 5 is the call count. A pair that prints is used on that map; a pair in the CSV with
+0 is registered and not used; a pair absent entirely is not even registered, which has
+never happened. **Check the `Game class is` line in the log before believing a zero** — a
+match that never kicked off registers everything and calls nothing, and looks exactly like
+a map with no physics (§6).
 
 ## 4. The pipeline
 
@@ -719,7 +768,7 @@ Alternating 240 s runs on `ONS-UCMP-ABC`, counting SIGSEGVs in the engine's own
 > **WITHDRAWN, 2026-08-24. That first row does not replicate.** Five 420 s runs of
 > stock Karma with no harness on `ONS-UCMP-ABC-ECE` crash **twice**, in
 > `McdModelGetGeometryType` under `KHandleCollisions` — the same site. The engine has a bug
-> of its own there and 0-of-4 at 240 s on a different map was luck. §7a has the numbers.
+> of its own there and 0-of-4 at 240 s on a different map was luck. §7b has the numbers.
 >
 > The rest of this section still stands: `m_cachedData` really was shared between the two
 > implementations, and fixing it really did take the GJK count divergences from 15 to 2.
@@ -752,7 +801,7 @@ What that changed, on `ONS-UCMP-ABC-ECE`, 900 s per run:
 | isolated | 3 ret + 2 count in 65,975 | **2 of 3** |
 
 **The right-hand column is now known to be confounded.** Stock Karma with no harness at
-all crashes in `KHandleCollisions` 2 times in 5 on this map (§7a), so "ran the full 900 s"
+all crashes in `KHandleCollisions` 4 times in 11 across two maps (§7b), so "ran the full 900 s"
 was never a clean measure of the harness. The GJK column — 15 count divergences down to
 2 — is unaffected and is the part of this result to keep.
 
@@ -834,7 +883,7 @@ rewritten statement would have been wrong even where the lookup succeeded.
 
 ---
 
-## 7a. Driving, not shadowing — the engine ON recovered Karma
+## 7b. Driving, not shadowing — the engine ON recovered Karma
 
 **Definition-of-done item 7, for the collision layer, done on 2026-08-24.**
 
@@ -1244,7 +1293,7 @@ Box × TriangleList at zero calls. Recorded so nobody re-derives the old number.
 **§12 item 1 is done.** Every pair the census shows the game calling is recovered and
 validated against a live match. The next milestone is **§12 item 7 — the engine running ON
 recovered Karma**, and as of 2026-08-24 the collision half of that has been measured
-(§7a). What blocks it now is the **solver**, and the solver's blockers are four named
+(§7b). What blocks it now is the **solver**, and the solver's blockers are four named
 objects rather than a vague expanse.
 
 Ordered by what actually moves the project, not by what is easiest:
@@ -1391,13 +1440,32 @@ Everything else — code, tests, measurement, tooling — is self-service.
 7. The engine runs with `WITH_KARMA=1` against recovered Karma with **no shipped `.a` in the
    link at all**. `test/make_substituted_metoolkit.sh` builds that tree.
    **The collision half is done** — all eight objects behind the twelve called pairs, in
-   the driving seat, through full ONS matches (§7a). The solver half is not, and cannot be
+   the driving seat, through full ONS matches (§7b). The solver half is not, and cannot be
    until §11 items 1–3 compile.
 
-With (1) closed, **(7) is the next real milestone** and the one that actually delivers
-physics on the web. The shadow harness structurally cannot test it: it feeds the engine the
-original's answer every frame, so a recovered error never gets to compound. Item 2's
-in-game numbers say the recovered code *agrees*; item 7 asks whether it can *drive*.
+### The seven items, and exactly where each one stands
+
+| # | item | state |
+|---|---|---|
+| 1 | every pair the census shows the game calling is recovered and validated | **DONE.** Twelve pairs, eight objects, evidence in `proven.txt`. Re-opens if the census moves — it has twice. |
+| 2 | validated = 0 ret/count/dims/overrun in a live match, `KD_SELFTEST` clean, evidence on the line | **DONE** for those twelve. |
+| 3 | all three scenes clean for every recovered object, *and* checked for sensitivity | **DONE**, and the sensitivity check (§4a) is what makes it mean anything. |
+| 4 | qhull and the asset loader **replaced**, not recovered | **NOT STARTED.** `libMcdConvexCreateHull` is qhull 2.6, 186 KB, load-time only, open source. `MeAssetDB`/`MeXML`/`MeAssetFactory` is `.ka` XML parsing. Neither is physics; both are swap-ins, not decompiles. §11 item 8. |
+| 5 | no detector suppressed, nothing released without evidence | **HOLDING.** 19 objects quarantined, and §4a now shows the quarantine is load-bearing (`MdtPartition` alone turns a bit-identical scene into a SIGSEGV). |
+| 6 | builds as ordinary C for wasm32 **and arm64/armv7** | **wasm32 DONE** (98/98, byte-identical symbol sets). **arm64 NOT TRIED** — no cross-compiler installed. Nothing has been *executed* on either. |
+| 7 | engine runs on recovered Karma with **no shipped `.a` in the link at all** | **COLLISION HALF DONE** (§7b, two maps, 11 runs/arm, indistinguishable from stock). **SOLVER HALF BLOCKED** on four objects, §11 items 1–3. |
+
+**So what is left, in one sentence each:**
+
+- **The solver's control flow** — `keaRbdCore_unified`, `keaMemory`, `keaIntegrate_pc`,
+  `keaLCPSolver`+`keaLCP_new`. All four fail for one reason: Ghidra cannot model their
+  frames. This is the only thing between here and item 7. §11 items 1–3.
+- **qhull and the asset loader** — replace, do not recover. Bounded, unstarted, and needs
+  no Ghidra. §11 item 8.
+- **arm64** — untried, needs a cross-compiler.
+- **Executing anything on wasm** — the web agent's job. `HANDOVER-WEB.md`.
+- **The tail** — 31 objects, nine of them one error from compiling, and read §11 item 7
+  first because two of the cheap-looking ones are traps (dead ends 9 and 10).
 
 
 ### Where the project actually stands — read this before estimating anything
@@ -1429,7 +1497,7 @@ with each blocker diagnosed down to the line.
 **Never executed on wasm.** 98/98 compile with byte-identical exported symbols. Not one
 instruction has run. See `HANDOVER-WEB.md`.
 
-**Run end to end, now, for the collision layer** — §7a. Not for the solver.
+**Run end to end, now, for the collision layer** — §7b. Not for the solver.
 
 So the honest summary is: **the collision layer is proven and drives a real match; the
 solver's arithmetic is proven and cannot yet be reached; the solver's control flow is

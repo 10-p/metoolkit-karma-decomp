@@ -172,6 +172,57 @@ def richness(die):
     return (n, size)
 
 
+def name_anonymous_typedef_targets(dies, public):
+    """Give `typedef struct { ... } Foo;` its name back.
+
+    gcc emits that as an UNNAMED DW_TAG_structure_type plus a DW_TAG_typedef
+    that points at it, so the scan below — which keys on DW_AT_name of the
+    aggregate — skipped the type entirely and the recovered source failed with
+    `unknown type name`. BodyData in MstModelDynamics.o (libMst, which IS
+    linked), weightingData in MeProfile.o and Mesh2GeometryType in
+    MeFGeometryFromMesh.o are all this shape.
+
+    Naming the target in place is enough: everything downstream — richness,
+    dependency ordering, emit() — reads the name from the same attribute.
+
+    First typedef wins. Two typedefs for one anonymous aggregate are aliases of
+    each other, and picking either gives the right layout; picking arbitrarily
+    is better than emitting the same struct twice under two names, which would
+    make every pointer between them a different type.
+
+    PUBLIC names are left anonymous, and skipping that guard takes the build to
+    ZERO. metoolkit's headers use this same idiom — MeProfile.h has
+    `typedef struct { ... } MeProfileTimerResult;` — so naming the target makes
+    declarator() spell a FIELD of some other type as
+    `struct MeProfileTimerResult`, and that tag does not exist because the
+    header's struct is anonymous too. The failure is nowhere near the type that
+    was named, which is the third time a kd_types.h change has failed globally
+    for a reason local to one line."""
+    for die in dies.values():
+        if die['tag'] != 'DW_TAG_typedef':
+            continue
+        tname = die['attrs'].get('DW_AT_name')
+        ref = die['attrs'].get('DW_AT_type')
+        if not tname or not ref:
+            continue
+        m = REF_RE.search(ref)
+        if not m:
+            continue
+        target = dies.get(int(m.group(1), 16))
+        if target is None:
+            continue
+        if target['tag'] not in ('DW_TAG_structure_type', 'DW_TAG_class_type',
+                                 'DW_TAG_union_type'):
+            continue
+        if target['attrs'].get('DW_AT_name'):
+            continue                                   # already named
+        if not any(c['tag'] == 'DW_TAG_member' for c in target['children']):
+            continue                                   # no layout to recover
+        if tname in public:
+            continue                                   # see the docstring
+        target['attrs']['DW_AT_name'] = tname
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('objdirs', nargs='+', help='directories of extracted .o files')
@@ -207,6 +258,7 @@ def main():
         except Exception as e:                                  # noqa: BLE001
             print(f'  ! {obj}: {e}', file=sys.stderr)
             continue
+        name_anonymous_typedef_targets(dies, public)
         for die in dies.values():
             if die['tag'] == 'DW_TAG_enumeration_type':
                 en = die['attrs'].get('DW_AT_name')

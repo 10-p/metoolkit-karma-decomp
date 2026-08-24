@@ -55,6 +55,8 @@ typedef struct _MeXMLInput _MeXMLInput;
 typedef struct _RRender _RRender;
 
 /* ---- forward declarations (so pointer members need no ordering) ---- */
+struct BodyData;
+typedef struct BodyData BodyData;
 struct CxSmallSort;
 typedef struct CxSmallSort CxSmallSort;
 struct CxSmallSortMarker;
@@ -148,6 +150,15 @@ enum VoronoiRegionType {
 typedef enum VoronoiRegionType VoronoiRegionType;
 
 /* ---- definitions ---- */
+/* from MstModelDynamics.o */
+/* BodyData — 16 bytes, recovered from DWARF */
+struct BodyData {
+    struct MdtBody *oldBody;                        /* +0x0 */
+    struct MdtBody *newBody;                        /* +0x4 */
+    struct _McdModel *model;                        /* +0x8 */
+    struct _McdSpace *space;                        /* +0xc */
+};
+
 /* from CxSmallSort.o */
 /* Link — 8 bytes, recovered from DWARF */
 struct Link {

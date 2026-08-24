@@ -1134,6 +1134,63 @@ def fix_stack_address_name(text, diag, ctx):
 fix_stack_address_name.file_wide = True
 
 
+VOID_CALL = re.compile(r'\(\s*\*\s*([A-Za-z_]\w*(?:\s*(?:->|\.)\s*[A-Za-z_]\w*)+)\s*\)\s*\(')
+
+
+def fix_call_through_void_ptr(line, diag, ctx):
+    """`(*handler->fn)(a,b,c)` where the header declares `fn` as `void *`.
+
+    Some metoolkit structs deliberately type a function pointer as `void *`
+    because the signature varies with a discriminator field — `MeXMLHandler.fn`
+    is either an `MeXMLCallback` or an `MeXMLParseFn` depending on `->type`. C
+    will not call through a `void *`, so GCC says `called object is not a
+    function or function pointer`, and no generic rule can know which of the two
+    a given site meant: only the surrounding branch does.
+
+    So this does NOT try to name the target type. It casts to a function pointer
+    built from `__typeof__` of the argument expressions actually present, which
+    needs no knowledge of the callee and cannot get the ABI wrong:
+
+        (*(__typeof__(lhs) (*)(__typeof__(a), __typeof__(b)))handler->fn)(a, b)
+
+    THAT IS THE POINT OF `__typeof__` HERE rather than a hand-written signature.
+    A cast with `void *` parameters would be a guess, and the guess is exactly
+    the one HANDOVER.md §8 records twice — an unprototyped or wrongly-prototyped
+    indirect call promoting a `float` to `double`, which is what made
+    IxConvexTriList wrong for three sessions. Taking each parameter's type from
+    the argument expression means the call site's ABI is whatever the arguments
+    already are, so a float stays a float.
+
+    Verified on the only object in the corpus that has this shape,
+    `MeXMLParser`. Both of its sites were checked against the machine code
+    before this rule was written: the `MeXMLActionCallback` branch pushes
+    `(&start, userdata)` and the parse branch pushes `(fi, handler, data)`,
+    matching `MeXMLCallback` and `MeXMLParseFn` exactly. Ghidra supplies one
+    extra argument at each — harmless, and what the original does too, since it
+    pushes four slots and the callee reads its own declared parameters."""
+    if 'called object is not a function or function pointer' not in diag:
+        return None
+    m = VOID_CALL.search(line)
+    if not m:
+        return None
+    target = m.group(1).strip()
+    open_paren = line.index('(', m.end() - 1)
+    close = _match_bracket(line, open_paren)
+    # _match_bracket returns the index JUST PAST the closing bracket, so the
+    # argument text stops one short of it.
+    if not close:
+        return None
+    args = [a.strip() for a in _split_arguments(line[open_paren + 1:close - 1])]
+    if not args or args == ['']:
+        return None                     # no arguments: nothing to build a type from
+
+    lhs = re.match(r'^\s*([A-Za-z_]\w*)\s*=\s*', line)
+    ret = '__typeof__(%s)' % lhs.group(1) if lhs else 'int'
+    params = ', '.join('__typeof__(%s)' % a for a in args)
+    cast = '(*(%s (*)(%s))%s)' % (ret, params, target)
+    return line[:m.start()] + cast + line[open_paren:]
+
+
 def fix_void_assignment(line, diag, ctx):
     """`uVar2 = MeMemoryAPI.destroyAligned(p);` — that function returns void.
 
@@ -1927,6 +1984,8 @@ REPAIR_RULES = [
      fix_too_many_arguments),
     (re.compile(r'invalid use of void expression'),
      fix_void_assignment),
+    (re.compile(r'called object is not a function or function pointer'),
+     fix_call_through_void_ptr),
 ]
 
 

@@ -33,18 +33,18 @@ complete types. That is what makes this tractable. Ghidra consumes it directly.
 ## 2. Status
 
 ```
-compile:  97 objects  (92 clean + 5 with prelude TODOs)  = 65.5% of 148 attempted
-scenes:   97/97 run clean on all three substitute scenes, and all 97 TOGETHER
+compile:  98 objects  (93 clean + 5 with prelude TODOs)  = 66.2% of 148 attempted
+scenes:   98/98 run clean on all three substitute scenes, and all 98 TOGETHER
           are bit-identical on the collision-free one — but read §4a before
           reading anything into that number
-wasm32:   97/97 compile, 97/97 exported symbol sets byte-identical to i386
-bindings: 97/97 export what the SHIPPED object exported, binding included (§8)
+wasm32:   98/98 compile, 98/98 exported symbol sets byte-identical to i386
+bindings: 98/98 export what the SHIPPED object exported, binding included (§8)
 difftest: self-test 12/12, and the real run reproduces the documented baseline
           exactly (§8) — IxBoxBox 1 count, IxSphereTriList 137 dims, the rest 0
 review:   19 objects held back by recover.py's eight safety detectors (§8;
           the ninth, symbol bindings, is a gate rather than a detector because
           it needs the shipped object to compare against)
-fail:     32 objects do not compile
+fail:     31 objects do not compile
 ```
 
 Reproduce all of that with the commands in §4. The whole pipeline is about a minute.
@@ -318,7 +318,7 @@ object that does **not** reproduce the original: 4.28e-04 m of divergence agains
 
 ### The combined test, and what it says about the quarantine
 
-All 97 validated objects substituted **together**:
+All 98 validated objects substituted **together**:
 
 | scene | result |
 |---|---|
@@ -925,7 +925,7 @@ compile.**
 `proven.txt` records which objects a real match has released, **with the evidence on the
 line**. That is the only way out. Do not remove a detector to make a number go up.
 
-**The quarantine has now been measured, not just argued for.** Substituting all 97
+**The quarantine has now been measured, not just argued for.** Substituting all 98
 validated objects into `scene_chain` at once is bit-identical over 900 steps; adding the
 ten quarantined objects that compile turns that into an immediate SIGSEGV. It is
 `MdtPartition` — the object the guessed-stack-frame detector was written for. §4a.
@@ -1185,7 +1185,17 @@ Box × TriangleList at zero calls. Recorded so nobody re-derives the old number.
 7. **Forcing `__cdecl` on every function** — §5.
 8. **Trusting a clean synthetic run for anything holding `kd_argslot_`** — `IxConvexTriList`
    is the second object to prove this.
-9. **Trusting a test whose callback ignores its arguments.** `difftest_pair`'s triangle
+9. **Cycling `fix_pointer_as_float` through the casts on a line until one is accepted.**
+   It works, in the sense that `McdSphyl` then compiles, and what it compiles is wrong.
+   The line is `*radius = (float)s[1].mRefCtAndID + (float)s[1].prev;` and GCC rejects
+   only the second cast, so cycling rewrites that one and leaves the first as an
+   integer-to-float **conversion**. The original does no such thing —
+   `flds 0x10(%ecx); fadds 0x14(%ecx)` — both operands are floats, and Ghidra mis-typed
+   the first member. This is dead end 6 turned around: there the compiler was the only
+   thing that knew, and here **the compiler is wrong, because it is reasoning about
+   Ghidra's types.** `McdSphyl` stays in the FAIL pile, where the defect is visible; it
+   is not the free object it looks like.
+10. **Trusting a test whose callback ignores its arguments.** `difftest_pair`'s triangle
    generator ignored `pos` and `radius` and set `flags = 0`. That hid a `-0` radius in four
    objects and left the entire edge-contact path of `GenerateTriangleContact` unexecuted, for
    the whole life of the project. When a recovered function calls back into the engine, the
@@ -1290,7 +1300,7 @@ work is Ghidra-side, in `DumpDecomp.java`.
    before quoting a bit-identical result — `keaCalcAcceleration_vanilla` is the worked
    example of a zero that means nothing.
 
-7. **Grind the tail.** 32 objects, but **read §3 first** — a large part of the pile is
+7. **Grind the tail.** 31 objects, but **read §3 first** — a large part of the pile is
    geometry the game never collides, and **nine of the 34 are one error from
    compiling**, which is where to start. The distribution, re-measured 2026-08-24:
 
@@ -1364,7 +1374,7 @@ Everything else — code, tests, measurement, tooling — is self-service.
 4. qhull and the asset loader replaced rather than recovered.
 5. No detector suppressed, no object released without a line in `proven.txt`.
 6. The whole set builds as ordinary C for **wasm32 and arm64/armv7**, not just i386.
-   **wasm32 is done** — 97/97 compile with byte-identical exported symbols
+   **wasm32 is done** — 98/98 compile with byte-identical exported symbols
    (`test/wasm_check.sh`). arm64 has not been tried; no cross-compiler is installed here.
    Nothing has been *executed* under wasm. See `HANDOVER-WEB.md`.
 7. The engine runs with `WITH_KARMA=1` against recovered Karma with **no shipped `.a` in the
@@ -1405,14 +1415,14 @@ the driver (`keaRbdCore_unified`), the allocator (`keaMemory`), the integrator
 runs on recovered kea**, however good the kernels are. §11 items 1–3 are those objects,
 with each blocker diagnosed down to the line.
 
-**Never executed on wasm.** 97/97 compile with byte-identical exported symbols. Not one
+**Never executed on wasm.** 98/98 compile with byte-identical exported symbols. Not one
 instruction has run. See `HANDOVER-WEB.md`.
 
 **Run end to end, now, for the collision layer** — §7a. Not for the solver.
 
 So the honest summary is: **the collision layer is proven and drives a real match; the
 solver's arithmetic is proven and cannot yet be reached; the solver's control flow is
-untouched.** Do not read 97/148 as 66% of the way there — the denominator is wrong in both
+untouched.** Do not read 98/148 as 66% of the way there — the denominator is wrong in both
 directions (a third of those objects are for collisions the game never makes, and the four
 kea objects in §11 are worth more than the other 38 put together).
 

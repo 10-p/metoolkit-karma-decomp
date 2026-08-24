@@ -1254,12 +1254,33 @@ work is Ghidra-side, in `DumpDecomp.java`.
    example of a zero that means nothing.
 
 7. **Grind the tail.** 34 objects, but **read §3 first** — a large part of the pile is
-   geometry the game never collides. What remains, by size: `stack0xNNNN` (~20 references,
-   a real value Ghidra lost — do not paper over it), `too few arguments` (14, genuinely
-   dropped arguments), types nothing defines (`MeASEObject`, `Mesh2GeometryType`,
-   `BodyData` — they are in the DWARF, and `gen_typedb.py` takes object directories, so
-   widening its input is the route), and `subscripted value` (16, all DebugDraw and XML —
-   a file-scope static emitted as `float x[n]` and indexed `x[i][j]`).
+   geometry the game never collides, and **nine of the 34 are one error from
+   compiling**, which is where to start. The distribution, re-measured 2026-08-24:
+
+   | diagnostic | count | what it is |
+   |---|---:|---|
+   | `request for member X in something not a structure` | 135 | almost all `McdSpace`, below |
+   | `X undeclared` | 102 | mixed |
+   | `unknown type name` | 34 | mostly `MeASE*`, the asset loader |
+   | `invalid use of undefined type` | 23 | 22 of them `struct _McdSpace`, below |
+   | `subscripted value is neither array nor pointer` | 22 | DebugDraw/XML statics |
+   | `too few arguments` | 32 | the lost-frame family; see §11.3 |
+
+   **Two corrections to what this section used to say.** `BodyData` is fixed — it was
+   `typedef struct { ... } Foo;`, which has no `DW_AT_name` on the aggregate. And the
+   advice "`gen_typedb.py` takes object directories, so widening its input is the route"
+   is **wrong**: the input is already all 192 archive members, and the remaining missing
+   names are not there to be found. `weightingData` is a variable, not a type;
+   `Mesh2GeometryType` is under an archive `--exclude` skips on purpose.
+
+   **`McdSpace` is not a quick win, despite being load-bearing.** 51 errors, and 22 of
+   them are `invalid use of undefined type 'struct _McdSpace'`. The layout is not in the
+   DWARF *anywhere*, including in `McdSpace.o` itself, where the DIE carries
+   `DW_AT_declaration : 1`. It would have to be inferred from the code, which is exactly
+   the kind of guess the detectors exist to stop. Same for `MeSimpleFile_linux`: GCC
+   rejects `open(filename, unaff_EBX, unaff_ESI, in_EDX)` through glibc's fortify check,
+   and `-D_FORTIFY_SOURCE=0` makes it compile with three garbage arguments. Leave it
+   failing — the compile error is the useful signal.
 
 8. **Replace, don't recover:** `libMcdConvexCreateHull` is qhull 2.6 (1998) — 186 KB,
    load-time only, open source. Swap in modern qhull. `MeAssetDB`/`MeXML`/`MeAssetFactory`

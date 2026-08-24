@@ -345,11 +345,29 @@ def main():
                 # way.
                 cname = qualified.replace('::', '__')
                 proto = protos.get(short)
+                # A C++ symbol whose demangled name a PUBLIC header also
+                # declares. McdConvexMesh.h expands
+                # MCD_DECLARE_INTERSECT_INTERACTION(Sphyl, ConvexMesh) to
+                # `MeBool McdSphylConvexMeshIntersect(McdModelPair *,
+                # McdIntersectResult *)`, and the object imports the MANGLED
+                # _Z27McdSphylConvexMeshIntersect... — so declaring ours under
+                # the same C spelling is "conflicting types" and the object
+                # fails. Only the mangled symbol exists in the library, so
+                # deferring to the header's declaration would link against a
+                # name that is not there.
+                #
+                # Declare under kd_ext_ and let the macro redirect the body. The
+                # macro is emitted AFTER kd_karma.h, so the header's own
+                # declaration is already parsed and unaffected.
+                shadowed = cname in declared
+                emit_name = ('kd_ext_' + cname) if shadowed else cname
                 if proto:
                     decl = re.sub(r'\b' + re.escape(short) + r'\s*\(',
-                                  cname + '(', proto[:-1].strip(), count=1)
+                                  emit_name + '(', proto[:-1].strip(), count=1)
                     w(f'extern {decl}')
                     w(f'    KD_MANGLED("{name}");')
+                    if shadowed:
+                        w(f'#define {cname} {emit_name}')
                 else:
                     w('/* TODO: fill in the C signature matching the demangled form above. */')
                     w(f'extern int {re.sub(r"[^A-Za-z0-9_]", "_", cname)}()')

@@ -32,12 +32,24 @@ Branch: **`karma/decompile`**. `main` is untouched. **Do not merge.**
   item 2 has the readelf command that shows it. `MdtBcl`, `MeMath` and `MdtWorld` are now
   blocked on exactly this too — at **one, one and ten** errors, far cheaper subjects to
   validate a fix on than any kea object. §13.
+- **The Ghidra-side attack on that is REFUTED, in three minutes, and it cost nothing.**
+  Disabling DWARF variable import leaves the `in_stack_`/`stack0x` frame model
+  **byte-identical**; all it removes is names. Ghidra's native stack recovery and its DWARF
+  importer agree. Dead end 18, and §11 item 2 has what the experiment found instead — which
+  is worth more than what it was looking for.
 - **109 objects compile**, 25 are quarantined by detectors, 14 do not. Object count is a bad
   progress metric — read §3 before using it.
 - **They compile for wasm32, armv7 AND arm64 — and arm64 is a lie.** Identical symbol sets
-  on all three, but arm64 emits 920 pointer/int conversion diagnostics against armv7's 23,
-  because the recovery puns pointers through 4-byte slots and arm64 pointers are 8. No gate
-  can see it. §6b.
+  on all three, but arm64 emits **2,162 pointer-truncation diagnostics across 65 of the 109
+  objects** where armv7 emits **zero**, because the recovery puns pointers through 4-byte
+  slots. There **is** now a gate for it — `test/ptrwidth_check.sh`, 13 seconds — and §6b's
+  old "920 vs 23" figure was two different diagnostic sets added together. §6b.
+- **`IxCylinderCylinder`'s 925 `dims_diff` is not a defect to fix — `dims` is not a
+  measurement for this pair.** The shipped library, run against ITSELF with one body moved
+  a ten-millionth of a metre, changes its own answer **more often** than our recovery
+  differs from it (7,798 against 6,432 on the same 200,000 pairs). No other pair in the
+  driver does this at all. §11 item 0.
+
 - **All 108 go into the engine at once and it plays a match**, indistinguishable from stock
   on the same map. That is up from the eight of §7b, and getting there took one real fix: a
   static pointer table whose relocations were never applied, which passed all seven gates
@@ -52,18 +64,19 @@ Branch: **`karma/decompile`**. `main` is untouched. **Do not merge.**
   also caught a *search* that could not have found what it was looking for. §4a, §12's
   closing section, and dead ends 9 and 10.
 
-### WHAT REMAINS — the whole list, ordered, 2026-08-24
+### WHAT REMAINS — the whole list, ordered, 2026-08-24 (fifth session)
 
 Everything else in this file is detail. This is the work.
 
 | # | what | where | blocked on |
 |---|---|---|---|
-| 1 | **The solver's frames.** 8 objects: `keaRbdCore_unified`, `keaMemory`, `keaIntegrate_pc`, `keaLCPSolver`, `keaLCP_new`, `MdtWorld`, `MdtBcl`, `MeMath`. The DWARF declares no `DW_AT_location`. **The untried move is a Ghidra re-dump with DWARF *variable* import disabled** — Ghidra's native stack recovery may beat the un-placeable variables its importer creates. | §11 item 2 | nothing. Ghidra is installed, a re-run is 75–120 min, and `MdtBcl`/`MeMath` are ONE error each so the answer is immediate |
-| 2 | **`IxCylinderCylinder` is wrong and is in the build.** 925 `dims_diff` in 24,111 real calls, a SAT tie-break at `OverlapCylCyl:1275`. No detector holds it. | §11 item 0 | nothing |
-| 3 | **arm64 truncates pointers.** Compiles 109/109 with identical symbols and is not trustworthy. armv7 is fine. | §6b | a generator-wide change to pointer-width slots |
+| 1 | **The solver's frames.** 8 objects: `keaRbdCore_unified`, `keaMemory`, `keaIntegrate_pc`, `keaLCPSolver`, `keaLCP_new`, `MdtWorld`, `MdtBcl`, `MeMath`. The DWARF declares no `DW_AT_location`. **The Ghidra-side re-dump is now TRIED AND REFUTED (dead end 18).** What replaces it: the frame is not lost, it is the OUTGOING ARGUMENT AREA, and `register0x00000010` is entry-ESP — both confirmed against the machine code. | §11 item 2 | nothing, but it is a text-level repair on a Ghidra-invented frame and needs a subject where a wrong answer would show |
+| 2 | ~~**`IxCylinderCylinder` is wrong and is in the build.**~~ **RE-FRAMED — `dims` is not a measurement for this pair.** The shipped library disagrees with itself, under a 1e-7 m nudge, more often than we disagree with it. Leave it in the build; do not release it either. | §11 item 0 | a live match scoring ret/count/position/separation with dims read separately |
+| 3 | **arm64 truncates pointers.** 2,162 diagnostics across 65 of 109 objects; armv7 zero. **There is now a gate** — `test/ptrwidth_check.sh`. | §6b | a generator-wide change to pointer-width slots |
 | 4 | **Nothing has EXECUTED on wasm32, armv7 or arm64.** | `HANDOVER-WEB.md` | the web agent |
 | 5 | **GJK's warm cache path has never been tested** — the busiest pair family in the census, cold-path only. | §11 item 4 | nothing |
 | 6 | **The tail: 14 objects, 271 errors — and it is finished.** 3 DEAD, 2 leave-alones, 3 dead end 9, 4 are item 1 above, 2 low-value profilers. | §13 | do not start here |
+
 
 **IS A COLLISION PAIR USED? YES — THIS IS ANSWERED, DEFINITIVELY, AND IT IS §3.**
 37 pairs are registered. **15 are called.** Of the 22 that are not:
@@ -113,18 +126,23 @@ scenes:   109/109 run clean on all three substitute scenes, and all 109 TOGETHER
           are bit-identical on the collision-free one — but read §4a before
           reading anything into that number
 wasm32:   109/109 compile, exported symbol sets byte-identical to i386
-armv7:    109/109 compile, symbol sets identical — a real 32-bit-pointer port
-arm64:    109/109 compile, symbol sets identical, and NOT TRUSTED (§6b)
+armv7:    109/109 compile, symbol sets identical — a real 32-bit-pointer port,
+          and 0 pointer-truncation diagnostics (test/ptrwidth_check.sh)
+arm64:    109/109 compile, symbol sets identical, and NOT TRUSTED — 2,162
+          pointer-truncation diagnostics across 65 of the 109 objects (§6b)
 bindings: 109/109 export what the SHIPPED object exported, binding included (§8)
 difftest: 14 pairs (Cylinder x Cylinder and Cylinder x TriangleList added
           2026-08-24), reproducing the documented baseline exactly — IxBoxBox
           1 count, IxSphereTriList 137 dims, IxCylinderCylinder 1 count + 20
-          dims, quarantined IxBoxTriList as documented, the rest 0
+          dims, quarantined IxBoxTriList as documented, the rest 0.
+          KD_GRID=1 puts it in the game's AXIS-ALIGNED regime, where
+          IxCylinderCylinder goes to 6,385 dims — and where the shipped
+          library stops reproducing ITSELF (§11 item 0)
 review:   25 objects held back by recover.py's eight safety detectors (§8;
           the ninth, symbol bindings, is a gate rather than a detector because
           it needs the shipped object to compare against)
 fail:     14 objects do not compile
-dumps:    out9 is current (§5a). It differs from out8 in 52 of 153 dumps, and
+dumps:    out10 is current (§5b). It differs from out9 in 4 of 153 dumps, and
           every object that already compiled is byte-identical.
 ```
 
@@ -515,23 +533,29 @@ metoolkit .a
 cd /home/ion/engines/engine-ut2004/karma-decomp
 rm -rf /tmp/kd_out /tmp/kd_build
 python3 tools/recover.py \
-  --dump-dir /home/ion/tools/karma-lab/out9 \
+  --dump-dir /home/ion/tools/karma-lab/out10 \
   --obj-dir  /home/ion/tools/karma-lab/allobj \
   --out-dir  /tmp/kd_out \
+  --build-dir /tmp/kd_build \
   --metoolkit ../Thirdparty/metoolkit \
-  --protos /home/ion/tools/karma-lab/kd_protos9.h
+  --protos /home/ion/tools/karma-lab/kd_protos10.h
 ```
 
-**`kd_protos9.h`, not `kd_protos.h`** — it is `kd_protos.h` with the API-struct
-prototypes appended; see §5a. Using the plain one silently loses 412 call-site
-signatures.
+**`kd_protos10.h`, not `kd_protos.h`** — it is `kd_protos.h` with the API-struct
+prototypes appended (§5a) *and* every C++ function re-declared under its mangled
+name (§5b). Using the plain one silently loses 412 call-site signatures and 197
+C++ prototypes.
+
+**`--build-dir` is not optional if you care about the object you already have.**
+It defaults to `/tmp/kd_build`, so a second run comparing a new dump set will
+overwrite the baseline you were about to compare against.
 
 Recovered `.c` lands in `/tmp/kd_out/allobj/`, objects in `/tmp/kd_build/`. `recover.py`
-prints a per-object table and a summary. **`out9` is the current dump directory** (§5).
-`out8` is the previous one and is kept deliberately — it is the fallback if a pipeline
-change ever has to be bisected against the dumps.
+prints a per-object table and a summary. **`out10` is the current dump directory** (§5b).
+`out5`–`out9` are kept deliberately — they are the fallback if a pipeline change ever has
+to be bisected against the dumps.
 
-### Gate what came out — all seven, every time
+### Gate what came out — all EIGHT, every time
 
 ```bash
 MT=../Thirdparty/metoolkit
@@ -555,6 +579,11 @@ python3 tools/check_frame_bounds.py /tmp/kd_out/allobj
 # interface: does each object export what the SHIPPED one exported — name,
 # BINDING and size? §8. Costs two seconds and caught a global putchar.
 python3 tools/check_symbol_bindings.py /tmp/kd_build /home/ion/tools/karma-lab/allobj
+
+# pointer width: the gate §6b used to say could not exist. 13 seconds, and it
+# needs no arm64 hardware — truncation is a compile-time diagnostic.
+# armv7 must read 0; arm64 currently reads 2,162 across 65 objects.
+./test/ptrwidth_check.sh /tmp/kd_out/allobj /tmp/kd_build
 
 # and the two that say what the scene gate above actually proved — §4a
 # KD_CENSUS_VALIDATED is not optional: without it this sweeps in the quarantined
@@ -677,7 +706,7 @@ Every other quarantined object that compiles is harmless on this scene. That is 
 end-to-end measurement of the quarantine policy rather than an assertion about it.
 
 
-**`difftest_pair.sh` has six switches and the first is not optional:**
+**`difftest_pair.sh` has nine switches and the first is not optional:**
 
 - **`KD_SELFTEST=1`** — run the ORIGINAL as both sides. Anything it reports is a fault in
   the driver. Run it before believing any divergence. Skipping the shadow harness's
@@ -704,6 +733,21 @@ end-to-end measurement of the quarantine policy rather than an assertion about i
   uses.
 - **`KD_SKEW=1`** — nudge the test mesh off its axis-aligned grid, to tell "disagrees at an
   exact feature boundary" from "disagrees".
+- **`KD_GRID=1`** — make the ROTATIONS axis-aligned: one of the 24 proper rotations whose
+  rows are exactly 1/0/-1, with translations still random. **This is the game's regime for
+  cylinders and it was missing for the project's whole life.** `IxCylinderCylinder` reads
+  20 dims in 200,000 with random rotations and **6,385 in 52,925 touching** with this, a
+  factor of 380 — which is why the synthetic tier said 0.01% while a live match said 3.8%.
+  The wrong thing was the DISTRIBUTION, not a value. Self-test is 100% bit-identical in
+  this regime, so the harness is sound in it.
+- **`KD_JITTER=<eps>`** — displace model2 by `eps` BETWEEN the two calls. With
+  `KD_SELFTEST=1` that runs the ORIGINAL against ITSELF on inputs differing by `eps`, and
+  it answers a question no A/B can: **is the answer a stable property of the geometry, or
+  is it decided by rounding?** `eps=0` and `eps=1e-12` are the controls and must read 0.
+  §11 item 0 is what it found.
+- **`KD_DIMSHIST=1`** — histogram of `(original dims -> recovered dims)` instead of four
+  sample dumps, plus how many divergent pairs agree BITWISE on every separation. Four
+  samples is enough to notice a divergence and not enough to localise one.
 
 
 Adding a pair is one `IX(...)` line and one table row; the geometry factories are shared.
@@ -749,13 +793,17 @@ timeout 9000 /home/ion/tools/ghidra_12.1.3_PUBLIC/support/analyzeHeadless \
   -postScript DumpDecomp.java -deleteProject
 ```
 
-Takes 1–2 hours (`out6` took about 75 minutes for 153 objects; `out8` about the same). Scripts live in
+Takes 1–2 hours for the whole corpus (`out6` about 75 minutes for 153 objects; `out8` and
+`out10` about the same). **A hypothesis does not need the whole corpus** — eight objects is
+25 seconds, and §5's `KD_GHIDRA_OPTS` block has the harness. Dead end 18 was settled that
+way in three minutes after two sessions of being budgeted at 75–120. Scripts live in
 `tools/gscripts/` and **must be copied** to `/home/ion/tools/karma-lab/gscripts/` —
 Ghidra reads them from there. **Write to a NEW output directory** and keep the old one
-until the new dumps have passed all **seven** gates; a re-run changes every object at
+until the new dumps have passed all **eight** gates (§4 — the eighth is
+`test/ptrwidth_check.sh`); a re-run changes every object at
 once — `out6` differs from `out5` in 103 of 153 dumps.
 
-`out5`–`out9` are all on disk. **`out9` is current.**
+`out5`–`out10` are all on disk. **`out10` is current** (§5b).
 
 ### `ParseKarmaHeaders.java` (preScript)
 
@@ -871,6 +919,49 @@ Zero objects got worse.
 > classifies by the FIRST error's pattern, and the mislabelled-symbol error that this fix
 > resolved was masking a `stack0x` one underneath. Check the error COUNT, not the label.
 
+## 5b. `out10` — the C++ prototypes that were never being applied
+
+`out10` is current. **4 of 153 dumps differ from `out9`** — `keaRbdCore_unified`,
+`keaLCPSolver`, `keaLCP_new` and `McdSpace`, none of which compiles — and all 109
+compiled objects' `.o` files are byte-identical. All eight gates read exactly as before.
+
+**What it fixes.** `ParseKarmaHeaders` matches a prototype to an ELF symbol **by name**,
+and it runs before Ghidra's demangler analyzer, so the symbol is still
+`_ZN12keaFunctions20checkPrintDebugInputE...` while `kd_protos.h`, built from
+`DW_AT_name`, says `checkPrintDebugInput`. **They never matched.** 75 undefined mangled
+symbols across 21 objects had no prototype and were arity-guessed from the call site —
+precisely the failure §5 says that header exists to prevent, sitting in plain sight since
+the header was written.
+
+**And the damage was not cosmetic.** In `MdtKeaAddConstraintForces` Ghidra laid out the
+outgoing arguments for `keaFunctions::checkPrintDebugInput` with `this` DROPPED:
+
+```
+        machine code                    Ghidra's model
+this      esp+0    (mov %eax,(%esp))     — not modelled —
+constraints esp+4  (lea 0x4(%esp),%edi)  esp+0     <- 92 bytes, one word early
+parameters  esp+0x60 (lea 0x60(%esp))    esp+0x5c  <- 76 bytes, one word early
+```
+
+which is why `MVar1.num_partitions` — field 0 of `MdtKeaConstraints` — was being assigned
+`&vanillaFunctions`, the `this` pointer. Same shape as the `__regparm` shift of §10: the
+convention decides the layout, and the body is then wrong by a fixed offset.
+
+**The fix needs nothing on the Ghidra side.** `gen_protos.py` re-emits every prototype
+under its `DW_AT_MIPS_linkage_name` as well. A mangled name is a valid C identifier and is
+unique by construction, so the existing exact-name lookup simply starts hitting — no
+demangling, no name matching, no ambiguity guard. 197 prototypes added, 0 removed or
+changed, and Ghidra parses 2,700 FunctionDefinitions instead of 2,503.
+
+Regenerate with the §5a recipe, substituting `kd_protos10.h`:
+
+```bash
+python3 tools/gen_protos.py /tmp/kd_allmembers -o /home/ion/tools/karma-lab/kd_protos10_base.h
+cat kd_protos10_base.h /tmp/kd_api_protos10.h > kd_protos10.h    # BOTH halves, §5a
+```
+
+**Covering C++ FREE functions too is tried and rejected — dead end 19.**
+
 ### `KARMA_VTABLE_CALLSITES` — the environment for a re-run
 
 `out8` needs one more variable than §5's recipe. Generate the table first, then export it:
@@ -974,11 +1065,34 @@ only inside the `.a`. Every caller of those would go back to Ghidra guessing ari
 is the exact failure this header exists to prevent. From all sixteen archives it is 2487
 prototypes, a strict superset of what shipped: 0 lost, 269 gained.
 
+### `KD_GHIDRA_OPTS` — changing an analyzer option
+
+`ParseKarmaHeaders` is a **preScript**, and headless order is import → preScript →
+analysis → postScript, so it is the one place an analyzer option can still be changed.
+
+```bash
+KD_GHIDRA_OPTS='DWARF.Import Local Variable Info=false;DWARF.Ignore Parameter Storage Info=true'
+```
+
+`;`-separated `Analyzer.Option Name=value`. The names are the exact strings the analyzer
+registers — see `DWARFImportOptions.java` inside
+`Ghidra/Features/Base/lib/Base-src.zip`. **An unknown name is reported loudly and not
+applied**, because "the option did nothing" and "the option was never applied" are
+otherwise the same output, and that is how a refutation becomes a false one. Unset changes
+nothing, which is what produced `out9` and `out10`.
+
+**Check the harness before believing the experiment.** Re-dumping eight objects with no
+options set must reproduce the current dump directory byte-for-byte. It does; that is what
+makes dead end 18 a result rather than a guess.
+
 ### Settled — do not re-test
 
 - Only the default `decompile` simplification style produces C. `normalize`, `firstpass`,
   `register`, `paramid` all fail outright.
 - The "Decompiler Parameter ID" analyzer does **not** fix call arity.
+- **Disabling the DWARF importer's variables or parameters does not touch the frame
+  model.** Dead end 18. All three of `Import Local Variable Info=false`,
+  `Ignore Parameter Storage Info=true` and `Import Functions=false` were measured.
 - metoolkit's own headers do **not** survive Ghidra's C parser (MEAPI/MEPUBLIC macros).
   That is why `gen_protos.py` generates a flat, dependency-free prototype header.
 
@@ -1165,15 +1279,44 @@ $NDK/aarch64-linux-android21-clang      ...   # 64-bit pointers
 
 with the same flags §4 uses for i386, minus `-m32`.
 
-| target | compiles | exported symbols vs i386 | pointer/int diagnostics* |
+| target | compiles | exported symbols vs i386 | pointer TRUNCATION diagnostics |
 |---|---|---|---:|
 | wasm32 | 109/109 | identical | — |
-| **armv7** | **109/109** | **identical** | **23** |
-| **arm64** | **109/109** | **identical** | **920** |
+| **armv7** | **109/109** | **identical** | **0** across 0 objects |
+| **arm64** | **109/109** | **identical** | **2,162** across **65 of 109** objects |
 
-\* with `-Wno-int-conversion` and `-Wno-incompatible-pointer-types` REMOVED, over five
-released objects (`IxSphereTriList`, `McdGjk`, `IxBoxBox`, `IxConvexTriList`,
-`IxSphylPrimitives`).
+Measured over **all 109 objects in the build** with `test/ptrwidth_check.sh`, which enables
+exactly three clang diagnostics on top of `-Wno-everything` so the count is those three and
+nothing else:
+
+```
+-Wint-to-pointer-cast        cast to 'T *' from a smaller integer type
+-Wpointer-to-int-cast        cast to a smaller integer type from 'T *'
+-Wvoid-pointer-to-int-cast   ... from 'void *'
+```
+
+> **CORRECTION, fifth session.** This table used to read **920 for arm64 against 23 for
+> armv7**, and those were two different diagnostic SETS added together. Re-measured on the
+> same five objects the original figure came from:
+>
+> | | total warnings | `-Wint-conversion` + `-Wincompatible-pointer-types` | truncation |
+> |---|---:|---:|---:|
+> | armv7 | 68 | 23 | **0** |
+> | arm64 | 968 | 23 | **897** |
+>
+> 920 = 897 + 23. The **conclusion is unchanged and is now stronger**: the 23 are shared by
+> both targets and are the ones §4 downgrades deliberately, while the truncation class is
+> arm64-only and armv7's zero is what makes the arm64 number mean anything — same source,
+> same compiler, 32-bit pointers, clean.
+>
+> **And "no gate can see it" is no longer true.** `test/ptrwidth_check.sh` takes 13 seconds
+> and needs no arm64 hardware, because truncation is a compile-time fact. It also names the
+> 65 affected objects; the other 44 are clean. Worst offenders: `IxSphylPrimitives` 600,
+> `IxConvexTriList` 203, `MdtMainLoop` 139, `McdAggregate` 124, `McdBatch` 112.
+>
+> One trap in measuring this, and it reads exactly like good news: `-w` followed by
+> `-Wint-to-pointer-cast` reports **zero on both targets** — clang's `-w` wins over a later
+> `-W` for these. Use `-Wno-everything`, which is designed to be overridden.
 
 **Why arm64 must not be trusted despite passing everything.** §4 downgrades those two
 diagnostics deliberately, and says why: they are "safe only because every target is
@@ -1182,9 +1325,11 @@ constantly — Ghidra recovers a stack slot as `undefined4` and the code stores 
 it. On a 32-bit target that is lossless. **On arm64 it truncates a 64-bit pointer to 32
 bits**, and the 40× jump in diagnostics is exactly that happening, 897 more times.
 
-It compiles. The symbol sets are byte-identical. Every one of the seven gates would pass,
-because not one of them executes arm64 code. This is §12's closing checklist in its purest
-form: *the measurement cannot see the failure.*
+It compiles. The symbol sets are byte-identical. Every one of the seven behavioural gates
+passes, because not one of them executes arm64 code — which is why the eighth gate had to
+be a *textual* one. This was §12's closing checklist in its purest form (*the measurement
+cannot see the failure*) and the answer was not "execute on arm64", it was "ask the
+compiler a question it already knows the answer to".
 
 **So the honest status is: armv7 is a real port, arm64 is not.** armv7 shares the
 32-bit-pointer assumption the whole recovery rests on, so it is in the same class as wasm32
@@ -1866,6 +2011,58 @@ Box × TriangleList at zero calls. Recorded so nobody re-derives the old number.
    perturbing the arithmetic rather than aligning it. Excess precision is not the cause of
    that divergence; measure before adopting a whole-corpus flag on this reasoning.
 
+   **And now there is a reason as well as a refutation** — §11 item 0. The separating axes
+   are numerically degenerate on axis-aligned input, so the winner is decided by rounding
+   *whatever* the rounding mode is. `-ffloat-store` did not fail to align the arithmetic;
+   there was nothing to align it to.
+
+18. **Re-dumping with the DWARF importer's variables turned off**, on the theory that
+   Ghidra's native stack recovery beats the un-placeable variables its importer creates for
+   functions whose DWARF carries no `DW_AT_location`. This was WHAT REMAINS item 1's
+   designated move for two sessions. It is refuted, and it took three minutes because the
+   experiment is eight objects, not 153 (§5, `KD_GHIDRA_OPTS`):
+
+   | setting | `stack0x` | `in_stack_` | `register0x` |
+   |---|---:|---:|---:|
+   | (out9, control — byte-identical re-dump) | 25 | 346 | 3 |
+   | `DWARF.Import Local Variable Info=false` | **25** | **346** | **3** |
+   | `DWARF.Ignore Parameter Storage Info=true` | files byte-identical to out9 | | |
+   | `DWARF.Import Functions=false` | 25 | **352** | 3 |
+
+   Not one construct moves. What the first setting changes is **names**: `MeReal myw[3]`
+   becomes `local_2c`/`local_28`/`local_24`, three scalars where the DWARF had a correctly
+   typed array. Ghidra's native stack recovery and its DWARF importer produce the SAME
+   frame model, and the DWARF only supplies names for slots Ghidra had already placed. The
+   third setting is the strongest form of the hypothesis and makes `in_stack_` counts go
+   **up**.
+
+   Run the control first. Eight objects re-dumped with no options set come out
+   byte-identical to `out9`; without that, "the option changed nothing" and "my harness
+   differs from the one that made out9" are the same output.
+
+19. **Giving C++ FREE functions their mangled prototypes** the way §5b gives them to class
+   members. The route is sound — a subprogram's `DW_AT_low_pc` and the ELF symbol's value
+   are offsets into the same `.text`, so the symbol at the concrete instance's `low_pc` is
+   the linkage name, no mangling re-implemented — and it lifts coverage from 40 of 75
+   undefined mangled symbols to 66. **It also takes the build from 109 objects to 105.**
+
+   Those functions (`MovingBoxBoxIntersect`, `AccumulateSphylContacts`,
+   `ConvexHullNSegment`, `PolynomialRoots`) ARE declared in the importing object's own
+   DWARF, so Ghidra already had their real signatures — and `gen_protos.simple_type` turns
+   every pointer into `void *`, so applying ours *overwrote* good types with worse ones.
+   `lsVec3 *` became `void *` in `IxBoxBox`, `IxConvexTriList`, `IxCylinderCylinder` and
+   `IxSphylPrimitives` — four objects with live in-game evidence in `proven.txt` — and they
+   stopped compiling.
+
+   **The distinction that matters is not C-vs-C++, it is whether Ghidra already had a
+   signature.** Class members do not have this problem, measured rather than argued: with
+   the member route alone all 109 compiled objects stay byte-identical.
+
+20. **`-w` followed by `-Wsomething` in clang.** `-w` wins, the diagnostic never fires, and
+   the run reports zero. That is how a first pass at §6b's pointer-truncation gate read
+   "arm64: 0 warnings" — the most reassuring possible output for the most dangerous known
+   defect in the project. Use `-Wno-everything`, which is designed to be overridden.
+
 ---
 
 ## 10. Facts established by measurement (do not re-derive)
@@ -1927,12 +2124,64 @@ Ordered by what actually moves the project, not by what is easiest:
    **And nothing is holding it.** It compiles, no detector objects, so it is in
    `/tmp/kd_build` and in the 108/109-object build of §7c. The quarantine can only hold what
    a detector recognises; an object that is simply never measured, and is wrong, walks
-   straight in. Decide whether to pull it before the next substituted build.
+   straight in.
 
    Reproduce with `test/make_shadow_metoolkit.sh` over a copy of `/tmp/kd_build` with
    `IxCylinderTriList` compiled in, then `KD_RUNTIME=/tmp/kd_runtime ./test/run_map.sh
    test-simple-physics 300 "$COMMON_URL"`. `KD_RUNTIME` keeps the run off
    `/home/ion/karma-run`, which matters if someone else is using it.
+
+   > ### RE-FRAMED, fifth session: `dims` IS NOT A MEASUREMENT FOR THIS PAIR
+   >
+   > **The shipped library does not reproduce it either.** `KD_JITTER=<eps>` runs the
+   > ORIGINAL against ITSELF with model2 displaced by `eps` between the two calls. On the
+   > same 200,000 axis-aligned pairs:
+   >
+   > | | count_diff | dims_diff | worst delta |
+   > |---|---:|---:|---|
+   > | nudge 0 (control) | 0 | **0** | 0.000e+00 |
+   > | nudge 1e-12 (control) | 0 | **0** | 0.000e+00 |
+   > | nudge 1e-9 | 0 | 10 | 1.788e-07 |
+   > | nudge **1e-7** | 0 | **7,798** | 7.997e-01 |
+   > | **our recovery, no nudge at all** | 1 | **6,432** | 8.000e-01 |
+   >
+   > A ten-millionth of a metre is below f32 resolution at ordinary UT2004 world
+   > coordinates. The shipped library disagrees with itself more often than we disagree
+   > with it, and produces the same 8.0e-01 worst delta we are charged with.
+   >
+   > **And only this pair.** Same probe, same nudge, grid regime: `McdBoxBoxIntersect` 0 of
+   > 28,401 touching, `McdSphereSphereIntersect` 0 of 76,407, `McdSphylSphylIntersect` 0 of
+   > 90,168, `McdSphylBoxIntersect` 0 of 62,078, and — the sibling released the same week —
+   > `McdCylinderTriangleListIntersect` **0 of 147,389**. So this is not "float comparisons
+   > are unstable", it is a property of THIS function's separating-axis set.
+   >
+   > **Why.** Instrumenting the recovered `OverlapCylCyl` to print every candidate:
+   >
+   > ```
+   > cand 10 sep -0.301695902     cand 8 sep -0.301695913
+   > cand  6 sep -0.301695973     cand 2 sep -0.301695922
+   > cand  9 sep -0.301695914
+   > ```
+   >
+   > Five candidates agreeing to seven significant figures. Over 57,079 calls, **29.7%
+   > choose their axis on a margin of 1e-6 relative or less** and 7.4% on an exact tie. For
+   > an axis-aligned cylinder pair the candidate axes are geometrically DEGENERATE, so
+   > `normInfo` — and therefore `dims` — is decided by rounding.
+   >
+   > **The obvious hypothesis is refuted.** `<` → `<=` at all six `maxSeparation <` sites
+   > and both endpoint min-search sites, one at a time under `KD_GRID=1`: no change at all,
+   > except at `:1008` which gets WORSE (6,385 → 7,563). The shipped code agrees — at
+   > `0x26aa` it is `fcoms; fnstsw %ax; test $0x45,%ah; jne`, i.e. take the new candidate
+   > iff STRICTLY greater, which is what the recovery already does.
+   >
+   > **Disposition, and it is on the line in `proven.txt`.** Do NOT pull it from the
+   > substituted build: the label it is charged with is one the shipped library re-rolls
+   > whenever a body moves a ten-millionth of a metre, which is every frame. Do NOT release
+   > it either — the **3 `count_diff` in 24,111 real calls** is 0.012%, is not explained by
+   > this, and `count` is far more stable under the same probe (0 at 1e-7, 5 at 1e-5).
+   > What would settle it is a live match scoring ret/touch/count/position/separation with
+   > `dims` reported SEPARATELY and read as non-discriminating for this pair — the way
+   > `nonfinite` is already read separately for NaN input (§7).
 
 1. **DONE — the vtable call sites.** `tools/gen_vtable_callsites.py` +
    `DumpDecomp.applyVtableCallsiteOverrides()`, adopted as `out8`. §5a has the method, the
@@ -2012,28 +2261,42 @@ Ordered by what actually moves the project, not by what is easiest:
    motivates a tool is the worst thing to validate it on; these are the alternative
    subjects that item did not have before.
 
-   **THE GHIDRA-SIDE ATTACK, which is the one to try next and has never been attempted.**
-   Ghidra IS installed (§5, `/home/ion/tools/ghidra_12.1.3_PUBLIC`) and a re-run is 75–120
-   minutes, so this is affordable. The hypothesis worth testing:
+   **THE GHIDRA-SIDE ATTACK IS TRIED AND REFUTED — dead end 18.** It was cheap and
+   decisive exactly as advertised, and the answer was no. Disabling DWARF variable import,
+   parameter storage, or function import entirely leaves `stack0x`, `in_stack_` and
+   `register0x` counts UNCHANGED on all eight objects. Ghidra's native stack recovery
+   produces the same frame model; the DWARF only supplies names for slots it had already
+   placed, and turning it off replaces `MeReal myw[3]` with three untyped scalars. The
+   experiment took three minutes, not 75–120, because it is eight objects rather than 153.
 
-   > The DWARF for these functions declares names and types with **no `DW_AT_location`**.
-   > Ghidra's DWARF importer still creates those variables, so the decompiler is handed a
-   > set of typed locals it cannot place — and then has to reconcile them with its own
-   > stack analysis. Ghidra's *native* stack-frame recovery, with no DWARF at all, is
-   > usually good. **The DWARF may be making this worse, not better.**
+   **WHAT THE EXPERIMENT FOUND INSTEAD, and it is worth more than what it was looking for:
+   the frame is not lost. It is the OUTGOING ARGUMENT AREA, and every part of it is
+   pinned by the cdecl ABI rather than by debug info.** Read against the disassembly of
+   `MdtKeaAddConstraintForces`:
 
-   The experiment: dump `keaRbdCore_unified`, `MdtWorld`, `MdtBcl` and `MeMath` with DWARF
-   variable import DISABLED (Ghidra's DWARF analyzer has options for exactly this — import
-   data types but not variables/parameters), into a NEW output dir, and diff the four
-   bodies against `out9`. If the `stack0x`/`in_stack_` mess collapses into ordinary
-   `local_NN`, the whole item is solved for all eight objects at once.
+   | Ghidra spells it | it is | confirmed by |
+   |---|---|---|
+   | `register0x00000010` | the ENTRY value of ESP (x86 register-space offset 0x10), so `+1` word is `&pconstraints` at `ebp+8` | `lea 0x8(%ebp),%esi` in the prologue |
+   | `&stack0xfffffdd8` | the outgoing argument slot at `esp+4` | `lea 0x4(%esp),%edi` then `rep movsl` with `ecx=0x17` = 92 bytes |
+   | `&stack0xfffffe34` | the outgoing argument slot at `esp+0x60` | `lea 0x60(%esp),%edi`, `ecx=0x13` = 76 bytes |
+   | `in_stack_NNNN` | the VALUE of the same slot whose ADDRESS is `stack0xNNNN` | they encode the same frame offset |
 
-   **Cheap and decisive, and it costs nothing if wrong** — a per-object dump comparison,
-   with `out9` untouched. §5's rules apply: new directory, keep the old one, seven gates
-   before adoption.
+   So the copy loops are `constraints = pconstraints` and `parameters = parameters`
+   marshalled for a call, and the `MVar1.field = in_stack_...` wall is Ghidra reassembling
+   the by-value aggregate to pass it. Nothing there is unknowable.
 
-   Note this is the FIRST thing in the project that would be validated on a non-kea object:
-   `MdtBcl` and `MeMath` are one error each, so the answer shows up in minutes.
+   **One consequence has already been fixed and is in `out10`.** Ghidra was laying that
+   call's argument list out with `this` dropped, so every by-value aggregate was read one
+   word early — §5b. That was not a frame problem at all; it was a missing prototype,
+   because `ParseKarmaHeaders` matches ELF symbols by name and every C++ function in the
+   corpus is mangled.
+
+   **What is left is a text-level repair on a Ghidra-invented frame**, which is the thing
+   the guessed-stack-frame detector exists to stop, and `MdtBcl`/`MeMath` cannot validate
+   it because their single error is a different shape (an epilogue rendered as a pointer
+   assignment; genuinely dropped `fcos`/`fsin` results). Before writing it, find a subject
+   where a wrong answer would DIFFER from a right one — §12's standing lesson, and dead
+   end 12 is what it costs to skip.
 
    **The one lead that is not a guess.** The by-value *incoming* parameters are pinned by
    the cdecl ABI, not by debug info, and Ghidra already has the signature:
@@ -2394,15 +2657,18 @@ box.
 | 2 | validated = 0 ret/count/dims/overrun in a live match, `KD_SELFTEST` clean, evidence on the line | **DONE** for those twelve, and it is the standard the two new pairs have to meet. |
 | 3 | all three scenes clean for every recovered object, *and* checked for sensitivity | **DONE**, and the sensitivity check (§4a) is what makes it mean anything. |
 | 4 | qhull and the asset loader **replaced**, not recovered | **DONE, both halves — but the asset half was RECOVERED, not replaced (§8c), which is a better outcome: exact rather than equivalent.** Qhull, all four tiers: `src/McdConvexCreateHull/kd_convexhull.c` replaces all 15 exported functions — 1.4 MB → 10 KB: 100,633 invariant checks, identical geometry and volumes, a collision A/B differing on 2 borderline pairs in 2.4 M, and **a live ONS match with 15,425 real GJK calls and 0 structural divergences**. wasm32 clean with an identical symbol set. The asset loader is 9 of 9 recovered (§8c) and needs no replacement. |
-| 5 | no detector suppressed, nothing released without evidence | **HOLDING, and a NEW HOLE FOUND.** 25 objects quarantined and the quarantine is load-bearing (§4a: `MdtPartition` alone turns a bit-identical scene into a SIGSEGV). But `IxCylinderCylinder` is measured wrong on a live pair and **no detector holds it**, so it is in the build. The quarantine only catches what a detector recognises — "not held" is not "validated". §11 item 0. |
-| 6 | builds as ordinary C for wasm32 **and arm64/armv7** | **wasm32 DONE** (109/109, byte-identical symbol sets). **armv7 DONE** (109/109, symbol sets identical, and it is a 32-bit-pointer target so the recovery's core assumption holds). **arm64 COMPILES AND IS NOT TRUSTED** — 109/109 with identical symbol sets, and 920 pointer/int conversion diagnostics against armv7's 23 on the same five objects. That 40x ratio is 64-bit pointers being truncated into 4-byte slots. §6b. Nothing has been *executed* on any of the three. |
+| 5 | no detector suppressed, nothing released without evidence | **HOLDING, and the hole found here has been re-framed rather than closed.** 25 objects quarantined and the quarantine is load-bearing (§4a: `MdtPartition` alone turns a bit-identical scene into a SIGSEGV). `IxCylinderCylinder` is still un-held and still unreleased — but its 925 `dims_diff` is now known to be a label the shipped library **does not reproduce against itself** under a 1e-7 m nudge (§11 item 0), so it is not the defect it looked like. The general point stands unchanged: "not held" is not "validated". |
+| 6 | builds as ordinary C for wasm32 **and arm64/armv7** | **wasm32 DONE** (109/109, byte-identical symbol sets). **armv7 DONE** (109/109, symbol sets identical, **0 pointer-truncation diagnostics** — it is a 32-bit-pointer target so the recovery's core assumption holds). **arm64 COMPILES AND IS NOT TRUSTED** — 109/109 with identical symbol sets and **2,162 pointer-truncation diagnostics across 65 of the 109 objects**, measured corpus-wide by `test/ptrwidth_check.sh`, which is the gate this row used to say could not exist. The old "920 vs 23" figure was two diagnostic sets added together; §6b has the correction. Nothing has been *executed* on any of the three. |
 | 7 | engine runs on recovered Karma with **no shipped `.a` in the link at all** | **COLLISION HALF DONE for the twelve validated pairs** (§7b, two maps, 11 runs/arm, indistinguishable from stock) — but those runs were on maps with no cylinder traffic, so they do not cover the two new pairs. **SOLVER HALF BLOCKED**, on one problem — the arguments are recovered (§5a) and what remains is the frames, §11 item 2. |
 
 **So what is left, in one sentence each:**
 
-- **One cylinder pair, measured wrong and unheld.** `IxCylinderCylinder`, 925 `dims_diff`
-  in 24,111 real calls, with no detector holding it out of the build. Its sibling
-  `IxCylinderTriList` was measured and released the same day. §3, §11 item 0.
+- **One cylinder pair, unheld and unreleased — but not for the reason it looked like.**
+  `IxCylinderCylinder`'s 925 `dims_diff` in 24,111 real calls is a feature LABEL on
+  geometrically degenerate separating axes, and the shipped library re-rolls it whenever a
+  body moves 1e-7 m. What is genuinely unaccounted for is **3 `count_diff` in 24,111**.
+  Its sibling `IxCylinderTriList` was measured and released the same day, and is stable
+  under the same probe. §3, §11 item 0.
 - **The solver's frames** — `keaRbdCore_unified`, `keaMemory`, `keaIntegrate_pc`,
   `keaLCPSolver`+`keaLCP_new`, **and `MdtBcl`, `MeMath` and `MdtWorld`, which are new and
   are the cheapest subjects to validate a fix on — one error, one error and ten.**
@@ -2413,7 +2679,8 @@ box.
 - ~~**qhull and the asset loader**~~ — **both done.** Qhull is replaced and validated at
   four tiers including a live match (§8a, §8b); the asset loader turned out to be
   RECOVERABLE and is 9 of 9 (§8c).
-- **arm64** — untried, needs a cross-compiler.
+- **arm64** — compiles, and is measured to truncate pointers in 65 of 109 objects.
+  `test/ptrwidth_check.sh`, §6b. The fix is generator-wide, not a flag.
 - **Executing anything on wasm** — the web agent's job. `HANDOVER-WEB.md`.
 - **The tail** — 14 objects, 271 errors, fully triaged in §13, and **effectively finished**:
   3 unreachable, 2 documented leave-alones, 3 dead end 9, **4 the §11 item 2 frame problem**
@@ -2507,6 +2774,18 @@ success. Before trusting a green result, ask:
   before quoting a bit-identical result.)
 - **Does the failure message identify the failure?** (Four objects said "Traceback (most
   recent call last):" and nothing else.)
+- **Is the test drawing from the distribution the game draws from?** (Added 2026-08-24,
+  fifth session. `difftest_pair` generated only random axis-angle rotations for its whole
+  life. `IxCylinderCylinder` read 0.01% divergence there and 3.8% in a live match, and the
+  difference was entirely that the game's cylinders are AXIS-ALIGNED. `KD_GRID=1` closes
+  the gap to 12%. This is one level up from "is any input fixed that the game varies?" —
+  the value was varying, and varying wrongly.)
+- **Can the ORIGINAL reproduce the thing you are asking the recovery to reproduce?**
+  (Added 2026-08-24, fifth session. `KD_JITTER` runs the shipped library against itself on
+  inputs differing by 1e-7 m. For `McdCylinderCylinderIntersect`'s `dims` it cannot — it
+  disagrees with itself 7,798 times where our recovery disagrees 6,432. Every other pair in
+  the driver reads 0, so the probe discriminates. A gate that demands more consistency than
+  the reference has is measuring the wrong thing.)
 - **If a SEARCH came back empty, can it find anything at all?** (Added 2026-08-24. Grepping
   2,015 asset packages for `CylinderElems` returned 0 and looked like the answer to a
   question that had been open for sessions. The same grep returns 0 for `BoxElems` and
@@ -2539,7 +2818,7 @@ can reach it — §3b — so it is out of scope, not a to-do.**
 | `McdBox` | live | 2 | **dead end 9**, at lines 235/236. Not the cheap win the error count makes it look |
 | `keaLCP_new` | live | 10 | **solver, do not text-repair.** §11 item 2 — nine calls short by one argument at non-uniform frame offsets |
 | `MdtWorld` | live | **10** | **RECLASSIFIED — this is the solver-frame problem, §11 item 2, and it is the cheapest place to attack it.** 6 `stack0x` + 6 `incompatible type for argument N` of `MdtKeaAddConstraintForces`/`MdtKeaIntegrateSystem`. `fix_stack_address_name` refuses correctly: the copy at line 253 writes 19 `MeReal` = 76 bytes (an `MdtKeaParameters`) and Ghidra declared 4. Outgoing by-value aggregate passing, exactly as §11 item 2 predicts — but in a NON-kea object, so a fix can be validated somewhere cheap |
-| `MdtBcl` | live | **1** | **31 → 1** on 2026-08-24: 22 errors were `FUN_00021130`, which is `.eh_frame` decompiled as code, and 2 more were `halt_baddata`-only functions (see below). The one left is `&stack0xfffffff4` used as a base to read a locals block at −0x80…−0x68 — and it is Ghidra rendering the function's **epilogue** (`lea -0xc(%ebp),%esp`) as a pointer assignment. §11 item 2's family. **Tied with `MeMath` for the cheapest validation subject in the project** |
+| `MdtBcl` | live | **1** | **31 → 1** on 2026-08-24: 22 errors were `FUN_00021130`, which is `.eh_frame` decompiled as code, and 2 more were `halt_baddata`-only functions (see below). The one left is `&stack0xfffffff4` used as a base to read a locals block at −0x80…−0x68 — and it is Ghidra rendering the function's **epilogue** (`lea -0xc(%ebp),%esp`) as a pointer assignment. §11 item 2's family. Cheapest object in the tail, but **NOT a validation subject for §11 item 2** — its single error is an epilogue rendered as a pointer assignment, a different shape from `MdtWorld`'s outgoing by-value marshalling, so a fix for one will not show up here |
 | `MeMath` | live | **1** | one `stack0x` at line 495, genuine frame loss rather than a name: Ghidra also dropped the `fcos`/`fsin` results that build the matrix being read. Same family as `MdtBcl` and `MdtWorld` |
 | `MeProfile_linux` | live | 13 | open, **low value** (§3b puts it under platform/misc) — and §13 used to undersell it as "an `rdtsc` shim". It needs that, plus `struct timeval` as a bare tag, plus the §5 EXTERNAL-slot collision (`_select` and `_clockSpeed` are neighbours of `frameTime`, not real symbols). Four families for a profiler timer |
 | `MeProfile` | live | **29** | open, **low value** — 11 `request for member`, 5 `weightingData` (§11 item 7: a variable, not a type), 5 of the exported-DATA rename gap (`frameTime`/`clockSpeed` vs `kd_*`; dead end 10), 2 `__divdi3`/`__udivdi3` |

@@ -1661,6 +1661,34 @@ That third point is the one to hold on to: with the same hull on both sides the 
 convex difftest still works unchanged, so this is testable — it just cannot be tested by
 diffing against the shipped hull.
 
+### 8b. The replacement, and how far it is validated
+
+`src/McdConvexCreateHull/kd_convexhull.c` — ~600 lines of plain C, all 15 exported
+functions, **1,416,194 bytes → 10,382**. Stage it into a metoolkit tree with
+`test/make_hull_lib.sh`, which also asserts the exported symbol set still matches the
+shipped archive.
+
+| tier | how | result |
+|---|---|---|
+| 1 — is it a valid hull? | `KD_HULL_IMPL=… test/hull_probe.sh` | **100,633 checks, 0 failures**; identical V/F/E to shipped on all six shapes; every degenerate case and the 1e-6/1e-5 cutoff match |
+| 2 — is it the same solid? | `test/hull_ab.sh` | 894 canonical lines, **1 differing** (one normal component by 1e-4), **all six volumes identical** |
+| 3 — does collision behave? | full `difftest_pair` A/B, same driver and build | 12 pairs, 2.4 M pairs: **identical except two borderline pairs flipping to touching** |
+
+Tier 3's two differences are `McdGjkCgIntersect` (46983 → 46984 touching, 0 → 1 count) and
+`McdConvexMeshTriangleListIntersect` (175353 → 175354 touching), which is what a 1e-4 change
+in a face normal does. **Attributed, not assumed**: `KD_SELFTEST` on GJK with the new hull is
+200,000 pairs 100% bit-identical, so the hull and harness are sound and that count divergence
+is the *recovered* `McdGjk`'s own residual on an input the shipped hull never produced —
+precisely the "low and sample-dependent" behaviour `proven.txt` already records.
+
+Also: **wasm32 compiles with a symbol set identical to i386**, clean under `-Wall -Wextra`.
+The shipped archive additionally exports `dfacet`/`dvertex`, qhull's debugger helpers;
+nothing in any of the sixteen archives references them, so they are deliberately absent.
+
+**What is NOT done: it has never run in the game.** The difftest exercises synthetic hulls; a
+live match exercises the `.ka` collision volumes UT2004 actually ships, which is a different
+distribution. That is the next step for this item.
+
 **Tier 1 exists: `test/hull_probe.sh`.** It runs the SHIPPED `McdComputeHull` and checks
 every claim the header makes in prose. **98,899 checks, 0 failures**, so the contract above
 is verified rather than assumed, and the same checker is the acceptance test for a
@@ -1769,7 +1797,7 @@ Everything else — code, tests, measurement, tooling — is self-service.
 | 1 | every pair the census shows the game calling is recovered and validated | **DONE.** Twelve pairs, eight objects, evidence in `proven.txt`. Re-opens if the census moves — it has twice. |
 | 2 | validated = 0 ret/count/dims/overrun in a live match, `KD_SELFTEST` clean, evidence on the line | **DONE** for those twelve. |
 | 3 | all three scenes clean for every recovered object, *and* checked for sensitivity | **DONE**, and the sensitivity check (§4a) is what makes it mean anything. |
-| 4 | qhull and the asset loader **replaced**, not recovered | **NOT STARTED, and bigger than it looks — read §8a.** "Load-time only" is wrong: the hull is built once and KEPT, and GJK's support function hill-climbs its adjacency on every query, under the busiest pair in the census. The asset loader half (`MeAssetDB`/`MeXML`/`MeAssetFactory`, `.ka` XML parsing) really is a straight swap-in. §11 item 8. |
+| 4 | qhull and the asset loader **replaced**, not recovered | **QHULL HALF DONE.** `src/McdConvexCreateHull/kd_convexhull.c` replaces all 15 exported functions — 1.4 MB → 10 KB — and passes all three tiers in §8a: 100,633 invariant checks, identical geometry and volumes, and a collision A/B that differs on 2 borderline pairs in 2.4 M. wasm32 clean with an identical symbol set. **Not yet run in the game.** The asset-loader half (`MeAssetDB`/`MeXML`/`MeAssetFactory`) is NOT STARTED and is a straight swap-in. §11 item 8. |
 | 5 | no detector suppressed, nothing released without evidence | **HOLDING.** 22 objects quarantined, and §4a now shows the quarantine is load-bearing (`MdtPartition` alone turns a bit-identical scene into a SIGSEGV). |
 | 6 | builds as ordinary C for wasm32 **and arm64/armv7** | **wasm32 DONE** (99/99, byte-identical symbol sets). **arm64 NOT TRIED** — no cross-compiler installed. Nothing has been *executed* on either. |
 | 7 | engine runs on recovered Karma with **no shipped `.a` in the link at all** | **COLLISION HALF DONE** (§7b, two maps, 11 runs/arm, indistinguishable from stock). **SOLVER HALF BLOCKED**, but on one problem now rather than four — the arguments are recovered (§5a) and what remains is the frames, §11 item 2. |

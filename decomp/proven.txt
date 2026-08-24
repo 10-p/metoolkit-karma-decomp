@@ -417,6 +417,64 @@ IxConvexTriList       RELEASED 2026-08-23, and the tenth and last pair the censu
 #                     withdrawn -- it was unanswerable. HANDOVER.md 3a.
 
 
+# --- libMcdConvexCreateHull, REPLACED not recovered ---------------------------
+#
+# HANDOVER.md 12 item 4, the qhull half. src/McdConvexCreateHull/kd_convexhull.c
+# provides all 15 exported functions in ~600 lines of plain C, replacing qhull
+# 2.6 (1998). 1,416,194 bytes -> 10,382. Stage it with test/make_hull_lib.sh.
+#
+# This is a REPLACEMENT, so "compare against the shipped output" is not an
+# available test: the hull REINDEXES, and two correct implementations can
+# disagree about every index while describing the same solid. Three tiers
+# instead, all green.
+#
+# TIER 1 -- invariants (test/hull_probe.sh, KD_HULL_IMPL=...):
+#   100,633 checks, 0 failures. Identical V/F/E to the shipped library on all
+#   six shapes. Coplanar triangles merge (a cube is 6 quads, not 12 triangles),
+#   interior and redundant coplanar input points are discarded, every edge is
+#   paired, winding is ACW seen from outside, sentinels present.
+#
+#   Degenerate input matches the shipped behaviour case for case:
+#     1 point / coplanar triangle / coplanar square / collinear  -> 0
+#     tetrahedron with every vertex duplicated  -> V=4 F=4 E=12
+#     unit square extruded by t  -> rejects t <= 1e-6, builds from t >= 1e-5
+#   That cutoff matters in BOTH directions -- McdConvexMeshCreateHull only
+#   checks the return value, so accepting a box the shipped code rejects would
+#   invent collision geometry the game never had.
+#
+# TIER 2 -- same solid (test/hull_ab.sh). Canonical geometry, sorted vertex
+#   positions and face planes plus enclosed volume, diffed:
+#     894 lines, ONE differing -- a single face-normal component by 1e-4 on the
+#     200-point cloud -- and ALL SIX VOLUMES IDENTICAL to 5 decimals.
+#
+# TIER 3 -- collisions, new hull on BOTH sides. Full difftest_pair run against
+#   a shipped-hull run of the SAME driver and the SAME build, diffed:
+#
+#     12 pairs, 2.4 M pairs tested. IDENTICAL except:
+#       McdGjkCgIntersect                   46983 -> 46984 touching, 0 -> 1 count
+#       McdConvexMeshTriangleListIntersect  175353 -> 175354 touching, 0 -> 0
+#
+#   Two borderline pairs out of 400,000 convex tests flip from not-touching to
+#   touching, which is exactly what a 1e-4 change in a face normal does. One of
+#   them lands on McdGjk's own known residual.
+#
+#   ATTRIBUTED, not assumed. KD_SELFTEST on McdGjkCgIntersect with the new hull:
+#   200,000 pairs, 100% bit-identical, worst delta exactly 0. So the hull and the
+#   harness are sound and that count divergence is the RECOVERED McdGjk code, on
+#   an input the shipped hull did not happen to produce. This is the "low and
+#   sample-dependent" rate the McdGjk entry above already records, and the note
+#   there -- "varying the hull changes the inputs completely" -- predicted it.
+#
+# Also: wasm32 compiles with a symbol set identical to i386 (15 functions), which
+# is 12 item 6 satisfied for this object, and the file is clean under
+# -Wall -Wextra. The shipped archive additionally exports `dfacet`/`dvertex`,
+# qhull's debugger helpers; nothing in any of the sixteen archives references
+# them, so they are deliberately absent rather than stubbed.
+#
+# NOT YET DONE: this has not been run in the GAME. The difftest exercises it on
+# synthetic hulls; a live match would exercise it on the .ka collision volumes
+# UT2004 actually ships, which is a different distribution.
+
 # --- libMdtKea, the solver ---------------------------------------------------
 #
 # READ THIS FIRST if you have been told the solver is "not started in any

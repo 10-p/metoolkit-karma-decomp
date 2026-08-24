@@ -121,9 +121,12 @@ static int dedup(Build *b, const MeVector3 *src, int n)
     hi = v3(-1e300, -1e300, -1e300);
     for (i = 0; i < n; i++) {
         double x = src[i][0], y = src[i][1], z = src[i][2];
-        if (x < lo.x) lo.x = x;  if (x > hi.x) hi.x = x;
-        if (y < lo.y) lo.y = y;  if (y > hi.y) hi.y = y;
-        if (z < lo.z) lo.z = z;  if (z > hi.z) hi.z = z;
+        if (x < lo.x) lo.x = x;
+        if (x > hi.x) hi.x = x;
+        if (y < lo.y) lo.y = y;
+        if (y > hi.y) hi.y = y;
+        if (z < lo.z) lo.z = z;
+        if (z > hi.z) hi.z = z;
     }
     b->scale = hi.x - lo.x;
     if (hi.y - lo.y > b->scale) b->scale = hi.y - lo.y;

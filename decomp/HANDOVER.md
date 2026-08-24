@@ -1762,6 +1762,24 @@ Box × TriangleList at zero calls. Recorded so nobody re-derives the old number.
    check the ADDRESS before extending the vocabulary.**
 
 
+17. **`-ffloat-store`, to make x87 intermediates round like the original's.** The reasoning
+   looks airtight: the shipped `OverlapCylCyl` has **216 `fsts`** against our **96**, so it
+   rounds intermediates to 32 bits far more often while ours keeps 80-bit x87 registers,
+   and `IxCylinderCylinder`'s divergence is a separating-axis TIE-BREAK
+   (`if (maxSeparation < fVar11)` at `IxCylinderCylinder.c:1275`), which is exactly what one
+   extra bit of precision flips. Both objects use x87, so it is not an SSE/387 mismatch
+   either. It is still wrong:
+
+   | build | count_diff | dims_diff | worst delta |
+   |---|---:|---:|---|
+   | baseline | 1 | 20 | 6.914e-06 |
+   | `-ffloat-store` | 6 | 44 | **8.618e-01** |
+
+   And it took `fsts` **down** to 69, not up. The flag does not do what the instruction
+   counts suggest it should, and a five-order-of-magnitude jump in worst delta says it is
+   perturbing the arithmetic rather than aligning it. Excess precision is not the cause of
+   that divergence; measure before adopting a whole-corpus flag on this reasoning.
+
 ---
 
 ## 10. Facts established by measurement (do not re-derive)

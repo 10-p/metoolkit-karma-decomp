@@ -523,6 +523,31 @@ IxConvexTriList       RELEASED 2026-08-23, and the tenth and last pair the censu
 #                     matters is unmeasured. DO NOT RELEASE, and consider whether it should
 #                     be pulled from the substituted build until it is understood.
 #
+#                     LOCALISED, so the next attempt does not start from nothing.
+#                     OverlapCylCyl writes outDims at seven sites; 0x103 and 0x303 are both
+#                     real values, at IxCylinderCylinder.c:1389 and :1413, and the branch
+#                     between them is `if ((normInfo & 3U) == 0)`. normInfo is set once, at
+#                     :1275, as `minAxis1 | cVar10 << 2` — inside
+#                     `if (maxSeparation < fVar11)`, i.e. it records WHICH SEPARATING AXIS
+#                     WON. So the divergence is a SAT tie-break, and grid-aligned cylinders
+#                     (the logged transforms have rows of exactly 1/0/-1) produce ties
+#                     constantly. That is the same class as the threshold flapping in 8,
+#                     at a much higher rate because the geometry keeps hitting ties.
+#
+#                     EXCESS PRECISION RULED OUT, and this is worth reading before trying
+#                     it. The shipped OverlapCylCyl has 216 `fsts` against our 96 — it
+#                     rounds intermediates to 32 bits far more often, while ours keeps them
+#                     at 80 bits in x87 registers, which is exactly what flips a tie. Both
+#                     use x87, so it is not an SSE/387 mismatch. Rebuilding with
+#                     -ffloat-store made it WORSE, not better:
+#
+#                       baseline        1 count   20 dims   worst 6.914e-06
+#                       -ffloat-store   6 count   44 dims   worst 8.618e-01
+#
+#                     and it took `fsts` DOWN to 69 rather than up. So the flag does not do
+#                     what the instruction counts suggest, and the 80-bit intermediates are
+#                     not the cause. See dead end 17.
+#
 # IxBoxTriList        Held by the reconstructed-frame detector (kd_argslot_), which exists
 #                     because IxSphereTriList compiled, passed the substitute gate and then
 #                     segfaulted on its first live call. So a clean synthetic run is not

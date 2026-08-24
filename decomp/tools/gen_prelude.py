@@ -69,6 +69,15 @@ def undefined(obj):
 
 
 _data_decl_cache = {}
+_dies_cache = {}
+
+
+def _dies(obj):
+    """readelf per static adds up — four DWARF lookups now run over the same
+    object. Same parse, memoised for the life of the process."""
+    if obj not in _dies_cache:
+        _dies_cache[obj] = dwarf_structs.parse(obj)
+    return _dies_cache[obj]
 
 
 def extern_data_declaration(corpus, name):
@@ -163,7 +172,7 @@ def dwarf_array_alias(obj, names, size, c_name, qual):
     code is doing with it. Returns None unless the element type is a plain named
     type and every dimension is known, so anything unusual keeps the bytes and
     the honest compile error."""
-    dies = dwarf_structs.parse(obj)
+    dies = _dies(obj)
     # The ELF symbol for a function-local static is mangled
     # (`_ZZ18McdSphereDebugDrawE10sphereDraw`); DWARF names it `sphereDraw`. Try
     # both, and require exactly ONE size-matching DIE — two locals of the same
@@ -222,6 +231,89 @@ def dwarf_array_alias(obj, names, size, c_name, qual):
             f'(*({elem} (*){shape})(const void *){c_name}_kdbytes)')
 
 
+def dwarf_local_static_owner(obj, base, size):
+    """Which function owns gcc's `nxt.0` — read from the DWARF, not guessed.
+
+    A C function-local static gets no mangling from gcc 3.2: `static const int
+    nxt[3]` inside `MeQuaternionFromTM` becomes the ELF symbol `nxt.0`, and the
+    function's name appears nowhere in it. Ghidra does not have that problem —
+    the DWARF DIE is a CHILD of the enclosing DW_TAG_subprogram — so it prints
+    `MeQuaternionFromTM::nxt`, which ghidra_clean flattens to
+    `MeQuaternionFromTM__nxt`.
+
+    Without the same lookup the prelude defines `nxt_0`, the body references
+    `MeQuaternionFromTM__nxt`, and the object fails on a name that IS declared,
+    under a spelling nothing produces. The C++-mangled spelling
+    (`_ZZ18McdSphereDebugDrawE10sphereDraw`) already resolves through demangle();
+    this is the C half of the same thing.
+
+    Requires exactly ONE size-matching hit: two functions with a local static of
+    the same name would otherwise pick an arbitrary one, and the `.N`
+    discriminator is not a reliable index into anything."""
+    dies = _dies(obj)
+    hits = []
+    for d in dies.values():
+        if d['tag'] != 'DW_TAG_subprogram':
+            continue
+        fn = d['attrs'].get('DW_AT_name')
+        if not fn:
+            continue
+        stack = list(d['children'])
+        while stack:
+            c = stack.pop()
+            if c['tag'] == 'DW_TAG_subprogram':
+                continue                # a nested function owns its own locals
+            if (c['tag'] == 'DW_TAG_variable'
+                    and c['attrs'].get('DW_AT_name') == base):
+                t = c['attrs'].get('DW_AT_type')
+                m = re.search(r'<0x([0-9a-f]+)>', t) if t else None
+                if m and dwarf_structs.type_size(dies, int(m.group(1), 16)) == size:
+                    hits.append(fn)
+            stack.extend(c['children'])
+    return hits[0] if len(set(hits)) == 1 else None
+
+
+def dwarf_scalar_alias(obj, names, size, c_name, qual):
+    """The scalar half of dwarf_array_alias, and for the same reason.
+
+    A four-byte static with real bytes in it renders as `static float x =
+    1.1210387714598537e-44f`, which is byte-exact and type-wrong: the bytes are
+    the integer 8. Nothing catches that until the code does something a float
+    cannot do — `firstfd->next`, `output.style`, `nxt[i]` as an index — and by
+    then the reading is already wrong rather than merely unspelled.
+
+    Keep the bytes, which cannot be wrong, and alias them at the type the
+    object's own DWARF declares. Declines on anything that is not a plain named
+    type or a pointer to one, so an aggregate keeps the honest compile error."""
+    dies = _dies(obj)
+    hits = []
+    for die in dies.values():
+        if die['tag'] != 'DW_TAG_variable':
+            continue
+        if die['attrs'].get('DW_AT_name') not in names:
+            continue
+        t = die['attrs'].get('DW_AT_type')
+        m = re.search(r'<0x([0-9a-f]+)>', t) if t else None
+        if m and dwarf_structs.type_size(dies, int(m.group(1), 16)) == size:
+            hits.append(int(m.group(1), 16))
+    if len(hits) != 1:
+        return None
+    spelled = dwarf_structs.type_name(dies, hits[0])
+    if not spelled:
+        return None
+    # `const int`, `struct MeProfileFrameData *`, `MeProfileLogModes_enum` — a
+    # named type with at most one level of pointer. An array is dwarf_array_alias'
+    # job and a bare `struct {...}` has no spelling to cast to.
+    m = re.fullmatch(r'(const\s+|volatile\s+)*((?:struct|union|enum)\s+)?'
+                     r'([A-Za-z_]\w*)\s*(\*?)', spelled.strip())
+    if not m:
+        return None
+    inner = f'{m.group(2) or ""}{m.group(3)}{" " + m.group(4) if m.group(4) else ""}'
+    if qual.strip() == 'const' or (m.group(1) or '').strip() == 'const':
+        inner = 'const ' + inner
+    return f'#define {c_name} (*({inner} *)(void *){c_name}_kdbytes)'
+
+
 def dwarf_static_declaration(obj, name, size):
     """`MeFAssetCreateFromFile MeFAssetCreateFunc[1]` for a file-scope static.
 
@@ -239,7 +331,7 @@ def dwarf_static_declaration(obj, name, size):
     that is the same source the imported-symbol path already uses. Restricted to
     ALL-ZERO bytes, so a static with a real initialiser keeps the byte-exact
     rendering and nothing is lost to a prettier type."""
-    dies = dwarf_structs.parse(obj)
+    dies = _dies(obj)
     for die in dies.values():
         if die['tag'] != 'DW_TAG_variable':
             continue
@@ -478,6 +570,12 @@ def main():
     obj = args.object
     rows = nm_rows(obj)
     ctor_inits, ctor_messy = ctor_initialisers(args.dump) if args.dump else ({}, False)
+    # Does this object have a C++ static constructor at all? The .bss branch
+    # below needs to tell "zero because the value is installed at load time"
+    # from "zero because this is C and zero IS the value". The symbol table
+    # answers it outright, and unlike the dump it is always available.
+    has_ctor = any(re.search(r'__static_initialization_and_destruction|_GLOBAL__I', n)
+                   for _v, _s, _k, n in rows)
     protos = {}
     if args.protos:
         # `float Foo(void *, int);` -> protos['Foo'] = the whole line
@@ -611,6 +709,17 @@ def main():
         m = re.match(r'(.+)::(.+)$', dem)
         if m:
             c_name = f'{m.group(1)}__{m.group(2)}'
+        # The C half of the same thing. gcc 3.2 does not mangle a local static
+        # in a C translation unit — it emits `nxt.0`, with the function's name
+        # nowhere in the symbol — but Ghidra reads the owner out of the DWARF
+        # and still prints `MeQuaternionFromTM::nxt`. See
+        # dwarf_local_static_owner; `base` is also the name the DWARF uses, so
+        # the type lookups below have to ask for it too.
+        base = re.sub(r'\.\d+$', '', dem)
+        if base != dem:
+            owner = dwarf_local_static_owner(obj, base, size)
+            if owner:
+                c_name = f'{owner}__{base}'
         if kind == 'b':
             w(f'/* {name}  ({sect}, {size} bytes) */')
             inits = ctor_inits.get(c_name) or ctor_inits.get(name)
@@ -623,10 +732,24 @@ def main():
                 w(f'/* recovered from __static_initialization_and_destruction_0 */')
                 w(f'static float {c_name}[{n}] = {{ ' + ', '.join(vals) + ' };')
             else:
-                w('/* TODO: zero in the object — value comes from the C++ static constructor,')
-                w(' * which the tool could not read. Check')
-                w(' * __static_initialization_and_destruction_0 in the decompiled dump. */')
-                w(f'static float {c_name}[{n}]; /* TODO: initializer */')
+                # No stores to recover. For a C translation unit that is not a
+                # gap at all — there IS no static constructor, and .bss means
+                # the value is zero at load. The DWARF type is then the whole
+                # answer, and it is the difference between `firstfd->next`
+                # compiling and `static float firstfd` swallowing 45 errors.
+                # An object that DOES have a constructor keeps the TODO, since
+                # there the zero really is a value the tool could not read.
+                decl = (dwarf_static_declaration(obj, base, size)
+                        if not has_ctor else None)
+                if decl:
+                    w('/* type from this object\'s DWARF; .bss and no static')
+                    w(' * constructor in this object, so zero IS the value */')
+                    w(f'static {decl};')
+                else:
+                    w('/* TODO: zero in the object — value comes from the C++ static constructor,')
+                    w(' * which the tool could not read. Check')
+                    w(' * __static_initialization_and_destruction_0 in the decompiled dump. */')
+                    w(f'static float {c_name}[{n}]; /* TODO: initializer */')
             w('')
             continue
         lit, note = render_value(data.get(sect, b''), value, size or 0)
@@ -644,13 +767,31 @@ def main():
                 w(f'static {qual0}{decl};')
                 w('')
                 continue
-        if note:
-            w(f'/* read from object: {note} */')
         # `const` only for .rodata. A .data static is writable by definition, and
         # several of them are file-scope scratch: IxCylinderCylinder keeps its
         # dot products there, and marking them const made ten assignments in
         # CylCylIntersect fail to compile.
         qual = 'const ' if sect == '.rodata' else ''
+        # The bytes are exact either way; the DWARF adds the TYPE. Ask it BEFORE
+        # falling back to the float rendering, because that rendering is a guess
+        # and this is evidence — `nxt.0` is `const int nxt[3]` = {1,2,0} and
+        # renders as {1.4e-45f, 2.8e-45f, 0.0f}, which stores the right bytes and
+        # then reads them as zero the moment the code uses one as an index.
+        # Only the ALIAS form is used, never a re-rendered literal, so the bytes
+        # in the object remain the bytes in the recovery.
+        cands = {name, dem, dem.split('::')[-1], base}
+        alias = (dwarf_array_alias(obj, cands, size, c_name, qual)
+                 or dwarf_scalar_alias(obj, cands, size, c_name, qual)) if size else None
+        if alias:
+            raw = chunk_of(data.get(sect, b''), value, size)
+            w('/* bytes exact; type from this object\'s DWARF */')
+            w(f'static {qual}unsigned char {c_name}_kdbytes[{len(raw)}] = {{ '
+              + ', '.join('0x%02x' % b for b in raw) + ' };')
+            w(alias)
+            w('')
+            continue
+        if note:
+            w(f'/* read from object: {note} */')
         if lit and size == 4:
             w(f'static {qual}float {c_name} = {lit};')
         elif lit:
@@ -662,17 +803,9 @@ def main():
             # something other than bytes the compiler says so, which is better
             # than a TODO nobody reads.
             raw = chunk_of(data.get(sect, b''), value, size)
-            # The bytes are exact either way; the DWARF adds the SHAPE, which is
-            # what code indexing the table needs. See dwarf_array_alias.
-            cands = {name, dem, dem.split('::')[-1]}
-            alias = dwarf_array_alias(obj, cands, size, c_name, qual)
-            byte_name = f'{c_name}_kdbytes' if alias else c_name
-            w(f'/* element type unknown; bytes are exact */' if not alias
-              else f'/* bytes exact; shape from this object\'s DWARF */')
-            w(f'static {qual}unsigned char {byte_name}[{len(raw)}] = {{ '
+            w(f'/* element type unknown; bytes are exact */')
+            w(f'static {qual}unsigned char {c_name}[{len(raw)}] = {{ '
               + ', '.join('0x%02x' % b for b in raw) + ' };')
-            if alias:
-                w(alias)
         else:
             w(f'/* TODO: {c_name} — tool could not render a literal */')
         w('')

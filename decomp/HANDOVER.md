@@ -1973,10 +1973,24 @@ Ordered by what actually moves the project, not by what is easiest:
    this becomes verifiable and is an afternoon.
 
 
-4. **Audit the other callbacks the way the triangle generator was audited** (§8, §12). The
-   triangle generator is still the only stub in `difftest_pair.c` that depends on its
-   arguments. The allocator and `McdCacheHello`/`Goodbye` have the same exposure and have
-   never been checked. Cheap, with a track record.
+4. **DONE — the callbacks are audited.** Result: one real exposure, closed and measured
+   inert; the other two do not exist in this driver.
+
+   - **Shared mutable state.** `difftest_pair.c` gave BOTH implementations the same
+     `McdModelPair`, so anything the original wrote into it — `McdGjkCgIntersect` keeps a
+     cache there — was read by the recovered one. `kd_shadow.c` has carried the fix for
+     this since §7; the synthetic driver never got it. Each side now gets its own pair,
+     `KD_SHARECACHE=1` restores the old behaviour. **Measured: every verdict and every
+     count is byte-for-byte unchanged** (IxBoxBox 1, IxSphereTriList 137, IxBoxTriList
+     1463/139961/12060, IxCylinderCylinder 1/20), because the cache pointer is NULL here so
+     nothing was ever written. The exposure was real and currently inert — worth closing
+     because the moment anyone warms the cache it stops being inert.
+   - **The allocator** is not stubbed: the driver builds a real `MstUniverse`, so Karma's
+     own allocator runs. Nothing to audit.
+   - **`McdCacheHello`/`Goodbye`** are not stubbed and never called, which is exactly why
+     GJK runs cold-path-only here. That remains a documented limit on this evidence, and
+     it is the one piece of §11 item 4 still open: **warming the GJK cache is untested
+     ground on the busiest pair family in the census.**
 
 5. **Chase what is left of the `IxBoxBox` and `McdGjk` divergences** (§8). Both reproduce
    synthetically once box dimensions vary — 1 and 2 count divergences in 200,000 — so they

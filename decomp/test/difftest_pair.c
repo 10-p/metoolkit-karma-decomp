@@ -147,6 +147,7 @@ static McdGeometryID mk_cylinder(McdFrameworkID fw, int seed)
    transform sequence differs and numbers either side of this switch are not
    comparable iteration by iteration, only in aggregate. */
 static int kd_fixedshape;
+static int kd_sharecache;      /* KD_SHARECACHE=1 — the pre-2026-08-24 behaviour */
 
 /* Declared here because reshape() uses them; built after the ConvexMesh type is
    registered, and documented at build_hulls() below. */
@@ -520,6 +521,7 @@ int main(int argc, char **argv)
     const char *tf = getenv("KD_TRIFLAGS");
     if (tf) kd_triflags = (McdTriangleFlags)strtol(tf, NULL, 0);
     kd_gen_check = getenv("KD_GENARGS") != NULL;
+    kd_sharecache = getenv("KD_SHARECACHE") != NULL;
     kd_fixedshape = getenv("KD_FIXEDSHAPE") != NULL;
     const char *e = getenv("KD_SELFTEST");
     int selftest = (e && *e == '1');
@@ -565,19 +567,30 @@ int main(int argc, char **argv)
 
             McdModelPair pair;  memset(&pair, 0, sizeof pair);
             pair.model1 = m1; pair.model2 = m2;
+            /* The second call gets its OWN pair, and this is not paranoia —
+               kd_shadow.c carries the same fix and §7 records what it cost to
+               find: the two implementations shared a McdModelPair for months,
+               so anything the first wrote into it (McdGjkCgIntersect keeps a
+               cache there) was read by the second. That masks divergences in
+               exactly the code least covered here, and it is §12's checklist
+               question "does the harness share mutable state with the thing it
+               measures?". KD_SHARECACHE=1 restores the old behaviour, matching
+               the shadow harness's escape hatch, so the two can be A/B'd. */
+            McdModelPair pair_b = pair;
+            McdModelPair *pb = kd_sharecache ? &pair : &pair_b;
 
             McdContact cA[MAXC], cB[MAXC];
             McdIntersectResult rA, rB;
             memset(cA, 0, sizeof cA); memset(cB, 0, sizeof cB);
             memset(&rA, 0, sizeof rA); memset(&rB, 0, sizeof rB);
             rA.pair = &pair; rA.contacts = cA; rA.contactMaxCount = MAXC;
-            rB.pair = &pair; rB.contacts = cB; rB.contactMaxCount = MAXC;
+            rB.pair = pb;    rB.contacts = cB; rB.contactMaxCount = MAXC;
 
             kd_gen_side = 0; kd_gen_calls[0] = kd_gen_calls[1] = 0;
             int a = PAIRS[k].orig(&pair, &rA);
             kd_gen_side = 1;
-            int b = selftest ? PAIRS[k].orig(&pair, &rB)
-                             : PAIRS[k].rec (&pair, &rB);
+            int b = selftest ? PAIRS[k].orig(pb, &rB)
+                             : PAIRS[k].rec (pb, &rB);
 
             if (kd_gen_check && kd_gen_calls[0] && kd_gen_calls[1]) {
                 int off = (kd_gen_radius[0] != kd_gen_radius[1]

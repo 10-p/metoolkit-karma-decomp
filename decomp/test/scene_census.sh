@@ -18,6 +18,19 @@
 # With no object names every recovered object that owns an archive member is
 # swapped in at once, which also answers a question substitute_test.sh does not
 # ask: does the scene still run with ALL of them in the link together.
+#
+# KD_CENSUS_VALIDATED=<dir> restricts the sweep to objects present in that
+# directory — point it at recover.py's build dir (/tmp/kd_build) to census the
+# VALIDATED set only.
+#
+# Without it this script instruments every object whose .c compiles, which
+# includes the ones recover.py's detectors are holding back, and one of those
+# is MdtPartition: HANDOVER.md 4a records that adding it turns scene_chain from
+# bit-identical into an immediate SIGSEGV. So the unrestricted sweep now dies
+# with `0 rows of trajectory` before writing any census at all — a gate that
+# cannot pass is not a gate, and the failure looks like a regression in
+# whatever was last changed rather than like the quarantine working. Restricting
+# to the validated set is what §4 means when it lists this as a gate.
 set -uo pipefail
 
 CDIR="${1:?dir of recovered .c files}"
@@ -43,7 +56,8 @@ BASELIB="$WORK/orig"; mkdir -p "$BASELIB"; cp "$LIBDIR"/*.a "$BASELIB/"
 gcc -m32 -O2 -fno-pic -std=gnu99 -w -c -o "$WORK/kd_instr.o" "$HERE/kd_instr.c" || {
     echo "FATAL: kd_instr.c did not compile"; exit 1; }
 
-objs=""; n=0; skipped=0; notrecovered=0
+objs=""; n=0; skipped=0; notrecovered=0; quarantined=0
+VALIDATED="${KD_CENSUS_VALIDATED:-}"
 for c in "$CDIR"/*.c; do
     [ -e "$c" ] || continue
     base=$(basename "$c" .c)
@@ -51,6 +65,11 @@ for c in "$CDIR"/*.c; do
         keep=0
         for w in "${WANT[@]}"; do [ "$w" = "$base" ] && keep=1; done
         [ "$keep" = 1 ] || continue
+    fi
+    # Held back by a recover.py detector: it compiles, and compiling is not the
+    # bar. Counted separately so the number is visible rather than silent.
+    if [ -n "$VALIDATED" ] && [ ! -e "$VALIDATED/$base.o" ]; then
+        quarantined=$((quarantined+1)); continue
     fi
     # Only objects that actually replace a library member are meaningful here:
     # anything else is dead code in the link and would report zero calls for a
@@ -74,7 +93,7 @@ for c in "$CDIR"/*.c; do
     ar d "$owner" "$base.o" 2>/dev/null
     objs="$objs $WORK/$base.o"; n=$((n+1))
 done
-echo "instrumented $n object(s), $skipped not library members, $notrecovered do not compile"
+echo "instrumented $n object(s), $skipped not library members, $notrecovered do not compile${VALIDATED:+, $quarantined quarantined}"
 [ "$n" -gt 0 ] || { echo "nothing to census"; exit 1; }
 
 if ! gcc -m32 -O2 -DLINUX -no-pie $IFLAGS -o "$WORK/t" "$SCENE" $objs "$WORK/kd_instr.o" \

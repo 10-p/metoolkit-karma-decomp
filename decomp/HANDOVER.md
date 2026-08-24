@@ -175,10 +175,14 @@ sessions as "the only surviving map ask". It did not need a map:
   **114 cylinder collision elements** across the tree (vs 107 sphere, 172 box, 32,191
   convex), in stock maps including `AS-BP2-Acatana`, `DM-Insidious`, `ONS-CBP2-Mirage`,
   `DOM-UCMP2-1on1-Smelter`.
-- **What is still open is narrow and does not block anything:** whether *stock gameplay*
-  ever simulates one. `test-simple-physics.ut2` is a custom test map, and a 300 s census on
-  the stock `DM-Insidious` — which contains a cylinder element — ticked properly (6 pairs,
-  49,785 calls) and produced zero cylinder calls. The mesh is there and is not simulated.
+- **Whether *stock gameplay* ever simulates one: five maps say no.** A census sweep of the
+  stock maps my parser says contain cylinder elements — `DM-Insidious`, `ONS-CBP2-Mirage`,
+  `DM-Urotsukidoji`, `DOM-UCMP2-1on1-Smelter`, `AS-BP2-Acatana` — produced **zero cylinder
+  calls on every one**, while ticking properly (Smelter alone: 6 pairs, 91,618 calls;
+  Mirage: Box × ConvexMesh 19,737). So shipped maps carry the geometry and do not simulate
+  it, and the pair is reached by `test-simple-physics.ut2`, a custom map. Not proof — a
+  sixth map could differ — but it is five maps of evidence, and nothing depends on the
+  answer now that both objects have been measured.
 
 **And grep cannot answer questions like this**, which is worth knowing before trying.
 `FKAggregateGeom` is serialised by a hand-written `operator<<` with no field names, so

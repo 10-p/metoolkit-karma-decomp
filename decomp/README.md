@@ -25,13 +25,27 @@ stack leaks totalling 235 bytes.
 
 ## Status
 
+**Current, 2026-08-24 — everything below this block is historical narrative kept for the
+reasoning, and its numbers are the numbers of the day it was written. `HANDOVER.md` is the
+live document; when the two disagree, HANDOVER wins.**
+
 | | |
+|---|---|
+| objects recovered | **109 compile** (73.6% of 148 attempted), 25 quarantined by detectors, 14 fail |
+| collision pairs the game calls | 15, of which **14 are validated** against the shipped original on live inputs |
+| the one that is not | `IxCylinderCylinder` — measured wrong, 925 `dims_diff` in 24,111 real calls, and no detector holds it |
+| the engine ON recovered Karma | **runs** — all 108 objects substituted, plays a match, indistinguishable from stock (§7c) |
+| wasm32 | 109/109 compile, byte-identical exported symbol sets. **Nothing executed yet** |
+| arm64/armv7 | not attempted — no cross-compiler on this machine |
+| the solver | arithmetic proven bit-exact over 900 steps; its **control flow does not compile**, blocked on frames the DWARF does not describe (§11 item 2) |
+
+| milestone | |
 |---|---|
 | Milestone 1 — one object end to end | ✅ **done** (`McdPrimitives/IxBoxBox`) |
 | Milestone 2 — `MdtKea` C++/vtable spike | ✅ **done — no blocker** |
-| Milestone 3 — scale validation | 🔶 **advanced, not finished** — 27% compile, 26/40 pass the breadth gate |
-| Milestone 4 — the grind (~2,100 functions) | ⬜ |
-| Milestone 5 — wasm + Android bring-up | ⬜ |
+| Milestone 3 — scale validation | ✅ **done** — 109 objects, seven gates, engine runs on them |
+| Milestone 4 — the grind (~2,100 functions) | 🔶 **collision done, solver blocked** — §11 item 2 |
+| Milestone 5 — wasm + Android bring-up | ⬜ — compiles, never executed. `HANDOVER-WEB.md` |
 
 ### Milestone 1 result
 

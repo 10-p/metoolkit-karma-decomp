@@ -17,9 +17,17 @@ MAP="${1:?map name}"; SECS="${2:-180}"; EXTRA="${3:-}"
 RUN="${KD_RUNTIME:-/home/ion/karma-run}"
 BIN="${KD_BIN:?set KD_BIN to the instrumented ut2004 binary}"
 
+# The prefix decides the gametype, and getting it wrong is not a small error: an
+# AS- map run as xDeathMatch loads, starts, ticks, and produces FOURTEEN collision
+# calls in four minutes, because none of the objectives or vehicles exist. It reads
+# as "this map has no physics" rather than as a misconfiguration. Verified against
+# the "Game class is" line in the run log, which is what the check below prints.
 case "$MAP" in
     ONS-*|VCTF-*) GAME="${KD_GAME:-Onslaught.ONSOnslaughtGame}" ;;
+    AS-*)         GAME="${KD_GAME:-UT2k4Assault.ASGameInfo}" ;;
     CTF-*)        GAME="${KD_GAME:-XGame.xCTFGame}" ;;
+    BR-*)         GAME="${KD_GAME:-XGame.xBombingRun}" ;;
+    DOM-*)        GAME="${KD_GAME:-XGame.xDoubleDom}" ;;
     *)            GAME="${KD_GAME:-XGame.xDeathMatch}" ;;
 esac
 

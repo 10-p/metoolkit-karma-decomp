@@ -120,12 +120,22 @@
 #include <MeMisc.h>
 #include <MstModelDynamics.h>
 
-/* Excluded: these do not compile at all. McdCone.h references an McdConeID
- * that the SDK never defines — cone geometry appears to have been dropped
- * before release. Karma does not use them, and neither do we.
- *   McdCone.h
- *   McdCoreErrorList.h
- *   McdMessage.h
+/* McdMessage.h was in the excluded list below and does not belong there: it
+ * compiles cleanly. Without it `McdErrorDescription` is only the forward
+ * typedef kd_compat.h supplies for the bare-tag problem, so it stays
+ * INCOMPLETE and McdMessage.o fails seven times on `invalid use of incomplete
+ * typedef`. The header carries the layout — three MeI16 and a const char* —
+ * and completing the tag is the whole fix. It includes McdCoreErrorList.h,
+ * but as an X-macro list inside its own `#define ERR(...)`, which is why that
+ * file is unusable standalone and fine here. */
+#include <McdMessage.h>
+
+/* Excluded: these do not compile at all.
+ *   McdCone.h           references an McdConeID the SDK never defines — cone
+ *                       geometry appears to have been dropped before release.
+ *   McdCoreErrorList.h  an X-macro list of bare ERR(...) entries, meant to be
+ *                       included inside a definition of ERR. Not a header.
+ * Karma does not use them, and neither do we.
  */
 
 #endif /* KD_KARMA_H */

@@ -1661,6 +1661,30 @@ That third point is the one to hold on to: with the same hull on both sides the 
 convex difftest still works unchanged, so this is testable — it just cannot be tested by
 diffing against the shipped hull.
 
+**Tier 1 exists: `test/hull_probe.sh`.** It runs the SHIPPED `McdComputeHull` and checks
+every claim the header makes in prose. **98,899 checks, 0 failures**, so the contract above
+is verified rather than assumed, and the same checker is the acceptance test for a
+replacement. What it settled:
+
+| claim | verdict |
+|---|---|
+| sentinel face and vertex with `firstEdge == numEdges` | present, and everything that iterates depends on it |
+| `V - E/2 + F == 2` | holds on all six shapes |
+| coplanar triangles **merge** into polygons | yes — a cube is `F=6` with 4-vertex faces, not 12 triangles |
+| redundant coplanar + interior input points are discarded | yes — cube + 6 face-centre + 5 interior points gives the identical `V=8 F=6` hull |
+| every directed edge has its reverse | yes |
+| `invLength == 1/|edge|`, normals unit and outward | yes |
+| `edgeIndex` entries all START at their vertex | yes — this is what GJK hill-climbs |
+| every input point inside or on the hull | yes |
+| **winding is ACW seen from OUTSIDE** | yes, by Newell's normal agreeing in sign with the face normal |
+
+That last row is the one a replacement is most likely to get backwards, and checks on ring
+closure and outward normals **cannot see it** — both hold for either handedness.
+
+Note also that the hull **reindexes**: `vertex[]` is the hull's own array and does not
+follow input order, which is precisely why the acceptance test cannot be an index-wise
+diff.
+
 
 ### What needs the project owner, and nothing else will do
 

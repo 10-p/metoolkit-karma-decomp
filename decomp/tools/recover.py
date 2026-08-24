@@ -287,6 +287,7 @@ def main():
                    '--umbrella', os.path.join(root, 'include', 'kd_karma.h')]
             if args.protos:
                 cmd += ['--protos', args.protos]
+            cmd += ['--corpus', args.obj_dir]
             r = run(cmd)
             if r.returncode != 0:
                 rows.append((archive, base, 'FAIL', 'gen_prelude: ' + tool_error(r.stderr)))

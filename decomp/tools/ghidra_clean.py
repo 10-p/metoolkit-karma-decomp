@@ -904,6 +904,104 @@ def restore_saved_element(body):
     return '\n'.join(out), n
 
 
+EXT_BASE = re.compile(r'&(\w+)(?=\s*[-+])')
+
+
+def fix_external_base_arithmetic(obj, text):
+    """`&pool_ptr + poolstack_ptr * 4` is `(char *)poolstack + -4 + ...`.
+
+    Two separate defects meet on one line, and fixing either alone leaves the
+    object wrong in a way that still compiles.
+
+    ONE — THE FOLDED ADDEND. When a relocation carries an addend, Ghidra
+    resolves the address into a NEIGHBOUR's EXTERNAL slot and prints the
+    neighbour (see relocation_targets). keaPopPoolFrame reads
+    `poolstack[poolstack_ptr - 1]`:
+
+        mov -0x4(,%ecx,4),%eax      R_386_32 poolstack
+
+    `poolstack` is slot 2 and the -4 addend lands on slot 1, `pool_ptr`, so
+    Ghidra prints `&pool_ptr + poolstack_ptr * 4` — the pop reading from the
+    push's SCALAR instead of from the stack array. keaPushPoolFrame, whose
+    addend is 0, is printed correctly, so the two halves of one 12-byte array
+    come out under two different names.
+
+    TWO — THE SCALE. Ghidra's `&X + i * 4` is BYTE arithmetic. That is
+    harmless while `X` is undeclared or an `undefined1[]`, and stops being
+    harmless the moment gen_prelude declares the symbol at its real DWARF type:
+    `&poolstack` is then `void *(*)[3]` and `+ i * 4` strides twelve bytes at a
+    time. So declaring the four symbols — which is what makes the object
+    compile — is exactly what would break the line Ghidra got RIGHT. Both sites
+    are rewritten to explicit `(char *)` byte arithmetic, which is what the
+    machine code does and what Ghidra meant.
+
+    Scoped to a bare `&NAME` that is an UNDEFINED symbol of this object and is
+    immediately followed by `+` or `-`, i.e. genuinely a base for arithmetic.
+    Across the whole corpus that is one object, keaMemory, and two names.
+
+    THE SELF-CHECK IS NOT OPTIONAL. Choosing a candidate wrongly does not fail
+    to compile, it reads the wrong memory. Two checks, and the first alone is
+    not enough:
+
+      * the slot arithmetic must reproduce the name Ghidra printed
+        (`slot[sym] + addend/4 == slot[printed]`). This verifies the MECHANISM,
+        but it cannot choose — the identity reading satisfies it trivially, and
+        that both readings satisfy it is precisely what makes the slot
+        ambiguous.
+      * so the choice is made on where the addend went. Ghidra FOLDS a constant
+        addend into the printed base, leaving only the variable part as `+ expr`.
+        A site that reads `&X + expr` therefore resolves to the unique candidate
+        with a NON-ZERO addend when one exists — the identity reading of an
+        indexed base would mean indexing a four-byte scalar, which is not what
+        any of these instructions do. With no non-zero candidate the site is
+        already correct and only needs the cast, so a single identity candidate
+        is accepted and anything else declines.
+
+    Worked example, and both halves are in one function pair. `keaPopPoolFrame`
+    offers {(pool_ptr, 0), (poolstack, -4)}: the non-zero rule picks `poolstack`
+    for the indexed base, and `fix_mislabelled_external` independently resolves
+    the plain value use to `pool_ptr`. `keaPushPoolFrame` offers only
+    {(poolstack, 0)}, so it keeps its name and gains the cast."""
+    und = undefined_symbols(obj)
+    if not und:
+        return text, 0
+    slot = {s: i for i, s in enumerate(und)}
+    names = {m.group(1) for m in EXT_BASE.finditer(text)} & set(slot)
+    if not names:
+        return text, 0
+    per_fn = relocation_targets(obj, per_function=True)
+
+    out, n = [], 0
+    for fn, region in _split_definitions(text):
+        cands = per_fn.get(fn, {}) if fn else {}
+
+        def rewrite(m):
+            nonlocal n
+            printed = m.group(1)
+            if printed not in slot:
+                return m.group(0)
+            # relocation_targets keys on the underscore spelling Ghidra gives
+            # the four-byte VALUE at the slot; `&X` is the same slot's address.
+            got = cands.get('_' + printed)
+            if not got:
+                return m.group(0)
+            ok = [(s, a) for s, a in sorted(got)
+                  if s in slot and slot[s] + a // 4 == slot[printed]]
+            folded = [c for c in ok if c[1] != 0]
+            if len(folded) == 1:
+                sym, addend = folded[0]
+            elif not folded and len(ok) == 1:
+                sym, addend = ok[0]
+            else:
+                return m.group(0)          # ambiguous — decline, do not pick
+            n += 1
+            return f'(char *){sym} + ({addend})'
+
+        new = EXT_BASE.sub(rewrite, region)
+        out.append(new)
+    return ''.join(out), n
+
+
 PTR_REF = re.compile(r'(?<![\w])(PTR_[A-Za-z0-9_]*?_([0-9a-f]{8}))\b')
 
 
@@ -2042,6 +2140,7 @@ def main():
                     f'{body}\n')
 
     body_text = '\n'.join(defs)
+    body_text, n_extbase = fix_external_base_arithmetic(args.object, body_text)
     data_block, n_data = materialise_data_refs(args.object, body_text)
     # `kd_aggN` is the opaque stand-in gen_protos.py uses for an aggregate passed
     # BY VALUE. Once Ghidra has the signature it puts that type in the BODY too,
@@ -2118,6 +2217,8 @@ def main():
         print(f'  {n_ftype} function type(s) declared from the name Ghidra gave them')
     if n_ptr:
         print(f'  {n_ptr} pointer slot(s) resolved from Ghidra addresses')
+    if n_extbase:
+        print(f'  {n_extbase} external base(s) re-resolved to byte arithmetic')
     if args.cflag:
         ctx = RepairContext(args.object, fieldmap, args.metoolkit_include)
         n_edits, left, _log = repair_loop(args.output, args.cc, args.cflag, ctx)

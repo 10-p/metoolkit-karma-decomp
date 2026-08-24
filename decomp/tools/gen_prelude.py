@@ -25,6 +25,9 @@ import struct
 import subprocess
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import dwarf_structs
+
 # libc / compiler-runtime imports that need no declaration from us.
 IGNORED_IMPORTS = {
     '__gxx_personality_v0', '__cxa_pure_virtual', '_Unwind_Resume',
@@ -63,6 +66,78 @@ def undefined(obj):
         if p and p[-1] not in IGNORED_IMPORTS:
             names.append(p[-1])
     return sorted(set(names))
+
+
+_data_decl_cache = {}
+
+
+def extern_data_declaration(corpus, name):
+    """`extern void *poolstack[3];` for an imported DATA symbol, from DWARF.
+
+    An undefined symbol that is a VARIABLE has no prototype in kd_protos.h —
+    that header is functions only — so it used to fall through to
+    `/* TODO: declare X */` and the object failed to compile. keaMemory, the
+    solver's allocator, imports four of them (`pool_ptr`, `pool_max`,
+    `poolstack`, `poolstack_ptr`) and failed on nothing else.
+
+    The type is not guessed. The object that DEFINES the symbol carries a
+    DW_TAG_variable DIE for it with a full type chain, and dwarf_structs
+    already renders that as a C declarator. `poolstack` comes back as
+    `void *poolstack[3]`, which is the array `keaPushPoolFrame` indexes.
+
+    THE SIZE CHECK IS THE POINT. A declaration that disagrees with the shipped
+    object about how big a symbol is does not fail to compile — it silently
+    reads or writes the wrong number of bytes at link time, which is the class
+    of defect this project treats as worse than not compiling. So the DWARF
+    declarator is accepted only when the type's size matches the `st_size` the
+    defining object records, and a mismatch returns None (the caller emits the
+    TODO, as before). Returns None rather than a guess whenever the defining
+    object cannot be found, carries no DWARF, or names no such variable."""
+    key = (corpus, name)
+    if key in _data_decl_cache:
+        return _data_decl_cache[key]
+    _data_decl_cache[key] = None
+    if not corpus or not os.path.isdir(corpus):
+        return None
+
+    # Find the object that defines `name` as an OBJECT (data), not a function.
+    owner = size = None
+    for fn in sorted(os.listdir(corpus)):
+        if not fn.endswith('.o'):
+            continue
+        path = os.path.join(corpus, fn)
+        for line in run('readelf', '-sW', path).splitlines():
+            p = line.split()
+            # num: value size type bind vis ndx name
+            if len(p) >= 8 and p[3] == 'OBJECT' and p[6] != 'UND' and p[7] == name:
+                owner, size = path, int(p[2])
+                break
+        if owner:
+            break
+    if not owner:
+        return None
+
+    dies = dwarf_structs.parse(owner)
+    ref = None
+    for die in dies.values():
+        if die['tag'] != 'DW_TAG_variable':
+            continue
+        if die['attrs'].get('DW_AT_name') != name:
+            continue
+        t = die['attrs'].get('DW_AT_type')
+        m = re.search(r'<0x([0-9a-f]+)>', t) if t else None
+        if m:
+            ref = int(m.group(1), 16)
+        break
+    if ref is None:
+        return None
+
+    decl = dwarf_structs.declarator(dies, ref, name)
+    got = dwarf_structs.type_size(dies, ref)
+    if got is None or got != size:
+        return None
+    _data_decl_cache[key] = (f'extern {decl};', os.path.basename(owner), size)
+    return _data_decl_cache[key]
 
 
 def section_bytes(obj, section):
@@ -268,6 +343,11 @@ def main():
                                    'from the C++ static constructor')
     ap.add_argument('--protos', help='kd_protos.h from tools/gen_protos.py, used to '
                                      'give C++-mangled imports a real signature')
+    ap.add_argument('--corpus', help='directory of every archive member. An imported '
+                                     'VARIABLE has no prototype in kd_protos.h, so its '
+                                     'declaration is recovered from the DWARF of whichever '
+                                     'object DEFINES it — and size-checked against that '
+                                     "object's symbol table before being emitted.")
     ap.add_argument('--umbrella', help='kd_karma.h; headers it already includes are '
                                        'NOT re-included here. Several metoolkit '
                                        'headers (MeSet.h among them) have no include '
@@ -377,7 +457,19 @@ def main():
                 if proto:
                     w(f'extern {proto[:-1].strip()};')
                 else:
-                    w(f'/* TODO: declare {name} */')
+                    # Not a function. An imported VARIABLE has no entry in
+                    # kd_protos.h, so this used to be an unconditional TODO and
+                    # the object failed to compile — keaMemory, the solver's
+                    # allocator, failed on nothing else. Recover the declaration
+                    # from the DWARF of whichever object defines it, size-checked
+                    # against that object's symbol table.
+                    dd = extern_data_declaration(args.corpus, name)
+                    if dd:
+                        decl, owner, size = dd
+                        w(f'/* {size} bytes, defined in {owner}; type from its DWARF */')
+                        w(decl)
+                    else:
+                        w(f'/* TODO: declare {name} */')
             w('')
 
     # ---- file-scope statics ----------------------------------------------

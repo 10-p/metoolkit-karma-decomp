@@ -59,6 +59,45 @@ def array_extent(dies, ref):
     return None
 
 
+def type_size(dies, ref, depth=0):
+    """Size in bytes of the type at DIE offset `ref`, or None if not derivable.
+
+    Exists so a generated declaration can be CHECKED against the `st_size` the
+    shipped object records for the symbol, rather than trusted. A declaration
+    that disagrees with the object about a symbol's size still compiles and
+    still links; it just reads or writes the wrong bytes. Returning None on
+    anything not positively derivable is deliberate — the caller is expected to
+    decline rather than to fall back to a guess."""
+    if ref is None or depth > 16:
+        return None
+    d = dies.get(ref)
+    if d is None:
+        return None
+    a = d['attrs']
+    tag = d['tag']
+    sub = a.get('DW_AT_type')
+    subref = int(REF_RE.search(sub).group(1), 16) if sub and REF_RE.search(sub) else None
+
+    if tag == 'DW_TAG_pointer_type':
+        # DW_AT_byte_size is present on i386 pointer DIEs, but default to the
+        # target's pointer width rather than failing if it is absent.
+        bs = a.get('DW_AT_byte_size')
+        return int(bs.split()[0]) if bs else 4
+    if tag == 'DW_TAG_array_type':
+        n = array_extent(dies, ref)
+        elem = type_size(dies, subref, depth + 1)
+        return None if (n is None or elem is None) else n * elem
+    if tag in ('DW_TAG_typedef', 'DW_TAG_const_type', 'DW_TAG_volatile_type'):
+        return type_size(dies, subref, depth + 1)
+    bs = a.get('DW_AT_byte_size')
+    if bs is not None:
+        try:
+            return int(bs.split()[0])
+        except ValueError:
+            return None
+    return None
+
+
 def parse(obj):
     """Return {offset: {'tag':…, 'depth':…, 'attrs':{…}, 'children':[…]}}"""
     out = subprocess.run(['readelf', '--debug-dump=info', obj],

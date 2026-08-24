@@ -65,7 +65,29 @@ def simple_type(dies, ref, depth=0):
         base = INT_BY_SIZE.get(size, 'int')
         return ('unsigned ' + base) if unsigned and base != 'char' else base
     if tag in ('DW_TAG_structure_type', 'DW_TAG_class_type', 'DW_TAG_union_type'):
-        return None                          # by-value aggregate: cannot simplify
+        # A by-value aggregate. This used to return None and the whole function
+        # was then DROPPED from the header, with the comment "leave to Ghidra" —
+        # which is precisely the thing this file exists to stop Ghidra doing.
+        #
+        # It cost the solver. MdtKeaConstraints and MdtKeaParameters are passed
+        # BY VALUE all through the kea API, so the dropped list was
+        # MdtKeaAddConstraintForces (the driver), MdtKeaIntegrateSystem and
+        # KeaIntegrateSystem_vanilla (the integrator), allocateMemory and
+        # vanillaAllocateMemory (the allocator) — every one of the four objects
+        # blocking libMdtKea, and no coincidence. With no prototype Ghidra had to
+        # guess a ~130-byte argument area and lost the frame entirely, which is
+        # why keaRbdCore_unified decompiles to a wall of in_stack_fffffeNN.
+        #
+        # Ghidra needs the argument COUNT and SIZE, not the field layout, so an
+        # opaque aggregate of the right size is enough and parses with no
+        # dependencies. Returning the size lets main() emit the typedef.
+        try:
+            size = int(a.get('DW_AT_byte_size', 0))
+        except ValueError:
+            size = 0
+        if size <= 0:
+            return None                      # genuinely unknown; still refuse
+        return ('AGG', size)
     if tag == 'DW_TAG_enumeration_type':
         return 'int'
     return 'int'          # unknown: assume one 4-byte slot rather than nothing
@@ -83,7 +105,7 @@ def main():
         objs.extend(sorted(glob.glob(os.path.join(d, '**', '*.o'), recursive=True)))
     objs = [o for o in objs if not any(x in o for x in args.exclude)]
 
-    protos, skipped = {}, []
+    protos, skipped, aggs = {}, [], set()
     for obj in objs:
         try:
             dies = parse(obj)
@@ -113,6 +135,9 @@ def main():
             rt = a.get('DW_AT_type')
             rref = int(REF_RE.search(rt).group(1), 16) if rt and REF_RE.search(rt) else None
             ret = simple_type(dies, rref)
+            if isinstance(ret, tuple):
+                aggs.add(ret[1])
+                ret = 'kd_agg%d' % ret[1]
             params, bad = [], False
             for c in die['children']:
                 if c['tag'] != 'DW_TAG_formal_parameter':
@@ -120,12 +145,15 @@ def main():
                 pt = c['attrs'].get('DW_AT_type')
                 pref = int(REF_RE.search(pt).group(1), 16) if pt and REF_RE.search(pt) else None
                 t = simple_type(dies, pref)
+                if isinstance(t, tuple):
+                    aggs.add(t[1])
+                    t = 'kd_agg%d' % t[1]
                 if t is None:
                     bad = True
                     break
                 params.append(t)
             if bad or ret is None:
-                skipped.append(name)          # by-value aggregate; leave to Ghidra
+                skipped.append(name)          # size genuinely unknown
                 continue
             plist = ', '.join(params) if params else 'void'
             protos[name] = f'{ret} {name}({plist});'
@@ -138,11 +166,21 @@ def main():
                 ' * count and size to get its stack analysis right, and simplified types\n'
                 ' * parse with no external dependencies.\n'
                 ' */\n')
+        if aggs:
+            f.write('\n/* Opaque stand-ins for aggregates passed or returned BY VALUE.\n'
+                    ' * Only the size matters: it is what tells Ghidra how much of the\n'
+                    ' * argument area belongs to that parameter. Dropping these functions\n'
+                    ' * instead cost the whole libMdtKea frame analysis — see simple_type().\n'
+                    ' */\n')
+            for n in sorted(aggs):
+                f.write('typedef struct { char _kd[%d]; } kd_agg%d;\n' % (n, n))
+            f.write('\n')
         for n in sorted(protos):
             f.write(protos[n] + '\n')
 
-    print(f'{args.output}: {len(protos)} prototypes from {len(objs)} objects'
-          + (f' ({len(set(skipped))} skipped: by-value aggregate params)' if skipped else ''))
+    print(f'{args.output}: {len(protos)} prototypes from {len(objs)} objects, '
+          f'{len(aggs)} by-value aggregate size(s)'
+          + (f', {len(set(skipped))} skipped (size unknown)' if skipped else ''))
 
 
 if __name__ == '__main__':

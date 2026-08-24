@@ -82,6 +82,18 @@ public class DumpDecomp extends GhidraScript {
     /** Make every function plain cdecl, and say how many had to be changed. */
     private void forceCdecl() {
         int changed = 0, failed = 0;
+        // Report the distribution before touching anything. HANDOVER.md 5 records
+        // that forcing __cdecl on EVERYTHING made things worse and cost five kea
+        // objects, so any widening of this rule has to be aimed at a measured
+        // population rather than applied blind.
+        java.util.Map<String,Integer> hist = new java.util.TreeMap<>();
+        FunctionIterator ith = currentProgram.getFunctionManager().getFunctions(true);
+        while (ith.hasNext()) {
+            String c = ith.next().getCallingConventionName();
+            hist.merge(c == null ? "(null)" : c, 1, Integer::sum);
+        }
+        println("KARMAHDR: calling conventions " + hist);
+
         FunctionIterator it = currentProgram.getFunctionManager().getFunctions(true);
         while (it.hasNext()) {
             Function f = it.next();
@@ -93,7 +105,29 @@ public class DumpDecomp extends GhidraScript {
             // compiling. __regparm is the one Ghidra gets wrong here — the
             // prologues read arguments from ebp+8 upwards, and the DWARF
             // agrees.
-            if (cc == null || !cc.startsWith("__regparm")) continue;
+            // Two populations, and the distinction is load-bearing.
+            //
+            // __regparmN is a MISDETECTION: gcc 3.2 on i386 passes everything on
+            // the stack here and Ghidra lays the parameter list out to match the
+            // convention it chose, shifting the body by N.
+            //
+            // "unknown" is different — Ghidra never decided at all, and the
+            // decompiler then emits `WARNING: Unknown calling convention` and
+            // falls back to guessing the frame. keaRbdCore_unified, the libMdtKea
+            // driver, has ALL ELEVEN of its functions in this state, which is why
+            // its body is a wall of in_stack_fffffeNN and register0x00000010.
+            // keaMemory has 7 of 11, keaIntegrate_pc 1 of 3 — the three objects
+            // blocking the solver.
+            //
+            // Set KD_FORCE_CDECL_UNKNOWN=1 to include them. It is opt-in because
+            // HANDOVER.md 5 records that forcing __cdecl on EVERYTHING made things
+            // worse: gcc's i386 C++ ABI passes `this` as the first stack argument,
+            // so Ghidra's __thiscall is already right and overriding it dropped
+            // the parameter, costing five kea objects that had been compiling.
+            // Leaving __thiscall and __cdecl alone is the whole point.
+            boolean unknown = (cc == null || cc.equals("unknown"))
+                              && "1".equals(System.getenv("KD_FORCE_CDECL_UNKNOWN"));
+            if (!unknown && (cc == null || !cc.startsWith("__regparm"))) continue;
             try {
                 // Custom storage pins parameters to the locations the wrong
                 // convention chose, so it has to go first or the change is

@@ -708,7 +708,19 @@ def main():
         dem = demangle(name)
         m = re.match(r'(.+)::(.+)$', dem)
         if m:
-            c_name = f'{m.group(1)}__{m.group(2)}'
+            # The owner may demangle WITH its parameter list —
+            # `McdBatchUnflattenAggregate(McdBatchContext*, ...)::ct`. Ghidra
+            # names such a static after the function alone, and this branch used
+            # to assign c_name straight from the demangling, skipping the
+            # sanitising pass the plain path does. McdBatch therefore emitted
+            #   static float McdBatchUnflattenAggregate(McdBatchContext*, ...)__ct;
+            # which is not a declaration, and took the object's other 13 errors
+            # down with it. Drop the signature, then sanitise like everything
+            # else. The nine other `::` statics in the corpus are already legal
+            # identifiers, so for them this is the identity.
+            owner = m.group(1)
+            owner = owner[:owner.index('(')] if '(' in owner else owner
+            c_name = re.sub(r'[^A-Za-z0-9_]', '_', f'{owner}__{m.group(2)}')
         # The C half of the same thing. gcc 3.2 does not mangle a local static
         # in a C translation unit — it emits `nxt.0`, with the function's name
         # nowhere in the symbol — but Ghidra reads the owner out of the DWARF

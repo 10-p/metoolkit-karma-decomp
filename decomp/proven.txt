@@ -1244,3 +1244,46 @@ MdtUtils              Bit-identical on scene_ragdoll with 4.113e+00 m of
 # the box and sphyl variation is not.
 #
 # STILL FIXED, and still on the list: the triangle count (NTRI = 32).
+
+# --- 2026-08-24 (fifth session): the axis-aligned regime, run on everything ----
+#
+# KD_GRID=1 was added to chase IxCylinderCylinder (see its entry above), but it
+# is a new regime for EVERY pair and none of them had ever been driven in it.
+# Axis-aligned rotations are the degenerate case for any algorithm that picks a
+# separating axis or classifies a contact feature, so this is a HARDER test than
+# random rotations, not merely a different one.
+#
+# Full run, 200,000 pairs each, recovered against the shipped original, with
+# KD_SELFTEST in the same regime reading 12/12 PASS and 100% bit-identical:
+#
+#   McdSphylConvexMeshIntersect          0 structural   worst 5.960e-08
+#   McdBoxBoxIntersect                   0 structural   worst 0.000e+00
+#   McdSphereSphereIntersect             0 structural   worst 5.960e-08
+#   McdSphylSphylIntersect               0 structural   worst 2.384e-07
+#   McdSphylSphereIntersect              0 structural   worst 5.364e-07
+#   McdSphylBoxIntersect                 0 structural   worst 7.898e-07
+#   McdSphylPlaneIntersect               0 structural   worst 4.768e-07
+#   McdGjkCgIntersect                    0 structural   worst 6.511e-02
+#   McdSphylTriangleListIntersect        0 structural   worst 1.935e-04
+#   McdConvexMeshTriangleListIntersect   0 structural   worst 1.383e-05
+#   McdCylinderTriangleListIntersect     0 structural   worst 2.831e-05
+#   McdSphereTriangleListIntersect     151 dims         worst 6.648e-05
+#   McdCylinderCylinderIntersect     6,385 dims + 1 cnt worst 8.000e-01
+#   McdBoxTriangleListIntersect      1058/118360/17075  worst 2.353e+00
+#
+# TWELVE OF FOURTEEN COME THROUGH CLEAN on a regime they had never seen, which
+# is the useful part: this is new evidence FOR the released objects, not just a
+# tool for the one that is not released.
+#
+# The two that move are the two already documented. IxSphereTriList's 151 is its
+# known limit (137 in the random regime) -- the same feature-classification
+# disagreement, same order of magnitude. IxBoxTriList is bad here as it is
+# everywhere and remains unreachable dead code (HANDOVER.md 3a).
+#
+# WORTH NOTING: McdBoxBoxIntersect reads 0 count divergences here against 1 in
+# the random regime. Axis-aligned boxes are the case where "which feature met"
+# is most ambiguous, and it does not flinch. Compare IxCylinderCylinder on the
+# same inputs.
+#
+# Reproduce:  KD_GRID=1 ./test/difftest_pair.sh /tmp/kd_build_dt <metoolkit>
+# and always with KD_SELFTEST=1 on the same regime first.

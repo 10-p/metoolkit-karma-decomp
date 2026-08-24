@@ -22,13 +22,13 @@ freebie, the Android NDK), and to integrate the result into the engine's web bui
 
 What exists today:
 
-- **94 recovered objects**, all of them compiling for i386 *and* for wasm32.
+- **98 recovered objects**, all of them compiling for i386 *and* for wasm32.
 - **The full collision-detection path the game actually uses is recovered and validated** —
   all twelve interaction pairs UT2004 calls, each measured against the shipped original on
   real inputs from a live match. Evidence per object in `karma-decomp/proven.txt`. §6 has
   the census that says "twelve" and why that is the number to plan against.
 - **The whole set already compiles under Emscripten**, and its exported symbol NAMES are
-  **byte-identical to the i386 build for all 94 objects** — nothing added or dropped. So
+  **byte-identical to the i386 build for all 98 objects** — nothing added or dropped. So
   the ABI surface the engine links against does not change between targets, which was the
   thing most likely to turn this into a rewrite. See §4. (Names only: `wasm_check.sh`
   discards the binding letter. That gap let a recovered object export a *global* `putchar`
@@ -176,11 +176,11 @@ This had never been tried, so it was worth doing before anything else:
 
 ```
 emcc 5.0.7, no -m32, otherwise the same flags as the native build
-94 of 94 recovered objects compiled for wasm32.  0 failures.
+98 of 98 recovered objects compiled for wasm32.  0 failures.
 ```
 
 Stronger than that — the **exported symbol names are byte-identical to i386 for
-all 94 objects**, nothing added or dropped. So the ABI surface the engine links
+all 98 objects**, nothing added or dropped. So the ABI surface the engine links
 against does not change between the two targets, which was the thing most likely
 to turn this into a rewrite.
 
@@ -227,6 +227,31 @@ runtime questions that compiling cannot answer. **Do not read "it compiles" as
    tolerates) but expect trapping where native "worked".
 5. **No `-m32`.** Every command in the existing docs passes `-m32`. Drop it for wasm; wasm32
    is already 32-bit.
+6. **`-sALLOW_MEMORY_GROWTH` and the pointers §2 is about.** Karma's heap *is* the engine's
+   linear memory, and the engine holds raw pointers into Karma structs
+   (`MdtBodyGetTransformPtr` returns a pointer to the live transform and the engine
+   dereferences it every frame). Growth does not invalidate those — a wasm pointer is an
+   offset, and offsets survive a grow. **What it does invalidate is every JS-side
+   `HEAPF32`/`HEAPU8` view**, because the underlying `ArrayBuffer` is detached and
+   replaced. Any glue that caches a typed array across a frame boundary is a
+   use-after-detach waiting to happen. Re-acquire views after anything that can allocate,
+   or size the heap up front and turn growth off.
+7. **Do not enable `-sMEMORY64`.** The recovered structs are 32-bit-pointer layouts by
+   construction (§3), and the engine's C++ shares those structs. memory64 changes pointer
+   size and every offset in the type database is then wrong. This is not a flag to
+   experiment with.
+8. **Threads change the answer to §2, not just the performance.** Karma is single-threaded
+   within a world step and `kd_compat.h` maps the x86 `LOCK` prefix to a no-op on that
+   basis. If you ever put the physics step on a worker, that assumption has to be revisited
+   *and* the shared-memory design in §2 becomes a `SharedArrayBuffer` question with COOP/COEP
+   headers attached. It is a much larger change than it looks; the current design deliberately
+   keeps Karma on the main heap.
+9. **Exceptions and `longjmp`.** The recovered C has neither, but it is linked beside UE2.5
+   C++ which does. If the engine build uses `-fwasm-exceptions` and the Karma objects are
+   compiled without, the link is still fine — they contain no landing pads — but
+   `__gxx_personality_v0` appears as an undefined symbol in a few shipped objects
+   (`McdGjkRegistration`'s original has it). The recovered ones do not; if you see it,
+   something pulled in a shipped `.a`.
 
 ---
 
@@ -291,6 +316,25 @@ casts Ghidra already wrote on the arguments. Two consequences for you:
 - If you hit such a trap, the fix is almost certainly in the generator, and the pattern to
   copy already exists.
 
+**A SECOND instance of exactly this was found on 2026-08-24, and it says the class is not
+closed.** The first was in the generated C (`typedef int code();`). The second was in the
+TYPE DATABASE: `dwarf_structs.declarator()` rendered every function type with an empty
+parameter list, so `kd_types.h` defined the broadphase's AABB-update callback as
+
+```c
+typedef void (*McdUpdateAABBFnPtr)();      /* no prototype */
+```
+
+and `CxSmallSort` calls it with a `MeReal`. The recovered object emitted `flds` then
+**`fstpl`** — storing the float as an 8-byte double — against a callee taking a float. The
+shipped `CxSmallSort.o` contains zero `fstpl`. Fixed, and `grep -c 'void (\*)()'
+karma-decomp/include/kd_types.h` should stay at **0** — that is the tripwire.
+
+Why you should care more than the recovery side does: on x86 this is wrong physics in the
+broadphase; **on wasm it is a trap**, and it is in a code path none of the three offline
+scenes reaches. If your wasm driver traps somewhere that looks unrelated to what you were
+testing, check the signature of every function pointer on the path before anything else.
+
 ### Out-of-range frame writes — harmless on one stack layout, corruption on another
 
 `tools/check_frame_bounds.py` reports every `(&)?NAME + K` where K falls outside the local
@@ -329,6 +373,19 @@ were allowed to vary in size it died with "stack smashing detected" and *no outp
 discarded everything printed before it to a redirected stdout. If a wasm harness of yours
 dies with no output, suspect a buffer before you suspect wasm.
 
+### A portability bug the native build cannot see: glibc-only names
+
+`McdPolygonIntersection` compiled for i386 and **not** for wasm32, on
+`use of undeclared identifier '__compar_fn_t'` — glibc's name for `qsort`'s comparator,
+which Ghidra emits because that is what the DWARF calls it. Emscripten's libc does not have
+it. Fixed in `kd_compat.h` behind glibc's own `__COMPAR_FN_T` guard.
+
+This is the first time `test/wasm_check.sh` has caught something the native build could
+not, and it is exactly what that gate is for. **Run it after every generator change.** Any
+glibc-internal spelling — `__ctype_b_loc`, `__strtol_internal`, `_IO_putc`,
+`__compar_fn_t` — is a candidate for the same treatment; `kd_compat.h` already maps several
+back to portable equivalents and that list is the pattern to extend.
+
 ### Test stubs must depend on their arguments
 
 The single most expensive lesson of this project. `difftest_pair`'s triangle generator
@@ -351,7 +408,7 @@ physics.
    all of them: `scene_chain.c` (collision-free, the authoritative trajectory signal),
    `scene_boxes_on_plane.c` (exercises the geometry dispatch), `scene_ragdoll.c` (nine
    capsules on ball-socket joints — the other two make **not one Sphyl call** between them).
-   Currently **94/94 clean on all three** on i386 — but read `HANDOVER.md` §4a before
+   Currently **98/98 clean on all three** on i386 — but read `HANDOVER.md` §4a before
    putting weight on that number: only eight of 103 objects have measurable sensitivity on
    any of these scenes, and `test/scene_census.sh` and `test/gate_sensitivity.sh` exist to
    say which. **Getting that under a wasm build is your first milestone.**
@@ -363,7 +420,7 @@ physics.
    contact regime and a figure without its regime is meaningless. `KD_GENARGS=1` and
    `KD_FIXEDSHAPE=1` are the two that found real bugs most recently.
 3. **`test/wasm_check.sh`** — compiles the whole set for wasm32 and diffs the exported
-   symbols against the native build. Currently 94/94 and 94/94. **Run this after any change
+   symbols against the native build. Currently 98/98 and 98/98. **Run this after any change
    to the recovery pipeline**; it is the cheapest possible early warning that a change has
    broken portability. It compares NAMES only — see the note at the end of §4.
 4. **`test/kd_shadow.c`** — the in-game shadow harness. Runs both implementations on the
@@ -427,10 +484,10 @@ gcc -m64 ... -o /tmp/rag_hx   test/scene_ragdoll.c  <linux_hx_single/*.a>
 - **Nothing has been RUN under wasm.** The whole set compiles and exports identical
   symbols, and that is all §4 hazards 2 and 3 settle. Hazards 1, 4 and 5 are runtime and
   entirely open.
-- **94 of ~150 objects compile**, 36 do not. But read `HANDOVER.md` §3 before reading that
+- **98 of ~150 objects compile**, 31 do not. But read `HANDOVER.md` §3 before reading that
   as 60% done — see the next bullet, it is the most important thing in this file for
   planning purposes.
-- **18 objects are deliberately quarantined** by eight safety detectors. They compile but
+- **19 objects are deliberately quarantined** by eight safety detectors. They compile but
   are known-or-suspected wrong. Do not include them to raise a coverage number. The proof
   of why: `IxConvexTriList` compiled, passed all three substitute scenes and 200,000
   synthetic pairs, and was **46% wrong in a live match** for two sessions — returning *no
@@ -461,7 +518,7 @@ moved off the never-called list, `Box×Sphere` most recently at 5,101 calls in o
 after 25 runs had shown none.
 
 So "how much of Karma do I need for the web build to run" is not 150 objects and not even
-94 — it is the collision path for twelve pairs, plus the solver, plus the framework objects
+98 — it is the collision path for twelve pairs, plus the solver, plus the framework objects
 that hold them together. That is a much smaller target than the compile count suggests, and
 it is the number to plan against.
 
@@ -517,7 +574,7 @@ where `wasm-ld` and GNU `ld` differ, and §4b already flags COMDAT for `keaMatri
 
 The honest one-line summary of the project's state: *the collision layer is proven and
 drives a real match; the solver's arithmetic is proven and cannot yet be reached; the
-solver's control flow is untouched.* Do not read 94-of-150 as 63%.
+solver's control flow is untouched.* Do not read 98-of-150 as 65%.
 
 ---
 
@@ -535,8 +592,10 @@ so it can be taken down independently.
 ## 8. Suggested order of work
 
 Compilation is no longer step one — that is done. But read §6's "gap that decides your
-schedule" first: **the solver is not recovered, so nothing can run end to end yet, on any
-target.** That reshapes the order. Start with what is runnable without a solver.
+schedule" first: **the solver's control flow is not recovered, so nothing runs end to end
+yet, on any target.** That reshapes the order. Start with what is runnable without a
+solver — and note that step 1 IS runnable today and nothing about it is blocked on the
+recovery side.
 
 1. **Prove the recovered collision functions EXECUTE under wasm, in isolation.** Write a
    standalone wasm driver that calls one interaction function directly with hand-built
@@ -571,3 +630,41 @@ target.** That reshapes the order. Start with what is runnable without a solver.
 
 Read `karma-decomp/HANDOVER.md` for how the recovery pipeline works, and
 `docs/KARMA-ON-WASM.md` Part I §2 for the full architectural analysis behind §2 above.
+
+---
+
+## 9. What changed on the recovery side, and what it means for you
+
+A log of the things that would otherwise surprise you, newest first. If you have read an
+older copy of this file, this is the diff.
+
+**2026-08-24.**
+
+- **98 objects** (was 93). The new ones are `CxSmallSort`, `MstModelDynamics`,
+  `McdGjkRegistration`, `McdPolygonIntersection`, `IxPrimitiveLineSegment` — the last is
+  the raycast path, and `McdGjkRegistration` installs the ConvexMesh interactions you will
+  need for anything vehicle-shaped.
+- **The dump directory moved from `out5` to `out6`.** 103 of 153 Ghidra dumps changed and
+  **not one compiled object did** — all 98 are byte-identical across the two. If you had
+  cached anything keyed on the dumps, it is stale; if you cached objects, it is not.
+- **A second unprototyped-indirect-call bug**, this time in the type database. §4b. This is
+  the one most likely to bite you, because on wasm it traps rather than corrupting.
+- **`__compar_fn_t`** — the first portability defect `wasm_check.sh` caught that the native
+  build could not. §4b.
+- **Three new gates on the recovery side**, and the reason they exist matters to you:
+  `scene_census.sh` (which recovered functions a scene actually RUNS),
+  `gate_sensitivity.sh` (whether the gate could have SEEN an error), and
+  `check_symbol_bindings.py` (exported name **and binding** vs the shipped object). The
+  first two exist because `substitute_test.sh` reported "trajectory bit-identical" for
+  every object and **only eight of 103 had any measurable sensitivity** — for the rest that
+  line was about the link, not the code. Do not build a wasm gate that can be green for the
+  same reason; make it report what it executed.
+- **The engine now drives on recovered collision code.** Eleven alternating 420 s ONS
+  matches per arm across two maps, stock vs substituted: indistinguishable, 4 crashes each,
+  same site — and that site turns out to be a bug in stock Karma, not ours. So "the
+  recovered collision layer works in a real game" is settled natively. It is not settled on
+  wasm, and that is still your line to cross.
+- **The solver moved, but not in a way that unblocks you.** Three `libMdtKea` compute
+  kernels are now proven bit-identical over 900 compounding steps. The four objects that
+  CALL them still do not compile, all for one reason — Ghidra cannot model their frames —
+  so §8 step 3 is exactly as blocked as before. Ask before assuming a date.

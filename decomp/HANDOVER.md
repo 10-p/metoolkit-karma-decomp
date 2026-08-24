@@ -2022,7 +2022,7 @@ Everything else — code, tests, measurement, tooling — is self-service.
 4. qhull and the asset loader replaced rather than recovered.
 5. No detector suppressed, no object released without a line in `proven.txt`.
 6. The whole set builds as ordinary C for **wasm32 and arm64/armv7**, not just i386.
-   **wasm32 is done** — 99/99 compile with byte-identical exported symbols
+   **wasm32 is done** — 106/106 compile with byte-identical exported symbols
    (`test/wasm_check.sh`). arm64 has not been tried; no cross-compiler is installed here.
    Nothing has been *executed* under wasm. See `HANDOVER-WEB.md`.
 7. The engine runs with `WITH_KARMA=1` against recovered Karma with **no shipped `.a` in the
@@ -2038,9 +2038,9 @@ Everything else — code, tests, measurement, tooling — is self-service.
 | 1 | every pair the census shows the game calling is recovered and validated | **DONE.** Twelve pairs, eight objects, evidence in `proven.txt`. Re-opens if the census moves — it has twice. |
 | 2 | validated = 0 ret/count/dims/overrun in a live match, `KD_SELFTEST` clean, evidence on the line | **DONE** for those twelve. |
 | 3 | all three scenes clean for every recovered object, *and* checked for sensitivity | **DONE**, and the sensitivity check (§4a) is what makes it mean anything. |
-| 4 | qhull and the asset loader **replaced**, not recovered | **QHULL HALF DONE, all four tiers.** `src/McdConvexCreateHull/kd_convexhull.c` replaces all 15 exported functions — 1.4 MB → 10 KB: 100,633 invariant checks, identical geometry and volumes, a collision A/B differing on 2 borderline pairs in 2.4 M, and **a live ONS match with 15,425 real GJK calls and 0 structural divergences**. wasm32 clean with an identical symbol set. The asset-loader half is NOT STARTED and is **not** the straight swap-in §11 item 8 implies — see §3b. |
+| 4 | qhull and the asset loader **replaced**, not recovered | **DONE, both halves — but the asset half was RECOVERED, not replaced (§8c), which is a better outcome: exact rather than equivalent.** Qhull, all four tiers: `src/McdConvexCreateHull/kd_convexhull.c` replaces all 15 exported functions — 1.4 MB → 10 KB: 100,633 invariant checks, identical geometry and volumes, a collision A/B differing on 2 borderline pairs in 2.4 M, and **a live ONS match with 15,425 real GJK calls and 0 structural divergences**. wasm32 clean with an identical symbol set. The asset loader is 9 of 9 recovered (§8c) and needs no replacement. |
 | 5 | no detector suppressed, nothing released without evidence | **HOLDING.** 25 objects quarantined, and §4a now shows the quarantine is load-bearing (`MdtPartition` alone turns a bit-identical scene into a SIGSEGV). |
-| 6 | builds as ordinary C for wasm32 **and arm64/armv7** | **wasm32 DONE** (99/99, byte-identical symbol sets). **arm64 NOT TRIED** — no cross-compiler installed. Nothing has been *executed* on either. |
+| 6 | builds as ordinary C for wasm32 **and arm64/armv7** | **wasm32 DONE** (106/106, byte-identical symbol sets). **arm64 NOT TRIED** — no cross-compiler installed. Nothing has been *executed* on either. |
 | 7 | engine runs on recovered Karma with **no shipped `.a` in the link at all** | **COLLISION HALF DONE** (§7b, two maps, 11 runs/arm, indistinguishable from stock). **SOLVER HALF BLOCKED**, but on one problem now rather than four — the arguments are recovered (§5a) and what remains is the frames, §11 item 2. |
 
 **So what is left, in one sentence each:**
@@ -2050,10 +2050,9 @@ Everything else — code, tests, measurement, tooling — is self-service.
   is that **the DWARF carries no `DW_AT_location` for these functions' variables**, so the
   frame is not merely unmodelled but undescribed. This is the only thing between here and
   item 7. §11 item 2.
-- **qhull and the asset loader** — replace, do not recover. Needs no Ghidra, but only the
-  asset loader is genuinely cheap: the hull carries the adjacency GJK hill-climbs, so it
-  has to be reproduced completely and cannot be validated by diffing against the shipped
-  library. §8a has the contract and the three tiers that do work.
+- ~~**qhull and the asset loader**~~ — **both done.** Qhull is replaced and validated at
+  four tiers including a live match (§8a, §8b); the asset loader turned out to be
+  RECOVERABLE and is 9 of 9 (§8c).
 - **arm64** — untried, needs a cross-compiler.
 - **Executing anything on wasm** — the web agent's job. `HANDOVER-WEB.md`.
 - **The tail** — 17 objects, fully triaged in §13. 3 are unreachable, 3 are documented
@@ -2091,7 +2090,7 @@ thing: **the DWARF for these particular functions declares no `DW_AT_location`**
 nothing — Ghidra or otherwise — can read the frame out of the debug info. §11 item 2 has
 the `readelf` that shows it and the one lead that is not a guess.
 
-**Never executed on wasm.** 99/99 compile with byte-identical exported symbols. Not one
+**Never executed on wasm.** 106/106 compile with byte-identical exported symbols. Not one
 instruction has run. See `HANDOVER-WEB.md`.
 
 **Run end to end, now, for the collision layer** — §7b. Not for the solver.

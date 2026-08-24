@@ -115,6 +115,29 @@ static Shape make_cloud(const char *name, int n)
     return s;
 }
 
+/* Degenerate inputs. These are NOT exotic for UT2004 — its collision volumes are
+ * boxes and low-poly prisms, so duplicate and coplanar vertices are the normal
+ * case. What McdComputeHull DOES here is a contract detail a replacement has to
+ * match, and it is not written down anywhere: a hull library that aborts, or
+ * that returns a degenerate structure the caller then walks, is the difference
+ * between a working map and a crash at load. */
+static Shape make_literal(const char *name, int n, const MeReal (*v)[3])
+{
+    Shape s; s.name = name; s.n = n; s.p = alloc_pts(n);
+    memcpy(s.p, v, n * sizeof(MeVector3));
+    return s;
+}
+
+static const MeReal PTS_TRI[3][3]      = {{0,0,0},{1,0,0},{0,1,0}};
+static const MeReal PTS_SQUARE[4][3]   = {{0,0,0},{1,0,0},{1,1,0},{0,1,0}};
+static const MeReal PTS_COLLINEAR[4][3]= {{0,0,0},{1,0,0},{2,0,0},{3,0,0}};
+static const MeReal PTS_DUP[8][3]      = {{0,0,0},{0,0,0},{1,0,0},{1,0,0},
+                                          {0,1,0},{0,1,0},{0,0,1},{0,0,1}};
+static const MeReal PTS_SLIVER[8][3]   = {{0,0,0},{1,0,0},{1,1,0},{0,1,0},
+                                          {0,0,1e-6f},{1,0,1e-6f},
+                                          {1,1,1e-6f},{0,1,1e-6f}};
+static const MeReal PTS_ONE[1][3]      = {{0,0,0}};
+
 /* ------------------------------------------------------------- the invariants */
 
 static void check_hull(const McdConvexHull *h, const Shape *s)
@@ -232,6 +255,43 @@ static void check_hull(const McdConvexHull *h, const Shape *s)
         CHECK(!outside, "input point %d is OUTSIDE the hull", i);
     }
 
+    /* 11. WHICH SIDE IS THE FACE ON? The header says the edge array is "sorted by
+     *     leftFace and ACW", and separately that an edge records "the face on its
+     *     right side". Those two sentences disagree about which field groups the
+     *     array, and getting it backwards mirrors every adjacency a replacement
+     *     builds. Settle it by measurement rather than by reading. */
+    {
+        int by_left = 0, by_right = 0;
+        for (f = 0; f < h->numFace; f++) {
+            int b = h->face[f].firstEdge, n = h->face[f + 1].firstEdge - b;
+            for (i = 0; i < n; i++) {
+                if (h->edge[b + i].leftFace  == f) by_left++;
+                if (h->edge[b + i].rightFace == f) by_right++;
+            }
+        }
+        CHECK(by_left == h->numEdge || by_right == h->numEdge,
+              "face ranges group by neither leftFace (%d/%d) nor rightFace (%d/%d)",
+              by_left, h->numEdge, by_right, h->numEdge);
+        printf("      [face ranges group by %s]\n",
+               by_left == h->numEdge ? "leftFace"
+               : by_right == h->numEdge ? "rightFace" : "NEITHER");
+    }
+
+    /* 12. An edge and its reverse must name the same two faces, swapped. */
+    for (e = 0; e < h->numEdge; e++) {
+        for (i = 0; i < h->numEdge; i++) {
+            if (h->edge[i].fromVert == h->edge[e].toVert &&
+                h->edge[i].toVert == h->edge[e].fromVert) {
+                CHECK(h->edge[i].leftFace == h->edge[e].rightFace &&
+                      h->edge[i].rightFace == h->edge[e].leftFace,
+                      "edge %d (L=%d R=%d) vs reverse %d (L=%d R=%d): not swapped",
+                      e, h->edge[e].leftFace, h->edge[e].rightFace,
+                      i, h->edge[i].leftFace, h->edge[i].rightFace);
+                break;
+            }
+        }
+    }
+
     /* 10. WINDING. The header says the edges are anti-clockwise around the face;
      *     it does not say from which side, and a replacement that guessed the
      *     other handedness would still close every ring and still have outward
@@ -292,6 +352,57 @@ static void run(Shape s, int dump)
     free(s.p);
 }
 
+/* Degenerate inputs are reported, not asserted on: the point is to LEARN what
+ * the shipped code does so a replacement can match it. Returning 0 is a
+ * perfectly good answer; silently producing a structure the caller then walks
+ * is a different one, and the caller (McdConvexMeshCreateHull) only checks the
+ * return value. */
+static void run_degenerate(Shape s)
+{
+    McdConvexHull h;
+    int ok;
+    printf("  %-28s (%2d pts) -> ", s.name, s.n);
+    fflush(stdout);
+    memset(&h, 0, sizeof h);
+    ok = McdComputeHull(&h, s.n, s.p);
+    if (!ok) {
+        printf("returns 0 (no hull)\n");
+    } else {
+        printf("returns 1: V=%d F=%d E=%d", h.numVertex, h.numFace, h.numEdge);
+        if (h.numVertex - h.numEdge / 2 + h.numFace == 2) printf("  [Euler ok]");
+        else printf("  [Euler = %d, NOT a closed polyhedron]",
+                    h.numVertex - h.numEdge / 2 + h.numFace);
+        printf("\n");
+        McdDeallocateHull(&h);
+    }
+    free(s.p);
+}
+
+/* Where exactly is the "too thin to be a solid" cutoff? It matters in both
+ * directions: a replacement that ACCEPTS a box the shipped code rejects creates
+ * collision geometry the game never had, and one that rejects more removes
+ * geometry it did have. Neither shows up as a crash — the caller just gets NULL
+ * and silently makes no primitive. */
+static void run_threshold_sweep(void)
+{
+    double t;
+    printf("\nHow thin is too thin? (unit square extruded by t)\n\n");
+    for (t = 1e-8; t < 2e-1; t *= 10.0) {
+        McdConvexHull h;
+        MeVector3 p[8];
+        int i, ok;
+        const MeReal base[4][2] = {{0,0},{1,0},{1,1},{0,1}};
+        for (i = 0; i < 4; i++) {
+            p[i][0] = base[i][0];   p[i][1] = base[i][1];   p[i][2] = 0;
+            p[i+4][0] = base[i][0]; p[i+4][1] = base[i][1]; p[i+4][2] = (MeReal)t;
+        }
+        memset(&h, 0, sizeof h);
+        ok = McdComputeHull(&h, 8, p);
+        printf("    t = %-9.0e -> %s\n", t, ok ? "hull built" : "returns 0");
+        if (ok) McdDeallocateHull(&h);
+    }
+}
+
 int main(void)
 {
     printf("Ground truth from the SHIPPED McdComputeHull (libMcdConvexCreateHull.a)\n\n");
@@ -306,5 +417,16 @@ int main(void)
     if (g_fail)
         printf("A failure here means the header's contract is not what this file "
                "assumed. Fix the assumption before writing a replacement.\n");
+
+    printf("\nDegenerate input — what does the shipped code DO?\n"
+           "(UT2004 collision volumes are boxes and prisms, so duplicate and\n"
+           " coplanar vertices are ordinary, not exotic.)\n\n");
+    run_degenerate(make_literal("single point",        1, PTS_ONE));
+    run_degenerate(make_literal("triangle (coplanar)", 3, PTS_TRI));
+    run_degenerate(make_literal("square (coplanar)",   4, PTS_SQUARE));
+    run_degenerate(make_literal("collinear",           4, PTS_COLLINEAR));
+    run_degenerate(make_literal("tetra w/ duplicates", 8, PTS_DUP));
+    run_degenerate(make_literal("1e-6 sliver box",     8, PTS_SLIVER));
+    run_threshold_sweep();
     return g_fail ? 1 : 0;
 }

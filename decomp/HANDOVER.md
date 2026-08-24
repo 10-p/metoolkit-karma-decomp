@@ -1681,9 +1681,35 @@ replacement. What it settled:
 That last row is the one a replacement is most likely to get backwards, and checks on ring
 closure and outward normals **cannot see it** — both hold for either handedness.
 
+**Two conventions the header is ambiguous about, settled by measurement.** It says the edge
+array is "sorted by leftFace and ACW" and also that an edge records "the face on its right
+side"; those two sentences disagree about which field groups the array, and reversing it
+mirrors every adjacency a replacement builds.
+
+- face `f`'s edge range contains exactly the edges with **`leftFace == f`** — measured, on
+  every shape;
+- an edge and its reverse carry the same two faces **swapped**.
+
 Note also that the hull **reindexes**: `vertex[]` is the hull's own array and does not
 follow input order, which is precisely why the acceptance test cannot be an index-wise
 diff.
+
+**Degenerate input, which for UT2004 is ordinary** — its collision volumes are boxes and
+low-poly prisms, so duplicate and coplanar vertices are the normal case:
+
+| input | shipped behaviour |
+|---|---|
+| 1 point, coplanar triangle, coplanar square, collinear | `return 0` — no hull |
+| tetrahedron with every vertex duplicated | `return 1`, duplicates collapsed, `V=4 F=4 E=12` |
+| unit square extruded by `t` | rejected at `t <= 1e-6`, hull built from `t >= 1e-5` |
+
+`McdConvexMeshCreateHull` only checks the return value and yields NULL, so the primitive is
+silently not created. **That cutoff matters in both directions**: a replacement that accepts
+a box the shipped code rejects invents collision geometry the game never had, and one that
+rejects more removes geometry it did have. Neither shows up as a crash.
+
+(The shipped code also leaks qhull's diagnostics — `- normal: - vertices:center point` — to
+stdout on degenerate input. A replacement should simply be silent.)
 
 
 ### What needs the project owner, and nothing else will do

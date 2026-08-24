@@ -320,6 +320,72 @@ static void check_hull(const McdConvexHull *h, const Shape *s)
     }
 }
 
+/* Canonical geometric dump, for the tier-2 A/B in HANDOVER.md §8a.
+ *
+ * The hull REINDEXES, so two correct implementations can disagree about every
+ * index and still describe the same solid. Comparing them therefore means
+ * comparing GEOMETRY as unordered sets: the vertex positions, and the face
+ * planes (unit normal + offset). Both are sorted and printed at fixed precision
+ * so `diff` does the work.
+ *
+ * Volume is printed too, as a single scalar that no amount of reordering can
+ * disguise — if the vertex and plane sets both match and the volume matches,
+ * the two hulls are the same solid. */
+static int cmp_line(const void *a, const void *b)
+{
+    return strcmp(*(const char *const *)a, *(const char *const *)b);
+}
+
+static void dump_canonical(const McdConvexHull *h, const char *name)
+{
+    char **lines;
+    int i, f, n = 0;
+    double vol = 0.0;
+
+    printf("### %s\n", name);
+    lines = (char **)malloc((size_t)(h->numVertex + h->numFace) * sizeof(char *));
+    if (!lines) return;
+
+    /* Adding 0.0 turns -0.0 into +0.0 under round-to-nearest. Without it the two
+     * implementations print the same plane as "-0.0000" and "+0.0000", which
+     * also reorders the sort and makes a signed zero look like a real
+     * disagreement. */
+    #define Z(x) ((double)(x) + 0.0)
+    for (i = 0; i < h->numVertex; i++) {
+        lines[n] = (char *)malloc(64);
+        sprintf(lines[n], "V %+.4f %+.4f %+.4f", Z(h->vertex[i].position[0]),
+                Z(h->vertex[i].position[1]), Z(h->vertex[i].position[2]));
+        n++;
+    }
+    for (f = 0; f < h->numFace; f++) {
+        const MeReal *nr = h->face[f].normal;
+        const MeReal *p = h->vertex[h->edge[h->face[f].firstEdge].fromVert].position;
+        double d = (double)nr[0]*p[0] + (double)nr[1]*p[1] + (double)nr[2]*p[2];
+        lines[n] = (char *)malloc(64);
+        sprintf(lines[n], "F %+.4f %+.4f %+.4f %+.4f", Z(nr[0]), Z(nr[1]), Z(nr[2]), Z(d));
+        n++;
+    }
+    #undef Z
+    qsort(lines, (size_t)n, sizeof(char *), cmp_line);
+    for (i = 0; i < n; i++) { printf("%s\n", lines[i]); free(lines[i]); }
+    free(lines);
+
+    /* Signed volume by the divergence theorem, fanning each face. */
+    for (f = 0; f < h->numFace; f++) {
+        int b = h->face[f].firstEdge, cnt = h->face[f + 1].firstEdge - b;
+        const MeReal *v0 = h->vertex[h->edge[b].fromVert].position;
+        for (i = 1; i + 1 < cnt; i++) {
+            const MeReal *v1 = h->vertex[h->edge[b + i].fromVert].position;
+            const MeReal *v2 = h->vertex[h->edge[b + i + 1].fromVert].position;
+            double ax=v1[0]-v0[0], ay=v1[1]-v0[1], az=v1[2]-v0[2];
+            double bx=v2[0]-v0[0], by=v2[1]-v0[1], bz=v2[2]-v0[2];
+            vol += ((double)v0[0]*(ay*bz-az*by) + (double)v0[1]*(az*bx-ax*bz)
+                  + (double)v0[2]*(ax*by-ay*bx)) / 6.0;
+        }
+    }
+    printf("VOL %.5f\n", fabs(vol));
+}
+
 /* ------------------------------------------------------------------------ main */
 
 static void run(Shape s, int dump)
@@ -336,6 +402,7 @@ static void run(Shape s, int dump)
         free(s.p);
         return;
     }
+    if (getenv("KD_HULL_DUMP")) { dump_canonical(&h, s.name); McdDeallocateHull(&h); free(s.p); return; }
     check_hull(&h, &s);
 
     if (dump) {
@@ -405,6 +472,17 @@ static void run_threshold_sweep(void)
 
 int main(void)
 {
+    if (getenv("KD_HULL_DUMP")) {
+        /* Tier 2: geometry only, canonical, for diffing one implementation
+         * against another. No banner — the whole output is the comparand. */
+        run(make_tetra(), 0);
+        run(make_cube(), 0);
+        run(make_cube_redundant(), 0);
+        run(make_cloud("sphere cloud, 24 pts", 24), 0);
+        run(make_cloud("sphere cloud, 60 pts", 60), 0);
+        run(make_cloud("sphere cloud, 200 pts", 200), 0);
+        return 0;
+    }
     printf("Ground truth from the SHIPPED McdComputeHull (libMcdConvexCreateHull.a)\n\n");
     run(make_tetra(), 1);
     run(make_cube(), 1);

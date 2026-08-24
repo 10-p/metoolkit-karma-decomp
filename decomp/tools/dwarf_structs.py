@@ -176,7 +176,29 @@ def declarator(dies, ref, name, depth=0):
         n = array_extent(dies, ref)
         return declarator(dies, subref, f'{name}[{n if n else ""}]', depth + 1)
     if tag == 'DW_TAG_subroutine_type':
-        return declarator(dies, subref, f'{name}()', depth + 1)
+        # Write the parameter list out. `f(...)` with an EMPTY list is a function
+        # type with no prototype, so C applies the default argument promotions at
+        # every call through it — a float goes across as a double and a callee
+        # that does have a prototype reads the low half. That is exactly the
+        # defect that made IxConvexTriList wrong for three sessions
+        # (HANDOVER.md 8), and emitting `()` here builds it into the type
+        # database by construction.
+        params = []
+        varargs = False
+        for c in d.get('children', []):
+            if c['tag'] == 'DW_TAG_unspecified_parameters':
+                varargs = True
+                continue
+            if c['tag'] != 'DW_TAG_formal_parameter':
+                continue
+            pt = c['attrs'].get('DW_AT_type')
+            pm = REF_RE.search(pt) if pt else None
+            params.append(declarator(dies, int(pm.group(1), 16) if pm else None,
+                                     '', depth + 1).strip())
+        if varargs:
+            params.append('...')
+        plist = ', '.join(params) if params else 'void'
+        return declarator(dies, subref, f'{name}({plist})', depth + 1)
     if tag in ('DW_TAG_const_type', 'DW_TAG_volatile_type'):
         q = 'const' if tag == 'DW_TAG_const_type' else 'volatile'
         inner = dies.get(subref, {}).get('tag') if subref is not None else None

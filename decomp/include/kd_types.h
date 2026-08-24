@@ -126,7 +126,15 @@ typedef __typeof__(((struct MePool *)0)->u) kd_anon_u;
 
 /* ---- internal typedefs the recovered structs depend on ---- */
 typedef struct _McdContactLink McdContactLink;
-typedef void (*McdUpdateAABBFnPtr)();
+typedef void (*McdUpdateAABBFnPtr)(struct _McdModel *, float);
+
+/* ---- function-pointer typedefs used by function bodies ---- */
+typedef void (*CDataFreeFunc)(void *const);
+typedef int (*McdPolyPointCompareFn)(const void *, const void *);
+typedef void (*McdUpdateSphereFnPtr)(struct _McdModel *, MeReal *, MeReal *);
+typedef void (*PElementCB)(struct PElement *, struct PElement *, void *);
+typedef struct PElement * (*PElementCompareCB)(struct PElement *, void *, void *);
+typedef void (*pIntegratorFunc)(struct MdtKeaBody *const *, struct MdtKeaTransformation *, int, struct MdtKeaParameters);
 
 /* ---- enums ---- */
 /* from IxPrimitiveLineSegment.o */

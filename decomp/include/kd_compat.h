@@ -22,6 +22,15 @@
    declares it. MeXMLTree failed on nothing else. */
 #include <ctype.h>
 
+/* glibc's name for qsort's comparator, which Ghidra emits because that is what
+   the object's DWARF calls it. It does not exist under Emscripten, so
+   McdPolygonIntersection compiled for i386 and not for wasm32. The guard macro
+   is glibc's own, so this is a no-op where the header already provided it. */
+#ifndef __COMPAR_FN_T
+# define __COMPAR_FN_T
+typedef int (*__compar_fn_t)(const void *, const void *);
+#endif
+
 /* ---- what gcc 3.2 turned the standard library into ----------------------
     A call to strtol comes back out of the decompiler as __strtol_internal,
     because that is the symbol gcc 3.2 emitted against glibc 2.x. Declaring the

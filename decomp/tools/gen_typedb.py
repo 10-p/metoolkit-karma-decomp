@@ -55,6 +55,18 @@ def public_type_names(include_dir):
     # learn about `MeSet` and go on to redefine `_MeSet`, which the header
     # already declares.
     tagdef = re.compile(r'\btypedef\s+(?:struct|union|enum)\s+([A-Za-z_]\w*)\s*\{')
+    # A FUNCTION-POINTER typedef. `anytd` above gets these wrong: the text before
+    # the `;` ends in `)`, so the last identifier it captures is the last
+    # PARAMETER TYPE, not the typedef name, and the header's
+    #   typedef void (*McdUpdateAABBFnPtr)(McdModelID, MeReal);
+    # was never recognised as public. That did not matter while nothing emitted
+    # typedefs; the moment function_pointer_typedefs() did, the build went to
+    # zero on 40-odd "conflicting types".
+    # The optional identifier before the `*` is the calling-convention macro:
+    # metoolkit writes `typedef void (MEAPI *MdtBodyCallbackCBPtr)(...)`, and a
+    # pattern that goes straight from `(` to `*` misses every one of them.
+    fnptr = re.compile(r'\btypedef\b[^;{}]*?\(\s*(?:[A-Za-z_]\w*\s+)?\*+\s*'
+                       r'([A-Za-z_]\w*)\s*\)\s*\(')
     for root, _, files in os.walk(include_dir):
         for f in files:
             if not f.endswith('.h'):
@@ -67,8 +79,10 @@ def public_type_names(include_dir):
             names.update(tpat.findall(txt))
             names.update(anytd.findall(txt))
             names.update(tagdef.findall(txt))
+            names.update(fnptr.findall(txt))
             tdnames.update(tpat.findall(txt))
             tdnames.update(anytd.findall(txt))
+            tdnames.update(fnptr.findall(txt))
     return names, tdnames
 
 
@@ -223,6 +237,60 @@ def name_anonymous_typedef_targets(dies, public):
         target['attrs']['DW_AT_name'] = tname
 
 
+def function_pointer_typedefs(dies, public, tdnames):
+    """`typedef int (*Foo)(void *, void *);` — typedefs gen_typedb used to skip.
+
+    The scan below only collects aggregates and enums, so a typedef whose target
+    is a POINTER TO FUNCTION never reached the header and the recovered source
+    failed with `unknown type name`. McdPolygonIntersection declares
+    `McdPolyPointCompareFn cmp[3];` and failed on nothing else.
+
+    The parameter list is written out rather than left empty, and that is not
+    cosmetic. `typedef int (*Foo)();` is a function type with NO prototype, so C
+    applies the default argument promotions at every call through it — which is
+    precisely the defect that made IxConvexTriList wrong for three sessions: a
+    float radius went across as a double and the callee read the low half. An
+    empty parameter list here would reintroduce it by construction.
+
+    Yields (name, C declaration)."""
+    out = []
+    for die in dies.values():
+        if die['tag'] != 'DW_TAG_typedef':
+            continue
+        name = die['attrs'].get('DW_AT_name')
+        if (not name or name in public or name in tdnames
+                or name in SYSTEM_TYPES):
+            continue
+        ref = die['attrs'].get('DW_AT_type')
+        m = REF_RE.search(ref) if ref else None
+        if not m:
+            continue
+        ptr = dies.get(int(m.group(1), 16))
+        if ptr is None or ptr['tag'] != 'DW_TAG_pointer_type':
+            continue
+        sub = ptr['attrs'].get('DW_AT_type')
+        m2 = REF_RE.search(sub) if sub else None
+        if not m2:
+            continue
+        fn = dies.get(int(m2.group(1), 16))
+        if fn is None or fn['tag'] != 'DW_TAG_subroutine_type':
+            continue
+        rref = fn['attrs'].get('DW_AT_type')
+        rm = REF_RE.search(rref) if rref else None
+        ret = declarator(dies, int(rm.group(1), 16) if rm else None, '').strip()
+        params = []
+        for c in fn['children']:
+            if c['tag'] != 'DW_TAG_formal_parameter':
+                continue
+            pr = c['attrs'].get('DW_AT_type')
+            pm = REF_RE.search(pr) if pr else None
+            params.append(declarator(dies, int(pm.group(1), 16) if pm else None,
+                                     '').strip())
+        plist = ', '.join(params) if params else 'void'
+        out.append((name, f'typedef {ret} (*{name})({plist});'))
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('objdirs', nargs='+', help='directories of extracted .o files')
@@ -241,6 +309,7 @@ def main():
     best = {}        # name -> (richness, die, dies, source object)  [emitted]
     pub_layout = {}  # same, for PUBLIC types: field map only, never emitted
     enums = {}       # name -> (die, source object)
+    fptypedefs = {}  # name -> `typedef int (*Foo)(void *, void *);`
     conflicts = {}   # name -> set of (nmembers, size) seen
 
     objs = []
@@ -259,6 +328,8 @@ def main():
             print(f'  ! {obj}: {e}', file=sys.stderr)
             continue
         name_anonymous_typedef_targets(dies, public)
+        for fpname, fpdecl in function_pointer_typedefs(dies, public, typedef_names):
+            fptypedefs.setdefault(fpname, fpdecl)
         for die in dies.values():
             if die['tag'] == 'DW_TAG_enumeration_type':
                 en = die['attrs'].get('DW_AT_name')
@@ -418,6 +489,16 @@ def main():
             m = REF_RE.search(sub) if sub else None
             ref = int(m.group(1), 16) if m else None
             out.append(f'typedef {declarator(dd, ref, n)};')
+            fptypedefs.pop(n, None)          # this path already covers it
+        out.append('')
+    # Function-pointer typedefs the struct scan cannot see, because they are used
+    # as LOCAL variable types rather than as members. McdPolygonIntersection
+    # declares `McdPolyPointCompareFn cmp[3];` and failed on nothing else.
+    fp_extra = {n: v for n, v in fptypedefs.items() if n not in best and n not in aux}
+    if fp_extra:
+        out.append('/* ---- function-pointer typedefs used by function bodies ---- */')
+        for n in sorted(fp_extra):
+            out.append(fp_extra[n])
         out.append('')
 
     if enums:

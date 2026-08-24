@@ -340,6 +340,26 @@ def materialise_alloca_frame(body, fname):
                          r'\s*\+\s*0xfU?\s*&\s*0xfffffff0\)\s*;', body):
         neg[m.group(1)] = (m.group(2).strip(), m.group(3))
 
+    # The SPLIT form of the same idiom. Ghidra does not always fold the rounding
+    # and the negation into one expression:
+    #
+    #     uVar19 = count * 4 + 0xfU & 0xfffffff0;
+    #     iVar5  = -uVar19;
+    #
+    # is the identical `sub %edx,%esp` alloca, and reading it as anything else
+    # leaves `&stack0xffffffac + iVar5` undeclared — which is what kept
+    # MeAssetFactory and MeFAsset out of the build, both of them on the .ka path
+    # that instances every ragdoll. The size expression is matched exactly as
+    # above, so this widens WHICH SPELLING is recognised, not what counts as an
+    # alloca.
+    sized = {}
+    for m in re.finditer(r'(\w+)\s*=\s*(?:\(int\)\s*)?(.+?)\s*\*\s*(0x[0-9a-f]+|\d+)'
+                         r'\s*\+\s*0xfU?\s*&\s*0xfffffff0\s*;', body):
+        sized[m.group(1)] = (m.group(2).strip(), m.group(3))
+    for m in re.finditer(r'(\w+)\s*=\s*-\s*(\w+)\s*;', body):
+        if m.group(2) in sized and m.group(1) not in neg:
+            neg[m.group(1)] = sized[m.group(2)]
+
     n = 0
     # negVar -> the base it was expressed against. Anything ELSE written as
     # `base + negVar` denotes the same block and must not be collapsed to the
@@ -1624,6 +1644,11 @@ SCALAR_KEYWORDS = {
     'undefined', 'undefined1', 'undefined2', 'undefined4', 'undefined8',
 }
 ANY_CAST = re.compile(r'\(\s*((?:struct\s+)?[A-Za-z_]\w*)\s*\)')
+# A cast with an EXPLICIT star. Kept separate from ANY_CAST rather than folded
+# into it, because fix_aggregate_as_integer also uses that pattern and filters on
+# SCALAR_KEYWORDS — widening it there would make `(int *)x` match as `int` and be
+# rewritten to `(*(int *)&(x))`, which is a different and wrong transformation.
+PTR_CAST = re.compile(r'\(\s*((?:struct\s+)?[A-Za-z_]\w*)\s*\*+\s*\)')
 
 
 def fix_float_as_pointer(line, diag, ctx):
@@ -1636,17 +1661,32 @@ def fix_float_as_pointer(line, diag, ctx):
 
     Casts to a scalar keyword are skipped, because `(int)f` is a legal
     conversion and rewriting it would replace a rounded value with a bit
-    pattern — the same mistake as dead end 6, pointing the other way."""
-    for m in ANY_CAST.finditer(line):
-        if m.group(1).replace('struct ', '') in SCALAR_KEYWORDS:
-            continue
-        end = scan_unary_forward(line, m.end())
-        if end is None or end <= m.end():
-            continue
-        operand = line[m.end():end].strip()
-        if not operand or operand.startswith('KD_FBITS'):
-            continue
-        return (line[:m.end()] + f'KD_FBITS({operand})' + line[end:])
+    pattern — the same mistake as dead end 6, pointing the other way.
+
+    BOTH SPELLINGS OF A POINTER CAST. The rule was written for a typedef that
+    already IS a pointer (`McdGeometryID`), and silently did nothing for an
+    explicit `(MeFAsset *)` because ANY_CAST has no star in it. That left
+    MeFAsset one error from compiling —
+
+        pMVar25 = (MeFAsset *)asset->massScale;   /* massScale is a MeReal */
+        ...
+        asset_1->massScale = (*(MeReal *)&(pMVar25));
+
+    which is Ghidra carrying a float through a slot it typed as a pointer, then
+    reading the bytes back. With an explicit star the SCALAR_KEYWORDS test is
+    not needed and must not be applied: no float converts to `int *` either, so
+    the bytes are the answer for any starred type."""
+    for pat, starred in ((ANY_CAST, False), (PTR_CAST, True)):
+        for m in pat.finditer(line):
+            if not starred and m.group(1).replace('struct ', '') in SCALAR_KEYWORDS:
+                continue
+            end = scan_unary_forward(line, m.end())
+            if end is None or end <= m.end():
+                continue
+            operand = line[m.end():end].strip()
+            if not operand or operand.startswith('KD_FBITS'):
+                continue
+            return (line[:m.end()] + f'KD_FBITS({operand})' + line[end:])
     return None
 
 fix_float_as_pointer.multiline = True

@@ -1543,7 +1543,45 @@ def prototype_indirect_calls(body):
 # Each entry: (diagnostic pattern the rule claims, rewrite function).
 # A rule is offered a line only when GCC reported that exact kind of error on
 # it, so the pattern here is half of the rule's safety argument.
+def fix_aggregate_cast(line, diag, ctx):
+    """`f((kd_agg16)*HWTMode)` — a cast to a by-value aggregate, which C forbids.
+
+    Once gen_protos.py gives Ghidra the real signature for a function taking a
+    struct BY VALUE (see its simple_type()), Ghidra casts the argument to that
+    type at the call site. `(T)x` where T is a struct is "conversion to
+    non-scalar type requested" — legal in Ghidra's output language, not in C.
+
+    The operand is always an lvalue of the right size in practice, because that
+    is what the original passed, so reinterpreting through a pointer is exactly
+    what the ABI does: `*(kd_agg16 *)&x`. Where the operand is already a
+    dereference, `*(T *)p` drops the redundant round trip.
+
+    Only kd_agg types, deliberately. A cast to some OTHER struct type would mean
+    Ghidra had recovered a real aggregate and reinterpreting it might not be
+    what the original did — that case is left to fail loudly."""
+    m = re.search(r'\((kd_agg\d+)\)\s*', line)
+    if not m:
+        return None
+    typ = m.group(1)
+    end = scan_unary_forward(line, m.end())
+    if end is None or end <= m.end():
+        return None
+    operand = line[m.end():end].strip()
+    if not operand:
+        return None
+    if operand.startswith('*'):
+        inner = operand[1:].strip()
+        repl = f'*({typ} *)({inner})'
+    elif operand.startswith('&'):
+        repl = f'*({typ} *)({operand})'
+    else:
+        repl = f'*({typ} *)&({operand})'
+    return line[:m.start()] + repl + line[end:]
+
+
 REPAIR_RULES = [
+    (re.compile(r'conversion to non-scalar type requested'),
+     fix_aggregate_cast),
     (re.compile(r'pointer value used where a floating-point was expected'),
      fix_pointer_as_float),
     (re.compile(r'cannot convert to a pointer type'),
@@ -1925,6 +1963,22 @@ def main():
 
     body_text = '\n'.join(defs)
     data_block, n_data = materialise_data_refs(args.object, body_text)
+    # `kd_aggN` is the opaque stand-in gen_protos.py uses for an aggregate passed
+    # BY VALUE. Once Ghidra has the signature it puts that type in the BODY too,
+    # not only in the imported declaration — MdtWorld declares `kd_agg76 kVar2;`
+    # as a local. gen_prelude can only see the prelude, so the typedef has to be
+    # emitted from here, where the whole file is assembled.
+    # Scan everything that ends up in the file, not just what is generated here.
+    # The type reaches the output by two independent routes: Ghidra puts it in a
+    # BODY once it has the signature (MdtWorld declares `kd_agg76 kVar2;` as a
+    # local), and gen_prelude puts it in an extern DECLARATION for an imported
+    # callee (keaCalcJinvMandRHS_vanilla). Scanning only the first missed the
+    # second and took two objects out of the build.
+    _agg_scan = body_text + '\n'.join(decls)
+    for _extra in (args.prelude, args.exports, args.vtables):
+        if _extra and os.path.exists(_extra):
+            _agg_scan += open(_extra, errors='ignore').read()
+    agg_sizes = sorted({int(n) for n in re.findall(r'\bkd_agg(\d+)\b', _agg_scan)})
     # Forward declarations mention these types too, so scan both.
     ftype_block, n_ftype = ghidra_functype_typedefs(body_text + '\n'.join(decls))
     ptr_block, n_ptr = resolve_ptr_labels(args.object, body_text)
@@ -1938,6 +1992,12 @@ def main():
         f.write('#include "kd_types.h"\n')
         f.write('#include <stdbool.h>\n')
         f.write('#include <stdarg.h>\n\n')
+        if agg_sizes:
+            f.write('/* Stand-ins for aggregates passed BY VALUE; only the size\n'
+                    ' * matters, and it is what fixes the ABI. See gen_protos.py. */\n')
+            for n in agg_sizes:
+                f.write('typedef struct { char _kd[%d]; } kd_agg%d;\n' % (n, n))
+            f.write('\n')
         if ftype_block:
             f.write(ftype_block)
         if data_block:

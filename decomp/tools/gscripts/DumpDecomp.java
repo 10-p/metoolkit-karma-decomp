@@ -119,14 +119,20 @@ public class DumpDecomp extends GhidraScript {
             // keaMemory has 7 of 11, keaIntegrate_pc 1 of 3 — the three objects
             // blocking the solver.
             //
-            // Set KD_FORCE_CDECL_UNKNOWN=1 to include them. It is opt-in because
-            // HANDOVER.md 5 records that forcing __cdecl on EVERYTHING made things
-            // worse: gcc's i386 C++ ABI passes `this` as the first stack argument,
-            // so Ghidra's __thiscall is already right and overriding it dropped
-            // the parameter, costing five kea objects that had been compiling.
+            // ON BY DEFAULT, and measured before being made so. It is narrower
+            // than the blanket force HANDOVER.md 5 records as harmful — that one
+            // also hit __thiscall, and gcc's i386 C++ ABI passes `this` as the
+            // first stack argument, so Ghidra's __thiscall is already right and
+            // overriding it dropped the parameter, costing five kea objects.
             // Leaving __thiscall and __cdecl alone is the whole point.
+            //
+            // With the by-value aggregate prototypes (gen_protos.simple_type) it
+            // is not merely cosmetic: without it, keaCalcJinvMandRHS_vanilla and
+            // keaRbdCore_unified stop compiling. Corpus-wide it takes decompiler
+            // warnings from 602 to 265 and changes nothing else the gates measure.
+            // Set KD_FORCE_CDECL_UNKNOWN=0 to turn it off for an A/B.
             boolean unknown = (cc == null || cc.equals("unknown"))
-                              && "1".equals(System.getenv("KD_FORCE_CDECL_UNKNOWN"));
+                              && !"0".equals(System.getenv("KD_FORCE_CDECL_UNKNOWN"));
             if (!unknown && (cc == null || !cc.startsWith("__regparm"))) continue;
             try {
                 // Custom storage pins parameters to the locations the wrong

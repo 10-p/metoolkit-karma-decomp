@@ -473,26 +473,7 @@ def main():
     if args.exports_out:
         open(args.exports_out, 'w').write('\n'.join(exp_out) + '\n')
 
-    # A prototype for a function taking or returning an aggregate BY VALUE
-    # names a `kd_aggN` stand-in (see gen_protos.simple_type). Those typedefs
-    # exist only in the header Ghidra consumes, so emit whichever ones this
-    # prelude actually used — hardcoding the sizes anywhere else would go stale
-    # the moment a new by-value aggregate turns up.
     text = '\n'.join(out)
-    sizes = sorted({int(n) for n in re.findall(r'\bkd_agg(\d+)\b', text)})
-    if sizes:
-        head = ['/* --- stand-ins for aggregates passed BY VALUE; only the size',
-                ' *     matters, and it is what fixes the ABI --- */']
-        head += ['typedef struct { char _kd[%d]; } kd_agg%d;' % (n, n) for n in sizes]
-        head.append('')
-        # After the file comment, before anything that could reference them.
-        for i, line in enumerate(out):
-            if line.startswith(' */'):
-                out = out[:i + 1] + [''] + head + out[i + 1:]
-                break
-        else:
-            out = head + out
-        text = '\n'.join(out)
     if args.output:
         open(args.output, 'w').write(text)
         n_todo = text.count('TODO')

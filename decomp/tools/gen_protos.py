@@ -34,6 +34,7 @@ from dwarf_structs import parse, REF_RE  # noqa: E402
 INT_BY_SIZE = {1: 'char', 2: 'short', 4: 'int', 8: 'long long'}
 
 
+
 def simple_type(dies, ref, depth=0):
     """Collapse a DWARF type to something with the right size and class."""
     if ref is None or depth > 16:
@@ -93,6 +94,48 @@ def simple_type(dies, ref, depth=0):
     return 'int'          # unknown: assume one 4-byte slot rather than nothing
 
 
+def collect_aliases(dies, out):
+    """Record {mangled ELF name: DW_AT_name} for the C++ functions in this object.
+
+    The source is DW_AT_MIPS_linkage_name, which gcc 3.2 emits for class
+    MEMBERS. That is a fact out of the object's own debug info — nothing here
+    re-implements Itanium mangling, and nothing matches on a name.
+
+    C++ FREE functions (`MovingBoxBoxIntersect`, `AccumulateSphylContacts`,
+    `ConvexHullNSegment`, `PolynomialRoots`) get no linkage attribute, and
+    covering them is TRIED AND REJECTED — see HANDOVER.md dead end 19. The
+    route works: a subprogram's DW_AT_low_pc and the ELF symbol's value are
+    offsets into the same .text, so the symbol at the concrete instance's
+    low_pc is the linkage name, and it took coverage from 40 of 75 undefined
+    mangled symbols to 66. It also took the build from 109 objects to 105,
+    because those functions ARE declared in the importing object's own DWARF,
+    so Ghidra already had their real signatures and the simplified prototype
+    (every pointer `void *`) overwrote them. `lsVec3 *` became `void *` in
+    IxBoxBox, IxConvexTriList, IxCylinderCylinder and IxSphylPrimitives — four
+    objects with live in-game evidence in proven.txt — and they stopped
+    compiling.
+
+    Members do not have that problem, measured rather than argued: with this
+    route alone all 109 compiled objects stay byte-identical. The distinction
+    that matters is not C-vs-C++, it is whether Ghidra already had a signature.
+    """
+    for die in dies.values():
+        if die['tag'] != 'DW_TAG_subprogram':
+            continue
+        a = die['attrs']
+        name = a.get('DW_AT_name')
+        linkage = a.get('DW_AT_MIPS_linkage_name') or a.get('DW_AT_linkage_name')
+        if not (linkage and name) or linkage == name:
+            continue
+        if not linkage.replace('_', 'a').isalnum():
+            continue
+        # An offset that two differently-named functions claim is not evidence.
+        if out.get(linkage, name) != name:
+            out[linkage] = None
+        else:
+            out.setdefault(linkage, name)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('objdirs', nargs='+')
@@ -106,11 +149,13 @@ def main():
     objs = [o for o in objs if not any(x in o for x in args.exclude)]
 
     protos, skipped, aggs = {}, [], set()
+    sigs, aliases = {}, {}
     for obj in objs:
         try:
             dies = parse(obj)
         except Exception:                                       # noqa: BLE001
             continue
+        collect_aliases(dies, aliases)
         for die in dies.values():
             if die['tag'] != 'DW_TAG_subprogram':
                 continue
@@ -157,6 +202,35 @@ def main():
                 continue
             plist = ', '.join(params) if params else 'void'
             protos[name] = f'{ret} {name}({plist});'
+            sigs[name] = (ret, plist)
+
+    # Re-emit every prototype under its MANGLED name as well.
+    #
+    # ParseKarmaHeaders matches a prototype to an ELF symbol by NAME, and it
+    # runs as a preScript — before Ghidra's demangler analyzer. So the symbol is
+    # still `_ZN12keaFunctions20checkPrintDebugInput...` while DW_AT_name, and
+    # therefore this header, says `checkPrintDebugInput`. Every C++ function in
+    # the corpus went unmatched and Ghidra fell back to guessing the arity from
+    # the call site — the exact failure this whole file exists to prevent. 75
+    # undefined mangled symbols across 21 objects were in that state.
+    #
+    # keaRbdCore_unified is the worked example, and the damage is not cosmetic.
+    # Ghidra guessed the outgoing argument area for
+    #   keaFunctions::checkPrintDebugInput(this, constraints, parameters, blist, n)
+    # with `this` DROPPED, so it read the 92-byte `constraints` from esp+0 where
+    # the machine code writes it at esp+4 (`lea 0x4(%esp),%edi`) and
+    # `parameters` from esp+0x5c where the code writes esp+0x60 — every by-value
+    # aggregate argument one word early. Same shape as the __regparm shift of
+    # HANDOVER.md 10.
+    #
+    # A mangled name is a valid C identifier and is unique by construction, so
+    # nothing on the Ghidra side has to change: its existing exact-name lookup
+    # simply starts hitting.
+    for mangled, bare in sorted(aliases.items()):
+        if bare and bare in sigs and mangled not in protos:
+            ret, plist = sigs[bare]
+            protos[mangled] = f'{ret} {mangled}({plist});'
+
 
     with open(args.output, 'w') as f:
         f.write('/* kd_protos.h — Karma function prototypes recovered from DWARF.\n'

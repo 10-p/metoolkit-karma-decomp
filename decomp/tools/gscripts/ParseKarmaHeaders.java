@@ -23,6 +23,12 @@ import ghidra.program.model.symbol.SourceType;
 public class ParseKarmaHeaders extends GhidraScript {
     @Override
     public void run() throws Exception {
+        // Analysis has NOT run yet — headless order is import, preScript,
+        // analysis, postScript — so this is the one place an analyzer option
+        // can still be changed. Unset means "do not touch anything", which is
+        // what produced out9.
+        applyAnalysisOptions();
+
         // A flat, dependency-free prototype header produced by
         // tools/gen_protos.py from the same DWARF. metoolkit's real headers
         // do NOT survive Ghidra's C parser: they are layered with
@@ -83,6 +89,30 @@ public class ParseKarmaHeaders extends GhidraScript {
         }
         println("KARMAHDR: signatures applied -- defined=" + defined
                 + " imported=" + imported + " failed=" + failed);
+        dumpSignatures();
+    }
+
+    /**
+     * Print the applied signature and per-parameter STORAGE for every function
+     * whose name contains KD_DUMP_SIGS. A prototype that reads correctly in
+     * kd_protos.h can still be laid out wrongly on the stack, and the layout is
+     * what the decompiler uses — so print the storage, not the text.
+     */
+    private void dumpSignatures() {
+        String want = System.getenv("KD_DUMP_SIGS");
+        if (want == null || want.isEmpty()) return;
+        for (Function f : currentProgram.getFunctionManager().getFunctions(true)) {
+            if (!f.getName().contains(want)) continue;
+            StringBuilder sb = new StringBuilder();
+            sb.append("SIG: ").append(f.getName())
+              .append(" cc=").append(f.getCallingConventionName())
+              .append(" custom=").append(f.hasCustomVariableStorage())
+              .append(" params=").append(f.getParameterCount()).append(" [");
+            for (ghidra.program.model.listing.Parameter p : f.getParameters())
+                sb.append(p.getName()).append(':').append(p.getDataType().getName())
+                  .append('@').append(p.getVariableStorage()).append(' ');
+            println(sb.append(']').toString());
+        }
     }
 
     private DataType findDef(DataTypeManager dtm, String name) {
@@ -90,5 +120,53 @@ public class ParseKarmaHeaders extends GhidraScript {
         dtm.findDataTypes(name, hits);
         for (DataType d : hits) if (d instanceof FunctionDefinition) return d;
         return null;
+    }
+
+    /**
+     * Set analyzer options from KD_GHIDRA_OPTS, a ';'-separated list of
+     * `Analyzer.Option Name=value` pairs, e.g.
+     *
+     *   KD_GHIDRA_OPTS='DWARF.Import Local Variable Info=false'
+     *
+     * Why this exists. For a handful of functions — MdtKeaAddConstraintForces
+     * and friends — the DWARF declares parameters and locals with names and
+     * types and NO DW_AT_location, because the abbrevs those DIEs use do not
+     * carry one. Ghidra's DWARF importer creates the variables anyway, so the
+     * decompiler is handed typed locals it cannot place and has to reconcile
+     * them with its own stack analysis. The hypothesis this switch exists to
+     * test is that the DWARF is making those frames WORSE, not better, and
+     * that Ghidra's native stack recovery alone would do better.
+     *
+     * Unset changes nothing, which is what produced out9. The option names are
+     * exactly the strings the analyzer registers (see DWARFImportOptions), and
+     * an unknown name is reported rather than ignored — a silently-declined
+     * option would look exactly like "the experiment showed no difference".
+     */
+    private void applyAnalysisOptions() {
+        String spec = System.getenv("KD_GHIDRA_OPTS");
+        if (spec == null || spec.trim().isEmpty()) {
+            println("KARMAOPT: KD_GHIDRA_OPTS not set, analyzer options untouched");
+            return;
+        }
+        ghidra.framework.options.Options opts =
+            currentProgram.getOptions(Program.ANALYSIS_PROPERTIES);
+        for (String kv : spec.split(";")) {
+            kv = kv.trim();
+            if (kv.isEmpty()) continue;
+            int eq = kv.indexOf('=');
+            if (eq < 0) { println("KARMAOPT: malformed '" + kv + "'"); continue; }
+            String name = kv.substring(0, eq).trim();
+            String val  = kv.substring(eq + 1).trim();
+            if (!opts.contains(name)) {
+                // Loudly, because the whole point of the experiment is to tell
+                // "the option did nothing" from "the option was never applied".
+                println("KARMAOPT: NO SUCH OPTION '" + name + "' -- NOT APPLIED");
+                continue;
+            }
+            String before = opts.getValueAsString(name);
+            setAnalysisOption(currentProgram, name, val);
+            println("KARMAOPT: " + name + " " + before + " -> "
+                    + opts.getValueAsString(name));
+        }
     }
 }

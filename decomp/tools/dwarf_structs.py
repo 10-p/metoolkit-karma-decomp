@@ -36,27 +36,48 @@ SYSTEM_TYPES = {
 }
 
 
-def array_extent(dies, ref):
-    """For a DW_TAG_array_type DIE, return its element count (or None)."""
+def array_dims(dies, ref):
+    """Every dimension of a DW_TAG_array_type, outermost first, or None.
+
+    DWARF represents a multi-dimensional array as ONE array_type with several
+    DW_TAG_subrange_type children — `MeReal x[24][2][3]` is one DIE with three
+    subranges, not three nested DIEs. Reading only the first is a silent
+    truncation: McdSphere's `sphereDraw` came out as `MeReal[24]`, 96 bytes,
+    against a symbol the object records as 576, and the code indexes it as
+    `sphereDraw[0][0]`."""
     d = dies.get(ref)
     if d is None or d['tag'] != 'DW_TAG_array_type':
         return None
+    dims = []
     for c in d['children']:
         if c['tag'] != 'DW_TAG_subrange_type':
             continue
         ub = c['attrs'].get('DW_AT_upper_bound')
-        if ub is not None:
-            try:
-                return int(ub.split()[0]) + 1
-            except ValueError:
-                return None
         cnt = c['attrs'].get('DW_AT_count')
-        if cnt is not None:
-            try:
-                return int(cnt.split()[0])
-            except ValueError:
-                return None
-    return None
+        try:
+            if ub is not None:
+                dims.append(int(ub.split()[0]) + 1)
+            elif cnt is not None:
+                dims.append(int(cnt.split()[0]))
+            else:
+                dims.append(None)          # flexible / unknown extent
+        except ValueError:
+            dims.append(None)
+    return dims or None
+
+
+def array_extent(dies, ref):
+    """Total element count of a DW_TAG_array_type (or None).
+
+    The PRODUCT of every dimension, so it is the count a size calculation
+    wants. See array_dims for why the first subrange is not enough."""
+    dims = array_dims(dies, ref)
+    if not dims or any(x is None for x in dims):
+        return None
+    n = 1
+    for x in dims:
+        n *= x
+    return n
 
 
 def type_size(dies, ref, depth=0):
@@ -212,8 +233,10 @@ def declarator(dies, ref, name, depth=0):
                else f'*{name}'
         return declarator(dies, subref, star, depth + 1)
     if tag == 'DW_TAG_array_type':
-        n = array_extent(dies, ref)
-        return declarator(dies, subref, f'{name}[{n if n else ""}]', depth + 1)
+        # Every dimension, outermost first: `x[24][2][3]`, not `x[24]`.
+        dims = array_dims(dies, ref) or [None]
+        sub = ''.join('[%s]' % ('' if n is None else n) for n in dims)
+        return declarator(dies, subref, f'{name}{sub}', depth + 1)
     if tag == 'DW_TAG_subroutine_type':
         # Write the parameter list out. `f(...)` with an EMPTY list is a function
         # type with no prototype, so C applies the default argument promotions at

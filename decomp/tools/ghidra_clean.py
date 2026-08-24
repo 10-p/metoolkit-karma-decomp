@@ -1543,15 +1543,26 @@ def scan_unary_forward(s, i):
 
     A cast binds tighter than any binary operator, so `(float)a->b - c` casts
     `a->b` and not `a->b - c`. Getting this boundary wrong is how a rewrite
-    silently changes the arithmetic."""
+    silently changes the arithmetic.
+
+    NEWLINES COUNT AS WHITESPACE. Ghidra wraps long expressions, so a cast can
+    sit at the end of one line with its operand on the next — which is why the
+    `multiline` rules are handed a whole statement in the first place. Stopping
+    at the newline made those rules silently decline: McdCylinder's
+
+        g[1].next = (McdGeometryID)
+                    SQRT(...);
+
+    was left alone while three identical single-line casts in the same file were
+    rewritten."""
     n = len(s)
-    while i < n and s[i] in ' \t':
+    while i < n and s[i] in ' \t\r\n':
         i += 1
     if i >= n:
         return None
     if s[i] in '-+!~':                 # not addressable; the caller must refuse
         return None
-    while i < n and s[i] in '*& \t':   # dereference / address-of prefixes
+    while i < n and s[i] in '*& \t\r\n':   # dereference / address-of prefixes
         i += 1
     if i >= n:
         return None
@@ -1799,20 +1810,35 @@ def fix_float_as_pointer(line, diag, ctx):
         asset_1->massScale = (*(MeReal *)&(pMVar25));
 
     which is Ghidra carrying a float through a slot it typed as a pointer, then
-    reading the bytes back. With an explicit star the SCALAR_KEYWORDS test is
-    not needed and must not be applied: no float converts to `int *` either, so
-    the bytes are the answer for any starred type."""
-    for pat, starred in ((ANY_CAST, False), (PTR_CAST, True)):
+    reading the bytes back.
+
+    THE SCALAR FILTER APPLIES TO THE STARRED FORM TOO, and a first version that
+    skipped it broke McdCylinder. The reasoning for skipping looked sound — no
+    float converts to `int *` either — but it ignores that this rule rewrites
+    the FIRST cast it can find on the line, not necessarily the one GCC is
+    complaining about. `*(float *)&x` is an ordinary bit-reinterpretation read
+    and perfectly legal, so wrapping its operand produced
+
+        (*(float *)KD_FBITS(&(pMVar1)))
+
+    and three new errors in an object that had none. A cast to a scalar type is
+    left alone whether or not it has a star."""
+    for pat in (ANY_CAST, PTR_CAST):
         for m in pat.finditer(line):
-            if not starred and m.group(1).replace('struct ', '') in SCALAR_KEYWORDS:
+            if m.group(1).replace('struct ', '') in SCALAR_KEYWORDS:
                 continue
             end = scan_unary_forward(line, m.end())
             if end is None or end <= m.end():
                 continue
-            operand = line[m.end():end].strip()
-            if not operand or operand.startswith('KD_FBITS'):
+            raw = line[m.end():end]
+            if not raw.strip() or raw.lstrip().startswith('KD_FBITS'):
                 continue
-            return (line[:m.end()] + f'KD_FBITS({operand})' + line[end:])
+            # Wrap the operand WITHOUT collapsing its whitespace. Ghidra wraps
+            # long expressions, so the operand often begins on the next line,
+            # and the repair loop rejects any multiline rewrite that changes the
+            # line count — stripping here made this rule silently decline on
+            # exactly the wrapped statements it was extended to handle.
+            return line[:m.end()] + 'KD_FBITS(' + raw + ')' + line[end:]
     return None
 
 fix_float_as_pointer.multiline = True

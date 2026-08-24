@@ -140,6 +140,88 @@ def extern_data_declaration(corpus, name):
     return _data_decl_cache[key]
 
 
+def dwarf_array_alias(obj, names, size, c_name, qual):
+    """Give a byte-exact static the TYPE its DWARF says it has.
+
+    The fallback for a static with real data emits its bytes, which is exact and
+    carries no guess about the element type — and that is the right default. But
+    it loses the shape, so code that indexes the table stops compiling:
+
+        static const unsigned char McdSphereDebugDraw__sphereDraw[576] = {...};
+        (int)McdSphereDebugDraw__sphereDraw[0][0]      /* subscripted value is
+                                                          neither array nor
+                                                          pointer nor vector */
+
+    The DWARF says `const MeReal sphereDraw[24][2][3]` — 576 bytes, matching the
+    symbol exactly. So keep the bytes, which cannot be wrong, and alias them at
+    the declared type rather than re-rendering 144 floats and inviting a
+    rounding question that does not need to exist:
+
+        #define X (*(const MeReal (*)[24][2][3])(const void *)X_kdbytes)
+
+    `X[0][0]` is then a `MeReal[3]` that decays to a pointer, which is what the
+    code is doing with it. Returns None unless the element type is a plain named
+    type and every dimension is known, so anything unusual keeps the bytes and
+    the honest compile error."""
+    dies = dwarf_structs.parse(obj)
+    # The ELF symbol for a function-local static is mangled
+    # (`_ZZ18McdSphereDebugDrawE10sphereDraw`); DWARF names it `sphereDraw`. Try
+    # both, and require exactly ONE size-matching DIE — two locals of the same
+    # name in different functions would otherwise pick an arbitrary one.
+    hits = []
+    for die in dies.values():
+        if die['tag'] != 'DW_TAG_variable':
+            continue
+        if die['attrs'].get('DW_AT_name') not in names:
+            continue
+        t = die['attrs'].get('DW_AT_type')
+        m = re.search(r'<0x([0-9a-f]+)>', t) if t else None
+        if not m:
+            continue
+        r = int(m.group(1), 16)
+        if dwarf_structs.type_size(dies, r) == size:
+            hits.append(r)
+    if len(hits) != 1:
+        return None
+    ref = hits[0]
+
+    # Peel qualifiers to the array itself.
+    cur = ref
+    for _ in range(8):
+        d = dies.get(cur)
+        if d is None:
+            return None
+        if d['tag'] == 'DW_TAG_array_type':
+            break
+        if d['tag'] not in ('DW_TAG_const_type', 'DW_TAG_volatile_type',
+                            'DW_TAG_typedef'):
+            return None
+        t = d['attrs'].get('DW_AT_type')
+        m = re.search(r'<0x([0-9a-f]+)>', t) if t else None
+        cur = int(m.group(1), 16) if m else None
+    else:
+        return None
+
+    dims = dwarf_structs.array_dims(dies, cur)
+    if not dims or any(x is None for x in dims):
+        return None
+    t = dies[cur]['attrs'].get('DW_AT_type')
+    m = re.search(r'<0x([0-9a-f]+)>', t) if t else None
+    elem = dwarf_structs.type_name(dies, int(m.group(1), 16)) if m else None
+    # The element type may carry its own `const` — `const MeReal x[24][2][3]`
+    # puts it on the element, not the array. Accept that spelling and do not
+    # also prepend the section's qualifier, so the cast reads `const MeReal`
+    # rather than `const const MeReal`.
+    em = re.fullmatch(r'(const\s+)?([A-Za-z_]\w*)', elem or '')
+    if not em:
+        return None
+    elem = ('const ' + em.group(2)) if (em.group(1) or qual.strip() == 'const') \
+           else em.group(2)
+    shape = ''.join('[%d]' % n for n in dims)
+    return (f'#define {c_name} '
+            f'(*({elem} (*){shape})(const void *){c_name}_kdbytes)')
+
+
 def dwarf_static_declaration(obj, name, size):
     """`MeFAssetCreateFromFile MeFAssetCreateFunc[1]` for a file-scope static.
 
@@ -580,9 +662,17 @@ def main():
             # something other than bytes the compiler says so, which is better
             # than a TODO nobody reads.
             raw = chunk_of(data.get(sect, b''), value, size)
-            w(f'/* element type unknown; bytes are exact */')
-            w(f'static {qual}unsigned char {c_name}[{len(raw)}] = {{ '
+            # The bytes are exact either way; the DWARF adds the SHAPE, which is
+            # what code indexing the table needs. See dwarf_array_alias.
+            cands = {name, dem, dem.split('::')[-1]}
+            alias = dwarf_array_alias(obj, cands, size, c_name, qual)
+            byte_name = f'{c_name}_kdbytes' if alias else c_name
+            w(f'/* element type unknown; bytes are exact */' if not alias
+              else f'/* bytes exact; shape from this object\'s DWARF */')
+            w(f'static {qual}unsigned char {byte_name}[{len(raw)}] = {{ '
               + ', '.join('0x%02x' % b for b in raw) + ' };')
+            if alias:
+                w(alias)
         else:
             w(f'/* TODO: {c_name} — tool could not render a literal */')
         w('')

@@ -1961,6 +1961,51 @@ def fix_mislabelled_external(text, diag, ctx):
 fix_mislabelled_external.file_wide = True
 
 
+def not_code(name, obj, body=''):
+    """Did Ghidra make a "function" out of bytes that are not code?
+
+    Two ways to know, and both are facts about the object file rather than
+    judgements about the decompilation.
+
+    ONE — THE ADDRESS IS OUTSIDE `.text`. Ghidra names a function it found no
+    symbol for after its address, and its address space is the invented one of
+    §5: allocatable sections laid out consecutively from 0x10000. So the address
+    says which SECTION the "function" came from. MdtBcl's `FUN_00021130` is at
+    0x21130; that object's `.text` ends at 0x21013, and 0x21130 lands in
+    `.eh_frame`. Ghidra disassembled exception-handling metadata as i386 code,
+    and the body reads exactly like that once you look: `swi` (an ARM
+    instruction), `in` (x86 port I/O), `uleb128`, `bRam00000018`. Twenty-two of
+    MdtBcl's thirty-one errors were in that one function.
+
+    TWO — THE BODY IS NOTHING BUT `halt_baddata()`. That is Ghidra's marker for
+    bytes it could not decode at all, so such a function contains ZERO recovered
+    instructions. MdtBcl has two, `FUN_000200f0` and `FUN_00020120`, and nothing
+    calls either.
+
+    Those diagnostics are the useful signal and must NOT be answered by defining
+    `undefined6`, `SCARRY1`, `POPCOUNT` and `halt_baddata` in kd_compat.h —
+    that would make the noise compile and publish bogus symbols. Dropping loses
+    nothing, because there is nothing there.
+
+    Only `FUN_`-named functions are eligible for the address test, since a
+    symbol-named function is at an address the symbol table vouches for.
+    Corpus-wide the two tests fire on one object between them: MdtBcl."""
+    if re.fullmatch(r'\s*\{?\s*halt_baddata\(\);\s*\}?\s*',
+                    re.sub(r'/\*.*?\*/', '', body, flags=re.S).split('\n{', 1)[-1]):
+        return True
+    m = re.fullmatch(r'FUN_([0-9a-f]{8})', name or '')
+    if not m or not obj:
+        return False
+    try:
+        secs, _ext = ghidra_memory_map(obj)
+    except Exception:
+        return False
+    text = [s for s in secs if s[0] == '.text']
+    if not text:
+        return False
+    return not (text[0][2] <= int(m.group(1), 16) < text[0][3])
+
+
 def _split_definitions(text):
     """[(function or None, text)] — the file cut at ghidra_clean's own banners."""
     parts, last, name = [], 0, None
@@ -2556,9 +2601,13 @@ def main():
     n_saved_elems = 0
     n_inline_dropped = 0
     n_vararg_fns = 0
+    n_not_code = 0
     for name, body in by_name.items():
         if name in args.drop:
             dropped.append(name)
+            continue
+        if not_code(name, args.object, body):
+            n_not_code += 1
             continue
         if name in hdr_inlines and name not in exported:
             n_inline_dropped += 1
@@ -2677,6 +2726,8 @@ def main():
 
     if n_inline_dropped:
         print(f'  {n_inline_dropped} header-inline function(s) dropped')
+    if n_not_code:
+        print(f'  {n_not_code} function(s) dropped as NOT CODE (outside .text)')
     if n_vararg_fns:
         print(f'  {n_vararg_fns} variadic function(s) given a real va_list')
     if n_alloca_fns:

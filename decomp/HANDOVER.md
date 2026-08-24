@@ -784,16 +784,20 @@ That inverts three whole classes of unresolvable name:
 
 ## 6. Running the game
 
-> ### ⚠ BLOCKED as of 2026-08-24 — the game assets are gone
+> ### ⚠ CHECK THIS FIRST — the asset tree unmounts on reboot
 >
-> **`/home/ion/ut2004-assets/` is EMPTY.** CLAUDE.md says it should be ~5.8 GB; it contains
-> zero entries. Every bulk-content symlink in `/home/ion/karma-run` therefore dangles
-> (`Textures`, `StaticMeshes`, `Animations`, `Sounds`, `KarmaData`, …), and **no map run of
-> any kind is possible.** This blocks the census, the shadow harness, `crash_ab.sh` and
-> every in-game measurement in this file — it is not specific to any one piece of work.
+> `/home/ion/ut2004-assets` (~19 GB, `$UT_ASSETS_DIR`) is a **mount, and it drops on
+> reboot**, leaving the directory empty. Every bulk-content symlink in `/home/ion/karma-run`
+> then dangles and **no map run of any kind works** — the census, the shadow harness,
+> `crash_ab.sh`, every in-game measurement in this file. **Only the project owner can
+> remount it.** Ask; do not try to work around it.
 >
-> The symptom is not obviously an asset problem, which is why it is written down here. The
-> engine dies during startup, long before the level loads, with a backtrace that looks like
+> ```bash
+> ls /home/ion/ut2004-assets      # empty => stop and ask for a remount
+> ```
+>
+> **The symptom does not look like an asset problem**, which is the reason for this box. The
+> engine dies during startup, long before the level loads, with a backtrace that reads like
 > an engine bug:
 >
 > ```
@@ -802,21 +806,15 @@ That inverts three whole classes of unresolvable name:
 >   ULinkerLoad::FindExportIndex / ULinkerLoad::Create / UEngine::Init
 > ```
 >
-> `run_map.sh` reports `gametype actually used: ?` and writes no CSV, which reads exactly
-> like the "started but never ticked" case in this section. It is not that. Check
+> `run_map.sh` reports `gametype actually used: ?` and writes no CSV, which is
+> indistinguishable from the "started but never ticked" case below. It is not that. Check
 > `System/UT2004.log` for `Can't find file for package` before anything else.
 >
-> **What was tried, so it is not tried again.** There is a 7.0 GB tree at
-> `/home/ion/epic-sources/ut2004-v3186-assets`. Repointing the sandbox symlinks at it gets
-> **further** — `AS_FX_TX` resolves and the engine loads GUI and game content — but it is
-> **version-mismatched**: the engine is build 3369 and that tree is 3186, so 3369-era
-> packages are absent. `ONSNewTank-A.ukx` is the one that stops it, and it exists nowhere
-> on this disk. Community content (CBP2/UCMP/BE-) is missing from it too, so the maps §3
-> and §7b depend on would not work even if the version matched. The symlinks were restored
-> exactly as found; nothing is left repointed.
->
-> **This needs the project owner: restore the 3369 asset tree at
-> `/home/ion/ut2004-assets`.** Nothing else unblocks it.
+> **Do not repoint the symlinks at `/home/ion/epic-sources/ut2004-v3186-assets`.** Tried on
+> 2026-08-24: it gets further — `AS_FX_TX` resolves — but the engine is build 3369 and that
+> tree is 3186, so 3369-era packages are missing (`ONSNewTank-A.ukx` stops it, and it exists
+> nowhere else on disk), and it has no community content, so the CBP2/UCMP maps §3 and §7b
+> rely on would not work even at a matching version.
 
 ### Sandbox
 
@@ -1877,9 +1875,9 @@ because someone ran a map nobody had tried. The specific asks, in order of value
   A map that exercises **`Cylinder`** geometry is still worth having, if any exists: that
   family is genuinely unreached rather than bypassed, and a definitive "UT2004 never uses
   Cylinder" would retire a chunk of the not-compiling pile permanently.
-- **RESTORE THE GAME ASSETS.** `/home/ion/ut2004-assets` is empty and every map-based gate
-  in this project is dead until it is back — see the box at the top of §6. This is now the
-  top ask by a distance; the map requests below are moot until it is fixed.
+- **REMOUNT THE ASSETS after any reboot.** `/home/ion/ut2004-assets` unmounts and every
+  map-based gate dies until it is back — see the box at the top of §6. Only the owner can do
+  it, so flag it rather than diagnosing it; the symptom looks like an engine crash.
 - **More community maps generally.** `CBP2`/`UCMP`/`BE-`/`SPAC-` reach pairs Epic's
   optimised maps never do; that fact came from the project owner and it has been the single
   most productive operational input to this project. `ONS-UCMP-ABC-ECE` is still the ONLY

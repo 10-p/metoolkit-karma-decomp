@@ -116,7 +116,8 @@ static McdGeometryID mk_plane(McdFrameworkID fw, int seed)
     return (McdGeometryID)McdPlaneCreate(fw);
 }
 
-/* Every box in this driver had ONE fixed size for its whole life, and that is
+/* Every box, sphyl and sphere in this driver had ONE fixed size for its whole
+   life, and that is
    named in proven.txt as the likeliest reason IxBoxBox's single real divergence
    never reproduced: 1 count_diff in 1,299 in-game calls at world
    (259.9, 8.0, 10.2), against 300,000 synthetic pairs near the origin and
@@ -130,13 +131,48 @@ static McdGeometryID mk_plane(McdFrameworkID fw, int seed)
    comparable iteration by iteration, only in aggregate. */
 static int kd_fixedshape;
 
-static void reshape(McdModelID m)
+/* Declared here because reshape() uses them; built after the ConvexMesh type is
+   registered, and documented at build_hulls() below. */
+#define NHULLS 24
+static McdGeometryID kd_hull[2][NHULLS];
+static int kd_hulls_built;
+
+static void reshape(McdModelID m, int side)
 {
     if (kd_fixedshape) return;
     McdGeometryID g = McdModelGetGeometry(m);
-    if (McdGeometryGetTypeId(g) == kMcdGeometryTypeBox)
+    switch (McdGeometryGetTypeId(g)) {
+    case kMcdGeometryTypeBox:
         McdBoxSetDimensions(g, frnd(0.3f, 2.2f), frnd(0.3f, 2.2f),
                             frnd(0.3f, 2.2f));
+        break;
+    /* Sphyl and sphere were fixed for exactly as long as the box was, and the
+       same argument applies with more force: Sphyl x TriangleList, Sphyl x Sphyl
+       and Sphyl x Sphere together are over 2 M real calls, and UT2004 varies
+       these dimensions enormously — a ragdoll forearm and a vehicle collision
+       hull are both sphyls. What decides which features can meet is the RATIO of
+       radius to height, and one fixed pair of sphyls approaching at random
+       angles never varies it at all.
+
+       The ranges bracket the game's: a UT2004 ragdoll limb sphyl is roughly
+       r 0.2-0.5, h 0.5-2.0 in Karma units, and vehicle hulls run larger. Going
+       wider than the game does is deliberate — the point of the synthetic tier
+       is corner cases the census cannot reach. */
+    case kMcdGeometryTypeSphyl:
+        McdSphylSetRadius(g, frnd(0.15f, 1.1f));
+        McdSphylSetHeight(g, frnd(0.3f, 2.6f));
+        break;
+    case kMcdGeometryTypeSphere:
+        McdSphereSetRadius(g, frnd(0.2f, 1.6f));
+        break;
+    case kMcdGeometryTypeConvexMesh:
+        /* Swap in a different pre-built hull rather than rebuilding one. */
+        if (kd_hulls_built)
+            McdModelSetGeometry(m, kd_hull[side & 1][(int)frnd(0, NHULLS - 0.001f)]);
+        break;
+    default:
+        break;
+    }
 }
 
 static McdGeometryID mk_sphere(McdFrameworkID fw, int seed)
@@ -295,18 +331,50 @@ static McdGeometryID mk_trilist(McdFrameworkID fw, int seed)
 /* A random convex polyhedron: points scattered on an ellipsoid, hulled. This is
    the shape a vehicle collision mesh actually has — a dozen-odd faces, no
    symmetry — rather than a box standing in for one. */
-static McdGeometryID mk_convex(McdFrameworkID fw, int seed)
+static McdGeometryID mk_convex_n(McdFrameworkID fw, int seed, int nv,
+                                 float sx, float sy, float sz)
 {
-    MeVector3 v[24];
-    float sx = seed ? 1.3f : 0.9f, sy = seed ? 0.7f : 1.1f, sz = seed ? 1.0f : 0.6f;
-    for (int i = 0; i < 24; i++) {
+    MeVector3 v[64];
+    if (nv > 64) nv = 64;
+    for (int i = 0; i < nv; i++) {
         float a = frnd(-3.14159f, 3.14159f), z = frnd(-1.0f, 1.0f);
         float r = sqrtf(1.0f - z * z);
         v[i][0] = sx * r * cosf(a);
         v[i][1] = sy * r * sinf(a);
         v[i][2] = sz * z;
     }
-    return (McdGeometryID)McdConvexMeshCreateHull(fw, v, 24, 0.0f);
+    (void)seed;
+    return (McdGeometryID)McdConvexMeshCreateHull(fw, v, nv, 0.0f);
+}
+
+static McdGeometryID mk_convex(McdFrameworkID fw, int seed)
+{
+    float sx = seed ? 1.3f : 0.9f, sy = seed ? 0.7f : 1.1f, sz = seed ? 1.0f : 0.6f;
+    return mk_convex_n(fw, seed, 24, sx, sy, sz);
+}
+
+/* A POOL of hulls, because a convex mesh cannot be resized in place the way a
+   box or a sphyl can — the hull has to be rebuilt, and rebuilding one per
+   iteration would put qhull in the inner loop of a 200,000-iteration test.
+   Twenty-four hulls per side, with the vertex count swept from 6 to 40 and the
+   ellipsoid axes varied, is enough to stop the shape being a constant.
+
+   The vertex count is the part that matters most and it is the part that has
+   been fixed at 24 for the whole life of this driver. UT2004's convex meshes
+   are nothing like uniform: a vehicle collision hull is a handful of vertices
+   and a static-mesh hull can be dozens, and how many vertices a hull has
+   decides how many candidate faces GJK has to separate. Box x ConvexMesh is the
+   busiest pair in the census at 608,280 real calls and McdGjk still has two
+   unexplained count divergences (proven.txt), so a fixed hull is exactly the
+   blind spot the fixed BOX turned out to be. */
+static void build_hulls(McdFrameworkID fw)
+{
+    for (int s = 0; s < 2; s++)
+        for (int i = 0; i < NHULLS; i++)
+            kd_hull[s][i] = mk_convex_n(fw, s, 6 + (i * 34) / (NHULLS - 1),
+                                        frnd(0.5f, 1.6f), frnd(0.5f, 1.6f),
+                                        frnd(0.5f, 1.6f));
+    kd_hulls_built = 1;
 }
 
 static const struct {
@@ -442,6 +510,7 @@ int main(int argc, char **argv)
     build_mesh();
     McdConvexMeshRegisterType(fw);
     McdConvexMeshPrimitivesRegisterInteractions(fw);
+    build_hulls(fw);          /* after the type is registered, before any pair */
 
     for (int k = 0; k < NPAIRS; k++) {
         if (want && strcmp(want, PAIRS[k].name)) continue;
@@ -464,7 +533,7 @@ int main(int argc, char **argv)
                deep interpenetration. A real level is shallow resting contact,
                one or two contacts, ~20% touching. They are different tests and
                they find different things. */
-            reshape(m1); reshape(m2);
+            reshape(m1, 0); reshape(m2, 1);
             rand_tm(McdModelGetTransformPtr(m1), PAIRS[k].spread * kd_spread);
             if (!fixed2) rand_tm(McdModelGetTransformPtr(m2),
                                  PAIRS[k].spread * kd_spread);

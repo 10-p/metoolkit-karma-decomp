@@ -2194,6 +2194,29 @@ Ordered by what actually moves the project, not by what is easiest:
    > field carries at 303/319 is the TRIANGLE FLAGS, not the "0/1/2 point/line/surface" the
    > header documents. Karma overloads it per side.)
    >
+   > **A fourth yardstick, partly explored, recorded so it is not re-derived.**
+   > `lib.rel/` ships FOUR Linux builds of the same source — `linux_single_gcc2.95`,
+   > `linux_single_gcc3.1`, `linux_single_gcc3.2` (all i386) and `linux_hx_single`
+   > (x86-64) — with identical exported symbol sets. Pointing `difftest_pair.sh` at a
+   > directory of gcc3.1 members runs **MathEngine's own build against MathEngine's own
+   > build** through the existing harness, with no code changes:
+   >
+   > ```bash
+   > mkdir /tmp/vendor && cd /tmp/vendor
+   > ar x .../lib.rel/linux_single_gcc3.1/libMcdPrimitives.a   # + libMcdConvex.a
+   > ./test/difftest_pair.sh /tmp/vendor ../Thirdparty/metoolkit
+   > ```
+   >
+   > It works, and the useful rows are the CONTROLS: gcc3.1 vs gcc3.2 reads **0 count,
+   > 0 dims** on `McdCylinderTriangleListIntersect` and on `McdBoxBoxIntersect`, in both
+   > regimes — so the vendor's own builds ARE reproducible for the pairs we release. Two
+   > limits: **`gcc2.95` cannot be linked at all** (pre-Itanium mangling —
+   > `NSegmentSegment__FPCfT0ffT0T0ffPfN28`), and gcc3.1's `IxCylinderCylinder.o`
+   > **segfaults on the first call** in this hybrid link, so the one number this was aimed
+   > at is not available from it. Extracting whole archives instead of individual members
+   > also segfaults — the prefixed registrars and the shipped ones then disagree about
+   > geometry type ids.
+   >
    > **Scope, stated honestly:** that branch IS live for this pair in general —
    > `OverlapCylCyl` also emits `2` and `0x200`, both of which make it true. The claim is
    > that the measured divergences never reach those values, which is about the histogram,

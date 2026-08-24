@@ -1195,7 +1195,15 @@ Box × TriangleList at zero calls. Recorded so nobody re-derives the old number.
    thing that knew, and here **the compiler is wrong, because it is reasoning about
    Ghidra's types.** `McdSphyl` stays in the FAIL pile, where the defect is visible; it
    is not the free object it looks like.
-10. **Trusting a test whose callback ignores its arguments.** `difftest_pair`'s triangle
+10. **Renaming exported DATA symbols in bodies the way functions are renamed.** The gap
+   is real — `gen_prelude` emits `void *kd_boxDraw[72] KD_MANGLED("boxDraw")` and the
+   bodies still say `boxDraw`, so `McduDebugDraw` fails on nothing else. But applying the
+   same rename machinery to data costs more than it gains: it took `McdGjk` (released, on
+   the busiest pair in the census) and `MeMessage` out of the build, because a body that
+   CALLS through an exported pointer — `(*MeInfoShow)(...)` — resolves through the public
+   header, and rewriting it to `kd_MeInfoShow` calls a `void *`. Net −2 objects for +1
+   debug-draw object. If you retry it, exclude any name the body dereferences or calls.
+11. **Trusting a test whose callback ignores its arguments.** `difftest_pair`'s triangle
    generator ignored `pos` and `radius` and set `flags = 0`. That hid a `-0` radius in four
    objects and left the entire edge-contact path of `GenerateTriangleContact` unexecuted, for
    the whole life of the project. When a recovered function calls back into the engine, the

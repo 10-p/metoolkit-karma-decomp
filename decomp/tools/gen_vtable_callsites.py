@@ -71,12 +71,23 @@ import subprocess
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import dwarf_structs
+import gen_protos
 import ghidra_clean
 import vtable_slots
 
 # `call *0x10(%ecx)` / `call *(%ecx)` — a dispatch through a register.
 CALL_IND = re.compile(r'^\s*([0-9a-f]+):\s+(?:[0-9a-f]{2} )+\s*call\s+\*'
                       r'(?:(-?0x[0-9a-f]+))?\(%(e[a-z]{2})\)')
+# `call *0xc` — an ABSOLUTE indirect call, i.e. through a fixed address. In a
+# relocatable object that address is a relocation plus the displacement, which
+# is how Karma calls every function-pointer member of its global API structs:
+#
+#     movl $0xc,(%esp)          ; the size argument, reusing the slot
+#     call *0x0                 ; R_386_32 MeMemoryAPI  -> member at +0
+#
+CALL_ABS = re.compile(r'^\s*([0-9a-f]+):\s+(?:[0-9a-f]{2} )+\s*call\s+'
+                      r'\*(0x[0-9a-f]+)\s*$')
 # `mov -0xb8(%ebp),%ecx` — loading a vptr out of a local.
 MOV_FROM_EBP = re.compile(r'^\s*([0-9a-f]+):\s+(?:[0-9a-f]{2} )+\s*mov\s+'
                           r'(-?0x[0-9a-f]+)\(%ebp\),%(e[a-z]{2})')
@@ -152,14 +163,191 @@ def _is_indirect_call(data, off):
     return ((data[i + 1] >> 3) & 7) == 2          # /2 == CALL r/m32
 
 
+def text_relocations(obj):
+    """{section: {offset: symbol}} for R_386_32 relocations."""
+    out, sect = {}, None
+    for line in run('readelf', '-rW', obj).splitlines():
+        m = re.match(r"Relocation section '(\S+)'", line)
+        if m:
+            sect = m.group(1)[4:] if m.group(1).startswith('.rel') else m.group(1)
+            continue
+        m = re.match(r'([0-9a-f]{8})\s+\S+\s+(\S+)\s+[0-9a-f]{8}\s+(\S+)', line)
+        if m and sect and m.group(2) == 'R_386_32':
+            out.setdefault(sect, {})[int(m.group(1), 16)] = m.group(3)
+    return out
+
+
+class ApiStructs:
+    """Global structs of function pointers, resolved offset -> member, from DWARF.
+
+    Karma reaches its allocator, pool and debug-draw hooks through file-scope
+    structs of function pointers (`MeMemoryAPI`, `MePoolAPI`, ...). A call is
+    `call *0xc` with a relocation naming the struct, so the member is pinned by
+    the displacement — and the whole chain is in the referencing object's own
+    DWARF even though the struct is DEFINED elsewhere, because the header
+    declares it:
+
+        DW_TAG_variable "MeMemoryAPI"  -> struct MeMemoryAPIStruct
+        DW_TAG_member   "create" @ +0  -> MeMemoryFuncPtrCreate
+                                       -> void *(size_t)
+
+    So nothing here is a hand-written table; the signatures are read from the
+    same debug info the rest of the pipeline uses, and a member that is not a
+    function pointer resolves to None rather than to a guess.
+
+    The generated name is `kd_<struct symbol>_<member>`, which is what
+    gen_api_protos() declares and what DumpDecomp looks up."""
+
+    def __init__(self, obj):
+        self.obj = obj
+        self._dies = None
+        self._cache = {}
+
+    def _load(self):
+        if self._dies is None:
+            self._dies = dwarf_structs.parse(self.obj)
+        return self._dies
+
+    @staticmethod
+    def _ref(die):
+        t = die['attrs'].get('DW_AT_type')
+        m = re.search(r'<0x([0-9a-f]+)>', t) if t else None
+        return int(m.group(1), 16) if m else None
+
+    def _subroutine(self, dies, ref):
+        """Peel typedef/pointer layers down to the DW_TAG_subroutine_type."""
+        for _ in range(8):
+            d = dies.get(ref) if ref is not None else None
+            if d is None:
+                return None
+            if d['tag'] == 'DW_TAG_subroutine_type':
+                return ref
+            ref = self._ref(d)
+        return None
+
+    def members(self, symbol):
+        """{offset: (member name, signature declarator)} for a struct symbol."""
+        if symbol in self._cache:
+            return self._cache[symbol]
+        self._cache[symbol] = {}
+        dies = self._load()
+        struct_ref = None
+        for d in dies.values():
+            if d['tag'] == 'DW_TAG_variable' and d['attrs'].get('DW_AT_name') == symbol:
+                struct_ref = self._ref(d)
+                break
+        # Peel typedefs to the aggregate itself.
+        for _ in range(8):
+            d = dies.get(struct_ref) if struct_ref is not None else None
+            if d is None:
+                return self._cache[symbol]
+            if d['tag'] in ('DW_TAG_structure_type', 'DW_TAG_class_type'):
+                break
+            struct_ref = self._ref(d)
+        else:
+            return self._cache[symbol]
+
+        out = {}
+        for c in dies[struct_ref].get('children', []):
+            if c['tag'] != 'DW_TAG_member':
+                continue
+            loc = dwarf_structs.OFF_RE.search(
+                c['attrs'].get('DW_AT_data_member_location', ''))
+            if not loc:
+                continue
+            sub = self._subroutine(dies, self._ref(c))
+            if sub is None:                    # not a function pointer
+                continue
+            nm = c['attrs'].get('DW_AT_name', '')
+            if not re.fullmatch(r'[A-Za-z_]\w*', nm):
+                continue
+            out[int(loc.group(1))] = (nm, sub)
+        self._cache[symbol] = out
+        return out
+
+    def member_at(self, symbol, offset):
+        """`kd_MeMemoryAPI_create` for (MeMemoryAPI, 0), or None."""
+        m = self.members(symbol).get(offset)
+        return 'kd_%s_%s' % (symbol, m[0]) if m else None
+
+    def prototype(self, symbol, offset):
+        """`void *kd_MeMemoryAPI_create(unsigned int)` for (MeMemoryAPI, 0).
+
+        Rendered with gen_protos.simple_type, NOT dwarf_structs.declarator, and
+        the difference is the whole reason this works. kd_protos.h is a FLAT,
+        dependency-free header — HANDOVER.md §5 records that metoolkit's real
+        headers do not survive Ghidra's C parser, which is why it exists — so it
+        declares no typedefs at all. A faithful declarator emits
+        `void *f(size_t)` and `void f(struct MePool *)`, and Ghidra's parser
+        rejects both because neither name is defined anywhere in that file.
+
+        That failure is SILENT in the way that matters: the header still parses,
+        the other 2487 prototypes still load, and the only symptom is
+        `VTABLE: no prototype for kd_MeMemoryAPI_destroy` in the run log with
+        every API call site skipped. It cost one full Ghidra run to notice.
+
+        simple_type collapses to the same size and class the ABI cares about —
+        pointers to `void *`, `size_t` to `unsigned int` — which is exactly what
+        the rest of the header already does."""
+        dies = self._load()
+        m = self.members(symbol).get(offset)
+        if not m:
+            return None
+        sub = dies[m[1]]
+        ret = gen_protos.simple_type(dies, self._ref(sub))
+        params = []
+        for c in sub.get('children', []):
+            if c['tag'] == 'DW_TAG_unspecified_parameters':
+                params.append('...')
+            elif c['tag'] == 'DW_TAG_formal_parameter':
+                params.append(gen_protos.simple_type(dies, self._ref(c)))
+        sep = '' if ret.endswith('*') else ' '
+        return '%s%skd_%s_%s(%s)' % (ret, sep, symbol, m[0],
+                                     ', '.join(params) if params else 'void')
+
+
 def resolve_object(corpus, obj, report):
     """[(ghidra_addr, method, class, slot)] for every virtual call site resolved."""
     rows = []
+    api = ApiStructs(obj)
+    relocs = text_relocations(obj)
     for section, funcs in disassemble(obj).items():
         base = section_base(obj, section)
         if base is None:
             continue
         data = ghidra_clean._section_bytes(obj, section)
+
+        # --- calls through a global API struct -------------------------------
+        # These are not C++ at all, but they are the same defect and the same
+        # repair: an indirect call Ghidra has no signature for, so it drops the
+        # arguments. gcc sets the first argument up with `push` and every
+        # subsequent one by writing the SAME outgoing slot with
+        # `movl $n,(%esp)`; without a signature the decompiler does not read
+        # that as argument setup, so `MeMemoryAPI.create(0xc)` comes out as
+        # `create()`. An allocation with no size is a real defect, and GCC's
+        # arity check is the only reason it surfaces at all.
+        for fname, _foff, lines in funcs:
+            for line in lines:
+                m = CALL_ABS.match(line)
+                if not m:
+                    continue
+                off, disp = int(m.group(1), 16), int(m.group(2), 16)
+                if not _is_indirect_call(data, off):
+                    report['not_an_indirect_call'] += 1
+                    continue
+                # `ff 15 <disp32>`: the relocation sits on the displacement.
+                sym = relocs.get(section, {}).get(off + 2)
+                if sym is None:
+                    report['abs_call_unrelocated'] += 1
+                    continue
+                name = api.member_at(sym, disp)
+                if name is None:
+                    report['not_an_api_struct'] += 1
+                    continue
+                rows.append((base + off, name, sym, disp))
+                report['resolved_api'] += 1
+
+        # --- C++ virtual calls through a local's vptr ------------------------
         for fname, _foff, lines in funcs:
             stores = vtable_slots.vptr_stores(obj, fname)
             if not stores:
@@ -228,6 +416,13 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('corpus', help='directory of every archive member')
     ap.add_argument('-o', '--output', required=True)
+    ap.add_argument('--protos-out',
+                    help='write the synthetic prototypes for the API-struct members '
+                         'here. They must be APPENDED to kd_protos.h before the '
+                         'Ghidra run, because DumpDecomp looks each name up in the '
+                         'DataTypeManager that ParseKarmaHeaders fills from that one '
+                         'file. Without them every API call site is skipped with '
+                         '"no prototype".')
     ap.add_argument('--only', action='append',
                     help='restrict to these object basenames (repeatable). '
                          'Applying a wrong signature is worse than applying '
@@ -235,9 +430,11 @@ def main():
                          'evidence.')
     args = ap.parse_args()
 
-    report = {k: 0 for k in ('resolved', 'no_vptr_source', 'not_a_vptr_local',
-                             'slot_not_in_vtable', 'unnameable',
-                             'not_an_indirect_call')}
+    protos = {}
+    report = {k: 0 for k in ('resolved', 'resolved_api', 'no_vptr_source',
+                             'not_a_vptr_local', 'slot_not_in_vtable',
+                             'unnameable', 'not_an_indirect_call',
+                             'abs_call_unrelocated', 'not_an_api_struct')}
     out_rows = []
     for fn in sorted(os.listdir(args.corpus)):
         if not fn.endswith('.o'):
@@ -245,14 +442,31 @@ def main():
         if args.only and fn[:-2] not in args.only and fn not in args.only:
             continue
         obj = os.path.join(args.corpus, fn)
+        api = None
         for addr, method, cls, slot in resolve_object(args.corpus, obj, report):
             out_rows.append((fn, addr, method, cls, slot))
+            if method.startswith('kd_'):
+                if api is None:
+                    api = ApiStructs(obj)
+                proto = api.prototype(cls, slot)
+                if proto:
+                    protos[method] = proto
 
     with open(args.output, 'w') as f:
         f.write('# object  ghidra-address  method  class+slot\n')
         f.write('# generated by tools/gen_vtable_callsites.py — see its docstring\n')
         for fn, addr, method, cls, slot in out_rows:
             f.write(f'{fn} 0x{addr:08x} {method} {cls}+0x{slot:02x}\n')
+
+    if args.protos_out:
+        with open(args.protos_out, 'w') as f:
+            f.write('/* Synthetic prototypes for indirect calls through Karma\'s global\n'
+                    ' * API structs, generated by tools/gen_vtable_callsites.py from the\n'
+                    ' * SAME DWARF that declares them. APPEND to kd_protos.h before the\n'
+                    ' * Ghidra run. See that file\'s ApiStructs docstring. */\n')
+            for nm in sorted(protos):
+                f.write(protos[nm] + ';\n')
+        print(f'{args.protos_out}: {len(protos)} API prototype(s)')
 
     print(f'{args.output}: {len(out_rows)} call site(s) resolved')
     for k, v in report.items():

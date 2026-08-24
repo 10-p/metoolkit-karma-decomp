@@ -573,7 +573,25 @@ def ghidra_memory_map(obj):
     trusted. MeXMLOutput settles it: .text is 0x405 bytes, and the dump's
     `MeStreamWrite(&DAT_00010405,1,1,...)` writes one byte from 0x10405 —
     offset 0 of .rodata.str1.1, whose first byte is '<'. The next two writes are
-    '>' at +2 and "</" at +0x12, which is what an XML writer emits."""
+    '>' at +2 and "</" at +0x12, which is what an XML writer emits.
+
+    ZERO-SIZED SECTIONS ARE SKIPPED, and getting that wrong is not cosmetic.
+    That same object has an EMPTY `.data` and `.bss` between `.text` and the
+    strings; honouring their 4-byte alignment pushes `.rodata.str1.1` from
+    0x10405 to 0x10408, which puts two of the object's four data references at a
+    NEGATIVE offset — impossible — and silently resolves the other two to the
+    wrong bytes. Ghidra creates no block for an empty section, so it neither
+    advances nor aligns the address.
+
+    Checked two ways rather than assumed. MeXMLOutput's four references are
+    0x10405, 0x10407, 0x10417 and 0x1041a; against a base of 0x10405 those are
+    offsets 0, 2, 0x12 and 0x15 — '<', '>', "</" and a newline, every one a
+    valid string start and exactly the verification above. Corpus-wide, across
+    every DAT_/PTR_ reference in every dump, skipping empty sections leaves ZERO
+    addresses outside any section while honouring them leaves two.
+
+    The EXTERNAL block base is unchanged in all 192 members, so the symbol
+    inversion that rests on it does not move."""
     out = subprocess.run(['readelf', '-SW', obj], capture_output=True, text=True).stdout
     addr, secs = GHIDRA_IMAGE_BASE, []
     for line in out.splitlines():
@@ -583,7 +601,7 @@ def ghidra_memory_map(obj):
             continue
         name, typ, size, flags, align = (m.group(1), m.group(2), int(m.group(3), 16),
                                          m.group(4), int(m.group(5)))
-        if 'A' not in flags:
+        if 'A' not in flags or size == 0:
             continue
         align = max(align, 1)
         addr = (addr + align - 1) // align * align

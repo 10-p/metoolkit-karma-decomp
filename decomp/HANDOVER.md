@@ -22,7 +22,7 @@ Branch: **`karma/decompile`**. `main` is untouched. **Do not merge.**
   the DWARF does not say where the frames live.** Not "Ghidra failed to use the debug info"
   — the `DW_AT_location` attributes are absent from the abbrevs those functions use. §11
   item 2 has the readelf command that shows it.
-- **104 objects compile**, 25 are quarantined by detectors, 19 do not compile. Object count
+- **106 objects compile**, 25 are quarantined by detectors, 17 do not compile. Object count
   is a bad progress metric — read §3 before using it.
 - **Two whole families the engine never asks Karma about.** `Box × TriangleList` and every
   `Aggregate` pair are intercepted by UT2004's own dispatcher, so they are registered and
@@ -61,18 +61,18 @@ complete types. That is what makes this tractable. Ghidra consumes it directly.
 ## 2. Status
 
 ```
-compile:  104 objects (97 clean + 7 with prelude TODOs)  = 70.3% of 148 attempted
-scenes:   104/104 run clean on all three substitute scenes, and all 104 TOGETHER
+compile:  106 objects (99 clean + 7 with prelude TODOs)  = 71.6% of 148 attempted
+scenes:   106/106 run clean on all three substitute scenes, and all 106 TOGETHER
           are bit-identical on the collision-free one — but read §4a before
           reading anything into that number
-wasm32:   104/104 compile, exported symbol sets byte-identical to i386
-bindings: 104/104 export what the SHIPPED object exported, binding included (§8)
+wasm32:   106/106 compile, exported symbol sets byte-identical to i386
+bindings: 106/106 export what the SHIPPED object exported, binding included (§8)
 difftest: self-test 12/12, and the real run reproduces the documented baseline
           exactly (§8) — IxBoxBox 1 count, IxSphereTriList 137 dims, the rest 0
 review:   25 objects held back by recover.py's eight safety detectors (§8;
           the ninth, symbol bindings, is a gate rather than a detector because
           it needs the shipped object to compare against)
-fail:     19 objects do not compile
+fail:     17 objects do not compile
 dumps:    out9 is current (§5a). It differs from out8 in 52 of 153 dumps, and
           every object that already compiled is byte-identical.
 ```
@@ -116,6 +116,37 @@ Produced with `KD_CENSUS=1`, which counts calls and runs nothing twice, so it pe
 nothing and can be pointed at any map safely (§6). Call counts below are the running total
 over every instrumented match to date; treat the ORDER as solid and the absolute numbers as
 "how much traffic this pair gets", not as a constant.
+
+### Is a pair used? The definitive answer, three ways
+
+This is the question that decides everything, so here is the whole answer in one place.
+Three independent instruments, and they are **not** interchangeable:
+
+| instrument | answers | limit |
+|---|---|---|
+| the census (`KD_CENSUS=1`) | did it EXECUTE on the maps we ran | only as good as the maps seen; two pairs have already moved off "never called" |
+| `tools/reachable.py` (§3b) | can the LINKER reach the object at all | interaction functions are address-taken by their registrars, so it says "reachable" for pairs the game never calls |
+| **the engine source** (`KIntersect`, §3a) | **can the game reach it, ever** | none — this is the decisive one |
+
+**Settled permanently, from the engine source:**
+
+- **`Box × TriangleList` — CANNOT fire.** `KIntersect` calls the engine's own
+  `KBoxTriangleListIntersect` instead. `IxBoxTriList` is measurably wrong and it does not
+  matter: it is dead code. The long-standing request for a map that exercises it is
+  **withdrawn as unanswerable**.
+- **Every `Aggregate` pair — CANNOT fire.** Same dispatcher, `KAggregateGenericIntersect`.
+  The family needs no recovery.
+
+**Settled by 25+ runs across 18 maps, but NOT proven impossible** — these are registered
+and have never been seen to execute. Treat as "no evidence of use", not "cannot be used":
+`Sphere × Plane`, `Box × Plane`, `Box × Cylinder`, `Cylinder × {Plane, Sphere, Cylinder,
+TriangleList, ConvexMesh}`, `Sphyl × {Plane, Box, Cylinder}`, `ConvexMesh × Plane`.
+
+**The one open question a map could still settle:** `Cylinder`. `KUtils.cpp:796` really does
+call `McdCylinderCreate` from a cylinder collision element, so the code path exists — the
+census has just never seen a shipped asset define one. **This is the only surviving map
+ask**, and it is worth answering because a definitive "UT2004 ships no cylinder collision
+volumes" retires five registered pairs permanently.
 
 ### Called — all twelve are recovered and validated
 
@@ -1739,7 +1770,7 @@ Ordered by what actually moves the project, not by what is easiest:
    before quoting a bit-identical result — `keaCalcAcceleration_vanilla` is the worked
    example of a zero that means nothing.
 
-7. **Grind the tail.** 19 objects, but **read §3b first** — a third of the pile is
+7. **Grind the tail.** 17 objects, but **read §3b first** — a third of the pile is
    unreachable or replace-not-recover — and then §3 — a large part of the pile is
    geometry the game never collides, and **nine of the 34 are one error from
    compiling**, which is where to start. The distribution, re-measured 2026-08-24:
@@ -2025,8 +2056,8 @@ Everything else — code, tests, measurement, tooling — is self-service.
   library. §8a has the contract and the three tiers that do work.
 - **arm64** — untried, needs a cross-compiler.
 - **Executing anything on wasm** — the web agent's job. `HANDOVER-WEB.md`.
-- **The tail** — 19 objects, and read §3b first: 3 are unreachable, and the `.ka` cluster
-  is **done, 9 of 9**. Two of the cheap-looking ones left are traps (dead ends 9 and 10).
+- **The tail** — 17 objects, fully triaged in §13. 3 are unreachable, 3 are documented
+  leave-alones, and 2 are dead end 9. What is actually open is 9 objects.
 
 
 ### Where the project actually stands — read this before estimating anything
@@ -2117,4 +2148,55 @@ success. Before trusting a green result, ask:
 
 That checklist is worth more than the next ten objects.
 
+---
 
+## 13. The 17 remaining failures, triaged
+
+Written so the next session starts from a decision, not from re-deriving one. Counts are
+error counts under `out9`. **"DEAD" means `tools/reachable.py` proves nothing in the engine
+can reach it — §3b — so it is out of scope, not a to-do.**
+
+| object | reach | errs | verdict |
+|---|---|---:|---|
+| `MeASELoad` | **DEAD** | 126 | out of scope |
+| `MeFGeometryFromMesh` | **DEAD** | 20 | out of scope |
+| `McduDebugDraw` | **DEAD** | 1 | out of scope — and dead end 10 already burned time here |
+| `McdSpace` | live | 50 | **documented leave-alone**, §11 item 7: the `struct _McdSpace` layout is not in the DWARF *anywhere*, including its own object, where the DIE is `DW_AT_declaration: 1`. Inferring it is the guess the detectors exist to stop |
+| `MeSimpleFile_linux` | live | 1 | **documented leave-alone**, §11 item 7: `-D_FORTIFY_SOURCE=0` makes it compile with three garbage arguments. The compile error is the useful signal |
+| `McdSphyl` | live | 1 | **dead end 9.** `(float)s[1].mRefCtAndID + (float)s[1].prev` — GCC rejects only the second cast, and the original loads *both* as floats. The compiler is reasoning about Ghidra's types and is wrong |
+| `McdTriangleList` | live | 6 | **dead end 9, same shape.** `(float)g[1].prev` etc. Confirmed this session |
+| `keaLCP_new` | live | 10 | **solver, do not text-repair.** §11 item 2 — nine calls short by one argument at non-uniform frame offsets |
+| `McdBox` | live | **2** | **open, closest.** Both are the dead-end-9 shape at lines 235/236 |
+| `McdContact` | live | **1** | **open.** `field_0x1e` — a member Ghidra reads at offset 0x1e that `kd_types.h`'s `McdContact` does not have. A type-database gap, so the fix is `gen_typedb`, not the body |
+| `MeMath` | live | 2 | **open.** `MeQuaternionFromTM__nxt` undeclared (a function-local static the prelude missed) + one `stack0x` |
+| `McdMessage` | live | 7 | open — `invalid use of incomplete typedef McdErrorDescription`. See dead end 1: that tag is one of the three C++-only ones |
+| `MeProfile_linux` | live | 13 | open — `rdtsc` is an inline-asm builtin; needs a `kd_compat.h` shim |
+| `McdBatch` | live | 14 | open — `expected declaration specifiers before '__ct'`, gcc 3.2's C++ constructor spelling |
+| `MdtWorld` | live | 30 | open — `stack0x` family + 18 `expected identifier` |
+| `MdtBcl` | live | 31 | open — `stack0x` family + 10 `invalid operands to binary &` |
+| `MeProfile` | live | 75 | open — 45 `request for member X in something not a structure` |
+
+**So the genuinely open list is 9 objects**, and the two cheapest (`McdContact` 1,
+`McdBox` 2) are the place to start — except that `McdBox`'s two are dead end 9, so
+`McdContact` is the only true one-liner left.
+
+### What has been working, and what has not
+
+Every object recovered this session came from finding a **shared cause** and fixing the
+generator, never from editing a generated file. The pattern that keeps paying:
+
+1. group the remaining errors by normalised message across all failing objects;
+2. pick the biggest group;
+3. find the ONE thing upstream that produces it;
+4. fix that, then **diff the blast radius** — the acceptance test is that every
+   already-compiling object's `.o` stays byte-identical.
+
+That last step is not ceremony. It caught a regression I introduced this session
+(`fix_float_as_pointer` widened to explicit `(T *)` casts put three new errors into
+`McdCylinder`, which had none), and it is the only reason the widening did not ship.
+
+**Two failure modes to expect, because both happened repeatedly:** a rule that looks right
+and silently declines (check by calling it directly on the offending line — that found the
+newline stop in `scan_unary_forward`, the `ANY_CAST` missing star, and the `_match_bracket`
+off-by-one), and a fix that looks like a regression but is a reclassification (`recover.py`
+labels by the FIRST error's pattern — check the error COUNT).

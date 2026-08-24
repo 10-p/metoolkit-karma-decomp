@@ -1579,9 +1579,51 @@ def fix_aggregate_cast(line, diag, ctx):
     return line[:m.start()] + repl + line[end:]
 
 
+def fix_aggregate_as_integer(line, diag, ctx):
+    """`(uint)faceId & 0xffff` where faceId is a STRUCT.
+
+    The mirror of fix_aggregate_cast: there a scalar was cast TO an aggregate,
+    here an aggregate is cast to a scalar. C forbids both; the machine code does
+    neither, it just loads the bytes. IxBoxLineSegment — the raycast path — does
+
+        pfVar12 = pfVar12 + ((uint)faceId & 0xffff) * 4;
+
+    where faceId is a two-field struct and the original loads its four bytes and
+    masks off the low half. `*(uint *)&faceId` says exactly that.
+
+    Safe because it only ever runs on a line GCC has already REJECTED: a cast of
+    an aggregate to an integer has no legal reading to be confused with, unlike
+    (float)x->member, which is a valid conversion when the member is an int
+    (dead end 6). One cast per pass, so the loop's verification decides.
+
+    ENDIANNESS. This reinterprets bytes rather than naming a field, which is what
+    the original does — `struct FaceId { MeU16 axis; MeU16 minside; }` and the
+    mask picks out `axis` because it is first in memory. That is only true on a
+    little-endian target. Every target this project builds for is little-endian
+    (i386, wasm32, arm64/armv7 as configured), and a great deal of the recovered
+    corpus already assumes it, but a big-endian port would need the field name
+    here rather than the mask."""
+    for m in ANY_CAST.finditer(line):
+        typ = m.group(1)
+        if typ.replace('struct ', '') not in SCALAR_KEYWORDS:
+            continue
+        end = scan_unary_forward(line, m.end())
+        if end is None or end <= m.end():
+            continue
+        operand = line[m.end():end].strip()
+        # An operand that is already a dereference or an address-of is not the
+        # struct-valued identifier this rule is for.
+        if not re.fullmatch(r'[A-Za-z_]\w*(?:\.\w+|->\w+|\[[^\]]*\])*', operand):
+            continue
+        return (line[:m.start()] + f'(*({typ} *)&({operand}))' + line[end:])
+    return None
+
+
 REPAIR_RULES = [
     (re.compile(r'conversion to non-scalar type requested'),
      fix_aggregate_cast),
+    (re.compile(r'aggregate value used where an integer was expected'),
+     fix_aggregate_as_integer),
     (re.compile(r'pointer value used where a floating-point was expected'),
      fix_pointer_as_float),
     (re.compile(r'cannot convert to a pointer type'),

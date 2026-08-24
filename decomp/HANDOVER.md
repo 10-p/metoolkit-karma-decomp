@@ -52,6 +52,33 @@ Branch: **`karma/decompile`**. `main` is untouched. **Do not merge.**
   also caught a *search* that could not have found what it was looking for. §4a, §12's
   closing section, and dead ends 9 and 10.
 
+### WHAT REMAINS — the whole list, ordered, 2026-08-24
+
+Everything else in this file is detail. This is the work.
+
+| # | what | where | blocked on |
+|---|---|---|---|
+| 1 | **The solver's frames.** 8 objects: `keaRbdCore_unified`, `keaMemory`, `keaIntegrate_pc`, `keaLCPSolver`, `keaLCP_new`, `MdtWorld`, `MdtBcl`, `MeMath`. The DWARF declares no `DW_AT_location`. **The untried move is a Ghidra re-dump with DWARF *variable* import disabled** — Ghidra's native stack recovery may beat the un-placeable variables its importer creates. | §11 item 2 | nothing. Ghidra is installed, a re-run is 75–120 min, and `MdtBcl`/`MeMath` are ONE error each so the answer is immediate |
+| 2 | **`IxCylinderCylinder` is wrong and is in the build.** 925 `dims_diff` in 24,111 real calls, a SAT tie-break at `OverlapCylCyl:1275`. No detector holds it. | §11 item 0 | nothing |
+| 3 | **arm64 truncates pointers.** Compiles 109/109 with identical symbols and is not trustworthy. armv7 is fine. | §6b | a generator-wide change to pointer-width slots |
+| 4 | **Nothing has EXECUTED on wasm32, armv7 or arm64.** | `HANDOVER-WEB.md` | the web agent |
+| 5 | **GJK's warm cache path has never been tested** — the busiest pair family in the census, cold-path only. | §11 item 4 | nothing |
+| 6 | **The tail: 14 objects, 271 errors — and it is finished.** 3 DEAD, 2 leave-alones, 3 dead end 9, 4 are item 1 above, 2 low-value profilers. | §13 | do not start here |
+
+**IS A COLLISION PAIR USED? YES — THIS IS ANSWERED, DEFINITIVELY, AND IT IS §3.**
+37 pairs are registered. **15 are called.** Of the 22 that are not:
+
+- **2 families CANNOT EVER be called**, proven from the engine source, not from a census:
+  `Box × TriangleList` and every `Aggregate` PAIR are intercepted by `KIntersect` before
+  Karma is consulted (§3a). No map can change this.
+- **the rest have simply never been seen** in 30+ runs across 20+ maps. That is not proof,
+  and the list has moved **five times** — most recently three Cylinder pairs on
+  2026-08-24, one of which landed on a quarantined object. **Re-run the census on any new
+  map before trusting anything about it.**
+
+14 of the 15 called pairs are validated against the shipped original on live inputs. The
+fifteenth is item 2 above.
+
 Reproduce the whole state in about a minute with §4.
 
 ---

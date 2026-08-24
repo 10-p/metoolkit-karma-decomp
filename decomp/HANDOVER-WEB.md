@@ -22,13 +22,14 @@ freebie, the Android NDK), and to integrate the result into the engine's web bui
 
 What exists today:
 
-- **106 recovered objects**, all of them compiling for i386 *and* for wasm32.
+- **109 recovered objects**, all compiling for i386, wasm32, armv7 *and* arm64 — but see
+  §3's pointer-size section: **arm64 is not trustworthy and wasm32 is**, for the same reason.
 - **The full collision-detection path the game actually uses is recovered and validated** —
   all twelve interaction pairs UT2004 calls, each measured against the shipped original on
   real inputs from a live match. Evidence per object in `karma-decomp/proven.txt`. §6 has
   the census that says "twelve" and why that is the number to plan against.
 - **The whole set already compiles under Emscripten**, and its exported symbol NAMES are
-  **byte-identical to the i386 build for all 106 objects** — nothing added or dropped. So
+  **byte-identical to the i386 build for all 109 objects** — nothing added or dropped. So
   the ABI surface the engine links against does not change between targets, which was the
   thing most likely to turn this into a rewrite. See §4. (Names only: `wasm_check.sh`
   discards the binding letter. That gap let a recovered object export a *global* `putchar`
@@ -46,7 +47,7 @@ What does **not** exist, and you need to know this before planning anything:
   run on recovered Karma alone today**, and closing that gap is recovery-side work, not
   yours. See "The gap that decides your schedule" below before planning around it.
 - **Nothing has run end to end under wasm.** Natively, the collision layer has: all eight
-  objects behind the twelve pairs the game calls were put in the driving seat — no shadow
+  objects behind the pairs the game calls were put in the driving seat — no shadow
   harness, the engine consuming the recovered code's answer every frame — through full ONS
   matches. The solver has not, and cannot until the four objects above compile. Everything
   else called "validated" was measured by a shadow harness that feeds the engine the
@@ -102,6 +103,37 @@ have 8-byte pointers and different padding throughout.
 **Consequence for you:** the recovered C assumes 32-bit pointers in places, because it came
 from 32-bit code. wasm32 matches. **wasm64/memory64 does not** — do not enable it without
 re-deriving the type database from a 64-bit source.
+
+> ### ⚠ THIS IS NOW MEASURED, NOT ASSERTED — and it is the strongest warning in this file
+>
+> On 2026-08-24 all 109 objects were compiled for **arm64** (64-bit pointers) as well as
+> armv7 and wasm32. Every one of them compiled. The exported symbol sets were
+> **byte-identical to i386 on all three**. Every gate the project has would have passed.
+>
+> Then the two suppressions the build relies on — `-Wno-int-conversion` and
+> `-Wno-incompatible-pointer-types` — were REMOVED, over five released objects:
+>
+> | target | pointer/int conversion diagnostics |
+> |---|---:|
+> | armv7 (32-bit) | **23** |
+> | arm64 (64-bit) | **920** |
+>
+> Forty times as many. That is decompiled code punning pointers through `undefined4`
+> slots — lossless at 32 bits, **silently truncating at 64**. 897 additional sites where a
+> pointer loses its top half.
+>
+> **What this means for you concretely:**
+>
+> 1. **wasm32 is safe** and shares armv7's number, not arm64's. Nothing here says wasm32 is
+>    at risk.
+> 2. **Never enable memory64.** The "do not enable without re-deriving" above now has a
+>    number attached: you would be turning on ~900 truncation sites, and *the build would
+>    still be green*.
+> 3. **The general lesson, which applies to everything you do here:** identical exported
+>    symbols and a clean compile prove nothing about a target you have not executed. That is
+>    the same trap `HANDOVER.md` §12 documents three times over, and it caught this project
+>    again on 2026-08-24 with a static pointer table whose relocations were never applied —
+>    it passed all seven gates and segfaulted on the engine's first asset load.
 
 ### Floating point — already settled, do not re-litigate
 
@@ -176,11 +208,11 @@ This had never been tried, so it was worth doing before anything else:
 
 ```
 emcc 5.0.7, no -m32, otherwise the same flags as the native build
-106 of 106 recovered objects compiled for wasm32.  0 failures.
+109 of 109 recovered objects compiled for wasm32.  0 failures.
 ```
 
 Stronger than that — the **exported symbol names are byte-identical to i386 for
-all 106 objects**, nothing added or dropped. So the ABI surface the engine links
+all 109 objects**, nothing added or dropped. So the ABI surface the engine links
 against does not change between the two targets, which was the thing most likely
 to turn this into a rewrite.
 
@@ -440,7 +472,7 @@ physics.
    all of them: `scene_chain.c` (collision-free, the authoritative trajectory signal),
    `scene_boxes_on_plane.c` (exercises the geometry dispatch), `scene_ragdoll.c` (nine
    capsules on ball-socket joints — the other two make **not one Sphyl call** between them).
-   Currently **106/106 clean on all three** on i386 — but read `HANDOVER.md` §4a before
+   Currently **109/109 clean on all three** on i386 — but read `HANDOVER.md` §4a before
    putting weight on that number: only eight of 103 objects have measurable sensitivity on
    any of these scenes, and `test/scene_census.sh` and `test/gate_sensitivity.sh` exist to
    say which. **Getting that under a wasm build is your first milestone.**
@@ -452,7 +484,7 @@ physics.
    contact regime and a figure without its regime is meaningless. `KD_GENARGS=1` and
    `KD_FIXEDSHAPE=1` are the two that found real bugs most recently.
 3. **`test/wasm_check.sh`** — compiles the whole set for wasm32 and diffs the exported
-   symbols against the native build. Currently 106/106. **Run this after any change
+   symbols against the native build. Currently 109/109. **Run this after any change
    to the recovery pipeline**; it is the cheapest possible early warning that a change has
    broken portability. It compares NAMES only — see the note at the end of §4.
 4. **`test/kd_shadow.c`** — the in-game shadow harness. Runs both implementations on the
@@ -516,11 +548,17 @@ gcc -m64 ... -o /tmp/rag_hx   test/scene_ragdoll.c  <linux_hx_single/*.a>
 - **Nothing has been RUN under wasm.** The whole set compiles and exports identical
   symbols, and that is all §4 hazards 2 and 3 settle. Hazards 1, 4 and 5 are runtime and
   entirely open.
-- **106 of ~150 objects compile**, 17 do not. But read `HANDOVER.md` §3b then §3 before reading that
+- **109 of ~150 objects compile**, 14 do not. But read `HANDOVER.md` §3b then §3 before reading that
   as 60% done — see the next bullet, it is the most important thing in this file for
   planning purposes.
-- **19 objects are deliberately quarantined** by eight safety detectors. They compile but
-  are known-or-suspected wrong. Do not include them to raise a coverage number. The proof
+- **25 objects are deliberately quarantined** by eight safety detectors. They compile but
+  are known-or-suspected wrong. Do not include them to raise a coverage number.
+- **AND THE QUARANTINE IS NOT A GUARANTEE, which is new on 2026-08-24.** It only holds
+  objects some *detector* recognises. `IxCylinderCylinder` is measured wrong on a live pair
+  — 925 structural divergences in 24,111 real calls — and **no detector objects, so it is
+  in `/tmp/kd_build` and in any build you make from it.** "Not quarantined" means "nothing
+  automated complained", not "validated". The list of what is actually validated is
+  `proven.txt`, and nothing else. The proof
   of why: `IxConvexTriList` compiled, passed all three substitute scenes and 200,000
   synthetic pairs, and was **46% wrong in a live match** for two sessions — returning *no
   contacts* where the original returned three. It is fixed and released now, but it was
@@ -669,6 +707,31 @@ Read `karma-decomp/HANDOVER.md` for how the recovery pipeline works, and
 
 A log of the things that would otherwise surprise you, newest first. If you have read an
 older copy of this file, this is the diff.
+
+**2026-08-24, fourth session.** Four things, and the first two change what you should
+believe about your own target.
+
+- **arm64 compiles, has identical symbols, and is wrong.** The full measurement is the
+  warning box in §3. The short version: a clean cross-compile with matching exported
+  symbols is not evidence about a target nobody has executed, and 64-bit pointers truncate
+  through this code ~900 times. **wasm32 is not affected** — it is 32-bit, and it measures
+  like armv7 (23 diagnostics), not like arm64 (920). Do not enable memory64.
+- **A defect got all the way through all seven gates and killed the engine at startup.**
+  `MeFileSearch`'s `MeDefaultFileLocations` is a `const char *[22]` whose `.rodata` bytes
+  are *relocation addends*, not addresses. Emitted raw, the file-search loop walked
+  `0, 1, 0xc, 0x1a` as directory prefixes and the engine segfaulted in `fread` loading its
+  first `.ka` asset — with a backtrace made entirely of *shipped* functions. Fixed
+  (`gen_prelude.static_reloc_definition`). **Why you care:** the offline scenes never open
+  a file, so no gate could see it. Your wasm build loads assets through a completely
+  different path; if you see something similar, this is the shape.
+- **The whole engine now runs on all 109 recovered objects** on native i386 — not the 8 of
+  §7b, everything. It plays a match and is indistinguishable from stock. That is the
+  clearest signal yet that the recovered code is usable as a unit, and it is the state your
+  wasm build should be aiming to reproduce. `HANDOVER.md` §7c has the four-minute recipe.
+- **109 objects, 14 fail.** One more pair was measured and released
+  (`Cylinder × TriangleList`, 71,417 real calls, 0 divergences); one was measured and found
+  WRONG (`Cylinder × Cylinder`, 925 divergences) **and nothing holds it out of the build** —
+  so if you build from `/tmp/kd_build`, that object is in it. `HANDOVER.md` §11 item 0.
 
 **2026-08-24, third session.** The biggest change to your side of the line since this file
 was written. Read all five points.

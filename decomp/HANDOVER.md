@@ -246,6 +246,61 @@ never happened. **Check the `Game class is` line in the log before believing a z
 match that never kicked off registers everything and calls nothing, and looks exactly like
 a map with no physics (§6).
 
+## 3b. What is in scope at all — reachability, and its two different meanings
+
+**Karma is being recovered FOR UT2004, not reproduced.** An object nothing reaches does not
+need to compile, and saying "out of scope" is a better answer than leaving it in a tail
+that never shrinks. But "reachable" means two different things and neither subsumes the
+other:
+
+| question | instrument | what it misses |
+|---|---|---|
+| can the linker reach it? | `tools/reachable.py` | interaction functions are ADDRESS-TAKEN by their registrars, so every one counts as reachable even if the game never calls it |
+| does the game execute it? | the census, §3 | only what the maps it has seen happen to do |
+
+`tools/reachable.py` walks a symbol-level closure from the engine's own object files
+through all 192 archive members. Result: **147 reachable, 31 not.** The 31 retire
+permanently:
+
+- `MeViewer2`/`MeApp`/`Render_*`/`RMenu`/`RMouseCam`/`RGeometry*`/`RConvex`/`Init_ogl` —
+  MathEngine's own demo viewer, never linked.
+- `McduDebugDraw` — **and this one is worth noting**, because dead end 10 spent effort
+  trying to make it compile. It is unreachable, so that work would have been worth zero
+  even had it succeeded.
+- `MeASELoad`, `MeFGeometryFromMesh`, `MeCommandLine`, `MeMisc`, `MeString`, `MeBounding`,
+  `MePrecision`, `MeSimpleFile`, `MeMemoryCpp`.
+- `MdtFixedPath`, `MdtLinear1`, `MdtLinear2`, `MdtSpring`, `MdtUserConstraint` — Karma's
+  other CONSTRAINT types. This is the joint-side analogue of the collision census: UT2004
+  does not use them.
+
+That takes the failing pile from 27 to **24 genuinely in scope**, and it re-sorts them:
+
+| group | objects | verdict |
+|---|---|---|
+| **core Karma** | `McdBatch` `McdBox` `McdContact` `McdSpace` `McdSphere` `McdSphyl` `McdTriangleList` `MdtBcl` `MdtWorld` `McdMessage` `MeMath` `MeChunk` `MeProfile` | required — geometry types and dynamics core |
+| **`.ka` asset loading** | `MeAssetDBXMLIO` `MeAssetDBXMLInput_1_0` `MeAssetFactory` `MeFAsset` `MeXMLOutput` `MeXMLParser` | **required, and §11 item 8 undersells it — see below** |
+| solver | `keaLCP_new` | required, §11 item 2 |
+| platform / misc | `MeProfile_linux` `MeSimpleFile_linux` `mesffnmin` | low value |
+| unknown | `McdCylinder` | reachable (`KUtils.cpp:796` calls `McdCylinderCreate` from a cylinder collision element) but the census has never seen a cylinder pair called. Depends on whether any shipped asset defines one — this is the surviving map question |
+
+### The asset loader is not peripheral
+
+§11 item 8 and §12 item 4 describe `MeAssetDB`/`MeXML`/`MeAssetFactory` as "`.ka` XML
+parsing, not physics", which is literally true and misleading. It is how **every ragdoll and
+vehicle gets instanced**:
+
+```
+KCreateAssetDB()   -> MeAssetDBCreate() -> MeAssetDBXMLInputCreate()
+                   -> parses ../KarmaData/*.ka
+KSkeletal.cpp:388  -> KAssetInstanceCreate(level->KAssetFactory, skelAss, ...)
+```
+
+So "replace, don't recover" is still the right strategy — it is a bounded XML parser, not
+physics — but it is **not optional** for §12 item 7. Six of the 24 failing objects are this
+cluster, and it is the largest single group.
+
+---
+
 ## 4. The pipeline
 
 ```

@@ -22,7 +22,7 @@ Branch: **`karma/decompile`**. `main` is untouched. **Do not merge.**
   the DWARF does not say where the frames live.** Not "Ghidra failed to use the debug info"
   — the `DW_AT_location` attributes are absent from the abbrevs those functions use. §11
   item 2 has the readelf command that shows it.
-- **99 objects compile**, 21 are quarantined by detectors, 28 do not compile. Object count
+- **99 objects compile**, 22 are quarantined by detectors, 27 do not compile. Object count
   is a bad progress metric — read §3 before using it.
 - **Two whole families the engine never asks Karma about.** `Box × TriangleList` and every
   `Aggregate` pair are intercepted by UT2004's own dispatcher, so they are registered and
@@ -69,10 +69,10 @@ wasm32:   99/99 compile, 99/99 exported symbol sets byte-identical to i386
 bindings: 99/99 export what the SHIPPED object exported, binding included (§8)
 difftest: self-test 12/12, and the real run reproduces the documented baseline
           exactly (§8) — IxBoxBox 1 count, IxSphereTriList 137 dims, the rest 0
-review:   21 objects held back by recover.py's eight safety detectors (§8;
+review:   22 objects held back by recover.py's eight safety detectors (§8;
           the ninth, symbol bindings, is a gate rather than a detector because
           it needs the shipped object to compare against)
-fail:     28 objects do not compile
+fail:     27 objects do not compile
 dumps:    out8 is current (§5). It differs from out6 in 2 of 153 dumps.
 ```
 
@@ -1470,16 +1470,38 @@ Ordered by what actually moves the project, not by what is easiest:
    ```
 
    Other functions **in the same object** use 45/46 and are located normally, so this is
-   per-function, not a property of the build. No tool can recover that frame from debug
-   info, and inferring it from the code is exactly the guess the guessed-stack-frame
-   detector exists to stop — `MdtPartition` compiled that way and segfaults `scene_chain`.
+   per-function, not a property of the build.
 
-   The residual errors are all this one thing: `stack0xfffffdd8` / `register0x00000010`
-   (`keaRbdCore_unified`), `stack0xffffff88` (`keaMemory`), `stack0xffffffa0`
-   (`keaIntegrate_pc`), and the genuinely-missing arguments in `keaLCPSolver`
-   (`makeFromPcSparsePSM`, expected 10 have 9 — and note the call already passes `this`,
-   so it is a MIDDLE argument, not a dropped `this`) and `keaLCP_new` (nine calls, each
-   short by one, at non-uniform offsets).
+   **But do not read that as "so nothing can be done" — that was too strong, and half a
+   day proved it.** Ghidra recovered usable storage for most of these slots anyway; it
+   simply spells a slot's **address** differently from its **value**, and only the value
+   gets a declaration:
+
+   ```c
+   MdtKeaParameters in_stack_ffffffa0;      /* declared, right type, 76 bytes */
+   pMVar3 = (MeReal *)&stack0xffffffa0;     /* undeclared — the SAME slot */
+   ```
+
+   Across all four objects there are only **six** `stack0x` references and four have a
+   covering declaration. `ghidra_clean.fix_stack_address_name()` resolves them, and that
+   alone made **`keaIntegrate_pc` compile** — it had been failing on nothing else.
+   **It must size-check, and the check is not decoration:** it refuses
+   `keaRbdCore_unified`, where the copy writes 92 bytes into a slot Ghidra declared as
+   `undefined1[72]`. The check cannot be left to the compiler, because the repair loop
+   accepts an edit when the error count does not *grow* — so trading `undeclared` for a
+   failed assertion would be kept, not reverted.
+
+   **And then `keaIntegrate_pc` turned out to be wrong**, which is the point of the whole
+   exercise: 4.900e-04 m of divergence on `scene_chain` against 6.100e-04 m of
+   sensitivity — PROVEN sensitive, not bit-identical, the same footing as
+   `keaMatrix_PcSparse_vanilla`. It stays quarantined. Compiling was not the win; being
+   **measurable for the first time** was. `proven.txt` has it.
+
+   What is genuinely left is narrower than it was: `register0x00000010` (one reference),
+   `keaRbdCore_unified`'s oversized copy, and the genuinely-missing call arguments in
+   `keaLCPSolver` (`makeFromPcSparsePSM`, expected 10 have 9 — the call already passes
+   `this`, so it is a MIDDLE argument) and `keaLCP_new` (nine calls, each short by one, at
+   non-uniform offsets).
 
    **The one lead that is not a guess.** The by-value *incoming* parameters are pinned by
    the cdecl ABI, not by debug info, and Ghidra already has the signature:
@@ -1542,7 +1564,7 @@ Ordered by what actually moves the project, not by what is easiest:
    before quoting a bit-identical result — `keaCalcAcceleration_vanilla` is the worked
    example of a zero that means nothing.
 
-7. **Grind the tail.** 28 objects, but **read §3 first** — a large part of the pile is
+7. **Grind the tail.** 27 objects, but **read §3 first** — a large part of the pile is
    geometry the game never collides, and **nine of the 34 are one error from
    compiling**, which is where to start. The distribution, re-measured 2026-08-24:
 
@@ -1634,7 +1656,7 @@ Everything else — code, tests, measurement, tooling — is self-service.
 | 2 | validated = 0 ret/count/dims/overrun in a live match, `KD_SELFTEST` clean, evidence on the line | **DONE** for those twelve. |
 | 3 | all three scenes clean for every recovered object, *and* checked for sensitivity | **DONE**, and the sensitivity check (§4a) is what makes it mean anything. |
 | 4 | qhull and the asset loader **replaced**, not recovered | **NOT STARTED.** `libMcdConvexCreateHull` is qhull 2.6, 186 KB, load-time only, open source. `MeAssetDB`/`MeXML`/`MeAssetFactory` is `.ka` XML parsing. Neither is physics; both are swap-ins, not decompiles. §11 item 8. |
-| 5 | no detector suppressed, nothing released without evidence | **HOLDING.** 21 objects quarantined, and §4a now shows the quarantine is load-bearing (`MdtPartition` alone turns a bit-identical scene into a SIGSEGV). |
+| 5 | no detector suppressed, nothing released without evidence | **HOLDING.** 22 objects quarantined, and §4a now shows the quarantine is load-bearing (`MdtPartition` alone turns a bit-identical scene into a SIGSEGV). |
 | 6 | builds as ordinary C for wasm32 **and arm64/armv7** | **wasm32 DONE** (99/99, byte-identical symbol sets). **arm64 NOT TRIED** — no cross-compiler installed. Nothing has been *executed* on either. |
 | 7 | engine runs on recovered Karma with **no shipped `.a` in the link at all** | **COLLISION HALF DONE** (§7b, two maps, 11 runs/arm, indistinguishable from stock). **SOLVER HALF BLOCKED**, but on one problem now rather than four — the arguments are recovered (§5a) and what remains is the frames, §11 item 2. |
 
@@ -1649,7 +1671,7 @@ Everything else — code, tests, measurement, tooling — is self-service.
   no Ghidra. §11 item 8.
 - **arm64** — untried, needs a cross-compiler.
 - **Executing anything on wasm** — the web agent's job. `HANDOVER-WEB.md`.
-- **The tail** — 28 objects, and read §11 item 7 first because two of the cheap-looking
+- **The tail** — 27 objects, and read §11 item 7 first because two of the cheap-looking
   ones are traps (dead ends 9 and 10).
 
 

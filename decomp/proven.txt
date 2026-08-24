@@ -506,6 +506,41 @@ MdtUtils              Bit-identical on scene_ragdoll with 4.113e+00 m of
 #                     the original: 4.280e-04 m of divergence on scene_chain
 #                     against 3.700e-04 m of sensitivity — about one rounding
 #                     step wrong, not bit-identical. Do not release it.
+# keaIntegrate_pc     COMPILES as of 2026-08-24, and is the SECOND kea object
+#                     measured not to reproduce the original. It had never been
+#                     measured before because it had never compiled.
+#
+#                       scene_chain   ran 1,800   as recovered   sensitivity
+#                       MdtKeaIntegrateSystem       900   4.900e-04   6.100e-04
+#                       KeaIntegrateSystem_vanilla  900
+#
+#                     PROVEN sensitive and NOT bit-identical: the gate can see
+#                     6.1e-04 on this scene and the recovery moves it 4.9e-04,
+#                     i.e. about eight tenths of one rounding step. That is the
+#                     same footing as keaMatrix_PcSparse_vanilla above, and the
+#                     same verdict — DO NOT RELEASE.
+#
+#                     Two things worth keeping about how it got here.
+#
+#                     What made it compile was one exact rename, not a guess:
+#                     Ghidra spells a stack slot's VALUE `in_stack_ffffffa0` and
+#                     gives it a declaration, and the same slot's ADDRESS
+#                     `stack0xffffffa0` and does not. Both encode the same frame
+#                     offset. GCC even suggests the fix itself. See
+#                     ghidra_clean.fix_stack_address_name(), and note it declines
+#                     on keaRbdCore_unified, where the same rewrite would put 92
+#                     bytes into a slot Ghidra declared as undefined1[72].
+#
+#                     And the divergence is NOT from that rename, which only
+#                     redirects a 76-byte copy of the by-value `parameters` into
+#                     the local that receives it. It is in
+#                     KeaIntegrateSystem_vanilla's own float arithmetic, which is
+#                     where a rounding difference would live. So this object
+#                     compiling is not progress in itself — it is progress
+#                     because it can now be MEASURED, and the measurement says
+#                     the recovery is wrong. The detector that was holding it
+#                     (unaccounted value: in_stack_ffffffa0) was right, and still
+#                     holds it.
 #
 # --- what is actually blocking the solver ------------------------------------
 #
@@ -574,9 +609,24 @@ MdtUtils              Bit-identical on scene_ragdoll with 4.113e+00 m of
 #                    the call already passes pkVar4 as its first argument)
 #   keaLCP_new       nine calls each short by exactly one, at NON-UNIFORM frame
 #                    offsets (see the keaLCP_new entry below)
-#   keaIntegrate_pc  stack0xffffffa0
+#   keaIntegrate_pc  RESOLVED -- it compiles now, and is measured NOT to
+#                    reproduce the original (see its entry above). The blocker
+#                    was a name, not a frame: `&stack0xffffffa0` is the address
+#                    of the local `in_stack_ffffffa0`, which Ghidra had already
+#                    declared with the right type.
 #   keaRbdCore_unified  stack0xfffffdd8 / stack0xfffffe2c / stack0xfffffe34 /
-#                    register0x00000010
+#                    register0x00000010. The stack0x half is the same name
+#                    problem, but the size check REFUSES it here: the copy writes
+#                    92 bytes and Ghidra declared undefined1[72].
+#
+# PARTIALLY WALKED BACK, same day. "The frames are undescribed, so nothing can
+# be done" was too strong. Ghidra recovered usable storage for most of these
+# slots anyway -- it simply spells a slot's ADDRESS differently from its VALUE,
+# and only the value gets a declaration. Across all four objects there are just
+# SIX `stack0x` references, and four have a declared local covering them. That
+# is a name-resolution problem, not a frame-recovery problem, and fixing it made
+# keaIntegrate_pc compile. The DWARF finding below is still true and still
+# explains why Ghidra had to guess; it does not mean the guesses are unusable.
 #
 # AND HERE IS THE FINDING THAT SHARPENS "Ghidra cannot model these frames":
 # **the DWARF does not say where these variables live.** Not "Ghidra failed to

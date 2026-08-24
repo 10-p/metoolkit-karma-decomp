@@ -1002,6 +1002,138 @@ def fix_external_base_arithmetic(obj, text):
     return ''.join(out), n
 
 
+_dwarf_size_cache = {}
+
+# `undefined1 in_stack_fffffdd8 [72];` / `MdtKeaParameters in_stack_ffffffa0;`
+IN_STACK_DECL = re.compile(
+    r'^[ \t]*(.+?)\bin_stack_([0-9a-f]{8})[ \t]*(?:\[[ \t]*(\d+)[ \t]*\])?[ \t]*;[ \t]*$', re.M)
+# `pMVar3 = (MeReal *)&stack0xffffffa0;`
+STACK_ADDR_ASSIGN = re.compile(
+    r'(\w+)\s*=\s*\(\s*([A-Za-z_]\w*)\s*\*\s*\)\s*&stack0x([0-9a-f]{8})\s*;')
+# `for (iVar1 = 0x13; iVar1 != 0; iVar1 = iVar1 + -1) {`
+COPY_LOOP = re.compile(r'for\s*\(\s*(\w+)\s*=\s*(0x[0-9a-f]+|\d+)\s*;')
+
+# Ghidra's own fixed-width placeholder types, and the C types whose width is not
+# in this corpus's DWARF under a name worth looking up.
+_FIXED_WIDTH = {'undefined1': 1, 'undefined2': 2, 'undefined4': 4, 'undefined8': 8,
+                'undefined': 1, 'byte': 1, 'char': 1, 'short': 2, 'ushort': 2,
+                'int': 4, 'uint': 4, 'long': 4, 'ulong': 4, 'float': 4,
+                'double': 8, 'MeReal': 4}
+
+
+def _dwarf_type_size(obj, name):
+    """Bytes of the named type, from the object's own DWARF, or None."""
+    if name in _FIXED_WIDTH:
+        return _FIXED_WIDTH[name]
+    if obj is None:
+        return None
+    key = (obj, name)
+    if key in _dwarf_size_cache:
+        return _dwarf_size_cache[key]
+    _dwarf_size_cache[key] = None
+    try:
+        import dwarf_structs
+        dies = dwarf_structs.parse(obj)
+    except Exception:
+        return None
+    for d in dies.values():
+        if d['tag'] not in ('DW_TAG_structure_type', 'DW_TAG_class_type',
+                            'DW_TAG_union_type', 'DW_TAG_typedef',
+                            'DW_TAG_base_type'):
+            continue
+        if d['attrs'].get('DW_AT_name') != name:
+            continue
+        s = dwarf_structs.type_size(dies, d['off'])
+        if s:
+            _dwarf_size_cache[key] = s
+            return s
+    return None
+
+
+def fix_stack_address_name(text, diag, ctx):
+    """`&stack0xffffffa0` is the address of the local `in_stack_ffffffa0`.
+
+    Ghidra spells a stack slot's VALUE and its ADDRESS differently — the value
+    is `in_stack_<offset>` and gets a declaration, the address is
+    `stack0x<offset>` and does not — so a function that copies a by-value
+    aggregate into an outgoing argument area comes out referring to storage it
+    also declares, under a name that does not exist. GCC says so itself:
+
+        error: 'stack0xffffffa0' undeclared; did you mean 'in_stack_ffffffa0'?
+
+    Both names encode the same frame offset, so the mapping is exact rather than
+    inferred. `keaIntegrate_pc` — `MdtKeaIntegrateSystem`, 900 calls per 900
+    solver steps — has this as its ONLY error.
+
+    THIS IS NOT `materialise_alloca_frame`'S CASE, and the distinction is the
+    whole reason it is allowed. That function's docstring declines to touch a
+    `stack0xNNNN` because inventing storage for one repeats the fixed-buffer
+    mistake of dead end 3. Nothing is invented here: Ghidra already declared the
+    local, with a real type, and this only connects the address to it. Where
+    there is no such declaration the rule declines.
+
+    THE SIZE CHECK IS WHY THIS IS SAFE, and it is not decoration — one of the
+    three sites in the corpus fails it. `keaRbdCore_unified` copies 92 bytes
+    (0x17 words) through a pointer into a slot Ghidra declared as
+    `undefined1[72]`, so rewriting it would put a 20-byte overflow into an
+    object that currently does not compile at all — the exact trade the
+    detectors exist to prevent. The written length comes from the copy loop's
+    own trip count and the pointer's element type; the declared length from the
+    object's DWARF. If either is unavailable, or the block does not fit, the
+    rule declines.
+
+    It cannot be left to the compiler either: the repair loop accepts an edit
+    when the error count does not GROW, so trading `undeclared` for a failed
+    size assertion would be kept rather than reverted."""
+    m = re.search(r'[‘\'"]stack0x([0-9a-f]{8})[’\'"] undeclared', diag)
+    if not m:
+        return None
+    off = m.group(1)
+    obj = getattr(ctx, 'obj', None)
+
+    out, changed = [], False
+    for _fn, region in _split_definitions(text):
+        if ('&stack0x' + off) not in region:
+            out.append(region)
+            continue
+        # The local Ghidra declared for this exact offset.
+        decl = None
+        for d in IN_STACK_DECL.finditer(region):
+            if d.group(2) == off:
+                decl = d
+                break
+        if decl is None:
+            out.append(region)          # nothing declared here — decline
+            continue
+        base_type = decl.group(1).strip().split()[-1] if decl.group(1).strip() else ''
+        if '*' in decl.group(1):
+            declared = 4                              # a pointer-typed slot
+        else:
+            unit = _dwarf_type_size(obj, base_type)
+            declared = None if unit is None else unit * int(decl.group(3) or 1)
+
+        # How much the copy loop writes through the pointer taken off this slot.
+        need = None
+        for a in STACK_ADDR_ASSIGN.finditer(region):
+            if a.group(3) != off:
+                continue
+            elem = _FIXED_WIDTH.get(a.group(2))
+            loop = COPY_LOOP.search(region, a.end())
+            if elem and loop:
+                need = int(loop.group(2), 0) * elem
+            break
+
+        if declared is None or need is None or declared < need:
+            out.append(region)          # unknown or does not fit — decline
+            continue
+        out.append(region.replace('&stack0x' + off, '&in_stack_' + off))
+        changed = True
+    return ''.join(out) if changed else None
+
+
+fix_stack_address_name.file_wide = True
+
+
 PTR_REF = re.compile(r'(?<![\w])(PTR_[A-Za-z0-9_]*?_([0-9a-f]{8}))\b')
 
 
@@ -1760,6 +1892,8 @@ REPAIR_RULES = [
      fix_subfield_access),
     (re.compile(r'[‘\'"]_\w+[’\'"] undeclared'),
      fix_mislabelled_external),
+    (re.compile(r'[‘\'"]stack0x[0-9a-f]+[’\'"] undeclared'),
+     fix_stack_address_name),
     (re.compile(r'too many arguments to function'),
      fix_too_many_arguments),
 ]
@@ -1771,6 +1905,7 @@ class RepairContext:
     it is inferred from the decompiled text."""
 
     def __init__(self, obj=None, fieldmap=None, include_dir=None):
+        self.obj = obj
         self.fieldmap = fieldmap or {}
         self.externals = relocation_targets(obj, per_function=True) if obj else {}
         self.extern_types = extern_var_types(include_dir)

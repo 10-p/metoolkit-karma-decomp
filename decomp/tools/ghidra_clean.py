@@ -1614,12 +1614,32 @@ def scan_postfix_backward(s, i):
         k = j
         while k > 0 and s[k - 1] in ' \t':
             k -= 1
-        if k > 0 and s[k - 1] == '.' and not s[k - 2:k - 1].isdigit():
+        if k > 0 and s[k - 1] == '.' and not _is_numeric_literal_end(s, k - 1):
             j = k - 1
         elif k > 1 and s[k - 2:k] == '->':
             j = k - 2
         else:
             return j
+
+
+def _is_numeric_literal_end(s, dot):
+    """Is the `.` at s[dot] a float literal's point rather than a selector?
+
+    The guard this replaces looked at ONE character — `s[dot-1].isdigit()` —
+    which is true for `1.5` and equally true for `kVar2._kd`, where the base is
+    an ordinary identifier that merely ends in a digit. Ghidra names locals
+    `kVar2`, `pMVar19`, `local_70`, so that is not a corner case: every subfield
+    access on such a base scanned back only as far as the member, and
+    fix_subfield_access rewrote `kVar2._kd._56_4_` into
+    `kVar2.(*(unsigned int *)((char *)&(_kd) + 56))` — eighteen of MdtWorld's
+    thirty errors.
+
+    A numeric literal starts with a digit; an identifier cannot. So read the
+    whole token to the left of the dot, not its last character."""
+    t = dot
+    while t > 0 and (s[t - 1].isalnum() or s[t - 1] == '_'):
+        t -= 1
+    return t < dot and s[t].isdigit()
 
 
 def _match_bracket(s, i):

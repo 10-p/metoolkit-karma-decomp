@@ -1453,11 +1453,13 @@ stock; only the collision objects are recovered. Item 7 asks for **no shipped `.
 link at all**, and that is blocked on §11 items 1–3. What is settled is that the recovered
 collision layer can drive, which the shadow harness structurally could not tell you.
 
-## 7c. All 108 objects at once — and the defect that only this found
+## 7c. All 109 objects at once — and the defect that only this found
 
 **2026-08-24 (third session).** §7b substituted the eight objects behind the called
-collision pairs. This substitutes **everything that compiles — all 108** — which is a much
-larger claim and it took one real fix to get there.
+collision pairs. This substitutes **everything that compiles** — 108 at the time, 109 after
+`IxCylinderTriList` was released the same day — which is a much larger claim, and it took
+one real fix to get there. Re-link before quoting it; the binary measured below is the
+108-object one.
 
 ```bash
 ./test/make_substituted_metoolkit.sh /tmp/kd_build ../Thirdparty/metoolkit /tmp/mt_subst

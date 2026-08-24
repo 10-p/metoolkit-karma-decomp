@@ -44,11 +44,14 @@ Branch: **`karma/decompile`**. `main` is untouched. **Do not merge.**
   objects** where armv7 emits **zero**, because the recovery puns pointers through 4-byte
   slots. There **is** now a gate for it — `test/ptrwidth_check.sh`, 13 seconds — and §6b's
   old "920 vs 23" figure was two different diagnostic sets added together. §6b.
-- **`IxCylinderCylinder`'s 925 `dims_diff` is not a defect to fix — `dims` is not a
-  measurement for this pair.** The shipped library, run against ITSELF with one body moved
-  a ten-millionth of a metre, changes its own answer **more often** than our recovery
-  differs from it (7,798 against 6,432 on the same 200,000 pairs). No other pair in the
-  driver does this at all. §11 item 0.
+- **`IxCylinderCylinder`'s 925 `dims_diff` is not a defect to fix.** Two independent
+  reasons. The shipped library, run against ITSELF with one body moved a ten-millionth of a
+  metre, changes its own answer **more often** than our recovery differs from it (7,798
+  against 6,432 on the same 200,000 pairs), and no other pair in the driver does this at
+  all. And **for this pair the field is never read**: the engine reads `dims` only when one
+  model is the level TriangleList, and Karma's single branch on it is false for all three
+  values the divergence involves. What is actually left is **3 `count_diff` in 24,111**.
+  §11 item 0.
 
 - **All 108 go into the engine at once and it plays a match**, indistinguishable from stock
   on the same map. That is up from the eight of §7b, and getting there took one real fix: a
@@ -2174,14 +2177,33 @@ Ordered by what actually moves the project, not by what is easiest:
    > `0x26aa` it is `fcoms; fnstsw %ax; test $0x45,%ah; jne`, i.e. take the new candidate
    > iff STRICTLY greater, which is what the recovery already does.
    >
+   > **And then the stronger answer, which is not statistical: FOR THIS PAIR THE
+   > DIVERGING FIELD IS NEVER READ.** `McdContact::dims` has three consumers in the engine
+   > and one in Karma, and all four were read rather than sampled:
+   >
+   > | consumer | when it runs |
+   > |---|---|
+   > | `KarmaSupport.cpp:303` `dims & 0x00FF` | `if(!a1)` — and the comment above it says "the ONLY model without an Actor must be the 'world', which must be the tri-list" |
+   > | `KarmaSupport.cpp:319` `dims >> 8` | the mirror case, model2 is the TriangleList |
+   > | `KarmaSupport.cpp:535` | inside `#if 0` |
+   > | `McdContactSimplify` | `if ((char)dims == 2 \|\| dims>>8 == 2)` — the only branch on this field in all 153 dumps |
+   >
+   > A Cylinder × Cylinder contact is two Actors and no TriangleList, so neither live engine
+   > branch runs. And the Karma branch is **false for 0x103, 0x301 and 0x303** — the only
+   > three values the divergence involves — so it takes the same path either way. (What the
+   > field carries at 303/319 is the TRIANGLE FLAGS, not the "0/1/2 point/line/surface" the
+   > header documents. Karma overloads it per side.)
+   >
+   > **Scope, stated honestly:** that branch IS live for this pair in general —
+   > `OverlapCylCyl` also emits `2` and `0x200`, both of which make it true. The claim is
+   > that the measured divergences never reach those values, which is about the histogram,
+   > not a proof over all inputs.
+   >
    > **Disposition, and it is on the line in `proven.txt`.** Do NOT pull it from the
-   > substituted build: the label it is charged with is one the shipped library re-rolls
-   > whenever a body moves a ten-millionth of a metre, which is every frame. Do NOT release
-   > it either — the **3 `count_diff` in 24,111 real calls** is 0.012%, is not explained by
-   > this, and `count` is far more stable under the same probe (0 at 1e-7, 5 at 1e-5).
-   > What would settle it is a live match scoring ret/touch/count/position/separation with
-   > `dims` reported SEPARATELY and read as non-discriminating for this pair — the way
-   > `nonfinite` is already read separately for NaN input (§7).
+   > substituted build. Do NOT release it either — the **3 `count_diff` in 24,111 real
+   > calls** is 0.012%, is not explained by any of this, and `count` IS a decision the
+   > engine acts on. That is the whole remaining charge, and it is what a live match should
+   > be scored on, with `dims` reported separately the way `nonfinite` already is (§7).
 
 1. **DONE — the vtable call sites.** `tools/gen_vtable_callsites.py` +
    `DumpDecomp.applyVtableCallsiteOverrides()`, adopted as `out8`. §5a has the method, the

@@ -860,21 +860,24 @@ McdSphylTriangleListIntersect       stock 371         substituted  467
 ### The result, and a correction to §7
 
 `test/crash_ab.sh` alternates two builds on the same map and URL, A,B,A,B, and keeps every
-log. `ONS-UCMP-ABC-ECE`, 420 s per run, five runs each:
+log. 420 s per run, **two maps**, every run reaching kickoff:
 
-| arm | runs | reached kickoff | crashed | crash site | ran the full 420 s |
-|---|---:|---:|---:|---|---:|
-| stock (shipped `.a`) | 5 | 5 | **2** | `McdModelGetGeometryType` | 3 |
-| substituted (recovered) | 5 | 5 | **2** | `McdModelGetGeometryType` | 3 |
+| map | runs/arm | stock crashes | substituted crashes | crash site |
+|---|---:|---:|---:|---|
+| `ONS-UCMP-ABC-ECE` | 5 | **2** | **2** | `McdModelGetGeometryType` |
+| `ONS-CBP2-Tropica` | 6 | **2** | **2** | `McdModelGetGeometryType` |
+| **total** | **11** | **4** | **4** | |
 
-**Indistinguishable.** Recovered collision code drives a real Onslaught match with bots and
-vehicles exactly as well as the shipped library does.
+**Indistinguishable, on both maps, at the same crash site.** Recovered collision code
+drives a real Onslaught match with bots and vehicles exactly as well as the shipped
+library does. Mean run length 366 s stock against 354 s substituted on Tropica.
 
 And the other half of that table is a correction. §7 recorded the `KHandleCollisions` →
 `McdModelGetGeometryType` SIGSEGV as something the shadow harness caused, on the strength
 of "stock Karma, no harness: 0 of 4". **It happens to stock, unmodified, shipped Karma
-with no harness at all, twice in five runs on this map.** The original measurement was
-four runs of 240 s on `ONS-UCMP-ABC`; this is five runs of 420 s on `ONS-UCMP-ABC-ECE`.
+with no harness at all — four times in eleven runs, on two different maps.** The original
+measurement was four runs of 240 s on `ONS-UCMP-ABC`; this is eleven runs of 420 s across
+`ONS-UCMP-ABC-ECE` and `ONS-CBP2-Tropica`.
 
 That does not make §7's cache-isolation work wrong — `m_cachedData` really was shared, and
 the GJK count divergences really did fall from 15 to 2 when it stopped being. It does mean
@@ -892,8 +895,8 @@ bug in its own `KHandleCollisions` and it is not ours.
   and run 5 of both crashed.
 - Keep every log (`crash_ab.sh` writes `/tmp/kd_ab_<arm>_<run>.log`) so a verdict can be
   re-derived without re-running seventy minutes of matches.
-- Five runs per arm is enough to say "the same" and nowhere near enough to say "2 in 5 is
-  the rate".
+- Eleven runs per arm across two maps is enough to say "the same" and nowhere near enough
+  to say "4 in 11 is the rate".
 
 ### What this does NOT show
 

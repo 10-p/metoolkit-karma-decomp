@@ -33,18 +33,18 @@ complete types. That is what makes this tractable. Ghidra consumes it directly.
 ## 2. Status
 
 ```
-compile:  95 objects  (90 clean + 5 with prelude TODOs)  = 64.2% of 148 attempted
-scenes:   95/95 run clean on all three substitute scenes, and all 95 TOGETHER
+compile:  97 objects  (92 clean + 5 with prelude TODOs)  = 65.5% of 148 attempted
+scenes:   97/97 run clean on all three substitute scenes, and all 97 TOGETHER
           are bit-identical on the collision-free one — but read §4a before
           reading anything into that number
-wasm32:   95/95 compile, 95/95 exported symbol sets byte-identical to i386
-bindings: 95/95 export what the SHIPPED object exported, binding included (§8)
+wasm32:   97/97 compile, 97/97 exported symbol sets byte-identical to i386
+bindings: 97/97 export what the SHIPPED object exported, binding included (§8)
 difftest: self-test 12/12, and the real run reproduces the documented baseline
           exactly (§8) — IxBoxBox 1 count, IxSphereTriList 137 dims, the rest 0
 review:   19 objects held back by recover.py's eight safety detectors (§8;
           the ninth, symbol bindings, is a gate rather than a detector because
           it needs the shipped object to compare against)
-fail:     34 objects do not compile
+fail:     32 objects do not compile
 ```
 
 Reproduce all of that with the commands in §4. The whole pipeline is about a minute.
@@ -318,7 +318,7 @@ object that does **not** reproduce the original: 4.28e-04 m of divergence agains
 
 ### The combined test, and what it says about the quarantine
 
-All 95 validated objects substituted **together**:
+All 97 validated objects substituted **together**:
 
 | scene | result |
 |---|---|
@@ -925,7 +925,7 @@ compile.**
 `proven.txt` records which objects a real match has released, **with the evidence on the
 line**. That is the only way out. Do not remove a detector to make a number go up.
 
-**The quarantine has now been measured, not just argued for.** Substituting all 95
+**The quarantine has now been measured, not just argued for.** Substituting all 97
 validated objects into `scene_chain` at once is bit-identical over 900 steps; adding the
 ten quarantined objects that compile turns that into an immediate SIGSEGV. It is
 `MdtPartition` — the object the guessed-stack-frame detector was written for. §4a.
@@ -1009,6 +1009,40 @@ sessions.** Two blind spots in `difftest_pair.c` hid it completely, and both are
 
 When a recovered function calls back into the engine, **its arguments are part of the
 answer.** Nothing downstream will tell you they were wrong.
+
+### The same defect, a second time, in the TYPE DATABASE
+
+`IxConvexTriList`'s promoted double came from `typedef int code();` in the generated C.
+On 2026-08-24 the identical defect turned up somewhere else entirely, and it had been
+there just as long: `dwarf_structs.declarator()` rendered every function type with an
+**empty parameter list**, so `kd_types.h` defined the broadphase's AABB-update callback as
+
+```c
+typedef void (*McdUpdateAABBFnPtr)();      /* no prototype */
+```
+
+`CxSmallSort` calls it with a `MeReal`, and the recovered object emitted
+
+```
+flds  0x54(%esp)      ; load the float
+fstpl (%esp)          ; store it as an 8-byte DOUBLE
+call  *0xc8(%edx)
+```
+
+against a callee that takes a `float`. The shipped `CxSmallSort.o` contains **zero**
+`fstpl` instructions.
+
+`declarator()` now writes the parameter list out. Two things worth taking from this:
+
+- **It was found by fixing a generator, not by testing.** No behavioural gate in this
+  project would have caught it — `CxSmallSort` is the broadphase's sorted-pair helper and
+  none of the three scenes reaches that callback.
+- **Look for the third one.** The pattern is any place the pipeline emits a function type
+  without a prototype. `dwarf_structs.type_name()` still returns the literal string
+  `'void (*)()'` for a subroutine type used as a struct MEMBER — it has no name to build a
+  declarator around, so it has not been fixed, and a member called through with a float
+  argument would have exactly this bug.
+
 
 ### The out-of-range frame reference — a defect no behavioural test can find
 
@@ -1253,7 +1287,7 @@ work is Ghidra-side, in `DumpDecomp.java`.
    before quoting a bit-identical result — `keaCalcAcceleration_vanilla` is the worked
    example of a zero that means nothing.
 
-7. **Grind the tail.** 34 objects, but **read §3 first** — a large part of the pile is
+7. **Grind the tail.** 32 objects, but **read §3 first** — a large part of the pile is
    geometry the game never collides, and **nine of the 34 are one error from
    compiling**, which is where to start. The distribution, re-measured 2026-08-24:
 
@@ -1327,7 +1361,7 @@ Everything else — code, tests, measurement, tooling — is self-service.
 4. qhull and the asset loader replaced rather than recovered.
 5. No detector suppressed, no object released without a line in `proven.txt`.
 6. The whole set builds as ordinary C for **wasm32 and arm64/armv7**, not just i386.
-   **wasm32 is done** — 95/95 compile with byte-identical exported symbols
+   **wasm32 is done** — 97/97 compile with byte-identical exported symbols
    (`test/wasm_check.sh`). arm64 has not been tried; no cross-compiler is installed here.
    Nothing has been *executed* under wasm. See `HANDOVER-WEB.md`.
 7. The engine runs with `WITH_KARMA=1` against recovered Karma with **no shipped `.a` in the
@@ -1368,14 +1402,14 @@ the driver (`keaRbdCore_unified`), the allocator (`keaMemory`), the integrator
 runs on recovered kea**, however good the kernels are. §11 items 1–3 are those objects,
 with each blocker diagnosed down to the line.
 
-**Never executed on wasm.** 95/95 compile with byte-identical exported symbols. Not one
+**Never executed on wasm.** 97/97 compile with byte-identical exported symbols. Not one
 instruction has run. See `HANDOVER-WEB.md`.
 
 **Run end to end, now, for the collision layer** — §7a. Not for the solver.
 
 So the honest summary is: **the collision layer is proven and drives a real match; the
 solver's arithmetic is proven and cannot yet be reached; the solver's control flow is
-untouched.** Do not read 95/148 as 64% of the way there — the denominator is wrong in both
+untouched.** Do not read 97/148 as 66% of the way there — the denominator is wrong in both
 directions (a third of those objects are for collisions the game never makes, and the four
 kea objects in §11 are worth more than the other 38 put together).
 

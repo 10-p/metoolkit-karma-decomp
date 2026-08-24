@@ -355,6 +355,39 @@ IxConvexTriList       RELEASED 2026-08-23, and the tenth and last pair the censu
 #                     a behavioural one.
 
 
+# --- 2026-08-24 (third session): THE ENGINE RUNS ON ALL 108 ------------------
+#
+# Not a per-object release; a whole-build result, and it is HANDOVER.md 7c.
+#
+# All 108 recovered objects substituted into metoolkit at once — up from the 8
+# of 7b — and the engine initialises, loads DM-Insidious, reaches START MATCH
+# under xDeathMatch and plays for 300 s. Against a stock control on the same map
+# and duration it is indistinguishable: same exit status, same gametype, and the
+# same PRE-EXISTING HUD fault (UCanvas::DrawTileStretched -> FCanvasUtil::
+# DrawTile -> FCanvasVertex) at the same four frames.
+#
+# Substitution verified in the machine code, not from the link:
+#   McdBoxBoxIntersect                     416 -> 1116 instructions
+#   McdSphereSphereIntersect               239 ->  204
+#   keaFunctions_Vanilla::calcJinvMandRHS  145 ->  355
+# so recovered SOLVER ARITHMETIC is in that binary too, not only collision.
+#
+# WHAT IT DOES NOT SAY. No trajectory comparison — the substituted build carries
+# no shadow instrumentation, so "indistinguishable" means it starts, runs and
+# ends like stock, NOT that its contacts match. The four kea objects of 11 item
+# 2 are still shipped, so this is not definition-of-done item 7.
+#
+# THE DEFECT IT FOUND, which is the part worth keeping. At 108 the engine
+# segfaulted in fread inside KCreateAssetDB, before any match, with a backtrace
+# made entirely of SHIPPED functions. MeFileSearch's MeDefaultFileLocations is
+# `const char *[22]` and its .rodata bytes are relocation ADDENDS, so emitted raw
+# the file-search loop got 0, 1, 0xc, 0x1a as directory prefixes and handed them
+# to the opener. It PASSED ALL SEVEN GATES before and after — the offline scenes
+# never open a .ka file, so no gate could see it. Same shape as IxSphereTriList:
+# compiles, gates clean, dies on first real use. Fixed in
+# gen_prelude.static_reloc_definition; test/try_subst.sh is the bisect harness.
+
+
 # --- 2026-08-24 (third session): CYLINDER PAIRS ARE LIVE ---------------------
 #
 # This is not a release. It is the opposite: a measurement that puts an object

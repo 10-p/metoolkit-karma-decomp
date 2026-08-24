@@ -31,6 +31,10 @@ Branch: **`karma/decompile`**. `main` is untouched. **Do not merge.**
   on exactly this, and a much cheaper subject to validate a fix on than any kea object. §13.
 - **108 objects compile**, 26 are quarantined by detectors, 14 do not. Object count is a bad
   progress metric — read §3 before using it.
+- **All 108 go into the engine at once and it plays a match**, indistinguishable from stock
+  on the same map. That is up from the eight of §7b, and getting there took one real fix: a
+  static pointer table whose relocations were never applied, which passed all seven gates
+  and then segfaulted on the engine's first `.ka` file. §7c.
 - **One whole family the engine never asks Karma about**, and one that looked like a second.
   Every `Aggregate` *pair* is intercepted by UT2004's own dispatcher, as is
   `Box × TriangleList`. But the aggregate dispatcher **recurses into `KIntersect` per
@@ -1358,6 +1362,51 @@ The **solver** is still shipped in that build. `libMdtKea`, `libMdt` and `libMst
 stock; only the collision objects are recovered. Item 7 asks for **no shipped `.a` in the
 link at all**, and that is blocked on §11 items 1–3. What is settled is that the recovered
 collision layer can drive, which the shadow harness structurally could not tell you.
+
+## 7c. All 108 objects at once — and the defect that only this found
+
+**2026-08-24 (third session).** §7b substituted the eight objects behind the called
+collision pairs. This substitutes **everything that compiles — all 108** — which is a much
+larger claim and it took one real fix to get there.
+
+```bash
+./test/make_substituted_metoolkit.sh /tmp/kd_build ../Thirdparty/metoolkit /tmp/mt_subst
+cmake --preset native-karma -B build-subst108 -DMETOOLKIT_DIR=/tmp/mt_subst
+cmake --build build-subst108 -j"$(nproc)"
+```
+
+**Result: the engine initialises, loads `DM-Insidious`, reaches `START MATCH` under
+`xDeathMatch`, and plays for 300 s.** Against a stock control on the same map and duration
+it is *indistinguishable*: same exit status, same gametype, and the same pre-existing HUD
+fault (`UCanvas::DrawTileStretched` → `FCanvasUtil::DrawTile` → `FCanvasVertex`) at the
+same four frames. Substitution verified at the machine-code level, not from the link —
+`McdBoxBoxIntersect` 416→1116 instructions, `McdSphereSphereIntersect` 239→204,
+`keaFunctions_Vanilla::calcJinvMandRHS` 145→355 — so recovered **solver arithmetic** is in
+this binary too, not only collision.
+
+**The defect this found, and nothing else could have.** At 108 objects the engine
+segfaulted in `fread` during `KCreateAssetDB`, before any match, with a backtrace made
+entirely of SHIPPED functions. `MeFileSearch`'s `MeDefaultFileLocations` is
+`const char *[22]` and its `.rodata` bytes are relocation ADDENDS, so emitting them raw
+gave the file-search loop 0, 1, 0xc, 0x1a as directory prefixes. Fixed in
+`gen_prelude.static_reloc_definition`. **It passed all seven gates before and after** —
+the offline scenes never open a `.ka` file, so no gate could see it. Same shape as
+`IxSphereTriList`: compiles, gates clean, dies on first real use.
+
+**`test/try_subst.sh`** is the bisect harness that found it — link a chosen subset, run 60 s,
+report. Two things about it are worth keeping:
+
+- its success test is **"reached `START MATCH`"**, not "did it SIGSEGV". The stock engine
+  also faults under Xvfb in `UCanvas::DrawTile`, so a SIGSEGV grep reports a crash for a
+  build that started a match perfectly well. That cost a cycle before it was noticed, and
+  it is §12's checklist again: *the measurement could not distinguish the two outcomes.*
+- bisecting is affordable because the crash is at **init**, so 60 s settles each cycle.
+
+**What this still does not show.** No trajectory comparison — the substituted build carries
+no shadow instrumentation, so "indistinguishable" here means it starts, runs and ends like
+stock, not that its contacts match. The four kea objects in §11 item 2 are still shipped,
+so this is not item 7 either. But it is the largest recovered surface the engine has ever
+run on, and it is reproducible in about four minutes.
 
 ---
 

@@ -22,13 +22,13 @@ freebie, the Android NDK), and to integrate the result into the engine's web bui
 
 What exists today:
 
-- **98 recovered objects**, all of them compiling for i386 *and* for wasm32.
+- **99 recovered objects**, all of them compiling for i386 *and* for wasm32.
 - **The full collision-detection path the game actually uses is recovered and validated** —
   all twelve interaction pairs UT2004 calls, each measured against the shipped original on
   real inputs from a live match. Evidence per object in `karma-decomp/proven.txt`. §6 has
   the census that says "twelve" and why that is the number to plan against.
 - **The whole set already compiles under Emscripten**, and its exported symbol NAMES are
-  **byte-identical to the i386 build for all 98 objects** — nothing added or dropped. So
+  **byte-identical to the i386 build for all 99 objects** — nothing added or dropped. So
   the ABI surface the engine links against does not change between targets, which was the
   thing most likely to turn this into a rewrite. See §4. (Names only: `wasm_check.sh`
   discards the binding letter. That gap let a recovered object export a *global* `putchar`
@@ -176,11 +176,11 @@ This had never been tried, so it was worth doing before anything else:
 
 ```
 emcc 5.0.7, no -m32, otherwise the same flags as the native build
-98 of 98 recovered objects compiled for wasm32.  0 failures.
+99 of 99 recovered objects compiled for wasm32.  0 failures.
 ```
 
 Stronger than that — the **exported symbol names are byte-identical to i386 for
-all 98 objects**, nothing added or dropped. So the ABI surface the engine links
+all 99 objects**, nothing added or dropped. So the ABI surface the engine links
 against does not change between the two targets, which was the thing most likely
 to turn this into a rewrite.
 
@@ -408,7 +408,7 @@ physics.
    all of them: `scene_chain.c` (collision-free, the authoritative trajectory signal),
    `scene_boxes_on_plane.c` (exercises the geometry dispatch), `scene_ragdoll.c` (nine
    capsules on ball-socket joints — the other two make **not one Sphyl call** between them).
-   Currently **98/98 clean on all three** on i386 — but read `HANDOVER.md` §4a before
+   Currently **99/99 clean on all three** on i386 — but read `HANDOVER.md` §4a before
    putting weight on that number: only eight of 103 objects have measurable sensitivity on
    any of these scenes, and `test/scene_census.sh` and `test/gate_sensitivity.sh` exist to
    say which. **Getting that under a wasm build is your first milestone.**
@@ -420,7 +420,7 @@ physics.
    contact regime and a figure without its regime is meaningless. `KD_GENARGS=1` and
    `KD_FIXEDSHAPE=1` are the two that found real bugs most recently.
 3. **`test/wasm_check.sh`** — compiles the whole set for wasm32 and diffs the exported
-   symbols against the native build. Currently 98/98 and 98/98. **Run this after any change
+   symbols against the native build. Currently 99/99 and 99/99. **Run this after any change
    to the recovery pipeline**; it is the cheapest possible early warning that a change has
    broken portability. It compares NAMES only — see the note at the end of §4.
 4. **`test/kd_shadow.c`** — the in-game shadow harness. Runs both implementations on the
@@ -484,7 +484,7 @@ gcc -m64 ... -o /tmp/rag_hx   test/scene_ragdoll.c  <linux_hx_single/*.a>
 - **Nothing has been RUN under wasm.** The whole set compiles and exports identical
   symbols, and that is all §4 hazards 2 and 3 settle. Hazards 1, 4 and 5 are runtime and
   entirely open.
-- **98 of ~150 objects compile**, 31 do not. But read `HANDOVER.md` §3 before reading that
+- **99 of ~150 objects compile**, 28 do not. But read `HANDOVER.md` §3 before reading that
   as 60% done — see the next bullet, it is the most important thing in this file for
   planning purposes.
 - **19 objects are deliberately quarantined** by eight safety detectors. They compile but
@@ -518,7 +518,7 @@ moved off the never-called list, `Box×Sphere` most recently at 5,101 calls in o
 after 25 runs had shown none.
 
 So "how much of Karma do I need for the web build to run" is not 150 objects and not even
-98 — it is the collision path for twelve pairs, plus the solver, plus the framework objects
+99 — it is the collision path for twelve pairs, plus the solver, plus the framework objects
 that hold them together. That is a much smaller target than the compile count suggests, and
 it is the number to plan against.
 
@@ -574,7 +574,7 @@ where `wasm-ld` and GNU `ld` differ, and §4b already flags COMDAT for `keaMatri
 
 The honest one-line summary of the project's state: *the collision layer is proven and
 drives a real match; the solver's arithmetic is proven and cannot yet be reached; the
-solver's control flow is untouched.* Do not read 98-of-150 as 65%.
+solver's control flow is untouched.* Do not read 99-of-150 as 66%.
 
 ---
 
@@ -638,7 +638,29 @@ Read `karma-decomp/HANDOVER.md` for how the recovery pipeline works, and
 A log of the things that would otherwise surprise you, newest first. If you have read an
 older copy of this file, this is the diff.
 
-**2026-08-24.**
+**2026-08-24, second session.**
+
+- **99 objects** (was 98). The new one is `MeStream`, from a generic fix: an imported
+  DATA symbol now gets a real `extern` declaration recovered from the DWARF of whichever
+  object DEFINES it, size-checked against that object's symbol table. Four objects gained
+  declarations this way.
+- **The dump directory moved from `out6` to `out8`**, and this time it barely moved: **2
+  of 153 dumps changed**, both of them solver objects that do not compile either way. Every
+  compiled object is byte-identical. Nothing you cached is stale.
+- **`wasm_check.sh` is 99/99 with byte-identical symbol sets.** Still nothing has been
+  EXECUTED on wasm; that remains the single largest unknown on your side.
+- **Two collision families are unreachable, not merely uncalled.** UT2004's dispatcher
+  (`KIntersect`, `KFarfield.cpp:936`) intercepts `Box × TriangleList` and every `Aggregate`
+  pair and calls its own code instead of Karma's. So `IxBoxTriList` — which is measurably
+  wrong — is dead code and cannot be reached from any map, and the Aggregate family needs
+  no recovery at all. `HANDOVER.md` §3a. If you are building a wasm coverage argument, this
+  removes two families from it rather than leaving them as open risk.
+- **The solver's virtual calls now carry their arguments** (`HANDOVER.md` §5a). It still
+  does not compile, and the reason is now known precisely: **the DWARF for those functions
+  declares no `DW_AT_location`**, so the frame is undescribed rather than merely
+  unmodelled. Do not expect a solver on wasm soon.
+
+**2026-08-24, first session.**
 
 - **98 objects** (was 93). The new ones are `CxSmallSort`, `MstModelDynamics`,
   `McdGjkRegistration`, `McdPolygonIntersection`, `IxPrimitiveLineSegment` — the last is

@@ -817,6 +817,132 @@ def materialise_data_refs(obj, text):
     return '\n'.join(out) + '\n\n', len(defines)
 
 
+PTR_BLOCK_REF = re.compile(r'(?<![\w])(PTR_[A-Za-z0-9_]*?_([0-9a-f]{8}))\b')
+
+
+def materialise_relocated_data(obj, text, renames=None):
+    """Rebuild a RELOCATED .rodata block — the thing materialise_data_refs won't.
+
+    That function deliberately refuses a section carrying relocations, because a
+    relocated word's value exists only in the relocation record and the zero
+    sitting in the section bytes would look right and be null. This does the
+    other half: it emits the words WITH their relocations applied, which is the
+    only way to recover a statically initialised table of pointers.
+
+    Karma's XML readers are built entirely out of those. `MeAssetDBXMLInput_1_0`
+    copies a handler template out of .rodata into a local:
+
+        ppuVar3 = &PTR_s_ASSET_000124fc;
+        for (iVar2 = 0x10; iVar2 != 0; iVar2 = iVar2 + -1) {
+            pMVar4->name = *ppuVar3;  ppuVar3 = ppuVar3 + 1; ...
+        }
+
+    and at that address sit two `MeXMLHandler`s — `{"ASSET",
+    MeXMLActionCallback, Handle_Asset_1_0, ...}` followed by an
+    `MeXMLActionEnd` sentinel. The tag name and the handler function are BOTH
+    relocations; the rest is literal zeros and a 2.
+
+    WHAT EACH WORD BECOMES, and none of it is inferred from decompiled text:
+
+      * a relocation naming a SECTION — gcc's spelling for a string literal,
+        `.rodata.str1.1 + 1137` — becomes a pointer into that section's bytes,
+        emitted alongside;
+      * a relocation naming a SYMBOL becomes that symbol's address, under
+        whatever name the recovery gave it. That is why this block is emitted
+        AFTER the forward declarations rather than with the other data;
+      * no relocation: the literal word out of the section bytes.
+
+    THE WHOLE SECTION IS EMITTED, not a guessed extent. Nothing here knows where
+    a table starts or ends — the copy loop's trip count does, and that lives in
+    the code, not the data — so the `#define` just indexes the section image and
+    the pointer arithmetic in the body keeps working unchanged.
+
+    A word whose relocation names a symbol the object does not define is left as
+    its literal addend with the symbol in a comment: emitting a reference to a
+    name that is not declared would trade a wrong value for a link error, and
+    neither is better than leaving the object visibly failing."""
+    refs = {}
+    for full, addr in PTR_BLOCK_REF.findall(text):
+        refs[full] = int(addr, 16)
+    if not refs:
+        return '', 0
+    secs, _ext = ghidra_memory_map(obj)
+    relocs = _section_relocations(obj)
+    _exported, _internal, _real, _weak = object_symbols(obj)
+    defined = set(_exported) | set(_internal)
+    renames = renames or {}
+
+    wanted, defines = {}, []
+    for full, addr in sorted(refs.items()):
+        for name, typ, lo, hi in secs:
+            if not (lo <= addr < hi and typ == 'PROGBITS'):
+                continue
+            if not (name.startswith('.rodata') or name.startswith('.data')):
+                continue
+            if name not in relocs or (addr - lo) % 4:
+                continue
+            wanted.setdefault(name, (lo, hi))
+            defines.append((full, name, (addr - lo) // 4))
+            break
+    if not defines:
+        return '', 0
+
+    # Sections a relocation points INTO (the string pools) have to come first.
+    targets = {}
+    for name, (lo, hi) in wanted.items():
+        for sym in relocs[name].values():
+            if sym.startswith('.'):
+                targets[sym] = True
+
+    out = ['/* ---- relocated section data (needs the declarations above) ---- */']
+    for sym in sorted(targets):
+        data = _section_bytes(obj, sym)
+        c = 'kd_relstr' + re.sub(r'\W', '_', sym)
+        rows = ', '.join('0x%02x' % b for b in data) or '0'
+        out.append(f'static const unsigned char {c}[{max(len(data), 1)}] = {{ {rows} }};')
+
+    for name, (lo, hi) in sorted(wanted.items()):
+        data = _section_bytes(obj, name)[:hi - lo]
+        rel = relocs[name]
+        words = []
+        for off in range(0, len(data) - 3, 4):
+            raw = struct.unpack('<I', data[off:off + 4])[0]
+            sym = rel.get(off)
+            if sym is None:
+                words.append('(void *)0x%xu' % raw)
+            elif sym.startswith('.'):
+                t = 'kd_relstr' + re.sub(r'\W', '_', sym)
+                words.append('(void *)&%s[0x%x]' % (t, raw))
+            elif sym in defined:
+                words.append('(void *)&%s' % renames.get(sym, sym))
+            else:
+                words.append('(void *)0x%xu /* %s */' % (raw, sym))
+        c = 'kd_relsec' + re.sub(r'\W', '_', name)
+        out.append(f'/* {name}: {len(words)} words at 0x{lo:x} */')
+        out.append(f'static void *const {c}[{max(len(words), 1)}] = {{')
+        out.append('    ' + ',\n    '.join(words) if words else '    0')
+        out.append('};')
+    for full, name, idx in defines:
+        c = 'kd_relsec' + re.sub(r'\W', '_', name)
+        out.append(f'#define {full} ({c}[0x{idx:x}])')
+    return '\n'.join(out) + '\n\n', len(defines)
+
+
+def _section_relocations(obj):
+    """{section: {offset: symbol}} for R_386_32 relocations in data sections."""
+    out, sect = {}, None
+    raw = subprocess.run(['readelf', '-rW', obj], capture_output=True, text=True).stdout
+    for line in raw.splitlines():
+        m = re.match(r"Relocation section '(\S+)'", line)
+        if m:
+            sect = m.group(1)[4:] if m.group(1).startswith('.rel') else m.group(1)
+            continue
+        m = re.match(r'([0-9a-f]{8})\s+\S+\s+(\S+)\s+[0-9a-f]{8}\s+(\S+)', line)
+        if m and sect and m.group(2) == 'R_386_32':
+            out.setdefault(sect, {})[int(m.group(1), 16)] = m.group(3)
+    return out
+
+
 FUNC_TYPE = re.compile(r'\b_func_(\w+)\b')
 
 
@@ -2444,6 +2570,9 @@ def main():
     # Forward declarations mention these types too, so scan both.
     ftype_block, n_ftype = ghidra_functype_typedefs(body_text + '\n'.join(decls))
     ptr_block, n_ptr = resolve_ptr_labels(args.object, body_text)
+    # After resolve_ptr_labels, so anything it could name from the object's own
+    # symbols is already gone and only the genuinely unnamed blocks remain.
+    rel_block, n_rel = materialise_relocated_data(args.object, body_text, renames)
 
     with open(args.output, 'w') as f:
         f.write('/* Generated by karma-decomp/tools/ghidra_clean.py — do not edit by hand.\n'
@@ -2477,6 +2606,8 @@ def main():
             f.write('\n')
         if ptr_block:
             f.write(ptr_block)
+        if rel_block:
+            f.write(rel_block)
         if args.exports and os.path.exists(args.exports):
             f.write('/* ---- exported data symbols (need the declarations above) ---- */\n')
             f.write(open(args.exports).read())
@@ -2502,6 +2633,8 @@ def main():
         print(f'  {n_ptr} pointer slot(s) resolved from Ghidra addresses')
     if n_extbase:
         print(f'  {n_extbase} external base(s) re-resolved to byte arithmetic')
+    if n_rel:
+        print(f'  {n_rel} relocated data block(s) rebuilt with their pointers')
     if args.cflag:
         ctx = RepairContext(args.object, fieldmap, args.metoolkit_include)
         n_edits, left, _log = repair_loop(args.output, args.cc, args.cflag, ctx)

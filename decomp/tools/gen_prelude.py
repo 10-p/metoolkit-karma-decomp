@@ -140,6 +140,40 @@ def extern_data_declaration(corpus, name):
     return _data_decl_cache[key]
 
 
+def dwarf_static_declaration(obj, name, size):
+    """`MeFAssetCreateFromFile MeFAssetCreateFunc[1]` for a file-scope static.
+
+    The fallback for a .data/.bss static is a guess from its BYTES, and for a
+    four-byte slot of zeros that guess is `static float x = 0.0f;`. For a
+    function-pointer hook — which is what a zeroed .data word usually is, since
+    something installs it at run time — that is wrong in a way that stops the
+    object compiling the moment the code calls through it:
+
+        MeFAssetCreateFunc      declared  static float
+        (*MeFAssetCreateFunc[0])(...)     "subscripted value is neither array
+                                           nor pointer nor vector"
+
+    The object's OWN DWARF says exactly what it is, array extent included, and
+    that is the same source the imported-symbol path already uses. Restricted to
+    ALL-ZERO bytes, so a static with a real initialiser keeps the byte-exact
+    rendering and nothing is lost to a prettier type."""
+    dies = dwarf_structs.parse(obj)
+    for die in dies.values():
+        if die['tag'] != 'DW_TAG_variable':
+            continue
+        if die['attrs'].get('DW_AT_name') != name:
+            continue
+        t = die['attrs'].get('DW_AT_type')
+        m = re.search(r'<0x([0-9a-f]+)>', t) if t else None
+        if not m:
+            return None
+        ref = int(m.group(1), 16)
+        if dwarf_structs.type_size(dies, ref) != size:
+            return None
+        return dwarf_structs.declarator(dies, ref, name)
+    return None
+
+
 def section_bytes(obj, section):
     tmp = f'/tmp/.kd_sect_{os.getpid()}.bin'
     r = subprocess.run(['objcopy', '-O', 'binary', f'--only-section={section}', obj, tmp],
@@ -515,6 +549,19 @@ def main():
             continue
         lit, note = render_value(data.get(sect, b''), value, size or 0)
         w(f'/* {name}  ({sect}+0x{value:x}, {size} bytes) */')
+        # An all-zero slot carries no evidence of its own type, so prefer what
+        # the DWARF says over a guess from the bytes. See
+        # dwarf_static_declaration: this is what makes a zeroed function-pointer
+        # hook come out as a function pointer rather than as a float.
+        raw_bytes = chunk_of(data.get(sect, b''), value, size or 0)
+        if size and raw_bytes and not any(raw_bytes):
+            decl = dwarf_static_declaration(obj, name, size)
+            if decl:
+                qual0 = 'const ' if sect == '.rodata' else ''
+                w(f'/* type from this object\'s DWARF; bytes are all zero */')
+                w(f'static {qual0}{decl};')
+                w('')
+                continue
         if note:
             w(f'/* read from object: {note} */')
         # `const` only for .rodata. A .data static is writable by definition, and

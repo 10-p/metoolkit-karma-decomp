@@ -1768,8 +1768,14 @@ def fix_field_offset(line, diag, ctx):
 
     def byte_ref(mm):
         return f'(*(char *)((char *)({mm.group(1)}) + 0x{off:x}))'
-    new = re.sub(r'([A-Za-z_]\w*)\s*->\s*' + field + r'\b', byte_ref, line)
-    new = re.sub(r'([A-Za-z_]\w*)\s*\.\s*' + field + r'\b',
+    # The base may be SUBSCRIPTED. `McdContactSimplify` copies a contact with
+    # `pMVar23[1].field_0x1e`, and a bare-identifier base declined on it
+    # silently while rewriting the `->` read of the same padding two lines up —
+    # so one half of a two-line copy was repaired and the other was not.
+    # A nested subscript (`p[a[0]].f`) still declines, which is the safe answer.
+    base = r'([A-Za-z_]\w*(?:\s*\[[^\]\[]*\])*)'
+    new = re.sub(base + r'\s*->\s*' + field + r'\b', byte_ref, line)
+    new = re.sub(base + r'\s*\.\s*' + field + r'\b',
                  lambda mm: f'(*(char *)((char *)&({mm.group(1)}) + 0x{off:x}))', new)
     return new if new != line else None
 

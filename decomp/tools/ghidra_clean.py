@@ -1189,6 +1189,15 @@ def _dwarf_type_size(obj, name):
     """Bytes of the named type, from the object's own DWARF, or None."""
     if name in _FIXED_WIDTH:
         return _FIXED_WIDTH[name]
+    # `kd_agg92` is OURS — gen_protos.py invents it as an opaque stand-in for an
+    # aggregate passed by value, so it is not in anybody's DWARF and the lookup
+    # below returns None. That made fix_stack_address_name decline on the one
+    # case in MdtWorld where the frame IS exactly described: 23 words copied
+    # into a slot Ghidra declared `kd_agg92 in_stack_ffffff04`, 92 bytes against
+    # 92 needed. The size is in the name, by construction, so read it there.
+    m = re.fullmatch(r'kd_agg(\d+)', name)
+    if m:
+        return int(m.group(1))
     if obj is None:
         return None
     key = (obj, name)

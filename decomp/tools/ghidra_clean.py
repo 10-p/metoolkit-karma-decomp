@@ -1197,14 +1197,39 @@ def fix_pointer_as_float(line, diag, ctx):
             pos = end
     if not casts:
         return None
-    chosen = casts if len(casts) == getattr(ctx, 'n_same', 0) else casts[:1]
-    out, last = [], 0
-    for start, mid, end, typ, operand in chosen:
-        out.append(line[last:start])
-        out.append(f'(*({typ} *)&({operand}))')
-        last = end
-    out.append(line[last:])
-    return ''.join(out)
+    def build(chosen):
+        out, last = [], 0
+        for start, mid, end, typ, operand in chosen:
+            out.append(line[last:start])
+            out.append(f'(*({typ} *)&({operand}))')
+            last = end
+        out.append(line[last:])
+        return ''.join(out)
+
+    if len(casts) == getattr(ctx, 'n_same', 0):
+        return build(casts)
+    # The counts disagree, so at least one cast on this line is a conversion GCC
+    # ACCEPTS. Rewrite only the first and let the loop's verification decide.
+    #
+    # DO NOT "improve" this by cycling through the casts until one is accepted.
+    # It was tried on 2026-08-24 and it works, in the sense that McdSphyl then
+    # compiles — and what it compiles is wrong. The line is
+    #
+    #     *radius = (float)s[1].mRefCtAndID + (float)s[1].prev;
+    #
+    # GCC rejects only the second cast, so cycling rewrites that one and leaves
+    # the first as an integer-to-float CONVERSION. The original does no such
+    # thing:
+    #
+    #     flds  0x10(%ecx)      ; load a float
+    #     fadds 0x14(%ecx)      ; add a float
+    #
+    # Both operands are floats; Ghidra mis-typed the first member as an integer,
+    # so the "legal conversion" is legal C and wrong semantics. This is dead end
+    # 6 turned around: there, the compiler was the only thing that knew, and
+    # here the compiler is wrong because it is reasoning about Ghidra's types.
+    # Leaving the object in the FAIL pile keeps the defect visible.
+    return build(casts[:1])
 
 
 fix_pointer_as_float.multiline = True
@@ -1701,6 +1726,11 @@ def repair_loop(path, cc, cflags, ctx=None, max_rounds=90, verbose=True):
                 # it to tell "every candidate here is wrong" from "one of them
                 # is"; see fix_pointer_as_float.
                 ctx.n_same = sum(1 for m2 in msgs if m2 == msg)
+                # So a rule can offer a DIFFERENT candidate for a line whose
+                # first candidate was tried and rejected. Without this the loop
+                # can only ever make progress with its first guess per line.
+                ctx.lineno = lineno
+                ctx.applied = applied
                 if getattr(rule, 'file_wide', False):
                     # A rule may resolve a name rather than a line, in which case
                     # every occurrence in the unit is the same defect. Fold the
@@ -1826,6 +1856,14 @@ def repair_loop(path, cc, cflags, ctx=None, max_rounds=90, verbose=True):
                     if verbose:
                         print(f'  fixed {os.path.basename(path)}:{entry[0]} '
                               f'[{entry[1]}] {entry[2][:60]}')
+                else:
+                    # Remember the REJECTION too. `applied` used to hold only
+                    # accepted edits, so a rule that guessed wrong regenerated
+                    # the same guess every round and the line never got a second
+                    # candidate — McdSphylGetBSphere stalled for exactly this
+                    # reason, on a line with two casts where only the second was
+                    # the pointer one.
+                    applied |= {(l, t) for l, t in changed.items()}
             open(path, 'w').write(best_text)
             if not progress:
                 break

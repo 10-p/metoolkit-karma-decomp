@@ -355,6 +355,74 @@ IxConvexTriList       RELEASED 2026-08-23, and the tenth and last pair the censu
 #                     a behavioural one.
 
 
+# --- 2026-08-24 (third session): CYLINDER PAIRS ARE LIVE ---------------------
+#
+# This is not a release. It is the opposite: a measurement that puts an object
+# BACK in scope, and it re-opens HANDOVER.md 12 item 1.
+#
+# Two pairs came off the "never called on any map, in any run" list of 3:
+#
+#   Cylinder x TriangleList   59,366 calls   object IxCylinderTriList  QUARANTINED
+#   Cylinder x Cylinder       24,267 calls   object IxCylinderCylinder compiles, never measured
+#
+# KD_CENSUS=1 on test-simple-physics, 300 s, alongside Sphyl x TriangleList
+# 95,544 and Sphere x TriangleList 31,088 — so the match was ticking properly
+# and the counts are in the same range as the pairs we already trust.
+#
+# WHY THIS MATTERS. 3 said of Cylinder x TriangleList: "quarantined; never
+# measured. Genuinely unreached rather than bypassed — same posture, unknown
+# magnitude." The "unreached" half is now false. IxCylinderTriList is held by
+# the reconstructed-frame detector (kd_argslot_) — the same detector that
+# exists because IxSphereTriList compiled, passed the substitute gate, and then
+# segfaulted on its first live call. An unmeasured reconstructed frame on a
+# pair with 59,366 real calls is the exact risk profile this ledger is for.
+#
+# HOW THE PAIR WAS FOUND, because the route matters more than the number.
+# 3's map ask was "does any shipped asset define a cylinder collision volume?"
+# and it had stood open for sessions. It is answerable from the assets:
+#
+#   * KFarfield.cpp's KAggregateGenericIntersect RECURSES into KIntersect once
+#     per element (line 878). So 3a's "the Aggregate family cannot reach Karma"
+#     is true of the AGGREGATE PAIR and false of its ELEMENTS: a cylinder inside
+#     an aggregate arrives at KIntersect as Cylinder x whatever, matches neither
+#     interception, and goes straight to Karma's intersectFn. Every cylinder in
+#     UT2004 is built this way — KUtils.cpp:762 always wraps elements in an
+#     McdAggregate, with no single-element shortcut.
+#   * tools/find_cylinder_geom.py parses the packages. 114 cylinder collision
+#     elements across the shipped tree (vs 107 sphere, 172 box, 32,191 convex),
+#     in stock maps including AS-BP2-Acatana, DM-Insidious, ONS-CBP2-Mirage,
+#     DOM-UCMP2-1on1-Smelter, DM-Urotsukidoji, DM-2019-XS-2006.
+#
+# GREP CANNOT ANSWER THIS and the failed attempt is worth recording, because it
+# looked like an answer. FKAggregateGeom is serialised by a hand-written
+# operator<< with no field names, so "CylinderElems" appears in NO package —
+# and neither does "BoxElems", nor "KarmaProps". A search returning 0 on all
+# 2,015 packages read exactly like "UT2004 ships no cylinders". The control that
+# caught it was searching for something that MUST be there and getting 0 too.
+#
+# WHAT IS NOT YET SHOWN. test-simple-physics.ut2 is a custom test map, not
+# shipped content (96 KB, mode 755, dated apart from the rest of the tree). A
+# 300 s census on DM-Insidious — a STOCK map that my parser says contains a
+# cylinder element — ticked properly (6 pairs, 49,785 calls) and produced ZERO
+# cylinder calls: the mesh is there and is not simulated. So:
+#
+#   proven      a Cylinder pair reaches Karma and executes in volume
+#   proven      shipped maps contain cylinder collision elements
+#   NOT proven  that stock gameplay ever simulates one
+#
+# That third line is the only part still open, and it no longer blocks anything:
+# whether or not Epic's own maps do it, the pair is reachable, a map that drives
+# it exists in the tree, and the object serving it is unmeasured.
+#
+# NEXT, and it is now a runnable task rather than a request for content: stage
+# IxCylinderTriList and IxCylinderCylinder into a shadow build and run
+# test-simple-physics WITHOUT KD_CENSUS. Note the census reported
+# Cylinder x TriangleList as function "(unidentified)", shadowed "no" — the
+# harness could not name the pair's intersectFn, which has to be sorted out
+# before it can compare anything. Cylinder x Cylinder already reads
+# shadowed "yes".
+
+
 # --- NOT proven, with what was observed --------------------------------------
 # --- compiles, evidence gathered, NOT released ------------------------------
 # IxBoxTriList        Held by the reconstructed-frame detector (kd_argslot_), which exists

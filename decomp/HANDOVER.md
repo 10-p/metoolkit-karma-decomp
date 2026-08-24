@@ -10,10 +10,16 @@ Branch: **`karma/decompile`**. `main` is untouched. **Do not merge.**
 
 - Karma is UT2004's physics library, shipped binary-only. We are recovering it as portable
   C from the DWARF the shipped `.a` files carry. §1.
-- **The collision layer is done and drives a real match.** All twelve interaction pairs the
-  game actually calls are recovered, measured against the shipped original on live inputs,
-  and the engine has run on them with no shipped `.a` for those objects — indistinguishable
-  from stock over 11 alternating matches on two maps. §3, §7b, `proven.txt`.
+- **The collision layer drives a real match** — for the twelve pairs the census had seen.
+  All twelve are recovered, measured against the shipped original on live inputs, and the
+  engine has run on them with no shipped `.a` for those objects. §3, §7b, `proven.txt`.
+- **But the census moved again on 2026-08-24, and this time it moved onto a QUARANTINED
+  object.** `Cylinder × TriangleList` fired **59,366** times and `Cylinder × Cylinder`
+  **24,267** times on a map in the tree. `IxCylinderTriList` is held by the
+  reconstructed-frame detector and has never been measured. That re-opens §12 item 1. §3.
+- **The cylinder map ask is answered and withdrawn** — not by finding a map to ask for, but
+  by parsing the assets (`tools/find_cylinder_geom.py`): 114 cylinder collision elements
+  ship, in stock maps. **There are no outstanding asks that need the project owner.** §3.
 - **The solver's virtual calls now carry their arguments** — the blocker this file used to
   call "the whole job". All nineteen vtable dispatches in `keaRbdCore_unified` and
   `keaLCPSolver` are restored from relocation data, and it cost only 2 changed dumps out of
@@ -21,16 +27,19 @@ Branch: **`karma/decompile`**. `main` is untouched. **Do not merge.**
 - **What now blocks the solver is one thing: arguments that are genuinely missing, because
   the DWARF does not say where the frames live.** Not "Ghidra failed to use the debug info"
   — the `DW_AT_location` attributes are absent from the abbrevs those functions use. §11
-  item 2 has the readelf command that shows it.
-- **106 objects compile**, 25 are quarantined by detectors, 17 do not compile. Object count
-  is a bad progress metric — read §3 before using it.
-- **Two whole families the engine never asks Karma about.** `Box × TriangleList` and every
-  `Aggregate` pair are intercepted by UT2004's own dispatcher, so they are registered and
-  unreachable. That retires the top two standing requests for maps and downgrades
-  `IxBoxTriList` from "live crash risk" to dead code. §3a.
+  item 2 has the readelf command that shows it. `MdtWorld` is now a **fifth** object blocked
+  on exactly this, and a much cheaper subject to validate a fix on than any kea object. §13.
+- **108 objects compile**, 26 are quarantined by detectors, 14 do not. Object count is a bad
+  progress metric — read §3 before using it.
+- **One whole family the engine never asks Karma about**, and one that looked like a second.
+  Every `Aggregate` *pair* is intercepted by UT2004's own dispatcher, as is
+  `Box × TriangleList`. But the aggregate dispatcher **recurses into `KIntersect` per
+  element**, so aggregate ELEMENTS reach Karma normally — which is exactly how the cylinder
+  pairs above arrive. §3a.
 - **The most important habit here is checking that a test is testing.** Most of the real
-  bugs in this project were found that way, not by writing new code. §4a, §12's closing
-  section, and dead ends 9 and 10.
+  bugs in this project were found that way, not by writing new code — and on 2026-08-24 it
+  also caught a *search* that could not have found what it was looking for. §4a, §12's
+  closing section, and dead ends 9 and 10.
 
 Reproduce the whole state in about a minute with §4.
 
@@ -61,18 +70,18 @@ complete types. That is what makes this tractable. Ghidra consumes it directly.
 ## 2. Status
 
 ```
-compile:  106 objects (99 clean + 7 with prelude TODOs)  = 71.6% of 148 attempted
-scenes:   106/106 run clean on all three substitute scenes, and all 106 TOGETHER
+compile:  108 objects (102 clean + 6 with prelude TODOs)  = 73.0% of 148 attempted
+scenes:   108/108 run clean on all three substitute scenes, and all 108 TOGETHER
           are bit-identical on the collision-free one — but read §4a before
           reading anything into that number
-wasm32:   106/106 compile, exported symbol sets byte-identical to i386
-bindings: 106/106 export what the SHIPPED object exported, binding included (§8)
+wasm32:   108/108 compile, exported symbol sets byte-identical to i386
+bindings: 108/108 export what the SHIPPED object exported, binding included (§8)
 difftest: self-test 12/12, and the real run reproduces the documented baseline
           exactly (§8) — IxBoxBox 1 count, IxSphereTriList 137 dims, the rest 0
-review:   25 objects held back by recover.py's eight safety detectors (§8;
+review:   26 objects held back by recover.py's eight safety detectors (§8;
           the ninth, symbol bindings, is a gate rather than a detector because
           it needs the shipped object to compare against)
-fail:     17 objects do not compile
+fail:     14 objects do not compile
 dumps:    out9 is current (§5a). It differs from out8 in 52 of 153 dumps, and
           every object that already compiled is byte-identical.
 ```
@@ -109,8 +118,9 @@ honest summary is §12.
 This is the single most useful table in the project. It decides what to work on, and it has
 changed priorities every time it has been re-run.
 
-**37 interaction pairs are registered on a typical map. The game calls twelve of them.**
-25 of the 37 have a recovered counterpart staged; the twelve that are called all do.
+**37 interaction pairs are registered on a typical map. The game calls fourteen of them.**
+25 of the 37 have a recovered counterpart staged; **thirteen of the fourteen that are called
+do, and the fourteenth is quarantined.**
 
 Produced with `KD_CENSUS=1`, which counts calls and runs nothing twice, so it perturbs
 nothing and can be pointed at any map safely (§6). Call counts below are the running total
@@ -124,9 +134,10 @@ Three independent instruments, and they are **not** interchangeable:
 
 | instrument | answers | limit |
 |---|---|---|
-| the census (`KD_CENSUS=1`) | did it EXECUTE on the maps we ran | only as good as the maps seen; two pairs have already moved off "never called" |
+| the census (`KD_CENSUS=1`) | did it EXECUTE on the maps we ran | only as good as the maps seen; **four** pairs have already moved off "never called" |
 | `tools/reachable.py` (§3b) | can the LINKER reach the object at all | interaction functions are address-taken by their registrars, so it says "reachable" for pairs the game never calls |
-| **the engine source** (`KIntersect`, §3a) | **can the game reach it, ever** | none — this is the decisive one |
+| `tools/find_cylinder_geom.py` (§3) | does any shipped ASSET define this geometry | only tells you the content exists, not that it is simulated — `DM-Insidious` has a cylinder element and never collides it |
+| **the engine source** (`KIntersect`, §3a) | **can the game reach it, ever** | **not none, and this file used to say none.** Only as good as how far you follow the call graph — `KIntersect` dispatches to `KAggregateGenericIntersect`, which calls `KIntersect` again. §3a |
 
 **Settled permanently, from the engine source:**
 
@@ -134,21 +145,40 @@ Three independent instruments, and they are **not** interchangeable:
   `KBoxTriangleListIntersect` instead. `IxBoxTriList` is measurably wrong and it does not
   matter: it is dead code. The long-standing request for a map that exercises it is
   **withdrawn as unanswerable**.
-- **Every `Aggregate` pair — CANNOT fire.** Same dispatcher, `KAggregateGenericIntersect`.
-  The family needs no recovery.
+- **Every `Aggregate` PAIR — CANNOT fire.** Same dispatcher, `KAggregateGenericIntersect`.
+  The family needs no recovery. **But read §3a before drawing the obvious conclusion: that
+  dispatcher recurses into `KIntersect` once per ELEMENT, so aggregate elements reach Karma
+  normally.** That is how the cylinder pairs below arrive.
 
 **Settled by 25+ runs across 18 maps, but NOT proven impossible** — these are registered
 and have never been seen to execute. Treat as "no evidence of use", not "cannot be used":
-`Sphere × Plane`, `Box × Plane`, `Box × Cylinder`, `Cylinder × {Plane, Sphere, Cylinder,
-TriangleList, ConvexMesh}`, `Sphyl × {Plane, Box, Cylinder}`, `ConvexMesh × Plane`.
+`Sphere × Plane`, `Box × Plane`, `Box × Cylinder`, `Cylinder × {Plane, Sphere,
+ConvexMesh}`, `Sphyl × {Plane, Box, Cylinder}`, `ConvexMesh × Plane`.
 
-**The one open question a map could still settle:** `Cylinder`. `KUtils.cpp:796` really does
-call `McdCylinderCreate` from a cylinder collision element, so the code path exists — the
-census has just never seen a shipped asset define one. **This is the only surviving map
-ask**, and it is worth answering because a definitive "UT2004 ships no cylinder collision
-volumes" retires five registered pairs permanently.
+**The cylinder question is CLOSED, and the answer was yes.** It stood open for several
+sessions as "the only surviving map ask". It did not need a map:
 
-### Called — all twelve are recovered and validated
+- **The code path is real and it fires.** `Cylinder × TriangleList` 59,366 calls and
+  `Cylinder × Cylinder` 24,267 calls in a 300 s census on `test-simple-physics`, alongside
+  `Sphyl × TriangleList` 95,544 — so the match was ticking and the counts are in the same
+  range as pairs we already trust.
+- **Shipped assets define cylinders.** `tools/find_cylinder_geom.py` parses the packages:
+  **114 cylinder collision elements** across the tree (vs 107 sphere, 172 box, 32,191
+  convex), in stock maps including `AS-BP2-Acatana`, `DM-Insidious`, `ONS-CBP2-Mirage`,
+  `DOM-UCMP2-1on1-Smelter`.
+- **What is still open is narrow and does not block anything:** whether *stock gameplay*
+  ever simulates one. `test-simple-physics.ut2` is a custom test map, and a 300 s census on
+  the stock `DM-Insidious` — which contains a cylinder element — ticked properly (6 pairs,
+  49,785 calls) and produced zero cylinder calls. The mesh is there and is not simulated.
+
+**And grep cannot answer questions like this**, which is worth knowing before trying.
+`FKAggregateGeom` is serialised by a hand-written `operator<<` with no field names, so
+`CylinderElems` appears in no package — and neither does `BoxElems`, nor `KarmaProps`.
+Searching for it returns 0 across all 2,015 packages and reads exactly like "UT2004 ships
+no cylinders". What caught it was searching for something that MUST be there and getting
+zero for that too. §4a's rule, applied to a search instead of a test.
+
+### Called — twelve are recovered and validated, two are not
 
 | pair | calls observed | function | object | status |
 |---|---:|---|---|---|
@@ -160,7 +190,9 @@ volumes" retires five registered pairs permanently.
 | Sphyl × Sphere | 218,426 | `McdSphylSphereIntersect` | `IxSphylPrimitives` | ✅ |
 | Box × Box | 150,146 | `McdBoxBoxIntersect` | `IxBoxBox` | ✅ released, 1-in-500k §8 |
 | Sphyl × ConvexMesh | 62,698 | `McdSphylConvexMeshIntersect` | `IxConvexPrimitives` | ✅ |
+| **Cylinder × TriangleList** | **59,366** | `McdCylinderTriangleListIntersect` | `IxCylinderTriList` | ⛔ **QUARANTINED and never measured — 2026-08-24** |
 | ConvexMesh × TriangleList | 49,064 | `McdConvexMeshTriangleListIntersect` | `IxConvexTriList` | ✅ released 2026-08-23 |
+| **Cylinder × Cylinder** | **24,267** | `McdCylinderCylinderIntersect` | `IxCylinderCylinder` | ⚠ **compiles, never measured — 2026-08-24** |
 | Sphere × ConvexMesh | 9,741 | `McdGjkCgIntersect` | `McdGjk` | ✅ |
 | Box × Sphere | 5,154 | `McdBoxSphereIntersect` | `IxBoxSphere` | ✅ |
 | ConvexMesh × ConvexMesh | 4,337 | `McdGjkCgIntersect` | `McdGjk` | ✅ |
@@ -175,21 +207,22 @@ volumes" retires five registered pairs permanently.
 | Sphere × Plane | `McdSpherePlaneIntersect` | yes |
 | Cylinder × Plane | `McdCylinderPlaneIntersect` | yes |
 | Cylinder × Sphere | `McdCylinderSphereIntersect` | yes |
-| Cylinder × Cylinder | `McdCylinderCylinderIntersect` | yes |
-| Cylinder × TriangleList | `McdCylinderTriangleListIntersect` | quarantined |
 | Cylinder × ConvexMesh | `McdGjkCgIntersect` | yes (same function as the called GJK pairs) |
 | Sphyl × Plane | `McdSphylPlaneIntersect` | yes |
 | Sphyl × Box | `McdSphylBoxIntersect` | yes — had a real bug, fixed, §8 |
 | Sphyl × Cylinder | `McdSphylCylinderIntersect` | yes |
 | ConvexMesh × Plane | `McdGjkCgIntersect` | yes |
-| Aggregate × {Null, Sphere, Box, Plane, Cylinder, Sphyl, TriangleList, ConvexMesh, Aggregate, …} | `McdAggregateGenericIntersect` + unidentified | no — and **unreachable**, §3a |
+| Aggregate × {Null, Sphere, Box, Plane, Cylinder, Sphyl, TriangleList, ConvexMesh, Aggregate, …} | `McdAggregateGenericIntersect` + unidentified | no — and **unreachable as a pair**, §3a |
 
-**Why the shape of that list makes sense.** UT2004 gives its physics actors sphere, sphyl,
-convex-mesh and triangle-list geometry and essentially nothing else. It never uses Karma's
-`Cylinder` type at all, `Plane` is registered but the level is a TriangleList rather than a
-plane, and **Box × TriangleList and the whole Aggregate family are intercepted by the
-engine before Karma is consulted** (§3a). So **whole objects in the "not compiling" pile are for collisions
-the game never makes**, and object count is the wrong progress metric.
+**Why the shape of that list makes sense — and where it was wrong.** UT2004 gives its
+physics actors sphere, sphyl, convex-mesh and triangle-list geometry mostly, `Plane` is
+registered but the level is a TriangleList rather than a plane, and Box × TriangleList and
+Aggregate PAIRS are intercepted by the engine before Karma is consulted (§3a). That much
+holds. What this section used to add — "It never uses Karma's `Cylinder` type at all" — was
+an inference from the census, and it is **false**: 114 cylinder collision elements ship, and
+two cylinder pairs have now been measured executing. **Whole objects in the "not compiling"
+pile are still for collisions the game never makes**, so object count remains the wrong
+progress metric; just do not read a census zero as a proof.
 
 ### If one of those pairs ever fires, which are dangerous?
 
@@ -198,20 +231,18 @@ first real call:
 
 | pair | if it fires |
 |---|---|
-| **Box × TriangleList** | **CANNOT FIRE — the engine bypasses it.** `IxBoxTriList` is quarantined *and* measurably wrong (2,254 ret / 139,961 count / 12,060 dims divergences in 200,000 synthetic pairs), but UT2004 never dispatches to it: `KIntersect` calls its own `KBoxTriangleListIntersect` instead. §3a. It is dead code, not a hazard. |
-| Cylinder × TriangleList | quarantined; never measured. Genuinely unreached rather than bypassed — same posture, unknown magnitude. |
-| Sphyl × Box, Sphyl × Plane, Sphere × Plane, Box × Plane, Box × Cylinder, Cylinder × {Plane, Sphere, Cylinder}, ConvexMesh × Plane, Cylinder × ConvexMesh | recovered, compiling, clean on the synthetic driver — `McdSphylBoxIntersect`, `McdSphylPlaneIntersect` and the GJK variants are all in the difftest and read 0 structural. These would be fine. |
+| **Box × TriangleList** | **CANNOT FIRE — the engine bypasses it.** `IxBoxTriList` is quarantined *and* measurably wrong (139,961 count / 12,060 dims divergences in 200,000 synthetic pairs; the ret/touch count varies run to run — 2,254 and 1,463 have both been recorded), but UT2004 never dispatches to it: `KIntersect` calls its own `KBoxTriangleListIntersect` instead. §3a. It is dead code, not a hazard. |
+| ~~Cylinder × TriangleList~~ | **NO LONGER HYPOTHETICAL — it fires, 59,366 times. Moved to the called table above.** This row used to read "quarantined; never measured. Genuinely unreached rather than bypassed — same posture, unknown magnitude." Two of those three clauses were right and the important one was wrong. |
+| Sphyl × Box, Sphyl × Plane, Sphere × Plane, Box × Plane, Box × Cylinder, Cylinder × {Plane, Sphere}, ConvexMesh × Plane, Cylinder × ConvexMesh | recovered, compiling, clean on the synthetic driver — `McdSphylBoxIntersect`, `McdSphylPlaneIntersect` and the GJK variants are all in the difftest and read 0 structural. These would be fine. |
 | Aggregate × anything | **not recovered, and does not need to be** — the engine bypasses this family too, §3a. A closed gap, not an open one. |
 
-The honest one-liner: **twelve pairs are used and all twelve are validated; of the
-twenty-five that are not used, two families (Box × TriangleList and Aggregate) are
+The honest one-liner: **fourteen pairs are used; twelve of them are validated, and the two
+that are not are both Cylinder pairs found on 2026-08-24 — one of them quarantined. Of the
+twenty-three that are not used, two families (Box × TriangleList and Aggregate pairs) are
 structurally unreachable because the engine implements them itself, and the rest would be
 fine.**
 
-### 3a. Two families the engine never asks Karma about
-
-This closes what were, for several sessions, the top two "needs the project owner" asks —
-and it is answered from the engine source rather than from a map.
+### 3a. Two families the engine never asks Karma about — and the hole in that
 
 `Source/Engine/Src/KFarfield.cpp`, `KIntersect()` at line 936, is the **single** dispatcher:
 the only two references to `interactions->intersectFn` in the whole engine are its null
@@ -231,30 +262,65 @@ unreachable**. That is exactly what the census has been reporting for 25+ runs a
 maps, and the zero is now explained rather than merely observed — **no map can move these
 off the never-called list.**
 
+> ### ⚠ AND HERE IS THE HOLE, found 2026-08-24
+>
+> "The engine intercepts Aggregate, therefore aggregate geometry never reaches Karma" does
+> **not** follow, and this file asserted it for two sessions. `KAggregateGenericIntersect`
+> is not a terminal handler. It loops over the aggregate's elements and, for each one that
+> overlaps, **calls `KIntersect` again** (`KFarfield.cpp:878`) with a dummy pair whose
+> model1 is the ELEMENT:
+>
+> ```c
+> for(i=0, element = ins->child; i<g->elementCountMax; i++, element = element->next)
+>     if (g->elementTable[i].mGeometry && McdGeometryInstanceOverlap(instance2,element))
+>     {
+>         dummyModel.mInstance = *element;
+>         KIntersect(&dummyPair, &dummyResult);      // <- back into the dispatcher
+>     }
+> ```
+>
+> On that inner call `type1` is the element's real type — Cylinder, Sphere, Box, ConvexMesh
+> — so it matches neither interception and goes **straight to Karma's `intersectFn`**.
+>
+> This is not a corner case. `KUtils.cpp:762` wraps EVERY primitive collision element in an
+> `McdAggregate`, with **no single-element shortcut**, so every sphere, box and cylinder
+> collision volume in the game arrives at Karma through this path.
+>
+> What survives: the Aggregate PAIR itself never reaches Karma, so
+> `McdAggregateGenericIntersect` still needs no recovery, and Box × TriangleList is still
+> intercepted at whatever depth it occurs. What does not survive: any argument of the form
+> "the geometry is in an aggregate, so Karma never sees it."
+
 Two consequences worth carrying:
 
 - **`IxBoxTriList` is not a live crash risk.** `proven.txt` withdrew its clean result and
-  §8 recorded it as "a defect waiting for a map". There is no such map. It stays
-  quarantined and stays out of `/tmp/kd_build`, but as dead code rather than as a hazard.
+  §8 recorded it as "a defect waiting for a map". There is no such map — the interception
+  is by TYPE PAIR and applies on the inner call too. It stays quarantined and stays out of
+  `/tmp/kd_build`, but as dead code rather than as a hazard.
 - **The Aggregate family is not a coverage gap.** §12 item 1 asks for every pair the game
-  calls; the game never calls Karma for Aggregate at all.
+  calls; the game never calls Karma for an Aggregate *pair* at all. Its elements are
+  another matter, and they are counted under their own types in §3's table.
 
-The general lesson: **the census tells you a pair is not called; the engine source tells
-you whether it *can* be.** For a pair that matters, read `KIntersect` before asking for a
-map.
+The general lesson, now with a correction attached: **the census tells you a pair is not
+called; the engine source tells you whether it *can* be — if you read the whole call
+graph.** Reading `KIntersect` was right. Stopping at `KIntersect` was not.
 
 ### How much to trust "never called"
 
-Read it as "not in 25+ runs across 18 maps", not "impossible". **Two pairs have already come
-off that list:**
+Read it as "not in 25+ runs across 18 maps", not "impossible". **Four pairs have already
+come off that list:**
 
 - `ConvexMesh × ConvexMesh` — appeared with 39 calls on `ONS-UCMP-ABC-ECE`.
 - `Box × Sphere` — appeared on 2026-08-23 with **5,101 calls in a single match**, on a map
   that had been run before. Not a trickle; a pair the game genuinely uses.
+- `Cylinder × TriangleList` — **59,366 calls**, 2026-08-24, on `test-simple-physics`.
+- `Cylinder × Cylinder` — **24,267 calls**, same run.
 
-Both were already recovered and clean, so both cost nothing. That is luck, not a plan. The
-cheap insurance is: **re-run the census on any new map before doing anything else with it**,
-and if a pair moves, check whether its object is quarantined before trusting the match.
+The first two were already recovered and clean, so both cost nothing. **The third was not:
+`IxCylinderTriList` is quarantined by the reconstructed-frame detector and has never been
+measured.** So the run of luck is over, and the insurance was already written down here:
+**re-run the census on any new map before doing anything else with it, and if a pair moves,
+check whether its object is quarantined before trusting the match.**
 
 It cuts the other way too. `McdSphylBoxIntersect` had a real bug in a pair that is never
 called — not wasted, because the fix was in shared code — and `IxSpherePlane` sits in the
@@ -1612,6 +1678,23 @@ Box × TriangleList at zero calls. Recorded so nobody re-derives the old number.
    `DW_AT_location`** — while other functions in the same object have them. Before planning
    any frame-recovery work, run the `readelf --debug-dump=abbrev` in §11 item 2 and find out
    whether the information exists at all.
+14. **Grepping an Unreal package for a field name.** `FKAggregateGeom` is serialised by a
+   hand-written `operator<<` (`Engine/Inc/KTypes.h:195`) that writes four `TArray`s in a
+   fixed order and **no field names**, so `CylinderElems` is in no package — and neither is
+   `BoxElems`, nor `KarmaProps`. A search across all 2,015 packages returns 0 for every one
+   of them and reads exactly like "UT2004 ships no cylinder collision volumes", which is
+   false: there are 114. **Always run a negative search against a known positive first.**
+   What IS in the file is the class name `KMeshProps`, because the export table names an
+   object's class — see `tools/find_cylinder_geom.py`, which parses instead.
+15. **Reading `KIntersect` and stopping there.** It is the single dispatcher and it does
+   intercept Aggregate pairs, which is true and was written up as §3a. But
+   `KAggregateGenericIntersect` **calls `KIntersect` again per element**
+   (`KFarfield.cpp:878`), so "the engine intercepts Aggregate" does not imply "aggregate
+   geometry never reaches Karma" — and since `KUtils.cpp:762` wraps every primitive
+   collision element in an aggregate with no single-element shortcut, that inner call is
+   how MOST geometry reaches Karma. Cost: two sessions of believing `Cylinder` was
+   unreachable while a map in the tree was calling it 59,366 times. **Follow the callee,
+   not just the caller.**
 
 
 ---
@@ -1653,6 +1736,33 @@ dispatches in `keaRbdCore_unified` and `keaLCPSolver` carry their arguments. Wha
 in all four objects is the same single thing, and item 2 below is now the whole job.
 
 Ordered by what actually moves the project, not by what is easiest:
+
+0. **FIRST: the two cylinder pairs.** Added 2026-08-24, ahead of everything else because
+   it re-opens §12 item 1 and because the hard part — finding content that drives it — is
+   already done. `Cylinder × TriangleList` fires **59,366** times and `Cylinder × Cylinder`
+   **24,267** times on `test-simple-physics`, and `IxCylinderTriList` is **quarantined by
+   the reconstructed-frame detector and has never been measured**. That detector exists
+   because `IxSphereTriList` compiled, passed the substitute gate, and then segfaulted on
+   its first live call.
+
+   ```bash
+   BIN=…/build-shadow-karma/Source/SDLLaunch/ut2004-karma-pixo.bin
+   KD_CENSUS=1 KD_BIN=$BIN KD_SHADOW_OUT=/tmp/c.csv \
+     ./test/run_map.sh test-simple-physics 300 "$COMMON_URL"
+   ```
+
+   **One thing to sort out before it can be measured:** the census reports
+   `Cylinder × TriangleList` with function `(unidentified)` and shadowed `no`, so the
+   harness cannot currently name that pair's `intersectFn` — probably because
+   `IxCylinderTriList` is excluded from the shadow build. `Cylinder × Cylinder` already
+   reads shadowed `yes`. Fix the naming, stage both objects, run without `KD_CENSUS`, and
+   the normal `proven.txt` standard applies.
+
+   Note also that `test-simple-physics.ut2` is a custom test map. Whether *stock* gameplay
+   simulates a cylinder is still unknown — a 300 s census on the stock `DM-Insidious`,
+   which contains a cylinder collision element, ticked properly and produced zero cylinder
+   calls. That does not change the priority: the pair is reachable and the object is
+   unmeasured either way.
 
 1. **DONE — the vtable call sites.** `tools/gen_vtable_callsites.py` +
    `DumpDecomp.applyVtableCallsiteOverrides()`, adopted as `out8`. §5a has the method, the
@@ -1708,6 +1818,21 @@ Ordered by what actually moves the project, not by what is easiest:
    `keaLCPSolver` (`makeFromPcSparsePSM`, expected 10 have 9 — the call already passes
    `this`, so it is a MIDDLE argument) and `keaLCP_new` (nine calls, each short by one, at
    non-uniform offsets).
+
+   **`MdtWorld` and `MeMath` belong to this item too, and `MdtWorld` is the best place to
+   start** — found 2026-08-24 after an unrelated fix stripped 18 of its 30 errors away and
+   left the shape visible. Its remaining 12 are 6 `stack0x` and 6 `incompatible type for
+   argument N of MdtKeaAddConstraintForces` / `MdtKeaIntegrateSystem`. That is the CALLER
+   side of the same by-value aggregate problem: at `MdtWorld.c:253` the copy loop writes 19
+   `MeReal` — 76 bytes, an `MdtKeaParameters` exactly — starting at `&stack0xffffff6c`,
+   where Ghidra declared `MeReal in_stack_ffffff6c;` and four bytes.
+   `fix_stack_address_name`'s size check refuses it, correctly.
+
+   **Why start there rather than on a kea object:** `MdtWorld` is not in `libMdtKea`, it
+   has only twelve errors, and the same fix has to work on both — so it is a subject where
+   a wrong answer shows up cheaply. §12's standing lesson is that the object which
+   motivates a tool is the worst thing to validate it on; this is the alternative subject
+   that item did not have before.
 
    **The one lead that is not a guess.** The by-value *incoming* parameters are pinned by
    the cdecl ABI, not by debug info, and Ghidra already has the signature:
@@ -1770,19 +1895,24 @@ Ordered by what actually moves the project, not by what is easiest:
    before quoting a bit-identical result — `keaCalcAcceleration_vanilla` is the worked
    example of a zero that means nothing.
 
-7. **Grind the tail.** 17 objects, but **read §3b first** — a third of the pile is
-   unreachable or replace-not-recover — and then §3 — a large part of the pile is
-   geometry the game never collides, and **nine of the 34 are one error from
-   compiling**, which is where to start. The distribution, re-measured 2026-08-24:
+7. **Grind the tail.** 14 objects, but **read §13 first** — it is fully triaged, and only
+   5 are genuinely open, of which 2 are item 2 in disguise. The distribution over the 14,
+   re-measured after the 2026-08-24 (third session) fixes:
 
    | diagnostic | count | what it is |
    |---|---:|---|
-   | `request for member X in something not a structure` | 135 | almost all `McdSpace`, below |
-   | `X undeclared` | 102 | mixed |
-   | `unknown type name` | 34 | mostly `MeASE*`, the asset loader |
-   | `invalid use of undefined type` | 23 | 22 of them `struct _McdSpace`, below |
-   | `subscripted value is neither array nor pointer` | 22 | DebugDraw/XML statics |
-   | `too few arguments` | 32 | the lost-frame family; see §11.3 |
+   | `request for member X in something not a structure` | 101 | almost all `McdSpace`, below |
+   | `X undeclared` (incl. "did you mean") | 53 | mixed; the `stack0x` family is in here |
+   | `too few arguments to function` | 35 | the lost-frame family; see §11 item 2 |
+   | `unknown type name` (incl. "did you mean") | 33 | mostly `MeASE*` — DEAD, §3b |
+   | `invalid use of undefined type` | 22 | all 22 `struct _McdSpace`, below |
+   | `expected expression before X` | 13 | mixed |
+   | `invalid operands to binary &` | 10 | all `MdtBcl` |
+
+   303 errors in total, and note the shape: **`MeASELoad`, `MeFGeometryFromMesh` and
+   `McduDebugDraw` account for 147 of them and all three are DEAD** (§3b), while `McdSpace`
+   is another 50 and is a documented leave-alone. So two thirds of the raw count belongs to
+   objects nobody should touch. Sort by §13's verdict column, never by error count.
 
    **Two corrections to what this section used to say.** `BodyData` is fixed — it was
    `typedef struct { ... } Foo;`, which has no `DW_AT_name` on the aggregate. And the
@@ -1980,26 +2110,34 @@ stdout on degenerate input. A replacement should simply be silent.)
 
 ### What needs the project owner, and nothing else will do
 
-Almost everything here can be pushed on alone. **Maps cannot.** The census (§3) is only as
-good as the maps it has seen, and two pairs have already moved off the never-called list
-because someone ran a map nobody had tried. The specific asks, in order of value:
+**As of 2026-08-24 there are no outstanding content asks.** All three that stood here are
+answered. That is worth stating plainly, because "we need a map" was the standing excuse for
+several open questions and it turned out to be answerable from the repo twice and from the
+asset files once.
 
 - ~~**A map that exercises `Box × TriangleList`.**~~ **WITHDRAWN — no such map can exist.**
   See §3a: UT2004 intercepts this pair in its own dispatcher and never calls Karma's
-  function. This was the top ask for several sessions; it is answered from the engine
-  source, not from a map.
+  function. Answered from the engine source.
 - ~~**A map that exercises `Aggregate` geometry.**~~ **WITHDRAWN for the same reason** —
-  `KIntersect` routes every Aggregate pair to the engine's own `KAggregateGenericIntersect`.
-  A map that exercises **`Cylinder`** geometry is still worth having, if any exists: that
-  family is genuinely unreached rather than bypassed, and a definitive "UT2004 never uses
-  Cylinder" would retire a chunk of the not-compiling pile permanently.
+  `KIntersect` routes every Aggregate *pair* to the engine's own
+  `KAggregateGenericIntersect`. (But note §3a's correction: that function recurses per
+  ELEMENT, so aggregate elements do reach Karma.)
+- ~~**A map with `Cylinder` collision geometry.**~~ **ANSWERED 2026-08-24, and the answer
+  is that they are already here.** `tools/find_cylinder_geom.py` parses the shipped
+  packages and finds **114 cylinder collision elements**, and a census on
+  `test-simple-physics` measured `Cylinder × TriangleList` at 59,366 calls. §3. It did not
+  need a new map; it needed reading the serialiser instead of grepping for a field name
+  that the format does not store.
 - **REMOUNT THE ASSETS after any reboot.** `/home/ion/ut2004-assets` unmounts and every
   map-based gate dies until it is back — see the box at the top of §6. Only the owner can do
-  it, so flag it rather than diagnosing it; the symptom looks like an engine crash.
-- **More community maps generally.** `CBP2`/`UCMP`/`BE-`/`SPAC-` reach pairs Epic's
-  optimised maps never do; that fact came from the project owner and it has been the single
-  most productive operational input to this project. `ONS-UCMP-ABC-ECE` is still the ONLY
-  known map that reaches `ConvexMesh × TriangleList`.
+  it, so flag it rather than diagnosing it; the symptom looks like an engine crash. **This
+  is now the only standing ask.**
+- **More community maps are still WELCOME but no longer blocking.** `CBP2`/`UCMP`/`BE-`/
+  `SPAC-` reach pairs Epic's optimised maps never do; that fact came from the project owner
+  and it has been the single most productive operational input to this project.
+  `ONS-UCMP-ABC-ECE` is still the ONLY known map that reaches `ConvexMesh × TriangleList`.
+  One question a map *could* still settle, though nothing depends on it: whether stock Epic
+  gameplay ever simulates a cylinder, as opposed to merely shipping the geometry.
 
 Everything else — code, tests, measurement, tooling — is self-service.
 
@@ -2010,9 +2148,11 @@ Everything else — code, tests, measurement, tooling — is self-service.
 **Complete** is not "every object recovered". It is:
 
 1. Every object the census (§3) shows the game *actually calls* is recovered and validated.
-   **That is twelve pairs, and all twelve are done** — the last, `IxConvexTriList`, on
-   2026-08-23. This is the item that was open for the whole project; treat any new entry in
-   the census (§3 has had two) as re-opening it, and re-run the census on any new map.
+   **This was marked done on 2026-08-23 and is RE-OPENED as of 2026-08-24.** Twelve of the
+   fourteen called pairs are validated; `Cylinder × TriangleList` (59,366 calls) is
+   quarantined and unmeasured, and `Cylinder × Cylinder` (24,267) compiles but has never
+   been measured. This file said to "treat any new entry in the census as re-opening it" —
+   this is that.
 2. Validated means: 0 `ret_diff`, 0 `count_diff`, 0 `dims_diff`, 0 `overrun` across a
    multi-hour in-game session, with `KD_SELFTEST` clean on the same session, and
    `proven.txt` carrying the evidence.
@@ -2035,18 +2175,21 @@ Everything else — code, tests, measurement, tooling — is self-service.
 
 | # | item | state |
 |---|---|---|
-| 1 | every pair the census shows the game calling is recovered and validated | **DONE.** Twelve pairs, eight objects, evidence in `proven.txt`. Re-opens if the census moves — it has twice. |
-| 2 | validated = 0 ret/count/dims/overrun in a live match, `KD_SELFTEST` clean, evidence on the line | **DONE** for those twelve. |
+| 1 | every pair the census shows the game calling is recovered and validated | **RE-OPENED 2026-08-24.** Twelve of fourteen done, eight objects, evidence in `proven.txt`. The two new ones are Cylinder pairs: `Cylinder × TriangleList` 59,366 calls on a QUARANTINED object, `Cylinder × Cylinder` 24,267 on an unmeasured one. §3. |
+| 2 | validated = 0 ret/count/dims/overrun in a live match, `KD_SELFTEST` clean, evidence on the line | **DONE** for those twelve, and it is the standard the two new pairs have to meet. |
 | 3 | all three scenes clean for every recovered object, *and* checked for sensitivity | **DONE**, and the sensitivity check (§4a) is what makes it mean anything. |
 | 4 | qhull and the asset loader **replaced**, not recovered | **DONE, both halves — but the asset half was RECOVERED, not replaced (§8c), which is a better outcome: exact rather than equivalent.** Qhull, all four tiers: `src/McdConvexCreateHull/kd_convexhull.c` replaces all 15 exported functions — 1.4 MB → 10 KB: 100,633 invariant checks, identical geometry and volumes, a collision A/B differing on 2 borderline pairs in 2.4 M, and **a live ONS match with 15,425 real GJK calls and 0 structural divergences**. wasm32 clean with an identical symbol set. The asset loader is 9 of 9 recovered (§8c) and needs no replacement. |
-| 5 | no detector suppressed, nothing released without evidence | **HOLDING.** 25 objects quarantined, and §4a now shows the quarantine is load-bearing (`MdtPartition` alone turns a bit-identical scene into a SIGSEGV). |
-| 6 | builds as ordinary C for wasm32 **and arm64/armv7** | **wasm32 DONE** (106/106, byte-identical symbol sets). **arm64 NOT TRIED** — no cross-compiler installed. Nothing has been *executed* on either. |
-| 7 | engine runs on recovered Karma with **no shipped `.a` in the link at all** | **COLLISION HALF DONE** (§7b, two maps, 11 runs/arm, indistinguishable from stock). **SOLVER HALF BLOCKED**, but on one problem now rather than four — the arguments are recovered (§5a) and what remains is the frames, §11 item 2. |
+| 5 | no detector suppressed, nothing released without evidence | **HOLDING, and it just earned its keep.** 26 objects quarantined; §4a shows the quarantine is load-bearing (`MdtPartition` alone turns a bit-identical scene into a SIGSEGV), and `IxCylinderTriList` was being held for a pair everyone believed was dead. |
+| 6 | builds as ordinary C for wasm32 **and arm64/armv7** | **wasm32 DONE** (108/108, byte-identical symbol sets). **arm64 NOT TRIED** — no cross-compiler installed. Nothing has been *executed* on either. |
+| 7 | engine runs on recovered Karma with **no shipped `.a` in the link at all** | **COLLISION HALF DONE for the twelve validated pairs** (§7b, two maps, 11 runs/arm, indistinguishable from stock) — but those runs were on maps with no cylinder traffic, so they do not cover the two new pairs. **SOLVER HALF BLOCKED**, on one problem — the arguments are recovered (§5a) and what remains is the frames, §11 item 2. |
 
 **So what is left, in one sentence each:**
 
+- **Two cylinder pairs, one of them quarantined.** New, and the cheapest real work on the
+  list: a map that drives them is already in the tree. §3, §11 item 0.
 - **The solver's frames** — `keaRbdCore_unified`, `keaMemory`, `keaIntegrate_pc`,
-  `keaLCPSolver`+`keaLCP_new`. Their virtual calls now carry arguments (§5a); what is left
+  `keaLCPSolver`+`keaLCP_new`, **and `MdtWorld`, which is new and is the cheapest subject
+  to validate a fix on.** Their virtual calls now carry arguments (§5a); what is left
   is that **the DWARF carries no `DW_AT_location` for these functions' variables**, so the
   frame is not merely unmodelled but undescribed. This is the only thing between here and
   item 7. §11 item 2.
@@ -2055,15 +2198,18 @@ Everything else — code, tests, measurement, tooling — is self-service.
   RECOVERABLE and is 9 of 9 (§8c).
 - **arm64** — untried, needs a cross-compiler.
 - **Executing anything on wasm** — the web agent's job. `HANDOVER-WEB.md`.
-- **The tail** — 17 objects, fully triaged in §13. 3 are unreachable, 3 are documented
-  leave-alones, and 2 are dead end 9. What is actually open is 9 objects.
+- **The tail** — 14 objects, fully triaged in §13. 3 are unreachable, 3 are documented
+  leave-alones, and 3 are dead end 9. What is actually open is 5 objects, and 2 of those
+  are really the solver-frame problem wearing a different hat.
 
 
 ### Where the project actually stands — read this before estimating anything
 
 **Done, to a real standard:** the collision-detection *interaction* layer, for the twelve
-pairs the game calls. Recovered, compiling for i386 and wasm32, each one measured against
-the shipped original on real inputs from a live match, evidence in `proven.txt`.
+pairs that had been seen called as of 2026-08-23. Recovered, compiling for i386 and wasm32,
+each one measured against the shipped original on real inputs from a live match, evidence in
+`proven.txt`. **Two more called pairs appeared on 2026-08-24 and neither is at that
+standard** — §3.
 
 **The solver is no longer "not started", and that is a correction to what this file used
 to say.** Three of `libMdtKea`'s compute kernels — `keaCalcJinvMandRHS_vanilla`,
@@ -2144,12 +2290,21 @@ success. Before trusting a green result, ask:
   before quoting a bit-identical result.)
 - **Does the failure message identify the failure?** (Four objects said "Traceback (most
   recent call last):" and nothing else.)
+- **If a SEARCH came back empty, can it find anything at all?** (Added 2026-08-24. Grepping
+  2,015 asset packages for `CylinderElems` returned 0 and looked like the answer to a
+  question that had been open for sessions. The same grep returns 0 for `BoxElems` and
+  `KarmaProps`, which certainly are in there — the field names simply are not in the file
+  format. Run the negative search against a known positive before believing it.)
+- **Does the code path you are calling unreachable actually terminate there?** (Added
+  2026-08-24. `KIntersect` intercepts Aggregate pairs — true. The interceptor then calls
+  `KIntersect` again per element — also true, and not noticed for two sessions. An
+  interception is not a dead end until you have read what it dispatches to.)
 
 That checklist is worth more than the next ten objects.
 
 ---
 
-## 13. The 17 remaining failures, triaged
+## 13. The 14 remaining failures, triaged
 
 Written so the next session starts from a decision, not from re-deriving one. Counts are
 error counts under `out9`. **"DEAD" means `tools/reachable.py` proves nothing in the engine
@@ -2163,26 +2318,28 @@ can reach it — §3b — so it is out of scope, not a to-do.**
 | `McdSpace` | live | 50 | **documented leave-alone**, §11 item 7: the `struct _McdSpace` layout is not in the DWARF *anywhere*, including its own object, where the DIE is `DW_AT_declaration: 1`. Inferring it is the guess the detectors exist to stop |
 | `MeSimpleFile_linux` | live | 1 | **documented leave-alone**, §11 item 7: `-D_FORTIFY_SOURCE=0` makes it compile with three garbage arguments. The compile error is the useful signal |
 | `McdSphyl` | live | 1 | **dead end 9.** `(float)s[1].mRefCtAndID + (float)s[1].prev` — GCC rejects only the second cast, and the original loads *both* as floats. The compiler is reasoning about Ghidra's types and is wrong |
-| `McdTriangleList` | live | 6 | **dead end 9, same shape.** `(float)g[1].prev` etc. Confirmed this session |
+| `McdTriangleList` | live | 6 | **dead end 9, same shape.** `(float)g[1].prev` etc. |
+| `McdBox` | live | 2 | **dead end 9**, at lines 235/236. Not the cheap win the error count makes it look |
 | `keaLCP_new` | live | 10 | **solver, do not text-repair.** §11 item 2 — nine calls short by one argument at non-uniform frame offsets |
-| `McdBox` | live | **2** | **open, closest.** Both are the dead-end-9 shape at lines 235/236 |
-| `McdContact` | live | **1** | **open.** `field_0x1e` — a member Ghidra reads at offset 0x1e that `kd_types.h`'s `McdContact` does not have. A type-database gap, so the fix is `gen_typedb`, not the body |
-| `MeMath` | live | 2 | **open.** `MeQuaternionFromTM__nxt` undeclared (a function-local static the prelude missed) + one `stack0x` |
-| `McdMessage` | live | 7 | open — `invalid use of incomplete typedef McdErrorDescription`. See dead end 1: that tag is one of the three C++-only ones |
+| `MdtWorld` | live | **12** | **RECLASSIFIED — this is the solver-frame problem, §11 item 2, and it is the cheapest place to attack it.** 6 `stack0x` + 6 `incompatible type for argument N` of `MdtKeaAddConstraintForces`/`MdtKeaIntegrateSystem`. `fix_stack_address_name` refuses correctly: the copy at line 253 writes 19 `MeReal` = 76 bytes (an `MdtKeaParameters`) and Ghidra declared 4. Outgoing by-value aggregate passing, exactly as §11 item 2 predicts — but in a NON-kea object, so a fix can be validated somewhere cheap |
+| `MeMath` | live | **1** | one `stack0x` at line 495, and it is genuine frame loss, not a name: Ghidra also dropped the `fcos`/`fsin` results that build the matrix being read. Same family as `MdtWorld` |
 | `MeProfile_linux` | live | 13 | open — `rdtsc` is an inline-asm builtin; needs a `kd_compat.h` shim |
-| `McdBatch` | live | 14 | open — `expected declaration specifiers before '__ct'`, gcc 3.2's C++ constructor spelling |
-| `MdtWorld` | live | 30 | open — `stack0x` family + 18 `expected identifier` |
-| `MdtBcl` | live | 31 | open — `stack0x` family + 10 `invalid operands to binary &` |
-| `MeProfile` | live | 75 | open — 45 `request for member X in something not a structure` |
+| `MdtBcl` | live | 31 | open — `stack0x` family + 10 `invalid operands to binary &` + 5 Ghidra-vocabulary gaps (`undefined6`, `uint6`, `int3`, `SCARRY1`, `POPCOUNT`) |
+| `MeProfile` | live | **29** | open — 11 `request for member`, plus the exported-DATA rename gap (`frameTime`/`clockSpeed` vs `kd_frameTime`; dead end 10), `weightingData` (§11 item 7: a variable, not a type), and `__divdi3`/`__udivdi3` |
 
-**So the genuinely open list is 9 objects**, and the two cheapest (`McdContact` 1,
-`McdBox` 2) are the place to start — except that `McdBox`'s two are dead end 9, so
-`McdContact` is the only true one-liner left.
+**Recovered on 2026-08-24 (third session): `McdContact`, `McdMessage`, `McdBatch`,
+`mesffnmin`** — 17 failures down to 14, 106 objects up to 108. `McdContact` compiles but
+is now held by the `extraout_EAX` detector, which is a different and real defect: that is a
+**reclassification**, not a release.
+
+**So the genuinely open list is 5 objects**, and two of them (`MdtWorld`, `MeMath`) are
+§11 item 2 in disguise. The cheapest *new* ground is `MeProfile_linux`'s `rdtsc` shim and
+`MdtBcl`'s Ghidra-vocabulary gaps — both are vocabulary, not inference.
 
 ### What has been working, and what has not
 
-Every object recovered this session came from finding a **shared cause** and fixing the
-generator, never from editing a generated file. The pattern that keeps paying:
+Every object recovered has come from finding a **shared cause** and fixing the generator,
+never from editing a generated file. The pattern that keeps paying:
 
 1. group the remaining errors by normalised message across all failing objects;
 2. pick the biggest group;
@@ -2190,12 +2347,27 @@ generator, never from editing a generated file. The pattern that keeps paying:
 4. fix that, then **diff the blast radius** — the acceptance test is that every
    already-compiling object's `.o` stays byte-identical.
 
-That last step is not ceremony. It caught a regression I introduced this session
+That last step is not ceremony. It caught a regression in an earlier session
 (`fix_float_as_pointer` widened to explicit `(T *)` casts put three new errors into
-`McdCylinder`, which had none), and it is the only reason the widening did not ship.
+`McdCylinder`, which had none), and on 2026-08-24 it caught two objects changing that
+**should** have changed — `McdNull` and `McdPlane`, whose `warn` flag went from a denormal
+float to the `int` the DWARF declares. When the acceptance test trips, disassemble before
+deciding: those two now emit the shipped `mov`/`test`/`jne` instead of a float compare with
+an extra NaN branch, which is convergence, not drift.
 
-**Two failure modes to expect, because both happened repeatedly:** a rule that looks right
-and silently declines (check by calling it directly on the offending line — that found the
-newline stop in `scan_unary_forward`, the `ANY_CAST` missing star, and the `_match_bracket`
-off-by-one), and a fix that looks like a regression but is a reclassification (`recover.py`
-labels by the FIRST error's pattern — check the error COUNT).
+**Two failure modes to expect, because both keep happening:** a rule that looks right and
+silently declines or mis-scans, and a fix that looks like a regression but is a
+reclassification (`recover.py` labels by the FIRST error's pattern — check the error COUNT).
+
+The first one has now cost six rules, and **calling the rule directly on the offending line
+found every one of them**: the newline stop in `scan_unary_forward`, the `ANY_CAST` missing
+star, the `_match_bracket` off-by-one, `fix_field_offset` declining on a subscripted base,
+`scan_postfix_backward` stopping at a base name ending in a digit, and the `::` branch of
+`gen_prelude` skipping its own sanitising pass. **Read the rule, then run it. Reading alone
+has a 0/6 record here.**
+
+And a third, new on 2026-08-24: **a search that cannot find what it is looking for.**
+Grepping 2,015 asset packages for `CylinderElems` returned 0 and read like an answer. It was
+not — the field name is not in the file format at all (§3). The control that caught it was
+searching for something that MUST be present and getting 0 for that too. Before believing a
+negative search, run it against a known positive.

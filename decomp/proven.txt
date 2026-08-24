@@ -471,9 +471,45 @@ IxConvexTriList       RELEASED 2026-08-23, and the tenth and last pair the censu
 # qhull's debugger helpers; nothing in any of the sixteen archives references
 # them, so they are deliberately absent rather than stubbed.
 #
-# NOT YET DONE: this has not been run in the GAME. The difftest exercises it on
-# synthetic hulls; a live match would exercise it on the .ka collision volumes
-# UT2004 actually ships, which is a different distribution.
+# TIER 4 -- IN THE GAME, 2026-08-24, once the asset mount came back.
+#   build-shadowhull-karma = the shadow harness + the new hull, so the hull is
+#   the only variable and KD_CENSUS/the harness both work. Verified to contain
+#   ZERO qh_ symbols against 361 in the shadow build, because "it linked" is not
+#   evidence the archive swap took.
+#
+#   census, ONS-CBP2-Tropica, 260 s, vs a shipped-qhull control on the same map:
+#     Box x ConvexMesh      6,713   (control 5,563)
+#     Sphyl x ConvexMesh    1,820   (control 2,729)
+#     Sphere x ConvexMesh     240   (control 1,084)
+#     ...same 8 pairs firing, 39 census rows both sides, no crash either side.
+#
+#   THIS IS THE ACCEPTANCE TEST, and the obvious one would have been wrong. "The
+#   match ran" shows nothing: McdConvexMeshCreateHull only checks
+#   McdComputeHull's return value, so if every hull had FAILED the geometry would
+#   silently not be created and the match would run perfectly well. Non-zero
+#   Box x ConvexMesh is the proof -- convex geometry exists and is being collided
+#   against. Counts differ run to run because ONS is non-deterministic.
+#
+#   shadow harness, same map, 440 s, full distance, no crash:
+#     Box x ConvexMesh   15,425 calls  14,463 bit-identical  962 float-noise
+#                        0 ret  0 count  0 dims  0 overrun  0 nonfinite
+#                        worst delta 4.749e-04
+#     Box x Box           1,075 calls     946 bit-identical  129 float-noise
+#                        0 ret  0 count  0 dims  worst 1.526e-05
+#     $KD_SHADOW_DIVERGENCES is EMPTY.
+#
+#   So the recovered collision code agrees with the shipped original on 15,425
+#   REAL calls whose geometry came out of the replacement hull -- which is both
+#   "the hull is good" and "GJK still works on hulls this builds", on the busiest
+#   pair in the census. The 4.7e-04 is penetration depth in an iterative
+#   algorithm, the regime this file already documents for GJK, not a defect.
+#
+#   Narrow pair coverage in that particular run -- 25 pairs were shadowed and
+#   only these two saw traffic. The census run above is the broader picture.
+#
+# The qhull half of item 4 is therefore DONE at all four tiers. What remains of
+# item 4 is the asset loader, which is a different and larger thing than 11 item
+# 8 implies -- see HANDOVER.md 3b.
 
 # --- libMdtKea, the solver ---------------------------------------------------
 #

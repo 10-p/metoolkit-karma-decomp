@@ -1776,19 +1776,40 @@ Also: **wasm32 compiles with a symbol set identical to i386**, clean under `-Wal
 The shipped archive additionally exports `dfacet`/`dvertex`, qhull's debugger helpers;
 nothing in any of the sixteen archives references them, so they are deliberately absent.
 
-**What is NOT done: it has never run in the game, and cannot be until the assets are back.**
-The difftest exercises synthetic hulls; a live match exercises the `.ka` collision volumes
-UT2004 actually ships, which is a different distribution. That is the next step for this
-item and it is **blocked by the empty asset tree — see the box at the top of §6.**
+**Tier 4 — in the game. DONE 2026-08-24**, once the asset mount came back.
+`build-shadowhull-karma` is the shadow harness plus the new hull, verified to contain **zero
+`qh_` symbols** against 361 in the shadow build (because "it linked" is not evidence the
+archive swap took).
 
-The build side of it is already done and waiting: `build-newhull-karma` (stock Karma + the
-new hull, so the hull is the only variable) and `build-shadowhull-karma` (the shadow harness
-+ the new hull, so `KD_CENSUS` can confirm the convex pairs are actually called). Both link
-and both contain **zero `qh_` symbols**, against 361 in the shadow build — verified, because
-"it linked" is not evidence the swap took. When assets return, run the second one with
-`KD_CENSUS=1` on a vehicle map: non-zero Box × ConvexMesh means the hulls were built and are
-colliding. **"The match ran" is NOT sufficient evidence** — if `McdComputeHull` returned 0
-for everything, the geometry would silently not exist and the match would run anyway.
+| | new hull | shipped-qhull control |
+|---|---:|---:|
+| Box × ConvexMesh | 6,713 | 5,563 |
+| Sphyl × ConvexMesh | 1,820 | 2,729 |
+| Sphere × ConvexMesh | 240 | 1,084 |
+
+Same 8 pairs firing, 39 census rows both sides, no crash either side; counts differ because
+ONS is non-deterministic. **This is the acceptance test, and the obvious one would have been
+wrong** — "the match ran" shows nothing, because `McdConvexMeshCreateHull` only checks the
+return value, so if every hull had failed the geometry would silently not exist and the match
+would run perfectly well. Non-zero Box × ConvexMesh is the proof.
+
+Then the shadow harness on the same map, 440 s, full distance:
+
+```
+Box x ConvexMesh  15,425 calls  14,463 bit-identical  962 float-noise
+                  0 ret  0 count  0 dims  0 overrun  0 nonfinite   worst 4.749e-04
+Box x Box          1,075 calls     946 bit-identical  129 float-noise   worst 1.526e-05
+$KD_SHADOW_DIVERGENCES empty.
+```
+
+The recovered collision code agrees with the shipped original on **15,425 real calls whose
+geometry came out of the replacement hull** — both "the hull is good" and "GJK still works on
+hulls this builds", on the busiest pair in the census. The 4.7e-04 is penetration depth in an
+iterative algorithm, the regime `proven.txt` already documents for GJK.
+
+**So the qhull half of §12 item 4 is done at all four tiers.** What is left of item 4 is the
+asset loader, which §3b shows is a larger and more load-bearing thing than §11 item 8
+implies.
 
 **Tier 1 exists: `test/hull_probe.sh`.** It runs the SHIPPED `McdComputeHull` and checks
 every claim the header makes in prose. **98,899 checks, 0 failures**, so the contract above
@@ -1901,7 +1922,7 @@ Everything else — code, tests, measurement, tooling — is self-service.
 | 1 | every pair the census shows the game calling is recovered and validated | **DONE.** Twelve pairs, eight objects, evidence in `proven.txt`. Re-opens if the census moves — it has twice. |
 | 2 | validated = 0 ret/count/dims/overrun in a live match, `KD_SELFTEST` clean, evidence on the line | **DONE** for those twelve. |
 | 3 | all three scenes clean for every recovered object, *and* checked for sensitivity | **DONE**, and the sensitivity check (§4a) is what makes it mean anything. |
-| 4 | qhull and the asset loader **replaced**, not recovered | **QHULL HALF DONE.** `src/McdConvexCreateHull/kd_convexhull.c` replaces all 15 exported functions — 1.4 MB → 10 KB — and passes all three tiers in §8a: 100,633 invariant checks, identical geometry and volumes, and a collision A/B that differs on 2 borderline pairs in 2.4 M. wasm32 clean with an identical symbol set. **Not yet run in the game.** The asset-loader half (`MeAssetDB`/`MeXML`/`MeAssetFactory`) is NOT STARTED and is a straight swap-in. §11 item 8. |
+| 4 | qhull and the asset loader **replaced**, not recovered | **QHULL HALF DONE, all four tiers.** `src/McdConvexCreateHull/kd_convexhull.c` replaces all 15 exported functions — 1.4 MB → 10 KB: 100,633 invariant checks, identical geometry and volumes, a collision A/B differing on 2 borderline pairs in 2.4 M, and **a live ONS match with 15,425 real GJK calls and 0 structural divergences**. wasm32 clean with an identical symbol set. The asset-loader half is NOT STARTED and is **not** the straight swap-in §11 item 8 implies — see §3b. |
 | 5 | no detector suppressed, nothing released without evidence | **HOLDING.** 23 objects quarantined, and §4a now shows the quarantine is load-bearing (`MdtPartition` alone turns a bit-identical scene into a SIGSEGV). |
 | 6 | builds as ordinary C for wasm32 **and arm64/armv7** | **wasm32 DONE** (99/99, byte-identical symbol sets). **arm64 NOT TRIED** — no cross-compiler installed. Nothing has been *executed* on either. |
 | 7 | engine runs on recovered Karma with **no shipped `.a` in the link at all** | **COLLISION HALF DONE** (§7b, two maps, 11 runs/arm, indistinguishable from stock). **SOLVER HALF BLOCKED**, but on one problem now rather than four — the arguments are recovered (§5a) and what remains is the frames, §11 item 2. |

@@ -17,6 +17,10 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
+/* Ghidra emits glibc's __ctype_b_loc() rather than the isalpha()-family macros
+   that expand to it, because that is what the object calls. Only <ctype.h>
+   declares it. MeXMLTree failed on nothing else. */
+#include <ctype.h>
 
 /* ---- what gcc 3.2 turned the standard library into ----------------------
     A call to strtol comes back out of the decompiler as __strtol_internal,

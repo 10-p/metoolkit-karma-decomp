@@ -22,13 +22,13 @@ freebie, the Android NDK), and to integrate the result into the engine's web bui
 
 What exists today:
 
-- **100 recovered objects**, all of them compiling for i386 *and* for wasm32.
+- **106 recovered objects**, all of them compiling for i386 *and* for wasm32.
 - **The full collision-detection path the game actually uses is recovered and validated** —
   all twelve interaction pairs UT2004 calls, each measured against the shipped original on
   real inputs from a live match. Evidence per object in `karma-decomp/proven.txt`. §6 has
   the census that says "twelve" and why that is the number to plan against.
 - **The whole set already compiles under Emscripten**, and its exported symbol NAMES are
-  **byte-identical to the i386 build for all 100 objects** — nothing added or dropped. So
+  **byte-identical to the i386 build for all 106 objects** — nothing added or dropped. So
   the ABI surface the engine links against does not change between targets, which was the
   thing most likely to turn this into a rewrite. See §4. (Names only: `wasm_check.sh`
   discards the binding letter. That gap let a recovered object export a *global* `putchar`
@@ -176,11 +176,11 @@ This had never been tried, so it was worth doing before anything else:
 
 ```
 emcc 5.0.7, no -m32, otherwise the same flags as the native build
-100 of 100 recovered objects compiled for wasm32.  0 failures.
+106 of 106 recovered objects compiled for wasm32.  0 failures.
 ```
 
 Stronger than that — the **exported symbol names are byte-identical to i386 for
-all 100 objects**, nothing added or dropped. So the ABI surface the engine links
+all 106 objects**, nothing added or dropped. So the ABI surface the engine links
 against does not change between the two targets, which was the thing most likely
 to turn this into a rewrite.
 
@@ -386,6 +386,38 @@ glibc-internal spelling — `__ctype_b_loc`, `__strtol_internal`, `_IO_putc`,
 `__compar_fn_t` — is a candidate for the same treatment; `kd_compat.h` already maps several
 back to portable equivalents and that list is the pattern to extend.
 
+### The three shapes of indirect call, and why wasm is unforgiving about all of them
+
+This is the single class of defect that has produced the most real bugs in this project,
+and **wasm is where it stops being survivable.** On x86 a call through a wrong-arity
+pointer corrupts quietly under caller-cleanup cdecl; wasm32 type-checks every indirect call
+against its table signature and **traps**. So every one of these had to be fixed at the
+source, and if you see a new one, fix it the same way rather than papering over it:
+
+| shape | what Ghidra did | fix |
+|---|---|---|
+| C++ virtual call through a local's vptr | dropped **every argument** | `gen_vtable_callsites.py`, 19 sites, §5a of `HANDOVER.md` |
+| call through a global API struct (`MeMemoryAPI.create`) | dropped the **size argument** — gcc reuses one `(%esp)` slot with `movl` instead of `push` | same tool, **412 sites** |
+| call through a `void *` struct member whose signature varies by a discriminator | not callable in C at all | cast via `__typeof__` of the actual arguments, never a hand-written signature |
+
+That last row is the one to internalise. `MeXMLHandler.fn` is deliberately `void *` because
+it is either an `MeXMLCallback` or an `MeXMLParseFn` depending on `->type`. The cast is
+built from `__typeof__` of the argument expressions **precisely so a float stays a float** —
+writing a plausible signature by hand is how the `-0` radius bug survived three sessions.
+
+### Data whose value is not in the bytes
+
+Two cases you will meet if you regenerate anything, and both look like the code is fine:
+
+- **A relocated `.rodata` word.** Its value lives in the relocation record; the section
+  holds a zero. Karma's XML handler tables are entirely this. `materialise_data_refs`
+  REFUSES relocated sections for that reason, and `materialise_relocated_data` is the
+  sibling that applies the relocations. If you ever see a table of null function pointers,
+  this is why.
+- **A zero-initialised static.** It carries no evidence of its own type, so guessing from
+  the bytes gives `static float x = 0.0f;` for what is really a function-pointer hook
+  installed at run time. The object's own DWARF is the authority.
+
 ### Test stubs must depend on their arguments
 
 The single most expensive lesson of this project. `difftest_pair`'s triangle generator
@@ -408,7 +440,7 @@ physics.
    all of them: `scene_chain.c` (collision-free, the authoritative trajectory signal),
    `scene_boxes_on_plane.c` (exercises the geometry dispatch), `scene_ragdoll.c` (nine
    capsules on ball-socket joints — the other two make **not one Sphyl call** between them).
-   Currently **100/100 clean on all three** on i386 — but read `HANDOVER.md` §4a before
+   Currently **106/106 clean on all three** on i386 — but read `HANDOVER.md` §4a before
    putting weight on that number: only eight of 103 objects have measurable sensitivity on
    any of these scenes, and `test/scene_census.sh` and `test/gate_sensitivity.sh` exist to
    say which. **Getting that under a wasm build is your first milestone.**
@@ -420,7 +452,7 @@ physics.
    contact regime and a figure without its regime is meaningless. `KD_GENARGS=1` and
    `KD_FIXEDSHAPE=1` are the two that found real bugs most recently.
 3. **`test/wasm_check.sh`** — compiles the whole set for wasm32 and diffs the exported
-   symbols against the native build. Currently 100/100. **Run this after any change
+   symbols against the native build. Currently 106/106. **Run this after any change
    to the recovery pipeline**; it is the cheapest possible early warning that a change has
    broken portability. It compares NAMES only — see the note at the end of §4.
 4. **`test/kd_shadow.c`** — the in-game shadow harness. Runs both implementations on the
@@ -484,7 +516,7 @@ gcc -m64 ... -o /tmp/rag_hx   test/scene_ragdoll.c  <linux_hx_single/*.a>
 - **Nothing has been RUN under wasm.** The whole set compiles and exports identical
   symbols, and that is all §4 hazards 2 and 3 settle. Hazards 1, 4 and 5 are runtime and
   entirely open.
-- **100 of ~150 objects compile**, 25 do not. But read `HANDOVER.md` §3b then §3 before reading that
+- **106 of ~150 objects compile**, 17 do not. But read `HANDOVER.md` §3b then §3 before reading that
   as 60% done — see the next bullet, it is the most important thing in this file for
   planning purposes.
 - **19 objects are deliberately quarantined** by eight safety detectors. They compile but
@@ -637,6 +669,37 @@ Read `karma-decomp/HANDOVER.md` for how the recovery pipeline works, and
 
 A log of the things that would otherwise surprise you, newest first. If you have read an
 older copy of this file, this is the diff.
+
+**2026-08-24, third session.** The biggest change to your side of the line since this file
+was written. Read all five points.
+
+- **106 objects** (was 98 two sessions ago), **17 fail**. wasm32 106/106 with
+  byte-identical exported symbol sets.
+- **`libMcdConvexCreateHull` (qhull, 1.4 MB) IS REPLACED** by
+  `src/McdConvexCreateHull/kd_convexhull.c`, ~600 lines of plain C, **10 KB**, and it is
+  validated at four tiers including a live ONS match with 15,425 real GJK calls and zero
+  structural divergences. **For you this is the single biggest win in the file**: it is
+  ordinary portable C with no third-party build integration, it compiles for wasm32 with a
+  symbol set identical to i386, and it removes 1.4 MB of 1998 global-state C from the link.
+  Stage it with `test/make_hull_lib.sh`. Its acceptance test is `test/hull_probe.sh`
+  (100,633 invariant checks) and `test/hull_ab.sh` (same-solid geometry diff) — **run both
+  if you ever touch it**, because a hull that is subtly wrong does not fail at load; it
+  degrades GJK silently, and GJK's support function hill-climbs that structure ~685,000
+  times a match.
+- **The `.ka` asset pipeline is now recovered, 9 objects of 9** — `MeChunk`, `MeXMLParser`,
+  `MeXMLTree`, `MeXMLOutput`, `MeAssetDB`, `MeAssetDBXMLIO`, `MeAssetDBXMLInput_1_0`,
+  `MeAssetFactory`, `MeFAsset`. **This matters to you more than the object count suggests:**
+  it is the path `KCreateAssetDB` parses `../KarmaData/*.ka` through and `KSkeletal.cpp:388`
+  instances **every ragdoll** through. Without it there are no ragdolls, on any target.
+- **A portability shim you must not remove: `__ctype_b_loc` in `kd_compat.h`.** `<ctype.h>`
+  declares it only on glibc; Emscripten's musl has no such function, so `MeXMLTree`,
+  `MeXMLParser` and `MeFAsset` compiled for i386 and not for wasm32. The recovered code does
+  not call `isspace()` — it indexes glibc's TABLE directly, the way the shipped object does
+  — so the shim rebuilds the table from the C library's own predicates. Verified entry by
+  entry against real glibc: **0 of 384 differ**. It is `#ifndef __GLIBC__`, so i386 is
+  untouched.
+- **Still nothing has been EXECUTED on wasm.** That remains the single largest unknown on
+  your side, and it has not moved.
 
 **2026-08-24, second session.**
 

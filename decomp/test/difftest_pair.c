@@ -147,6 +147,35 @@ static McdGeometryID mk_cylinder(McdFrameworkID fw, int seed)
    transform sequence differs and numbers either side of this switch are not
    comparable iteration by iteration, only in aggregate. */
 static int kd_fixedshape;
+static int kd_grid;          /* KD_GRID=1: axis-aligned rotations, the game's regime */
+
+/* KD_DIMSHIST=1 prints a histogram of (original dims, recovered dims) instead
+   of four sample dumps. Four samples is enough to recognise a divergence and
+   not enough to localise one: `dims` is the FEATURE LABEL, so the histogram
+   says which branches of the contact-generation switch the two ends up in, and
+   therefore which decision upstream differs. */
+static int kd_dimshist;
+#define DIMSHIST_MAX 64
+static struct { int a, b, n; } kd_dh[DIMSHIST_MAX];
+static int kd_dh_n;
+/* Among dims-divergent pairs, how many agree BITWISE on every separation. That
+   separates "the two broke an exact tie differently" from "the two computed
+   different numbers" — and they need different fixes. */
+static int kd_dh_septie, kd_dh_sepdiff;
+
+/* KD_JITTER=<eps> displaces model2 by eps between the two calls. With
+   KD_SELFTEST=1 that runs the ORIGINAL against ITSELF on inputs that differ by
+   eps, which answers a question no A/B can: is the answer a STABLE property of
+   the geometry, or is it decided by rounding? A gate that demands we reproduce
+   a decision the original itself cannot reproduce under a 1e-6 nudge is
+   demanding the wrong thing. */
+static float kd_jitter;
+static void dimshist_add(int a, int b)
+{
+    for (int i = 0; i < kd_dh_n; i++)
+        if (kd_dh[i].a == a && kd_dh[i].b == b) { kd_dh[i].n++; return; }
+    if (kd_dh_n < DIMSHIST_MAX) kd_dh[kd_dh_n++] = (typeof(kd_dh[0])){a, b, 1};
+}
 static int kd_sharecache;      /* KD_SHARECACHE=1 — the pre-2026-08-24 behaviour */
 
 /* Declared here because reshape() uses them; built after the ConvexMesh type is
@@ -488,6 +517,46 @@ static void dump(int *n, const char *fn, const char *what, int iter,
 }
 
 /* proper rotation from random axis-angle, so the inputs are physically real */
+/* An axis-aligned rotation: one of the 24 proper rotations whose rows are
+   exactly 1/0/-1.
+       This is not a corner case, it is THE case. IxCylinderCylinder reads
+       925 dims_diff in 24,111 real calls (3.8%) and 20 in 200,000 synthetic
+       pairs (0.01%), a factor of 380, and proven.txt records the real
+       divergences as landing on "grid-aligned transforms, rows of exactly
+       1/0/-1". A random rotation essentially never produces an exact tie
+       between two separating axes; an axis-aligned one produces them
+       constantly, and which axis wins a tie is exactly what `dims` reports.
+       So the synthetic tier was measuring a regime the game does not spend
+       its time in — §12's "is any input fixed for the whole run that the game
+       varies?", one level up: the DISTRIBUTION was wrong, not just a value.
+
+       Translation stays random: the real dumps show ordinary float positions
+       with axis-aligned rotations, which is what an actor resting on level
+       geometry looks like. */
+static void grid_tm(MeMatrix4Ptr tm, float spread)
+{
+    static const int perm[6][3] = {{0,1,2},{0,2,1},{1,0,2},
+                                   {1,2,0},{2,0,1},{2,1,0}};
+    static const int parity[6]  = { 1, -1, -1, 1, 1, -1 };
+    int p = (int)(frnd(0.0f, 5.999f));
+    if (p < 0) p = 0; else if (p > 5) p = 5;
+    int s[3];
+    s[0] = frnd(-1, 1) < 0 ? -1 : 1;
+    s[1] = frnd(-1, 1) < 0 ? -1 : 1;
+    /* det must be +1 — a reflection is not a rotation and Karma would be
+       entitled to do anything with one. */
+    s[2] = parity[p] * s[0] * s[1];
+    for (int i = 0; i < 3; i++) {
+        tm[i][0] = tm[i][1] = tm[i][2] = 0.0f;
+        tm[i][perm[p][i]] = (float)s[i];
+        tm[i][3] = 0.0f;
+    }
+    tm[3][0] = kd_origin + frnd(-spread, spread);
+    tm[3][1] = kd_origin + frnd(-spread, spread);
+    tm[3][2] = kd_origin + frnd(-spread, spread);
+    tm[3][3] = 1;
+}
+
 static void rand_tm(MeMatrix4Ptr tm, float spread)
 {
     float ax = frnd(-1, 1), ay = frnd(-1, 1), az = frnd(-1, 1);
@@ -523,6 +592,9 @@ int main(int argc, char **argv)
     kd_gen_check = getenv("KD_GENARGS") != NULL;
     kd_sharecache = getenv("KD_SHARECACHE") != NULL;
     kd_fixedshape = getenv("KD_FIXEDSHAPE") != NULL;
+    kd_grid = getenv("KD_GRID") != NULL;
+    kd_dimshist = getenv("KD_DIMSHIST") != NULL;
+    { const char *j = getenv("KD_JITTER"); kd_jitter = j ? (float)atof(j) : 0.0f; }
     const char *e = getenv("KD_SELFTEST");
     int selftest = (e && *e == '1');
     const char *want = (argc > 1 && strcmp(argv[1], "all")) ? argv[1] : NULL;
@@ -561,9 +633,10 @@ int main(int argc, char **argv)
                one or two contacts, ~20% touching. They are different tests and
                they find different things. */
             reshape(m1, 0); reshape(m2, 1);
-            rand_tm(McdModelGetTransformPtr(m1), PAIRS[k].spread * kd_spread);
-            if (!fixed2) rand_tm(McdModelGetTransformPtr(m2),
-                                 PAIRS[k].spread * kd_spread);
+            void (*tmfn)(MeMatrix4Ptr, float) = kd_grid ? grid_tm : rand_tm;
+            tmfn(McdModelGetTransformPtr(m1), PAIRS[k].spread * kd_spread);
+            if (!fixed2) tmfn(McdModelGetTransformPtr(m2),
+                              PAIRS[k].spread * kd_spread);
 
             McdModelPair pair;  memset(&pair, 0, sizeof pair);
             pair.model1 = m1; pair.model2 = m2;
@@ -588,6 +661,11 @@ int main(int argc, char **argv)
 
             kd_gen_side = 0; kd_gen_calls[0] = kd_gen_calls[1] = 0;
             int a = PAIRS[k].orig(&pair, &rA);
+            if (kd_jitter != 0.0f) {
+                MeMatrix4Ptr jt = McdModelGetTransformPtr(m2);
+                for (int j = 0; j < 3; j++) jt[3][j] += kd_jitter;
+                McdModelUpdate(m2);
+            }
             kd_gen_side = 1;
             int b = selftest ? PAIRS[k].orig(pb, &rB)
                              : PAIRS[k].rec (pb, &rB);
@@ -638,7 +716,18 @@ int main(int argc, char **argv)
                     if (d > pair_worst) pair_worst = d;
                 }
             if (structural) {
-                dimsdiff++; dump(&dumped, PAIRS[k].name, "contact dims", t, m1, m2,
+                dimsdiff++;
+                if (kd_dimshist) {
+                    int septie = 1;
+                    for (int i = 0; i < rA.contactCount && i < MAXC; i++) {
+                        if (cA[i].dims != cB[i].dims)
+                            dimshist_add(cA[i].dims, cB[i].dims);
+                        if (memcmp(&cA[i].separation, &cB[i].separation,
+                                   sizeof cA[i].separation)) septie = 0;
+                    }
+                    if (septie) kd_dh_septie++; else kd_dh_sepdiff++;
+                }
+                dump(&dumped, PAIRS[k].name, "contact dims", t, m1, m2,
                                  &rA, &rB); continue;
             }
             /* Only pairs that AGREED contribute to the numeric spread. Letting a
@@ -664,6 +753,22 @@ int main(int argc, char **argv)
         printf("  DIFFERENT contact count: %d\n", countdiff);
         printf("  DIFFERENT contact dims : %d\n", dimsdiff);
         printf("  worst numeric delta    : %.3e  (over pairs that agreed)\n", worst_ok);
+        if (kd_dimshist) {
+            for (int i = 0; i < kd_dh_n; i++)
+                for (int j = i + 1; j < kd_dh_n; j++)
+                    if (kd_dh[j].n > kd_dh[i].n) {
+                        typeof(kd_dh[0]) tmp = kd_dh[i];
+                        kd_dh[i] = kd_dh[j]; kd_dh[j] = tmp;
+                    }
+            printf("  dims histogram (orig -> recovered):   "
+                   "separations bit-identical %d, differing %d\n",
+                   kd_dh_septie, kd_dh_sepdiff);
+            kd_dh_septie = kd_dh_sepdiff = 0;
+            for (int i = 0; i < kd_dh_n; i++)
+                printf("      0x%-4x -> 0x%-4x  %d\n",
+                       kd_dh[i].a, kd_dh[i].b, kd_dh[i].n);
+            kd_dh_n = 0;
+        }
         printf("  -> %s\n\n", bad == 0
                ? "PASS -- every discrete decision matches"
                : "FAIL -- behavioural divergence");

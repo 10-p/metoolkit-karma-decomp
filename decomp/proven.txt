@@ -548,6 +548,133 @@ IxConvexTriList       RELEASED 2026-08-23, and the tenth and last pair the censu
 #                     what the instruction counts suggest, and the 80-bit intermediates are
 #                     not the cause. See dead end 17.
 #
+#                     RE-FRAMED 2026-08-24 (fifth session), and the re-framing is
+#                     the result: `dims` IS NOT A MEASUREMENT FOR THIS PAIR IN
+#                     THIS REGIME. The shipped library does not reproduce it
+#                     either.
+#
+#                     Two new switches in difftest_pair.c made this measurable in
+#                     1.3 seconds instead of a map run:
+#
+#                       KD_GRID=1    axis-aligned rotations -- one of the 24
+#                                    proper rotations whose rows are exactly
+#                                    1/0/-1 -- which is the regime the real
+#                                    divergences were logged in. Translations
+#                                    stay random.
+#                       KD_JITTER=e  displace model2 by e BETWEEN the two calls.
+#                                    With KD_SELFTEST=1 that runs the ORIGINAL
+#                                    against ITSELF on inputs differing by e.
+#                       KD_DIMSHIST=1 histogram of (orig dims -> recovered dims)
+#                                    instead of four sample dumps.
+#
+#                     WHY THE SYNTHETIC TIER WAS READING 0.01% AND THE GAME 3.8%.
+#                     It was testing the wrong DISTRIBUTION, not the wrong value:
+#
+#                       random rotations   20 dims in 200,000    (0.03% of touching)
+#                       KD_GRID=1        6,385 dims in  52,925 touching  (12.1%)
+#
+#                     a factor of 380. SELFTEST on the same 200,000 grid pairs is
+#                     100% bit-identical, so the harness is sound in this regime.
+#
+#                     WHAT IS ACTUALLY HAPPENING. Instrumenting the recovered
+#                     OverlapCylCyl to print every separating-axis candidate:
+#
+#                       cand 10 sep -0.301695902
+#                       cand  6 sep -0.301695973
+#                       cand  9 sep -0.301695914
+#                       cand  8 sep -0.301695913
+#                       cand  2 sep -0.301695922
+#
+#                     Five candidates agreeing to seven significant figures. Over
+#                     57,079 calls with two or more candidates, the gap between
+#                     the winner and the runner-up is:
+#
+#                       exact tie                   4,236   7.42%
+#                       < 1e-7 relative (1 ULP)    10,255  17.97%
+#                       1e-7 .. 1e-6                2,458   4.31%
+#                       1e-6 .. 1e-4                  833   1.46%
+#                       1e-4 .. 1e-2                2,658   4.66%
+#                       > 1e-2 (well separated)    36,639  64.19%
+#
+#                     29.7% of calls pick their separating axis on a margin of
+#                     1e-6 relative or less. For an axis-aligned cylinder pair the
+#                     candidate axes are geometrically DEGENERATE -- they measure
+#                     the same separation -- so the winner, and therefore
+#                     normInfo, and therefore dims, is decided by rounding.
+#
+#                     THE YARDSTICK, and this is the part that settles it. Run the
+#                     SHIPPED ORIGINAL against ITSELF with model2 displaced by
+#                     1e-7 m -- a ten-millionth of a metre, below f32 resolution
+#                     at ordinary UT2004 world coordinates -- on the same 200,000
+#                     grid pairs:
+#
+#                       nudge     count_diff  dims_diff  worst delta
+#                       0              0           0     0.000e+00
+#                       1e-12          0           0     0.000e+00
+#                       1e-9           0          10     1.788e-07
+#                       1e-7           0       7,798     7.997e-01
+#                       1e-5           5       7,821     8.000e-01
+#
+#                     compared with the recovered code against the original, with
+#                     NO nudge at all:
+#
+#                       recovered      1       6,432     8.000e-01
+#
+#                     The shipped library disagrees with ITSELF, under a
+#                     displacement smaller than float precision, MORE often than
+#                     our recovery disagrees with it -- and produces the same
+#                     8.0e-01 worst delta that the recovery is charged with. The
+#                     0 and 1e-12 rows are the controls: the probe is inert when
+#                     the input does not move.
+#
+#                     AND IT IS THIS PAIR ONLY. Same probe, same nudge, grid
+#                     regime, other pairs in the driver:
+#
+#                       McdBoxBoxIntersect                 0 of  28,401 touching
+#                       McdSphereSphereIntersect           0 of  76,407
+#                       McdSphylSphylIntersect             0 of  90,168
+#                       McdSphylBoxIntersect               0 of  62,078
+#                       McdCylinderTriangleListIntersect   0 of 147,389
+#                       McdCylinderCylinderIntersect   7,798 of  52,925
+#
+#                     So this is not "float comparisons are unstable", it is a
+#                     property of THIS function's separating-axis set on
+#                     axis-aligned input. Note the sibling that was RELEASED the
+#                     same week, McdCylinderTriangleListIntersect, is perfectly
+#                     stable -- which is what makes the contrast evidence rather
+#                     than an excuse.
+#
+#                     THE TIE-BREAK HYPOTHESIS IS REFUTED, and it was the obvious
+#                     one. Changing `<` to `<=` at all six `maxSeparation <` sites
+#                     and at both sites of the endpoint min-search, one at a time,
+#                     under KD_GRID=1: no change at all except at
+#                     IxCylinderCylinder.c:1008, which goes 6,385 -> 7,563, i.e.
+#                     WORSE. The shipped code agrees: at 0x26aa it does
+#                     `fcoms -0x268(%ebp); fnstsw %ax; test $0x45,%ah; jne` --
+#                     take the new candidate iff STRICTLY greater, which is what
+#                     the recovery already does.
+#
+#                     WHAT THIS DOES NOT SHOW, and it matters:
+#                       * NOT that the recovered arithmetic matches the original's.
+#                         It does not -- the 1-ULP differences are real. What is
+#                         shown is that the quantity being compared cannot
+#                         DISCRIMINATE between two implementations in this regime.
+#                       * NOT an explanation for the 3 count_diff in 24,111 real
+#                         calls. count is far more stable than dims under the same
+#                         probe (0 at a 1e-7 nudge, 5 at 1e-5). That residue is
+#                         0.012%, against the 0.0013% IxSphylPrimitives was
+#                         released on, so it is small and it is not zero.
+#
+#                     DISPOSITION. Do NOT pull it from the substituted build: the
+#                     divergence it is charged with is a label the shipped library
+#                     re-rolls whenever a body moves a ten-millionth of a metre,
+#                     which is every frame. Do NOT release it either -- the
+#                     count_diff residue has not been accounted for. What would
+#                     settle it is a live match scoring ret/touch/count/position/
+#                     separation, with dims reported SEPARATELY and read as
+#                     non-discriminating for this pair, the way `nonfinite` is
+#                     already read separately for NaN input.
+#
 # IxBoxTriList        Held by the reconstructed-frame detector (kd_argslot_), which exists
 #                     because IxSphereTriList compiled, passed the substitute gate and then
 #                     segfaulted on its first live call. So a clean synthetic run is not

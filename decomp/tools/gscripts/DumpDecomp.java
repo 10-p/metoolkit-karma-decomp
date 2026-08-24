@@ -27,6 +27,17 @@ public class DumpDecomp extends GhidraScript {
         // passes the arguments properly.
         applyCallsiteOverrides();
 
+        // The same repair, aimed at C++ virtual calls instead of a C callback.
+        // Ghidra drops every argument at a call through a function pointer, and
+        // in the libMdtKea solver driver that is the whole blocker: the calls
+        // into the three kernels already proven bit-identical come out as
+        // `(**(code **)(_vanillaFunctions + 0x10))()`. Which function each slot
+        // reaches is worked out by tools/gen_vtable_callsites.py, from
+        // relocation records rather than from decompiled text, and handed here
+        // as a table of addresses. See that file's docstring for why each row
+        // is allowed to be believed.
+        applyVtableCallsiteOverrides();
+
         // Ghidra decides a calling convention per function during analysis, and
         // for this corpus it decides wrong: 19 functions across 9 objects come
         // out tagged __regparm1 or __regparm2. gcc 3.2 on i386 passes everything
@@ -145,6 +156,81 @@ public class DumpDecomp extends GhidraScript {
         }
         println("KARMAHDR: __regparm -> __cdecl on " + changed + " function(s), "
                 + failed + " refused");
+    }
+
+    /**
+     * Apply a real signature at each C++ virtual call site named in
+     * KARMA_VTABLE_CALLSITES.
+     *
+     * The rows are `<object> <ghidra-address> <method> <class>+<slot>`, produced
+     * by tools/gen_vtable_callsites.py by reading the vptr store's relocation
+     * ("vtable for keaFunctions_Vanilla", addend +8 = the Itanium ABI address
+     * point) and the vtable's own relocation records. Nothing in them is
+     * inferred from decompiled output.
+     *
+     * The signature itself is whatever ParseKarmaHeaders already parsed out of
+     * kd_protos.h into this program's DataTypeManager, looked up by the bare
+     * method name — the same source, and the same `this`-as-first-stack-argument
+     * convention, that every other call in the corpus uses.
+     *
+     * Applying a WRONG signature here would be worse than applying none: it
+     * would call the right function with the wrong arguments and still compile.
+     * So a row is skipped, loudly, if the address is not inside a function, if
+     * the method has no prototype, or if the override is refused.
+     */
+    private void applyVtableCallsiteOverrides() {
+        String table = System.getenv("KARMA_VTABLE_CALLSITES");
+        if (table == null) {
+            println("VTABLE: KARMA_VTABLE_CALLSITES not set, skipping");
+            return;
+        }
+        String me = currentProgram.getName();
+        DataTypeManager dtm = currentProgram.getDataTypeManager();
+        FunctionManager fm = currentProgram.getFunctionManager();
+        int applied = 0, noproto = 0, nofunc = 0, refused = 0, rows = 0;
+
+        try (java.io.BufferedReader r =
+                 new java.io.BufferedReader(new FileReader(table))) {
+            String line;
+            while ((line = r.readLine()) != null) {
+                line = line.trim();
+                if (line.isEmpty() || line.startsWith("#")) continue;
+                String[] p = line.split("\\s+");
+                if (p.length < 3) continue;
+                // The table covers the whole corpus; each program takes its own.
+                if (!p[0].equals(me)) continue;
+                rows++;
+                Address site = currentProgram.getAddressFactory()
+                                   .getDefaultAddressSpace()
+                                   .getAddress(Long.parseLong(p[1].substring(2), 16));
+                Function host = fm.getFunctionContaining(site);
+                if (host == null) { nofunc++; continue; }
+
+                DataType dt = null;
+                java.util.List<DataType> hits = new ArrayList<>();
+                dtm.findDataTypes(p[2], hits);
+                for (DataType d : hits)
+                    if (d instanceof FunctionDefinition) { dt = d; break; }
+                if (dt == null) { noproto++;
+                    println("VTABLE: no prototype for " + p[2] + " at " + p[1]);
+                    continue; }
+
+                try {
+                    HighFunctionDBUtil.writeOverride(
+                        host, site, (FunctionDefinition) dt);
+                    applied++;
+                } catch (Exception e) {
+                    refused++;
+                    println("VTABLE: override refused at " + p[1] + ": " + e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            println("VTABLE: could not read " + table + ": " + e.getMessage());
+            return;
+        }
+        println("VTABLE: " + me + " rows=" + rows + " applied=" + applied
+                + " no-prototype=" + noproto + " not-in-a-function=" + nofunc
+                + " refused=" + refused);
     }
 
     private FunctionDefinitionDataType triListFnSig() {

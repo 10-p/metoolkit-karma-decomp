@@ -1134,6 +1134,35 @@ def fix_stack_address_name(text, diag, ctx):
 fix_stack_address_name.file_wide = True
 
 
+def fix_void_assignment(line, diag, ctx):
+    """`uVar2 = MeMemoryAPI.destroyAligned(p);` — that function returns void.
+
+    Ghidra models a call's return value from the ABI (eax is live afterwards, so
+    it invents a variable) rather than from the callee's type, so a call to a
+    void function comes out assigned to something. GCC then says `invalid use of
+    void expression` and points at the call.
+
+    Dropping the assignment is exactly right and is not a guess about types: the
+    compiler has already resolved the callee and told us its return type is void.
+    Contrast dead end 9, where the compiler was reasoning about GHIDRA's types
+    and was therefore wrong — here it is reasoning about the real prototype out
+    of metoolkit's own headers.
+
+    Deliberately narrow. Only a whole statement of the form `lhs = rhs;` on the
+    line GCC named, so a nested or compound expression is left alone rather than
+    rewritten by pattern. The assigned variable usually becomes unused, which is
+    harmless — the recovered sources compile with -w."""
+    if 'invalid use of void expression' not in diag:
+        return None
+    m = re.match(r'^(\s*)[A-Za-z_]\w*\s*=\s*(.+;)\s*$', line)
+    if not m:
+        return None
+    rhs = m.group(2)
+    if '(' not in rhs:                    # not a call; leave it
+        return None
+    return m.group(1) + rhs
+
+
 PTR_REF = re.compile(r'(?<![\w])(PTR_[A-Za-z0-9_]*?_([0-9a-f]{8}))\b')
 
 
@@ -1896,6 +1925,8 @@ REPAIR_RULES = [
      fix_stack_address_name),
     (re.compile(r'too many arguments to function'),
      fix_too_many_arguments),
+    (re.compile(r'invalid use of void expression'),
+     fix_void_assignment),
 ]
 
 

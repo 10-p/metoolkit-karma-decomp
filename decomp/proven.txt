@@ -395,6 +395,26 @@ IxConvexTriList       RELEASED 2026-08-23, and the tenth and last pair the censu
 #                     calls on every map so far (HANDOVER.md 3), and object count is the
 #                     wrong progress metric. Recorded so that nobody re-derives the old
 #                     clean result and releases it.
+#
+#                     AND THE ZERO IS NOW EXPLAINED, 2026-08-24. It is not that no map has
+#                     happened to exercise this pair -- no map CAN. UT2004's single
+#                     dispatcher, KIntersect() in Source/Engine/Src/KFarfield.cpp:936,
+#                     intercepts Box x TriangleList and calls its own
+#                     KBoxTriangleListIntersect instead of the registered Karma function:
+#
+#                         else if(type1 == kMcdGeometryTypeBox &&
+#                                 type2 == kMcdGeometryTypeTriangleList)
+#                             result->touch = KBoxTriangleListIntersect(p, result);
+#
+#                     The only two references to interactions->intersectFn in the whole
+#                     engine are that function's null check and its call, and the call is
+#                     in the else branch. So McdBoxTriangleListIntersect is registered and
+#                     UNREACHABLE, and so is the entire Aggregate family, which is
+#                     intercepted on the line above.
+#
+#                     This object is therefore DEAD CODE, not a live crash risk, and the
+#                     standing request for "a map that exercises Box x TriangleList" is
+#                     withdrawn -- it was unanswerable. HANDOVER.md 3a.
 
 
 # --- libMdtKea, the solver ---------------------------------------------------
@@ -489,6 +509,137 @@ MdtUtils              Bit-identical on scene_ragdoll with 4.113e+00 m of
 #
 # --- what is actually blocking the solver ------------------------------------
 #
+# REWRITTEN 2026-08-24 (second session). The argument-dropping half of this is
+# SOLVED; what is left is one thing, and it is not the thing this section used
+# to say. Read the next block before the per-object notes, which are kept below
+# with their status corrected in place.
+#
+# --- SOLVED: the vtable dispatches now carry their arguments ------------------
+#
+# Every virtual call in keaRbdCore_unified and keaLCPSolver used to be emitted
+# with EVERY ARGUMENT DROPPED, because Ghidra has no signature for a call
+# through a function pointer. That is now fixed at the source, in the dumps:
+#
+#   before   (**(code **)(_vanillaFunctions + 4))();
+#   after    (**(code **)(_vanillaFunctions + 4))
+#                      (&vanillaFunctions,mem.invIworld,mem.vhmf,blist,tlist,
+#                       num_bodies,parameters.stepsize);
+#
+# which is calcIworldandNonInertialForceandVhmf's demangled signature exactly.
+# All nine dispatches in the driver and all ten in the LCP are restored.
+#
+# HOW, and why it is allowed to be believed. tools/gen_vtable_callsites.py
+# resolves each site from the machine code -- `mov -0xb8(%ebp),%ecx` then
+# `call *0x10(%ecx)` -- by walking back to the mov that defined the register and
+# looking the frame offset up in the vptr stores vtable_slots.vptr_stores()
+# reads out of the constructor's RELOCATIONS. Nothing is inferred from
+# decompiled text. DumpDecomp.java then applies the slot's real signature at
+# that address, the same writeOverride mechanism KD_CALLSITE_SIG=trilist uses.
+#
+#   * the 19 resolved sites reproduce the 19 dispatches in the old dump
+#     one-for-one -- an exact independent match;
+#   * the slot mapping agrees with test/scene_census.sh's count of
+#     platformInit / calcJinvMandRHS / calcIworld... / calculateConstraint...
+#     running 900 times each in 900 steps, measured months apart for an
+#     unrelated reason;
+#   * Ghidra's own ELF loader reports the same relocation, as
+#     `External Location = _ZTV20keaFunctions_Vanilla+0x8`.
+#
+# ONE BUG WORTH NOT REPEATING. The first version computed the call site as
+# `section base + function offset + call offset`. objdump's offsets are
+# SECTION-relative, so the function offset was counted twice. keaRbdCore_unified
+# hid it completely -- its only relevant function is at offset 0, where the two
+# agree and 9/9 applied -- while keaLCPSolver's later sites were thrown past the
+# end of .text into .eh_frame and SIX sites were being applied at addresses that
+# were simply wrong. A signature at a wrong address is not a no-op: it can land
+# on another call site and give it somebody else's parameter list, which
+# compiles. _is_indirect_call() now checks the bytes (0xFF /2) before the
+# address is used.
+#
+# ADOPTED as out8, and the adoption is unusually clean: only 2 of 153 dumps
+# differ from out6, against 103 of 153 for out5 -> out6. Every piece of in-game
+# evidence above therefore still applies to a byte-identical dump. All seven
+# gates green -- 99 objects clean on three scenes, all 99 substituted TOGETHER
+# bit-identical on scene_chain over 900 steps, wasm32 99/99 with identical
+# symbol sets, 0 frame-bound violations, 0 interface errors, difftest self-test
+# 12/12 with the real run reproducing the documented baseline exactly.
+#
+# --- WHAT IS LEFT, and it is now ONE thing -----------------------------------
+#
+# All four objects still fail on arguments that are GENUINELY MISSING from the
+# decompiled call, not merely dropped for want of a signature:
+#
+#   keaLCPSolver     too few arguments to keaMatrix_pcSparse__makeFromPcSparsePSM;
+#                    expected 10, have 9   (one MIDDLE argument, not `this` --
+#                    the call already passes pkVar4 as its first argument)
+#   keaLCP_new       nine calls each short by exactly one, at NON-UNIFORM frame
+#                    offsets (see the keaLCP_new entry below)
+#   keaIntegrate_pc  stack0xffffffa0
+#   keaRbdCore_unified  stack0xfffffdd8 / stack0xfffffe2c / stack0xfffffe34 /
+#                    register0x00000010
+#
+# AND HERE IS THE FINDING THAT SHARPENS "Ghidra cannot model these frames":
+# **the DWARF does not say where these variables live.** Not "Ghidra failed to
+# use it" -- it is not there. For MdtKeaAddConstraintForces every parameter and
+# local uses DWARF abbrev 33/34/35, and those abbrevs declare NO DW_AT_location:
+#
+#   $ readelf --debug-dump=abbrev keaRbdCore_unified.o
+#     abbrev 33: DW_TAG_formal_parameter        (no DW_AT_location)
+#     abbrev 34: DW_TAG_variable                (no DW_AT_location)
+#     abbrev 35: DW_TAG_variable                (no DW_AT_location)
+#     abbrev 45: DW_TAG_formal_parameter        has DW_AT_location
+#     abbrev 46: DW_TAG_variable                has DW_AT_location
+#
+# Other functions in the SAME OBJECT use 45/46 and are located normally, so this
+# is per-function, not a property of the build. The names and types are present;
+# only the locations are gone. No tool can recover that frame from debug info,
+# and inferring it from the code is exactly the guess the guessed-stack-frame
+# detector exists to stop -- MdtPartition compiled that way and segfaulted.
+#
+# THE ONE LEAD THAT IS NOT A GUESS. The by-value INCOMING parameters are pinned
+# by the cdecl ABI, not by debug info, and Ghidra already has the signature:
+#
+#   pconstraints  ebp+0x08   (MdtKeaConstraints, 92 bytes)
+#   blist         ebp+0x64
+#   tlist         ebp+0x68
+#   num_bodies    ebp+0x6c
+#   parameters    ebp+0x70   (MdtKeaParameters, 76 bytes)
+#
+# CONFIRMED against the machine code, which is why it is written down here: the
+# prologue does `lea 0x8(%ebp),%esi` and `lea 0x70(%ebp),%esi` -- the two
+# by-value aggregates -- and copies them to outgoing argument areas. So the
+# `in_stack_*` / `register0x00000010` copy loops are outgoing BY-VALUE ARGUMENT
+# passing that Ghidra rendered clumsily, not unknowable locals. That is where a
+# next attempt should start, and it is Ghidra-side.
+#
+# --- ALSO SOLVED: the vptr STORE is fully inverted, and not yet written -------
+#
+# Both objects still fail on `_vanillaFunctions` / `_vanillaQMatrix` / etc.
+# being undeclared. That is the SAME EXTERNAL-slot addend collision as keaMemory
+# (HANDOVER.md 5) and it is already inverted exactly, uniquely, by existing
+# machinery -- ghidra_clean.relocation_targets(obj, per_function=True):
+#
+#   keaRbdCore_unified  MdtKeaAddConstraintForces
+#     __ZN12keaFunctions8initPoolEPvi          -> (_ZTV20keaFunctions_Vanilla, 8)
+#     __ZN12keaLCPSolver8solveLCPE...          -> (_ZTV26keaMatrix_pcSparse_vanilla, 8)
+#   keaLCPSolver  makeXandW / PrincipalSubmatrix / PrincipalPivotTransform
+#     ___gxx_personality_v0                    -> (_ZTV26keaMatrix_pcSparse_vanilla, 8)
+#
+# +8 is the Itanium ABI address point. So `_vanillaFunctions = keaFunctions::
+# initPool;` is really `vanillaFunctions.vptr = &vtable[2]`, and
+# `__gxx_personality_v0` is not the personality routine at all. Corpus-wide only
+# these 2 objects import a vtable, so the blast radius is contained.
+#
+# DELIBERATELY NOT IMPLEMENTED, and the reason matters. Writing it would remove
+# an error class from two objects that STILL would not compile, because of the
+# genuinely-missing arguments above -- so no gate could see whether the rewrite
+# was right or wrong. An unvalidatable generator change is the exact risk
+# profile that produced dead ends 9 and 10. Do the frame work first; then this
+# becomes verifiable and is an afternoon.
+#
+# The per-object notes below are from before that session. Their diagnoses stand
+# except where the block above corrects them.
+#
 # keaRbdCore_unified  THE DRIVER (MdtKeaAddConstraintForces, 900 calls/900
 #                     steps). Quarantined. Ghidra lost the frame completely:
 #                     the body is full of in_stack_fffffeNN and
@@ -502,6 +653,10 @@ MdtUtils              Bit-identical on scene_ragdoll with 4.113e+00 m of
 #                     wants callsite signatures for the keaFunctions_Vanilla
 #                     vtable slots, the same machinery KD_CALLSITE_SIG=trilist
 #                     already applies to McdTriangleListFnPtr.
+#
+#                     THE ARGUMENT-DROPPING HALF IS DONE, 2026-08-24 — see the
+#                     block above. The frame is still lost, and the DWARF turns
+#                     out not to describe it.
 # keaMemory           THE ALLOCATOR (keaPoolAlloc, 14,400 calls/900 steps). Was
 #                     crashing the pipeline outright; that is fixed and it now
 #                     repairs 47 lines and reports 13 real errors. Twelve of the
@@ -515,6 +670,26 @@ MdtUtils              Bit-identical on scene_ragdoll with 4.113e+00 m of
 #                     expression against two differently mis-resolved bases.
 #                     DECLARING the four symbols makes it compile and leaves it
 #                     WRONG. It needs the per-function symbol inversion.
+#
+#                     FIXED 2026-08-24, both halves, and the warning above was
+#                     right — it was wrong in TWO ways, not one:
+#
+#                       * the pop's base. Inverted from the relocation:
+#                         `poolstack + (-4)`, i.e.
+#                         `pool_ptr = poolstack[poolstack_ptr - 1]`.
+#                       * the SCALE. Ghidra's `&X + i*4` is byte arithmetic, so
+#                         declaring poolstack at its real DWARF type
+#                         (`void *[3]`) would have made the line Ghidra got
+#                         RIGHT stride twelve bytes. Both sites are now explicit
+#                         (char *) byte arithmetic.
+#
+#                     The four declarations come from the DWARF of the object
+#                     that DEFINES them and are size-checked against its symbol
+#                     table (12/4/4/4). Verified against the disassembly.
+#                     FAIL -> review; 13 errors -> 6. What is left is
+#                     `stack0xffffff88` in allocateMemory — the by-value
+#                     MdtKeaConstraints copy, i.e. the same lost-frame family as
+#                     the driver, not a separate problem.
 # keaIntegrate_pc     MdtKeaIntegrateSystem, 900 calls/900 steps. Fails on
 #                     `stack0xffffffa0` — another lost frame.
 # keaLCPSolver        Fixing the vtable mislabelling alone would NOT unblock it:

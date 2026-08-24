@@ -14,12 +14,20 @@ Branch: **`karma/decompile`**. `main` is untouched. **Do not merge.**
   game actually calls are recovered, measured against the shipped original on live inputs,
   and the engine has run on them with no shipped `.a` for those objects — indistinguishable
   from stock over 11 alternating matches on two maps. §3, §7b, `proven.txt`.
-- **The solver is half done and blocked in one specific way.** Three `libMdtKea` compute
-  kernels reproduce the original bit-for-bit over 900 compounding steps. The four objects
-  that *call* them do not compile, all for the same reason: Ghidra cannot model their
-  frames. Nothing runs end to end on recovered Karma until they do. §11 items 1–3, §12.
-- **98 objects compile**, 19 are quarantined by detectors, 31 do not compile. Object count
+- **The solver's virtual calls now carry their arguments** — the blocker this file used to
+  call "the whole job". All nineteen vtable dispatches in `keaRbdCore_unified` and
+  `keaLCPSolver` are restored from relocation data, and it cost only 2 changed dumps out of
+  153. §5a, §11 item 1.
+- **What now blocks the solver is one thing: arguments that are genuinely missing, because
+  the DWARF does not say where the frames live.** Not "Ghidra failed to use the debug info"
+  — the `DW_AT_location` attributes are absent from the abbrevs those functions use. §11
+  item 2 has the readelf command that shows it.
+- **99 objects compile**, 21 are quarantined by detectors, 28 do not compile. Object count
   is a bad progress metric — read §3 before using it.
+- **Two whole families the engine never asks Karma about.** `Box × TriangleList` and every
+  `Aggregate` pair are intercepted by UT2004's own dispatcher, so they are registered and
+  unreachable. That retires the top two standing requests for maps and downgrades
+  `IxBoxTriList` from "live crash risk" to dead code. §3a.
 - **The most important habit here is checking that a test is testing.** Most of the real
   bugs in this project were found that way, not by writing new code. §4a, §12's closing
   section, and dead ends 9 and 10.
@@ -53,18 +61,19 @@ complete types. That is what makes this tractable. Ghidra consumes it directly.
 ## 2. Status
 
 ```
-compile:  98 objects  (93 clean + 5 with prelude TODOs)  = 66.2% of 148 attempted
-scenes:   98/98 run clean on all three substitute scenes, and all 98 TOGETHER
+compile:  99 objects  (94 clean + 5 with prelude TODOs)  = 66.9% of 148 attempted
+scenes:   99/99 run clean on all three substitute scenes, and all 99 TOGETHER
           are bit-identical on the collision-free one — but read §4a before
           reading anything into that number
-wasm32:   98/98 compile, 98/98 exported symbol sets byte-identical to i386
-bindings: 98/98 export what the SHIPPED object exported, binding included (§8)
+wasm32:   99/99 compile, 99/99 exported symbol sets byte-identical to i386
+bindings: 99/99 export what the SHIPPED object exported, binding included (§8)
 difftest: self-test 12/12, and the real run reproduces the documented baseline
           exactly (§8) — IxBoxBox 1 count, IxSphereTriList 137 dims, the rest 0
-review:   19 objects held back by recover.py's eight safety detectors (§8;
+review:   21 objects held back by recover.py's eight safety detectors (§8;
           the ninth, symbol bindings, is a gate rather than a detector because
           it needs the shipped object to compare against)
-fail:     31 objects do not compile
+fail:     28 objects do not compile
+dumps:    out8 is current (§5). It differs from out6 in 2 of 153 dumps.
 ```
 
 Reproduce all of that with the commands in §4. The whole pipeline is about a minute.
@@ -130,7 +139,7 @@ over every instrumented match to date; treat the ORDER as solid and the absolute
 |---|---|---|
 | Box × Plane | `McdBoxPlaneIntersect` | yes |
 | Box × Cylinder | `McdBoxCylinderIntersect` | yes |
-| Box × TriangleList | `McdBoxTriangleListIntersect` | quarantined, and **badly wrong**, §8 |
+| Box × TriangleList | `McdBoxTriangleListIntersect` | quarantined and **badly wrong** — but **unreachable**, §3a |
 | Sphere × Plane | `McdSpherePlaneIntersect` | yes |
 | Cylinder × Plane | `McdCylinderPlaneIntersect` | yes |
 | Cylinder × Sphere | `McdCylinderSphereIntersect` | yes |
@@ -141,12 +150,13 @@ over every instrumented match to date; treat the ORDER as solid and the absolute
 | Sphyl × Box | `McdSphylBoxIntersect` | yes — had a real bug, fixed, §8 |
 | Sphyl × Cylinder | `McdSphylCylinderIntersect` | yes |
 | ConvexMesh × Plane | `McdGjkCgIntersect` | yes |
-| Aggregate × {Null, Sphere, Box, Plane, Cylinder, Sphyl, TriangleList, ConvexMesh, Aggregate, …} | `McdAggregateGenericIntersect` + unidentified | no |
+| Aggregate × {Null, Sphere, Box, Plane, Cylinder, Sphyl, TriangleList, ConvexMesh, Aggregate, …} | `McdAggregateGenericIntersect` + unidentified | no — and **unreachable**, §3a |
 
 **Why the shape of that list makes sense.** UT2004 gives its physics actors sphere, sphyl,
 convex-mesh and triangle-list geometry and essentially nothing else. It never uses Karma's
-`Cylinder` or `Aggregate` types at all, and `Plane` is registered but the level is a
-TriangleList, not a plane. So **whole objects in the "not compiling" pile are for collisions
+`Cylinder` type at all, `Plane` is registered but the level is a TriangleList rather than a
+plane, and **Box × TriangleList and the whole Aggregate family are intercepted by the
+engine before Karma is consulted** (§3a). So **whole objects in the "not compiling" pile are for collisions
 the game never makes**, and object count is the wrong progress metric.
 
 ### If one of those pairs ever fires, which are dangerous?
@@ -156,14 +166,50 @@ first real call:
 
 | pair | if it fires |
 |---|---|
-| **Box × TriangleList** | **LIVE CRASH RISK.** `IxBoxTriList` is quarantined *and* measurably wrong: 2,254 ret / 139,961 count / 12,060 dims divergences in 200,000 synthetic pairs, against a driver that self-tests 100% bit-identical. It is not staged in `/tmp/kd_build`, so a substituted build falls back to the shipped object and is safe — but the moment someone stages it, it is a defect waiting for a map. §8. |
-| Cylinder × TriangleList | quarantined; never measured. Same posture, unknown magnitude. |
+| **Box × TriangleList** | **CANNOT FIRE — the engine bypasses it.** `IxBoxTriList` is quarantined *and* measurably wrong (2,254 ret / 139,961 count / 12,060 dims divergences in 200,000 synthetic pairs), but UT2004 never dispatches to it: `KIntersect` calls its own `KBoxTriangleListIntersect` instead. §3a. It is dead code, not a hazard. |
+| Cylinder × TriangleList | quarantined; never measured. Genuinely unreached rather than bypassed — same posture, unknown magnitude. |
 | Sphyl × Box, Sphyl × Plane, Sphere × Plane, Box × Plane, Box × Cylinder, Cylinder × {Plane, Sphere, Cylinder}, ConvexMesh × Plane, Cylinder × ConvexMesh | recovered, compiling, clean on the synthetic driver — `McdSphylBoxIntersect`, `McdSphylPlaneIntersect` and the GJK variants are all in the difftest and read 0 structural. These would be fine. |
-| Aggregate × anything | **not recovered at all.** No object, no fallback beyond the shipped `.a`. A gap in coverage rather than a hazard — but the one family with nothing behind it. |
+| Aggregate × anything | **not recovered, and does not need to be** — the engine bypasses this family too, §3a. A closed gap, not an open one. |
 
 The honest one-liner: **twelve pairs are used and all twelve are validated; of the
-twenty-five that are not used, one (Box × TriangleList) would be a real bug if it ever
-fired, one family (Aggregate) has no recovered code at all, and the rest would be fine.**
+twenty-five that are not used, two families (Box × TriangleList and Aggregate) are
+structurally unreachable because the engine implements them itself, and the rest would be
+fine.**
+
+### 3a. Two families the engine never asks Karma about
+
+This closes what were, for several sessions, the top two "needs the project owner" asks —
+and it is answered from the engine source rather than from a map.
+
+`Source/Engine/Src/KFarfield.cpp`, `KIntersect()` at line 936, is the **single** dispatcher:
+the only two references to `interactions->intersectFn` in the whole engine are its null
+check and its call. And before that call it intercepts two cases:
+
+```c
+if(type1 == kMcdGeometryTypeAggregate || type2 == kMcdGeometryTypeAggregate)
+    result->touch = KAggregateGenericIntersect(p, result);
+else if(type1 == kMcdGeometryTypeBox && type2 == kMcdGeometryTypeTriangleList)
+    result->touch = KBoxTriangleListIntersect(p, result);
+else
+    result->touch = (*interactions->intersectFn)(p, result);   // <- Karma
+```
+
+So `McdBoxTriangleListIntersect` and `McdAggregateGenericIntersect` are **registered and
+unreachable**. That is exactly what the census has been reporting for 25+ runs across 18
+maps, and the zero is now explained rather than merely observed — **no map can move these
+off the never-called list.**
+
+Two consequences worth carrying:
+
+- **`IxBoxTriList` is not a live crash risk.** `proven.txt` withdrew its clean result and
+  §8 recorded it as "a defect waiting for a map". There is no such map. It stays
+  quarantined and stays out of `/tmp/kd_build`, but as dead code rather than as a hazard.
+- **The Aggregate family is not a coverage gap.** §12 item 1 asks for every pair the game
+  calls; the game never calls Karma for Aggregate at all.
+
+The general lesson: **the census tells you a pair is not called; the engine source tells
+you whether it *can* be.** For a pair that matters, read `KIntersect` before asking for a
+map.
 
 ### How much to trust "never called"
 
@@ -233,7 +279,7 @@ metoolkit .a
 cd /home/ion/engines/engine-ut2004/karma-decomp
 rm -rf /tmp/kd_out /tmp/kd_build
 python3 tools/recover.py \
-  --dump-dir /home/ion/tools/karma-lab/out6 \
+  --dump-dir /home/ion/tools/karma-lab/out8 \
   --obj-dir  /home/ion/tools/karma-lab/allobj \
   --out-dir  /tmp/kd_out \
   --metoolkit ../Thirdparty/metoolkit \
@@ -241,8 +287,8 @@ python3 tools/recover.py \
 ```
 
 Recovered `.c` lands in `/tmp/kd_out/allobj/`, objects in `/tmp/kd_build/`. `recover.py`
-prints a per-object table and a summary. **`out6` is the current dump directory** (§5).
-`out5` is the previous one and is kept deliberately — it is the fallback if a pipeline
+prints a per-object table and a summary. **`out8` is the current dump directory** (§5).
+`out6` is the previous one and is kept deliberately — it is the fallback if a pipeline
 change ever has to be bisected against the dumps.
 
 ### Gate what came out — all seven, every time
@@ -271,7 +317,11 @@ python3 tools/check_frame_bounds.py /tmp/kd_out/allobj
 python3 tools/check_symbol_bindings.py /tmp/kd_build /home/ion/tools/karma-lab/allobj
 
 # and the two that say what the scene gate above actually proved — §4a
-./test/scene_census.sh     /tmp/kd_out/allobj $LIB test/scene_chain.c
+# KD_CENSUS_VALIDATED is not optional: without it this sweeps in the quarantined
+# objects too, and MdtPartition alone segfaults the scene before any census is
+# written (§4a). A gate that cannot pass is not a gate.
+KD_CENSUS_VALIDATED=/tmp/kd_build \
+  ./test/scene_census.sh   /tmp/kd_out/allobj $LIB test/scene_chain.c
 ./test/gate_sensitivity.sh /tmp/kd_out/allobj $LIB test/scene_ragdoll.c
 ```
 
@@ -367,7 +417,7 @@ object that does **not** reproduce the original: 4.28e-04 m of divergence agains
 
 ### The combined test, and what it says about the quarantine
 
-All 98 validated objects substituted **together**:
+All 99 validated objects substituted **together**:
 
 | scene | result |
 |---|---|
@@ -459,13 +509,13 @@ timeout 9000 /home/ion/tools/ghidra_12.1.3_PUBLIC/support/analyzeHeadless \
   -postScript DumpDecomp.java -deleteProject
 ```
 
-Takes 1–2 hours (`out6` took about 75 minutes for 153 objects). Scripts live in
+Takes 1–2 hours (`out6` took about 75 minutes for 153 objects; `out8` about the same). Scripts live in
 `tools/gscripts/` and **must be copied** to `/home/ion/tools/karma-lab/gscripts/` —
 Ghidra reads them from there. **Write to a NEW output directory** and keep the old one
 until the new dumps have passed all **seven** gates; a re-run changes every object at
 once — `out6` differs from `out5` in 103 of 153 dumps.
 
-`out5`, `out6` and `out7` are all on disk. `out6` is current.
+`out5`, `out6`, `out7` and `out8` are all on disk. **`out8` is current.**
 
 ### `ParseKarmaHeaders.java` (preScript)
 
@@ -533,6 +583,89 @@ Two results in that table are worth carrying:
 - Forcing `__cdecl` on `unknown` is **load-bearing, not cosmetic**: `out7` shows that
   without it the new prototypes *cost* `keaCalcJinvMandRHS_vanilla` and
   `keaRbdCore_unified`.
+
+### `out8` — vtable call-site signatures, and a re-run that changed almost nothing
+
+`out8` is current. It adds one thing: **the C++ virtual calls in `keaRbdCore_unified` and
+`keaLCPSolver` now carry their arguments.** That was the blocker §11 used to call "the
+whole job", and §5a explains the machinery.
+
+**It differs from `out6` in 2 of 153 dumps** — only the two targeted objects. Compare
+`out5 → out6`, which changed 103 of 153. Nothing else in the corpus moved, no
+classification changed, and all seven gates read exactly as before. A re-run does *not*
+have to be a big-bang: this one was surgical because the change is applied at 19 specific
+addresses rather than to a global setting.
+
+### `KARMA_VTABLE_CALLSITES` — the environment for a re-run
+
+`out8` needs one more variable than §5's recipe. Generate the table first, then export it:
+
+```bash
+python3 karma-decomp/tools/gen_vtable_callsites.py /home/ion/tools/karma-lab/allobj \
+    -o /home/ion/tools/karma-lab/kd_vtable_callsites.txt
+export KARMA_VTABLE_CALLSITES=/home/ion/tools/karma-lab/kd_vtable_callsites.txt
+```
+
+Without it `DumpDecomp.java` prints `VTABLE: KARMA_VTABLE_CALLSITES not set, skipping` and
+you silently get `out6` behaviour back.
+
+## 5a. Recovering the arguments to a C++ virtual call
+
+**This is how §11 item 1 was solved, and the technique generalises.**
+
+Ghidra has no signature for a call through a function pointer, so it drops **every
+argument**. For the solver driver that was not cosmetic — it was the whole reason the
+object could not be recovered:
+
+```c
+before   (**(code **)(_vanillaFunctions + 4))();
+after    (**(code **)(_vanillaFunctions + 4))
+                   (&vanillaFunctions,mem.invIworld,mem.vhmf,blist,tlist,
+                    num_bodies,parameters.stepsize);
+```
+
+which is `calcIworldandNonInertialForceandVhmf`'s demangled signature exactly.
+
+The mechanism is `HighFunctionDBUtil.writeOverride`, the same one
+`KD_CALLSITE_SIG=trilist` already used. What was missing was *which* signature, because
+the vtable lives in a different object and therefore a different Ghidra program. So the
+resolution happens in Python — `tools/gen_vtable_callsites.py` — and Java just consumes a
+table of addresses. `ParseKarmaHeaders` has already loaded `kd_protos.h` into the
+DataTypeManager, so the method name is enough to find the prototype.
+
+A site is resolved from the two-instruction idiom gcc 3.2 emits:
+
+```
+mov  -0xb8(%ebp),%ecx        ; the vptr, out of a local
+call *0x10(%ecx)             ; slot +0x10 of that class's vtable
+```
+
+by walking back to the `mov` that defined the register and looking the frame offset up in
+the vptr stores `vtable_slots.vptr_stores()` reads out of the **relocations**. Nothing is
+inferred from decompiled text.
+
+**Why it is allowed to be believed** — a wrong signature here calls the right function
+with the wrong arguments and still compiles, so every step is checked:
+
+- `vptr_stores()` refuses any store whose addend is not the **+8 ABI address point**, so a
+  multiple-inheritance secondary vtable cannot pass as a primary one. Ghidra's own ELF
+  loader independently agrees, logging `External Location = _ZTV20keaFunctions_Vanilla+0x8`.
+- the slot must **exist** in that class's vtable, read from relocation records in the
+  object that defines it. An offset that is not a slot is refused, not rounded.
+- the backward register walk refuses if anything else writes the register in between.
+- the 19 resolved sites reproduce the 19 dispatches in the old dump **one-for-one**, and
+  the slot mapping agrees with `scene_census.sh`'s count of the four kernels running 900
+  times each in 900 steps — a measurement taken months earlier for an unrelated reason.
+
+**The bug worth not repeating.** The first version computed the site as `section base +
+function offset + call offset`. objdump's offsets are **section**-relative, so the
+function offset was counted twice. `keaRbdCore_unified` hid it completely — its only
+relevant function is at offset 0, where the two agree, and it read 9/9 applied — while
+`keaLCPSolver`'s later sites were thrown past the end of `.text` into `.eh_frame` and
+**six sites were being applied at addresses that were simply wrong**. `_is_indirect_call()`
+now checks the bytes (`0xFF` with reg field `/2`) before the address is used. The general
+lesson is the one in §12: the object that motivates the tool is the worst possible thing
+to validate it on.
 
 ### Regenerating `kd_protos.h`
 
@@ -977,9 +1110,9 @@ compile.**
 `proven.txt` records which objects a real match has released, **with the evidence on the
 line**. That is the only way out. Do not remove a detector to make a number go up.
 
-**The quarantine has now been measured, not just argued for.** Substituting all 98
+**The quarantine has now been measured, not just argued for.** Substituting all 99
 validated objects into `scene_chain` at once is bit-identical over 900 steps; adding the
-ten quarantined objects that compile turns that into an immediate SIGSEGV. It is
+quarantined objects that compile turns that into an immediate SIGSEGV. It is
 `MdtPartition` — the object the guessed-stack-frame detector was written for. §4a.
 
 ### A weak symbol that comes back global takes over libc
@@ -1260,6 +1393,19 @@ Box × TriangleList at zero calls. Recorded so nobody re-derives the old number.
    objects and left the entire edge-contact path of `GenerateTriangleContact` unexecuted, for
    the whole life of the project. When a recovered function calls back into the engine, the
    arguments it passes are part of its answer — make the stub depend on them (§8).
+12. **Validating an address-computing tool on the object it was written for.**
+   `gen_vtable_callsites.py` computed call sites as `section base + function offset + call
+   offset`; objdump's offsets are section-relative, so the function offset was counted
+   twice. It read **9/9 applied** on `keaRbdCore_unified`, because that object's only
+   relevant function starts at offset 0 and the two formulas coincide there. The second
+   object put six signatures at addresses inside `.eh_frame`. Check an address against the
+   bytes it is supposed to point at, and pick a validation subject where the wrong answer
+   would *differ* (§5a).
+13. **Expecting the DWARF to describe a frame just because it names the variables.** For
+   `MdtKeaAddConstraintForces` the abbrevs carry `DW_AT_name` and `DW_AT_type` and **no
+   `DW_AT_location`** — while other functions in the same object have them. Before planning
+   any frame-recovery work, run the `readelf --debug-dump=abbrev` in §11 item 2 and find out
+   whether the information exists at all.
 
 
 ---
@@ -1292,59 +1438,95 @@ Box × TriangleList at zero calls. Recorded so nobody re-derives the old number.
 
 **§12 item 1 is done.** Every pair the census shows the game calling is recovered and
 validated against a live match. The next milestone is **§12 item 7 — the engine running ON
-recovered Karma**, and as of 2026-08-24 the collision half of that has been measured
-(§7b). What blocks it now is the **solver**, and the solver's blockers are four named
-objects rather than a vague expanse.
+recovered Karma**, and the collision half of that has been measured (§7b). What blocks it
+is the **solver**.
+
+**The solver's blockers have collapsed from four problems into one.** As of the second
+session of 2026-08-24 the argument-dropping half is solved (§5a): all nineteen vtable
+dispatches in `keaRbdCore_unified` and `keaLCPSolver` carry their arguments. What is left
+in all four objects is the same single thing, and item 2 below is now the whole job.
 
 Ordered by what actually moves the project, not by what is easiest:
 
-1. **`keaRbdCore_unified` — the solver driver.** This is now the single highest-value
-   object in the project and it did not look like it before. Three of the recovered kea
-   kernels are proven bit-identical (§2, `proven.txt`), and the reason they still cannot
-   drive anything is that the object which *calls* them does not compile. Ghidra lost its
-   frame completely: the body reconstructs `MdtKeaConstraints` and `MdtKeaParameters`
-   field by field out of a copied stack block, and every call into the recovered kernels
-   is `(**(code **)(_vanillaFunctions + 0x10))()` — a `keaFunctions_Vanilla` vtable
-   dispatch with **every argument dropped**.
+1. **DONE — the vtable call sites.** `tools/gen_vtable_callsites.py` +
+   `DumpDecomp.applyVtableCallsiteOverrides()`, adopted as `out8`. §5a has the method, the
+   checks and the one bug it went through. Items 1 and 3 of the old list were indeed "one
+   shared fix, not two", as this file predicted. Nothing to do here; it is written down
+   because the technique generalises to any indirect call whose target is pinned by a
+   relocation.
 
-   That is a Ghidra-side problem with existing machinery pointed at it. `DumpDecomp.java`
-   already applies `McdTriangleListFnPtr` at indirect call sites by function-name match
-   (`KD_CALLSITE_SIG=trilist`, §5); the vtable slots of `keaFunctions_Vanilla` are known
-   (`gen_vtables.py` recovers C++ ABI data, and the kernels' own mangled names give the
-   signatures). Applying slot signatures at `(_vanillaFunctions + N)` call sites is the
-   same trick. Budget a Ghidra re-run (1–2 hours, §5, **new output directory**).
+2. **THE JOB: the frames — and the DWARF does not describe them.** This is the correction
+   that matters most. "Ghidra cannot model these frames" was true and understated. For
+   `MdtKeaAddConstraintForces` the debug info gives names and types but **no locations at
+   all**, because the abbrevs its DIEs use do not declare `DW_AT_location`:
 
-2. **`keaMemory` — the allocator**, 14,400 calls per 900 solver steps. It used to crash
-   the pipeline; that is fixed and it now reports 13 real errors, twelve of which are one
-   defect. `pool_ptr`, `pool_max`, `poolstack` and `poolstack_ptr` are four **contiguous**
-   globals in `keaRbdCore_unified.o`'s `.bss` (offsets 0, 0xc, 0x10, 0x14) and Ghidra
-   resolved relocations-with-addend against the wrong neighbours — §5. Line 52 pushes to
-   `&poolstack + poolstack_ptr*4` and line 61 pops from `&pool_ptr + poolstack_ptr*4`:
-   the same address expression against two differently mis-resolved bases. **Declaring
-   the four symbols makes it compile and leaves it wrong** — it needs the per-function
-   symbol inversion, not a prelude entry.
+   ```bash
+   readelf --debug-dump=abbrev keaRbdCore_unified.o
+   #   abbrev 33: DW_TAG_formal_parameter   (no DW_AT_location)   <- this function
+   #   abbrev 34: DW_TAG_variable           (no DW_AT_location)
+   #   abbrev 35: DW_TAG_variable           (no DW_AT_location)
+   #   abbrev 45: DW_TAG_formal_parameter   has DW_AT_location    <- other functions
+   #   abbrev 46: DW_TAG_variable           has DW_AT_location
+   ```
 
-3. **`keaLCPSolver` — now one fix away from the same place as item 1.** It used to fail on
-   `implicit declaration of PrincipalSubmatrix`, because `ghidra_clean`'s rename map was
-   keyed on the flattened declarator while Ghidra writes intra-class call sites with the
-   bare method name. **Fixed**; the object moved FAIL → review (13 errors → 8) and
-   `CxSmallSort` came into the validated set with it. What holds `keaLCPSolver` now is
-   `_vanillaQMatrix` — the **same vtable-slot mislabelling as `keaRbdCore_unified`**, so
-   items 1 and 3 are one shared fix, not two.
+   Other functions **in the same object** use 45/46 and are located normally, so this is
+   per-function, not a property of the build. No tool can recover that frame from debug
+   info, and inferring it from the code is exactly the guess the guessed-stack-frame
+   detector exists to stop — `MdtPartition` compiled that way and segfaults `scene_chain`.
 
-   `keaLCP_new` — `keaLCPSolver::solveLCP` itself — is short by exactly one argument on
-   **nine** calls. That looks like a dropped `this` and is not: Ghidra lost the alloca
-   frame and emits the call sequence's own stack effects as C assignments, including the
-   return address. `proven.txt` has the worked example. **Do not write a text rule for
-   it** — the missing arguments are at non-uniform frame offsets, and this is the exact
-   shape the guessed-stack-frame detector exists for.
+   The residual errors are all this one thing: `stack0xfffffdd8` / `register0x00000010`
+   (`keaRbdCore_unified`), `stack0xffffff88` (`keaMemory`), `stack0xffffffa0`
+   (`keaIntegrate_pc`), and the genuinely-missing arguments in `keaLCPSolver`
+   (`makeFromPcSparsePSM`, expected 10 have 9 — and note the call already passes `this`,
+   so it is a MIDDLE argument, not a dropped `this`) and `keaLCP_new` (nine calls, each
+   short by one, at non-uniform offsets).
 
-**All four solver blockers are the same underlying problem: Ghidra cannot model these
-frames.** `keaRbdCore_unified` has by-value structs of 92 and 76 bytes plus all-`unknown`
-conventions; `keaIntegrate_pc` and `keaLCP_new` allocate dynamically; `keaMemory`'s
-globals collide in the EXTERNAL block. None is a text-level repair, and three separate
-attempts to make one are recorded above and in `proven.txt` so they are not repeated. The
-work is Ghidra-side, in `DumpDecomp.java`.
+   **The one lead that is not a guess.** The by-value *incoming* parameters are pinned by
+   the cdecl ABI, not by debug info, and Ghidra already has the signature:
+
+   | parameter | location | size |
+   |---|---|---|
+   | `pconstraints` (`MdtKeaConstraints`) | `ebp+0x08` | 92 |
+   | `blist` | `ebp+0x64` | 4 |
+   | `tlist` | `ebp+0x68` | 4 |
+   | `num_bodies` | `ebp+0x6c` | 4 |
+   | `parameters` (`MdtKeaParameters`) | `ebp+0x70` | 76 |
+
+   **Confirmed against the machine code**, which is why it is worth starting from: the
+   prologue does `lea 0x8(%ebp),%esi` and `lea 0x70(%ebp),%esi` — the two by-value
+   aggregates — and copies them to outgoing argument areas. So the `in_stack_*` /
+   `register0x00000010` copy loops are *outgoing by-value argument passing* that Ghidra
+   rendered clumsily, **not** unknowable locals. That reframes the problem from "recover an
+   unknown frame" to "make Ghidra model a by-value aggregate argument", which is a much
+   smaller question and is Ghidra-side.
+
+3. **Then, and only then, the vptr store.** Both objects also fail on `_vanillaFunctions` /
+   `_vanillaQMatrix` being undeclared. That is the **same EXTERNAL-slot addend collision as
+   `keaMemory`** (§5) and it is **already inverted exactly and uniquely** by existing
+   machinery — `ghidra_clean.relocation_targets(obj, per_function=True)` returns:
+
+   ```
+   keaRbdCore_unified  MdtKeaAddConstraintForces
+     __ZN12keaFunctions8initPoolEPvi   -> (_ZTV20keaFunctions_Vanilla, 8)
+     __ZN12keaLCPSolver8solveLCPE...   -> (_ZTV26keaMatrix_pcSparse_vanilla, 8)
+   keaLCPSolver  makeXandW / PrincipalSubmatrix / PrincipalPivotTransform
+     ___gxx_personality_v0             -> (_ZTV26keaMatrix_pcSparse_vanilla, 8)
+   ```
+
+   `+8` is the Itanium ABI address point, so `_vanillaFunctions = keaFunctions::initPool;`
+   is really `vanillaFunctions.vptr = &vtable[2]`, and **`__gxx_personality_v0` is not the
+   personality routine at all**. Corpus-wide only these 2 objects import a vtable, so the
+   blast radius is contained. The shape that works is
+   `#define _vanillaFunctions (*(char **)&vanillaFunctions)` plus an
+   `extern void *_ZTV20keaFunctions_Vanilla[];`, checked by requiring the local's declared
+   type to equal the class named in the relocation.
+
+   **Deliberately not implemented, and the reason is the point.** Writing it would remove
+   an error class from two objects that *still* would not compile, because of item 2 — so
+   **no gate could see whether the rewrite was right or wrong**. An unvalidatable generator
+   change is the exact risk profile that produced dead ends 9 and 10. Do item 2 first; then
+   this becomes verifiable and is an afternoon.
+
 
 4. **Audit the other callbacks the way the triangle generator was audited** (§8, §12). The
    triangle generator is still the only stub in `difftest_pair.c` that depends on its
@@ -1360,7 +1542,7 @@ work is Ghidra-side, in `DumpDecomp.java`.
    before quoting a bit-identical result — `keaCalcAcceleration_vanilla` is the worked
    example of a zero that means nothing.
 
-7. **Grind the tail.** 31 objects, but **read §3 first** — a large part of the pile is
+7. **Grind the tail.** 28 objects, but **read §3 first** — a large part of the pile is
    geometry the game never collides, and **nine of the 34 are one error from
    compiling**, which is where to start. The distribution, re-measured 2026-08-24:
 
@@ -1400,14 +1582,15 @@ Almost everything here can be pushed on alone. **Maps cannot.** The census (§3)
 good as the maps it has seen, and two pairs have already moved off the never-called list
 because someone ran a map nobody had tried. The specific asks, in order of value:
 
-- **A map that exercises `Box × TriangleList`.** `IxBoxTriList` is quarantined and, we now
-  know, badly wrong — 139,961 count divergences in 200,000 synthetic pairs. Zero calls on
-  every map run so far. If the game ever reaches it, that object is a live crash risk rather
-  than a curiosity, and right now there is no way to find out.
-- **A map that exercises `Cylinder` or `Aggregate` geometry**, if any exists. Those are
-  whole families of registered-but-never-called pairs. If the answer is "UT2004 never uses
-  them", that is worth knowing definitively, because it retires a large chunk of the
-  not-compiling pile permanently.
+- ~~**A map that exercises `Box × TriangleList`.**~~ **WITHDRAWN — no such map can exist.**
+  See §3a: UT2004 intercepts this pair in its own dispatcher and never calls Karma's
+  function. This was the top ask for several sessions; it is answered from the engine
+  source, not from a map.
+- ~~**A map that exercises `Aggregate` geometry.**~~ **WITHDRAWN for the same reason** —
+  `KIntersect` routes every Aggregate pair to the engine's own `KAggregateGenericIntersect`.
+  A map that exercises **`Cylinder`** geometry is still worth having, if any exists: that
+  family is genuinely unreached rather than bypassed, and a definitive "UT2004 never uses
+  Cylinder" would retire a chunk of the not-compiling pile permanently.
 - **More community maps generally.** `CBP2`/`UCMP`/`BE-`/`SPAC-` reach pairs Epic's
   optimised maps never do; that fact came from the project owner and it has been the single
   most productive operational input to this project. `ONS-UCMP-ABC-ECE` is still the ONLY
@@ -1434,7 +1617,7 @@ Everything else — code, tests, measurement, tooling — is self-service.
 4. qhull and the asset loader replaced rather than recovered.
 5. No detector suppressed, no object released without a line in `proven.txt`.
 6. The whole set builds as ordinary C for **wasm32 and arm64/armv7**, not just i386.
-   **wasm32 is done** — 98/98 compile with byte-identical exported symbols
+   **wasm32 is done** — 99/99 compile with byte-identical exported symbols
    (`test/wasm_check.sh`). arm64 has not been tried; no cross-compiler is installed here.
    Nothing has been *executed* under wasm. See `HANDOVER-WEB.md`.
 7. The engine runs with `WITH_KARMA=1` against recovered Karma with **no shipped `.a` in the
@@ -1451,21 +1634,23 @@ Everything else — code, tests, measurement, tooling — is self-service.
 | 2 | validated = 0 ret/count/dims/overrun in a live match, `KD_SELFTEST` clean, evidence on the line | **DONE** for those twelve. |
 | 3 | all three scenes clean for every recovered object, *and* checked for sensitivity | **DONE**, and the sensitivity check (§4a) is what makes it mean anything. |
 | 4 | qhull and the asset loader **replaced**, not recovered | **NOT STARTED.** `libMcdConvexCreateHull` is qhull 2.6, 186 KB, load-time only, open source. `MeAssetDB`/`MeXML`/`MeAssetFactory` is `.ka` XML parsing. Neither is physics; both are swap-ins, not decompiles. §11 item 8. |
-| 5 | no detector suppressed, nothing released without evidence | **HOLDING.** 19 objects quarantined, and §4a now shows the quarantine is load-bearing (`MdtPartition` alone turns a bit-identical scene into a SIGSEGV). |
-| 6 | builds as ordinary C for wasm32 **and arm64/armv7** | **wasm32 DONE** (98/98, byte-identical symbol sets). **arm64 NOT TRIED** — no cross-compiler installed. Nothing has been *executed* on either. |
-| 7 | engine runs on recovered Karma with **no shipped `.a` in the link at all** | **COLLISION HALF DONE** (§7b, two maps, 11 runs/arm, indistinguishable from stock). **SOLVER HALF BLOCKED** on four objects, §11 items 1–3. |
+| 5 | no detector suppressed, nothing released without evidence | **HOLDING.** 21 objects quarantined, and §4a now shows the quarantine is load-bearing (`MdtPartition` alone turns a bit-identical scene into a SIGSEGV). |
+| 6 | builds as ordinary C for wasm32 **and arm64/armv7** | **wasm32 DONE** (99/99, byte-identical symbol sets). **arm64 NOT TRIED** — no cross-compiler installed. Nothing has been *executed* on either. |
+| 7 | engine runs on recovered Karma with **no shipped `.a` in the link at all** | **COLLISION HALF DONE** (§7b, two maps, 11 runs/arm, indistinguishable from stock). **SOLVER HALF BLOCKED**, but on one problem now rather than four — the arguments are recovered (§5a) and what remains is the frames, §11 item 2. |
 
 **So what is left, in one sentence each:**
 
-- **The solver's control flow** — `keaRbdCore_unified`, `keaMemory`, `keaIntegrate_pc`,
-  `keaLCPSolver`+`keaLCP_new`. All four fail for one reason: Ghidra cannot model their
-  frames. This is the only thing between here and item 7. §11 items 1–3.
+- **The solver's frames** — `keaRbdCore_unified`, `keaMemory`, `keaIntegrate_pc`,
+  `keaLCPSolver`+`keaLCP_new`. Their virtual calls now carry arguments (§5a); what is left
+  is that **the DWARF carries no `DW_AT_location` for these functions' variables**, so the
+  frame is not merely unmodelled but undescribed. This is the only thing between here and
+  item 7. §11 item 2.
 - **qhull and the asset loader** — replace, do not recover. Bounded, unstarted, and needs
   no Ghidra. §11 item 8.
 - **arm64** — untried, needs a cross-compiler.
 - **Executing anything on wasm** — the web agent's job. `HANDOVER-WEB.md`.
-- **The tail** — 31 objects, nine of them one error from compiling, and read §11 item 7
-  first because two of the cheap-looking ones are traps (dead ends 9 and 10).
+- **The tail** — 28 objects, and read §11 item 7 first because two of the cheap-looking
+  ones are traps (dead ends 9 and 10).
 
 
 ### Where the project actually stands — read this before estimating anything
@@ -1491,10 +1676,15 @@ statements were derived from the same green output.
 the driver (`keaRbdCore_unified`), the allocator (`keaMemory`), the integrator
 (`keaIntegrate_pc`) and the LCP (`keaLCPSolver` + `keaLCP_new`). Each runs 900 times per
 900 steps and none compiles. Until they do there is **no configuration in which the engine
-runs on recovered kea**, however good the kernels are. §11 items 1–3 are those objects,
-with each blocker diagnosed down to the line.
+runs on recovered kea**, however good the kernels are.
 
-**Never executed on wasm.** 98/98 compile with byte-identical exported symbols. Not one
+That statement is unchanged, but the reason behind it is now much narrower. The
+argument-dropping blocker is gone (§5a), and the remaining failure in all four is one
+thing: **the DWARF for these particular functions declares no `DW_AT_location`**, so
+nothing — Ghidra or otherwise — can read the frame out of the debug info. §11 item 2 has
+the `readelf` that shows it and the one lead that is not a guess.
+
+**Never executed on wasm.** 99/99 compile with byte-identical exported symbols. Not one
 instruction has run. See `HANDOVER-WEB.md`.
 
 **Run end to end, now, for the collision layer** — §7b. Not for the solver.
@@ -1519,6 +1709,19 @@ not testing.** The three biggest findings of 2026-08-24 have the same shape:
 - `recover.py` truncated tracebacks to 90 characters, so **four objects** — including the
   solver's allocator — sat in the FAIL column behind an error message that was pure
   boilerplate, all of them the same single bug in the repair loop's retry path.
+
+The second session of 2026-08-24 added two more of exactly this shape, and both are worth
+carrying because they are about *validating on the wrong subject*:
+
+- `gen_vtable_callsites.py` computed call-site addresses wrongly (§5a) and read **9/9
+  applied** on the object it was written for, because that object's only relevant function
+  starts at offset 0 — where the wrong formula and the right one agree. The second object
+  put six signatures at addresses in `.eh_frame`. **The object that motivates a tool is the
+  worst possible thing to validate it on.**
+- `scene_census.sh` — one of the seven gates, and the instrument §4a's whole argument rests
+  on — could not pass at all. It swept in the quarantined objects, `MdtPartition` segfaulted
+  the scene, and it printed `FATAL: no census written`. Pre-existing, and it reads exactly
+  like a regression in whatever you last touched.
 
 None of these was a hard problem. All three were invisible because the output looked like
 success. Before trusting a green result, ask:

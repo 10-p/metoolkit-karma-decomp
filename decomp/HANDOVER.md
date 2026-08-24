@@ -22,7 +22,7 @@ Branch: **`karma/decompile`**. `main` is untouched. **Do not merge.**
   the DWARF does not say where the frames live.** Not "Ghidra failed to use the debug info"
   — the `DW_AT_location` attributes are absent from the abbrevs those functions use. §11
   item 2 has the readelf command that shows it.
-- **100 objects compile**, 23 are quarantined by detectors, 25 do not compile. Object count
+- **103 objects compile**, 23 are quarantined by detectors, 22 do not compile. Object count
   is a bad progress metric — read §3 before using it.
 - **Two whole families the engine never asks Karma about.** `Box × TriangleList` and every
   `Aggregate` pair are intercepted by UT2004's own dispatcher, so they are registered and
@@ -61,19 +61,20 @@ complete types. That is what makes this tractable. Ghidra consumes it directly.
 ## 2. Status
 
 ```
-compile:  100 objects (95 clean + 5 with prelude TODOs)  = 67.6% of 148 attempted
-scenes:   100/100 run clean on all three substitute scenes, and all 100 TOGETHER
+compile:  103 objects (97 clean + 6 with prelude TODOs)  = 69.6% of 148 attempted
+scenes:   103/103 run clean on all three substitute scenes, and all 103 TOGETHER
           are bit-identical on the collision-free one — but read §4a before
           reading anything into that number
-wasm32:   100/100 compile, exported symbol sets byte-identical to i386
-bindings: 100/100 export what the SHIPPED object exported, binding included (§8)
+wasm32:   103/103 compile, exported symbol sets byte-identical to i386
+bindings: 103/103 export what the SHIPPED object exported, binding included (§8)
 difftest: self-test 12/12, and the real run reproduces the documented baseline
           exactly (§8) — IxBoxBox 1 count, IxSphereTriList 137 dims, the rest 0
 review:   23 objects held back by recover.py's eight safety detectors (§8;
           the ninth, symbol bindings, is a gate rather than a detector because
           it needs the shipped object to compare against)
-fail:     25 objects do not compile
-dumps:    out8 is current (§5). It differs from out6 in 2 of 153 dumps.
+fail:     22 objects do not compile
+dumps:    out9 is current (§5a). It differs from out8 in 52 of 153 dumps, and
+          every object that already compiled is byte-identical.
 ```
 
 Reproduce all of that with the commands in §4. The whole pipeline is about a minute.
@@ -335,16 +336,20 @@ metoolkit .a
 cd /home/ion/engines/engine-ut2004/karma-decomp
 rm -rf /tmp/kd_out /tmp/kd_build
 python3 tools/recover.py \
-  --dump-dir /home/ion/tools/karma-lab/out8 \
+  --dump-dir /home/ion/tools/karma-lab/out9 \
   --obj-dir  /home/ion/tools/karma-lab/allobj \
   --out-dir  /tmp/kd_out \
   --metoolkit ../Thirdparty/metoolkit \
-  --protos /home/ion/tools/karma-lab/kd_protos.h
+  --protos /home/ion/tools/karma-lab/kd_protos9.h
 ```
 
+**`kd_protos9.h`, not `kd_protos.h`** — it is `kd_protos.h` with the API-struct
+prototypes appended; see §5a. Using the plain one silently loses 412 call-site
+signatures.
+
 Recovered `.c` lands in `/tmp/kd_out/allobj/`, objects in `/tmp/kd_build/`. `recover.py`
-prints a per-object table and a summary. **`out8` is the current dump directory** (§5).
-`out6` is the previous one and is kept deliberately — it is the fallback if a pipeline
+prints a per-object table and a summary. **`out9` is the current dump directory** (§5).
+`out8` is the previous one and is kept deliberately — it is the fallback if a pipeline
 change ever has to be bisected against the dumps.
 
 ### Gate what came out — all seven, every time
@@ -571,7 +576,7 @@ Ghidra reads them from there. **Write to a NEW output directory** and keep the o
 until the new dumps have passed all **seven** gates; a re-run changes every object at
 once — `out6` differs from `out5` in 103 of 153 dumps.
 
-`out5`, `out6`, `out7` and `out8` are all on disk. **`out8` is current.**
+`out5`–`out9` are all on disk. **`out9` is current.**
 
 ### `ParseKarmaHeaders.java` (preScript)
 
@@ -652,18 +657,65 @@ classification changed, and all seven gates read exactly as before. A re-run doe
 have to be a big-bang: this one was surgical because the change is applied at 19 specific
 addresses rather than to a global setting.
 
+### `out9` — the API-struct call sites, and 412 recovered allocation sizes
+
+`out9` is current. It extends the call-site machinery from C++ vtables to the other
+indirect-call shape in this corpus, and that one is far larger: **412 sites against 19.**
+
+Karma reaches its allocator and pools through file-scope structs of function pointers, and
+gcc sets the first argument up with `push` but every subsequent one by rewriting the same
+outgoing slot:
+
+```
+push $0x5c            ; first call: Ghidra sees an argument
+call *0x4             ; R_386_32 MeMemoryAPI -> createZeroed
+movl $0xc,(%esp)      ; second call: same slot, no push
+call *0x0             ; -> create ... and the size is DROPPED
+```
+
+An allocation with no size is a real defect. GCC's arity check is the only reason it
+surfaces, which also means **nothing that already compiled could have been hiding it** —
+and indeed all 101 previously-built objects came through byte-identical.
+
+`ApiStructs` in `gen_vtable_callsites.py` resolves offset → member → signature from the
+referencing object's **own DWARF**, which carries the struct declaration even though the
+struct is defined elsewhere. No hand-written table. A free confirmation that the mapping is
+right: the six `MeMemoryAPI` slots the corpus actually calls (`+0/4/8/c/10/14`) are exactly
+the six members the struct declares.
+
+**52 of 153 dumps changed and not one already-compiling object's `.o` moved.** Error counts
+only fell — `MeFAsset` 10 → 4, `MeAssetFactory` 7 → 3, `MdtLOD` 9 → 4, `MeProfile` 83 → 79.
+Zero objects got worse.
+
+> **A reclassification that looks like a regression.** `MdtLOD` went `review → FAIL` here
+> and that is not a step backwards: it never compiled in either dump. `recover.py`
+> classifies by the FIRST error's pattern, and the mislabelled-symbol error that this fix
+> resolved was masking a `stack0x` one underneath. Check the error COUNT, not the label.
+
 ### `KARMA_VTABLE_CALLSITES` — the environment for a re-run
 
 `out8` needs one more variable than §5's recipe. Generate the table first, then export it:
 
 ```bash
-python3 karma-decomp/tools/gen_vtable_callsites.py /home/ion/tools/karma-lab/allobj \
-    -o /home/ion/tools/karma-lab/kd_vtable_callsites.txt
-export KARMA_VTABLE_CALLSITES=/home/ion/tools/karma-lab/kd_vtable_callsites.txt
+cd /home/ion/tools/karma-lab
+python3 .../tools/gen_vtable_callsites.py allobj \
+    -o kd_vtable_callsites9.txt --protos-out /tmp/kd_api_protos.h
+cat kd_protos.h /tmp/kd_api_protos.h > kd_protos9.h      # <-- BOTH halves
+export KARMA_VTABLE_CALLSITES=/home/ion/tools/karma-lab/kd_vtable_callsites9.txt
+export KARMA_PROTOS=/home/ion/tools/karma-lab/kd_protos9.h
 ```
 
-Without it `DumpDecomp.java` prints `VTABLE: KARMA_VTABLE_CALLSITES not set, skipping` and
-you silently get `out6` behaviour back.
+Without the table `DumpDecomp.java` prints `VTABLE: KARMA_VTABLE_CALLSITES not set,
+skipping` and you silently get `out6` behaviour back.
+
+**And the prototypes half is just as load-bearing, in a way that is easy to miss.** One
+whole Ghidra run was spent finding out that appending prototypes rendered *faithfully* —
+`void *f(size_t)`, `void f(struct MePool *)` — does nothing: `kd_protos.h` is FLAT and
+declares no typedefs (§5 records why), so Ghidra's C parser rejects both. **The failure is
+silent where it counts**: the header still parses, the other 2487 prototypes still load, and
+the only symptom is `no prototype for kd_MeMemoryAPI_destroy` in the run log with all 412
+sites skipped. They are rendered with `gen_protos.simple_type` now, so each one parses
+standalone — `grep 'kd_Me.*API_' kd_protos9.h` should show 16.
 
 ## 5a. Recovering the arguments to a C++ virtual call
 
@@ -1652,7 +1704,7 @@ Ordered by what actually moves the project, not by what is easiest:
    before quoting a bit-identical result — `keaCalcAcceleration_vanilla` is the worked
    example of a zero that means nothing.
 
-7. **Grind the tail.** 25 objects, but **read §3b first** — a third of the pile is
+7. **Grind the tail.** 22 objects, but **read §3b first** — a third of the pile is
    unreachable or replace-not-recover — and then §3 — a large part of the pile is
    geometry the game never collides, and **nine of the 34 are one error from
    compiling**, which is where to start. The distribution, re-measured 2026-08-24:
@@ -1938,9 +1990,9 @@ Everything else — code, tests, measurement, tooling — is self-service.
   library. §8a has the contract and the three tiers that do work.
 - **arm64** — untried, needs a cross-compiler.
 - **Executing anything on wasm** — the web agent's job. `HANDOVER-WEB.md`.
-- **The tail** — 25 objects, and read §3b first: 3 are unreachable and 6 are the `.ka`
-  asset cluster, which is replace-not-recover. Two of the cheap-looking ones are traps
-  (dead ends 9 and 10).
+- **The tail** — 22 objects, and read §3b first: 3 are unreachable, and the `.ka` cluster
+  is now 7 of 9 recovered rather than something to replace. Two of the cheap-looking ones
+  are traps (dead ends 9 and 10).
 
 
 ### Where the project actually stands — read this before estimating anything

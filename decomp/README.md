@@ -36,7 +36,8 @@ live document; when the two disagree, HANDOVER wins.**
 | the one that is not | `IxCylinderCylinder` — measured wrong, 925 `dims_diff` in 24,111 real calls, and no detector holds it |
 | the engine ON recovered Karma | **runs** — all 108 objects substituted, plays a match, indistinguishable from stock (§7c) |
 | wasm32 | 109/109 compile, byte-identical exported symbol sets. **Nothing executed yet** |
-| arm64/armv7 | not attempted — no cross-compiler on this machine |
+| armv7 | 109/109 compile, symbol sets identical to i386 — a real 32-bit-pointer port |
+| arm64 | 109/109 compile **and not trusted** — 920 pointer/int truncation diagnostics vs armv7's 23 (§6b) |
 | the solver | arithmetic proven bit-exact over 900 steps; its **control flow does not compile**, blocked on frames the DWARF does not describe (§11 item 2) |
 
 | milestone | |

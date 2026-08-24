@@ -34,6 +34,10 @@ Branch: **`karma/decompile`**. `main` is untouched. **Do not merge.**
   validate a fix on than any kea object. §13.
 - **109 objects compile**, 25 are quarantined by detectors, 14 do not. Object count is a bad
   progress metric — read §3 before using it.
+- **They compile for wasm32, armv7 AND arm64 — and arm64 is a lie.** Identical symbol sets
+  on all three, but arm64 emits 920 pointer/int conversion diagnostics against armv7's 23,
+  because the recovery puns pointers through 4-byte slots and arm64 pointers are 8. No gate
+  can see it. §6b.
 - **All 108 go into the engine at once and it plays a match**, indistinguishable from stock
   on the same map. That is up from the eight of §7b, and getting there took one real fix: a
   static pointer table whose relocations were never applied, which passed all seven gates
@@ -82,6 +86,8 @@ scenes:   109/109 run clean on all three substitute scenes, and all 109 TOGETHER
           are bit-identical on the collision-free one — but read §4a before
           reading anything into that number
 wasm32:   109/109 compile, exported symbol sets byte-identical to i386
+armv7:    109/109 compile, symbol sets identical — a real 32-bit-pointer port
+arm64:    109/109 compile, symbol sets identical, and NOT TRUSTED (§6b)
 bindings: 109/109 export what the SHIPPED object exported, binding included (§8)
 difftest: 14 pairs (Cylinder x Cylinder and Cylinder x TriangleList added
           2026-08-24), reproducing the documented baseline exactly — IxBoxBox
@@ -1116,6 +1122,53 @@ done
 
 ---
 
+## 6b. arm64 and armv7 — one of them is a lie
+
+**Measured 2026-08-24 (fourth session), and the headline is that the green result is the
+dangerous one.**
+
+The toolchain is the Android NDK, which IS installed — an earlier session wrongly reported
+no cross-compiler because it only looked at `/usr/bin` and `/opt`:
+
+```bash
+NDK=/home/ion/Android/Sdk/ndk/30.0.14904198/toolchains/llvm/prebuilt/linux-x86_64/bin
+$NDK/armv7a-linux-androideabi21-clang   ...   # 32-bit pointers
+$NDK/aarch64-linux-android21-clang      ...   # 64-bit pointers
+```
+
+with the same flags §4 uses for i386, minus `-m32`.
+
+| target | compiles | exported symbols vs i386 | pointer/int diagnostics* |
+|---|---|---|---:|
+| wasm32 | 109/109 | identical | — |
+| **armv7** | **109/109** | **identical** | **23** |
+| **arm64** | **109/109** | **identical** | **920** |
+
+\* with `-Wno-int-conversion` and `-Wno-incompatible-pointer-types` REMOVED, over five
+released objects (`IxSphereTriList`, `McdGjk`, `IxBoxBox`, `IxConvexTriList`,
+`IxSphylPrimitives`).
+
+**Why arm64 must not be trusted despite passing everything.** §4 downgrades those two
+diagnostics deliberately, and says why: they are "safe only because every target is
+32-bit-pointer (i386 and wasm32)". Decompiled code puns pointers through integer slots
+constantly — Ghidra recovers a stack slot as `undefined4` and the code stores a pointer in
+it. On a 32-bit target that is lossless. **On arm64 it truncates a 64-bit pointer to 32
+bits**, and the 40× jump in diagnostics is exactly that happening, 897 more times.
+
+It compiles. The symbol sets are byte-identical. Every one of the seven gates would pass,
+because not one of them executes arm64 code. This is §12's closing checklist in its purest
+form: *the measurement cannot see the failure.*
+
+**So the honest status is: armv7 is a real port, arm64 is not.** armv7 shares the
+32-bit-pointer assumption the whole recovery rests on, so it is in the same class as wasm32
+and i386. arm64 needs the pointer punning fixed at the source — Ghidra's `undefined4` slots
+would have to become pointer-width — which is a generator-wide change, not a flag.
+
+**Nothing has been executed on any non-i386 target.** Compiling is not running; see
+`HANDOVER-WEB.md`, which says the same thing about wasm.
+
+---
+
 ## 7. Instrumenting the game — the shadow harness
 
 `test/kd_shadow.c`. Every collision call runs the original into the caller's real result
@@ -1930,6 +1983,29 @@ Ordered by what actually moves the project, not by what is easiest:
    motivates a tool is the worst thing to validate it on; these are the alternative
    subjects that item did not have before.
 
+   **THE GHIDRA-SIDE ATTACK, which is the one to try next and has never been attempted.**
+   Ghidra IS installed (§5, `/home/ion/tools/ghidra_12.1.3_PUBLIC`) and a re-run is 75–120
+   minutes, so this is affordable. The hypothesis worth testing:
+
+   > The DWARF for these functions declares names and types with **no `DW_AT_location`**.
+   > Ghidra's DWARF importer still creates those variables, so the decompiler is handed a
+   > set of typed locals it cannot place — and then has to reconcile them with its own
+   > stack analysis. Ghidra's *native* stack-frame recovery, with no DWARF at all, is
+   > usually good. **The DWARF may be making this worse, not better.**
+
+   The experiment: dump `keaRbdCore_unified`, `MdtWorld`, `MdtBcl` and `MeMath` with DWARF
+   variable import DISABLED (Ghidra's DWARF analyzer has options for exactly this — import
+   data types but not variables/parameters), into a NEW output dir, and diff the four
+   bodies against `out9`. If the `stack0x`/`in_stack_` mess collapses into ordinary
+   `local_NN`, the whole item is solved for all eight objects at once.
+
+   **Cheap and decisive, and it costs nothing if wrong** — a per-object dump comparison,
+   with `out9` untouched. §5's rules apply: new directory, keep the old one, seven gates
+   before adoption.
+
+   Note this is the FIRST thing in the project that would be validated on a non-kea object:
+   `MdtBcl` and `MeMath` are one error each, so the answer shows up in minutes.
+
    **The one lead that is not a guess.** The by-value *incoming* parameters are pinned by
    the cdecl ABI, not by debug info, and Ghidra already has the signature:
 
@@ -2271,7 +2347,9 @@ box.
 5. No detector suppressed, no object released without a line in `proven.txt`.
 6. The whole set builds as ordinary C for **wasm32 and arm64/armv7**, not just i386.
    **wasm32 is done** — 106/106 compile with byte-identical exported symbols
-   (`test/wasm_check.sh`). arm64 has not been tried; no cross-compiler is installed here.
+   (`test/wasm_check.sh`). **armv7 and arm64 both compile 109/109 with the Android NDK
+   (§6b) — but only armv7 is believed CORRECT, and arm64 is believed WRONG for a
+   structural reason. Read §6b before touching either.**
    Nothing has been *executed* under wasm. See `HANDOVER-WEB.md`.
 7. The engine runs with `WITH_KARMA=1` against recovered Karma with **no shipped `.a` in the
    link at all**. `test/make_substituted_metoolkit.sh` builds that tree.
@@ -2288,7 +2366,7 @@ box.
 | 3 | all three scenes clean for every recovered object, *and* checked for sensitivity | **DONE**, and the sensitivity check (§4a) is what makes it mean anything. |
 | 4 | qhull and the asset loader **replaced**, not recovered | **DONE, both halves — but the asset half was RECOVERED, not replaced (§8c), which is a better outcome: exact rather than equivalent.** Qhull, all four tiers: `src/McdConvexCreateHull/kd_convexhull.c` replaces all 15 exported functions — 1.4 MB → 10 KB: 100,633 invariant checks, identical geometry and volumes, a collision A/B differing on 2 borderline pairs in 2.4 M, and **a live ONS match with 15,425 real GJK calls and 0 structural divergences**. wasm32 clean with an identical symbol set. The asset loader is 9 of 9 recovered (§8c) and needs no replacement. |
 | 5 | no detector suppressed, nothing released without evidence | **HOLDING, and a NEW HOLE FOUND.** 25 objects quarantined and the quarantine is load-bearing (§4a: `MdtPartition` alone turns a bit-identical scene into a SIGSEGV). But `IxCylinderCylinder` is measured wrong on a live pair and **no detector holds it**, so it is in the build. The quarantine only catches what a detector recognises — "not held" is not "validated". §11 item 0. |
-| 6 | builds as ordinary C for wasm32 **and arm64/armv7** | **wasm32 DONE** (109/109, byte-identical symbol sets). **arm64 NOT POSSIBLE HERE** — checked 2026-08-24, there is no aarch64 or arm cross-compiler on this machine, so this needs a toolchain install before it can even be attempted. Nothing has been *executed* on either. |
+| 6 | builds as ordinary C for wasm32 **and arm64/armv7** | **wasm32 DONE** (109/109, byte-identical symbol sets). **armv7 DONE** (109/109, symbol sets identical, and it is a 32-bit-pointer target so the recovery's core assumption holds). **arm64 COMPILES AND IS NOT TRUSTED** — 109/109 with identical symbol sets, and 920 pointer/int conversion diagnostics against armv7's 23 on the same five objects. That 40x ratio is 64-bit pointers being truncated into 4-byte slots. §6b. Nothing has been *executed* on any of the three. |
 | 7 | engine runs on recovered Karma with **no shipped `.a` in the link at all** | **COLLISION HALF DONE for the twelve validated pairs** (§7b, two maps, 11 runs/arm, indistinguishable from stock) — but those runs were on maps with no cylinder traffic, so they do not cover the two new pairs. **SOLVER HALF BLOCKED**, on one problem — the arguments are recovered (§5a) and what remains is the frames, §11 item 2. |
 
 **So what is left, in one sentence each:**

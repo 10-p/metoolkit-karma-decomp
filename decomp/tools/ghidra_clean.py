@@ -20,6 +20,7 @@ What it does, and what it deliberately does NOT do:
     it is small (~10 lines for IxBoxBox).
 """
 import argparse
+import collections
 import os
 import re
 import struct
@@ -2304,6 +2305,213 @@ def fix_printf_extra_args(text):
                 n += len(drop)
                 pos = op + 1
                 region = new_call
+        out.append(region)
+    return ''.join(out), n
+
+
+# Ghidra's frame-slot names all encode their own offset, so two slots spelled
+# differently can still be compared numerically. `kd_argslot_*` is this
+# pipeline's own name, emitted by materialise_shifted_frame.
+_SLOT_NAME = [
+    (re.compile(r'^(?:kd_argslot|in_stack)_([0-9a-f]{8})$'),
+     lambda h: int(h, 16) - (1 << 32) if int(h, 16) >= (1 << 31) else int(h, 16)),
+    (re.compile(r'^[A-Za-z_]*Stack[A-Z]?_([0-9a-f]+)$'), lambda h: -int(h, 16)),
+    (re.compile(r'^local_([0-9a-f]+)$'), lambda h: -int(h, 16)),
+]
+
+_DEREF = re.compile(r'\*\([^()]*\*\)\(')
+
+# A bare unmodelled register name, and nothing else, on the right of a store.
+_BARE_UNMODELLED = re.compile(
+    r'^(?:extraout_[A-Z]+[0-9_]*|unaff_[A-Z]+[0-9_]*)$')
+
+
+def _slot_base_offset(name):
+    for pat, fn in _SLOT_NAME:
+        m = pat.match(name)
+        if m:
+            return fn(m.group(1))
+    return None
+
+
+def _split_plus(s):
+    """Split on `+` at bracket depth zero."""
+    out, depth, cur = [], 0, ''
+    for ch in s:
+        if ch in _OPEN:
+            depth += 1
+        elif ch in _CLOSE:
+            depth -= 1
+        if ch == '+' and depth == 0:
+            out.append(cur)
+            cur = ''
+        else:
+            cur += ch
+    out.append(cur)
+    return [p.strip() for p in out if p.strip()]
+
+
+def _decode_slot(text, start):
+    """`*(T *)( base + terms + const )` -> (terms, frame offset, end) or None."""
+    m = _DEREF.match(text, start)
+    if not m:
+        return None
+    end = _match_bracket(text, m.end() - 1)
+    if end is None:
+        return None
+    base, off, terms = None, 0, []
+    for piece in _split_plus(text[m.end():end - 1]):
+        if re.match(r'^-?(?:0x[0-9a-f]+|\d+)$', piece):
+            off += int(piece, 16) if 'x' in piece.lower() else int(piece)
+            continue
+        nm = re.match(r'^(?:\(int\))?\s*&?\s*\(?\s*\*?\s*([A-Za-z_]\w*)\s*\)?$', piece)
+        if nm and base is None and _slot_base_offset(nm.group(1)) is not None:
+            base = _slot_base_offset(nm.group(1))
+            continue
+        terms.append(re.sub(r'\s+', '', piece))
+    if base is None:
+        return None
+    return tuple(sorted(terms)), base + off, end
+
+
+def _slots_in(text):
+    """Every decodable frame slot in `text`, left to right."""
+    i, out = 0, []
+    while True:
+        j = text.find('*(', i)
+        if j < 0:
+            return out
+        k = _decode_slot(text, j)
+        if k:
+            out.append((j, k[0], k[1], k[2]))
+            i = k[2]
+        else:
+            i = j + 2
+
+
+def drop_padding_arg_stores(text):
+    r"""`*(slot above the last argument) = extraout_EDX;` — gcc's padding push.
+
+    The third rendering of the defect fix_variadic_extra_args and
+    fix_printf_extra_args already fix in the other two. gcc 3.2 keeps `%esp`
+    16-byte aligned across a call, so it pushes 0-3 filler words before the
+    arguments; the filler is whatever register was live, and Ghidra recovers
+    the push honestly as a store of a value it could not account for:
+
+        *(undefined4 *)((int)auStack_78 + iVar2 + iVar6 + 8) = extraout_EDX;
+        *(undefined4 *)((int)auStack_78 + iVar2 + iVar6 + 4) = extraout_EDX;
+        *(MdtBaseConstraint **)((int)auStack_78 + iVar2 + iVar6) = ...;
+        *(MeHeap **)((int)aiStack_90 + iVar2 + iVar6 + 0x14) = &q;
+        *(undefined4 *)((int)aiStack_90 + iVar2 + iVar6 + 0x10) = 0x1029f;
+        MeHeapPush(*(void **)((int)aiStack_90 + iVar2 + iVar6 + 0x14),
+                   *(void **)((int)auStack_78 + iVar2 + iVar6));
+
+    `MdtLOD.o` at 0x291: `push %edx; lea; push %edx; push %ebx; push %eax;
+    call MeHeapPush; add $0x10,%esp`. Four words pushed, two arguments read.
+
+    THE ARITY IS DERIVED, NOT GUESSED, AND IT COMES OUT OF THE TEXT. Ghidra
+    knows the callee's prototype, so it emits the right number of arguments and
+    READS THEM BACK out of the same slots; the pushes it had left over become
+    stray stores. So the top argument slot is the highest slot the call itself
+    reads, and everything above it was already known to be beyond the arity —
+    by Ghidra, at the moment it wrote the call.
+
+    THREE GUARDS:
+
+      * the block size must come out a multiple of four words. gcc aligns to 16
+        bytes, so `arguments + padding` is 4, 8, 12 ... — checked against the
+        real thing at every site examined (IxConvexTriList's 6 arguments plus 2
+        filler is `add $0x20,%esp`; MdtLOD's 2 plus 2 is `add $0x10,%esp`). A
+        site that does not fit that shape is left alone, and the object stays in
+        review, which is the right answer for something this cannot explain.
+      * only a BARE unmodelled name is dropped. Where Ghidra did model the value
+        the code is valid C that reproduces the machine faithfully and there is
+        no defect to fix — IxConvexTriList stores a live `pfVar21` into its two
+        filler words and is validated, in the build, and left untouched.
+      * the store must be pending for THIS call: anything written to the area
+        before the previous call on it has already been consumed.
+
+    12 sites across 5 objects directly, and 9 more through a variable.
+
+    THE VARIABLE CASE IS DECIDED ON THE WHOLE VARIABLE, not on a definition.
+    Ghidra merges unrelated values into one C local, so `uVar14 = extraout_ECX_00`
+    says nothing on its own about what `uVar14` carries elsewhere. What can be
+    read straight off the text is whether the local carries ANYTHING else:
+
+        uVar14 = extraout_ECX_00;                       <- assigned, unmodelled
+        uVar14 = extraout_ECX_01;                       <- assigned, unmodelled
+        *(undefined4 *)((int)aMStack_9c94 + 4) = uVar14; <- read, padding slot
+        *(undefined4 *)((int)aMStack_9c94)     = uVar14; <- read, padding slot
+
+    Every assignment unmodelled and every read a padding slot means no
+    definition of it can reach anything observable, whatever the control flow
+    does — so the local is deleted whole. `MstUtils`'s `p_Var8` fails that test
+    (it is also assigned from four real calls and read three more times) and is
+    left, which is the right answer: proving THAT one inert needs to know which
+    definition reaches which read, and this does not."""
+    out, n = [], 0
+    for _fn, region in _split_definitions(text):
+        lines = region.split('\n')
+        pending, drop = collections.defaultdict(list), set()
+        via = collections.defaultdict(set)      # local -> padding-store line(s)
+        for i, line in enumerate(lines):
+            s = line.strip()
+            sl = _slots_in(s)
+            if not sl or sl[0][0] != 0:
+                continue
+            _, terms, off, end = sl[0]
+            if re.match(r'\*\(undefined4 \*\)\(.*\)\s*=\s*0x1[0-9a-f]{4}\s*;$', s):
+                call = '\n'.join(lines[i + 1:i + 14])
+                stop = call.find(';')
+                if stop >= 0:
+                    args = [a[2] for a in _slots_in(call[:stop + 1]) if a[1] == terms]
+                    if args:
+                        top = max(args)
+                        nargs = (top - off) // 4
+                        # gcc aligns the pushed block to four words
+                        block = ((nargs + 3) // 4) * 4
+                        for (ln, rhs) in pending.get(terms, []):
+                            if not (top < ln[1] <= off + 4 * block):
+                                continue
+                            if _BARE_UNMODELLED.match(rhs):
+                                drop.add(ln[0])
+                            elif re.match(r'^[A-Za-z_]\w*$', rhs):
+                                via[rhs].add(ln[0])
+                pending[terms] = []
+                continue
+            eq = s.find('=', end)
+            if eq > 0 and s[eq + 1:eq + 2] != '=':
+                pending[terms].append(((i, off), s[eq + 1:].strip().rstrip(';').strip()))
+        # a local whose every assignment is unmodelled and whose every read is a
+        # padding store cannot reach anything observable, on any path
+        for var, stores in via.items():
+            word = re.compile(r'(?<![\w])' + re.escape(var) + r'\b')
+            assigns, reads, ok = [], [], True
+            for i, line in enumerate(lines):
+                if not word.search(line):
+                    continue
+                s = line.strip()
+                if re.match(r'^(?:const\s+|struct\s+|unsigned\s+|signed\s+)*'
+                            r'[A-Za-z_]\w*\s*[\*\s]*' + re.escape(var)
+                            + r'\s*(?:\[[^\]]*\])?;$', s):
+                    continue                                    # its declaration
+                m = re.match(r'^' + re.escape(var) + r'\s*=([^=].*);$', s)
+                if m and not word.search(m.group(1)):
+                    if not _BARE_UNMODELLED.match(m.group(1).strip()):
+                        ok = False
+                        break
+                    assigns.append(i)
+                    continue
+                if i in stores and len(word.findall(line)) == 1:
+                    reads.append(i)
+                    continue
+                ok = False
+                break
+            if ok and assigns and set(reads) == stores:
+                drop |= set(assigns) | stores
+        if drop:
+            n += len(drop)
+            region = '\n'.join(l for j, l in enumerate(lines) if j not in drop)
         out.append(region)
     return ''.join(out), n
 
@@ -5125,6 +5333,10 @@ def main():
     body_text, n_fltload = fix_float_load_of_int(args.object, body_text)
     body_text, n_frame = materialise_shifted_frame(
         body_text, args.object, read_ghidra_locals(args.input))
+    # After materialise_shifted_frame, because the outgoing-argument area it
+    # gives real storage to is spelled `kd_argslot_*` in its output and the
+    # padding slots sit in exactly that area.
+    body_text, n_pad = drop_padding_arg_stores(body_text)
     body_text, n_ftext = restore_float_text(
         body_text, args.object, read_ghidra_locals(args.input))
     data_block, n_data = materialise_data_refs(args.object, body_text)
@@ -5237,6 +5449,8 @@ def main():
         print(f'  {n_uninit} unmodelled-register local(s) given a defined initial value')
     if n_pfmt:
         print(f'  {n_pfmt} padding word(s) dropped from variadic call(s)')
+    if n_pad:
+        print(f'  {n_pad} padding word(s) dropped from an outgoing argument area')
     if n_rel:
         print(f'  {n_rel} relocated data block(s) rebuilt with their pointers')
     if args.cflag:

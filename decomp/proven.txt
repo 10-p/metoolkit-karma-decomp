@@ -2034,3 +2034,136 @@ MdtUtils              Bit-identical on scene_ragdoll with 4.113e+00 m of
 # COMPILED, passed the substitute gate, and then segfaulted on its first call in
 # a real match". Until the alloca is materialised the compile error is the
 # useful signal.
+
+# --- 2026-08-25 (third session): keaLCPSolver IS EXACT, AND WHAT FOUND IT -----
+#
+# RELEASED FROM MEASURED_WRONG. Bit-identical on scene_chain, scene_ragdoll and
+# scene_boxes_on_plane, and bit-identical on every one of its FIFTEEN functions
+# taken one at a time (test/bisect_object.sh). 113 objects in the build.
+#
+# THE DEFECT WAS THREE CASTS, and nothing diagnosed them. Ghidra type-puns a
+# `MeReal *` into a struct pointer and writes through the first member:
+#
+#     this_00 = (keaLCPSolver *)this->x;
+#     (&this_00->AinvStride)[k] = (int)this->clampedValues[k];
+#
+# `AinvStride` is at offset 0, so the ADDRESS is right; in C this is a
+# float-to-int CONVERSION and it destroys the value. The shipped code is `mov`.
+# Three sites, all in PrincipalSubmatrix -- and the sibling lines of the same
+# unrolled loop, `this->x[clamped[i]] = this->clampedValues[clamped[i]]`, Ghidra
+# got right. That is why twelve of fifteen functions were already exact and the
+# object still put a ragdoll body 3.7 m out of place on step 1.
+#
+# fix_int_store_of_float rests on the machine code: a float-to-int conversion on
+# i386 is `fistp`, `fisttp` or a `cvtt*2si`, and keaLCPSolver contains NOT ONE in
+# any function. So an `(int)` applied to a floating expression cannot be a
+# conversion the program performs.
+#
+# AND THE RULE WAS WRONG FIRST, in the way this project keeps meeting. Its
+# subscript matcher was a greedy `\[.*\]`, so `(axis->v[1] < axis->v[0])` read as
+# one subscripted member and a COMPARISON was typed as a float -- silently
+# changing IxCylinderCylinder, an object with nothing wrong with it. The
+# blast-radius check caught it before anything else could.
+#
+# test/bisect_object.sh IS THE NEW INSTRUMENT and it is what made this findable.
+# substitute_test.sh works one OBJECT at a time; this drives the same scene with
+# exactly ONE recovered function in the link -- the shipped member's globals
+# WEAKENED, all but one of the recovered object's LOCALISED -- so a divergence
+# names the function. It carries its own control and reads the FIRST differing
+# step. On keaLCPSolver it read `identical` for thirteen of fifteen and NaN for
+# PrincipalSubmatrix and makeXandW, and makeXandW calls PrincipalSubmatrix.
+#
+# ONE LIMIT OF IT, so nobody is misled: localising a symbol does not REMOVE it,
+# so intra-object calls still bind to the recovered copy. "One function in" is
+# really "this function and everything it calls". An `identical` row is
+# therefore strong; a divergent row names a subtree, not a leaf.
+#
+# --- 2026-08-25 (third session): keaIntegrate_pc, narrowed not fixed ----------
+#
+# first@13 = 1.500e-08 on scene_chain, growing to 4.900e-04 over 900 steps. That
+# is a LAST-BIT difference amplified, not a gross defect -- a different class
+# from keaLCPSolver's, and the first-differing-step column is what separates
+# them. Its two functions report identically because MdtKeaIntegrateSystem calls
+# KeaIntegrateSystem_vanilla.
+#
+# THE DOUBLE LITERALS ARE REFUTED. `* 0.5 *` and `1.0 / SQRT(...)` are C double
+# constants where the original has floats; rebuilding with `0.5f` and `1.0f`
+# changes NOTHING (still first@13 = 1.500e-08). 0.5 and 1.0 are exact, and x87
+# computes at 80 bits either way.
+#
+# What is left is EXPRESSION REASSOCIATION in the quaternion update. The four
+# qrot lines are associated differently from one another --
+# `((a - b) - c)`, `((a + b) - c)`, `(a + -b + c)`, `(c + (a - b))` -- and float
+# addition is not associative, so any one of them reordered against the machine
+# code moves the last bit. Read the `fadd`/`fsub` order out of
+# KeaIntegrateSystem_vanilla and compare.
+#
+# --- 2026-08-25 (third session): keaLCP_new, SIZED and not attempted ---------
+#
+# 37 references to `auStack_3c` in about ten distinct shapes, plus 24 `stack0x`
+# sites, and the strides are MIXED: `(int)auStack_3c + uVar6 * -3` is BYTE
+# arithmetic while `auStack_3c[iVar2 - uVar6]` is ELEMENT arithmetic on a
+# `uint[3]`. Repairing it means deciding the stride at each of 61 sites against
+# the disassembly, and the failure mode of getting one wrong is a silent
+# out-of-bounds write, not a compile error. The layout is recorded above; this
+# note is the size of the job.
+
+# --- 2026-08-25 (third session): BOTH CYLINDER DEFECTS NOW REPRODUCE OFFLINE --
+#
+# IxCylinderTriList -- THE BLOCKER IN "WHAT REMAINS" ROW 7 IS DISCHARGED. That
+# row said the divergence "diverges in a live match and the synthetic tier
+# cannot see it", and asked for "a test mesh that can be a corner".
+# `KD_CORNER=1` IS that mesh, and it works:
+#
+#   default mesh (4x2 patch)   200,000 pairs, 165,267 touching   0 count_diff
+#   KD_CORNER=1                200,000 pairs, 188,416 touching   1 count_diff
+#
+#   !! contact count differs at iteration 23624 (ret 0/0 touch 1/1 count 30/32)
+#
+# The shipped library returns THIRTY contacts and we return THIRTY-TWO, with
+# `ret` and `touch` agreeing. So the live defect -- 37 count_diff in 153,391,
+# off-by-one contacts on a cylinder resting in a corner -- is now DETERMINISTIC
+# and debuggable without a match. The synthetic rate (1 in 200,000) is far below
+# the live one (0.024%), which is expected: the corner mesh puts a cylinder in a
+# corner sometimes, and the game does it constantly.
+#
+# TWO HYPOTHESES REFUTED, both cheaply, both worth not repeating:
+#
+#   * The accumulation of the average normal reads
+#     `*(float *)(MStack_26c.flags + 4) = diff.v[1] + ...` -- component 1 and 2
+#     of `result->normal` written through what looks like ANOTHER OBJECT'S
+#     field. It is not: rewriting all three as `result->normal[i] +=` gives a
+#     BYTE-IDENTICAL result, so `MStack_26c.flags` already holds
+#     `&result->normal[0]` there. An alias, not a defect.
+#   * Our object defines ONE local where the shipped one defines FOUR
+#     (`MeVector3Normalize`, `McdVanillaOverlapCylTri`,
+#     `McdVanillaAddTriCylSegmentPoints`, `McdVanillaSegmentCylinderIntersect`).
+#     Also not a defect: all four are `static` in the recovered source and GCC
+#     inlined three of them. Note that check_symbol_bindings compares GLOBALS,
+#     so it would not have caught a genuinely missing local -- worth knowing.
+#
+# Where to look next: the count comes from a range, `footprint` to `verts`, that
+# `McdVanillaOverlapCylTri` fills, and every contact in it is emitted. Two extra
+# contacts means two extra footprint points.
+#
+# IxCylinderCylinder -- THE COUNT DIVERGENCE IS LOCATED, and it is NOT the
+# rounding instability that explains its dims.
+#
+#   !! contact count differs at iteration 194376 (ret 0/0 touch 1/1 count 4/2)
+#      [0] sep -0.244169116 / -0.244169161
+#      [1] sep -0.0574037619 / -0.244169116
+#
+# The shipped library keeps FOUR contacts and we keep TWO. Our contact [1]
+# carries the separation the shipped library gives its contact [0], so the
+# FOOTPRINT differs -- this is upstream of the emission filter, which is
+# `if (sep < separation * 0.01)` and would have kept -0.0574 against a threshold
+# of -0.00244.
+#
+# AND IT IS A REAL DEFECT, WHICH IS WORTH STATING BECAUSE §11 ITEM 0 MIGHT
+# SUGGEST OTHERWISE. That item establishes that this pair's SEPARATING AXIS is
+# decided by rounding -- 29.7% of calls choose on a margin of 1e-6 or less --
+# and that the shipped library, nudged by 1e-7, disagrees with itself on `dims`
+# 7,798 times in 200,000. But the same probe reports **0 count_diff**. The
+# shipped library does not disagree with ITSELF about how many contacts there
+# are. So the one count divergence is ours, and `dims` being unmeasurable for
+# this pair does not extend to `count`.

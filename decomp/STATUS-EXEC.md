@@ -32,17 +32,20 @@ and one of the two Android targets is known to be wrong.
 
 | | |
 |---|---|
-| Modules rebuilt and in use | **115** of a 153-module working set |
-| Rebuilt but held back until proven | 15 |
-| Not yet rebuilt | 18 |
+| Modules rebuilt and in use | **121** of a 153-module working set |
+| **Original modules the game still needs** | **21** — the number that measures the goal |
+| Rebuilt but held back until proven | 13 |
+| Not yet rebuilt | 14 |
 | Movement modules rebuilt exactly | **7 of 7** — was 2 of 7 a week ago |
 | Movement modules the game runs on | **14 of the 20 shipped**; 1 of the other 6 still matters |
 | Collision types the game uses | **15** — 13 proven, 1 small defect, 1 open |
 | Platforms building | PC ✅ · Web ✅ · Android 32-bit ✅ · Android 64-bit ⚠ |
 | Platforms **running** | PC only |
 
-Module count is a poor progress measure — a few of the 18 remaining are worth more than
-thirty finished ones. Judge by the "movement modules" row.
+Module count is a poor progress measure, and we now have a better one. The second row
+counts the original modules the game still reaches — the ones that have to be replaced
+before the rebuilt library can stand on its own. It went from 27 to 21 this week, and it
+falls only when a module is rebuilt **and proven**, not merely rebuilt.
 
 ---
 
@@ -67,7 +70,7 @@ thirty finished ones. Judge by the "movement modules" row.
 |---|---|---|
 | **An error class our PC tests cannot see** | **large / unknown** | exactly harmless on PC, changes about a third of results on web and Android. 3 fixed, 152 modules unexamined |
 | **One movement module still the original's** | small | five of its six functions now reproduce the original exactly; the sixth is located to two helper routines. The last thing between us and using none of the original solver |
-| **64-bit Android is wrong** — 2,436 known issues | medium | compiles and looks fine; it is not |
+| **64-bit Android is wrong** — 2,680 known issues | medium | compiles and looks fine; it is not |
 | **Nothing has executed on web or Android** | medium | separate workstream |
 | Two small collision defects (~1 in 4,000, ~1 in 10,000) | small | both reproducible in seconds on a desk |
 | The remaining modules | small | nothing cheap left |
@@ -116,12 +119,33 @@ headless renderer has started crashing at the first frame under two of its three
 code, and switching to the third mode makes both run clean. Running the unmodified control
 before reading a crash as ours is the whole reason we know that.
 
-Finally, the last original movement module went from "wrong by an unknown amount somewhere"
-to "five of its six functions exactly right, and the sixth narrowed to two helper routines"
-— but only after we found that the tool meant to attribute a fault to a function **was not
+The last original movement module went from "wrong by an unknown amount somewhere" to "five
+of its six functions exactly right, and the sixth narrowed to two helper routines" — but
+only after we found that the tool meant to attribute a fault to a function **was not
 attributing anything at all**. It reported the same number for all six, including one that
-does no arithmetic and therefore could not have produced it. That is the kind of thing the
-working rule below is for.
+does no arithmetic and therefore could not have produced it.
+
+**And then we built the measure this project has been missing.** Until now progress was
+counted in modules rebuilt, which does not answer the question that matters: how many of
+the ORIGINAL modules does the game still need? A new tool answers it directly, by tracing
+every function the engine calls through to whoever provides it — 21 today, 27 at the start
+of the week. It is checked against reality rather than trusted: we deleted every original
+module, tried to build the game, and confirmed the tool had predicted all 111 things that
+went missing.
+
+Six of those 21 were closed this week, and three of them by a single correction. A note in
+our own records had said, for months, that a particular family of failures was the
+compiler's fault and should be left alone. It was not: the compiler complains about exactly
+one of two problems on the line and is silent about the second, so fixing what it named
+left the real error in place. Correcting that recovered three modules — **and repaired four
+more that had been compiling, passing every test, and computing the wrong answer.** One of
+them was working out a sphere's mass from its radius read as a whole number.
+
+**The reason we found that last group at all is the reason to keep running the real game.**
+A module we had just cleared on all nine of our offline tests then killed the game during
+start-up, because a table of function addresses had a blank where an address belonged. It
+is the second time that exact defect has appeared. For anything touching the game's asset
+files, our offline tests are not evidence — only the game is.
 
 ---
 
@@ -132,8 +156,11 @@ that a passing test is not believed until we have shown it could have failed, wh
 repeatedly been the difference between real and imaginary progress. Three times this week
 that rule caught our own tests: one check could not have matched anything it was looking
 for; one deliberately-planted fault went undetected because the test never exercised the
-code it was planted in; and one attribution tool turned out to be attributing nothing.
+code it was planted in; one attribution tool turned out to be attributing nothing; and a
+module that passed all nine offline tests killed the game on start-up.
 
 **Both halves are now rebuilt and proven on PC, and the game runs on them. What we cannot
 yet claim is that they behave the same way on web and Android — and this week we found a
 specific, measured reason to doubt it.**
+
+**The finish line is now countable: 21 original modules left, from 27.**

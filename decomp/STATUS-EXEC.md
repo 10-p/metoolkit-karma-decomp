@@ -10,12 +10,16 @@ builds can have vehicles and ragdolls instead of nothing. Updated 2026-08-25.
 **Collision detection — does A hit B — is done.** The game plays full matches on our
 rebuilt code, indistinguishable from the original.
 
-**Movement — how things fall, bounce and swing — is nearly there.** The mathematics was
-already proven exact. This week the three modules around it were rebuilt — the driver, the
-equation solver and the memory allocator — and **all three reproduce the original exactly,
-step for step, on all three test scenes**. The control code was five modules short a week
-ago; it is now **one**. There is still no configuration in which the game runs on our
-physics engine, and that one module is the only reason.
+**Movement — how things fall, bounce and swing — is one module away.** The mathematics was
+already proven exact. This week the four modules around it were rebuilt — the driver, the
+equation solver, its inner loop and the memory allocator — and **all four reproduce the
+original exactly, step for step, on all three test scenes**. The control code was five
+modules short a week ago.
+
+The one that remains is not missing: it is rebuilt and runs, and disagrees with the
+original by **one part in a hundred million** on the first step where it differs at all —
+a single rounding step, not a fault. Until that is settled there is still no configuration
+in which the game runs on our physics engine, and it is the only reason.
 
 **Nothing has run on web or Android yet.** It compiles for both — not the same thing —
 and one of the two Android targets is known to be wrong.
@@ -27,14 +31,14 @@ and one of the two Android targets is known to be wrong.
 | | |
 |---|---|
 | Modules rebuilt and in use | **113** of a 153-module working set |
-| Rebuilt but held back until proven | 16 |
-| Not yet rebuilt | 19 |
-| Movement modules still missing | **1** — was 5 |
+| Rebuilt but held back until proven | 17 |
+| Not yet rebuilt | 18 |
+| Movement modules rebuilt exactly | **6 of 7** — was 2 of 7 a week ago |
 | Collision types the game uses | **15** — 13 proven, 1 small defect, 1 open |
 | Platforms building | PC ✅ · Web ✅ · Android 32-bit ✅ · Android 64-bit ⚠ |
 | Platforms **running** | PC only |
 
-Module count is a poor progress measure — a few of the 19 remaining are worth more than
+Module count is a poor progress measure — a few of the 18 remaining are worth more than
 thirty finished ones. Judge by the "movement modules" row.
 
 ---
@@ -50,15 +54,15 @@ thirty finished ones. Judge by the "movement modules" row.
 - Two large components dealt with — the hull builder replaced (1.4 MB of third-party code
   down to 10 KB) and the asset loader rebuilt.
 - Builds for web and 32-bit Android with an interface identical to the original.
-- **The solver's driver, its equation solver and its memory allocator** — rebuilt this week,
-  all three reproducing the original exactly on all three test scenes. Each checked by
-  building a wrong version on purpose and confirming it fails.
+- **The solver's driver, its equation solver, that solver's inner loop and its memory
+  allocator** — rebuilt this week, all four reproducing the original exactly on all three
+  test scenes. Each checked by building a wrong version on purpose and confirming it fails.
 
 ## Left
 
 | | size | |
 |---|---|---|
-| **The solver's control code** — 1 module | large | the last thing between us and a running physics engine |
+| **One movement module, out by one part in 100 million** | small | the last thing between us and a running physics engine |
 | **64-bit Android is wrong** — 2,291 known issues | medium | compiles and looks fine; it is not |
 | **Nothing has executed on web or Android** | medium | separate workstream |
 | Two small collision defects (~1 in 4,000, ~1 in 10,000) | small | both now reproducible in seconds on a desk, which they were not |
@@ -68,11 +72,16 @@ thirty finished ones. Judge by the "movement modules" row.
 
 ## This week
 
-**The movement half went from five missing modules to one.** Three were rebuilt — the
-driver, the equation solver and the memory allocator — and the one that remains is now
-traced to a specific, written-down cause. The driver had been blocked for months on a repair
-nobody could check; we built the check first, then made the repair, and the check catches
-both ways of getting it wrong.
+**The movement half went from five missing modules to none missing and one imperfect.**
+Four were rebuilt — the driver, the equation solver, its inner loop and the memory
+allocator — and every one of them reproduces the original exactly. The driver had been
+blocked for months on a repair nobody could check; we built the check first, then made the
+repair, and the check catches both ways of getting it wrong.
+
+The last of the four had been marked "do not attempt" twice, on the grounds that its memory
+layout was inconsistent. Looking again, it was not — the note had misread one line of it.
+The layout was recoverable, and once it was, a single call turned out to be missing its
+three arguments. Putting them back made the module exact.
 
 **The part worth noting is a measurement we had been reading wrong.** One module looked
 acceptable for a whole session because we were judging it by its WORST disagreement with

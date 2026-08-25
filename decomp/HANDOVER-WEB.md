@@ -730,6 +730,22 @@ Read `karma-decomp/HANDOVER.md` for how the recovery pipeline works, and
 A log of the things that would otherwise surprise you, newest first. If you have read an
 older copy of this file, start here.
 
+### 2026-08-25 (fourth session) — the solver is recovered; the dump is out13
+
+Nothing here changes what the web build does, and the object count does not move.
+
+- **`keaLCP_new` — the last `libMdtKea` module — is bit-identical to the shipped library on
+  all three test scenes.** It is NOT in the build: a detector still holds it, for a reason
+  `proven.txt` shows to be inert. Everything in the solver is now either exact or, in one
+  case, out by 1.5e-08.
+- **The dump directory is now `out13`, not `out12`** — one of 153 dumps changed. If you
+  re-run the recovery, `HANDOVER.md` §4's command has been updated to match.
+- 113 objects, wasm32 **113/113** with identical exported symbol sets, armv7 **0**
+  truncations, arm64 **2,291 across 68** — all unchanged from the last entry.
+
+The web workstream's job is still item 4 in WHAT REMAINS: nothing has EXECUTED on wasm32,
+armv7 or arm64.
+
 ### 2026-08-25 (third session) — 113 objects, and the solver is one module away
 
 Nothing here changes what the web build does; both objects that moved are solver-side.

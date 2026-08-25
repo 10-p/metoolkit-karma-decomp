@@ -204,6 +204,7 @@ static int kd_warm;            /* KD_WARM=<K>: track length in frames, 0 = off *
    thing to check about a new mode is that it changed anything at all. */
 static int kd_warmdebug;
 static int kd_flat;            /* KD_FLAT=1: coplanar test mesh, i.e. a level floor */
+static int kd_corner;          /* KD_CORNER=1: three perpendicular faces, a room corner */
 static void dimshist_add(int a, int b)
 {
     for (int i = 0; i < kd_dh_n; i++)
@@ -277,8 +278,81 @@ static McdGeometryID mk_sphere(McdFrameworkID fw, int seed)
 static MeVector3 kd_vert[NTRI][3];
 static MeVector3 kd_norm[NTRI];
 
+/* KD_CORNER=1 — a room CORNER instead of a single patch.
+ *
+ * Three mutually perpendicular flat faces meeting at a corner, plus a second
+ * floor patch to use up NTRI. Each face is coplanar, axis-aligned and tiled
+ * into quads, so a body resting in it touches surfaces with DIFFERENT normals
+ * in one call.
+ *
+ * That is the shape the live IxCylinderTriList divergences have and the shape
+ * the default mesh cannot present at any spread: the logged results carry two
+ * normals at once, (0,1,0) and (0,0,1), so the cylinder is on a floor AND
+ * against a wall. The default mesh is one 4x2 patch — every triangle in it
+ * faces roughly the same way, so "resting in a corner" is not in the input
+ * distribution at all, which is why 200,000 pairs at six spreads, with
+ * KD_GRID and with KD_FLAT, all read zero.
+ *
+ * The normal is computed from the winding and then the winding is FIXED to
+ * match the outward direction, rather than both being set independently — the
+ * generator is handed both and a disagreement between them would be a bug in
+ * the test that looks like a bug in the code under test.
+ */
+static void build_mesh_corner(void)
+{
+    /* axis, plane position, outward direction along that axis, tile origin */
+    static const struct { int axis; float pos, sgn, ou, ov; } face[4] = {
+        { 1, -0.6f, +1.0f, -1.2f, -1.2f },   /* floor,      normal +y */
+        { 2, -0.6f, +1.0f, -1.2f, -1.2f },   /* wall,       normal +z */
+        { 0, -0.6f, +1.0f, -1.2f, -1.2f },   /* wall,       normal +x */
+        { 1, -0.6f, +1.0f, +1.2f, -1.2f },   /* more floor, normal +y */
+    };
+    const float STEP = 1.2f;
+    int t = 0;
+    for (int f = 0; f < 4 && t < NTRI; f++) {
+        int a = face[f].axis, u = (a + 1) % 3, v = (a + 2) % 3;
+        for (int iu = 0; iu < 2 && t < NTRI; iu++)
+        for (int iv = 0; iv < 2 && t < NTRI; iv++) {
+            float p[4][3];
+            for (int k = 0; k < 4; k++) {
+                p[k][a] = face[f].pos;
+                p[k][u] = face[f].ou + iu * STEP + ((k & 1) ? STEP : 0.0f);
+                p[k][v] = face[f].ov + iv * STEP + ((k >> 1) ? STEP : 0.0f);
+            }
+            static const int tri[2][3] = { {0, 1, 3}, {0, 3, 2} };
+            for (int q = 0; q < 2 && t < NTRI; q++, t++) {
+                for (int w = 0; w < 3; w++)
+                    for (int j = 0; j < 3; j++)
+                        kd_vert[t][w][j] = p[tri[q][w]][j];
+                MeVector3 e1, e2;
+                for (int j = 0; j < 3; j++) {
+                    e1[j] = kd_vert[t][1][j] - kd_vert[t][0][j];
+                    e2[j] = kd_vert[t][2][j] - kd_vert[t][0][j];
+                }
+                kd_norm[t][0] = e1[1] * e2[2] - e1[2] * e2[1];
+                kd_norm[t][1] = e1[2] * e2[0] - e1[0] * e2[2];
+                kd_norm[t][2] = e1[0] * e2[1] - e1[1] * e2[0];
+                if (kd_norm[t][a] * face[f].sgn < 0.0f) {   /* wound inwards */
+                    for (int j = 0; j < 3; j++) {
+                        float tmp = kd_vert[t][1][j];
+                        kd_vert[t][1][j] = kd_vert[t][2][j];
+                        kd_vert[t][2][j] = tmp;
+                    }
+                    for (int j = 0; j < 3; j++) kd_norm[t][j] = -kd_norm[t][j];
+                }
+                float n = sqrtf(kd_norm[t][0] * kd_norm[t][0]
+                              + kd_norm[t][1] * kd_norm[t][1]
+                              + kd_norm[t][2] * kd_norm[t][2]);
+                if (n < 1e-9f) n = 1.0f;
+                for (int j = 0; j < 3; j++) kd_norm[t][j] /= n;
+            }
+        }
+    }
+}
+
 static void build_mesh(void)
 {
+    if (kd_corner) { build_mesh_corner(); return; }
     for (int t = 0; t < NTRI; t++) {
         int gx = t % 8, gy = t / 8;
         float x0 = -2.0f + gx * 0.5f, y0 = -1.0f + gy * 0.5f;
@@ -653,6 +727,7 @@ int main(int argc, char **argv)
       if (kd_warm < 0) kd_warm = 0; }
     kd_warmdebug = getenv("KD_WARMDEBUG") != NULL;
     kd_flat = getenv("KD_FLAT") != NULL;
+    kd_corner = getenv("KD_CORNER") != NULL;
     { const char *d = getenv("KD_DUMPMAX"); if (d) kd_dumpmax = atoi(d);
       if (kd_dumpmax < 1) kd_dumpmax = 1; }
     kd_dumponly = getenv("KD_DUMPONLY");

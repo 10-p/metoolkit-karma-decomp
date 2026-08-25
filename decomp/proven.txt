@@ -1561,3 +1561,26 @@ MdtUtils              Bit-identical on scene_ragdoll with 4.113e+00 m of
 # multiples of 0.64. The driver's mesh is a single 4x2 patch of 32 triangles and
 # cannot present a corner at all. That, not coplanarity alone, is the untested
 # shape. NTRI is still fixed at 32.
+
+# AND KD_CORNER=1, added the same day, which DOES move it -- a little.
+# Three mutually perpendicular flat faces meeting at a corner, so a body resting
+# in it touches surfaces with DIFFERENT normals in one call, which is what the
+# logged results show and what one 4x2 patch cannot present at any spread.
+#
+#   default / flat / grid meshes, six spreads     0 count_diff
+#   KD_CORNER=1, spread 1.0                       1 count_diff in 188,416 touching
+#   KD_CORNER=1, spread 1.5                       1
+#   KD_CORNER=1 + KD_GRID=1, three spreads        0
+#   SELFTEST on the corner mesh, all 14 pairs     PASS, 100% bit-identical
+#
+# So the corner is necessary and not sufficient. And READ THE DIVERGENCE BEFORE
+# claiming it is the same bug: it is `count 30/32` on a cylinder buried in the
+# corner, with the recovered code inserting two contacts at the FRONT of an
+# otherwise identical list (rec[2] and rec[3] are orig[0] and orig[1]). The
+# game's are `count 4/5` at separations of -3e-04, a cylinder RESTING. Same
+# direction -- the recovery finds more -- and a different depth regime, so
+# whether it is one defect or two is not established.
+#
+# KD_CORNER across all 14 pairs finds nothing else: same numbers as the default
+# mesh everywhere, IxSphereTriList 50 dims against 137, IxBoxTriList worse as it
+# is in every regime. A third mesh that CONFIRMS.

@@ -2791,16 +2791,41 @@ FLOAT_TEXT_REPAIRS = {
              old="      fVar1 = 1.0 / SQRT(fVar4 * fVar4 + fVar3 * fVar3 + fVar2 * fVar2 + fVar1 * fVar1);",
              new="      fVar1 = 1.0 / SQRT(fVar1 * fVar1 + fVar2 * fVar2 + fVar3 * fVar3 + fVar4 * fVar4);"),
     ],
+    ('keaMatrix_PcSparse_vanilla', 'solve'): [
+        # -- round_local: `MeReal tmp[4]` at ebp-0x28. gcc 3.2 accumulates the
+        #    running total THROUGH MEMORY — sixteen `fsts` and nineteen `fadds`
+        #    against those four slots, and not one `flds` — so every partial sum
+        #    is rounded to 32 bits. Ghidra keeps it in an expression and gcc then
+        #    keeps it in an 80-bit register.
+        #
+        #    test/bisect_object.sh (with the vtable-isolation fix) takes this
+        #    function from `first@0=4.700e-10 max=4.300e-04` to IDENTICAL, with
+        #    both its controls reading identical. The other five functions of the
+        #    object were already exact; `factorize` still is not, and blanket
+        #    rounding of the two Cholesky statics makes it WORSE
+        #    (`first@10` -> `first@7`), which is dead end 17 in miniature: the
+        #    rounding has to go where the original spilled, not everywhere.
+        dict(kind='round_local', local='tmp'),
+    ],
 }
 
-# `fstps -0x34(%ebp)` / `flds -0x34(%ebp)` — a 4-byte x87 spill or reload of a
-# frame slot. The width matters: `fstpl`/`fstpt` would be a double or an
-# extended spill, which loses nothing and is not what this looks for.
-_F32_SLOT = re.compile(r'\bf(?P<op>stp?|ld)s\s+-?0x(?P<off>[0-9a-f]+)\(%ebp\)')
+# A 4-byte x87 access to a frame slot. The WIDTH matters: `fstpl`/`fstpt` is a
+# double or extended spill, which loses nothing and is not what this looks for.
+#
+# `fadds -0x28(%ebp)` counts as a RELOAD. gcc 3.2 accumulates through memory —
+# `fsts` the running total, then `fadds` it back next iteration — so requiring a
+# literal `flds` misses the whole shape: `keaMatrix_pcSparse_vanilla::solve`
+# writes tmp[0..3] with `fsts` sixteen times and reads them back with `fadds`
+# nineteen times and not one `flds`. A check that cannot see the case it is
+# there for is the failure mode this file has hit four times.
+_F32_SLOT = re.compile(
+    r'\bf(?P<op>stps?|sts|lds|adds|subs|subrs|muls|divs|divrs|coms|comps)'
+    r'\s+-?0x(?P<off>[0-9a-f]+)\(%ebp\)')
+_F32_STORE_OPS = ('stps', 'sts')
 
 
 def _f32_spill_slots(obj, fn):
-    """({stored offsets}, {reloaded offsets}) as ebp-relative ints, from the
+    """({stored offsets}, {read-back offsets}) as ebp-relative ints, from the
     SHIPPED disassembly. ({}, {}) when the function cannot be located."""
     for name, lo, hi in function_extents(obj):
         if name != fn:
@@ -2813,7 +2838,7 @@ def _f32_spill_slots(obj, fn):
             off = int(m.group('off'), 16)
             if '-0x' in m.group(0):
                 off = -off
-            (loaded if m.group('op') == 'ld' else stored).add(off)
+            (stored if m.group('op') in _F32_STORE_OPS else loaded).add(off)
         return stored, loaded
     return set(), set()
 
@@ -2832,10 +2857,10 @@ def restore_float_text(text, obj, locals_table):
         return text, 0
     n = 0
     for fn, site in sites:
-        if site['kind'] == 'spill':
-            # The local must be declared and, because Ghidra folded its stores
-            # into the expressions, unreferenced. `<obj>.locals` gives its frame
-            # offset; the shipped code must spill AND reload inside it.
+        if site['kind'] in ('spill', 'round_local'):
+            # `<obj>.locals` gives the local's frame offset; the shipped code
+            # must both STORE into it and READ IT BACK, which is what makes the
+            # dropped rounding observable rather than a dead spill.
             loc = locals_table.get(fn, {}).get(site['local'])
             if loc is None:
                 raise SystemExit(
@@ -2853,8 +2878,33 @@ def restore_float_text(text, obj, locals_table):
                 raise SystemExit(
                     f'restore_float_text: {base}:{fn}: `{site["local"]}` at '
                     f'[{lo:#x},{hi:#x}) shows {len(hit_s)} f32 store(s) and '
-                    f'{len(hit_l)} reload(s) in the shipped code — the spill '
+                    f'{len(hit_l)} read-back(s) in the shipped code — the spill '
                     f'this repair restores is not there')
+        if site['kind'] == 'round_local':
+            # Scoped mechanical rewrite rather than a literal text match: every
+            # assignment to the named local inside this function goes through
+            # KD_F32. Robust to a re-dump renaming the temporaries around it,
+            # which a literal `old`/`new` pair is not.
+            region = None
+            for name, body in _split_definitions(text):
+                if name == fn:
+                    region = body
+                    break
+            if region is None:
+                raise SystemExit(
+                    f'restore_float_text: {base}: no `{fn}` in the emitted text')
+            pat = re.compile(r'(?m)^([ \t]*)(' + re.escape(site['local'])
+                             + r'\[[^\]]*\]) = ((?![ \t]*KD_F32\b)[^;]+);[ \t]*$')
+            new, k = pat.subn(lambda m: '%s%s = KD_F32(%s);'
+                              % (m.group(1), m.group(2), m.group(3)), region)
+            if k == 0:
+                raise SystemExit(
+                    f'restore_float_text: {base}:{fn}: no assignment to '
+                    f'`{site["local"]}[]` to round. The dump changed; re-read '
+                    f'the site against the disassembly rather than deleting it.')
+            text = text.replace(region, new, 1)
+            n += 1
+            continue
         if text.count(site['old']) != 1:
             raise SystemExit(
                 f'restore_float_text: {base}:{fn}: site text matched '

@@ -2427,3 +2427,83 @@ keaLCP_new            RELEASED 2026-08-25 (fifth session). Bit-identical on all 
 # Epic needed a variable-timestep version, copied MathEngine's, and left the
 # original reachable behind a toggle. That copy is what gave this session
 # ground truth for the association defect above.
+
+# --- 2026-08-25 (fifth session): keaMatrix_PcSparse_vanilla, 5 of 6 ----------
+#
+# NOT RELEASED. Recorded because the object went from "one number, no idea
+# where" to "five of six functions exact and the sixth located", and because
+# getting there required fixing the instrument first.
+#
+# THE INSTRUMENT WAS BROKEN AND THE OBJECT IS WHAT SHOWED IT.
+# test/bisect_object.sh reported all six functions with the SAME
+# `first@0=4.700e-10 max=4.280e-04`, including `allocate`, which does no
+# floating-point arithmetic and therefore cannot produce 4.7e-10. Cause:
+# `objcopy --localize-symbol` does not touch a WEAK OBJECT symbol (nm type
+# `V`), so the recovered `_ZTV26keaMatrix_pcSparse_vanilla` stayed global; being
+# in plain `.data` rather than the shipped copy's COMDAT section it won the
+# weak-vs-weak contest, and its slot relocations resolved against the recovered
+# object's own now-LOCAL methods. So every configuration ran ALL the recovered
+# code. Confirmed by linking the object with EVERY function localised: the
+# trajectory still moved, while the SHIPPED object given identical treatment
+# changed nothing (its COMDAT duplicate is discarded), and an unrelated dummy
+# object with .data and .bss changed nothing either — so it was not link
+# layout. Fixed by renaming the ABI symbols out of the way; `--abi-only` is the
+# new control that would have caught it. Six objects in the corpus carry their
+# own vtable; keaLCPSolver is NOT one, so the bisect that found
+# PrincipalSubmatrix's three casts stands.
+#
+# WITH THE FIX, the divergence is TWO functions of six:
+#
+#   solveUnits  identical      makeFromJMJT  identical
+#   allocate    identical      multiply      identical
+#   solve       first@0 =4.700e-10           factorize  first@10=3.800e-09
+#
+# AND `solve` IS NOW EXACT, by the same repair keaIntegrate_pc needed.
+# `MeReal tmp[4]` at ebp-0x28: gcc 3.2 accumulates the running total THROUGH
+# MEMORY -- sixteen `fsts` and nineteen `fadds` against those four slots, and
+# NOT ONE `flds`. Routing every `tmp[i] = ...` through KD_F32 takes the
+# function to IDENTICAL with both controls clean. Note that a check written to
+# look for `fstps`/`flds` pairs would have DECLINED here and looked like a rule
+# that does not apply; `_F32_SLOT` now counts `fadds`/`fsubs`/`fmuls` from a
+# slot as a read-back, which is what gcc 3.2 actually emits.
+#
+# `factorize` IS NOT FIXED AND THE OBVIOUS ATTEMPT MAKES IT WORSE. Its
+# arithmetic is not in `factorize` at all -- the shipped function is 0xcc bytes
+# with ZERO float instructions and calls the file-statics `vc_strip_Cholesky`
+# (0x48d) and `vc_dstrip_Cholesky` (0x48a), which gcc inlined in the recovery
+# (0x7a2). Those two have no `%ebp`-relative float spills at all: they are
+# flds/fmuls/fadds/fstps throughout, i.e. every intermediate goes to memory
+# through a POINTER. Wrapping all 62 of their float stores in KD_F32 moves the
+# divergence from `first@10` to `first@7` -- WORSE. That is dead end 17 in
+# miniature: the rounding has to go where the original spilled, not everywhere.
+# Next step is to read the two statics' float traffic against the recovery
+# statement by statement, with bisect_object.sh's `factorize` row as the gate.
+#
+# AND THE ASSOCIATION HYPOTHESIS IS REFUTED AS THE CAUSE HERE, which is worth
+# recording because the object is full of the shape. Reversing all 41
+# unparenthesised 3+-term float `+` chains changed the object file and changed
+# NOTHING measurable -- the same x87 exactness that makes §11 item 2a invisible.
+# So on i386 a corpus-wide association rewrite is UNFALSIFIABLE: it cannot be
+# shown right and it cannot be shown wrong. Do not ship one on this evidence.
+
+# --- 2026-08-25 (fifth session): four 340 s engine runs, no crash ------------
+#
+# test-karma-1, xDeathMatch, -SOFTWARERENDERER, 340 s each:
+#
+#   build            branch        exit  SIGSEGV  START MATCH  NaN/Critical
+#   stock-karma      default        124        0            1             0
+#   stock-karma      KSAFETIME 0    124        0            1             0
+#   subst115         default        124        0            1             0
+#   subst115         KSAFETIME 0    124        0            1             0
+#
+# exit=124 is the timeout, i.e. all four ran to the end. So the engine on 115
+# recovered objects -- including the whole recovered solver, and including
+# keaIntegrate_pc on the branch that reaches it -- is as stable as stock over
+# 340 s of live physics. This is NOT a trajectory comparison: neither binary
+# carries shadow instrumentation.
+#
+# -GL4ESRENDERER and -OPENGLRENDERER both fault at the first HUD frame in this
+# environment (`REALLOC FAILED ... NewSize=1351188168`, viewport created 2x1),
+# and STOCK DOES IT TOO -- same map, same URL, logs identical modulo timestamps
+# and addresses, 523 lines each. Environment regression, not recovery. Run the
+# stock control before reading a crash as yours.

@@ -2313,6 +2313,245 @@ def fix_aggregate_as_integer(line, diag, ctx):
     return None
 
 
+
+# `<dst> = (T *)&stack0xNNNN;` followed by a word-at-a-time copy out of a
+# struct pointer. gcc 3.2 marshals a BY-VALUE AGGREGATE ARGUMENT this way, and
+# Ghidra renders the ABI mechanics as C.
+MARSHAL_LOOP = re.compile(
+    r'^(?P<ind>[ \t]*)(?P<dst>\w+) = \((?P<ety>[A-Za-z_]\w*) \*\)'
+    r'&(?P<spell>stack0x|in_stack_)(?P<off>[0-9a-f]{8});\n'
+    # gcc sets up unrelated outgoing arguments between the pointer and the
+    # loop — `ppMVar7 = keabodyArray_00;` — so tolerate a few PLAIN assignments
+    # here. Only plain ones: anything with a call or a dereference could be
+    # what fills the source, and stepping over that would be a guess.
+    r'(?P<between>(?:(?P=ind)\w+ = [\w.>\[\]-]+;\n){0,4})'
+    r'(?P=ind)for \((?P<iv>\w+) = (?P<cnt>0x[0-9a-f]+|\d+); (?P=iv) != 0; (?P=iv) = (?P=iv) \+ -1\) \{\n'
+    r'(?P=ind)  \*(?P=dst) = (?P<src>\w+)->\w+;\n'
+    r'(?P=ind)  (?P=src) = \([^)]*\)&(?P=src)->\w+;\n'
+    r'(?P=ind)  (?P=dst) = (?P=dst) \+ 1;\n'
+    r'(?P=ind)\}\n', re.M)
+
+# `kVar3._kd[0x30] = (char)uVar18;` — Ghidra reassembling the aggregate it is
+# about to pass, byte by byte, out of the slot the loop above just filled.
+AGG_REASSEMBLE = re.compile(
+    r'^[ \t]*(?P<agg>kVar\d+)\._kd(?:\[[^\]]+\]|\._\d+_\d+_) = [^;\n]*;\n'
+    r'|^[ \t]*\(\*\(unsigned int \*\)\(\(char \*\)&\((?P<agg2>kVar\d+)\._kd\) \+ \d+\)\) = [^;\n]*;\n',
+    re.M)
+
+
+def _trace_pointer_base(region, upto, var, hops=3):
+    """Name the aggregate the copy loop is reading FROM, or decline.
+
+    Follows `var = X;` backwards. Two endings are accepted and nothing else:
+
+      `var = &EXPR;`   the aggregate is EXPR — `pMVar14 = &w->keaParams`.
+      `var = <call>;`  the aggregate is `*var`, but ONLY if that variable is
+                       assigned exactly once in the whole function. A pointer
+                       that is reassigned somewhere else does not name one
+                       thing, and `MdtKeaConstraintsCreateFromChunk` returning
+                       into `keaCon_00` does.
+
+    Anything else — arithmetic, a second assignment, a chain longer than
+    `hops` — declines. The rule this serves rewrites a call argument, so a
+    wrong answer here is a wrong argument that still compiles, which is the
+    failure mode HANDOVER.md §8 records twice.
+    """
+    for _ in range(hops):
+        # Ghidra wraps a long right-hand side, so `keaCon_00 =
+        # MdtKeaConstraintsCreateFromChunk\n    (...);` is ONE assignment on two
+        # lines. Matching only single-line ones made this decline silently.
+        assigns = list(re.finditer(r'^[ \t]*' + re.escape(var) + r' = ([^;]*?);',
+                                   region, re.M | re.S))
+        before = [m for m in assigns if m.start() < upto]
+        if not before:
+            return None
+        rhs = before[-1].group(1).strip()
+        if rhs.startswith('&'):
+            return rhs[1:]
+        if re.fullmatch(r'\w+', rhs):
+            var, upto = rhs, before[-1].start()
+            continue
+        # A pointer that already holds the aggregate. Only if it holds it for
+        # the whole function — one assignment, no reassignment anywhere.
+        if len(assigns) == 1:
+            return '*' + var
+        return None
+    return None
+
+
+def collapse_outgoing_aggregate_copy(body, protos=None):
+    """Pass the by-value aggregate SOURCE, instead of the frame it was copied to.
+
+    gcc 3.2 passes an aggregate by value by copying it word-at-a-time into the
+    outgoing argument area and then calling. Ghidra renders those ABI mechanics
+    literally: a pointer to a frame slot it does not declare, a copy loop, and
+    then the callee's argument rebuilt BYTE BY BYTE out of that slot into a
+    `kd_aggNN` temporary. In C none of that is needed — `f(x)` marshals `x`
+    itself — so the whole sequence collapses to passing the source.
+
+        pMVar12 = pMVar14;                                  <- source
+        pMVar17 = (MeReal *)&stack0xffffff6c;               <- outgoing slot
+        for (i = 0x13; i != 0; i = i + -1) { ... }           <- 19 * 4 = 76 bytes
+        kVar2._kd[4] = in_stack_ffffff70[0];  ... x76        <- rebuild
+        MdtKeaAddConstraintForces(..., kVar2);
+
+    becomes `MdtKeaAddConstraintForces(..., w->keaParams);`, because
+    `pMVar14 = &w->keaParams`.
+
+    WHY THIS IS ALLOWED AND THE OVERLAY WAS NOT. Dead end 20 tried to make the
+    frame self-consistent — alias the slot so the writes and the reads agree —
+    and it compiles and goes NaN, because the argument block is not the
+    contiguous run of locals Ghidra split the frame into. This does not model
+    the frame at all. It removes it, which is what the C compiler will rebuild
+    from the source anyway.
+
+    THE CHECK THAT MAKES IT SAFE is the size. The loop's own trip count times
+    its element width must equal the size of the aggregate parameter at the
+    call, taken from the prototype — 19 * 4 = 76 = `MdtKeaParameters`,
+    23 * 4 = 92 = `MdtKeaConstraints`. A source that does not match the
+    parameter it is being passed as is refused, not rounded.
+
+    Validated on `MdtWorld`, which is why that object was the subject: 10
+    errors to 0, `MdtWorldStep` ran 900 times in `scene_chain` (scene_census),
+    trajectory BIT-IDENTICAL on all three scenes, and the gate is sensitive to
+    one part per million in the aggregate this passes — perturbing
+    `stepsize` by 1e-6 moves the chain 4.9e-04 m, `gamma` by 1% moves it
+    8.6e-04 m. It stays quarantined afterwards, correctly: another function in
+    the same object genuinely lost `num_bodies`.
+    """
+    region, n = body, 0
+    loops = list(MARSHAL_LOOP.finditer(region))
+    if not loops:
+        return body, 0
+
+    # PLAN first, against the untouched body, then apply once. Blanking a loop
+    # shortens the text, so a second pass over match offsets taken before it
+    # would read the wrong places.
+    plan = []
+    for loop in loops:
+        elem = _FIXED_WIDTH.get(loop.group('ety'))
+        if elem is None:
+            continue
+        nbytes = int(loop.group('cnt'), 0) * elem
+        base = _trace_pointer_base(region, loop.start(), loop.group('src'))
+        if not base:
+            continue            # cannot NAME the source — decline, do not guess
+        # Which aggregate is passed for this slot? Two spellings: Ghidra either
+        # rebuilds a `kd_aggNN kVarM` byte by byte out of the slot, or — when it
+        # declared the slot itself as a `kd_aggNN` — passes `in_stack_NNNN`
+        # directly. Same repair either way.
+        aggs = set(re.findall(r'\b(kVar\d+)\._kd', region))
+        # `in_stack_<off>` names the SAME SLOT as `&stack0x<off>` — the value
+        # and the address of one frame offset (§5c). So it is a candidate
+        # whichever spelling the loop used to write there; gating on the
+        # spelling missed the case where Ghidra declared the slot as a
+        # `kd_agg92` and the loop still addressed it as `&stack0x...`.
+        aggs.add('in_stack_' + loop.group('off'))
+        for agg in sorted(aggs):
+            if any(p[1] == agg for p in plan):
+                continue
+            # It must be ONLY the aggregate. In MdtWorldStepSafeTime Ghidra
+            # uses `in_stack_ffffff5c` as the copy destination AND as an
+            # ordinary MeReal — `in_stack_ffffff5c = *(MeReal *)(...)` — so the
+            # slot is not one value and rewriting the name breaks the other use.
+            if re.search(r'^[ \t]*' + re.escape(agg) + r'[ \t]*=[^=]', region, re.M):
+                continue
+            call = re.search(r'\b(\w+)\(([^;\n]*\b' + agg + r'\b[^;\n]*)\);', region)
+            if not call:
+                continue
+            # THE CHECK THAT MAKES THIS SAFE: the bytes the loop copies must be
+            # the bytes the callee's parameter is.
+            if _proto_param_size(call.group(1), _arg_index(call.group(2), agg),
+                                 protos) == nbytes:
+                plan.append((loop.group('off'), agg, base))
+                break
+    if not plan:
+        return body, 0
+
+    offs = {p[0] for p in plan}
+    aggnames = {p[1] for p in plan}
+    # Keep the intervening assignments. They are UNRELATED outgoing arguments —
+    # `ppMVar7 = keabodyArray_00; pvVar8 = pvVar5;` — that happen to sit between
+    # the destination pointer and the loop, and deleting them with the loop left
+    # the call passing uninitialised locals. That compiled, and segfaulted on
+    # scene_chain.
+    region = MARSHAL_LOOP.sub(
+        lambda m: m.group('between') if m.group('off') in offs else m.group(0),
+        region)
+    region = AGG_REASSEMBLE.sub(
+        lambda m: '' if (m.group('agg') or m.group('agg2')) in aggnames else m.group(0),
+        region)
+    for _off, agg, base in plan:
+        # The declaration goes first: renaming every occurrence would turn
+        # `kd_agg76 kVar2;` into `kd_agg76 (w->keaParams);`.
+        region = re.sub(r'^[ \t]*(?:kd_agg\d+|undefined1|char|MeReal) ' + re.escape(agg)
+                        + r'[ \t]*(?:\[\d+\])?[ \t]*;[ \t]*\n', '', region,
+                        count=1, flags=re.M)
+        region = re.sub(r'\b' + re.escape(agg) + r'\b', '(' + base + ')', region)
+        n += 1
+    return region, n
+
+
+def _arg_index(arglist, name):
+    args = [a.strip() for a in _split_args(arglist)]
+    return args.index(name) if name in args else -1
+
+
+
+
+
+def _split_args(s):
+    args, depth, cur = [], 0, ''
+    for ch in s:
+        if ch in '([':
+            depth += 1
+        elif ch in ')]':
+            depth -= 1
+        if ch == ',' and depth == 0:
+            args.append(cur); cur = ''
+        else:
+            cur += ch
+    args.append(cur)
+    return args
+
+
+_PROTO_AGG_SIZES = {}
+
+
+def _proto_param_size(fname, idx, protos=None):
+    """Parameter `idx` of `fname`, in bytes, if it is a by-value aggregate.
+
+    Sourced from kd_protos*.h, where gen_protos.py renders exactly these as
+    `kd_aggNN` — the size is in the name, by construction.
+    """
+    if not _PROTO_AGG_SIZES:
+        for path in (protos, os.environ.get('KARMA_PROTOS')):
+            if not path or not os.path.exists(path):
+                continue
+            with open(path) as f:
+                for line in f:
+                    m = re.match(r'\S+ (\w+)\(([^)]*)\);', line.strip())
+                    if m:
+                        _PROTO_AGG_SIZES[m.group(1)] = [
+                            int(x.group(1)) if x else 0
+                            for x in (re.search(r'kd_agg(\d+)', a)
+                                      for a in m.group(2).split(','))]
+            break
+    sizes = _PROTO_AGG_SIZES.get(fname)
+    if not sizes or idx >= len(sizes):
+        return None
+    return sizes[idx] or None
+
+
+# NOTE, found 2026-08-25: repair_loop picks ONE rule per diagnostic —
+# `next((fn for pat, fn in REPAIR_RULES if pat.search(msg)), None)` — so a
+# SECOND entry with the same pattern is dead code and looks exactly like a rule
+# that declines. It also requires a file-wide rule to leave the LINE COUNT
+# unchanged, and folds the result back into per-line edits that are then
+# verified individually. A structural rewrite whose lines only help as a GROUP
+# cannot live here at all; put it in the pre-pass chain in main() instead, which
+# is where collapse_outgoing_aggregate_copy ended up after being written as a
+# rule first and applied piecemeal.
 REPAIR_RULES = [
     (re.compile(r'conversion to non-scalar type requested'),
      fix_aggregate_cast),
@@ -2566,6 +2805,10 @@ def main():
     ap.add_argument('--field-map', help='kd_types_fields.json — offsets to member '
                                         'names, for classes where Ghidra emitted '
                                         'field_0xNN instead')
+    ap.add_argument('--protos', help='kd_protos*.h — used ONLY to size the '
+                    'by-value aggregate parameters collapse_outgoing_aggregate_copy '
+                    'checks against; unset disables that repair rather than '
+                    'guessing a size')
     ap.add_argument('--metoolkit-include',
                     help='metoolkit include/ root; functions the headers define as '
                          'MeINLINE are dropped, since the header already supplies them')
@@ -2665,6 +2908,7 @@ def main():
     n_alloca_fns = 0
     n_proto_calls = 0
     n_saved_elems = 0
+    n_agg_copies = 0
     n_inline_dropped = 0
     n_vararg_fns = 0
     n_not_code = 0
@@ -2690,6 +2934,8 @@ def main():
             n_alloca_fns += 1
         body, nproto = prototype_indirect_calls(body)
         n_proto_calls += nproto
+        body, nagg = collapse_outgoing_aggregate_copy(body, args.protos)
+        n_agg_copies += nagg
         sig = signature_of(body)
         if sig is None:
             print(f'  ! skipping {name}: no body found', file=sys.stderr)
@@ -2801,6 +3047,9 @@ def main():
     if n_proto_calls:
         print(f'  {n_proto_calls} indirect call(s) given a prototype '
               f'(a float argument was being promoted to double)')
+    if n_agg_copies:
+        print(f'  {n_agg_copies} outgoing by-value aggregate copy(s) collapsed '
+              f'to the source')
     if n_saved_elems:
         print(f'  {n_saved_elems} save-and-restore(s) of an array element reordered')
     if n_data:

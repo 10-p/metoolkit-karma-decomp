@@ -1584,3 +1584,89 @@ MdtUtils              Bit-identical on scene_ragdoll with 4.113e+00 m of
 # KD_CORNER across all 14 pairs finds nothing else: same numbers as the default
 # mesh everywhere, IxSphereTriList 50 dims against 137, IxBoxTriList worse as it
 # is in every regime. A third mesh that CONFIRMS.
+
+
+# --- 2026-08-25: MdtWorld RECOVERED, and it is not on UT2004's path -----------
+#
+# The first object out of the HANDOVER.md 11 item 2 group. FAIL -> ok, 10 errors
+# to 0, and the build goes 109 -> 110 with every previously-compiling .o
+# byte-identical and all eight gates unchanged.
+#
+# WHAT FIXED IT. ghidra_clean.collapse_outgoing_aggregate_copy, a pre-pass, not
+# a repair-loop rule. gcc 3.2 passes an aggregate BY VALUE by copying it
+# word-at-a-time into the outgoing argument area and then calling; Ghidra
+# renders those ABI mechanics literally -- a pointer to a frame slot it does not
+# declare, a copy loop, then the callee's argument rebuilt BYTE BY BYTE out of
+# that slot into a kd_aggNN temporary. In C none of it is needed, because `f(x)`
+# marshals `x` itself. So the whole sequence collapses to passing the source.
+#
+#   THE CHECK THAT MAKES IT SAFE is the size: the loop's own trip count times
+#   its element width must equal the size of the aggregate parameter at the
+#   call, taken from the prototype. 19 * 4 = 76 = MdtKeaParameters,
+#   23 * 4 = 92 = MdtKeaConstraints. Anything else is refused, not rounded.
+#
+# EVIDENCE, and it is the full 4a treatment rather than a green line:
+#
+#   compiles              10 errors -> 0
+#   RAN                   scene_census: MdtWorldStep 900 times in scene_chain
+#                         (4 of 55 functions ran; the rest never reached)
+#   trajectory            BIT-IDENTICAL on scene_chain, scene_ragdoll AND
+#                         scene_boxes_on_plane
+#   could the gate SEE    yes, and this is the part that matters. The rounding
+#     an error?           probe reads 0.000e+00 ("not demonstrated"), so it was
+#                         settled by mutating the aggregate this repair passes:
+#
+#                           control, no perturbation      bit-identical
+#                           stepsize * 1.000001           4.900e-04 m
+#                           gamma    * 1.01               8.600e-04 m
+#                           max_iterations - 1            bit-identical
+#
+#                         One part per million in the parameters block moves the
+#                         chain 4.9e-04 m, and the recovery moves it exactly
+#                         nothing. (max_iterations is inert because the solver
+#                         converges before the cap -- consistent, not a miss.)
+#
+# INDEPENDENT CORROBORATION FROM THE ENGINE'S OWN SOURCE, which is better than
+# any of the above. KDynStep.cpp:849 is:
+#
+#     MdtKeaAddConstraintForces(*keaCon,
+#         keabodyArray, keatmArray, po->bodiesSize[partitionindex], w->keaParams);
+#
+# and the rule produced, from the decompiled object:
+#
+#     MdtKeaAddConstraintForces((*keaCon_00), ppMVar7, pvVar8, iVar10, (w->keaParams));
+#
+# Same shape, same spellings -- `*keaCon` and `w->keaParams`. UT2004 was written
+# against this API and does the marshalling the C way, so the engine's source is
+# a witness that the repair reconstructs what the original C looked like, not
+# merely something that compiles.
+#
+# AND NOW THE PART THAT LIMITS THE RESULT. UT2004 NEVER CALLS MdtWorldStep.
+# KDynStep.cpp reimplements the whole stepping loop and calls the kea entry
+# points directly:
+#
+#   MdtWorldStep            0 references in Source/ ; only MstUniverse.o calls
+#                           it, and the engine makes 0 calls to MstUniverseStep
+#                           or MstUniverseCreate
+#   MdtWorldStepSafeTime    0 references; KWorldStepSafeTime is the ENGINE'S OWN
+#                           function, in KDynStep.cpp
+#   MdtKeaAddConstraintForces / MdtKeaIntegrateSystem / MdtKeaConstraintsCreate-
+#                           FromChunk / MdtPartOutCreateFromChunk  -- called
+#                           DIRECTLY, from KDynStep.cpp
+#
+# What the engine does use from MdtWorld is the configuration surface --
+# MdtWorldCreate/Destroy/SetGamma/SetEpsilon/SetAutoDisable* /GetTotalBodies --
+# and every one of those compiled all along.
+#
+# So this is a third member of the 3a family: a Karma entry point the engine
+# implements itself. The recovery is real and validated; it does NOT advance
+# item 7, and the objects that would are the kea ones, which ARE on the path.
+#
+# MdtWorldStepSafeTime IS STILL WRONG, and the engine's source proves that too.
+# It passes `(int)in_stack_ffffff5c` for num_bodies, where line 383 sets
+# `in_stack_ffffff5c = *(MeReal *)(*(int *)((int)pvVar3 + 0x1c) + partitionindex * 4)`
+# -- which is `po->bodiesSize[partitionindex]`, an INT, read as a float and then
+# converted back. The address is right and the type is wrong, so the value is
+# garbage. It is unreachable, and no scene runs it (scene_census: 4 of 55), so
+# `ok` is the right classification for the object -- but nothing here is
+# evidence about that function.

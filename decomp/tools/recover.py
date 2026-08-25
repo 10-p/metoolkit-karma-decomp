@@ -312,6 +312,7 @@ def main():
                  '--metoolkit-include', inc,
                  '--field-map', os.path.join(root, 'include',
                                              'kd_types_fields.json')]
+                + (['--protos', args.protos] if args.protos else [])
                 # `--cflag=-m32`, not `--cflag -m32`: argparse reads a value
                 # that starts with `-` as the next option and bails out.
                 + [f'--cflag={f}' for f in cflags] + drops)

@@ -1,5 +1,18 @@
 # HANDOVER — Karma on the web, for the integration agent
 
+## WHY THIS EXISTS, in four sentences
+
+UT2004's physics is Karma, which ships as **binary-only x86 static libraries**. The web and
+Android builds therefore ship with `NO_KARMA` and have no vehicles and no ragdolls. Another
+workstream is recovering Karma from those binaries as portable C — **not to make a physics
+library, but to produce a DROP-IN REPLACEMENT UT2004 links instead of MathEngine's**, so
+that the game can have physics on your targets. **Nobody else will ever link this**, so
+"correct" means "UT2004 behaves", not "faithful to MathEngine's product".
+
+**Your half is the half that has never been tested: nothing this project has produced has
+executed on wasm32, armv7 or arm64. Not one instruction.** That is the largest unknown in
+the whole effort, and it is yours.
+
 You are picking up the **web (WebAssembly) and Android** side of getting UT2004's physics
 working outside x86. You do not need the history of how the source was obtained, only what
 it is, what constrains it, and where the sharp edges are. This document is self-contained.
@@ -622,58 +635,104 @@ That last three points remove ~36% of the total binary footprint without recover
 
 ### The number that should drive your planning
 
-**37 collision-interaction pairs are registered. The game calls TWELVE of them.** A census
-over 25 runs and 18 maps (`HANDOVER.md` §3) found that UT2004 gives its physics actors
-sphere, sphyl, convex-mesh and triangle-list geometry and essentially nothing else. Every
-`Aggregate` pair, every `Cylinder` pair, `Box×Plane`, `Box×TriangleList`, `Sphere×Plane`,
-`Sphyl×Box`, `Sphyl×Plane` and `ConvexMesh×Plane` are registered on every map and called
-**zero** times.
+**Not the object count. `tools/dropin_gap.py`.**
 
-**All twelve are now validated against the real game** — the last, `ConvexMesh ×
-TriangleList`, on 2026-08-23. Treat the count as provisional though: two pairs have already
-moved off the never-called list, `Box×Sphere` most recently at 5,101 calls in one match
-after 25 runs had shown none.
+```bash
+python3 tools/dropin_gap.py <engine-build-dir> /tmp/kd_build \
+        /home/ion/tools/karma-lab/allobj --status <recover.py output>
+```
 
-So "how much of Karma do I need for the web build to run" is not 150 objects and not even
-99 — it is the collision path for twelve pairs, plus the solver, plus the framework objects
-that hold them together. That is a much smaller target than the compile count suggests, and
-it is the number to plan against.
+It walks the symbol closure from the ENGINE's own object files, resolving each symbol
+against the recovered build first and only then against the shipped archives, and prints
+**every shipped member the engine still needs**. That is the distance to the deliverable.
+**20 members, 148 symbols** today, from 27/192 the same week. It is checked against ground
+truth rather than trusted: a real link of the engine with every shipped member deleted
+reports 111 undefined symbols, and the walk predicts all 111.
 
-### The gap that decides your schedule
+`HANDOVER.md` §3c has the table and groups the 20 by cause.
 
-**The collision path is done and drives a real match. The solver's arithmetic is proven;
-its control flow is not recovered.**
+**And the scope is smaller than "Karma" suggests, in two ways worth internalising:**
 
-`libMdtKea` is Karma's LCP solver: it takes the contacts collision detection produced and
-works out how bodies actually move. As of 2026-08-24 three of its compute kernels —
-`keaCalcJinvMandRHS_vanilla`, `keaCalcConstraintForces_vanilla`,
-`keaCalcIworldandNonInertialForceandVhmf_vanilla` — reproduce the shipped library
-bit-for-bit over 900 compounding solver steps, plus `MdtUtils`. That is real and it is new.
+- **37 collision pairs are registered; UT2004 calls FIFTEEN.** Thirteen are validated
+  against the real game. Two families — `Box × TriangleList` and every `Aggregate` PAIR —
+  **can never be called**, proven from the engine source: `KIntersect` intercepts them
+  before Karma is consulted. The rest have simply never been seen in 30+ runs across 20+
+  maps, which is "no evidence of use", not "impossible" — the list has moved five times.
+- **31 objects are unreachable from the engine at all** and are retired permanently
+  (`HANDOVER.md` §3b) — MathEngine's demo viewer, its unused constraint types, its ASE
+  loader. They will never be recovered and that is correct.
 
-**It does not change your schedule.** Four objects still do not compile, and they are the
-ones that *call* the kernels: the driver `keaRbdCore_unified`, the allocator `keaMemory`,
-the integrator `keaIntegrate_pc` and the LCP itself (`keaLCPSolver` + `keaLCP_new`). Each
-runs 900 times per 900 steps. Until they compile, **there is still no configuration in
-which the engine runs on recovered Karma alone**, on any target.
+So "how much of Karma does the web build need" is not 153 objects and not 122. It is the
+122 already recovered plus the 20 in the gap, and the gap is the only number that moves.
 
-The difference from the previous version of this section is the shape of the remaining
-work, not its existence: it is four named objects with each blocker diagnosed to the line
-(`HANDOVER.md` §11 items 1–3), not an open-ended expanse. Ask before assuming a date.
+### The gap that decides your schedule — REWRITTEN, the old blocker is GONE
 
-This is recovery-side work, not yours, but it constrains you in two ways worth planning
-around:
+**Every version of this section before 2026-08-25 said the solver's control flow was not
+recovered and that you could not reach "the engine runs on recovered physics" by yourself.
+That is no longer true.** `libMdtKea` is recovered whole: every object in it reproduces the
+shipped library bit-for-bit on all three test scenes, and the engine has been rebuilt
+against them and RUN — the recovered `MdtKeaAddConstraintForces` executes 301 times and
+`keaLCPSolver::solveLCP` 85 times on a real map, with the substitution verified at the
+machine-code level, not from the link (`HANDOVER.md` §7d).
 
-1. **You cannot reach "the engine runs on wasm with recovered physics" by yourself.** Do not
-   sequence your work as if you can. What you *can* do, entirely without the solver, is
-   everything in §8 steps 1–3 — proving the recovered collision code executes correctly
-   under wasm, using standalone scenes that link the shipped solver natively... except that
-   the shipped solver is x86, so under wasm even the scenes need the recovered solver.
-   **Which means §8 step 1 in its stated form is blocked on `libMdtKea` too.** See §8 for
-   what is actually runnable today.
-2. **What you learn early is worth more than what you learn late.** Every portability
-   problem you find in the collision code now is a problem the solver recovery will avoid by
-   construction, because the fix goes in the generator and the solver has not been generated
-   yet. Front-load the hazard hunting in §4b.
+**So the recovery side no longer blocks you. What blocks the project now is on YOUR side.**
+
+| | |
+|---|---|
+| **the deliverable** | UT2004 linking NO shipped `metoolkit` member, on wasm32 and Android, and playing |
+| **recovery-side remainder** | 20 shipped members / 148 symbols, tracked by `tools/dropin_gap.py` (`HANDOVER.md` §3c). Shrinking steadily — 7 members closed in one session |
+| **YOUR remainder** | **nothing has ever EXECUTED on wasm32, armv7 or arm64.** Not one instruction. That is the single largest unknown in the whole project |
+
+**Sequence your work as if the physics is coming, because it is.** The right thing to
+front-load is not "wait for the solver" — it is **getting anything at all to run under
+wasm**, because every hazard in §4b is unmeasured until something executes, and because of
+the next item, which is new and is specifically yours.
+
+### ⚠ THE HAZARD THAT ONLY YOU CAN SEE — and it is measured
+
+**There is a class of arithmetic error in the recovered code that is PROVABLY HARMLESS on
+i386 and changes results on wasm32, armv7 and arm64.**
+
+Ghidra prints right-leaning floating-point `+` chains without the parentheses they need, so
+C re-parses them in a different order. Float addition is not associative, so that is a real
+change of program.
+
+- On i386 it is **exactly inert**: the x87 register carries 64 mantissa bits and a float
+  product needs only 48, so these sums come out identical whatever the order — **measured 0
+  differences in 2,000,000 samples** under `-mfpmath=387`.
+- Under `-mfpmath=sse`, which is the same storage-precision arithmetic **wasm32, armv7 and
+  arm64 all use**, the identical probe differs in **31%** of samples.
+
+**Every gate on the recovery side is structurally blind to it by construction.** Three
+instances were found and fixed in one object (`keaIntegrate_pc`) by reading the shipped
+machine code against Ghidra's output; **152 other objects have not been examined**, and a
+corpus-wide rewrite cannot be validated on i386 — reversing all 41 flat chains in a second
+object changed the object file and changed nothing measurable.
+
+**What this means for you, concretely:**
+
+1. If wasm physics diverges from native and you cannot reproduce it in ANY native test,
+   this is the first hypothesis, not the last. `HANDOVER.md` §11 item 2a.
+2. **Do not treat "bit-identical on i386" as a promise about wasm.** It is not one, and now
+   there is a measured reason why.
+3. **A wasm-vs-native A/B is worth more than it looks.** It can see something the entire
+   recovery-side gate set cannot. If you build one thing beyond bring-up, build that.
+
+### Android is half the deliverable, and it is in worse shape than wasm
+
+The Android NDK is installed and `test/ptrwidth_check.sh` is a 13-second gate that needs no
+device — pointer truncation is a compile-time diagnostic.
+
+| target | compiles | symbols | truncations |
+|---|---|---|---|
+| wasm32 | 122/122 | identical to i386 | — (32-bit) |
+| **armv7** | 122/122 | identical | **0** — a real 32-bit-pointer port |
+| **arm64** | 122/122 | identical | **2,680 across 73 of 122 objects** |
+
+**arm64 compiling is a lie.** The recovery puns pointers through 4-byte slots, which is
+sound on every 32-bit target and silently truncates on a 64-bit one. The fix is
+generator-wide, on the recovery side — but **decide early whether arm64 is a target at
+all**, because armv7 works today and a 32-bit Android build may be the whole answer.
 
 ### One thing that changed on your side of the fence
 
@@ -689,9 +748,10 @@ bindings between the two targets is worth doing: weak/COMDAT handling is exactly
 where `wasm-ld` and GNU `ld` differ, and §4b already flags COMDAT for `keaMatrix.o`.
 
 
-The honest one-line summary of the project's state: *the collision layer is proven and
-drives a real match; the solver's arithmetic is proven and cannot yet be reached; the
-solver's control flow is untouched.* Do not read 99-of-150 as 66%.
+The honest one-line summary of the project's state: *the collision layer and the solver are
+both recovered and both run inside the real engine on i386; 20 shipped members remain, and
+nothing has ever executed on any of your three targets.* Do not read 122-of-153 as 80% —
+read `tools/dropin_gap.py`.
 
 ---
 
@@ -708,11 +768,12 @@ so it can be taken down independently.
 
 ## 8. Suggested order of work
 
-Compilation is no longer step one — that is done. But read §6's "gap that decides your
-schedule" first: **the solver's control flow is not recovered, so nothing runs end to end
-yet, on any target.** That reshapes the order. Start with what is runnable without a
-solver — and note that step 1 IS runnable today and nothing about it is blocked on the
-recovery side.
+Compilation is no longer step one — that is done. **And neither is waiting: the solver is
+recovered, so steps 1 through 3 are ALL runnable today.** Every earlier version of this
+section told you step 3 was blocked on `libMdtKea`; it is not, as of 2026-08-25.
+
+**Read §6's two boxes before you plan** — the association hazard (which only your targets
+can see) and the arm64 pointer-truncation table. They change what is worth doing first.
 
 1. **Prove the recovered collision functions EXECUTE under wasm, in isolation.** Write a
    standalone wasm driver that calls one interaction function directly with hand-built
@@ -730,8 +791,13 @@ recovery side.
    `-sSTACK_SIZE=1MB`), then function-pointer signature traps, then anything
    `check_frame_bounds.py` has to say. Everything you find here goes back to the generator
    and is then fixed for the solver too, before it is written.
-3. **Then `scene_chain.c` and `scene_ragdoll.c` under wasm** — but note these step a full
-   `MstUniverse`, so they need the solver. They become available when `libMdtKea` does.
+3. **Then `scene_chain.c` and `scene_ragdoll.c` under wasm — AVAILABLE NOW.** These step a
+   full `MstUniverse` and so need the solver, which is why every earlier version of this
+   file deferred them. The solver is recovered, so they run today, and **they are the
+   sharpest instrument you have**: `scene_chain` over 900 steps is bit-identical on i386
+   between recovered and shipped, so ANY divergence you see under wasm is a wasm-side fact —
+   either a portability bug or §6's association hazard. That is a much stronger signal than
+   step 1's record-and-replay.
    `scene_chain` is collision-free and is the authoritative trajectory signal;
    `scene_ragdoll` is the one that calibrates against the vendor-vs-vendor divergence in §5,
    which is the single most useful number in this project for deciding whether a wasm
@@ -754,6 +820,25 @@ Read `karma-decomp/HANDOVER.md` for how the recovery pipeline works, and
 
 A log of the things that would otherwise surprise you, newest first. If you have read an
 older copy of this file, start here.
+
+### 2026-08-25 (fifth session, last) — 122 objects, and this file was stale in one big way
+
+- **The section that told you the solver blocks you is WRONG and has been rewritten.**
+  `libMdtKea` is recovered whole and the engine runs on it. **§8 steps 1–3 are all runnable
+  today**, and step 3 — `scene_chain` under wasm — is the sharpest instrument you have,
+  because it is bit-identical on i386 over 900 steps, so any divergence under wasm is a
+  wasm-side fact.
+- **122 objects**, drop-in gap **20 members / 148 symbols**. arm64 **2,680 truncations
+  across 73 of 122**; armv7 **0**.
+- **Four objects that already compiled were silently WRONG and are now fixed** —
+  `McdSphere` computed a sphere's mass properties from its radius read as an integer;
+  `McdCylinder`, `McdConvexMesh` and `McdPlaneIntersect` had the same defect. **Any wasm
+  build you made before today contains them.** Rebuild.
+- **`MeAssetDBXMLIO` passed all nine offline gates and killed engine init**, calling through
+  a null in a relocated handler table on the `.ka` path — the path that instances every
+  ragdoll and vehicle. Second time that exact defect has got that far. You have no
+  equivalent of "run the engine and watch it die at init" on wasm; **building one is worth
+  more than it looks.**
 
 ### 2026-08-25 (fifth session, later) — 121 objects, and a metric for the finish line
 

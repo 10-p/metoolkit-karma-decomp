@@ -28,6 +28,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import vtable_slots
+import dwarf_structs
 
 BANNER = re.compile(r'/\* ==== (\S+) ==== \*/')
 
@@ -2304,9 +2305,168 @@ def _vptr_call_site(region, pos, scale):
     return off, len(args)
 
 
+# x87 covers every float operation gcc 3.2 emits for these objects; the SSE
+# scalar and packed forms are included so that over-detecting is the failure
+# mode, since over-detecting only makes fix_void_pointer_member decline.
+_FP_MNEMONIC = re.compile(r'f[a-z0-9]+$|[a-z0-9]{2,}(?:ss|sd|ps|pd)$')
+
+
+def _function_has_float(obj, fn):
+    """Does the SHIPPED function contain any floating-point instruction?
+
+    None when the function cannot be located, which callers must treat as
+    "cannot confirm" rather than as "no".
+
+    The mnemonic is taken from objdump's THIRD tab-separated field, not matched
+    out of the line. A first version matched the line and read the last hex
+    BYTE as the mnemonic — `c7 45 f0` came back as `f0`, an x87 instruction
+    that is not there — so every function looked as if it did float work and
+    the rule declined everywhere. A check that cannot pass is not a check."""
+    for name, lo, hi in function_extents(obj):
+        if name != fn:
+            continue
+        out = subprocess.run(['objdump', '-d', '--start-address', hex(lo),
+                              '--stop-address', hex(hi), obj],
+                             capture_output=True, text=True).stdout
+        for line in out.splitlines():
+            parts = line.split('\t')
+            if len(parts) < 3 or not parts[2].split():
+                continue
+            if _FP_MNEMONIC.match(parts[2].split()[0]):
+                return True
+        return False
+    return None
+
+
+def fix_void_pointer_member(obj, text, declared=None):
+    """`pool_ptr->invI0` is `pool_ptr` — a `void *` has no members.
+
+    Ghidra gives an untyped external its own working type and then spells the
+    POINTER through it. keaMemory's pool cursor is `void *pool_ptr` in the
+    DWARF of the object that defines it, and the recovered allocator reads
+
+        if (pool_max < (undefined1 *)((int)pool_ptr->invI0    + iVar10))
+        piVar4    =            (int *)((int)pool_ptr->invI0[0] + iVar10);
+        mem->rhs  = pool_ptr->invI0;
+
+    — three spellings of one thing. The machine code for that block is
+    `mov pool_ptr,%edx; lea (%ebx,%edx,1),%eax; cmp; add %ebx,%edx;
+    mov %edx,pool_ptr; mov %esi,0xc(%ecx)`: pointer arithmetic and a store,
+    with NO load through the pointer anywhere in the function.
+
+    THE OBVIOUS REPAIR IS WRONG AND WOULD COMPILE, which is why this one is
+    written the way it is. Supplying the cast Ghidra elided —
+    `((MdtKeaInverseMassMatrix *)pool_ptr)->invI0` — is right for the two
+    array-decay spellings and WRONG for `->invI0[0]`, which then reads a
+    `MeReal` out of the pool. Four sites correct, one silently reading memory
+    the original never touches, and the object builds either way.
+
+    So the rewrite drops the member access entirely, and four things are read
+    before it does:
+
+      1. the extern's DWARF type is `void *` — it has no members, so what
+         Ghidra printed is its typing and not the program's;
+      2. every cast Ghidra assigns to that name in this unit agrees on one
+         struct type, which is therefore the type it was working with;
+      3. that struct's own DWARF, in THIS object, puts the member at offset 0
+         and declares it an array of a floating type — so the array-decay
+         spellings denote the address of the object itself;
+      4. the SHIPPED function contains no floating-point instruction, so the
+         only other reading of `->M[0]` — a `MeReal` loaded from the pool — is
+         refuted by the object rather than argued away.
+
+    Check 4 is the one doing the work. Without it this is a guess about what
+    Ghidra meant; with it, the alternative reading requires an instruction that
+    is not in the function."""
+    if not obj:
+        return text, 0
+    declared = declared if declared is not None else text
+    voids = set(re.findall(r'\bextern[ \t]+void[ \t]*\*[ \t]*(\w+)[ \t]*;', declared))
+    if not voids:
+        return text, 0
+    used = {v for v in voids if re.search(r'(?<![\w.>])_?' + re.escape(v) + r'\s*->', text)}
+    if not used:
+        return text, 0
+
+    # Ghidra spells the four-byte VALUE at an EXTERNAL slot `_name`, and this
+    # runs BEFORE fix_mislabelled_external has renamed it, so both spellings
+    # have to be recognised. `_name` is accepted only where the relocations in
+    # THIS function say it is that slot and nothing else — the same evidence
+    # fix_mislabelled_external resolves on — and it is rewritten under the name
+    # Ghidra gave it, so the naming stays that rule's job and not this one's.
+    per_fn = relocation_targets(obj, per_function=True)
+    dies = None
+    out, n = [], 0
+    for fn, region in _split_definitions(text):
+        if not fn:
+            out.append(region)
+            continue
+        spellings = []
+        for v in sorted(used):
+            spellings.append(v)
+            if per_fn.get(fn, {}).get('_' + v) == {(v, 0)}:
+                spellings.append('_' + v)
+        for name in spellings:
+            acc = re.compile(r'(?<![\w.>])' + re.escape(name)
+                             + r'[ \t]*->[ \t]*(\w+)(?:[ \t]*\[[ \t]*0[ \t]*\])?')
+            members = {m.group(1) for m in acc.finditer(region)}
+            if not members:
+                continue
+            # (2) Ghidra's own type for the name, from the casts it prints.
+            # `(void *)` is not one of them — it is the type the name already
+            # has, so it says nothing about what Ghidra was working with, and
+            # counting it made keaMemory's two casts look ambiguous.
+            casts = {c for c in re.findall(
+                r'(?<![\w.>])' + re.escape(name)
+                + r'[ \t]*=[ \t]*\([ \t]*(\w+)[ \t]*\*[ \t]*\)', text)
+                if c != 'void'}
+            if len(casts) != 1:
+                continue
+            struct = next(iter(casts))
+            # (4) the load the other reading needs is not in this function.
+            if _function_has_float(obj, fn) is not False:
+                continue
+            if dies is None:
+                dies = dwarf_structs.parse(obj)
+            ok = True
+            for member in sorted(members):
+                # (3) offset 0 and an array of a floating type, from the DWARF
+                # of this very object.
+                got = _dwarf_member(dies, struct, member)
+                if not got or got[0] != 0 or not re.search(
+                        r'\b(MeReal|float|double)\b.*\[', got[1]):
+                    ok = False
+                    break
+            if not ok:
+                continue
+            region, k = acc.subn(name, region)
+            n += k
+        out.append(region)
+    return ''.join(out), n
+
+
+def _dwarf_member(dies, struct, member):
+    """(offset, declarator) for `struct.member`, straight out of .debug_info."""
+    for die in dies.values():
+        if die['tag'] not in ('DW_TAG_structure_type', 'DW_TAG_class_type'):
+            continue
+        if die['attrs'].get('DW_AT_name') != struct:
+            continue
+        for c in die['children']:
+            if c['tag'] != 'DW_TAG_member' or c['attrs'].get('DW_AT_name') != member:
+                continue
+            loc = c['attrs'].get('DW_AT_data_member_location', '')
+            m = dwarf_structs.OFF_RE.search(loc)
+            ref = dwarf_structs.REF_RE.search(c['attrs'].get('DW_AT_type', ''))
+            if not (m and ref):
+                return None
+            return (int(m.group(1)),
+                    dwarf_structs.declarator(dies, int(ref.group(1), 16), member))
+    return None
+
+
 def fix_mislabelled_external(text, diag, ctx):
     """`(*_McdGeometryDeinit)(0x20, 0x10)` is `MeMemoryAPI.createAligned(...)`.
-
     Ghidra printed the wrong name for the right address; see relocation_targets()
     for the mechanism and the evidence. Two shapes come out of it:
 
@@ -3353,6 +3513,7 @@ def main():
                                        read_ghidra_locals(args.input))
     body_text, n_mangled = resolve_mangled_call_names(
         body_text, _declared + '\n' + '\n'.join(decls))
+    body_text, n_voidmem = fix_void_pointer_member(args.object, body_text, _declared)
     data_block, n_data = materialise_data_refs(args.object, body_text)
     # `kd_aggN` is the opaque stand-in gen_protos.py uses for an aggregate passed
     # BY VALUE. Once Ghidra has the signature it puts that type in the BODY too,
@@ -3445,6 +3606,8 @@ def main():
         print(f'  {n_vptr} vptr store(s) resolved to a vtable address point')
     if n_mangled:
         print(f'  {n_mangled} mangled call site(s) resolved to a declared name')
+    if n_voidmem:
+        print(f'  {n_voidmem} member access(es) on a void * resolved to the pointer')
     if n_rel:
         print(f'  {n_rel} relocated data block(s) rebuilt with their pointers')
     if args.cflag:

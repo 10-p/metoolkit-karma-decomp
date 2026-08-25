@@ -2391,12 +2391,46 @@ Ordered by what actually moves the project, not by what is easiest:
    because `ParseKarmaHeaders` matches ELF symbols by name and every C++ function in the
    corpus is mangled.
 
-   **What is left is a text-level repair on a Ghidra-invented frame**, which is the thing
-   the guessed-stack-frame detector exists to stop, and `MdtBcl`/`MeMath` cannot validate
-   it because their single error is a different shape (an epilogue rendered as a pointer
-   assignment; genuinely dropped `fcos`/`fsin` results). Before writing it, find a subject
-   where a wrong answer would DIFFER from a right one — §12's standing lesson, and dead
-   end 12 is what it costs to skip.
+   > ### AND THE FRAMES ARE NOT UNDESCRIBED. They are described and FRAGMENTED.
+   >
+   > 2026-08-25, from `<object>.locals` (§5c) via `tools/frame_offsets.py --cover`. Every
+   > `stack0x` site in the solver objects sits at the start of a **contiguous run of
+   > declared locals** covering at least what the copy loop writes:
+   >
+   > | object / site | copy writes | contiguous described |
+   > |---|---:|---|
+   > | `MdtWorld` ffffff6c | 76 B | **80 B in 9 locals** |
+   > | `MdtWorld` ffffff04 | 92 B | 92 B in 1 |
+   > | `keaRbdCore_unified` fffffdd8 | 92 B | **176 B in 20 locals** |
+   > | `keaRbdCore_unified` fffffe2c | — | 92 B in 16 |
+   > | `keaIntegrate_pc` ffffffa0 | 76 B | 76 B in 1 |
+   > | `keaMemory` ffffff88 | 92 B | 92 B in 1 |
+   >
+   > `fix_stack_address_name` declines on the fragmented ones because it size-checks ONE
+   > local — `MdtWorld`'s ffffff6c is a 4-byte `MeReal` — and it is right to: writing 76
+   > bytes there is a 72-byte overflow. **But the other 72 bytes are not missing.** They
+   > are `in_stack_ffffff70[48]` and six scalars Ghidra also uses as ordinary variables, in
+   > that order, with no gap.
+   >
+   > **So the repair is an OVERLAY, not a reconstruction.** Alias the contiguous run into
+   > one block so `&stack0xNNNN` and every `in_stack_*` read see the same storage. Offsets,
+   > sizes and types all come from the table, so nothing is inferred, and the recovered
+   > function does not need to match the original's frame LAYOUT — only to be
+   > self-consistent.
+   >
+   > **What has to be got right, and is why it is written down rather than done:** the run
+   > includes locals the decompiler also treats as SSA VALUES (`uVar18`, `pMVar19`), and
+   > giving those aliased storage is faithful only if Ghidra means they live at that offset
+   > for the whole function. There is a worked reason to think aliasing HELPS rather than
+   > hurts — `MdtWorld` reads `kVar2._kd[0x44] = (char)uVar22` where `uVar22` was last
+   > assigned a stale return address, and under aliasing it would instead read what the
+   > copy loop put there, which is what the machine code does — but that is an argument,
+   > not a measurement.
+   >
+   > **Validate on `MdtWorld`.** Non-kea, ten errors, and `scene_chain` drives
+   > `MdtWorldStep` 900 times, so a wrong answer shows up on a gate rather than in a
+   > review column. That is the subject §12's standing lesson asks for and item 2 did not
+   > have.
 
    **The one lead that is not a guess.** The by-value *incoming* parameters are pinned by
    the cdecl ABI, not by debug info, and Ghidra already has the signature:

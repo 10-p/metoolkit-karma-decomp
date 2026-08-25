@@ -44,6 +44,34 @@ WHAT IT ESTABLISHED, 2026-08-25, over every `stack0x` site in the corpus:
     Not attempted here: the base points 144 bytes into a 64-byte array, so a
     base-level rewrite is what `check_frame_bounds.py` exists to reject, and an
     access-level rewrite needs the loop trip count. One object, in the tail.
+
+AND WHAT `--cover` ESTABLISHED, which is the bigger one: THE SOLVER FRAMES ARE
+NOT UNDESCRIBED. They are described and FRAGMENTED. Every `stack0x` site in the
+solver objects sits at the start of a CONTIGUOUS run of declared locals that
+covers at least what the copy loop writes:
+
+    object / site              copy writes   contiguous described
+    MdtWorld     ffffff6c          76 B      80 B in  9 locals
+    MdtWorld     ffffff04          92 B      92 B in  1
+    keaRbdCore   fffffdd8          92 B     176 B in 20 locals
+    keaRbdCore   fffffe2c           —        92 B in 16
+    keaIntegrate ffffffa0          76 B      76 B in  1
+    keaMemory    ffffff88          92 B      92 B in  1
+
+`fix_stack_address_name` declines on the fragmented ones because it size-checks
+ONE local — `MdtWorld`'s ffffff6c is a 4-byte `MeReal` — and it is right to,
+because writing 76 bytes into it would be a 72-byte overflow. But the missing 72
+bytes are not missing: they are `in_stack_ffffff70[48]` and six scalars Ghidra
+also uses as ordinary variables, in that order, with no gap.
+
+So the repair is an OVERLAY, not a reconstruction: alias the contiguous run into
+one block so that the address `&stack0xNNNN` and every `in_stack_*` read see the
+same storage. Offsets, sizes and types all come from this table, so nothing is
+inferred. What has to be got right, and is the reason it is not done here: the
+run includes locals the decompiler also treats as SSA VALUES (`uVar18`,
+`pMVar19`), and giving them aliased storage is only faithful if Ghidra really
+means they live at that offset for the whole function. Validate on `MdtWorld` —
+non-kea, and `scene_chain` drives `MdtWorldStep` where a wrong answer shows.
 """
 import argparse
 import collections
@@ -86,6 +114,10 @@ def main():
     ap.add_argument('objects', nargs='*')
     ap.add_argument('--quiet', action='store_true',
                     help='only print sites with no covering local, or a size problem')
+    ap.add_argument('--cover', action='store_true',
+                    help='for each site, print the CONTIGUOUS RUN of locals starting '
+                         'there and the cumulative size — which answers whether the '
+                         'frame is undescribed or merely fragmented')
     args = ap.parse_args()
 
     dumps = sorted(glob.glob(os.path.join(args.dumpdir, '*.c')))
@@ -138,6 +170,20 @@ def main():
                 print(f'== {os.path.basename(c)[:-4]}')
                 printed = True
             print(f'   {fn:34s} stack0x{hx} ({off:6d})  {kind}  {desc}')
+            if args.cover and cov is not None:
+                run, total, at = [], 0, off
+                for l in sorted(locs.get(fn, [])):
+                    if l[0] < at:
+                        continue
+                    if l[0] != at:
+                        break          # a gap: the frame really is undescribed here
+                    run.append(l)
+                    total += l[2]
+                    at += l[2]
+                for l in run:
+                    print(f'        +{l[0]-off:<4d} {l[1]:<24s} {l[2]:>4d}B  {l[3]}')
+                print(f'        = {total} contiguous byte(s) described from this '
+                      f'offset, in {len(run)} local(s)')
 
     print(f'\n{n_exact} site(s) resolve to a local at exactly that offset, '
           f'{n_nolocal} have no covering local.')

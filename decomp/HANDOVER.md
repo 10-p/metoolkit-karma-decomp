@@ -132,7 +132,7 @@ Everything else in this file is detail. This is the work.
 | 5 | ~~**GJK's warm cache path has never been tested.**~~ **DONE 2026-08-25** — `KD_WARM=<K>`, 0 ret / 0 count / 0 dims over 200,000 pairs, cache verified live. §11 item 4. The 3 `ret_diff` seen in a live match are still not reproduced, and this narrows where they can be. | §11 item 4 | — |
 | 7 | **NEW — `IxCylinderTriList` diverges in a live match and the synthetic tier cannot see it.** 37 `count_diff` in 153,391, off-by-one contacts on a cylinder resting in a CORNER of level geometry; self-test clean on 248,777. difftest reads 0 at every spread, and with `KD_GRID` and `KD_FLAT`. The driver's mesh is one 4×2 patch and cannot present a corner. | `proven.txt` | a test mesh that can be a corner; `NTRI` is still fixed at 32 |
 | 8 | **`IxCylinderCylinder`'s remaining charge is `count_diff` only** — 1 in 37,735 and 7 in 51,142 on two runs. Its `dims` is settled (§11 item 0). | §11 item 0 | nothing |
-| 6 | **The tail: 14 objects in the FAIL bucket and it is still finished.** 3 DEAD, 2 leave-alones, 3 dead end 9, 2 are item 1 above, 2 low-value profilers, plus `MdtBcl`/`MeMath` at one `stack0x` each. `keaRbdCore_unified` joined it this session by getting BETTER — 18 errors to 7 — because recover.py labels by the FIRST error. Sort by §13's verdict column, never by the bucket. | §13 | do not start here |
+| 6 | **The tail: 13 objects in the FAIL bucket and it is still finished.** 3 DEAD (`MeASELoad` 126, `MeFGeometryFromMesh` 20, `McduDebugDraw` 1), 2 documented leave-alones (`McdSpace` 22, `MeSimpleFile_linux` 1), 3 dead end 9 (`McdTriangleList` 6, `McdBox` 2, `McdSphyl` 1), 2 low-value profilers (`MeProfile` 29, `MeProfile_linux` 13), `MdtBcl`/`MeMath` at one `stack0x` each, and `keaLCP_new` which is item 1. **197 of the errors belong to objects nobody should touch.** Sort by §13's verdict column, never by the count. | §13 | do not start here |
 
 
 ### WHERE MY HEAD IS — the next three moves, in order
@@ -3302,7 +3302,7 @@ That checklist is worth more than the next ten objects.
 
 ---
 
-## 13. The 14 remaining failures, triaged
+## 13. The 13 remaining failures, triaged
 
 Written so the next session starts from a decision, not from re-deriving one. Counts are
 error counts as of 2026-08-25 (second session). **"DEAD" means `tools/reachable.py` proves
@@ -3334,7 +3334,7 @@ getting better: `recover.py` classifies by the FIRST error's pattern, so an obje
 14**. `McdContact` compiles but is now held by the `extraout_EAX` detector, which is a
 different and real defect: that is a **reclassification**, not a release.
 
-**The tail is now essentially exhausted, and that is the useful summary.** Of the 14:
+**The tail is now essentially exhausted, and that is the useful summary.** Of the 13:
 3 are DEAD, 2 are documented leave-alones, 3 are dead end 9, **4 are the §11 item 2 frame
 problem** (`MdtBcl` 1, `MeMath` 1, `keaLCP_new` 2 — `keaRbdCore_unified` left this table by
 being RECOVERED) and 2 are low-value profilers. There is no cheap object left that is not one of those. Work item 2 —

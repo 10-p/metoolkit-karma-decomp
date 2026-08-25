@@ -307,6 +307,33 @@ def main():
     GHIDRA_LOST_STORE = re.compile(
         r'^\s*([A-Za-z_]\w*(?:\[[A-Za-z0-9_]+\]|\.\w+|->\w+)*)\s*=\s*\1\s*;\s*$', re.M)
 
+    def _is_read(region, var):
+        """Is `var` READ anywhere in this function, as opposed to only written?
+
+        The old test counted OCCURRENCES and called two or fewer a dead store —
+        a declaration plus one assignment. That is the right idea and the wrong
+        measure: gcc often initialises the slot as well, and
+
+            uVar2 = 0;
+            uVar2 = extraout_EAX;               /* and nothing ever reads it */
+
+        is three occurrences and still dead. MeAssetDBXMLIO was held on exactly
+        that, after the store that used to read it had been removed as a
+        variadic padding word. Count reads, which is what the docstring above
+        has always claimed this does."""
+        word = r'(?<![\w])' + re.escape(var) + r'\b'
+        for line in region.split('\n'):
+            for m in re.finditer(word, line):
+                rest = line[m.end():]
+                if re.match(r'\s*=[^=]', rest):
+                    continue                      # written, not read
+                before = line[:m.start()].rstrip()
+                if re.search(r'[A-Za-z_]\w*[\s\*]*$', before) and not before.endswith(
+                        (',', '(', '=', '+', '-', '*', '/', '&', '|', '!', '<', '>', '[')):
+                    continue                      # part of its own declaration
+                return True
+        return False
+
     def live_unmodelled(src):
         """Unmodelled-value names that are READ BEFORE anything assigns them.
 
@@ -334,7 +361,7 @@ def main():
                     if re.match(r'\s*' + word + r'\s*=[^=]', line):
                         break                     # assigned first; dataflow intact
                     m = re.match(r'\s*(\w+)\s*=\s*' + word + r'\s*;\s*$', line)
-                    if m and len(re.findall(r'\b' + m.group(1) + r'\b', region)) <= 2:
+                    if m and not _is_read(region, m.group(1)):
                         continue                  # dead store: nothing reads it
                     live.append(name)
                     break

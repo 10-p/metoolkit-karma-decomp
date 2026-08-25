@@ -2089,6 +2089,104 @@ def initialise_unmodelled_locals(text):
     return text, n
 
 
+# Variadic functions whose format string this pipeline can read, and where it
+# sits in the argument list. MeInfo/MeWarning/MeLog/MeFatalError are Karma's own
+# and take (level, format, ...) — MeMessage.h.
+PRINTF_FAMILY = {'printf': 0, 'fprintf': 1, 'sprintf': 1, 'snprintf': 2,
+                 'vsprintf': 1, 'MeInfo': 1, 'MeWarning': 1, 'MeLog': 1,
+                 'MeFatalError': 1}
+
+# One conversion. `%%` consumes nothing; a `*` width or precision consumes an
+# extra int each, which is why they are captured rather than skipped.
+PRINTF_SPEC = re.compile(
+    r'%(?P<flags>[-+ #0\']*)(?P<w>\*|\d+)?(?:\.(?P<p>\*|\d+))?'
+    r'(?:hh|h|ll|l|L|q|z|j|t)?(?P<conv>[diouxXeEfFgGaAcspn%])')
+
+
+def _printf_arity(fmt):
+    """How many arguments the literal format consumes, or None if unsure."""
+    body = fmt.strip()
+    if not (body.startswith('"') and body.endswith('"')):
+        return None
+    n, pos = 0, 0
+    body = body[1:-1]
+    while True:
+        i = body.find('%', pos)
+        if i < 0:
+            return n
+        m = PRINTF_SPEC.match(body, i)
+        if not m:
+            return None                     # a conversion this cannot classify
+        if m.group('conv') == 'n':
+            return None                     # %n writes through its argument
+        if m.group('conv') != '%':
+            n += 1
+            n += (m.group('w') == '*') + (m.group('p') == '*')
+        pos = m.end()
+
+
+def fix_printf_extra_args(text):
+    r"""`sprintf(buf, "%s", name, extraout_EDX)` — gcc's padding, not an argument.
+
+    The same defect as fix_variadic_extra_args and the same evidence, without a
+    diagnostic to hang it on: gcc pushes alignment padding before a call, Ghidra
+    recovers every pushed word as an argument, and it sources the extra ones
+    from whatever register happened to be live — which is where a large part of
+    the `extraout_ECX`/`extraout_EDX` family comes from.
+
+    C permits any number of arguments to a variadic function, so nothing
+    diagnoses it. But the FORMAT STRING says how many are read, and it is right
+    there as a literal, so the count is derived rather than guessed. Dropping
+    the rest cannot change behaviour: a variadic argument the callee never
+    fetches is not observable.
+
+    THREE GUARDS, because this rewrites calls in objects that are already
+    validated:
+
+      * the format must be a literal and every conversion in it must be one this
+        can classify. `%n` writes through its argument and is refused outright;
+        `%*d` consumes an extra int for the width and is counted.
+      * only arguments with NO side effect are dropped — a bare identifier, a
+        constant or a simple member access. Anything containing a call is left,
+        and with it the whole site.
+      * arguments are dropped from the END only, never reordered.
+
+    156 sites across 7 objects, 6 of them held out of the build. The one that is
+    in it, McdMessage, has a single site."""
+    out, n = [], 0
+    for _fn, region in _split_definitions(text):
+        for name, fi in PRINTF_FAMILY.items():
+            pos = 0
+            while True:
+                m = re.compile(r'(?<![\w.>])' + re.escape(name)
+                               + r'[ \t\n]*\(').search(region, pos)
+                if not m:
+                    break
+                op = m.end() - 1
+                end = _match_bracket(region, op)
+                if end is None:
+                    pos = m.end()
+                    continue
+                args = _split_args(region[op + 1:end - 1])
+                pos = m.end()
+                if len(args) <= fi:
+                    continue
+                want = _printf_arity(args[fi])
+                if want is None or len(args) <= fi + 1 + want:
+                    continue
+                keep = args[:fi + 1 + want]
+                drop = args[fi + 1 + want:]
+                if any('(' in d or '=' in d or '++' in d or '--' in d for d in drop):
+                    continue                # a side effect; leave the site alone
+                new_call = region[:op + 1] + ','.join(a.strip() for a in keep) \
+                    + region[end - 1:]
+                n += len(drop)
+                pos = op + 1
+                region = new_call
+        out.append(region)
+    return ''.join(out), n
+
+
 def fix_undeclared_underscore_local(text):
     r"""`_iVar3` used where only `iVar3` is declared — Ghidra's own name collision.
 
@@ -4804,6 +4902,7 @@ def main():
     # forward declarations as well.
     body_text, n_vptr = fix_vptr_store(args.object, body_text, _declared,
                                        read_ghidra_locals(args.input), args.protos)
+    body_text, n_pfmt = fix_printf_extra_args(body_text)
     body_text, n_uscore = fix_undeclared_underscore_local(body_text)
     body_text, n_uninit = initialise_unmodelled_locals(body_text)
     body_text, n_mangled = resolve_mangled_call_names(
@@ -4922,6 +5021,8 @@ def main():
         print(f'  {n_fltload} int-to-float conversion(s) rewritten as a four-byte load')
     if n_uninit:
         print(f'  {n_uninit} unmodelled-register local(s) given a defined initial value')
+    if n_pfmt:
+        print(f'  {n_pfmt} padding word(s) dropped from variadic call(s)')
     if n_rel:
         print(f'  {n_rel} relocated data block(s) rebuilt with their pointers')
     if args.cflag:

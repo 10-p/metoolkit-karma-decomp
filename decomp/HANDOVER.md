@@ -84,6 +84,8 @@ Everything else in this file is detail. This is the work.
 | 3 | **arm64 truncates pointers.** 2,162 diagnostics across 65 of 109 objects; armv7 zero. **There is now a gate** — `test/ptrwidth_check.sh`. | §6b | a generator-wide change to pointer-width slots |
 | 4 | **Nothing has EXECUTED on wasm32, armv7 or arm64.** | `HANDOVER-WEB.md` | the web agent |
 | 5 | ~~**GJK's warm cache path has never been tested.**~~ **DONE 2026-08-25** — `KD_WARM=<K>`, 0 ret / 0 count / 0 dims over 200,000 pairs, cache verified live. §11 item 4. The 3 `ret_diff` seen in a live match are still not reproduced, and this narrows where they can be. | §11 item 4 | — |
+| 7 | **NEW — `IxCylinderTriList` diverges in a live match and the synthetic tier cannot see it.** 37 `count_diff` in 153,391, off-by-one contacts on a cylinder resting in a CORNER of level geometry; self-test clean on 248,777. difftest reads 0 at every spread, and with `KD_GRID` and `KD_FLAT`. The driver's mesh is one 4×2 patch and cannot present a corner. | `proven.txt` | a test mesh that can be a corner; `NTRI` is still fixed at 32 |
+| 8 | **`IxCylinderCylinder`'s remaining charge is `count_diff` only** — 1 in 37,735 and 7 in 51,142 on two runs. Its `dims` is settled (§11 item 0). | §11 item 0 | nothing |
 | 6 | **The tail: 14 objects, 271 errors — and it is finished.** 3 DEAD, 2 leave-alones, 3 dead end 9, 4 are item 1 above, 2 low-value profilers. | §13 | do not start here |
 
 

@@ -1978,3 +1978,59 @@ MdtUtils              Bit-identical on scene_ragdoll with 4.113e+00 m of
 # reads bit-identical against a devirtualised control with both wrong versions
 # crashing. The defect is elsewhere in the object, and the instrument to find it
 # now exists: bisect on the first differing step, not on the maximum.
+
+# --- 2026-08-25 (second session): keaLCP_new's FRAME, READ OFF THE PROLOGUE ---
+#
+# Recorded so MOVE 2 is a mechanical job and not a research one. NOT repaired:
+# this is a frame RECONSTRUCTION, which is the class dead end 20 refutes, and it
+# should be done by extending materialise_alloca_frame rather than by naming
+# slots. What follows is every fact that extension needs.
+#
+# THE SHIPPED PROLOGUE. `keaLCPSolver::solveLCP` allocas SIX regions of the same
+# runtime size and then a fixed twelve-byte outgoing argument area:
+#
+#   28f: sub %edi,%esp ; mov %esp,-0x20(%ebp)      alloca #1
+#   294: sub %edi,%esp ; mov %esp,-0x24(%ebp)      alloca #2
+#   299: sub %edi,%esp ; mov %esp,%esi             alloca #3
+#   29d: sub %edi,%esp ; mov %esp,%ebx             alloca #4
+#   2a1: sub %edi,%esp ; mov %esp,-0x28(%ebp)      alloca #5
+#   2a6: sub %edi,%esp ; mov %esp,-0x2c(%ebp)      alloca #6
+#   2ab: sub $0xc,%esp                             outgoing arguments
+#
+# with `%edi` = `uVar6` = `this->n * 4 + 0xf & 0xfffffff0` -- the SAME
+# `+ 0xf & 0xfffffff0` rounding materialise_alloca_frame already reads, only
+# positive and used six times instead of negated once.
+#
+# WHAT GHIDRA DID WITH IT. It re-based the whole region on `auStack_3c`, the
+# local that happens to sit at its top, and expressed every address as a fixed
+# frame offset plus a runtime shift. From <object>.locals (offsets are
+# entry-ESP relative; ebp offset = these + 4):
+#
+#   auStack_3c   -60  (ffffffc4)  uint[3]   the pre-sub %esp -- the base
+#   pMStack_44   -68  (ffffffbc)  MeReal *  outgoing argument slot 2
+#   stack0xffffffb8  -72                    outgoing argument slot 1
+#   stack0xffffffb4  -76                    outgoing argument slot 0
+#   iStackY_50   -80  (ffffffb0)  int       where the CALL pushes its return
+#                                           address -- `iStackY_50 = 0x1025b;`
+#                                           is that, not a variable
+#
+# SO THE LAYOUT IS FULLY DETERMINED, and none of it is a guess:
+#
+#   base       = alloca(6 * uVar6 + 12)      /* lowest address */
+#   outgoing   = base            + {0,4,8}   /* &stack0xffffffb4 + uVar6*-6 */
+#   region k   = base + 12 + (6-k)*uVar6     /* k = 1..6 */
+#   auStack_3c = base + 12 + 6*uVar6         /* what Ghidra bases its
+#                                               arithmetic on */
+#
+# and the recovered body's `I`, `C`, `clamped`, `unclamped` are regions 1, 2, 5
+# and 6, which is what `(int)auStack_3c - uVar6`, `+ uVar6 * -2`, `* -5` and
+# `* -6` already say.
+#
+# WHY NAMING THE TWO `stack0x` SLOTS INSTEAD WOULD BE WORSE THAN THE ERRORS.
+# `auStack_3c` is declared `uint[3]` -- TWELVE BYTES. Without the alloca, every
+# one of those addresses is below a twelve-byte local, so the object would
+# compile and then read and write `6*(4n+15 & ~15)` bytes of somebody else's
+# stack. materialise_alloca_frame's own docstring records what that costs: "it
+# COMPILED, passed the substitute gate, and then segfaulted on its first call in
+# a real match". Until the alloca is materialised the compile error is the
+# useful signal.

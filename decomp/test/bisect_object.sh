@@ -94,12 +94,47 @@ gcc -m32 -O2 -DLINUX -no-pie $IF -o "$W/n" "$SCENE" "$W/shipped_weak.o" \
 "$W/n" > "$W/n.csv" 2>/dev/null
 report "--none-- (control, must be identical)" "$W/n.csv"
 
+# THE OBJECT'S OWN VTABLE UNDOES THE LOCALISATION, AND FOR A SESSION NOBODY
+# NOTICED. `objcopy --localize-symbol` does not touch a WEAK OBJECT symbol
+# (nm type `V`) — the C++ ABI data — so the recovered `_ZTV*` stays global and,
+# being in plain `.data` rather than the shipped copy's COMDAT section, WINS the
+# weak-vs-weak contest. Its slot relocations then resolve against the recovered
+# object's own now-LOCAL methods, so every virtual call goes to the recovered
+# code no matter which symbol is being kept, and every row of the table reads
+# the same number.
+#
+# `keaMatrix_PcSparse_vanilla` is where it showed: six functions, six identical
+# `first@0=4.700e-10 max=4.280e-04` rows — including `allocate`, which does no
+# floating-point arithmetic at all and therefore cannot produce 4.7e-10.
+#
+# Renaming the ABI symbols out of the way leaves the SHIPPED vtable in place,
+# whose slots resolve to the shipped weak method unless the recovered strong
+# definition of that one method is present. That is the isolation this script
+# claims. The `--none` control does not catch it, because it links no recovered
+# object at all; `--abi-only` below does.
+ABI_ARGS=$(nm --defined-only -g --format=posix "$REC" \
+    | awk '$2 ~ /^[VvUuWw]$/ && $1 ~ /^_ZT/ {print "--redefine-sym " $1 "=kd_bisect_unused_" $1}')
+
+# --abi-only: recovered object present, EVERY function localised and the ABI
+# data renamed away. It must be identical; if it is not, the isolation is
+# leaking and no row below means anything.
+nm --defined-only -g --format=posix "$REC" \
+    | awk '$2 ~ /^[TDBRW]$/ {print "--localize-symbol=" $1}' > "$W/loc.args"
+if objcopy $(cat "$W/loc.args") $ABI_ARGS "$REC" "$W/abi.o" 2>/dev/null \
+   && gcc -m32 -O2 -DLINUX -no-pie $IF -o "$W/t" "$SCENE" "$W/abi.o" "$W/shipped_weak.o" \
+        -Wl,--start-group "$W"/*.a -Wl,--end-group -lstdc++ -lm 2>/dev/null \
+   && timeout 120 "$W/t" > "$W/t.csv" 2>/dev/null; then
+    report "--abi-only-- (control, must be identical)" "$W/t.csv"
+else
+    echo "  --abi-only-- (control) did not build or run"
+fi
+
 for sym in $SYMS; do
     keep="$sym"
     nm --defined-only -g --format=posix "$REC" \
         | awk -v k="$keep" '$2 ~ /^[TDBRW]$/ && $1 != k {print "--localize-symbol=" $1}' \
         > "$W/loc.args"
-    objcopy $(cat "$W/loc.args") "$REC" "$W/one.o" 2>/dev/null || { echo "  $sym objcopy failed"; continue; }
+    objcopy $(cat "$W/loc.args") $ABI_ARGS "$REC" "$W/one.o" 2>/dev/null || { echo "  $sym objcopy failed"; continue; }
     if ! gcc -m32 -O2 -DLINUX -no-pie $IF -o "$W/t" "$SCENE" "$W/one.o" "$W/shipped_weak.o" \
             -Wl,--start-group "$W"/*.a -Wl,--end-group -lstdc++ -lm 2>/dev/null; then
         echo "  $(c++filt "$sym" | sed 's/(.*//') link failed"; continue

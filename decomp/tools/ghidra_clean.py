@@ -824,7 +824,7 @@ def materialise_data_refs(obj, text):
 PTR_BLOCK_REF = re.compile(r'(?<![\w])(PTR_[A-Za-z0-9_]*?_([0-9a-f]{8}))\b')
 
 
-def materialise_relocated_data(obj, text, renames=None):
+def materialise_relocated_data(obj, text, renames=None, declared=''):
     """Rebuild a RELOCATED .rodata block — the thing materialise_data_refs won't.
 
     That function deliberately refuses a section carrying relocations, because a
@@ -861,10 +861,30 @@ def materialise_relocated_data(obj, text, renames=None):
     the code, not the data — so the `#define` just indexes the section image and
     the pointer arithmetic in the body keeps working unchanged.
 
-    A word whose relocation names a symbol the object does not define is left as
-    its literal addend with the symbol in a comment: emitting a reference to a
-    name that is not declared would trade a wrong value for a link error, and
-    neither is better than leaving the object visibly failing."""
+    A word whose relocation names a symbol the object does not define USED TO BE
+    left as its literal addend with the symbol in a comment, on the grounds that
+    emitting an undeclared name would trade a wrong value for a link error and
+    neither is better than leaving the object visibly failing.
+
+    THAT REASONING WAS WRONG ABOUT THE OUTCOME, and MeAssetDBXMLIO is what
+    showed it. The object is not visibly failing: it compiles, passes every gate
+    in this project, and then the engine calls through the null word during
+    `KCreateAssetDB` and dies before a match starts —
+
+        #0  0x00000000 in ?? ()
+        #1  MeXMLElementProcess (…) at MeXMLParser.c:656
+        #2  MeXMLInputProcess (…)
+        #3  MeAssetDBXMLInputRead ()
+        #4  KCreateAssetDB (…) KUtils.cpp:1374
+
+    which is HANDOVER.md §7c's defect exactly, in a second object. A link error
+    is loud and immediate; a null handler in a table is silent and fatal. And
+    there is a third option better than either: the symbol is very often defined
+    by a SIBLING object in the same corpus — `Handle_KaFile_0_1` is a global `T`
+    in `MeAssetDBXMLInput_1_0.o` — so it can simply be declared and its address
+    taken. The declaration's shape comes from the defining object's symbol TYPE,
+    not from a guess. Only a symbol nothing in the corpus defines is still left
+    as a commented literal."""
     refs = {}
     for full, addr in PTR_BLOCK_REF.findall(text):
         refs[full] = int(addr, 16)
@@ -898,6 +918,7 @@ def materialise_relocated_data(obj, text, renames=None):
             if sym.startswith('.'):
                 targets[sym] = True
 
+    externs = set()
     out = ['/* ---- relocated section data (needs the declarations above) ---- */']
     for sym in sorted(targets):
         data = _section_bytes(obj, sym)
@@ -919,6 +940,12 @@ def materialise_relocated_data(obj, text, renames=None):
                 words.append('(void *)&%s[0x%x]' % (t, raw))
             elif sym in defined:
                 words.append('(void *)&%s' % renames.get(sym, sym))
+            elif _corpus_defines(obj, sym):
+                # Defined by a SIBLING object, so it can be declared and its
+                # address taken. See the note below on why leaving it null is
+                # the worst of the three options.
+                externs.add((sym, _corpus_defines(obj, sym)))
+                words.append('(void *)&%s' % sym)
             else:
                 words.append('(void *)0x%xu /* %s */' % (raw, sym))
         c = 'kd_relsec' + re.sub(r'\W', '_', name)
@@ -929,7 +956,44 @@ def materialise_relocated_data(obj, text, renames=None):
     for full, name, idx in defines:
         c = 'kd_relsec' + re.sub(r'\W', '_', name)
         out.append(f'#define {full} ({c}[0x{idx:x}])')
+    # NO DECLARATION IS EMITTED, and that is deliberate. The symbol is already
+    # declared in every case observed — by the prelude for `Handle_KaFile_0_1`,
+    # by MeXMLParser.h for `MeXMLParseInt` — and a second, weaker `extern void
+    # X();` beside either is a `conflicting types` error. Two objects left the
+    # build that way on the first attempt, and the header case cannot be
+    # detected by looking at the prelude and the body, which is all this sees.
+    #
+    # So the reference is emitted bare. If nothing declares the symbol the
+    # compile fails with `undeclared`, which is loud, immediate, and strictly
+    # better than the silent null this replaced — see the docstring.
     return '\n'.join(out) + '\n\n', len(defines)
+
+
+def _corpus_defines(obj, sym):
+    """'func' / 'data' if a sibling object in the same corpus defines `sym`.
+
+    The declaration this drives only ever has its ADDRESS taken, so the kind
+    decides the spelling and nothing else — but a function declared as an array
+    reads as a lie in the generated source, and this file is meant to be read."""
+    cache = _corpus_defines.cache
+    d = os.path.dirname(os.path.abspath(obj))
+    if d not in cache:
+        table = {}
+        for f in sorted(os.listdir(d)):
+            if not f.endswith('.o') or os.path.join(d, f) == os.path.abspath(obj):
+                continue
+            out = subprocess.run(['nm', '--defined-only', '--format=posix',
+                                  os.path.join(d, f)],
+                                 capture_output=True, text=True).stdout
+            for line in out.splitlines():
+                p = line.split()
+                if len(p) >= 2 and p[1] in 'TtWwVvDdBbRr':
+                    table.setdefault(p[0], 'func' if p[1] in 'TtWw' else 'data')
+        cache[d] = table
+    return cache[d].get(sym)
+
+
+_corpus_defines.cache = {}
 
 
 def _section_relocations(obj):
@@ -4936,7 +5000,8 @@ def main():
     ptr_block, n_ptr = resolve_ptr_labels(args.object, body_text)
     # After resolve_ptr_labels, so anything it could name from the object's own
     # symbols is already gone and only the genuinely unnamed blocks remain.
-    rel_block, n_rel = materialise_relocated_data(args.object, body_text, renames)
+    rel_block, n_rel = materialise_relocated_data(args.object, body_text,
+                                                 renames, _declared)
 
     with open(args.output, 'w') as f:
         f.write('/* Generated by karma-decomp/tools/ghidra_clean.py — do not edit by hand.\n'

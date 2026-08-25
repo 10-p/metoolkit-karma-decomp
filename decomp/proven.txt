@@ -2507,3 +2507,84 @@ keaLCP_new            RELEASED 2026-08-25 (fifth session). Bit-identical on all 
 # and STOCK DOES IT TOO -- same map, same URL, logs identical modulo timestamps
 # and addresses, 523 lines each. Environment regression, not recovery. Run the
 # stock control before reading a crash as yours.
+
+# --- 2026-08-25 (fifth session): TOWARD A DROP-IN LIBRARY --------------------
+#
+# The goal is the engine linking against recovered source and NO shipped `.a`
+# member. Object counts do not measure that, so tools/dropin_gap.py does: it
+# walks the symbol closure from the ENGINE's own objects, resolving each symbol
+# against the RECOVERED build first and only then against the shipped archives,
+# and reports every shipped member the walk still had to reach.
+#
+# CHECKED AGAINST GROUND TRUTH, not asserted. A real link of the engine with
+# every shipped member deleted reports 111 undefined symbols; the walk predicts
+# all 111. (gcc prints demangled names and nm mangled ones, so the comparison
+# demangles both sides — without that three C++ symbols look like a hole in the
+# walk when they are a hole in the comparison.)
+#
+#   at the start of this run   27 members / 192 symbols
+#   after this run             21 members / 160 symbols
+#
+# Members closed: MeDict, McdBox, McdSphyl, McdTriangleList, MeSimpleFile_linux,
+# MeAssetDBXMLIO. 121 objects in the build, from 115.
+#
+# AND FOUR OBJECTS THAT ALREADY COMPILED WERE SILENTLY WRONG. McdSphere computed
+# a sphere's mass properties from its radius read as an INTEGER; McdCylinder,
+# McdConvexMesh and McdPlaneIntersect had the same defect. `_McdGeometry` is 16
+# bytes and `McdCylinder::mR` is at +16, exactly where Ghidra's `g[1].mRefCtAndID`
+# lands, and the shipped code reads it with `flds 0x10` — there is not one `fild`
+# or `cvtsi2*` in any function of those objects. No gate had caught them: the
+# scenes barely exercise those AABB and mass-property paths and difftest reads
+# contacts, not radii.
+
+# --- 2026-08-25 (fifth session): MeAssetDBXMLIO — §7c's DEFECT, AGAIN --------
+#
+# WORTH READING IN FULL, because everything about it is the failure mode this
+# project keeps rediscovering.
+#
+# The object was RELEASED on a correct argument — the `extraout_EAX` it was held
+# for is a dead store, provably, once the variadic padding word that used to
+# read it was removed. It then passed EVERY offline gate: 121/121 clean on three
+# scenes, frame bounds 0, symbol bindings 0 errors, difftest at the documented
+# baseline. And the engine died before a match started:
+#
+#   #0  0x00000000 in ?? ()
+#   #1  MeXMLElementProcess (…) at MeXMLParser.c:656
+#   #2  MeXMLInputProcess (…)
+#   #3  MeAssetDBXMLInputRead ()
+#   #4  KCreateAssetDB (…) KUtils.cpp:1374
+#
+# Located by bisecting the eleven objects that had changed since the last
+# engine-verified build, four link-and-run cycles, ~4 minutes each.
+#
+# THE DEFECT: `materialise_relocated_data` emitted the XML handler table with
+#
+#     (void *)0x0u /* Handle_KaFile_0_1 */,
+#
+# — it knew the relocation's target and wrote a NULL, because the symbol is
+# defined in a SIBLING object rather than in this one. Its docstring defended
+# that: "emitting a reference to a name that is not declared would trade a wrong
+# value for a link error, and neither is better than leaving the object visibly
+# failing."
+#
+# THAT REASONING IS SOUND AND ITS PREMISE IS FALSE. The object was not visibly
+# failing — it was invisibly failing, which is worse than either alternative. A
+# link error is loud and immediate; a null handler in a table is silent and
+# fatal. `Handle_KaFile_0_1` is a global `T` in MeAssetDBXMLInput_1_0.o, so the
+# third option — emit the reference — was available all along.
+#
+# TWO ATTEMPTS AT THE FIX, and the first was wrong in an instructive way.
+# Emitting `extern void Handle_KaFile_0_1();` beside the reference is a
+# `conflicting types` error: the prelude already declares it with a real
+# prototype, and MeXMLParser.h declares MeXMLParseInt the same way. That took
+# TWO objects out of the build. The declaration is now omitted entirely — every
+# symbol observed is already declared by the prelude or by a public header, and
+# an undeclared one now fails loudly, which is the outcome the docstring wanted.
+#
+#   engine, test-karma-1, 200 s, -SOFTWARERENDERER
+#     before   SIGSEGV in KCreateAssetDB, never reached START MATCH
+#     after    ran to the timeout, 0 SIGSEGV, START MATCH reached
+#   blast radius of the fix   1 object, no classification changed
+#
+# THE LESSON IS §7c'S AND IT NEEDS SAYING AGAIN: for anything on the `.ka` path,
+# the offline gates are not evidence. Run the engine.

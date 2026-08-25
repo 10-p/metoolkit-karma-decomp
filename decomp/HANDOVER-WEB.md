@@ -123,7 +123,7 @@ re-deriving the type database from a 64-bit source.
 > | target | pointer-TRUNCATION diagnostics |
 > |---|---:|
 > | armv7 (32-bit) | **0** across 0 objects |
-> | arm64 (64-bit) | **2,291** across **68 of the 112** objects |
+> | arm64 (64-bit) | **2,258** across **67 of the 112** objects |
 >
 > That is decompiled code punning pointers through `undefined4` slots — lossless at 32
 > bits, **silently truncating at 64**.
@@ -144,7 +144,7 @@ re-deriving the type database from a 64-bit source.
 >    wasm32 is at risk. Run `test/ptrwidth_check.sh` yourself before believing that; it
 >    takes 13 seconds and it is the cheapest insurance in this document.
 > 2. **Never enable memory64.** The "do not enable without re-deriving" above now has a
->    number attached: you would be turning on **2,291** truncation sites across two thirds
+>    number attached: you would be turning on **2,258** truncation sites across two thirds
 >    of the library, and *the build would still be green*.
 > 3. **The general lesson, which applies to everything you do here:** identical exported
 >    symbols and a clean compile prove nothing about a target you have not executed. That is
@@ -513,7 +513,7 @@ physics.
    day because this was skipped, and it reproduces with no recovered code executing.
 
 7. **`test/ptrwidth_check.sh <out>/allobj <build>`** — the pointer-width gate. armv7
-   must read **0**; arm64 currently reads **2,291 across 68 of 112**. This is the only
+   must read **0**; arm64 currently reads **2,258 across 67 of 112**. This is the only
    gate in the project that can see a defect on a target nobody has executed, and it is
    the one that matters most to you. 13 seconds.
 
@@ -729,6 +729,25 @@ Read `karma-decomp/HANDOVER.md` for how the recovery pipeline works, and
 
 A log of the things that would otherwise surprise you, newest first. If you have read an
 older copy of this file, start here.
+
+### 2026-08-25 (second session, late) — the solver DRIVER is recovered
+
+Still nothing here changes what the web build does — the two objects that moved are both
+`libMdtKea`, i.e. the SOLVER, and the web build has no Karma at all yet. Three things are
+worth knowing anyway.
+
+- **`keaRbdCore_unified` — the solver driver — is in the build and reproduces the shipped
+  library bit-for-bit on all three test scenes.** That is the object every previous note
+  called the single thing standing in the way.
+- **`keaLCPSolver` came OUT of the build**, measured wrong, so the object count is
+  unchanged at 112 and the set is not. If you are diffing symbol lists against an earlier
+  run, that is why.
+- **arm64 is 2,258 truncation sites across 67 of 112**, down from 2,291/68 purely because
+  keaLCPSolver left. armv7 remains **0** and wasm32 remains **112/112** with identical
+  exported symbol sets.
+
+The current dump directory is now **`out12`**, not `out11` — it differs in 2 of 153 dumps.
+If you re-run the recovery, `HANDOVER.md` §4's command has been updated to match.
 
 ### 2026-08-25 (second session) — 112 objects, and the solver is two modules away
 

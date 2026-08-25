@@ -2030,6 +2030,56 @@ def declared_under(declared):
     return out
 
 
+def fix_undeclared_underscore_local(text):
+    r"""`_iVar3` used where only `iVar3` is declared — Ghidra's own name collision.
+
+    `MeDictLookup` is the worked case. Ghidra declares `int iVar3;`, never uses
+    it, and then writes the function against `_iVar3`, which it declares
+    nowhere:
+
+        int iVar3;                                     /* declared, unused */
+        ...
+        _iVar3 = (*dict->compare)(key,(pMVar2->nilnode).key);
+        if (-1 < (int)_iVar3) break;
+        ...
+        if ((int)_iVar3 < 1) break;
+
+    Three sibling functions IN THE SAME FILE emit the identical shape with a
+    single `iVar3`, so this is a per-function decompiler quirk and not a second
+    variable. `recover.py` catches it with the MISLABELLED-CALL detector, whose
+    pattern is `error: '_<name>' undeclared` — the same diagnostic a genuinely
+    mislabelled external produces, which is why it reads as one family and is
+    four.
+
+    THE GUARD IS WHAT MAKES IT SAFE, and it is not decoration. The rename only
+    fires when `X` is declared in this function and has NO other use in it, so
+    the declaration is exactly the storage `_X` wants and nothing is merged. If
+    `X` is used too, Ghidra is distinguishing two values and merging them would
+    be a silent semantic change — so it declines and the object stays in REVIEW,
+    which is the right answer.
+    """
+    out, n = [], 0
+    for _fn, region in _split_definitions(text):
+        names = {m.group(1) for m in re.finditer(r'\b_([A-Za-z]\w*)\b', region)}
+        for name in sorted(names):
+            if not re.search(r'(?m)^[ \t]+[\w \*]*\b' + re.escape(name)
+                             + r'\s*(\[[^\]]*\])?;\s*$', region):
+                continue                      # `X` is not declared here
+            if re.search(r'(?<![\w_])_' + re.escape(name) + r'\s*(\[[^\]]*\])?;\s*$',
+                         region, re.M):
+                continue                      # `_X` has a declaration of its own
+            bare = [m for m in re.finditer(r'(?<![\w_])' + re.escape(name) + r'\b',
+                                           region)]
+            # One bare use is the declaration itself; more means Ghidra is
+            # distinguishing two values and this must not merge them.
+            if len(bare) != 1:
+                continue
+            region, k = re.subn(r'\b_' + re.escape(name) + r'\b', name, region)
+            n += k
+        out.append(region)
+    return ''.join(out), n
+
+
 def resolve_mangled_call_names(text, declared):
     """`_ZN12keaLCPSolver8setUpperEPf(x)` is a call to something already declared.
 
@@ -2613,7 +2663,13 @@ def _expr_float_type(expr, region, sig, obj, dies):
         base = e[:i].strip()
     m = re.fullmatch(r'\*?[ \t]*(\w+)', base)
     if m:
-        t = _declared_pointee(region, sig, m.group(1))
+        # `*p` and `p[i]` are the POINTEE's type; a bare `r` is its own. Only
+        # the first was resolved, so `(MeU32)r` for a `MeReal r` parameter typed
+        # as nothing and the rule declined — see INT_STORE above for what that
+        # cost. `[` present means the subscript form, `*` the dereference.
+        bare = not base.lstrip().startswith('*') and i < 0
+        t = (_declared_type_name(region, sig, m.group(1)) if bare
+             else _declared_pointee(region, sig, m.group(1)))
         return t if t in _FLOAT_TYPES else None
     m = re.fullmatch(r'\*?[ \t]*(\w+)->(\w+)', base)
     if m:
@@ -2624,8 +2680,200 @@ def _expr_float_type(expr, region, sig, obj, dies):
     return None
 
 
-INT_STORE = re.compile(r'^(?P<ind>[ \t]*)(?P<lhs>[^;=\n]+?) = \(int\)(?P<rhs>[^;\n]+);'
-                       r'[ \t]*$', re.M)
+def _function_has_int_to_float(obj, fn):
+    """Does the SHIPPED function convert an integer to a float? None if unsure.
+
+    The mirror of _function_has_float_to_int, and the mnemonic is taken from
+    objdump's THIRD tab-separated field for the same reason: matching it out of
+    the line reads a hex byte as an instruction and the check declines
+    everywhere. See _function_has_float."""
+    for name, lo, hi in function_extents(obj):
+        if name != fn:
+            continue
+        out = subprocess.run(['objdump', '-d', '--start-address', hex(lo),
+                              '--stop-address', hex(hi), obj],
+                             capture_output=True, text=True).stdout
+        for line in out.splitlines():
+            parts = line.split('\t')
+            if len(parts) < 3 or not parts[2].split():
+                continue
+            m = parts[2].split()[0]
+            if m.startswith('fild') or m.startswith('cvtsi2'):
+                return True
+        return False
+    return None
+
+
+def _dwarf_struct_of_typedef(dies, name, hops=8):
+    """The STRUCT TAG behind a typedef, following the chain, or `name`.
+
+    Declarations use Karma's typedef and .debug_info names the struct by its
+    tag, so a member lookup keyed on the declared spelling finds nothing and the
+    rule declines everywhere. That is the shape of failure this file has hit
+    four times, so it is resolved rather than assumed.
+
+    THE CHAIN IS NOT ONE HOP, which is the version that declined on two of the
+    three objects it was written for: `McdSphylID` is a typedef of
+    `McdGeometryID`, which is a typedef of `struct _McdGeometry *`. Pointer,
+    const and volatile links are followed too, because the declared type of a
+    Karma geometry handle is a POINTER typedef and the member being read belongs
+    to what it points at."""
+    seen = set()
+    die = None
+    for d in dies.values():
+        if d['tag'] in ('DW_TAG_typedef', 'DW_TAG_base_type',
+                        'DW_TAG_structure_type', 'DW_TAG_class_type') \
+           and d['attrs'].get('DW_AT_name') == name:
+            die = d
+            break
+    while die is not None and hops > 0:
+        hops -= 1
+        if die['tag'] in ('DW_TAG_structure_type', 'DW_TAG_class_type'):
+            return die['attrs'].get('DW_AT_name') or name
+        if die['off'] in seen:
+            break
+        seen.add(die['off'])
+        ref = dwarf_structs.REF_RE.search(die['attrs'].get('DW_AT_type', ''))
+        if not ref:
+            break
+        die = dies.get(int(ref.group(1), 16))
+    return name
+
+
+def _declared_type_name(region, sig, var):
+    """The bare declared TYPE NAME of `var` here — `McdSphylID` for
+    `McdSphylID s`. Complements _declared_pointee, which only sees `T *var`."""
+    m = re.search(r'^[ \t]*(?:const[ \t]+)?([A-Za-z_]\w*)[ \t]+' + re.escape(var)
+                  + r'[ \t]*(?:\[[^\]]*\])?[ \t]*;[ \t]*$', region, re.M)
+    if m:
+        return m.group(1)
+    m = re.search(r'(?:\(|,)[ \t]*(?:const[ \t]+)?([A-Za-z_]\w*)[ \t]+'
+                  + re.escape(var) + r'[ \t]*(?:,|\))', sig or '')
+    return m.group(1) if m else None
+
+
+def _expr_int_type(expr, region, sig, obj, dies):
+    """The INTEGER type of `expr`, or None. Deliberately the same shapes, and
+    the same bracket matcher, as _expr_float_type — see its docstring for why a
+    greedy subscript is not acceptable here."""
+    e = expr.strip()
+    while e.startswith('(') and _match_bracket(e, 0) == len(e):
+        e = e[1:-1].strip()
+    # `g[1].mRefCtAndID` / `s[1].prev` — a member of the struct a pointer names.
+    # This is tried FIRST because the whole-expression subscript guard below
+    # rejects it: in `g[1].mRefCtAndID` the bracket closes at 4 and the
+    # expression is 16 long, so the guard returns None before the member
+    # pattern is ever reached. That is how the rule declined on every one of the
+    # sites it was written for.
+    m = re.fullmatch(r'\*?[ \t]*(\w+)(?:\[[^\]]*\])?[ \t]*(?:->|\.)[ \t]*(\w+)', e)
+    if m:
+        owner = (_declared_pointee(region, sig, m.group(1))
+                 or _declared_type_name(region, sig, m.group(1)))
+        if owner:
+            owner = _dwarf_struct_of_typedef(dies, owner)
+        got = _dwarf_member(dies, owner, m.group(2)) if owner else None
+        if got and not re.match(r'^(' + '|'.join(_FLOAT_TYPES) + r')\b', got[1]):
+            return got[1]
+        return None
+    base = e
+    i = e.find('[')
+    if i >= 0:
+        if _match_bracket(e, i) != len(e):
+            return None                 # the subscript is not the whole thing
+        base = e[:i].strip()
+    m = re.fullmatch(r'\*?[ \t]*(\w+)', base)
+    if m:
+        t = _declared_pointee(region, sig, m.group(1))
+        return t if t and t not in _FLOAT_TYPES else None
+    return None
+
+
+# `(float)g[1].mRefCtAndID` — a cast applied to something that is not a call and
+# not already a pointer dereference of the right type. The operand is captured
+# with the postfix scanner rather than `.*` so a following binary operator is
+# not swallowed; see _expr_float_type on the greedy-subscript bug.
+FLOAT_CAST = re.compile(r'\(float\)[ \t]*(?=[A-Za-z_*])')
+
+
+def fix_float_load_of_int(obj, text):
+    r"""`(float)g[1].prev` is a four-byte LOAD, not a conversion.
+
+    The mirror of fix_int_store_of_float, and the same defect seen from the
+    other side. UT2004's geometry types derive from `McdGeometry` by prefixing
+    it, so a `McdBox`'s dimensions live PAST the base struct. Ghidra has only
+    `McdGeometry *`, so it addresses them as `g[1].<field-of-the-base>` — the
+    byte offset is right and the TYPE is whatever field of a second
+    `McdGeometry` happens to sit there:
+
+        fVar1 = ABS(tm->row[2].v.v[0]) * (*(float *)&(g[1].next)) +
+                ABS(tm->row[1].v.v[0]) * (*(float *)&(g[1].prev)) +
+                ABS(tm->row[0].v.v[0]) * (float)g[1].mRefCtAndID;
+
+    Two of the three are already reinterprets and the third is a CONVERSION,
+    which is a different program: `mRefCtAndID` is an `int`, so C converts the
+    bit pattern instead of reading the float that is there.
+
+    THIS IS DEAD END 9, RE-DIAGNOSED. That entry blames `fix_pointer_as_float`
+    for "cycling through the casts on a line until one is accepted" and
+    concludes the compiler is reasoning about Ghidra's types and is wrong. The
+    first half is right and the conclusion was too weak: gcc rejects only the
+    cast whose operand is a POINTER, so cycling fixes that one and leaves the
+    `int` one — which compiles, and is wrong. The line needs both, and which
+    both is decided by the operand's type, not by which one the compiler
+    complained about.
+
+    THE EVIDENCE IS THE MACHINE CODE, exactly as in the store direction. An
+    integer-to-float conversion on i386 is `fild` or `cvtsi2s*`; `McdBox.o`,
+    `McdSphyl.o` and `McdTriangleList.o` contain NOT ONE, in any function — every
+    float they touch arrives by `flds`. So a `(float)` applied to an integer
+    lvalue in those functions cannot be a conversion the program performs.
+
+    Both halves are required, as in the store direction: the operand must
+    RESOLVE to a non-floating type from a declaration or from the object's own
+    DWARF, and the function must contain no conversion instruction. An
+    expression this cannot type is left alone; so is a function that really does
+    convert."""
+    if not obj:
+        return text, 0
+    dies, out, n = None, [], 0
+    for fn, region in _split_definitions(text):
+        if not fn or '(float)' not in region:
+            out.append(region)
+            continue
+        if _function_has_int_to_float(obj, fn) is not False:
+            out.append(region)
+            continue
+        sig = signature_of(region)
+        if dies is None:
+            dies = dwarf_structs.parse(obj)
+        pieces, last = [], 0
+        for m in FLOAT_CAST.finditer(region):
+            end = scan_unary_forward(region, m.end())
+            if end is None or end <= m.end():
+                continue
+            operand = region[m.end():end]
+            if _expr_int_type(operand, region, sig, obj, dies) is None:
+                continue
+            pieces.append(region[last:m.start()])
+            pieces.append('*(float *)&(%s)' % operand.strip())
+            last = end
+            n += 1
+        pieces.append(region[last:])
+        out.append(''.join(pieces))
+    return ''.join(out), n
+
+
+# Ghidra spells the destination with whatever integer type the SLOT has, not
+# with `int`. `McdSphylCreate` writes the capsule radius as
+# `pMVar1[1].mRefCtAndID = (MeU32)r;` — a truncation to zero for any radius
+# under 1 — where the shipped code does `fstps 0x10(%ebx)`. Matching only
+# `(int)` left that in place, and because McdSphyl never compiled it had never
+# been run: the first scene it reached produced 8,100 non-finite samples.
+INT_STORE = re.compile(r'^(?P<ind>[ \t]*)(?P<lhs>[^;=\n]+?) = '
+                       r'\((?:int|uint|long|ulong|short|ushort|char|byte|sbyte'
+                       r'|MeI32|MeU32|MeI16|MeU16|MeI8|MeU8'
+                       r'|undefined4|undefined2|undefined1)\)'
+                       r'(?P<rhs>[^;\n]+);[ \t]*$', re.M)
 
 
 def fix_int_store_of_float(obj, text):
@@ -2658,7 +2906,13 @@ def fix_int_store_of_float(obj, text):
         return text, 0
     dies, out, n = None, [], 0
     for fn, region in _split_definitions(text):
-        if not fn or '(int)' not in region:
+        # Test the PATTERN, not the literal `(int)`. The early-out used to look
+        # for that string, so widening INT_STORE to the other integer spellings
+        # changed nothing at all: `McdSphylCreate` contains `(MeU32)` and no
+        # `(int)`, so it was skipped before the regex ever ran. A cheap guard
+        # that disagrees with the rule it guards is a rule that silently
+        # declines — the fifth time in this file.
+        if not fn or not INT_STORE.search(region):
             out.append(region)
             continue
         if _function_has_float_to_int(obj, fn) is not False:
@@ -4445,10 +4699,12 @@ def main():
     # forward declarations as well.
     body_text, n_vptr = fix_vptr_store(args.object, body_text, _declared,
                                        read_ghidra_locals(args.input), args.protos)
+    body_text, n_uscore = fix_undeclared_underscore_local(body_text)
     body_text, n_mangled = resolve_mangled_call_names(
         body_text, _declared + '\n' + '\n'.join(decls))
     body_text, n_voidmem = fix_void_pointer_member(args.object, body_text, _declared)
     body_text, n_intstore = fix_int_store_of_float(args.object, body_text)
+    body_text, n_fltload = fix_float_load_of_int(args.object, body_text)
     body_text, n_frame = materialise_shifted_frame(
         body_text, args.object, read_ghidra_locals(args.input))
     body_text, n_ftext = restore_float_text(
@@ -4554,6 +4810,10 @@ def main():
     if n_ftext:
         print(f'  {n_ftext} float expression site(s) repaired (spill rounding / '
               f'add-chain association)')
+    if n_uscore:
+        print(f'  {n_uscore} undeclared `_local` reference(s) bound to their declaration')
+    if n_fltload:
+        print(f'  {n_fltload} int-to-float conversion(s) rewritten as a four-byte load')
     if n_rel:
         print(f'  {n_rel} relocated data block(s) rebuilt with their pointers')
     if args.cflag:

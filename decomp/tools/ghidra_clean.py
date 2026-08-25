@@ -2812,7 +2812,17 @@ def collapse_outgoing_aggregate_copy(body, protos=None):
     for _off, agg, base in plan:
         # The declaration goes first: renaming every occurrence would turn
         # `kd_agg76 kVar2;` into `kd_agg76 (w->keaParams);`.
-        region = re.sub(r'^[ \t]*(?:kd_agg\d+|undefined1|char|MeReal) ' + re.escape(agg)
+        #
+        # ANY type, not a list of them. This used to name four —
+        # kd_aggNN/undefined1/char/MeReal — and Ghidra declares the slot under
+        # whatever type it worked out, which for keaMemory's allocateMemory is
+        # the real `MdtKeaConstraints`. The declaration then survived the
+        # removal, the rename rewrote it, and the object failed on
+        # `MdtKeaConstraints (constraints);` — `constraints` redeclared as a
+        # different kind of symbol, because the source it collapses to is the
+        # function's own by-value PARAMETER of that name. Anchoring on the
+        # NAME is what makes this safe; the type never was doing any work.
+        region = re.sub(r'^[ \t]*(?:[A-Za-z_]\w*[ \t]+)+' + re.escape(agg)
                         + r'[ \t]*(?:\[\d+\])?[ \t]*;[ \t]*\n', '', region,
                         count=1, flags=re.M)
         region = re.sub(r'\b' + re.escape(agg) + r'\b', '(' + base + ')', region)
@@ -2925,7 +2935,8 @@ class RepairContext:
         self.n_same = 0
 
 
-def repair_loop(path, cc, cflags, ctx=None, max_rounds=90, verbose=True):
+def repair_loop(path, cc, cflags, ctx=None, max_rounds=200, verbose=True,
+                max_restarts=3):
     """Compile, rewrite the lines GCC rejected, recompile, until it settles.
 
     Returns (n_edits, remaining_errors, log). The file is left with whichever
@@ -2938,7 +2949,26 @@ def repair_loop(path, cc, cflags, ctx=None, max_rounds=90, verbose=True):
     silently so — McdBox stopped at 29 errors, and simply running the loop a
     second time took it to 8, which is the actual fixed point. A cap that stops
     early looks exactly like a rule that does not work. One round is one
-    compile of one file; being wrong in this direction costs seconds."""
+    compile of one file; being wrong in this direction costs seconds.
+
+    "Running it a second time gets further" is now BEHAVIOUR rather than an
+    anecdote, and max_restarts is what makes it so. The reason it works is the
+    rejection memory: `applied` holds every edit that was TRIED, accepted or
+    not, so a line that got a wrong candidate can be offered a different one —
+    and a rejection then outlives the reason for it. keaMemory is the worked
+    case. `_pool_ptr` -> `pool_ptr` is exactly right and exchanges three
+    `undeclared` diagnostics for three of a different kind, so on the round it
+    was first offered the count did not fall and it was refused; by the time
+    the surrounding repairs made it a strict improvement it was already in
+    `applied` and could never be offered again. Clearing the memory and going
+    round again takes the object from 5 errors to 5 with every one of them the
+    same honest class, and 31 lines correctly renamed.
+
+    Clearing is safe for the ACCEPTED half: an accepted edit is already in the
+    file, so a rule re-offering it produces no change and it never reaches the
+    filter. Only rejections are actually forgotten. A restart is taken only
+    after real progress, so a rule that simply cannot help this object does not
+    buy itself extra rounds."""
     ctx = ctx or RepairContext()
     original = open(path, errors='ignore').read()
     best_text, log = original, []
@@ -2948,6 +2978,7 @@ def repair_loop(path, cc, cflags, ctx=None, max_rounds=90, verbose=True):
         return 0, 0, log
 
     n_edits = 0
+    since_restart, restarts = 0, 0
     applied = set()                 # (line, text) pairs already tried; no loops
     for _ in range(max_rounds):
         lines = best_text.split('\n')
@@ -3027,6 +3058,14 @@ def repair_loop(path, cc, cflags, ctx=None, max_rounds=90, verbose=True):
                     groups.append((tried[-1], {lineno: new}))
                     break
         if not edits:
+            # Every rule has now declined every line it was offered. That is
+            # only the fixed point if no rule was ever REFUSED on evidence that
+            # has since changed — see the docstring. Forget the rejections and
+            # go round once more, but only if this pass actually got somewhere.
+            if best_n and since_restart and restarts < max_restarts:
+                applied, since_restart = set(), 0
+                restarts += 1
+                continue
             break
 
         # The verification, and the reason a wrong rule is harmless: an edit is
@@ -3068,6 +3107,7 @@ def repair_loop(path, cc, cflags, ctx=None, max_rounds=90, verbose=True):
         if no_worse and resolved == len(targets):
             best_text, best_n, diags = candidate_text, len(new_diags), new_diags
             n_edits += len(edits)
+            since_restart += len(edits)
             log += tried
             applied |= {(l, t) for l, t in edits.items()}
             if verbose:
@@ -3096,6 +3136,7 @@ def repair_loop(path, cc, cflags, ctx=None, max_rounds=90, verbose=True):
                 if ok and res:
                     best_text, best_n, diags = one_text, len(d), d
                     n_edits += 1
+                    since_restart += 1
                     progress = True
                     applied |= {(l, t) for l, t in changed.items()}
                     log.append(entry)

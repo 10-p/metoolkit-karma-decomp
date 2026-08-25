@@ -22,14 +22,14 @@ freebie, the Android NDK), and to integrate the result into the engine's web bui
 
 What exists today:
 
-- **113 recovered objects**, all compiling for i386, wasm32, armv7 *and* arm64 — but see
+- **115 recovered objects**, all compiling for i386, wasm32, armv7 *and* arm64 — but see
   §3's pointer-size section: **arm64 is not trustworthy and wasm32 is**, for the same reason.
 - **The full collision-detection path the game actually uses is recovered and validated** —
   all twelve interaction pairs UT2004 calls, each measured against the shipped original on
   real inputs from a live match. Evidence per object in `karma-decomp/proven.txt`. §6 has
   the census that says "twelve" and why that is the number to plan against.
 - **The whole set already compiles under Emscripten**, and its exported symbol NAMES are
-  **byte-identical to the i386 build for all 113 objects** — nothing added or dropped. So
+  **byte-identical to the i386 build for all 115 objects** — nothing added or dropped. So
   the ABI surface the engine links against does not change between targets, which was the
   thing most likely to turn this into a rewrite. See §4. (Names only: `wasm_check.sh`
   discards the binding letter. That gap let a recovered object export a *global* `putchar`
@@ -39,20 +39,45 @@ What does **not** exist, and you need to know this before planning anything:
 
 - **Nothing has ever been EXECUTED under wasm.** "It compiles" is not "it works", and the
   runtime hazards in §4 are still open. That line is yours to cross, and it is §8 step 1.
-- **The solver's control flow is not recovered.** `libMdtKea` is Karma's LCP solver — the
-  code that turns contacts into motion. Three of its compute kernels are now proven
-  bit-identical over 900 compounding steps, but the four objects that *call* them — the
-  driver, the allocator, the integrator and the LCP — still do not compile. Collision
-  detection tells you what touched; without the solver nothing moves. **A wasm build cannot
-  run on recovered Karma alone today**, and closing that gap is recovery-side work, not
-  yours. See "The gap that decides your schedule" below before planning around it.
+- ~~**The solver's control flow is not recovered.**~~ **RECOVERED, 2026-08-25 — this
+  blocker is GONE.** Every object in `libMdtKea` now reproduces the shipped library
+  bit-for-bit on all three test scenes, and the engine has been rebuilt against them and
+  RUN: the recovered `MdtKeaAddConstraintForces` executes 301 times and
+  `keaLCPSolver::solveLCP` 85 times on a real map (`HANDOVER.md` §7d). Six of the twenty
+  shipped members are still original and only one of them is on the path
+  (`keaMatrix_PcSparse_vanilla`, about one rounding step out). **So "a wasm build cannot run
+  on recovered Karma alone" is no longer true on the recovery side** — what is left is
+  yours.
 - **Nothing has run end to end under wasm.** Natively, the collision layer has: all eight
   objects behind the pairs the game calls were put in the driving seat — no shadow
   harness, the engine consuming the recovered code's answer every frame — through full ONS
-  matches. The solver has not, and cannot until the four objects above compile. Everything
-  else called "validated" was measured by a shadow harness that feeds the engine the
-  ORIGINAL's answer every frame, so a recovered error never compounds. Do not assume
-  "validated" means "has been run on".
+  matches. The solver now has too, on a smaller run (§7d). Everything else called
+  "validated" was measured by a shadow harness that feeds the engine the ORIGINAL's answer
+  every frame, so a recovered error never compounds. Do not assume "validated" means "has
+  been run on".
+
+> ### ⚠ AND ONE NEW HAZARD THAT IS SPECIFICALLY YOURS, found 2026-08-25
+>
+> **There is a class of arithmetic error in the recovered code that is provably harmless on
+> i386 and changes results on wasm32.** Ghidra prints right-leaning floating-point `+`
+> chains without the parentheses they need, so C re-parses them in a different order. Float
+> addition is not associative, so that is a real change.
+>
+> On i386 it is **exactly inert**: the x87 register carries 64 mantissa bits and a float
+> product needs only 48, so these sums come out identical whatever the order — measured **0
+> differences in 2,000,000 samples** under `-mfpmath=387`. Under `-mfpmath=sse`, which is
+> the same storage-precision arithmetic **wasm32, armv7 and arm64 all use**, the identical
+> probe differs in **31%** of samples.
+>
+> **Every gate on the recovery side is structurally blind to this.** Three instances were
+> found and fixed in `keaIntegrate_pc` by reading the shipped machine code; 152 other
+> objects have not been examined. `HANDOVER.md` §11 item 2a.
+>
+> **What this means for you:** if wasm physics diverges from native and you cannot reproduce
+> it in any native test, this is the first hypothesis, not the last. It is also the reason
+> not to treat "bit-identical on i386" as a promise about wasm. Any A/B you build that
+> compares wasm output against native output is measuring something the recovery side
+> cannot, and is therefore worth more than it looks.
 
 
 Reproduce the wasm result in one command:
@@ -106,7 +131,7 @@ re-deriving the type database from a 64-bit source.
 
 > ### ⚠ THIS IS NOW MEASURED, NOT ASSERTED — and it is the strongest warning in this file
 >
-> All 113 objects compile for **arm64** (64-bit pointers) as well as armv7 and wasm32.
+> All 115 objects compile for **arm64** (64-bit pointers) as well as armv7 and wasm32.
 > Every one of them compiles. The exported symbol sets are **byte-identical to i386 on all
 > three**. Every behavioural gate the project has passes. And arm64 is wrong.
 >
@@ -123,7 +148,7 @@ re-deriving the type database from a 64-bit source.
 > | target | pointer-TRUNCATION diagnostics |
 > |---|---:|
 > | armv7 (32-bit) | **0** across 0 objects |
-> | arm64 (64-bit) | **2,291** across **68 of the 113** objects |
+> | arm64 (64-bit) | **2,436** across **69 of the 115** objects |
 >
 > That is decompiled code punning pointers through `undefined4` slots — lossless at 32
 > bits, **silently truncating at 64**.
@@ -144,7 +169,7 @@ re-deriving the type database from a 64-bit source.
 >    wasm32 is at risk. Run `test/ptrwidth_check.sh` yourself before believing that; it
 >    takes 13 seconds and it is the cheapest insurance in this document.
 > 2. **Never enable memory64.** The "do not enable without re-deriving" above now has a
->    number attached: you would be turning on **2,291** truncation sites across two thirds
+>    number attached: you would be turning on **2,436** truncation sites across two thirds
 >    of the library, and *the build would still be green*.
 > 3. **The general lesson, which applies to everything you do here:** identical exported
 >    symbols and a clean compile prove nothing about a target you have not executed. That is
@@ -225,11 +250,11 @@ This had never been tried, so it was worth doing before anything else:
 
 ```
 emcc 5.0.7, no -m32, otherwise the same flags as the native build
-113 of 113 recovered objects compiled for wasm32.  0 failures.
+115 of 115 recovered objects compiled for wasm32.  0 failures.
 ```
 
 Stronger than that — the **exported symbol names are byte-identical to i386 for
-all 113 objects**, nothing added or dropped. So the ABI surface the engine links
+all 115 objects**, nothing added or dropped. So the ABI surface the engine links
 against does not change between the two targets, which was the thing most likely
 to turn this into a rewrite.
 
@@ -489,7 +514,7 @@ physics.
    all of them: `scene_chain.c` (collision-free, the authoritative trajectory signal),
    `scene_boxes_on_plane.c` (exercises the geometry dispatch), `scene_ragdoll.c` (nine
    capsules on ball-socket joints — the other two make **not one Sphyl call** between them).
-   Currently **113/113 clean on all three** on i386 — but read `HANDOVER.md` §4a before
+   Currently **115/115 clean on all three** on i386 — but read `HANDOVER.md` §4a before
    putting weight on that number: only eight of 103 objects have measurable sensitivity on
    any of these scenes, and `test/scene_census.sh` and `test/gate_sensitivity.sh` exist to
    say which. **Getting that under a wasm build is your first milestone.**
@@ -501,7 +526,7 @@ physics.
    contact regime and a figure without its regime is meaningless. `KD_GENARGS=1` and
    `KD_FIXEDSHAPE=1` are the two that found real bugs most recently.
 3. **`test/wasm_check.sh`** — compiles the whole set for wasm32 and diffs the exported
-   symbols against the native build. Currently 113/113. **Run this after any change
+   symbols against the native build. Currently 115/115. **Run this after any change
    to the recovery pipeline**; it is the cheapest possible early warning that a change has
    broken portability. It compares NAMES only — see the note at the end of §4.
 4. **`test/kd_shadow.c`** — the in-game shadow harness. Runs both implementations on the
@@ -513,7 +538,7 @@ physics.
    day because this was skipped, and it reproduces with no recovered code executing.
 
 7. **`test/ptrwidth_check.sh <out>/allobj <build>`** — the pointer-width gate. armv7
-   must read **0**; arm64 currently reads **2,291 across 68 of 113**. This is the only
+   must read **0**; arm64 currently reads **2,436 across 69 of 115**. This is the only
    gate in the project that can see a defect on a target nobody has executed, and it is
    the one that matters most to you. 13 seconds.
 
@@ -570,7 +595,7 @@ gcc -m64 ... -o /tmp/rag_hx   test/scene_ragdoll.c  <linux_hx_single/*.a>
 - **Nothing has been RUN under wasm.** The whole set compiles and exports identical
   symbols, and that is all §4 hazards 2 and 3 settle. Hazards 1, 4 and 5 are runtime and
   entirely open.
-- **113 of ~150 objects compile**, 19 do not. But read `HANDOVER.md` §3b then §3 before reading that
+- **115 of ~150 objects compile**, 17 do not. But read `HANDOVER.md` §3b then §3 before reading that
   as 60% done — see the next bullet, it is the most important thing in this file for
   planning purposes.
 - **25 objects are deliberately quarantined** by eight safety detectors. They compile but
@@ -729,6 +754,32 @@ Read `karma-decomp/HANDOVER.md` for how the recovery pipeline works, and
 
 A log of the things that would otherwise surprise you, newest first. If you have read an
 older copy of this file, start here.
+
+### 2026-08-25 (fifth session) — the solver blocker is GONE, and a hazard that is yours
+
+**Two things here matter to you and one of them is new work.**
+
+- **`libMdtKea` is recovered whole.** `keaIntegrate_pc` is bit-identical on all three scenes
+  and over 450,000 bodies of a per-function A/B; `keaLCP_new` is released. The engine was
+  rebuilt against them and RUN — recovered `MdtKeaAddConstraintForces` 301 calls,
+  `keaLCPSolver::solveLCP` 85 calls on a real map (`HANDOVER.md` §7d). **The line in §1 that
+  said a wasm build cannot run on recovered Karma alone is withdrawn.**
+- **⚠ A NEW HAZARD, AND IT IS SPECIFIC TO YOUR TARGETS.** Ghidra prints right-leaning float
+  `+` chains without the parentheses they need. On i386 that is **exactly inert** — 0
+  differences in 2,000,000 samples under `-mfpmath=387`, because x87 carries 64 mantissa
+  bits and a float product needs 48. Under `-mfpmath=sse`, i.e. the arithmetic wasm32,
+  armv7 and arm64 all use, the same probe differs in **31%**. Three instances were fixed in
+  one object; **152 objects are unexamined and no recovery-side gate can see this.** §1 has
+  the full note; `HANDOVER.md` §11 item 2a has the evidence. If wasm physics ever diverges
+  from native in a way no native test reproduces, start here.
+- **115 objects** (was 113), wasm32 **115/115** with identical exported symbol sets, armv7
+  **0** truncations, arm64 **2,436 across 69 of 115** (up from 2,291/68 — `keaLCP_new`
+  contributes 145 of the new sites).
+- The dump directory is still **`out13`**.
+
+The web workstream's job is still item 4 in WHAT REMAINS: nothing has EXECUTED on wasm32,
+armv7 or arm64 — and the hazard above makes the first wasm-vs-native comparison worth more
+than it used to be, because it can see something the recovery side cannot.
 
 ### 2026-08-25 (fourth session) — the solver is recovered; the dump is out13
 

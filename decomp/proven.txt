@@ -2386,3 +2386,44 @@ keaIntegrate_pc       RELEASED 2026-08-25 (fifth session). Bit-identical on all 
 #
 keaLCP_new            RELEASED 2026-08-25 (fifth session). Bit-identical on all three scenes
 #                     and per-function; both detectors that held it are accounted for above.
+
+# --- 2026-08-25 (fifth session): THE ENGINE ON THE RECOVERED SOLVER ----------
+#
+# build-subst115: the engine linked against /tmp/mt_subst115, in which 115 of
+# the recovered objects REPLACE the shipped members -- 14 of libMdtKea's 20.
+#
+# SUBSTITUTION VERIFIED AT THE MACHINE-CODE LEVEL, not from the link:
+#
+#                                    stock   subst115
+#   MdtKeaIntegrateSystem               23        40   instructions
+#   KeaIntegrateSystem_vanilla         434       415
+#   keaLCPSolver::solveLCP             314       499
+#   MdtKeaAddConstraintForces          471       405
+#
+# AND IT EXECUTES. gdb breakpoint counts, test-karma-1, xDeathMatch:
+#
+#   MdtKeaAddConstraintForces      301 calls   (recovered keaRbdCore_unified)
+#   keaLCPSolver::solveLCP          85 calls   (recovered keaLCPSolver/keaLCP_new)
+#   MdtKeaIntegrateSystem            0 calls   <-- and this is the finding
+#
+# HANDOVER.md SAID "THE ENGINE CALLS MdtKeaIntegrateSystem DIRECTLY". IT DOES
+# NOT, IN NORMAL PLAY. KDynStep.cpp:869 branches on `KGData->bUseSafeTime`,
+# which KarmaSupport.cpp:1721 initialises to 1 and only the console command
+# `KSAFETIME 0` (KUtils.cpp:610) clears. The safe-time branch integrates with
+# the engine's OWN KIntegrateSystem (KDynStep.cpp:618) and calls Kea's
+# integrator only in the else. Forcing the other branch with -EXEC:
+#
+#   -EXEC=kd_exec.txt containing `KSAFETIME 0`  ->  "Karma Safe-Time Disabled."
+#   MdtKeaIntegrateSystem                            51 calls
+#
+# So keaIntegrate_pc is REACHABLE and not on the default path. It still has to
+# be correct -- it is in the link, the console toggle is a shipped feature, and
+# an object that is wrong is wrong -- but it is the third member of the §3a
+# family (MdtWorldStep, KIntersect's two intercepts) where UT2004 reimplements
+# what it also links. Check the branch, not just the call, before calling
+# something load-bearing.
+#
+# The same read explains why KDynStep.cpp contains KIntegrateSystem verbatim:
+# Epic needed a variable-timestep version, copied MathEngine's, and left the
+# original reachable behind a toggle. That copy is what gave this session
+# ground truth for the association defect above.

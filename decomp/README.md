@@ -41,7 +41,7 @@ numbers are the numbers of the day each part was written.
 | Milestone 1 — one object end to end | ✅ **done** (`McdPrimitives/IxBoxBox`) |
 | Milestone 2 — `MdtKea` C++/vtable spike | ✅ **done — no blocker** |
 | Milestone 3 — scale validation | ✅ **done** — the engine runs on the recovered set |
-| Milestone 4 — the grind | 🔶 **collision done, solver blocked** — HANDOVER §11 item 2 |
+| Milestone 4 — the grind | 🔶 **collision done, solver DONE and running** — 115 objects; `libMdtKea` is bit-identical throughout and the engine executes it (HANDOVER §7d). What is open is §11 item 2a: an association defect that is inert on i386 and 31% divergent on wasm/ARM |
 | Milestone 5 — wasm + Android bring-up | ⬜ compiles, never executed. `HANDOVER-WEB.md` |
 
 ### Milestone 1 result

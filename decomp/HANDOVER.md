@@ -38,11 +38,29 @@ moves, move it there.
   call "the whole job". All nineteen vtable dispatches in `keaRbdCore_unified` and
   `keaLCPSolver` are restored from relocation data, and it cost only 2 changed dumps out of
   153. §5a, §11 item 1.
-- **EVERY OBJECT IN `libMdtKea` NOW REPRODUCES THE SHIPPED LIBRARY EXACTLY, EXCEPT ONE.**
-  The driver (`keaRbdCore_unified`), the LCP (`keaLCPSolver`), `keaLCP_new` — the last
-  module — and the allocator (`keaMemory`) are all **bit-identical on all three scenes**,
-  alongside the three compute kernels that already were. The only one left is
-  `keaIntegrate_pc`, and it is a SINGLE LAST BIT: `first@13 = 1.500e-08`. §11 item 2.
+- **`libMdtKea` IS RECOVERED. EVERY OBJECT IN IT REPRODUCES THE SHIPPED LIBRARY EXACTLY.**
+  The driver (`keaRbdCore_unified`), the LCP (`keaLCPSolver`), `keaLCP_new`, the allocator
+  (`keaMemory`), the three compute kernels and — as of 2026-08-25, fifth session —
+  `keaIntegrate_pc` are all **bit-identical on all three scenes**. `keaLCP_new` and
+  `keaIntegrate_pc` are also RELEASED, so the build is **115 objects**. §11 item 2.
+- **AND THE ENGINE RUNS ON IT.** `build-subst115` links 115 recovered objects in place of
+  the shipped members — 14 of `libMdtKea`'s 20 — and gdb breakpoint counts on
+  `test-karma-1` read **`MdtKeaAddConstraintForces` 301 calls** and
+  **`keaLCPSolver::solveLCP` 85 calls**. The recovered solver executes in the real engine on
+  a real map, which nothing before this had shown. §7d.
+- **`keaIntegrate_pc`'s defect was A ROUNDING GHIDRA DROPPED, and there was a second one no
+  gate here can see.** The shipped code spills `dq[1..3]` to 32-bit slots and reloads them;
+  Ghidra folds store and reload into one expression, so on i386 gcc keeps the chain at 80
+  bits and the last bit drifts. And Ghidra prints a right-leaning float `+` chain FLAT, so C
+  re-parses it left-leaning over the wrong operands — **exactly inert on x87 (0 in 2,000,000
+  samples) and 31% divergent under storage precision, which is what wasm32, armv7 and arm64
+  give.** §11 item 2a. Ground truth was not an inference: `KDynStep.cpp:618` is MathEngine's
+  integrator copied verbatim into UT2004.
+- **AND "the engine calls `MdtKeaIntegrateSystem` directly" — WHICH THIS FILE SAID — IS
+  WRONG.** `KDynStep.cpp:869` branches on `bUseSafeTime`, which defaults to 1 and is only
+  cleared by the console command `KSAFETIME 0`; the default branch uses the engine's OWN
+  integrator. Measured both ways: 0 calls by default, 51 with `-EXEC` forcing the toggle.
+  §7d, §3a.
 - **`keaLCP_new`'s frame was materialised, and the reason this file said twice not to touch
   it was HALF WRONG.** The "61 sites with mixed byte and element strides" was a misreading:
   `auStack_3c[i - uVar6]` is a `uint *` indexed in elements, i.e.
@@ -66,7 +84,7 @@ moves, move it there.
   had rendered three float stores as int CONVERSIONS — `(&this_00->AinvStride)[k] =
   (int)this->clampedValues[k]`, which destroys the value and compiles without a warning. The
   object is now bit-identical on all three scenes and on all fifteen of its functions
-  individually. **113 objects.** §8, `proven.txt`.
+  individually. **115 objects.** §8, `proven.txt`.
 - **BOTH CYLINDER DEFECTS NOW REPRODUCE OFFLINE.** `IxCylinderTriList`'s live divergence — the
   one WHAT REMAINS row 7 said the synthetic tier could not see — reproduces under `KD_CORNER=1`
   at iteration 23624 with **count 30/32**, where the default mesh reads 0.
@@ -94,27 +112,29 @@ moves, move it there.
   alone would not be. The wrong repair is the one that supplies the cast Ghidra elided: it
   compiles, and it reads a `MeReal` out of the pool that the original never touches.
   §11 item 3a.
-- **What is left of the solver is ONE object and ONE last bit.** `keaIntegrate_pc` reads
-  `first@13 = 1.500e-08` on the collision-free scene — a single last bit amplified, not a
-  gross defect. The double-literal hypothesis is refuted; expression reassociation in the
-  quaternion update is what is left. `keaLCP_new` is proven exact but still HELD by the
-  `extraout_EDX` detector, whose complaint `proven.txt` shows to be inert — both stores land
-  in the alignment padding of a call. §11 item 2.
+- **What is left of the solver is NOTHING — this row is discharged.** `keaIntegrate_pc` was
+  `first@13 = 1.500e-08`; it is now bit-identical on all three scenes and over 450,000
+  bodies of a per-function A/B on both code paths (`test/ab_integrate.sh`). Expression
+  reassociation WAS one of the two defects and it was not the one that moved the number —
+  see §11 item 2a. `keaLCP_new` is released too, and that took accounting for a **second**
+  detector nobody had seen: `GHIDRA_STACK_GUESS` firing on the output of
+  `materialise_shifted_frame`. §11 item 2, `proven.txt`.
 - **The Ghidra-side attack on that is REFUTED, in three minutes, and it cost nothing.**
   Disabling DWARF variable import leaves the `in_stack_`/`stack0x` frame model
   **byte-identical**; all it removes is names. Ghidra's native stack recovery and its DWARF
   importer agree. Dead end 18, and §11 item 2 has what the experiment found instead — which
   is worth more than what it was looking for.
-- **112 objects compile**, 22 are quarantined by detectors, 20 do not. Object count is a bad
+- **115 objects compile**, 21 are quarantined by detectors, 17 do not. Object count is a bad
   progress metric — read §3 before using it.
 - **`MdtWorld` is the first object out of §11 item 2, and the engine does not use it.**
   `collapse_outgoing_aggregate_copy` takes it FAIL → ok, bit-identical on all three scenes,
   with the gate proven sensitive to one part per million in the aggregate the repair passes
   — and then `KDynStep.cpp` turns out to reimplement the stepping loop and call the kea
   entry points directly, so `MdtWorldStep` is a third member of the §3a family. The method
-  is validated; the object is not on the path. §11 item 2, `proven.txt`.
+  is validated; the object is not on the path. **`MdtKeaIntegrateSystem` turned out to be a
+  FOURTH member of that family** — §7d. §11 item 2, `proven.txt`.
 - **They compile for wasm32, armv7 AND arm64 — and arm64 is a lie.** Identical symbol sets
-  on all three, but arm64 emits **2,291 pointer-truncation diagnostics across 68 of the 113
+  on all three, but arm64 emits **2,436 pointer-truncation diagnostics across 69 of the 115
   objects** where armv7 emits **zero**, because the recovery puns pointers through 4-byte
   slots. There **is** now a gate for it — `test/ptrwidth_check.sh`, 13 seconds — and §6b's
   old "920 vs 23" figure was two different diagnostic sets added together. §6b.
@@ -144,55 +164,68 @@ moves, move it there.
   also caught a *search* that could not have found what it was looking for. §4a, §12's
   closing section, and dead ends 9 and 10.
 
-### WHAT REMAINS — the whole list, ordered, 2026-08-25
+### WHAT REMAINS — the whole list, ordered, 2026-08-25 (fifth session)
 
 Everything else in this file is detail. This is the work.
 
 | # | what | where | blocked on |
 |---|---|---|---|
-| 1 | **THE SOLVER IS RECOVERED — every `libMdtKea` object is bit-identical on all three scenes except ONE, and that one is a single last bit.** The driver, the LCP, `keaLCP_new` and the allocator all reproduce the shipped library exactly. `keaIntegrate_pc` reads `first@13 = 1.500e-08`; the double-literal hypothesis is refuted and expression reassociation in the quaternion update is what is left. `keaLCP_new` is exact but still HELD by the `extraout_EDX` detector, whose two stores `proven.txt` shows land in a call's alignment padding — releasing it is one line, and it would still not unlock §12 item 7 alone. | §11 item 2 | nothing |
+| 1 | ~~**The solver.**~~ **DONE. `libMdtKea` is recovered whole and the engine has RUN on it.** Every object in it is bit-identical on all three scenes; `keaIntegrate_pc` and `keaLCP_new` are released, so the build is 115. `build-subst115` executes the recovered `MdtKeaAddConstraintForces` 301 times and `keaLCPSolver::solveLCP` 85 times on `test-karma-1`. | §11 item 2, §7d | — |
+| 1a | **THE ASSOCIATION DEFECT IS A CORPUS-WIDE LEAD AND NOTHING HERE CAN SEE IT.** Ghidra prints right-leaning float `+` chains flat. On x87 that is EXACTLY inert (0 in 2,000,000 samples); under storage precision — wasm32, armv7, arm64 — it differs in **31%**. Three sites were found and fixed in one object by reading the disassembly. **Nobody has looked at the other 152.** Every gate in this project is structurally blind to it, so the first symptom will be wasm physics that drifts from native. | §11 item 2a | an instrument that does not exist yet — start from the 220-site scan |
 | 2 | ~~**`IxCylinderCylinder` is wrong and is in the build.**~~ **RE-FRAMED — `dims` is not a measurement for this pair.** The shipped library disagrees with itself, under a 1e-7 m nudge, more often than we disagree with it. Leave it in the build; do not release it either. | §11 item 0 | a live match scoring ret/count/position/separation with dims read separately |
-| 3 | **arm64 truncates pointers.** 2,291 diagnostics across 68 of 113 objects; armv7 zero. **There is now a gate** — `test/ptrwidth_check.sh`. | §6b | a generator-wide change to pointer-width slots |
+| 3 | **arm64 truncates pointers.** 2,436 diagnostics across 69 of 115 objects; armv7 zero. **There is now a gate** — `test/ptrwidth_check.sh`. | §6b | a generator-wide change to pointer-width slots |
 | 4 | **Nothing has EXECUTED on wasm32, armv7 or arm64.** | `HANDOVER-WEB.md` | the web agent |
 | 5 | ~~**GJK's warm cache path has never been tested.**~~ **DONE 2026-08-25** — `KD_WARM=<K>`, 0 ret / 0 count / 0 dims over 200,000 pairs, cache verified live. §11 item 4. The 3 `ret_diff` seen in a live match are still not reproduced, and this narrows where they can be. | §11 item 4 | — |
 | 7 | **`IxCylinderTriList` diverges in a live match — and it now REPRODUCES offline.** 37 `count_diff` in 153,391 live; `KD_CORNER=1` gets it at iteration 23624 with **count 30/32** where the default 4×2 patch reads 0. So it is deterministic and debuggable without a match. Two hypotheses already refuted (the normal-accumulation alias; the three 'missing' statics, which GCC inlined). Next: the `footprint`→`verts` range that `McdVanillaOverlapCylTri` fills — two extra contacts means two extra points. | `proven.txt` | nothing |
 | 8 | **`IxCylinderCylinder`'s remaining charge is `count_diff` only, and it is LOCATED.** Iteration 194376, **count 4/2** — we keep two contacts where the shipped library keeps four, and our contact [1] carries the shipped [0]'s separation, so the FOOTPRINT differs upstream of the emission filter. It is a real defect, not the rounding instability of §11 item 0: that probe reports **0 `count_diff`** for the shipped library against itself. | §11 item 0 | nothing |
-| 6 | **The tail: 12 objects in the FAIL bucket and NOTHING in it blocks anything.** 3 DEAD (`MeASELoad` 126, `MeFGeometryFromMesh` 20, `McduDebugDraw` 1), 2 documented leave-alones (`McdSpace` 22, `MeSimpleFile_linux` 1), 3 dead end 9 (`McdTriangleList` 6, `McdBox` 2, `McdSphyl` 1), 2 low-value profilers (`MeProfile` 29, `MeProfile_linux` 13) and `MdtBcl`/`MeMath` at one `stack0x` each. **197 of the errors belong to objects nobody should touch**, and `keaLCP_new` left this table by being RECOVERED. Sort by §13's verdict column, never by the count. | §13 | do not start here |
+| 9 | **The last six `libMdtKea` members are still shipped, and only one matters.** `keaStuff` and `version` have no functions; `keaDebug`, `keaPrintBasicTypes` and `ReadWriteKeaInputToFile` are debug/IO. **`keaMatrix_PcSparse_vanilla` is the one on the path** — §4a measures it at 4.28e-04 against 3.70e-04 of sensitivity, i.e. about one rounding step wrong, and it is quarantined on a guessed frame. It is now the only thing between here and a link with NO shipped `libMdtKea` at all. | §4a, §12 item 7 | nothing — and §11 item 2a's rounding lead is the first thing to try on it |
+| 6 | **The tail: 12 objects in the FAIL bucket and NOTHING in it blocks anything.** 3 DEAD (`MeASELoad` 126, `MeFGeometryFromMesh` 20, `McduDebugDraw` 1), 2 documented leave-alones (`McdSpace` 22, `MeSimpleFile_linux` 1), 3 dead end 9 (`McdTriangleList` 6, `McdBox` 2, `McdSphyl` 1), 2 low-value profilers (`MeProfile` 29, `MeProfile_linux` 13) and `MdtBcl`/`MeMath` at one `stack0x` each. **197 of the errors belong to objects nobody should touch.** Sort by §13's verdict column, never by the count. | §13 | do not start here |
 
 
 ### WHERE MY HEAD IS — the next three moves, in order
 
-Written 2026-08-25 (fourth session). **`libMdtKea` is recovered.** Every object in it is
-bit-identical to the shipped library on all three scenes except one, and that one is a
-single last bit:
+Written 2026-08-25 (fifth session). **`libMdtKea` is recovered whole, and the engine has run
+on it.** Every object in it is bit-identical to the shipped library on all three scenes, and
+`build-subst115` executes the recovered driver and LCP on a real map (§7d).
 
 | object | state |
 |---|---|
-| ~~`keaRbdCore_unified`~~ | the DRIVER. In the build, bit-identical on all three scenes |
+| ~~`keaRbdCore_unified`~~ | the DRIVER. In the build, bit-identical, **301 calls in the engine** |
 | ~~`keaLCPSolver`~~ | in the build, bit-identical, and on all fifteen functions individually |
-| ~~`keaLCP_new`~~ | **bit-identical on all three scenes** — but HELD by `extraout_EDX`. MOVE 1 |
+| ~~`keaLCP_new`~~ | **RELEASED.** Bit-identical; **85 calls in the engine** |
 | ~~`keaMemory`~~ | in the build, bit-identical on all three scenes |
-| `keaIntegrate_pc` | compiles; `first@13 = 1.500e-08` — one last bit. MOVE 2 |
+| ~~`keaIntegrate_pc`~~ | **RELEASED.** Bit-identical on all three scenes and on 450,000 bodies |
+| `keaMatrix_PcSparse_vanilla` | the LAST `libMdtKea` object on the path. 4.28e-04 out. **MOVE 1** |
+| — everything above | **the association defect (§11 item 2a) has been checked in ONE object of 153. MOVE 2** |
 | `IxCylinderTriList` | `KD_CORNER=1`, iteration 23624, count 30/32. MOVE 3 |
 | `IxCylinderCylinder` | iteration 194376, count 4/2. MOVE 3 |
 | `MdtBcl` / `MeMath` | one `stack0x` each at offset −12, both diagnosed in §5c |
 
-**MOVE 1 — release `keaLCP_new`, or make the detector stop firing on it.** It is proven
-exact and held by `extraout_EDX`, and `proven.txt` shows the complaint to be inert: both
-stores land in the two alignment-padding words the shipped `commonPivot` call pushes before
-its six arguments, and one of the slots is never read anywhere in the function. Two ways
-forward, and the second is better: release it explicitly with the evidence, or teach the
-pass to drop a store of an `extraout_*` value into a slot BEYOND the callee's arity, which
-is derivable from the prototype. **It does not unlock §12 item 7 on its own** — see MOVE 2.
+**MOVE 1 — `keaMatrix_PcSparse_vanilla`, the last `libMdtKea` object that matters.** It is
+the only one of the six still-shipped members on the path (§4a measures it sensitive on
+`scene_chain` and 4.28e-04 out against 3.70e-04 of sensitivity — about ONE rounding step).
+**Try the rounding lead first**: that is exactly the size of error the dropped `dq[1..3]`
+spill produced in `keaIntegrate_pc`, and this object declares `float afStack_1c[3]` that the
+body never references — the same fingerprint. Read `<object>.locals`, then look for
+`fstps`/`flds` against its slots in the shipped disassembly. `test/bisect_object.sh` names
+the function; a per-function A/B like `test/ab_integrate.sh` localises inside it. Landing
+this gives a link with **no shipped `libMdtKea` at all**, which is §12 item 7's second half.
 
-**MOVE 2 — `keaIntegrate_pc`, and it is now the only thing between here and a link with no
-shipped `libMdtKea`.** The engine calls `MdtKeaIntegrateSystem` directly (§3a), so this one
-is required. `first@13 = 1.500e-08` on the collision-free scene: one last bit, amplified.
-The double literals are refuted (`0.5f`/`1.0f` change nothing — both are exact and x87
-works at 80 bits). What is left is EXPRESSION REASSOCIATION in the quaternion update, where
-the four `qrot` lines are associated four different ways; float addition is not associative,
-so read the `fadd`/`fsub` order out of `KeaIntegrateSystem_vanilla` and compare. Then §12
-item 7's second half, and re-read §7c first.
+**MOVE 2 — the association defect, corpus-wide, and it is the most important thing in this
+file.** §11 item 2a: Ghidra prints a right-leaning float `+` chain FLAT, so C re-parses it
+left-leaning over the wrong operands. **On i386 this is EXACTLY inert** — a float product
+needs 48 mantissa bits and x87 has 64, measured 0 differences in 2,000,000 samples — and
+under storage precision, which is what wasm32, armv7 and arm64 all give, it differs in
+**31%**. So every gate in this project is structurally blind to it and it will surface as
+wasm physics that drifts from native, with no offline test able to reproduce it.
+
+Three sites were found in `keaIntegrate_pc` by reading the disassembly against Ghidra's
+output. **Nobody has looked at the other 152 objects.** Do not start by writing a
+corpus-wide rewrite: the text `a + b + c` is genuinely ambiguous (Ghidra prints the same
+thing for both trees), so the association has to come from the machine code. Start by
+measuring the size of the problem — count multi-term float `+` chains per object — and by
+building an oracle that reads `fadd`/`faddp` order out of one function. `KDynStep.cpp:618`
+is a free correctness check for the integrator; nothing else has one.
 
 **MOVE 3 — the two cylinder defects, both of which REPRODUCE OFFLINE.** Neither needs a
 match:
@@ -205,20 +238,28 @@ match:
   filter. **It is a real defect**: §11 item 0's jitter probe reports 0 `count_diff` for the
   shipped library against itself.
 
-**Three instruments to reach for before writing any code.** `test/bisect_object.sh` drives
+**Four instruments to reach for before writing any code.** `test/bisect_object.sh` drives
 a scene with exactly ONE recovered function in the link and names the one that diverges —
 it found keaLCPSolver's three casts among fifteen functions and keaLCP_new's dropped call
-among two. `substitute_test.sh` prints the FIRST DIFFERING STEP, which is the column to
-read on a contact scene. And `test/vptr_ab.sh` measures a vtable dispatch rather than a
-trajectory.
+among two. **`test/ab_integrate.sh` is the new one and it is the sharpest**: it calls the
+shipped and the recovered function on identical randomised state and names the FIELD that
+differs, which took `keaIntegrate_pc` from "1.5e-08 somewhere in 900 chaotic steps" to
+"`qrot`, and only `qrot`" in one run. Copy its shape for any object with a clean signature.
+`substitute_test.sh` prints the FIRST DIFFERING STEP, which is the column to read on a
+contact scene. And `test/vptr_ab.sh` measures a vtable dispatch rather than a trajectory.
 
 **What NOT to do next.** Do not read a max-delta as a verdict on a contact scene. Do not
 attempt `MeMath` (§5c proves the target is never written). Do not grind the tail (§13) —
-nothing in it blocks anything now.
+nothing in it blocks anything now. Do not reach for `-ffloat-store` for the rounding lead:
+dead end 17 measured it making things five orders of magnitude worse, and the repair that
+worked is three sites chosen from the disassembly, not a flag.
 
 **And keep the perspective §12 asks for:** `MdtWorld` was recovered and it turned out UT2004
-never calls it. Before spending a session on an object, run the same check —
-`grep -rn "\bSymbolName\b" Source/` and look for undefined references across the corpus.
+never calls it — and on 2026-08-25 `MdtKeaIntegrateSystem` joined it. This file had said
+"the engine calls it directly"; it does, in a branch guarded by `bUseSafeTime`, which
+defaults to 1 and routes to the engine's OWN integrator. Measured 0 calls by default and 51
+with `KSAFETIME 0` forced. **Grepping for the call is not enough — read the branch around
+it.** §7d.
 
 **IS A COLLISION PAIR USED? YES — THIS IS ANSWERED, DEFINITIVELY, AND IT IS §3.**
 37 pairs are registered. **15 are called.** Of the 22 that are not:
@@ -263,17 +304,18 @@ complete types. That is what makes this tractable. Ghidra consumes it directly.
 ## 2. Status
 
 ```
-compile:  113 objects in the build, and the MEASURED_WRONG quarantine (§8)
-          is empty again — read §4a before quoting any of the numbers below
-scenes:   113/113 run clean on all three substitute scenes, and all 113 TOGETHER
-          are bit-identical on the collision-free one — but read §4a before
-          reading anything into that number
-wasm32:   113/113 compile, exported symbol sets byte-identical to i386
-armv7:    113/113 compile, symbol sets identical — a real 32-bit-pointer port,
+compile:  115 objects in the build, and the MEASURED_WRONG quarantine (§8)
+          is empty — read §4a before quoting any of the numbers below
+scenes:   115/115 run clean on all three substitute scenes, EVERY ONE of them
+          is individually bit-identical on the collision-free scene, and all
+          115 TOGETHER are bit-identical on it — but read §4a before reading
+          anything into that number
+wasm32:   115/115 compile, exported symbol sets byte-identical to i386
+armv7:    115/115 compile, symbol sets identical — a real 32-bit-pointer port,
           and 0 pointer-truncation diagnostics (test/ptrwidth_check.sh)
-arm64:    113/113 compile, symbol sets identical, and NOT TRUSTED — 2,291
-          pointer-truncation diagnostics across 68 of the 113 objects (§6b)
-bindings: 113/113 export what the SHIPPED object exported, binding included (§8)
+arm64:    115/115 compile, symbol sets identical, and NOT TRUSTED — 2,436
+          pointer-truncation diagnostics across 69 of the 115 objects (§6b)
+bindings: 115/115 export what the SHIPPED object exported, binding included (§8)
 difftest: 14 pairs (Cylinder x Cylinder and Cylinder x TriangleList added
           2026-08-24), reproducing the documented baseline exactly — IxBoxBox
           1 count, IxSphereTriList 137 dims, IxCylinderCylinder 1 count + 20
@@ -284,15 +326,20 @@ difftest: 14 pairs (Cylinder x Cylinder and Cylinder x TriangleList added
 vptr:     the repaired vtable dispatches are bit-identical to a devirtualised
           control on all three scenes, and both wrong versions of the repair
           segfault where the dispatch runs (test/vptr_ab.sh, §11 item 3)
-review:   23 objects recover.py labels "needs review" — and that label covers
-          TWO different states, which matters when quoting it. 17 of them
+review:   21 objects recover.py labels "needs review" — and that label covers
+          TWO different states, which matters when quoting it. 15 of them
           COMPILE and are held out of the build by the safety detectors (§8);
           the other 6 do NOT compile and their first error merely matches a
-          detector's pattern. So: 130 of 153 rebuild, 113 are in the build.
+          detector's pattern. So: 130 of 153 rebuild, 115 are in the build.
 fail:     12 more do not compile, for a total of 18 that do not
-solver:   EVERY libMdtKea object is bit-identical on all three scenes except
-          keaIntegrate_pc, which is 1.5e-08 out. keaLCP_new is exact and still
-          HELD by a detector whose complaint is inert (§11 item 2)
+solver:   libMdtKea IS RECOVERED. Every object in it is bit-identical on all
+          three scenes, and the engine EXECUTES the recovered driver (301
+          calls) and LCP (85 calls) on a real map (§7d). Six members are still
+          shipped; only keaMatrix_PcSparse_vanilla is on the path (§4a)
+BLIND SPOT: no gate here can see expression ASSOCIATION. It is exactly inert
+          on x87 and 31% divergent under storage precision, i.e. on wasm32,
+          armv7 and arm64 (§11 item 2a). Three sites fixed in one object of
+          153; the rest are unexamined
 dumps:    out13 is current (§5e) — out12's dumps with ONE changed, the virtual
           call through a PARAMETER's vptr. out12 = out11 with two changed.
 ```
@@ -733,7 +780,7 @@ python3 tools/check_symbol_bindings.py /tmp/kd_build /home/ion/tools/karma-lab/a
 
 # pointer width: the gate §6b used to say could not exist. 13 seconds, and it
 # needs no arm64 hardware — truncation is a compile-time diagnostic.
-# armv7 must read 0; arm64 currently reads 2,291 across 68 objects.
+# armv7 must read 0; arm64 currently reads 2,436 across 69 objects.
 ./test/ptrwidth_check.sh /tmp/kd_out/allobj /tmp/kd_build
 
 # the ninth: does the repaired vtable dispatch reach the function it claims?
@@ -749,6 +796,13 @@ python3 tools/check_symbol_bindings.py /tmp/kd_build /home/ion/tools/karma-lab/a
 KD_CENSUS_VALIDATED=/tmp/kd_build \
   ./test/scene_census.sh   /tmp/kd_out/allobj $LIB test/scene_chain.c
 ./test/gate_sensitivity.sh /tmp/kd_out/allobj $LIB test/scene_ragdoll.c
+
+# per-function A/B for keaIntegrate_pc: the sharpest instrument here, because it
+# names the FIELD that differs instead of the step. Both code paths — the scenes
+# never set MdtKeaBodyFlagUseFastSpin, so the second argument is not optional.
+# §11 item 2a.
+./test/ab_integrate.sh /tmp/kd_out/allobj/keaIntegrate_pc.c 100000 0
+./test/ab_integrate.sh /tmp/kd_out/allobj/keaIntegrate_pc.c 100000 1
 ```
 
 `difftest_pair.sh` needs the quarantined `IxBoxTriList` staged or it will not link
@@ -783,9 +837,17 @@ looks exactly like a rule that declines. The `undeclared` pattern is already own
 | **`fix_vptr_store`** | `_vanillaQMatrix = &__gxx_personality_v0;` — the vtable address point | relocations + the shipped disassembly + `<obj>.locals` |
 | **`resolve_mangled_call_names`** | a call site Ghidra spelled `_ZN12keaLCPSolver8setUpperEPf` | the asm labels this unit is about to emit |
 | **`fix_void_pointer_member`** | `pool_ptr->invI0` — a `void *` has no members | the DWARF + "this function has no FP instruction" |
+| **`restore_float_text`** | a rounding Ghidra folded away, and a `+` chain it printed flat | `<obj>.locals` + `fst(p)s`/`flds` pairs in the shipped disassembly |
 
-The last three are new on 2026-08-25 and none of them needs a diagnostic: the evidence is
+The last four are new on 2026-08-25 and none of them needs a diagnostic: the evidence is
 in the object file, so there is no reason to wait for GCC to complain.
+
+**`restore_float_text` is the one to read before adding another.** Its defects produce no
+diagnostic AND no gate failure on i386 (§11 item 2a), so a repair that silently declined
+would be indistinguishable from success. It therefore **raises** rather than declining: if a
+site's text stops matching exactly once, or the disassembly stops showing the spill the
+repair restores, the run stops and says so. Four of the five mistakes §12 lists were rules
+that silently declined; this is what that lesson looks like encoded.
 
 **One thing the repair loop does that is worth knowing before you debug it.** `applied`
 holds every edit TRIED, accepted or rejected, so a line that got a wrong candidate can be
@@ -1592,11 +1654,11 @@ with the same flags §4 uses for i386, minus `-m32`.
 
 | target | compiles | exported symbols vs i386 | pointer TRUNCATION diagnostics |
 |---|---|---|---:|
-| wasm32 | 113/113 | identical | — |
-| **armv7** | **113/113** | **identical** | **0** across 0 objects |
-| **arm64** | **113/113** | **identical** | **2,291** across **68 of 113** objects |
+| wasm32 | 115/115 | identical | — |
+| **armv7** | **115/115** | **identical** | **0** across 0 objects |
+| **arm64** | **115/115** | **identical** | **2,436** across **69 of 115** objects |
 
-Measured over **all 113 objects in the build** with `test/ptrwidth_check.sh`, which enables
+Measured over **all 115 objects in the build** with `test/ptrwidth_check.sh`, which enables
 exactly three clang diagnostics on top of `-Wno-everything` so the count is those three and
 nothing else:
 
@@ -1958,6 +2020,79 @@ run on, and it is reproducible in about four minutes.
 
 ---
 
+## 7d. The engine ON the recovered SOLVER — and a reachability correction
+
+**2026-08-25 (fifth session).** §7c ran the engine on 108 recovered collision objects. This
+runs it on **115, including fourteen of `libMdtKea`'s twenty members** — the driver, the LCP,
+`keaLCP_new`, the allocator, the three kernels and `keaIntegrate_pc`.
+
+```bash
+./test/make_substituted_metoolkit.sh /tmp/kd_build ../Thirdparty/metoolkit /tmp/mt_subst115
+cmake --preset native-karma -B build-subst115 -DMETOOLKIT_DIR=/tmp/mt_subst115
+cmake --build build-subst115 -j"$(nproc)"
+```
+
+**Substitution verified at the machine-code level, not from the link** — the §7c discipline:
+
+| symbol | stock | subst115 |
+|---|---:|---:|
+| `MdtKeaIntegrateSystem` | 23 | **40** instructions |
+| `KeaIntegrateSystem_vanilla` | 434 | **415** |
+| `keaLCPSolver::solveLCP` | 314 | **499** |
+| `MdtKeaAddConstraintForces` | 471 | **405** |
+
+**And it executes.** gdb breakpoint counts on `test-karma-1` under `xDeathMatch`:
+
+| symbol | calls |
+|---|---:|
+| `MdtKeaAddConstraintForces` | **301** |
+| `keaLCPSolver::solveLCP` | **85** |
+| `MdtKeaIntegrateSystem` | **0** |
+
+The recovered solver runs in the real engine on a real map. Nothing before this had shown
+that: §7c's binary carried recovered solver *arithmetic* but the kea entry points were
+still shipped.
+
+> ### ⚠ AND THE LAST ROW IS A CORRECTION THIS FILE OWED
+>
+> **"The engine calls `MdtKeaIntegrateSystem` directly" — which WHERE MY HEAD IS said, and
+> which made `keaIntegrate_pc` the designated blocker — is wrong in normal play.**
+> `KDynStep.cpp:869` branches on `KGData->bUseSafeTime`. `KarmaSupport.cpp:1721` initialises
+> it to **1**, and only the console command `KSAFETIME 0` (`KUtils.cpp:610`) clears it. The
+> safe-time branch integrates with the engine's OWN `KIntegrateSystem` (`KDynStep.cpp:618`);
+> Kea's integrator is the `else`.
+>
+> Measured both ways rather than read off the source alone:
+>
+> ```
+> default                                    MdtKeaIntegrateSystem   0 calls
+> -EXEC=<file containing `KSAFETIME 0`>      MdtKeaIntegrateSystem  51 calls
+>                                            ("Karma Safe-Time Disabled." in the log)
+> ```
+>
+> So `keaIntegrate_pc` is a **fourth member of the §3a family** — code UT2004 links and
+> reimplements — alongside `MdtWorldStep` and `KIntersect`'s two intercepts. It still has to
+> be correct: it is in the link and the toggle is a shipped feature. But it was never the
+> blocker, and **grepping for a call is not enough — read the branch around it.**
+>
+> The same reading explains where §11 item 2a's ground truth came from. Epic needed a
+> variable-timestep integrator, copied MathEngine's into `KDynStep.cpp` verbatim, and left
+> the original reachable behind a toggle. That copy is the only place in this project where
+> Karma's ORIGINAL SOURCE is available, and it settled an association question no gate here
+> could.
+
+**What this does NOT show, and the environment changed under it.** On 2026-08-25 the engine
+faults at the first HUD frame under Xvfb — `REALLOC FAILED ... NewSize=1351188168` in
+`UCanvas::DrawTileStretched`, from a viewport the renderer creates at **2×1**. **The stock
+build does exactly the same thing**: same map, same URL, same duration, logs identical
+modulo timestamps and addresses, 523 lines each. So it is an environment regression, not a
+recovery defect — but it means today's runs show START MATCH and a short tick, not §7c's
+300 s of play. `-SOFTWARERENDERER` survives where `-GL4ESRENDERER` and `-OPENGLRENDERER`
+do not, and is what the gdb runs above used. **Always run the stock control before reading
+a crash as yours.**
+
+---
+
 ## 8. The detectors — why objects are held back
 
 > ### `MEASURED_WRONG` — the quarantine that holds on evidence, not on a pattern
@@ -2003,6 +2138,32 @@ compile.**
 
 `proven.txt` records which objects a real match has released, **with the evidence on the
 line**. That is the only way out. Do not remove a detector to make a number go up.
+
+> ### THE OTHER SIDE: releasing a detector's complaint, and why it needed TWO mechanisms
+>
+> 2026-08-25 (fifth session). Two objects reached the end of the evidence chain — exact on
+> all three scenes, exact per-function — while still tripping a detector. Holding a PROVEN
+> object on a shape is the same error as letting an UNPROVEN one through on one.
+>
+> **`recover.RELEASED_UNMODELLED`** releases the *unaccounted value* detector, and it names
+> the **identifiers**, not the object, so a NEW unmodelled read in the same object still
+> quarantines it. `keaLCP_new`'s `extraout_EDX` goes into a call's alignment padding;
+> `keaIntegrate_pc`'s `in_stack_ffffffa0` is a declared 76-byte outgoing argument area the
+> copy loop fills completely. A release whose identifier the detector no longer reports
+> prints a **stale-entry warning** rather than rotting quietly — the stale skip-list of §12.
+>
+> **`KD_MATERIALISED_BASE`** is different and more interesting, because the detector was
+> firing on the output of a REPAIR. Releasing `keaLCP_new`'s `extraout_EDX` uncovered
+> `GHIDRA_STACK_GUESS` on 20 sites of the form `(int)auStack_3c + uVar6 * -3` — every one of
+> them written by `materialise_shifted_frame`. That detector's premise is *"Ghidra INVENTED
+> the array, so the storage is not there"*, and the repair falsifies the premise: it
+> redeclares the base as a pointer into an `alloca`'d block sized from `<object>.locals` and
+> big enough by construction. The repair now marks each base it rewrites and the detector
+> skips those, scoped to the function carrying the marker. **`MdtPartition` — the object the
+> detector was written for — still reports its 30 sites**, which is the control.
+>
+> The general shape: when a detector fires on a repair's output, do not release the object,
+> **falsify the detector's premise for that site and say how.**
 
 **The quarantine has now been measured, not just argued for.** Substituting all 99
 validated objects into `scene_chain` at once is bit-identical over 900 steps; adding the
@@ -2610,10 +2771,11 @@ Ordered by what actually moves the project, not by what is easiest:
    relocation.
 
 2. **THE JOB: the frames — DONE. `libMdtKea` is recovered.** Every object in it is
-   bit-identical to the shipped library on all three scenes except `keaIntegrate_pc`, which
-   is a single last bit out (`first@13 = 1.500e-08`).
+   bit-identical to the shipped library on all three scenes. `keaIntegrate_pc` was the last
+   and it came out on 2026-08-25 (fifth session) — **item 2a below has it, and the second of
+   its two defects is the most important open lead in this file.**
 
-   `keaLCP_new` was the last, and it came out on 2026-08-25 in two steps. The frame was
+   `keaLCP_new` was the one before, and it came out on 2026-08-25 in two steps. The frame was
    materialised — and **the "61 sites with mixed byte and element strides" that justified
    leaving it alone was a MISREADING**: `auStack_3c[i - uVar6]` is a `uint *` indexed in
    elements, i.e. `(int)auStack_3c + 4*i - 4*uVar6`, which is region FOUR in byte terms and
@@ -2793,6 +2955,71 @@ Ordered by what actually moves the project, not by what is easiest:
    rendered clumsily, **not** unknowable locals. That reframes the problem from "recover an
    unknown frame" to "make Ghidra model a by-value aggregate argument", which is a much
    smaller question and is Ghidra-side.
+
+2a. **`keaIntegrate_pc` — TWO DEFECTS, and the second one no gate here can see.**
+   2026-08-25, fifth session. The object is now bit-identical on all three scenes and over
+   450,000 bodies of a per-function A/B on both code paths.
+
+   **THE DROPPED ROUNDING.** The shipped function declares `MeReal dq[4]` at `ebp-0x38` and
+   spills three of its four elements to 32-bit slots:
+
+   ```
+   2ca: fstps -0x34(%ebp)     dq[1], ROUNDED TO 32 BITS
+   327: flds  -0x34(%ebp)     reloaded
+   32c: fmuls 0x14(%ebp)      * stepsize
+   ```
+
+   Ghidra folds the store and its reload into one expression — `qrot[1] = EXPR * 0.5 *
+   stepsize + qrot[1]` — so the local is left **declared and unused** and the
+   round-to-storage-precision is gone. On i386 gcc then keeps the whole chain in an 80-bit
+   x87 register. That is the entire `first@13 = 1.500e-08`: routing `dq[1..3]` back through
+   `KD_F32()` takes the A/B from **52,902 divergent bodies in 400,000 to ZERO**. `dq[0]` must
+   NOT be rounded — the shipped code stores it with `fsts` and keeps using `st(0)`, so that
+   store is dead. The same shape is on the fast-spin path, which the engine reaches
+   (`KConstraint.cpp:357` sets the flag).
+
+   **This is not `-ffloat-store`** (dead end 17). That flag rounds everywhere, including the
+   many places the original did not, and it made `IxCylinderCylinder` five orders of
+   magnitude worse. This rounds at three sites, each shown by the disassembly to be a 4-byte
+   spill AND reload of a slot the DWARF names. `ghidra_clean.restore_float_text` checks that
+   evidence and **raises** if it is absent.
+
+   > ### ⚠ THE ASSOCIATION DEFECT — INVISIBLE TO EVERY GATE IN THIS PROJECT
+   >
+   > Ghidra prints a right-leaning float `+` chain **flat**: `a + b + c` for a tree that is
+   > `a + (b + c)`. C then parses it left-leaning, over the wrong operand order. Float
+   > addition is not associative, so this is a real arithmetic change — and the text is
+   > genuinely ambiguous, because Ghidra prints the same `a + b + c` for both trees.
+   >
+   > **Ground truth here was not an inference.** `Source/Engine/Src/KDynStep.cpp:618` is
+   > `KIntegrateSystem` — MathEngine's own integrator, copied VERBATIM into UT2004 by Epic.
+   > Its association is the shipped `fadd` order and not Ghidra's:
+   >
+   > | | |
+   > |---|---|
+   > | Ghidra | `dq[2] = (q1*w2 + -q3*w0 + q0*w1) * 0.5` |
+   > | KDynStep.cpp:657 | `dq[2] = 0.5*( -q3*w0 + q0*w1 + q1*w2 )` |
+   >
+   > Three sites in this one function: the fast-spin dot product, `dq[2]`, and the
+   > normalisation sum.
+   >
+   > **AND ON i386 IT IS EXACTLY INERT.** A float product needs 48 mantissa bits and the x87
+   > register has 64, so these sums are exact whatever the association — measured **0
+   > differences in 2,000,000 samples** under `-mfpmath=387`. The same probe under
+   > `-mfpmath=sse`, which is the arithmetic **wasm32, armv7 and arm64 all give**, differs in
+   > **31%** (621,410 and 624,401 of 2,000,000 on the two sites tested).
+   >
+   > So: the three substitute scenes, `difftest_pair`, `scene_census`, `gate_sensitivity`
+   > and the whole 450,000-body A/B are **structurally blind** to it, and the port target is
+   > exactly where it bites. The first symptom will be wasm physics that drifts from native
+   > with no offline test able to reproduce it.
+   >
+   > **Three sites in one object of 153 have been examined. Nobody has looked at the rest.**
+   > A corpus scan for declared-but-unused float locals — the fingerprint of the *rounding*
+   > half — finds **220 sites across 47 objects**, and only the ones whose slots show a
+   > `fst(p)s`/`flds` pair in the shipped disassembly are real. The association half has no
+   > textual fingerprint at all and needs an oracle that reads `fadd`/`faddp` order out of
+   > the machine code. That is WHAT REMAINS row 1a and WHERE MY HEAD IS MOVE 2.
 
 3. **DONE 2026-08-25 — the vptr store, and it is MEASURED.** Both objects failed on
    `_vanillaFunctions` / `_vanillaQMatrix` being undeclared. That is the **same
@@ -3215,8 +3442,8 @@ box.
 4. qhull and the asset loader replaced rather than recovered.
 5. No detector suppressed, no object released without a line in `proven.txt`.
 6. The whole set builds as ordinary C for **wasm32 and arm64/armv7**, not just i386.
-   **wasm32 is done** — 113/113 compile with byte-identical exported symbols
-   (`test/wasm_check.sh`). **armv7 and arm64 both compile 113/113 with the Android NDK
+   **wasm32 is done** — 115/115 compile with byte-identical exported symbols
+   (`test/wasm_check.sh`). **armv7 and arm64 both compile 115/115 with the Android NDK
    (§6b) — but only armv7 is believed CORRECT, and arm64 is believed WRONG for a
    structural reason. Read §6b before touching either.**
    Nothing has been *executed* under wasm. See `HANDOVER-WEB.md`.
@@ -3236,8 +3463,8 @@ box.
 | 3 | all three scenes clean for every recovered object, *and* checked for sensitivity | **DONE**, and the sensitivity check (§4a) is what makes it mean anything. |
 | 4 | qhull and the asset loader **replaced**, not recovered | **DONE, both halves — but the asset half was RECOVERED, not replaced (§8c), which is a better outcome: exact rather than equivalent.** Qhull, all four tiers: `src/McdConvexCreateHull/kd_convexhull.c` replaces all 15 exported functions — 1.4 MB → 10 KB: 100,633 invariant checks, identical geometry and volumes, a collision A/B differing on 2 borderline pairs in 2.4 M, and **a live ONS match with 15,425 real GJK calls and 0 structural divergences**. wasm32 clean with an identical symbol set. The asset loader is 9 of 9 recovered (§8c) and needs no replacement. |
 | 5 | no detector suppressed, nothing released without evidence | **HOLDING, and the hole found here has been re-framed rather than closed.** 22 objects quarantined and the quarantine is load-bearing (§4a: `MdtPartition` alone turns a bit-identical scene into a SIGSEGV). `IxCylinderCylinder` is still un-held and still unreleased — but its 925 `dims_diff` is now known to be a label the shipped library **does not reproduce against itself** under a 1e-7 m nudge (§11 item 0), so it is not the defect it looked like. The general point stands unchanged: "not held" is not "validated". |
-| 6 | builds as ordinary C for wasm32 **and arm64/armv7** | **wasm32 DONE** (113/113, byte-identical symbol sets). **armv7 DONE** (113/113, symbol sets identical, **0 pointer-truncation diagnostics** — it is a 32-bit-pointer target so the recovery's core assumption holds). **arm64 COMPILES AND IS NOT TRUSTED** — 113/113 with identical symbol sets and **2,291 pointer-truncation diagnostics across 68 of the 113 objects**, measured corpus-wide by `test/ptrwidth_check.sh`, which is the gate this row used to say could not exist. The old "920 vs 23" figure was two diagnostic sets added together; §6b has the correction. Nothing has been *executed* on any of the three. |
-| 7 | engine runs on recovered Karma with **no shipped `.a` in the link at all** | **COLLISION HALF DONE for the twelve validated pairs** (§7b, two maps, 11 runs/arm, indistinguishable from stock) — but those runs were on maps with no cylinder traffic, so they do not cover the two new pairs. **SOLVER HALF BLOCKED**, on one problem — the arguments are recovered (§5a) and what remains is the frames, §11 item 2. |
+| 6 | builds as ordinary C for wasm32 **and arm64/armv7** | **wasm32 DONE** (115/115, byte-identical symbol sets). **armv7 DONE** (115/115, symbol sets identical, **0 pointer-truncation diagnostics** — it is a 32-bit-pointer target so the recovery's core assumption holds). **arm64 COMPILES AND IS NOT TRUSTED** — 115/115 with identical symbol sets and **2,436 pointer-truncation diagnostics across 69 of the 115 objects**, measured corpus-wide by `test/ptrwidth_check.sh`, which is the gate this row used to say could not exist. The old "920 vs 23" figure was two diagnostic sets added together; §6b has the correction. Nothing has been *executed* on any of the three — **and there is now a second reason not to trust that they would agree if they did: §11 item 2a's association defect is exactly inert on x87 and 31% divergent on all three of these targets.** |
+| 7 | engine runs on recovered Karma with **no shipped `.a` in the link at all** | **COLLISION HALF DONE for the twelve validated pairs** (§7b, two maps, 11 runs/arm, indistinguishable from stock) — but those runs were on maps with no cylinder traffic, so they do not cover the two new pairs. **SOLVER HALF NO LONGER BLOCKED, AND MEASURED: 2026-08-25 the engine EXECUTES the recovered `MdtKeaAddConstraintForces` 301 times and `keaLCPSolver::solveLCP` 85 times on `test-karma-1`** (§7d), with substitution verified at the machine-code level. `libMdtKea` is recovered whole. **What is left of this row is six shipped members, of which exactly one is on the path — `keaMatrix_PcSparse_vanilla`, ~one rounding step out (§4a)** — and the fact that the runs above show START MATCH and a short tick rather than 300 s of play, because the environment's renderer now faults at the first HUD frame **for stock too**. §7d. |
 
 **So what is left, in one sentence each:**
 
@@ -3247,22 +3474,24 @@ box.
   body moves 1e-7 m. What is genuinely unaccounted for is **3 `count_diff` in 24,111**.
   Its sibling `IxCylinderTriList` was measured and released the same day, and is stable
   under the same probe. §3, §11 item 0.
-- **The solver's frames** — `keaRbdCore_unified`, `keaMemory`, `keaIntegrate_pc`,
-  `keaLCPSolver`+`keaLCP_new`, **and `MdtBcl`, `MeMath` and `MdtWorld`, which are new and
-  are the cheapest subjects to validate a fix on — one error, one error and ten.**
-  Their virtual calls now carry arguments (§5a); what is left
-  is that **the DWARF carries no `DW_AT_location` for these functions' variables**, so the
-  frame is not merely unmodelled but undescribed. This is the only thing between here and
-  item 7. §11 item 2.
+- ~~**The solver's frames**~~ — **DONE. `libMdtKea` is recovered whole and the engine has
+  run on it** (§7d). What replaces this row is **`keaMatrix_PcSparse_vanilla`**, the one
+  still-shipped member on the path, about one rounding step out (§4a) — and the rounding
+  lead of §11 item 2a is the first thing to try on it, since it carries the same
+  declared-but-unused float local.
+- **THE ASSOCIATION DEFECT, which is new and is the largest unquantified risk in the
+  project.** Ghidra prints right-leaning float `+` chains flat; on x87 that is exactly inert
+  and on wasm32/armv7/arm64 it differs in 31% of samples. Three sites fixed in one object of
+  153, **the other 152 unexamined, and no gate here can see it.** §11 item 2a.
 - ~~**qhull and the asset loader**~~ — **both done.** Qhull is replaced and validated at
   four tiers including a live match (§8a, §8b); the asset loader turned out to be
   RECOVERABLE and is 9 of 9 (§8c).
-- **arm64** — compiles, and is measured to truncate pointers in 68 of 113 objects (2,291 sites).
+- **arm64** — compiles, and is measured to truncate pointers in 69 of 115 objects (2,436 sites).
   `test/ptrwidth_check.sh`, §6b. The fix is generator-wide, not a flag.
 - **Executing anything on wasm** — the web agent's job. `HANDOVER-WEB.md`.
-- **The tail** — 14 objects, 271 errors, fully triaged in §13, and **effectively finished**:
-  3 unreachable, 2 documented leave-alones, 3 dead end 9, **4 the §11 item 2 frame problem**
-  and 2 low-value profilers. Nothing cheap is left in it.
+- **The tail** — 12 objects, fully triaged in §13, and **effectively finished**:
+  3 unreachable, 2 documented leave-alones, 3 dead end 9, 2 low-value profilers and
+  `MdtBcl`/`MeMath` at one `stack0x` each. Nothing cheap is left in it.
 
 
 ### Where the project actually stands — read this before estimating anything
@@ -3303,7 +3532,7 @@ frame.
 The frame problem is down to **one `stack0x` each in `MdtBcl` and `MeMath`**, neither on
 anybody's path. §11 item 2.
 
-**Never executed on wasm.** 113/113 compile with byte-identical exported symbols. Not one
+**Never executed on wasm.** 115/115 compile with byte-identical exported symbols. Not one
 instruction has run. See `HANDOVER-WEB.md`.
 
 **Run end to end, now, for the collision layer** — §7b. Not for the solver.
@@ -3415,12 +3644,20 @@ getting better: `recover.py` classifies by the FIRST error's pattern, so an obje
 different and real defect: that is a **reclassification**, not a release.
 
 **The tail is now essentially exhausted, and that is the useful summary.** Of the 12:
-3 are DEAD, 2 are documented leave-alones, 3 are dead end 9, **4 are the §11 item 2 frame
-problem** (`MdtBcl` 1 and `MeMath` 1 — `keaRbdCore_unified` and then `keaLCP_new` both left
-this table by being RECOVERED) and 2 are low-value profilers. **Nothing in it blocks
-anything.** There is no cheap object left that is not one of those. Work item 2 —
-which is now two well-specified moves rather than a frame problem — or the cylinder pairs
-(§11 item 0). Grinding the tail is done.
+3 are DEAD, 2 are documented leave-alones, 3 are dead end 9, **2 are the §11 item 2 frame
+problem** (`MdtBcl` 1 and `MeMath` 1 — `keaRbdCore_unified`, `keaLCP_new` and finally
+`keaIntegrate_pc` all left this table by being RECOVERED) and 2 are low-value profilers.
+**Nothing in it blocks anything.** There is no cheap object left that is not one of those.
+Work §11 item 2a — the association defect, which is corpus-wide and which no gate here can
+see — or `keaMatrix_PcSparse_vanilla`, or the cylinder pairs (§11 item 0). Grinding the tail
+is done.
+
+**And note what is NOT in this table but is still shipped.** Six `libMdtKea` members never
+reach the FAIL bucket because they are held earlier or have no functions:
+`keaStuff` and `version` (no functions), `keaDebug` and `keaPrintBasicTypes`
+(`extraout_EDX`), `ReadWriteKeaInputToFile` (a mislabelled `_gDebug`), and
+**`keaMatrix_PcSparse_vanilla`**, which is quarantined on a guessed frame and is the only
+one of the six the solver actually calls. It is WHAT REMAINS row 9, not a tail object.
 
 ### What has been working, and what has not
 

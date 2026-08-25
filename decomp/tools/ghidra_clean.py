@@ -2556,6 +2556,131 @@ def _dwarf_member(dies, struct, member):
     return None
 
 
+_FLOAT_TYPES = {'MeReal', 'float', 'double'}
+# fistp/fist store an integer FROM the x87 stack; cvttss2si and friends are the
+# SSE equivalents. If none of these is in a function, that function performs no
+# float-to-int conversion, whatever the decompiled text says it does.
+_F2I_MNEMONIC = re.compile(r'^(fi?st?t?p?|fist|fistp|fisttp|cvtt?s[sd]2si)$')
+
+
+def _function_has_float_to_int(obj, fn):
+    """Does the SHIPPED function convert a float to an integer? None if unsure."""
+    for name, lo, hi in function_extents(obj):
+        if name != fn:
+            continue
+        out = subprocess.run(['objdump', '-d', '--start-address', hex(lo),
+                              '--stop-address', hex(hi), obj],
+                             capture_output=True, text=True).stdout
+        for line in out.splitlines():
+            parts = line.split('\t')
+            if len(parts) < 3 or not parts[2].split():
+                continue
+            m = parts[2].split()[0]
+            if m in ('fistp', 'fist', 'fisttp') or m.startswith('cvtts') \
+               or m.startswith('cvtss2si') or m.startswith('cvtsd2si'):
+                return True
+        return False
+    return None
+
+
+def _declared_pointee(region, sig, var):
+    """`MeReal` for a `MeReal *var` declared as a local or a parameter here."""
+    m = re.search(r'^[ \t]*([A-Za-z_]\w*)[ \t]*\*[ \t]*' + re.escape(var)
+                  + r'[ \t]*;[ \t]*$', region, re.M)
+    if m:
+        return m.group(1)
+    m = re.search(r'\b([A-Za-z_]\w*)[ \t]*\*[ \t]*' + re.escape(var) + r'\b', sig or '')
+    return m.group(1) if m else None
+
+
+def _expr_float_type(expr, region, sig, obj, dies):
+    """The floating type of `expr`, or None. Only shapes it can RESOLVE.
+
+    The subscript is matched with a BRACKET MATCHER, not with `.*`. A greedy
+    `\[.*\]` reads `(axis->v[1] < axis->v[0])` as one subscripted member and
+    types a COMPARISON as a float — which is how the first version of this rule
+    silently changed IxCylinderCylinder, an object that had nothing wrong with
+    it. Requiring the closing bracket to be the end of the expression is what
+    keeps a top-level operator from being swallowed."""
+    e = expr.strip()
+    while e.startswith('(') and _match_bracket(e, 0) == len(e):
+        e = e[1:-1].strip()
+    base = e
+    i = e.find('[')
+    if i >= 0:
+        if _match_bracket(e, i) != len(e):
+            return None                 # the subscript is not the whole thing
+        base = e[:i].strip()
+    m = re.fullmatch(r'\*?[ \t]*(\w+)', base)
+    if m:
+        t = _declared_pointee(region, sig, m.group(1))
+        return t if t in _FLOAT_TYPES else None
+    m = re.fullmatch(r'\*?[ \t]*(\w+)->(\w+)', base)
+    if m:
+        owner = _declared_pointee(region, sig, m.group(1))
+        got = _dwarf_member(dies, owner, m.group(2)) if owner else None
+        if got and re.match(r'^(' + '|'.join(_FLOAT_TYPES) + r')\b', got[1]):
+            return got[1].split()[0]
+    return None
+
+
+INT_STORE = re.compile(r'^(?P<ind>[ \t]*)(?P<lhs>[^;=\n]+?) = \(int\)(?P<rhs>[^;\n]+);'
+                       r'[ \t]*$', re.M)
+
+
+def fix_int_store_of_float(obj, text):
+    """`p[i] = (int)q[i];` is a four-byte MOVE, not a conversion.
+
+    Ghidra type-puns a `MeReal *` into a struct pointer — `this_00 =
+    (keaLCPSolver *)this->x;` — and then writes through the first member, which
+    is an `int`. In C that is a float-to-int CONVERSION and it destroys the
+    value; in the shipped code it is `mov`, four bytes moved unchanged.
+
+    NOTHING DIAGNOSES THIS. It compiles without a warning, which is why
+    keaLCPSolver sat in the build for a session with three of these in
+    PrincipalSubmatrix, putting a ragdoll body 3.7 m out of place on step 1
+    while twelve of its fifteen functions were bit-identical. That is also why
+    this is a PRE-PASS: there is no diagnostic for a repair rule to hang on.
+
+    THE EVIDENCE IS THE MACHINE CODE. A float-to-int conversion on i386 is
+    `fistp`, `fisttp` or a `cvtt*2si`; keaLCPSolver contains NOT ONE, in any
+    function. So an `(int)` applied to a floating expression there cannot be a
+    conversion the program performs, and the store is of the float. The rewrite
+    keeps the address exactly as Ghidra computed it and only fixes the width
+    question: `*(T *)&(LHS) = RHS`.
+
+    Both halves are required. The RHS must RESOLVE to a floating type — from a
+    local's or parameter's declaration, or from the object's own DWARF for a
+    struct member — and the function must contain no conversion instruction. An
+    expression this cannot type is left alone; so is a function that really does
+    convert."""
+    if not obj:
+        return text, 0
+    dies, out, n = None, [], 0
+    for fn, region in _split_definitions(text):
+        if not fn or '(int)' not in region:
+            out.append(region)
+            continue
+        if _function_has_float_to_int(obj, fn) is not False:
+            out.append(region)
+            continue
+        sig = signature_of(region)
+        if dies is None:
+            dies = dwarf_structs.parse(obj)
+
+        def rewrite(m):
+            nonlocal n
+            t = _expr_float_type(m.group('rhs'), region, sig, obj, dies)
+            if not t:
+                return m.group(0)
+            n += 1
+            return '%s*(%s *)&%s = %s;' % (m.group('ind'), t, m.group('lhs'),
+                                           m.group('rhs'))
+
+        out.append(INT_STORE.sub(rewrite, region))
+    return ''.join(out), n
+
+
 def fix_mislabelled_external(text, diag, ctx):
     """`(*_McdGeometryDeinit)(0x20, 0x10)` is `MeMemoryAPI.createAligned(...)`.
     Ghidra printed the wrong name for the right address; see relocation_targets()
@@ -3941,6 +4066,7 @@ def main():
     body_text, n_mangled = resolve_mangled_call_names(
         body_text, _declared + '\n' + '\n'.join(decls))
     body_text, n_voidmem = fix_void_pointer_member(args.object, body_text, _declared)
+    body_text, n_intstore = fix_int_store_of_float(args.object, body_text)
     data_block, n_data = materialise_data_refs(args.object, body_text)
     # `kd_aggN` is the opaque stand-in gen_protos.py uses for an aggregate passed
     # BY VALUE. Once Ghidra has the signature it puts that type in the BODY too,
@@ -4035,6 +4161,8 @@ def main():
         print(f'  {n_mangled} mangled call site(s) resolved to a declared name')
     if n_voidmem:
         print(f'  {n_voidmem} member access(es) on a void * resolved to the pointer')
+    if n_intstore:
+        print(f'  {n_intstore} float store(s) rendered as an int conversion')
     if n_rel:
         print(f'  {n_rel} relocated data block(s) rebuilt with their pointers')
     if args.cflag:

@@ -86,12 +86,16 @@ def dump_functions(path):
 # what it gets wrong is a field the engine does not read for that pair. This is
 # for an object whose output is wrong in a way that would make any build
 # containing it useless.
-MEASURED_WRONG = {
-    'keaLCPSolver':
-        'ragdoll step 1 is 3.772e+00 m out — a body teleports. Released '
-        'objects first differ at 1e-6 to 1e-8 and grow from there; this does '
-        'not. See proven.txt, 2026-08-25 second session.',
-}
+#
+# EMPTY, and the entry it used to hold is worth keeping in view. keaLCPSolver
+# was put here on the strength of `first@1 = 3.772e+00` on the ragdoll — a body
+# teleporting 3.7 m on step 1 — and came out the same day, because the
+# measurement that held it also located the defect: three float stores Ghidra
+# rendered as int CONVERSIONS, in PrincipalSubmatrix, which the compiler had no
+# reason to complain about. See fix_int_store_of_float and proven.txt. It is now
+# bit-identical on all three scenes and on every one of its fifteen functions
+# individually (test/bisect_object.sh).
+MEASURED_WRONG = {}
 
 
 def main():

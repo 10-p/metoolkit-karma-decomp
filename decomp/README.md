@@ -14,6 +14,9 @@ line tables, parameter names, local names, complete types. Ghidra consumes that 
 over the entire hot path (100 objects, 381.5 KB), **1092 of 1092 functions decompile**, with two x87
 stack leaks totalling 235 bytes.
 
+
+- [`STATUS-EXEC.md`](STATUS-EXEC.md) — progress summary in plain language: counts,
+  what is done, what is left. Start here if you are not going to read the code.
 ## Start here
 
 * **[`HANDOVER.md`](HANDOVER.md)** — everything needed to resume the recovery work:

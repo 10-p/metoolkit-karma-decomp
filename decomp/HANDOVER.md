@@ -6,6 +6,12 @@ anything. It is written for someone with no memory of how any of it came to be.
 
 Branch: **`karma/decompile`**. `main` is untouched. **Do not merge.**
 
+**If you want the non-technical picture — counts, what is done, what is left — read
+[`STATUS-EXEC.md`](STATUS-EXEC.md) instead.** It is written for someone who knows the
+product and not the internals, and it is the right thing to hand to anyone asking "how
+far along is this?". Keep it in step with this file and `proven.txt`: if a number here
+moves, move it there.
+
 ### Read this first — the thirty-second version
 
 - Karma is UT2004's physics library, shipped binary-only. We are recovering it as portable

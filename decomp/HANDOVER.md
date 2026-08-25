@@ -43,8 +43,14 @@ Branch: **`karma/decompile`**. `main` is untouched. **Do not merge.**
   **byte-identical**; all it removes is names. Ghidra's native stack recovery and its DWARF
   importer agree. Dead end 18, and §11 item 2 has what the experiment found instead — which
   is worth more than what it was looking for.
-- **109 objects compile**, 25 are quarantined by detectors, 14 do not. Object count is a bad
+- **110 objects compile**, 25 are quarantined by detectors, 13 do not. Object count is a bad
   progress metric — read §3 before using it.
+- **`MdtWorld` is the first object out of §11 item 2, and the engine does not use it.**
+  `collapse_outgoing_aggregate_copy` takes it FAIL → ok, bit-identical on all three scenes,
+  with the gate proven sensitive to one part per million in the aggregate the repair passes
+  — and then `KDynStep.cpp` turns out to reimplement the stepping loop and call the kea
+  entry points directly, so `MdtWorldStep` is a third member of the §3a family. The method
+  is validated; the object is not on the path. §11 item 2, `proven.txt`.
 - **They compile for wasm32, armv7 AND arm64 — and arm64 is a lie.** Identical symbol sets
   on all three, but arm64 emits **2,162 pointer-truncation diagnostics across 65 of the 109
   objects** where armv7 emits **zero**, because the recovery puns pointers through 4-byte
@@ -79,7 +85,7 @@ Everything else in this file is detail. This is the work.
 
 | # | what | where | blocked on |
 |---|---|---|---|
-| 1 | **The solver's frames.** 8 objects: `keaRbdCore_unified`, `keaMemory`, `keaIntegrate_pc`, `keaLCPSolver`, `keaLCP_new`, `MdtWorld`, `MdtBcl`, `MeMath`. The DWARF declares no `DW_AT_location`. **The Ghidra-side re-dump is now TRIED AND REFUTED (dead end 18).** What replaces it: the frame is not lost, it is the OUTGOING ARGUMENT AREA, and `register0x00000010` is entry-ESP — both confirmed against the machine code. | §11 item 2 | nothing, but it is a text-level repair on a Ghidra-invented frame and needs a subject where a wrong answer would show |
+| 1 | **The solver's frames — one down, and the method is validated.** `collapse_outgoing_aggregate_copy` recovered `MdtWorld` (bit-identical, three scenes, gate-sensitive to 1e-6, corroborated by `KDynStep.cpp`'s own call). It does NOT help the seven that are left — `keaRbdCore_unified` and `keaLCPSolver` are blocked on the vptr store (§11 item 3) and `keaLCP_new` on the alloca frame. 7 objects: `keaRbdCore_unified`, `keaMemory`, `keaIntegrate_pc`, `keaLCPSolver`, `keaLCP_new`, `MdtBcl`, `MeMath`. The DWARF declares no `DW_AT_location`, and §11 item 2 now adds: the frames are described and FRAGMENTED, the overlay repair for that is dead end 20, and the aggregate-copy collapse is what worked. **The Ghidra-side re-dump is now TRIED AND REFUTED (dead end 18).** What replaces it: the frame is not lost, it is the OUTGOING ARGUMENT AREA, and `register0x00000010` is entry-ESP — both confirmed against the machine code. | §11 item 2 | nothing, but it is a text-level repair on a Ghidra-invented frame and needs a subject where a wrong answer would show |
 | 2 | ~~**`IxCylinderCylinder` is wrong and is in the build.**~~ **RE-FRAMED — `dims` is not a measurement for this pair.** The shipped library disagrees with itself, under a 1e-7 m nudge, more often than we disagree with it. Leave it in the build; do not release it either. | §11 item 0 | a live match scoring ret/count/position/separation with dims read separately |
 | 3 | **arm64 truncates pointers.** 2,162 diagnostics across 65 of 109 objects; armv7 zero. **There is now a gate** — `test/ptrwidth_check.sh`. | §6b | a generator-wide change to pointer-width slots |
 | 4 | **Nothing has EXECUTED on wasm32, armv7 or arm64.** | `HANDOVER-WEB.md` | the web agent |
@@ -132,11 +138,11 @@ complete types. That is what makes this tractable. Ghidra consumes it directly.
 ## 2. Status
 
 ```
-compile:  109 objects (103 clean + 6 with prelude TODOs)  = 73.6% of 148 attempted
-scenes:   109/109 run clean on all three substitute scenes, and all 109 TOGETHER
+compile:  110 objects (104 clean + 6 with prelude TODOs)  = 74.3% of 148 attempted
+scenes:   110/110 run clean on all three substitute scenes, and all 110 TOGETHER
           are bit-identical on the collision-free one — but read §4a before
           reading anything into that number
-wasm32:   109/109 compile, exported symbol sets byte-identical to i386
+wasm32:   110/110 compile, exported symbol sets byte-identical to i386
 armv7:    109/109 compile, symbol sets identical — a real 32-bit-pointer port,
           and 0 pointer-truncation diagnostics (test/ptrwidth_check.sh)
 arm64:    109/109 compile, symbol sets identical, and NOT TRUSTED — 2,162
@@ -152,7 +158,7 @@ difftest: 14 pairs (Cylinder x Cylinder and Cylinder x TriangleList added
 review:   25 objects held back by recover.py's eight safety detectors (§8;
           the ninth, symbol bindings, is a gate rather than a detector because
           it needs the shipped object to compare against)
-fail:     14 objects do not compile
+fail:     13 objects do not compile
 dumps:    out11 is current (§5c) — out10's dumps byte-for-byte, plus a
           per-object `.locals` table of Ghidra's frame assignments. out10
           differs from out9 in 4 of 153 dumps and no compiled object moved.

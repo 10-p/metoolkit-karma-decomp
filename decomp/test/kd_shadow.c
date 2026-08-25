@@ -102,6 +102,26 @@ static int           kd_npairs;
 static int           kd_logged;
 static FILE         *kd_log;
 static unsigned long kd_since_flush;
+
+/* KD_ONLY=<substring>: shadow only functions whose name contains it. Everything
+   else is COUNTED but not run twice, exactly as under KD_CENSUS.
+   
+   THIS WAS DOCUMENTED AND NOT IMPLEMENTED — in this file's own header, and in
+   HANDOVER.md §7 as one of three switches to "reach for first when a session
+   misbehaves" — from the day it was written until 2026-08-25. Every run that
+   set it shadowed the whole matrix and looked exactly like a narrowed one. §7's
+   crash table has a row reading "narrowed (KD_ONLY)"; that row was a full run.
+   Check that a switch does something before believing a result that rests on
+   it. */
+static const char *kd_only;
+static int kd_only_read;
+
+/* The divergence log stops at KD_LOG_MAX entries, and the KINDS COMPETE: a pair
+   with a thousand `dims` divergences fills the log before a pair with nine
+   `count` ones is ever reached, so the interesting case is crowded out by the
+   boring one. KD_LOGMAX raises the cap. */
+static int kd_logmax = KD_LOG_MAX;
+static int kd_logmax_read;
 /* How deeply the thunks nest. Aggregates dispatch to their children's
    interactions, so a shadowed call can sit inside another one, and each frame
    carries a ~2.9 KB scratch buffer. Whether that is enough to matter is a
@@ -269,7 +289,7 @@ static void kd_compare(kd_pair *s, int a, int b,
     if (worst > s->worst_delta) s->worst_delta = worst;
 
     if (bad) {
-        if (kd_log && kd_logged < KD_LOG_MAX) {
+        if (kd_log && kd_logged < kd_logmax) {
             kd_logged++;
             fprintf(kd_log, "%s (%s vs %s): ret %d/%d touch %d/%d count %d/%d maxCount %d\n",
                     s->name ? s->name : "?", kd_typename(s->t1), kd_typename(s->t2),
@@ -300,7 +320,7 @@ static void kd_compare(kd_pair *s, int a, int b,
         /* A delta this large is not float noise — the same run gets 1 ULP on
            Sphere x Sphere. Dump both sides in full so the wrong component is
            identifiable rather than merely counted. */
-        if (worst > 1e-3 && kd_log && kd_logged < KD_LOG_MAX) {
+        if (worst > 1e-3 && kd_log && kd_logged < kd_logmax) {
             kd_logged++;
             fprintf(kd_log, "NUMERIC %s worst=%.6g count=%d\n",
                     s->name ? s->name : "?", worst, ra->contactCount);
@@ -351,6 +371,7 @@ static int kd_census = -1;
    only so the change can be measured against what it replaced. */
 static int kd_sharecache = -1;
 
+
 static int kd_dispatch(int slot, McdModelPair *p, McdIntersectResult *r)
 {
     kd_pair *s = &kd_pairs[slot];
@@ -366,6 +387,21 @@ static int kd_dispatch(int slot, McdModelPair *p, McdIntersectResult *r)
         const char *e = getenv("KD_SHARECACHE");
         kd_sharecache = (e && *e == '1') ? 1 : 0;
     }
+    if (!kd_only_read) {
+        kd_only_read = 1;
+        kd_only = getenv("KD_ONLY");
+        if (kd_only && !*kd_only) kd_only = 0;
+    }
+    if (!kd_logmax_read) {
+        kd_logmax_read = 1;
+        const char *e = getenv("KD_LOGMAX");
+        if (e) { kd_logmax = atoi(e); if (kd_logmax < 1) kd_logmax = 1; }
+    }
+    /* Narrowed: count it, do not run it twice. Matched on the recovered
+       function's own name, which is what the CSV reports, so what you type is
+       what you see. A pair whose name we could not identify never matches, and
+       is therefore excluded rather than silently included. */
+    int narrowed = kd_only && !(s->name && strstr(s->name, kd_only));
     s->calls++;
     if (++kd_since_flush >= KD_FLUSH_EVERY) { kd_since_flush = 0; kd_flush(); }
 
@@ -375,13 +411,13 @@ static int kd_dispatch(int slot, McdModelPair *p, McdIntersectResult *r)
        below. */
     McdModelPair  pair_before = *p;
     unsigned char cache_before[KD_CACHE_BYTES];
-    int have_cache = (s->rec && !kd_census && !kd_sharecache
+    int have_cache = (s->rec && !kd_census && !narrowed && !kd_sharecache
                       && p->m_cachedData != 0);
     if (have_cache) memcpy(cache_before, p->m_cachedData, KD_CACHE_BYTES);
 
     if (++kd_depth > kd_maxdepth) kd_maxdepth = kd_depth;
     int a = s->orig(p, r);
-    if (s->rec && !kd_census) {
+    if (s->rec && !kd_census && !narrowed) {
         /* The scratch buffer carries a canary past its end.
            A recovered function that writes more contacts than it was given room
            for does not fail here — it smashes whatever is next, and the engine
@@ -472,7 +508,7 @@ static int kd_dispatch(int slot, McdModelPair *p, McdIntersectResult *r)
         for (i = 0; i < gn; i++) if (g[i] != KD_CANARY) break;
         if (i < gn || scratch.contactCount < 0 || scratch.contactCount > cap) {
             s->overrun++;
-            if (kd_log && kd_logged < KD_LOG_MAX) {
+            if (kd_log && kd_logged < kd_logmax) {
                 kd_logged++;
                 fprintf(kd_log, "OVERRUN %s: wrote past a %d-contact buffer "
                                 "(reported count %d)\n",

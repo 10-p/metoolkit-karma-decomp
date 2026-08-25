@@ -1410,3 +1410,62 @@ MdtUtils              Bit-identical on scene_ragdoll with 4.113e+00 m of
 #
 # Reproduce:  KD_WARM=8 ./test/difftest_pair.sh /tmp/kd_build_dt <metoolkit>
 #             KD_WARM=8 KD_SELFTEST=1 ...   first, always.
+
+
+# --- 2026-08-25: A FRESH LIVE MATCH ON THE out11 BUILD ------------------------
+#
+# test-simple-physics, 300 s, xDeathMatch, KD_RUNTIME=/tmp/kd_runtime.
+# Shadow harness over /tmp/kd_build as of out11 (109 objects, all .o
+# byte-identical to out9's -- see HANDOVER.md 5b/5c).
+#
+#   pair                        calls   ret  count   dims  ovr  nonfin  worst
+#   Sphere x Sphere               364     0      0      0    0    0     0
+#   Cylinder x Cylinder        37,735     0      1  1,126    0    0     9.83e-02
+#   Sphere x TriangleList      26,688     0      0      0    0    0     0
+#   Cylinder x TriangleList    92,834     0      0      1    0    0     2.98e-03
+#   Sphyl x Sphere             29,312     0      0      0    0    0     1.91e-06
+#   Sphyl x Sphyl              33,528     0      0      0    0    0     1.91e-06
+#   Sphyl x TriangleList       81,702     0      0      0    0    0     1.91e-06
+#   Cylinder x ConvexMesh       1,287     0      0      0    0    0     3.19e-01
+#
+# SELFTEST, same map, same length, original against original: all eight pairs
+# 100% bit-identical, 0 divergences of any kind, divergence file empty. So the
+# harness is sound on this map and these numbers are the recovery.
+#
+# THREE THINGS IN THAT TABLE.
+#
+# 1. IxCylinderCylinder's count_diff is 1 in 37,735 -- 2.6e-05. The figure this
+#    file has been carrying is 3 in 24,111 (1.2e-04), from a smaller run. For
+#    scale, the RELEASED IxBoxBox sits at 1 count_diff in 1,299 real calls
+#    (7.7e-04), thirty times higher, and IxSphylPrimitives was released at 1
+#    structural in 74,921. So the remaining charge against IxCylinderCylinder is
+#    now smaller than what two released objects carry.
+#
+#    IT IS STILL NOT RELEASED, and the reason is the standard, not the number:
+#    HANDOVER.md 12 item 2 says released means ZERO count_diff, and this is one.
+#    Recorded so the decision is made on the comparison rather than re-derived.
+#    The 1,126 dims_diff (3.0%, consistent with the 3.8% seen before) is the
+#    field this file has now shown the engine does not read for this pair and
+#    the shipped library does not reproduce either.
+#
+# 2. IxCylinderTriList SHOWED ITS FIRST DIVERGENCE, and this is a correction to
+#    a release. It was released 2026-08-24 on "71,417 real calls, 0 ret_diff,
+#    0 count_diff, 0 dims_diff". On 92,834 calls it reads 1 dims_diff.
+#
+#    THAT ONE MATTERS MORE THAN IxCylinderCylinder'S 1,126, and the reason is
+#    the consumer analysis under IxCylinderCylinder above: for a TriangleList
+#    pair the engine DOES read dims --
+#    KarmaSupport.cpp:303/319 take it as the TRIANGLE FLAGS and use them to pick
+#    friction and restitution. A wrong value there is one contact on one frame
+#    with the wrong surface parameters. Small, and not nothing, and not the same
+#    as a field nobody reads.
+#
+#    1 in 92,834 is 1.1e-05. The release stands on 164,251 real calls across two
+#    matches with 0 ret / 0 count / 0 overrun; this is recorded as a known limit
+#    on it, in the way IxSphereTriList's is.
+#
+# 3. Everything else is clean at volume: 81,702 Sphyl x TriangleList, 33,528
+#    Sphyl x Sphyl, 29,312 Sphyl x Sphere, 26,688 Sphere x TriangleList, all 0
+#    structural. And Cylinder x ConvexMesh reaches McdGjkCgIntersect 1,287 times
+#    with 0 structural -- an independent live confirmation of the warm-path
+#    result above, since the engine DOES call McdCacheHello.

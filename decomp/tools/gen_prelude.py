@@ -525,6 +525,97 @@ def declared_names(umbrella, include_dir):
     return names
 
 
+def _split_top(text):
+    """Split a parameter list at top-level commas."""
+    out, depth, cur = [], 0, ''
+    for ch in text:
+        if ch in '([':
+            depth += 1
+        elif ch in ')]':
+            depth -= 1
+        if ch == ',' and depth == 0:
+            out.append(cur)
+            cur = ''
+        else:
+            cur += ch
+    out.append(cur)
+    return [x.strip() for x in out]
+
+
+def dwarf_type_size(obj, name):
+    """Bytes of the named aggregate, from this object's own DWARF, or None."""
+    dies = _dies(obj)
+    for die in dies.values():
+        if die['tag'] not in ('DW_TAG_structure_type', 'DW_TAG_class_type',
+                              'DW_TAG_union_type', 'DW_TAG_typedef'):
+            continue
+        if die['attrs'].get('DW_AT_name') != name:
+            continue
+        if die['tag'] == 'DW_TAG_typedef':
+            ref = re.search(r'<0x([0-9a-f]+)>', die['attrs'].get('DW_AT_type', ''))
+            return dwarf_structs.type_size(dies, int(ref.group(1), 16)) if ref else None
+        bs = die['attrs'].get('DW_AT_byte_size')
+        return int(bs.split()[0]) if bs else None
+    return None
+
+
+def real_aggregate_types(proto, dem, obj):
+    """`kd_agg92` back to `MdtKeaConstraints`, from the DEMANGLED signature.
+
+    `kd_aggNN` is gen_protos' opaque stand-in for an aggregate passed BY VALUE,
+    and it exists because kd_protos.h is FLAT — it declares no typedefs, because
+    Ghidra's C parser rejects metoolkit's headers (HANDOVER.md 5). A prelude is
+    not flat: it is compiled in a translation unit that already has kd_types.h
+    and kd_karma.h, so the stand-in buys nothing there and costs something real.
+
+    What it costs is `collapse_outgoing_aggregate_copy`. That pass replaces
+    Ghidra's word-by-word marshalling with the SOURCE aggregate, and the source
+    has its true type — so against a `kd_agg92` parameter the collapsed call is
+    "incompatible type for argument 2" and the pass cannot be used at all.
+    `MdtWorld` was only ever collapsible because ITS callee,
+    MdtKeaAddConstraintForces, is declared by a PUBLIC header with the real
+    types and the stand-in is used only to SIZE the parameter.
+    `keaFunctions::checkPrintDebugInput` is a C++ method with no public
+    declaration, and it is what keeps the solver DRIVER from compiling.
+
+    The real names are in the demangling, positionally:
+
+        proto  int checkPrintDebugInput(void *, kd_agg92, kd_agg76, void *, int)
+        dem    keaFunctions::checkPrintDebugInput(MdtKeaConstraints,
+                   MdtKeaParameters, MdtKeaBody const* const*, int)
+
+    with the extra leading `void *` being `this`. THE SIZE CHECK IS WHAT MAKES
+    THE POSITIONAL MATCH SAFE: the name taken from the demangling must be a type
+    this object's own DWARF gives exactly NN bytes. A misalignment by one
+    parameter therefore does not silently produce a call with the wrong stack —
+    it fails the check and the whole substitution declines, leaving the
+    stand-ins and the error that goes with them."""
+    if 'kd_agg' not in proto:
+        return proto
+    m = re.match(r'^(.*?)\(([^()]*)\)\s*;?\s*$', proto.strip(), re.S)
+    d = re.match(r'^.*?\((.*)\)\s*(?:const\s*)?$', dem.strip(), re.S)
+    if not (m and d):
+        return proto
+    pp, dp = _split_top(m.group(2)), _split_top(d.group(1))
+    if dp == ['']:
+        dp = []
+    if len(pp) == len(dp) + 1:
+        dp = [None] + dp                      # `this`
+    elif len(pp) != len(dp):
+        return proto
+    for i, t in enumerate(pp):
+        agg = re.fullmatch(r'kd_agg(\d+)', t)
+        if not agg:
+            continue
+        real = dp[i]
+        if not real or not re.fullmatch(r'[A-Za-z_]\w*', real):
+            return proto
+        if dwarf_type_size(obj, real) != int(agg.group(1)):
+            return proto
+        pp[i] = real
+    return '%s(%s);' % (m.group(1), ', '.join(pp))
+
+
 def anonymous_struct_typedefs(umbrella, include_dir):
     """Names that are a typedef of an aggregate with NO tag of the same name.
 
@@ -777,6 +868,9 @@ def main():
                     w(f'extern void *{re.sub(r"[^A-Za-z0-9_]", "_", cname)}[]')
                     w(f'    KD_MANGLED("{name}");')
                 elif proto:
+                    # The prelude is not flat, so it does not need gen_protos'
+                    # opaque `kd_aggNN` stand-ins and is actively hurt by them.
+                    proto = real_aggregate_types(proto, dem, obj)
                     decl = re.sub(r'\b' + re.escape(short) + r'\s*\(',
                                   emit_name + '(', proto[:-1].strip(), count=1)
                     w(f'extern {decl}')

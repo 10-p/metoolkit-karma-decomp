@@ -2267,9 +2267,18 @@ def _repair_vptr_store(fn, region, groups, declared, obj, corpus, locals_table):
     if not vname:
         return None
 
-    new = region
-    for pat, _scale, sub in uses:
-        new = pat.sub(lambda m, s=sub: m.group(0) if m.start() in skip else s, new)
+    # ONE pass over the ORIGINAL region, not one per name. `skip` holds offsets
+    # into that region, and substituting the first name shifts every offset
+    # after it — so a two-pass rewrite silently un-skips exactly the sites the
+    # check above refused. keaRbdCore_unified is what found it: the object
+    # compiled, and `scene_chain` then called `allocate()` with no arguments and
+    # a garbage size on step 4. The skip was right; the bookkeeping was not.
+    subs = {'_' + name: alias, '_' + label: slot0}
+    combined = re.compile('|'.join(
+        r'(?<![\w])' + re.escape(t) + r'\b'
+        for t in sorted(subs, key=len, reverse=True)))
+    new = combined.sub(
+        lambda m: m.group(0) if m.start() in skip else subs[m.group(0)], region)
     store = re.compile(r'^([ \t]*)' + re.escape(alias) + r'[ \t]*=[^;\n]*;[ \t]*$',
                        re.M)
     new, k = store.subn(
@@ -2929,6 +2938,74 @@ MARSHAL_LOOP = re.compile(
 
 # `kVar3._kd[0x30] = (char)uVar18;` — Ghidra reassembling the aggregate it is
 # about to pass, byte by byte, out of the slot the loop above just filled.
+# The SECOND shape of the same thing, and the one the solver DRIVER uses. Here
+# the source is not a typed pointer walked field by field but the raw incoming
+# argument area, advanced in the for-header's COMMA operator:
+#
+#     puVar15 = (undefined4 *)&stack0xfffffdd8;
+#     puVar12 = (undefined4 *)register0x00000010;
+#     for (i = 0x17; puVar12 = puVar12 + 1, i != 0; i = i + -1) {
+#       *puVar15 = *puVar12;
+#       puVar15 = puVar15 + 1;
+#     }
+#
+# `register0x00000010` is x86 register-space offset 0x10 — the ENTRY value of
+# ESP — so the `+ 1` word the loop advances before its first read is the return
+# address plus four, i.e. `ebp+8`, i.e. the first stack argument. That is the
+# cdecl ABI and not a guess; the shipped prologue says it outright with
+# `lea 0x8(%ebp),%esi`.
+REG_MARSHAL_LOOP = re.compile(
+    r'^(?P<ind>[ 	]*)(?P<dst>\w+) = \((?P<ety>[A-Za-z_]\w*) \*\)'
+    r'&(?P<spell>stack0x|in_stack_)(?P<off>[0-9a-f]{8});\n'
+    r'(?P=ind)(?P<sv>\w+) = \([A-Za-z_]\w* \*\)register0x00000010;\n'
+    r'(?P<between>(?:(?P=ind)\w+ = [\w.>\[\]-]+;\n){0,4})'
+    r'(?P=ind)for \((?P<iv>\w+) = (?P<cnt>0x[0-9a-f]+|\d+); '
+    r'(?P=sv) = (?P=sv) \+ 1, (?P=iv) != 0; (?P=iv) = (?P=iv) \+ -1\) \{\n'
+    r'(?P=ind)  \*(?P=dst) = \*(?P=sv);\n'
+    r'(?P=ind)  (?P=dst) = (?P=dst) \+ 1;\n'
+    r'(?P=ind)\}\n', re.M)
+
+
+def _enclosing_call(region, pos):
+    r"""(callee, argument list) for the call whose arguments contain `pos`.
+
+    Ghidra WRAPS a long call — the name on one line and `(args…)` on the next —
+    so a regex anchored on `\bname\(` with a newline-free argument list finds
+    nothing and the size check that guards the whole collapse silently never
+    runs. That is what kept keaRbdCore_unified, the solver driver, out of the
+    build after everything else about it was solved. Walking out from the
+    argument instead is immune to the wrapping and to an inner call, which a
+    left-to-right regex is not."""
+    depth, i = 0, pos
+    while i > 0:
+        c = region[i]
+        if c == ';':
+            return None
+        if c == ')':
+            depth += 1
+        elif c == '(':
+            if depth == 0:
+                end = _match_bracket(region, i)
+                m = re.search(r'(\w+)[ \t\n]*$', region[:i])
+                if end is None:
+                    return None
+                if m:
+                    return m.group(1), region[i + 1:end - 1]
+                # No identifier before the `(` — the callee is an EXPRESSION,
+                # which in this corpus means a vtable dispatch. Hand the
+                # expression back and let the caller resolve it; returning None
+                # here declines every by-value aggregate passed through a
+                # virtual call, and keaRbdCore_unified passes one.
+                if i and region[i - 1] == ')':
+                    o = _match_bracket_back(region, i - 1)
+                    if o is not None:
+                        return region[o:i], region[i + 1:end - 1]
+                return None
+            depth -= 1
+        i -= 1
+    return None
+
+
 AGG_REASSEMBLE = re.compile(
     r'^[ \t]*(?P<agg>kVar\d+)\._kd(?:\[[^\]]+\]|\._\d+_\d+_) = [^;\n]*;\n'
     r'|^[ \t]*\(\*\(unsigned int \*\)\(\(char \*\)&\((?P<agg2>kVar\d+)\._kd\) \+ \d+\)\) = [^;\n]*;\n',
@@ -2975,7 +3052,117 @@ def _trace_pointer_base(region, upto, var, hops=3):
     return None
 
 
-def collapse_outgoing_aggregate_copy(body, protos=None):
+# `(**(code **)(_vanillaFunctions + 0x14))` and, once fix_vptr_store has run,
+# `(**(code **)((*(char **)&vanillaFunctions) + 0x14))`. Both name a LOCAL whose
+# class fixes the vtable and an offset that fixes the slot.
+_VT_DISPATCH = re.compile(
+    r'^\(\*\*\(code \*\*\)\(?'
+    r'(?:\(\*\(\w+ \*\*\)&(?P<loc1>\w+)\)|_(?P<loc2>\w+))'
+    r'(?:[ \t]*\+[ \t]*(?P<off>0x[0-9a-f]+|\d+))?\)?\)$')
+
+
+def _vtable_dispatch_callee(expr, region, corpus):
+    """The mangled symbol a virtual call through a local's vptr reaches.
+
+    The slot table is read from the relocations in the object that DEFINES the
+    vtable — vtable_slots.slot_table — so this is the same evidence
+    fix_vptr_store rests on and not a second guess at it. Returns None for
+    anything that is not this exact shape, which is the only kind of indirect
+    call in this corpus whose target is knowable."""
+    m = _VT_DISPATCH.match(expr.strip())
+    if not m:
+        return None
+    local = m.group('loc1') or m.group('loc2')
+    d = re.search(r'^[ \t]*([A-Za-z_]\w*)[ \t]+' + re.escape(local) + r'[ \t]*;[ \t]*$',
+                  region, re.M)
+    if not d:
+        return None
+    table = vtable_slots.slot_table(corpus, d.group(1))
+    return table.get(int(m.group('off'), 0) if m.group('off') else 0)
+
+
+# The INCOMING mirror of REG_MARSHAL_LOOP: gcc 3.2 copies a by-value aggregate
+# PARAMETER into a local before using it, and Ghidra renders that as a field
+# walk out of the raw argument area.
+#
+#     pMVar16 = &constraints;
+#     piVar13 = (int *)register0x00000010;
+#     for (i = 0x17; piVar13 = piVar13 + 1, i != 0; i = i + -1) {
+#       pMVar16->num_partitions = *piVar13;
+#       pMVar16 = (MdtKeaConstraints *)&pMVar16->max_partitions;
+#     }
+#
+# is `constraints = pconstraints;`, and the shipped code says so in one
+# instruction: `lea -0xa8(%ebp),%edi; mov $0x17,%ecx; lea 0x8(%ebp),%esi;
+# rep movsl`.
+INCOMING_ARG_COPY = re.compile(
+    r'^(?P<ind>[ \t]*)(?P<dp>\w+) = &(?P<dst>\w+);\n'
+    r'(?P=ind)(?P<sv>\w+) = \((?P<ety>[A-Za-z_]\w*) \*\)register0x00000010;\n'
+    r'(?P<between>(?:(?P=ind)\w+ = [\w.>\[\]-]+;\n){0,4})'
+    r'(?P=ind)for \((?P<iv>\w+) = (?P<cnt>0x[0-9a-f]+|\d+); '
+    r'(?P=sv) = (?P=sv) \+ 1, (?P=iv) != 0; (?P=iv) = (?P=iv) \+ -1\) \{\n'
+    r'(?P=ind)  (?P=dp)->\w+ = \*(?P=sv);\n'
+    r'(?P=ind)  (?P=dp) = \([^)]*\)&(?P=dp)->\w+;\n'
+    r'(?P=ind)\}\n', re.M)
+
+
+def _collapse_incoming_arg_copy(region, first_param, obj):
+    """`constraints = pconstraints;` — the assignment the copy loop spells out.
+
+    Three things must agree before the loop is replaced, and together they make
+    the assignment type-correct by construction rather than by inspection:
+
+      * the destination is a LOCAL declared in this function, at some type T;
+      * the function's first stack parameter is declared at the SAME type T —
+        which is what the cdecl ABI says `register0x00000010 + 1` points at;
+      * T's size in this object's DWARF is exactly what the loop copies.
+
+    A loop that copies part of an aggregate, or into something of another type,
+    fails all three and is left alone."""
+    if not (first_param and obj):
+        return region, 0
+    ptype, pname = first_param
+    n = 0
+
+    def rewrite(m):
+        nonlocal n
+        elem = _FIXED_WIDTH.get(m.group('ety'))
+        if elem is None:
+            return m.group(0)
+        nbytes = int(m.group('cnt'), 0) * elem
+        d = re.search(r'^[ \t]*([A-Za-z_]\w*)[ \t]+' + re.escape(m.group('dst'))
+                      + r'[ \t]*;[ \t]*$', region, re.M)
+        if not d or d.group(1) != ptype or _dwarf_type_size(obj, ptype) != nbytes:
+            return m.group(0)
+        n += 1
+        return '%s%s = %s;\n%s' % (m.group('ind'), m.group('dst'), pname,
+                                   m.group('between'))
+
+    return INCOMING_ARG_COPY.sub(rewrite, region), n
+
+
+def _first_stack_parameter(body):
+    """(type, name) of the function's first parameter, or None.
+
+    Only a BY-VALUE aggregate is returned — no `*`, no array, no scalar the
+    fixed-width table knows — because that is the only thing the caller may pass
+    in place of a copy loop, and because on cdecl it is the only shape whose
+    address is the incoming argument area itself.
+    """
+    sig = signature_of(body)
+    if not sig:
+        return None
+    m = re.search(r'\(([^()]*)\)\s*$', sig.replace('\n', ' ').strip())
+    if not m:
+        return None
+    first = _split_args(m.group(1))[0].strip()
+    d = re.fullmatch(r'([A-Za-z_]\w*)[ \t]+([A-Za-z_]\w*)', first)
+    if not d or d.group(1) in _FIXED_WIDTH:
+        return None
+    return d.group(1), d.group(2)
+
+
+def collapse_outgoing_aggregate_copy(body, protos=None, obj=None, declared=''):
     """Pass the by-value aggregate SOURCE, instead of the frame it was copied to.
 
     gcc 3.2 passes an aggregate by value by copying it word-at-a-time into the
@@ -3015,21 +3202,44 @@ def collapse_outgoing_aggregate_copy(body, protos=None):
     8.6e-04 m. It stays quarantined afterwards, correctly: another function in
     the same object genuinely lost `num_bodies`.
     """
-    region, n = body, 0
-    loops = list(MARSHAL_LOOP.finditer(region))
+    region, n = _collapse_incoming_arg_copy(body, _first_stack_parameter(body), obj)
+    body = region
+    loops = [(m, False) for m in MARSHAL_LOOP.finditer(region)]
+    loops += [(m, True) for m in REG_MARSHAL_LOOP.finditer(region)]
     if not loops:
-        return body, 0
+        return body, n
+    first_param = _first_stack_parameter(body)
+    # kd_protos*.h keys a C++ function on its DWARF name and on its linkage
+    # name (§5b); the BODY calls it by the flattened `Class__method` spelling
+    # gen_prelude declares. The asm label is the only thing the two share, so
+    # the prototype lookup goes through it rather than through a name rule —
+    # `CxSmallSort::_Update` flattens to `CxSmallSort___Update` and no rsplit
+    # gets back to it.
+    sym_of = {c: sym for sym, c in declared_under(declared).items()}
 
     # PLAN first, against the untouched body, then apply once. Blanking a loop
     # shortens the text, so a second pass over match offsets taken before it
     # would read the wrong places.
     plan = []
-    for loop in loops:
+    for loop, from_args in loops:
         elem = _FIXED_WIDTH.get(loop.group('ety'))
         if elem is None:
             continue
         nbytes = int(loop.group('cnt'), 0) * elem
-        base = _trace_pointer_base(region, loop.start(), loop.group('src'))
+        if from_args:
+            # The source is `register0x00000010 + 1` word, which the cdecl ABI
+            # pins to the first stack parameter — see REG_MARSHAL_LOOP. Its
+            # DECLARED TYPE must be exactly the size the loop copies, which is a
+            # second and independent confirmation to the call-site size check
+            # below: one says the destination is that big, this says the source
+            # is. A signature this cannot read declines rather than guesses.
+            base = None
+            if first_param and obj:
+                ptype, pname = first_param
+                if _dwarf_type_size(obj, ptype) == nbytes:
+                    base = pname
+        else:
+            base = _trace_pointer_base(region, loop.start(), loop.group('src'))
         if not base:
             continue            # cannot NAME the source — decline, do not guess
         # Which aggregate is passed for this slot? Two spellings: Ghidra either
@@ -3052,12 +3262,27 @@ def collapse_outgoing_aggregate_copy(body, protos=None):
             # slot is not one value and rewriting the name breaks the other use.
             if re.search(r'^[ \t]*' + re.escape(agg) + r'[ \t]*=[^=]', region, re.M):
                 continue
-            call = re.search(r'\b(\w+)\(([^;\n]*\b' + agg + r'\b[^;\n]*)\);', region)
+            # Every occurrence, not the first: the first is the DECLARATION
+            # (`kd_agg92 kVar1;`), which is in no call at all.
+            call = next((c for c in (
+                _enclosing_call(region, u.start()) for u in
+                re.finditer(r'(?<![\w.>])' + re.escape(agg) + r'\b(?![\w.])', region))
+                if c), None)
             if not call:
                 continue
             # THE CHECK THAT MAKES THIS SAFE: the bytes the loop copies must be
             # the bytes the callee's parameter is.
-            if _proto_param_size(call.group(1), _arg_index(call.group(2), agg),
+            callee = call[0]
+            if not re.fullmatch(r'\w+', callee):
+                callee = _vtable_dispatch_callee(
+                    callee, region,
+                    os.path.dirname(os.path.abspath(obj))) if obj else None
+                if not callee:
+                    continue
+            elif _proto_param_size(callee, _arg_index(call[1], agg),
+                                   protos) is None:
+                callee = sym_of.get(callee, callee)
+            if _proto_param_size(callee, _arg_index(call[1], agg),
                                  protos) == nbytes:
                 plan.append((loop.group('off'), agg, base))
                 break
@@ -3071,9 +3296,10 @@ def collapse_outgoing_aggregate_copy(body, protos=None):
     # the destination pointer and the loop, and deleting them with the loop left
     # the call passing uninitialised locals. That compiled, and segfaulted on
     # scene_chain.
-    region = MARSHAL_LOOP.sub(
-        lambda m: m.group('between') if m.group('off') in offs else m.group(0),
-        region)
+    for _pat in (MARSHAL_LOOP, REG_MARSHAL_LOOP):
+        region = _pat.sub(
+            lambda m: m.group('between') if m.group('off') in offs else m.group(0),
+            region)
     region = AGG_REASSEMBLE.sub(
         lambda m: '' if (m.group('agg') or m.group('agg2')) in aggnames else m.group(0),
         region)
@@ -3555,6 +3781,14 @@ def main():
                           new, text)
         return text
 
+    # The prelude and the exports are read here rather than beside their use
+    # below, because collapse_outgoing_aggregate_copy runs INSIDE the loop that
+    # follows and needs the asm labels to look a callee's prototype up.
+    _declared = ''
+    for _extra in (args.prelude, args.vtables, args.exports):
+        if _extra and os.path.exists(_extra):
+            _declared += open(_extra, errors='ignore').read()
+
     decls, defs, dropped = [], [], []
     n_alloca_fns = 0
     n_proto_calls = 0
@@ -3585,7 +3819,8 @@ def main():
             n_alloca_fns += 1
         body, nproto = prototype_indirect_calls(body)
         n_proto_calls += nproto
-        body, nagg = collapse_outgoing_aggregate_copy(body, args.protos)
+        body, nagg = collapse_outgoing_aggregate_copy(body, args.protos,
+                                                       args.object, _declared)
         n_agg_copies += nagg
         sig = signature_of(body)
         if sig is None:
@@ -3627,10 +3862,6 @@ def main():
     # text this reads for the declaration is not the text it rewrites. Same for
     # the mangled call sites below, which resolve against this unit's own
     # forward declarations as well.
-    _declared = ''
-    for _extra in (args.prelude, args.vtables, args.exports):
-        if _extra and os.path.exists(_extra):
-            _declared += open(_extra, errors='ignore').read()
     body_text, n_vptr = fix_vptr_store(args.object, body_text, _declared,
                                        read_ghidra_locals(args.input))
     body_text, n_mangled = resolve_mangled_call_names(

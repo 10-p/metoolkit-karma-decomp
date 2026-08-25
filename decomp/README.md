@@ -28,28 +28,21 @@ stack leaks totalling 235 bytes.
 
 ## Status
 
-**Current, 2026-08-24 — everything below this block is historical narrative kept for the
-reasoning, and its numbers are the numbers of the day it was written. `HANDOVER.md` is the
-live document; when the two disagree, HANDOVER wins.**
-
-| | |
-|---|---|
-| objects recovered | **109 compile** (73.6% of 148 attempted), 25 quarantined by detectors, 14 fail |
-| collision pairs the game calls | 15, of which **14 are validated** against the shipped original on live inputs |
-| the one that is not | `IxCylinderCylinder` — measured wrong, 925 `dims_diff` in 24,111 real calls, and no detector holds it |
-| the engine ON recovered Karma | **runs** — all 108 objects substituted, plays a match, indistinguishable from stock (§7c) |
-| wasm32 | 109/109 compile, byte-identical exported symbol sets. **Nothing executed yet** |
-| armv7 | 109/109 compile, symbol sets identical to i386 — a real 32-bit-pointer port |
-| arm64 | 109/109 compile **and not trusted** — 920 pointer/int truncation diagnostics vs armv7's 23 (§6b) |
-| the solver | arithmetic proven bit-exact over 900 steps; its **control flow does not compile**, blocked on frames the DWARF does not describe (§11 item 2) |
+**Numbers live in two places and this is not one of them.**
+[`STATUS-EXEC.md`](STATUS-EXEC.md) has the current counts in plain language;
+[`HANDOVER.md`](HANDOVER.md) §2 has them with the engineering detail, and
+[`proven.txt`](proven.txt) has the evidence behind each one. This section used to carry a
+third copy, which went stale between sessions and then had to be corrected in two files
+instead of one. Everything below is **historical narrative, kept for the reasoning**; its
+numbers are the numbers of the day each part was written.
 
 | milestone | |
 |---|---|
 | Milestone 1 — one object end to end | ✅ **done** (`McdPrimitives/IxBoxBox`) |
 | Milestone 2 — `MdtKea` C++/vtable spike | ✅ **done — no blocker** |
-| Milestone 3 — scale validation | ✅ **done** — 109 objects, seven gates, engine runs on them |
-| Milestone 4 — the grind (~2,100 functions) | 🔶 **collision done, solver blocked** — §11 item 2 |
-| Milestone 5 — wasm + Android bring-up | ⬜ — compiles, never executed. `HANDOVER-WEB.md` |
+| Milestone 3 — scale validation | ✅ **done** — the engine runs on the recovered set |
+| Milestone 4 — the grind | 🔶 **collision done, solver blocked** — HANDOVER §11 item 2 |
+| Milestone 5 — wasm + Android bring-up | ⬜ compiles, never executed. `HANDOVER-WEB.md` |
 
 ### Milestone 1 result
 

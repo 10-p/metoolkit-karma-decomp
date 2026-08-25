@@ -66,7 +66,7 @@ thirty finished ones. Judge by the "movement modules" row.
 | | size | |
 |---|---|---|
 | **An error class our PC tests cannot see** | **large / unknown** | exactly harmless on PC, changes about a third of results on web and Android. 3 fixed, 152 modules unexamined |
-| **One movement module still the original's** | small | out by about one rounding step; the last thing between us and using none of the original solver |
+| **One movement module still the original's** | small | five of its six functions now reproduce the original exactly; the sixth is located to two helper routines. The last thing between us and using none of the original solver |
 | **64-bit Android is wrong** — 2,436 known issues | medium | compiles and looks fine; it is not |
 | **Nothing has executed on web or Android** | medium | separate workstream |
 | Two small collision defects (~1 in 4,000, ~1 in 10,000) | small | both reproducible in seconds on a desk |
@@ -109,10 +109,19 @@ both ways: zero calls normally, fifty-one with the switch forced. The module sti
 right, but it was never the blocker we had it down as. **Reading the branch around a call,
 not just the call, is the lesson.**
 
-A caution on the run itself: the machine's headless renderer has started crashing at the
-first frame. **The unmodified game does exactly the same thing**, so it is the environment
-and not our code — but it means this week's runs show a match starting and ticking briefly
-rather than the five minutes of play we recorded last week.
+**Four five-minute matches, ours and the original's, on both settings, no crash on any of
+them.** That is the stability result. A caution on how it was obtained: the machine's
+headless renderer has started crashing at the first frame under two of its three modes.
+**The unmodified game does exactly the same thing**, so it is the environment and not our
+code, and switching to the third mode makes both run clean. Running the unmodified control
+before reading a crash as ours is the whole reason we know that.
+
+Finally, the last original movement module went from "wrong by an unknown amount somewhere"
+to "five of its six functions exactly right, and the sixth narrowed to two helper routines"
+— but only after we found that the tool meant to attribute a fault to a function **was not
+attributing anything at all**. It reported the same number for all six, including one that
+does no arithmetic and therefore could not have produced it. That is the kind of thing the
+working rule below is for.
 
 ---
 

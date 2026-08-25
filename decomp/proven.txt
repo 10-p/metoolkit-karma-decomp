@@ -1469,3 +1469,67 @@ MdtUtils              Bit-identical on scene_ragdoll with 4.113e+00 m of
 #    structural. And Cylinder x ConvexMesh reaches McdGjkCgIntersect 1,287 times
 #    with 0 structural -- an independent live confirmation of the warm-path
 #    result above, since the engine DOES call McdCacheHello.
+
+
+# --- 2026-08-25: IxCylinderTriList's RELEASE FIGURE DOES NOT REPLICATE --------
+#
+# Released 2026-08-24 on "test-simple-physics, 300 s, 71,417 calls of
+# McdCylinderTriangleListIntersect -- 0 ret_diff, 0 count_diff, 0 dims_diff,
+# 0 overrun". Three longer runs on the same map and the same build disagree:
+#
+#   configuration            calls     ret  count  dims   worst
+#   full harness, 300 s     92,834      0      0     1    2.98e-03
+#   full harness, 420 s    160,030      0      9     0    5.76e+00
+#   KD_ONLY, 420 s         153,391      0     37     1    6.68e-03
+#
+# THE HARNESS IS SOUND IN EXACTLY THE THIRD CONFIGURATION. SELFTEST with the
+# SAME KD_ONLY narrowing and the same length: 248,777 calls of the same
+# function, 100% bit-identical, 0 divergences of any kind, divergence file
+# EMPTY. So the 37 are the recovered code, not the measurement.
+#
+# The third row is the cleanest of the three, because KD_ONLY stops the other
+# seven pairs being run twice and so perturbs the match least -- and it is also
+# the worst. That ordering is the wrong way round for a harness artefact.
+#
+# WHAT THE DIVERGENCE IS. Off by ONE CONTACT, and nearly always in the same
+# direction -- the recovered code finds one MORE:
+#
+#   count 4/5   25 cases        (orig/recovered)
+#   count 3/4    9
+#   count 5/4    2
+#   count 3/5    1
+#
+# Everything else agrees closely. A representative case: three of the four
+# contacts identical to 1e-9 in position and normal, dims 515/515 and 513/513
+# matching on every contact, separations agreeing to 4e-8, worst positional
+# delta 1.3e-03. These are cylinders RESTING on level triangles at separations
+# of -3e-04, i.e. the shallow regime the game spends its time in, not deep
+# interpenetration.
+#
+# So this is a contact-GENERATION defect -- an extra contact that is not being
+# culled -- and not a tolerance flap on whether the bodies touch: ret_diff is 0
+# across all three runs and 406,000 calls.
+#
+# WHAT TO DO WITH THE RELEASE. Not withdrawn, and not left as it stands.
+# 37 in 153,391 is 2.4e-04. For scale, among objects that ARE released:
+#
+#   IxSphylPrimitives    1 structural in  74,921   1.3e-05
+#   IxCylinderTriList   37 count_diff  in 153,391  2.4e-04
+#   IxBoxBox             1 count_diff  in   1,299  7.7e-04
+#
+# It sits between two released objects and closer to IxBoxBox. Neither it nor
+# IxBoxBox meets HANDOVER.md 12 item 2 as literally written ("0 count_diff"),
+# which is worth saying out loud: the project's actual practice is "released
+# with the divergence ON THE LINE", and this is that line. What is corrected
+# here is the CLAIM -- the release said zero, and zero was a 300 s sample.
+#
+# THE GENERAL LESSON, and it is the one this project keeps re-learning: the
+# original release ran 71,417 calls and saw nothing. 153,391 calls of the same
+# function on the same map saw 37. A zero is a sample size, not a property,
+# until the run is long enough that the next run does not move it.
+#
+# Reproduce:
+#   KD_ONLY=CylinderTriangleList KD_LOGMAX=400 KD_RUNTIME=/tmp/kd_runtime \
+#   KD_BIN=.../ut2004-karma-pixo.bin KD_SHADOW_OUT=/tmp/x.csv \
+#   KD_SHADOW_DIVERGENCES=/tmp/x.txt ./test/run_map.sh test-simple-physics 420 "$URL"
+#   and the same with KD_SELFTEST=1 first, always.

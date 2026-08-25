@@ -13,11 +13,17 @@ Branch: **`karma/decompile`**. `main` is untouched. **Do not merge.**
 - **The collision layer drives a real match** — for the twelve pairs the census had seen.
   All twelve are recovered, measured against the shipped original on live inputs, and the
   engine has run on them with no shipped `.a` for those objects. §3, §7b, `proven.txt`.
-- **The census moved again on 2026-08-24 — three more pairs — and both cylinder pairs have
-  now been MEASURED.** `IxCylinderTriList` came out of quarantine clean: 71,417 real calls
-  and 200,000 synthetic pairs, 0 structural divergences, self-test clean. **`IxCylinderCylinder`
-  came back WRONG** — 925 `dims_diff` in 24,111 real calls — **and no detector holds it, so
-  it is in the build.** That is the sharper finding: the quarantine only catches what a
+- **A ZERO IS A SAMPLE SIZE, NOT A PROPERTY.** `IxCylinderTriList` was released on
+  2026-08-24 with "0 structural in 71,417 real calls". On 2026-08-25 the same function on
+  the same map, run longer, reads **37 `count_diff` in 153,391** — with a self-test over
+  248,777 calls in the identical configuration coming back 100% bit-identical, so it is the
+  code and not the harness. The divergence is off-by-one contacts on a cylinder RESTING on
+  level geometry, which is the regime the game lives in. `proven.txt`, and §3's table now
+  says so.
+- **`IxCylinderCylinder` is still unreleased, and its charge has shrunk to one thing.** Its
+  925/1,126 `dims_diff` is a field the engine does not read for this pair and the shipped
+  library does not reproduce either (§11 item 0). What is left is `count_diff`, and no
+  detector holds the object, so it is in the build. The quarantine only catches what a
   detector recognises. §3, `proven.txt`.
 - **The cylinder map ask is answered and withdrawn** — not by finding a map to ask for, but
   by parsing the assets (`tools/find_cylinder_geom.py`): 114 cylinder collision elements
@@ -258,7 +264,7 @@ zero for that too. §4a's rule, applied to a search instead of a test.
 | Sphyl × Sphere | 218,426 | `McdSphylSphereIntersect` | `IxSphylPrimitives` | ✅ |
 | Box × Box | 150,146 | `McdBoxBoxIntersect` | `IxBoxBox` | ✅ released, 1-in-500k §8 |
 | Sphyl × ConvexMesh | 62,698 | `McdSphylConvexMeshIntersect` | `IxConvexPrimitives` | ✅ |
-| **Cylinder × TriangleList** | **71,417** | `McdCylinderTriangleListIntersect` | `IxCylinderTriList` | ✅ **RELEASED 2026-08-24** — 71,417 real + 200k synth, 0 structural |
+| **Cylinder × TriangleList** | **160,030** | `McdCylinderTriangleListIntersect` | `IxCylinderTriList` | ⚠ released 2026-08-24 on **0 structural in 71,417 — and that figure does not replicate.** 37 `count_diff` in 153,391, self-test clean on 248,777. `proven.txt` |
 | ConvexMesh × TriangleList | 49,064 | `McdConvexMeshTriangleListIntersect` | `IxConvexTriList` | ✅ released 2026-08-23 |
 | **Cylinder × Cylinder** | **24,111** | `McdCylinderCylinderIntersect` | `IxCylinderCylinder` | ⛔ **MEASURED WRONG — 925 dims_diff in 24,111 real calls, and NOTHING HOLDS IT** |
 | **Cylinder × ConvexMesh** | **244** | `McdGjkCgIntersect` | `McdGjk` | ✅ already released; a fifth pair off the never-called list |

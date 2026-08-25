@@ -767,6 +767,63 @@ def extern_var_types(include_dir):
     return types
 
 
+def api_member_param_types(include_dir):
+    """{(struct, member): first parameter's base type} for function-pointer
+    members of the API structs the public headers declare.
+
+    `MePoolAPI.destroy` takes `MePool *`; `MeMemoryAPI.destroy` takes `void *`.
+    That is the only thing that tells the two apart when a relocation's addend
+    lands on BOTH — `MePoolAPI+4` and `MeMemoryAPI+12` are the same address in
+    Ghidra's invented memory map, and `_resolve_external` has to decline. It is
+    read from the header, not inferred."""
+    out = {}
+    if not include_dir or not os.path.isdir(include_dir):
+        return out
+    member = re.compile(
+        r'\(\s*(?:MEAPI\s*)?\*\s*(?P<name>\w+)\s*\)\s*\(\s*'
+        r'(?:const\s+)?(?P<type>\w+)\s*(?P<star>\*?)')
+    # `MeMemoryAPIStruct`'s members are TYPEDEF'D function pointers rather than
+    # inline ones — `MeMemoryFuncPtrDestroy destroy;` — so the inline pattern
+    # finds nothing for it and the whole rule declines on the one struct the
+    # ambiguity is actually about. Resolve the typedefs first.
+    fnptr = {}
+    for root, _dirs, files in os.walk(include_dir):
+        for f in sorted(files):
+            if not f.endswith('.h'):
+                continue
+            try:
+                txt = open(os.path.join(root, f), errors='ignore').read()
+            except OSError:
+                continue
+            for mm in re.finditer(r'typedef\s+[\w \*]+?\(\s*(?:MEAPI\s*)?\*\s*'
+                                  r'(?P<td>\w+)\s*\)\s*\(\s*(?:const\s+)?'
+                                  r'(?P<type>\w+)', txt):
+                fnptr.setdefault(mm.group('td'), mm.group('type'))
+    for root, _dirs, files in os.walk(include_dir):
+        for f in sorted(files):
+            if not f.endswith('.h'):
+                continue
+            try:
+                txt = open(os.path.join(root, f), errors='ignore').read()
+            except OSError:
+                continue
+            for m in re.finditer(r'(?:typedef\s+)?struct\s+(\w+)\s*\{', txt):
+                start = m.end()
+                depth, i = 1, start
+                while i < len(txt) and depth:
+                    depth += (txt[i] == '{') - (txt[i] == '}')
+                    i += 1
+                body = txt[start:i]
+                for mm in member.finditer(body):
+                    out.setdefault((m.group(1), mm.group('name')),
+                                   mm.group('type'))
+                for mm in re.finditer(r'(?m)^\s*(\w+)\s+(\w+)\s*;', body):
+                    if mm.group(1) in fnptr:
+                        out.setdefault((m.group(1), mm.group(2)),
+                                       fnptr[mm.group(1)])
+    return out
+
+
 DATA_REF = re.compile(r'(?<![\w])DAT_([0-9a-f]{8})\b')
 
 
@@ -3740,6 +3797,97 @@ def _split_definitions(text):
     return parts
 
 
+def _resolve_external_per_site(region, ghidra_name, named, ctx, call):
+    """One Ghidra name, two API slots — decide each CALL SITE by its argument.
+
+    `McdTerm` calls `MePoolAPI.destroy(MePool *)` twice and
+    `MeMemoryAPI.destroy(void *)` four times, and Ghidra spells both
+    `_McdGeometryGetReferenceCount` because `MePoolAPI+4` and `MeMemoryAPI+12`
+    are the same address in its invented memory map. `relocation_targets`
+    correctly offers BOTH candidates and `_resolve_external` correctly declines,
+    which left thirteen symbols of the drop-in gap (§3c) on one ambiguity.
+
+    The argument settles it, and both halves of the comparison are READ:
+
+      * the slot's first parameter type comes from the public header —
+        `MePoolAPI.destroy` takes `MePool`, `MeMemoryAPI.destroy` takes `void`;
+      * the argument's type comes from the object's own DWARF: `&frame->cachePool`
+        is a `MePool *` because `cachePool` is an `MePool` member of the struct
+        `frame` points at.
+
+    A site whose argument this cannot type, or that matches neither candidate
+    and has no `void`-taking fallback, is left alone — and leaving ONE site
+    alone leaves the whole object in review, which is the right outcome: half a
+    resolution is not a resolution."""
+    params = ctx.api_params
+    if not params:
+        return None
+    sig = signature_of(region)
+    dies = dwarf_structs.parse(ctx.obj) if ctx.obj else {}
+    want = {}
+    for sym, _addend, member in named:
+        typ = ctx.extern_types.get(sym)
+        p = params.get((typ, member)) or params.get(('_' + str(typ), member))
+        if p is None:
+            return None                    # cannot type one of the candidates
+        want[p] = (sym, member)
+
+    out, last, n = [], 0, 0
+    for m in call.finditer(region):
+        end = _match_bracket(region, m.end() - 1)
+        if end is None:
+            return None
+        arg = _split_args(region[m.end():end - 1])
+        arg = arg[0].strip() if arg else ''
+        t = _arg_base_type(arg, region, sig, dies)
+        pick = want.get(t) or (want.get('void') if t else None)
+        if pick is None:
+            return None                    # unresolved site; leave the object
+        out.append(region[last:m.start()])
+        out.append('(%s.%s)(' % pick)
+        # Resume just after the call's OPENING paren. Resuming at the closing
+        # one drops the argument, and gcc then says `too few arguments`, the
+        # error count goes up, and the repair loop reverts the edit — so the
+        # rule reads as if it declined.
+        last = m.end()
+        n += 1
+    if not n:
+        return None
+    out.append(region[last:])
+    new = ''.join(out)
+    # Any REMAINING bare reference is a read of the slot, not a call, and this
+    # cannot say which slot it is. Refuse rather than guess.
+    if re.search(r'(?<![\w])' + re.escape(ghidra_name) + r'\b', new):
+        return None
+    return new
+
+
+def _arg_base_type(arg, region, sig, dies):
+    """`MePool` for `&frame->cachePool`, `void` for a plain `void *`. None if
+    this cannot say."""
+    a = arg.strip()
+    if a.startswith('&'):
+        m = re.fullmatch(r'&\s*(\w+)\s*->\s*(\w+)', a)
+        if not m:
+            return None
+        # `McdFrameworkID frame` is a POINTER typedef with no `*`, so
+        # _declared_pointee alone returns None and every `&frame->pool` site
+        # went unresolved — which left the whole object in review even though
+        # five of its eight sites had typed cleanly.
+        owner = (_declared_pointee(region, sig, m.group(1))
+                 or _declared_type_name(region, sig, m.group(1)))
+        if owner:
+            owner = _dwarf_struct_of_typedef(dies, owner)
+        got = _dwarf_member(dies, owner, m.group(2)) if owner else None
+        if not got:
+            return None
+        # `MePool cachePool` -> MePool; a pointer member is not this shape.
+        decl = got[1].replace('struct ', '').strip()
+        m2 = re.match(r'^(\w+)\s+\w+$', decl)
+        return m2.group(1) if m2 else None
+    return 'void'
+
+
 def _resolve_external(region, ghidra_name, candidates, ctx):
     # Choose between candidates on evidence, never on preference. A base symbol
     # the public headers declare as a struct WITH a member at this exact offset
@@ -3763,7 +3911,7 @@ def _resolve_external(region, ghidra_name, candidates, ctx):
         return re.sub(r'(?<![\w])' + re.escape(ghidra_name) + r'\b',
                       f'{sym}.{member}', region)
     if named:
-        return None                        # still ambiguous; a human should look
+        return _resolve_external_per_site(region, ghidra_name, named, ctx, call)
     if call.search(region):
         return None                        # a call with no prototype to give it
     zero = [s for s, a in sorted(candidates) if a == 0]
@@ -4535,6 +4683,7 @@ class RepairContext:
         self.fieldmap = fieldmap or {}
         self.externals = relocation_targets(obj, per_function=True) if obj else {}
         self.extern_types = extern_var_types(include_dir)
+        self.api_params = api_member_param_types(include_dir)
         # {ELF symbol: the C identifier this unit defines it as} — read from the
         # prelude and exports this unit is about to emit, keyed on the asm label.
         self.declared = declared

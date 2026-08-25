@@ -2588,3 +2588,47 @@ keaLCP_new            RELEASED 2026-08-25 (fifth session). Bit-identical on all 
 #
 # THE LESSON IS §7c'S AND IT NEEDS SAYING AGAIN: for anything on the `.ka` path,
 # the offline gates are not evidence. Run the engine.
+
+# --- 2026-08-25 (fifth session): McdFrame — one name, two API slots ----------
+#
+# 13 symbols of the drop-in gap stood on a single ambiguity. `McdTerm` calls
+# `MePoolAPI.destroy(MePool *)` twice and `MeMemoryAPI.destroy(void *)` four
+# times, and Ghidra spells BOTH `_McdGeometryGetReferenceCount`, because
+# `MePoolAPI+4` and `MeMemoryAPI+12` are the same address in its invented memory
+# map. `relocation_targets` correctly offered both candidates and
+# `_resolve_external` correctly declined — a tie it had no way to break.
+#
+# THE ARGUMENT BREAKS IT, and both halves of the comparison are READ:
+#
+#   the slot's first parameter type   from the public header. MePool.h declares
+#                                     `void (*destroy)(MePool *)`; MeMemory.h
+#                                     declares destroy through a TYPEDEF'D
+#                                     function pointer, which the first version
+#                                     of the header reader could not see — so it
+#                                     found nothing for the one struct the
+#                                     ambiguity is about, and declined
+#   the argument's type               from the object's own DWARF.
+#                                     `&frame->cachePool` is a `MePool *`
+#                                     because `cachePool` is a `MePool` member
+#                                     of what `frame` points at
+#
+# Result: pools go to MePoolAPI.destroy, memory blocks to MeMemoryAPI.destroy,
+# and the object compiles. A site the typer cannot resolve leaves the WHOLE
+# object in review — half a resolution is not a resolution.
+#
+# TWO SELF-INFLICTED DECLINES ON THE WAY, both found by calling the rule
+# directly on the offending line rather than reasoning about it:
+#
+#   * `McdFrameworkID frame` is a POINTER TYPEDEF with no `*`, so
+#     `_declared_pointee` returned None and every `&frame->pool` site went
+#     unresolved — five of eight sites typed cleanly and the object still stayed
+#     in review;
+#   * the rewrite resumed at the call's CLOSING paren instead of its opening
+#     one, so it dropped the argument. gcc then said `too few arguments`, the
+#     error count went UP, and the repair loop reverted the edit — which from
+#     the outside is indistinguishable from a rule that declined.
+#
+#   122 objects · 122/122 clean on three scenes, all bit-identical on chain
+#   difftest at the documented baseline · frame bounds 0 · bindings 0 errors
+#   engine, test-karma-1, 200 s: ran to the timeout, 0 SIGSEGV, START MATCH
+#   drop-in gap 21 -> 20 members, 161 -> 148 symbols

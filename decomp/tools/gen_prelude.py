@@ -716,7 +716,20 @@ def main():
                 # declaration is already parsed and unaffected.
                 shadowed = cname in declared
                 emit_name = ('kd_ext_' + cname) if shadowed else cname
-                if proto:
+                if name.startswith('_ZTV'):
+                    # A vtable is DATA, not a function. The generic path below
+                    # finds no prototype for `vtable for X` and emits a stub
+                    # declaring it `extern int f()`, which is the one shape that
+                    # makes the arithmetic the ABI describes — the ADDRESS POINT
+                    # at +8, two words past the offset-to-top and typeinfo —
+                    # impossible to write. Nothing here is inferred from the
+                    # bytes: the Itanium ABI fixes the shape of every vtable,
+                    # and the demangling says this symbol is one.
+                    w('/* an Itanium-ABI vtable: pointer-sized words, address'
+                      ' point at +8 */')
+                    w(f'extern void *{re.sub(r"[^A-Za-z0-9_]", "_", cname)}[]')
+                    w(f'    KD_MANGLED("{name}");')
+                elif proto:
                     decl = re.sub(r'\b' + re.escape(short) + r'\s*\(',
                                   emit_name + '(', proto[:-1].strip(), count=1)
                     w(f'extern {decl}')

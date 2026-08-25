@@ -26,6 +26,9 @@ import struct
 import subprocess
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import vtable_slots
+
 BANNER = re.compile(r'/\* ==== (\S+) ==== \*/')
 
 
@@ -1976,6 +1979,331 @@ MISLABELLED = re.compile(r'\b_(\w+)\b')
 DEF_BANNER = re.compile(r'^/\* ---- (\S+) \(', re.M)
 
 
+# `_vanillaQMatrix = (undefined4 *)&__gxx_personality_v0;`
+# `_vanillaFunctions = _ZN12keaFunctions8initPoolEPvi;`
+VPTR_STORE = re.compile(
+    r'^([ \t]*)_(\w+)[ \t]*=[ \t]*'
+    r'(?:\([ \t]*([A-Za-z_]\w*)[ \t]*\*[ \t]*\)[ \t]*)?'
+    r'&?(\w+)[ \t]*;[ \t]*$', re.M)
+
+# The identifier some other part of the pipeline declared for a mangled symbol.
+# gen_prelude writes `extern void *vtable_for_X[] KD_MANGLED("_ZTVN…")`,
+# gen_vtables `extern const void *kd_ext__ZTVN…[] __asm__("_ZTVN…")`. Either is
+# a usable base; a declaration that is NOT an array is not, which is why the
+# `[]` is part of the pattern rather than optional.
+def _declared_array_for(text, sym):
+    m = re.search(r'\b(\w+)[ \t]*\[[ \t]*\][ \t\n]*'
+                  r'(?:KD_MANGLED|__asm__)\([ \t]*"' + re.escape(sym) + r'"[ \t]*\)',
+                  text)
+    return m.group(1) if m else None
+
+
+# The identifier a declaration introduces is the last one directly followed by
+# `(` or `[` before the asm label — the declarator, in every shape this pipeline
+# emits: `extern void f(...) KD_MANGLED(…)`, `void __thiscall kd_f (…) …`,
+# `extern void *v[] …`, `float kd_x[3] …`.
+_DECLARATOR = re.compile(r'\b([A-Za-z_]\w*)[ \t\n]*[(\[]')
+_ASM_LABEL = re.compile(r'(?:KD_MANGLED|__asm__)\([ \t]*"([^"]+)"[ \t]*\)')
+
+
+def declared_under(declared):
+    """{ELF symbol: the C identifier this unit declares it as}."""
+    out = {}
+    for stmt in declared.split(';'):
+        m = _ASM_LABEL.search(stmt)
+        if not m:
+            continue
+        head = stmt[:m.start()]
+        idents = [d for d in _DECLARATOR.findall(head)
+                  if d not in ('KD_MANGLED', '__asm__')]
+        if idents and idents[-1] != m.group(1):
+            out[m.group(1)] = idents[-1]
+    return out
+
+
+def resolve_mangled_call_names(text, declared):
+    """`_ZN12keaLCPSolver8setUpperEPf(x)` is a call to something already declared.
+
+    Ghidra spells an intra-class or imported C++ call site either with the bare
+    method name or with the MANGLED symbol, and which one it picks is not under
+    our control. `cxx_names_to_c` flattens `Class::method` to `Class__method`
+    and gen_prelude declares imports under the same flattened spelling, so a
+    call site Ghidra spelled mangled matches neither and comes out as an
+    implicit declaration of a function that does not exist.
+
+    This is a DEBT `out10` created rather than a defect it exposed. Before it,
+    ParseKarmaHeaders had no prototype for any mangled symbol and Ghidra
+    arity-guessed those calls from the call site; giving every C++ function a
+    prototype under its linkage name (§5b) fixed the arguments and moved the
+    spelling. `keaLCP_new` went from 10 errors to 11 in that trade, and it was
+    still worth it — a call with the right arguments and the wrong spelling
+    fails to COMPILE, while the other way round it silently linked.
+
+    The map is READ from the declarations this unit is about to emit — its own
+    forward declarations and its prelude — keyed on the asm label, which is the
+    ELF symbol and therefore the only thing the two spellings share. Nothing is
+    demangled and nothing is matched by name. Scoped to `_Z…` symbols: an
+    ordinary C name is declared under its own spelling, and rewriting those
+    would collide with the renaming passes that already own them."""
+    names = {s: c for s, c in declared_under(declared).items()
+             if s.startswith('_Z')}
+    if not names:
+        return text, 0
+    pat = re.compile(r'(?<![\w.>])(' + '|'.join(re.escape(s) for s in
+                                                sorted(names, key=len, reverse=True))
+                     + r')\b')
+    return pat.subn(lambda m: names[m.group(1)], text)
+
+
+_vptr_store_cache = {}
+
+
+def _vptr_stores_cached(obj, func_symbol):
+    key = (obj, func_symbol)
+    if key not in _vptr_store_cache:
+        try:
+            _vptr_store_cache[key] = vtable_slots.vptr_stores(obj, func_symbol)
+        except Exception:
+            _vptr_store_cache[key] = {}
+    return _vptr_store_cache[key]
+
+
+def _demangled_param_count(mangled):
+    """How many parameters the demangling of `mangled` declares, or None.
+
+    `this` is NOT counted — the caller adds it, because every slot in this
+    corpus is a non-static member function and the call site passes the object
+    as its first argument."""
+    dem = subprocess.run(['c++filt', mangled], capture_output=True,
+                         text=True).stdout.strip()
+    if not dem or dem == mangled:
+        return None
+    dem = re.sub(r'\s*const\s*$', '', dem)
+    if not dem.endswith(')'):
+        return None
+    open_at = _match_bracket_back(dem, len(dem) - 1)
+    if open_at is None:
+        return None
+    inner = dem[open_at + 1:-1].strip()
+    if not inner or inner == 'void':
+        return 0
+    return len(_split_args(inner))
+
+
+def fix_vptr_store(obj, text, declared=None, locals_table=None):
+    """`_vanillaQMatrix = &__gxx_personality_v0;` is `vanillaQMatrix.vptr = &vtable[2]`.
+
+    A function that constructs a polymorphic class as a LOCAL stores the vtable
+    ADDRESS POINT into its first word, and Ghidra loses that: the store becomes
+    an assignment to an undeclared `_<local>`, and the right-hand side is a
+    neighbour's EXTERNAL slot (the addend collision of relocation_targets), so
+    `keaLCPSolver` reads `&__gxx_personality_v0` where the object file says
+    `_ZTV26keaMatrix_pcSparse_vanilla + 8`. Every virtual call in the function
+    then goes through the undeclared name and the object does not compile.
+
+    THE REWRITE. `_<local>` is the local's first word, so every occurrence
+    becomes `(*(E **)&<local>)` and the store's right-hand side becomes the
+    vtable's address point. Nothing about the frame is reconstructed — the
+    storage is the local Ghidra already declared, and the recovered function
+    only has to be self-consistent with itself.
+
+    WHAT MAKES IT BELIEVABLE, because a wrong slot calls the wrong function and
+    still compiles. Six checks, each READ from the object file:
+
+      1. `vtable_slots.vptr_stores` disassembles the SHIPPED function and reads
+         which class's address point it stores, and at which stack offset. That
+         is the fact the rewrite rests on; see its docstring for why the call
+         sites are the wrong thing to verify against.
+      2. the relocation at the store must name `_ZTV<class>` with addend
+         exactly 8 — the Itanium address point. A secondary vtable of a
+         multiply-inherited class would have a different addend and is refused.
+      3. the local's DECLARED type must be that same class.
+      4. the class must have exactly one such local in the function and the
+         function exactly one store of it, so there is nothing to choose
+         between.
+      5. `<object>.locals` — Ghidra's own frame assignment, not the offset
+         encoded in a name — must put that local at the offset the machine code
+         stores to. Ghidra's offsets are relative to the entry ESP and the
+         disassembly's to EBP, which differ by the saved EBP: +4.
+      6. every offset the call sites use must be a real slot in that class's
+         vtable, read from the defining object's relocations, and the site's
+         argument count must equal that slot's parameter count plus `this`.
+
+    Check 6 is what settles the one thing NOT read from the object: the scale.
+    Ghidra types `_vanillaQMatrix` as `undefined4 *` in `makeXandW`, so `[2]` is
+    the third WORD, and leaves it byte-like in `PrincipalSubmatrix`, so `+ 0xc`
+    is the fourth. Read the second at word scale and the offsets are 48 and 64
+    in a table whose last slot is 32; read the first at byte scale and `[2]` is
+    not a multiple of four. Either error is refused rather than compiled.
+
+    Corpus-wide this fires on two objects — the only two that import a vtable —
+    and on four functions between them.
+
+    It is a PRE-PASS and not a REPAIR_RULES entry on purpose. Nothing about it
+    is driven by a diagnostic: the evidence is the object's relocations and the
+    shipped disassembly, so there is no reason to wait for GCC to complain, and
+    the `undeclared` pattern is already spoken for by fix_mislabelled_external —
+    a second entry with that pattern would be dead code (see the note above
+    REPAIR_RULES)."""
+    if not obj:
+        return text, 0
+    corpus = os.path.dirname(os.path.abspath(obj))
+    declared = declared if declared is not None else text
+    locals_table = locals_table or {}
+
+    out, n = [], 0
+    for fn, region in _split_definitions(text):
+        if not fn:
+            out.append(region)
+            continue
+        # A function may construct more than one polymorphic local —
+        # MdtKeaAddConstraintForces builds both a keaFunctions_Vanilla and a
+        # keaMatrix_pcSparse_vanilla. Each store is judged on its own evidence,
+        # and one that cannot be resolved leaves its own error standing rather
+        # than costing the others their repair.
+        for store in VPTR_STORE.finditer(region):
+            new = _repair_vptr_store(fn, region, store.groups(), declared, obj,
+                                     corpus, locals_table)
+            if new is not None:
+                region, n = new, n + 1
+        out.append(region)
+    return ''.join(out), n
+
+
+def _repair_vptr_store(fn, region, groups, declared, obj, corpus, locals_table):
+    _indent, name, cast, label = groups
+
+    # (3) the local, and (4) it must be the only one of its type here.
+    decls = re.findall(r'^[ \t]*([A-Za-z_]\w*)[ \t]+(\w+)[ \t]*;[ \t]*$',
+                       region, re.M)
+    ltype = next((t for t, v in decls if v == name), None)
+    if not ltype or sum(1 for t, _v in decls if t == ltype) != 1:
+        return None
+
+    # (2) the relocation under the store, resolved in THIS function.
+    per_fn = relocation_targets(obj, per_function=True)
+    cands = per_fn.get(fn, {}).get('_' + label)
+    if not cands or len(cands) != 1:
+        return None
+    sym, addend = next(iter(cands))
+    if addend != 8 or not sym.startswith('_ZTV'):
+        return None
+    if vtable_slots.mangle_class(ltype) != sym[len('_ZTV'):]:
+        return None
+
+    # (1) what the shipped machine code stores, and where.
+    m = re.search(r'asm label "(\S+)"', region)
+    if not m:
+        return None
+    dem = subprocess.run(['c++filt', m.group(1)], capture_output=True,
+                         text=True).stdout.strip()
+    st = _vptr_stores_cached(obj, dem or m.group(1))
+    offsets = st.get(ltype)
+    if not offsets or len(offsets) != 1:
+        return None
+
+    # (5) Ghidra's frame assignment for that local must be the same slot.
+    ghidra_local = locals_table.get(fn, {}).get(name)
+    if ghidra_local is not None and ghidra_local[0] + 4 != offsets[0]:
+        return None
+
+    table = vtable_slots.slot_table(corpus, ltype)
+    if not table:
+        return None
+
+    etype = cast or 'char'
+    esize = _FIXED_WIDTH.get(etype)
+    if not esize:
+        return None
+
+    alias = f'(*({etype} **)&{name})'
+    slot0 = f'(*(code **)({alias}))'
+
+    # (6) every use is a dispatch through a real slot, with the right arity.
+    uses = [(re.compile(r'(?<![\w])_' + re.escape(name) + r'\b'), esize, alias),
+            (re.compile(r'(?<![\w])_' + re.escape(label) + r'\b'), None, slot0)]
+    sm = re.search(r'^([ \t]*)_' + re.escape(name) + r'[ \t]*=[^;\n]*;[ \t]*$',
+                   region, re.M)
+    if not sm:
+        return None
+    store_at = sm.start() + len(sm.group(1))
+    skip = set()
+    for pat, scale, _sub in uses:
+        for u in pat.finditer(region):
+            if u.start() == store_at:
+                continue                # the store's own left-hand side
+            site = _vptr_call_site(region, u.end(), scale)
+            if site is None:
+                return None
+            off, nargs = site
+            if off not in table:
+                return None
+            want = _demangled_param_count(table[off])
+            if want is None:
+                return None
+            if nargs == want + 1:
+                continue
+            # Ghidra dropped this call's arguments — a separate defect, and not
+            # one this rule may paper over: rewriting the site would compile
+            # into a call to the right function with the wrong stack, which is
+            # the one outcome worse than not compiling. Leave the site, and its
+            # diagnostic, exactly as they are. An argument count that is wrong
+            # in any OTHER way is not "dropped", it is "misread", and then the
+            # slot derivation itself is suspect and the whole store declines.
+            if nargs:
+                return None
+            skip.add(u.start())
+
+    vname = _declared_array_for(declared, sym)
+    if not vname:
+        return None
+
+    new = region
+    for pat, _scale, sub in uses:
+        new = pat.sub(lambda m, s=sub: m.group(0) if m.start() in skip else s, new)
+    store = re.compile(r'^([ \t]*)' + re.escape(alias) + r'[ \t]*=[^;\n]*;[ \t]*$',
+                       re.M)
+    new, k = store.subn(
+        lambda mm: f'{mm.group(1)}{alias} = ({etype} *)((char *)&{vname}[0] + 8);',
+        new)
+    return new if k == 1 else None
+
+
+def _vptr_call_site(region, pos, scale):
+    """(slot byte offset, argument count) for the dispatch starting at `pos`.
+
+    `pos` is just past the mislabelled name. Four shapes reach here and they
+    differ only in how the offset is spelled:
+
+        (*(code *)*_V)(...)             +0, Ghidra's word-typed base
+        (*(code *)_V[2])(...)           word 2
+        (**(code **)(_V + 0xc))(...)    byte 0xc
+        (**(code **)_V)(...)            +0
+        (*_L)(...)                      +0, the slot's VALUE rather than the base
+
+    Anything else — a plain read, a store, an address taken — returns None, and
+    the caller then declines the whole function. That is deliberate: a use this
+    does not recognise is a use whose offset it cannot derive either."""
+    off = 0
+    if scale is not None:
+        m = re.match(r'[ \t]*\[[ \t]*(0x[0-9a-f]+|\d+)[ \t]*\]', region[pos:])
+        if not m:
+            m = re.match(r'[ \t]*\+[ \t]*(0x[0-9a-f]+|\d+)\b', region[pos:])
+        if m:
+            off = int(m.group(1), 0) * scale
+            pos += m.end()
+    j = pos
+    while j < len(region) and region[j] in ') \t\n':
+        j += 1
+    if j >= len(region) or region[j] != '(':
+        return None
+    end = _match_bracket(region, j)
+    if end is None:
+        return None
+    args = [a for a in _split_args(region[j + 1:end - 1]) if a.strip()]
+    return off, len(args)
+
+
 def fix_mislabelled_external(text, diag, ctx):
     """`(*_McdGeometryDeinit)(0x20, 0x10)` is `MeMemoryAPI.createAligned(...)`.
 
@@ -2972,6 +3300,18 @@ def main():
 
     body_text = '\n'.join(defs)
     body_text, n_extbase = fix_external_base_arithmetic(args.object, body_text)
+    # The vtable a virtual call goes through is declared by the PRELUDE, so the
+    # text this reads for the declaration is not the text it rewrites. Same for
+    # the mangled call sites below, which resolve against this unit's own
+    # forward declarations as well.
+    _declared = ''
+    for _extra in (args.prelude, args.vtables):
+        if _extra and os.path.exists(_extra):
+            _declared += open(_extra, errors='ignore').read()
+    body_text, n_vptr = fix_vptr_store(args.object, body_text, _declared,
+                                       read_ghidra_locals(args.input))
+    body_text, n_mangled = resolve_mangled_call_names(
+        body_text, _declared + '\n' + '\n'.join(decls))
     data_block, n_data = materialise_data_refs(args.object, body_text)
     # `kd_aggN` is the opaque stand-in gen_protos.py uses for an aggregate passed
     # BY VALUE. Once Ghidra has the signature it puts that type in the BODY too,
@@ -3060,6 +3400,10 @@ def main():
         print(f'  {n_ptr} pointer slot(s) resolved from Ghidra addresses')
     if n_extbase:
         print(f'  {n_extbase} external base(s) re-resolved to byte arithmetic')
+    if n_vptr:
+        print(f'  {n_vptr} vptr store(s) resolved to a vtable address point')
+    if n_mangled:
+        print(f'  {n_mangled} mangled call site(s) resolved to a declared name')
     if n_rel:
         print(f'  {n_rel} relocated data block(s) rebuilt with their pointers')
     if args.cflag:

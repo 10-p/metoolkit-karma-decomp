@@ -129,10 +129,10 @@ working rule below is for.
 
 Every claim above traces to a recorded measurement that can be re-run. The working rule is
 that a passing test is not believed until we have shown it could have failed, which has
-repeatedly been the difference between real and imaginary progress. Twice this week that
-rule caught our own tests: one check could not have matched anything it was looking for, and
-one deliberately-planted fault went undetected because the test never exercised the code it
-was planted in.
+repeatedly been the difference between real and imaginary progress. Three times this week
+that rule caught our own tests: one check could not have matched anything it was looking
+for; one deliberately-planted fault went undetected because the test never exercised the
+code it was planted in; and one attribution tool turned out to be attributing nothing.
 
 **Both halves are now rebuilt and proven on PC, and the game runs on them. What we cannot
 yet claim is that they behave the same way on web and Android — and this week we found a

@@ -329,8 +329,8 @@ def main():
                     # read and the object is held back for nothing. McdGjk was.
                     if re.match(r'\s*(?:const\s+|struct\s+|unsigned\s+|signed\s+)*'
                                 r'[A-Za-z_]\w*\s*[\*\(\s]*' + word
-                                + r'\s*[\)\[\]\w\s\*]*;\s*$', line):
-                        continue
+                                + r'\s*[\)\[\]\w\s\*]*(?:=[^=][^;]*)?;\s*$', line):
+                        continue      # declaration, with or without an initialiser
                     if re.match(r'\s*' + word + r'\s*=[^=]', line):
                         break                     # assigned first; dataflow intact
                     m = re.match(r'\s*(\w+)\s*=\s*' + word + r'\s*;\s*$', line)

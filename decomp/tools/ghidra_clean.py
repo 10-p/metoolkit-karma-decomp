@@ -1581,6 +1581,9 @@ def signature_of(body):
 # ---------------------------------------------------------------------------
 
 GCC_DIAG = re.compile(r'^(?P<file>.+?):(?P<line>\d+):(?P<col>\d+):\s+error:\s+(?P<msg>.*)$')
+# `    inlined from ‘kd_MeOpenRaw’ at /tmp/…/MeSimpleFile_linux.c:76:11:`
+INLINED_FROM = re.compile(
+    r'^\s+inlined from .+? at (?P<file>.+?):(?P<line>\d+):(?P<col>\d+):?\s*$')
 
 # GCC quotes identifiers with typographic quotes under a UTF-8 locale and ASCII
 # ones otherwise; match either so the rules do not depend on the environment.
@@ -1597,10 +1600,28 @@ def compile_diags(path, cc, cflags):
                        capture_output=True, text=True)
     here = os.path.abspath(path)
     diags = []
+    inlined = None
     for line in r.stderr.splitlines():
+        # `inlined from ‘kd_MeOpenRaw’ at <our file>:76:11:` — GCC reporting a
+        # diagnostic inside a header that is ABOUT one of our lines. glibc's
+        # fortified `open` is the case: the error is raised at fcntl2.h:46 and
+        # the only thing wrong is at MeSimpleFile_linux.c:76. Without this the
+        # diagnostic is dropped by the header rule below and no repair can ever
+        # see it — the object stayed in the FAIL bucket for the project's whole
+        # life on one such line.
+        m = INLINED_FROM.match(line)
+        if m:
+            if os.path.abspath(m.group('file')) == here:
+                inlined = (int(m.group('line')), int(m.group('col')))
+            continue
         m = GCC_DIAG.match(line)
-        if m and os.path.abspath(m.group('file')) == here:
+        if not m:
+            continue
+        if os.path.abspath(m.group('file')) == here:
             diags.append((int(m.group('line')), int(m.group('col')), m.group('msg')))
+        elif inlined:
+            diags.append((inlined[0], inlined[1], m.group('msg')))
+        inlined = None
     return diags
 
 
@@ -2028,6 +2049,44 @@ def declared_under(declared):
         if idents and idents[-1] != m.group(1):
             out[m.group(1)] = idents[-1]
     return out
+
+
+UNMODELLED_DECL = re.compile(
+    r'(?m)^(?P<ind>[ \t]+)(?P<decl>[A-Za-z_][\w ]*\**[ \t]'
+    r'(?P<name>(?:unaff_|in_)[A-Z]\w*))[ \t]*;[ \t]*$')
+
+
+def initialise_unmodelled_locals(text):
+    r"""Give `unaff_ESI` and `in_EDX` a defined initial value.
+
+    These are Ghidra's names for a callee-saved register or an incoming slot it
+    could not account for, and on some paths NOTHING assigns them before they
+    are read. `MeOpenRaw` is the case:
+
+        if (mode == kMeOpenModeWRONLY) { unaff_EBX = 0x241; unaff_ESI = 0x1a0; }
+        else { … unaff_EBX = 0; }                 /* unaff_ESI untouched */
+        iVar1 = open(filename, unaff_EBX, unaff_ESI);
+
+    and the READ-ONLY path is the one the asset loader takes constantly.
+
+    THE RECOVERY IS FAITHFUL AND THE C IS NOT. The shipped code does the same
+    thing — `%esi` is genuinely live-in there, and `open` ignores the mode
+    argument unless O_CREAT is set, so the value never mattered. But an
+    uninitialised read is UNDEFINED BEHAVIOUR in C, and a compiler is entitled
+    to conclude the path is unreachable and delete it. There was no information
+    in the register to preserve, so zero costs nothing and removes the licence.
+
+    Deliberately NOT applied to `extraout_*`: recover.py's `live_unmodelled`
+    detector decides on reads-before-assignment in the SOURCE, so initialising
+    those would switch the detector off for exactly the objects it is holding.
+    `unaff_*`/`in_*` are named for a register the callee never wrote, which is a
+    different claim from "a value a call returned"."""
+    out, n = [], 0
+    for m in UNMODELLED_DECL.finditer(text):
+        pass
+    text, n = UNMODELLED_DECL.subn(
+        lambda m: '%s%s = 0;' % (m.group('ind'), m.group('decl')), text)
+    return text, n
 
 
 def fix_undeclared_underscore_local(text):
@@ -3551,6 +3610,50 @@ def _resolve_external(region, ghidra_name, candidates, ctx):
     return re.sub(r'(?<![\w])' + re.escape(ghidra_name) + r'\b', zero[0], region)
 
 
+def fix_variadic_extra_args(line, diag, ctx):
+    """`open(filename, flags, mode, junk)` — the padding word gcc pushed.
+
+    `MeOpenRaw`'s call site pushes FOUR words:
+
+        2d: push %edx    2e: push %esi    32: push %ebx    33: push %edx
+        34: call open
+
+    and the stack reads `open(filename, ebx, esi, edx)`. `open` is variadic, so
+    the callee reads two or three and the fourth is never looked at — it is
+    stack padding gcc left, and on the read-only paths `%esi` is not even
+    assigned. Ghidra recovers all four honestly, which is right about the
+    machine and wrong about the program.
+
+    NOTHING COULD SEE IT UNTIL NOW. C permits any number of arguments to a
+    variadic function, so the only complaint comes from glibc's FORTIFIED
+    `open`, which raises its error inside `fcntl2.h` — a header, and
+    compile_diags dropped header diagnostics by design. It is reachable because
+    GCC also prints `inlined from … at <our file>:76`, which compile_diags now
+    honours.
+
+    THE ARITY IS TAKEN FROM THE DIAGNOSTIC, not assumed: glibc says "open can be
+    called either with 2 or 3 arguments, not more", so the cap is the largest
+    number in that sentence. A message this cannot read is declined."""
+    m = re.search(r'[‘\'"](\w+)[’\'"] declared with attribute error:\s*'
+                  r'(?P<fn>\w+) can be called either with '
+                  r'(?P<lo>\d+) or (?P<hi>\d+) arguments, not more', diag)
+    if not m:
+        return None
+    callee, cap = m.group('fn'), int(m.group('hi'))
+    i = line.find(callee + '(')
+    if i < 0:
+        return None
+    open_paren = i + len(callee)
+    end = _match_bracket(line, open_paren)
+    if end is None:
+        return None
+    args = _split_args(line[open_paren + 1:end - 1])
+    if len(args) <= cap:
+        return None
+    return line[:open_paren + 1] + ','.join(a.strip() for a in args[:cap]) \
+        + line[end - 1:]
+
+
 def fix_too_many_arguments(line, diag, ctx):
     """Drop the arguments past the end of a known prototype.
 
@@ -4239,6 +4342,8 @@ REPAIR_RULES = [
      fix_mislabelled_external),
     (re.compile(r'[‘\'"]stack0x[0-9a-f]+[’\'"] undeclared'),
      fix_stack_address_name),
+    (re.compile(r'can be called either with \d+ or \d+ arguments, not more'),
+     fix_variadic_extra_args),
     (re.compile(r'too many arguments to function'),
      fix_too_many_arguments),
     (re.compile(r'invalid use of void expression'),
@@ -4700,6 +4805,7 @@ def main():
     body_text, n_vptr = fix_vptr_store(args.object, body_text, _declared,
                                        read_ghidra_locals(args.input), args.protos)
     body_text, n_uscore = fix_undeclared_underscore_local(body_text)
+    body_text, n_uninit = initialise_unmodelled_locals(body_text)
     body_text, n_mangled = resolve_mangled_call_names(
         body_text, _declared + '\n' + '\n'.join(decls))
     body_text, n_voidmem = fix_void_pointer_member(args.object, body_text, _declared)
@@ -4814,6 +4920,8 @@ def main():
         print(f'  {n_uscore} undeclared `_local` reference(s) bound to their declaration')
     if n_fltload:
         print(f'  {n_fltload} int-to-float conversion(s) rewritten as a four-byte load')
+    if n_uninit:
+        print(f'  {n_uninit} unmodelled-register local(s) given a defined initial value')
     if n_rel:
         print(f'  {n_rel} relocated data block(s) rebuilt with their pointers')
     if args.cflag:

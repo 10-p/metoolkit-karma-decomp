@@ -178,7 +178,7 @@ Everything else in this file is detail. This is the work.
 | 5 | ~~**GJK's warm cache path has never been tested.**~~ **DONE 2026-08-25** — `KD_WARM=<K>`, 0 ret / 0 count / 0 dims over 200,000 pairs, cache verified live. §11 item 4. The 3 `ret_diff` seen in a live match are still not reproduced, and this narrows where they can be. | §11 item 4 | — |
 | 7 | **`IxCylinderTriList` diverges in a live match — and it now REPRODUCES offline.** 37 `count_diff` in 153,391 live; `KD_CORNER=1` gets it at iteration 23624 with **count 30/32** where the default 4×2 patch reads 0. So it is deterministic and debuggable without a match. Two hypotheses already refuted (the normal-accumulation alias; the three 'missing' statics, which GCC inlined). Next: the `footprint`→`verts` range that `McdVanillaOverlapCylTri` fills — two extra contacts means two extra points. | `proven.txt` | nothing |
 | 8 | **`IxCylinderCylinder`'s remaining charge is `count_diff` only, and it is LOCATED.** Iteration 194376, **count 4/2** — we keep two contacts where the shipped library keeps four, and our contact [1] carries the shipped [0]'s separation, so the FOOTPRINT differs upstream of the emission filter. It is a real defect, not the rounding instability of §11 item 0: that probe reports **0 `count_diff`** for the shipped library against itself. | §11 item 0 | nothing |
-| 9 | **The last six `libMdtKea` members are still shipped, and only one matters.** `keaStuff` and `version` have no functions; `keaDebug`, `keaPrintBasicTypes` and `ReadWriteKeaInputToFile` are debug/IO. **`keaMatrix_PcSparse_vanilla` is the one on the path** — §4a measures it at 4.28e-04 against 3.70e-04 of sensitivity, i.e. about one rounding step wrong, and it is quarantined on a guessed frame. It is now the only thing between here and a link with NO shipped `libMdtKea` at all. | §4a, §12 item 7 | nothing — and §11 item 2a's rounding lead is the first thing to try on it |
+| 9 | **`keaMatrix_PcSparse_vanilla` is FIVE OF SIX, and the sixth is located.** The last still-shipped `libMdtKea` member on the path. `solve` was fixed by the same dropped-rounding repair as `keaIntegrate_pc` (`MeReal tmp[4]`, accumulated through memory); four others were already exact. **What is left is `factorize`, whose arithmetic is not in `factorize`** — the shipped function has ZERO float instructions and calls the file-statics `vc_strip_Cholesky` / `vc_dstrip_Cholesky`, which gcc inlined in the recovery. Blanket-rounding their 62 float stores makes it WORSE (`first@10` → `first@7`), so read them statement by statement with `bisect_object.sh`'s `factorize` row as the gate. The other five members are `keaStuff`/`version` (no functions) and three debug/IO objects. | `proven.txt`, §11 item 2a | nothing |
 | 6 | **The tail: 12 objects in the FAIL bucket and NOTHING in it blocks anything.** 3 DEAD (`MeASELoad` 126, `MeFGeometryFromMesh` 20, `McduDebugDraw` 1), 2 documented leave-alones (`McdSpace` 22, `MeSimpleFile_linux` 1), 3 dead end 9 (`McdTriangleList` 6, `McdBox` 2, `McdSphyl` 1), 2 low-value profilers (`MeProfile` 29, `MeProfile_linux` 13) and `MdtBcl`/`MeMath` at one `stack0x` each. **197 of the errors belong to objects nobody should touch.** Sort by §13's verdict column, never by the count. | §13 | do not start here |
 
 
@@ -201,15 +201,25 @@ on it.** Every object in it is bit-identical to the shipped library on all three
 | `IxCylinderCylinder` | iteration 194376, count 4/2. MOVE 3 |
 | `MdtBcl` / `MeMath` | one `stack0x` each at offset −12, both diagnosed in §5c |
 
-**MOVE 1 — `keaMatrix_PcSparse_vanilla`, the last `libMdtKea` object that matters.** It is
-the only one of the six still-shipped members on the path (§4a measures it sensitive on
-`scene_chain` and 4.28e-04 out against 3.70e-04 of sensitivity — about ONE rounding step).
-**Try the rounding lead first**: that is exactly the size of error the dropped `dq[1..3]`
-spill produced in `keaIntegrate_pc`, and this object declares `float afStack_1c[3]` that the
-body never references — the same fingerprint. Read `<object>.locals`, then look for
-`fstps`/`flds` against its slots in the shipped disassembly. `test/bisect_object.sh` names
-the function; a per-function A/B like `test/ab_integrate.sh` localises inside it. Landing
-this gives a link with **no shipped `libMdtKea` at all**, which is §12 item 7's second half.
+**MOVE 1 — `keaMatrix_PcSparse_vanilla::factorize`, and it is the ONLY thing left in the
+solver.** The object is five of six: `solve` was taken to exact on 2026-08-25 by the same
+dropped-rounding repair as `keaIntegrate_pc` — `MeReal tmp[4]` at `ebp-0x28`, which gcc 3.2
+accumulates THROUGH MEMORY (sixteen `fsts`, nineteen `fadds`, not one `flds`) — and the
+other four were already exact.
+
+**`factorize`'s arithmetic is not in `factorize`.** The shipped function is 0xcc bytes with
+**zero** float instructions; it calls the file-statics `vc_strip_Cholesky` (0x48d) and
+`vc_dstrip_Cholesky` (0x48a), which gcc inlined in the recovery (0x7a2). Those two have no
+`%ebp`-relative float spills at all — they are `flds`/`fmuls`/`fadds`/`fstps` throughout,
+every intermediate going to memory through a POINTER.
+
+**And the blanket attempt is already refuted**: wrapping all 62 of their float stores in
+`KD_F32` moves the divergence from `first@10` to `first@7` — worse. Dead end 17 in
+miniature. Read them statement by statement against the recovery, with
+`test/bisect_object.sh`'s `factorize` row as the gate. **Check `bisect_object.sh`'s two
+controls read identical before believing any row** — they did not until 2026-08-25, and that
+is why this object looked like one number instead of six. Landing this gives a link with
+**no shipped `libMdtKea` at all**, which is §12 item 7's second half.
 
 **MOVE 2 — the association defect, corpus-wide, and it is the most important thing in this
 file.** §11 item 2a: Ghidra prints a right-leaning float `+` chain FLAT, so C re-parses it
@@ -226,6 +236,15 @@ thing for both trees), so the association has to come from the machine code. Sta
 measuring the size of the problem — count multi-term float `+` chains per object — and by
 building an oracle that reads `fadd`/`faddp` order out of one function. `KDynStep.cpp:618`
 is a free correctness check for the integrator; nothing else has one.
+
+**AND THERE IS A SECOND MEASUREMENT SAYING THE SAME THING FROM THE OTHER SIDE.** Reversing
+ALL 41 unparenthesised 3+-term float `+` chains in `keaMatrix_PcSparse_vanilla` — an object
+full of the shape — **changed the object file and changed nothing measurable**, on a gate
+that had just been made sensitive enough to localise that object to two functions. So on
+i386 a corpus-wide association rewrite is **unfalsifiable**: it can be shown neither right
+nor wrong, and it would silently rewrite 152 objects on an argument. That is the state of
+this lead — a real defect with real evidence at three sites, and no way to validate a
+general rule without either an oracle or a wasm-side A/B.
 
 **MOVE 3 — the two cylinder defects, both of which REPRODUCE OFFLINE.** Neither needs a
 match:
@@ -247,6 +266,16 @@ differs, which took `keaIntegrate_pc` from "1.5e-08 somewhere in 900 chaotic ste
 "`qrot`, and only `qrot`" in one run. Copy its shape for any object with a clean signature.
 `substitute_test.sh` prints the FIRST DIFFERING STEP, which is the column to read on a
 contact scene. And `test/vptr_ab.sh` measures a vtable dispatch rather than a trajectory.
+
+**And check `bisect_object.sh`'s TWO controls before believing any of its rows.** It grew a
+second one on 2026-08-25 because it was not isolating: `objcopy --localize-symbol` does not
+touch a weak OBJECT symbol, so an object's own vtable stayed global, won the weak-vs-weak
+contest against the shipped COMDAT copy, and pointed every slot back at the recovered code.
+`keaMatrix_PcSparse_vanilla` reported six identical rows including `allocate`, which does no
+float arithmetic. `--abi-only` is the control that catches it; `--none` cannot, because it
+links no recovered object at all. Six objects carry their own vtable (`CxSmallSort`,
+`keaCalcJinvMandRHS_vanilla`, `keaMatrix`, `keaMatrix_PcSparse`, `keaMatrix_tester`,
+`keaMatrix_PcSparse_vanilla`); `keaLCPSolver` is not one, so its result stands.
 
 **What NOT to do next.** Do not read a max-delta as a verdict on a contact scene. Do not
 attempt `MeMath` (§5c proves the target is never written). Do not grind the tail (§13) —
@@ -2080,6 +2109,22 @@ still shipped.
 > the original reachable behind a toggle. That copy is the only place in this project where
 > Karma's ORIGINAL SOURCE is available, and it settled an association question no gate here
 > could.
+
+**Four 340 s runs, no crash on either side.** `test-karma-1`, `xDeathMatch`,
+`-SOFTWARERENDERER`:
+
+| build | branch | exit | SIGSEGV | START MATCH | NaN / Critical |
+|---|---|---:|---:|---:|---:|
+| `stock-karma` | default | 124 | 0 | 1 | 0 |
+| `stock-karma` | `KSAFETIME 0` | 124 | 0 | 1 | 0 |
+| **`subst115`** | default | 124 | 0 | 1 | 0 |
+| **`subst115`** | `KSAFETIME 0` | 124 | 0 | 1 | 0 |
+
+`exit=124` is the timeout, i.e. all four ran to the end. So the engine on 115 recovered
+objects — the whole recovered solver, and `keaIntegrate_pc` on the branch that reaches it —
+is as stable as stock over 340 s of live physics. **It is not a trajectory comparison**:
+neither binary carries shadow instrumentation, so this says "runs like stock", not "computes
+what stock computes".
 
 **What this does NOT show, and the environment changed under it.** On 2026-08-25 the engine
 faults at the first HUD frame under Xvfb — `REALLOC FAILED ... NewSize=1351188168` in

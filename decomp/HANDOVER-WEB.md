@@ -22,14 +22,14 @@ freebie, the Android NDK), and to integrate the result into the engine's web bui
 
 What exists today:
 
-- **121 recovered objects**, all compiling for i386, wasm32, armv7 *and* arm64 — but see
+- **122 recovered objects**, all compiling for i386, wasm32, armv7 *and* arm64 — but see
   §3's pointer-size section: **arm64 is not trustworthy and wasm32 is**, for the same reason.
 - **The full collision-detection path the game actually uses is recovered and validated** —
   all twelve interaction pairs UT2004 calls, each measured against the shipped original on
   real inputs from a live match. Evidence per object in `karma-decomp/proven.txt`. §6 has
   the census that says "twelve" and why that is the number to plan against.
 - **The whole set already compiles under Emscripten**, and its exported symbol NAMES are
-  **byte-identical to the i386 build for all 121 objects** — nothing added or dropped. So
+  **byte-identical to the i386 build for all 122 objects** — nothing added or dropped. So
   the ABI surface the engine links against does not change between targets, which was the
   thing most likely to turn this into a rewrite. See §4. (Names only: `wasm_check.sh`
   discards the binding letter. That gap let a recovered object export a *global* `putchar`
@@ -758,12 +758,12 @@ older copy of this file, start here.
 ### 2026-08-25 (fifth session, later) — 121 objects, and a metric for the finish line
 
 - **`tools/dropin_gap.py` counts what is actually left**: the shipped members the engine
-  still needs, resolved symbol by symbol against the recovered build. **21 members, 161
+  still needs, resolved symbol by symbol against the recovered build. **20 members, 148
   symbols**, down from 27/192 the same day. Checked against a real link of the engine with
   every shipped member deleted — 111 undefined symbols, all 111 predicted. `HANDOVER.md`
   §3c. Use it rather than the object count when you need to know how close this is.
-- **121 objects** (was 115). wasm32 **121/121** with identical exported symbol sets, armv7
-  **0** truncations, arm64 **2,680 across 73 of 121**.
+- **122 objects** (was 115). wasm32 **122/122** with identical exported symbol sets, armv7
+  **0** truncations, arm64 **2,680 across 73 of 122**.
 - **Four objects that already compiled were silently WRONG**, and one of them is on your
   path: `McdSphere` computed a sphere's mass properties from its radius read as an integer,
   and `McdCylinder`, `McdConvexMesh` and `McdPlaneIntersect` had the same defect. If you

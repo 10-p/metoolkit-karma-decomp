@@ -127,9 +127,9 @@ moves, move it there.
 - **THE METRIC THAT MEASURES THE GOAL IS THE DROP-IN GAP, and it is new.** Object count is a
   bad progress metric and this file has said so for months without offering a better one.
   `tools/dropin_gap.py` walks the symbol closure from the ENGINE's own objects and reports
-  every shipped member the engine still needs: **21 members, 161 symbols**, down from 27/192
+  every shipped member the engine still needs: **20 members, 148 symbols**, down from 27/192
   in one session. It is checked against a real link of the engine with every shipped member
-  deleted — 111 undefined symbols, all 111 predicted. **121 objects compile.** §3c.
+  deleted — 111 undefined symbols, all 111 predicted. **122 objects compile.** §3c.
 - **AND SIX MEMBERS CLOSED IN ONE RUN, off three generator fixes — plus FOUR objects that
   already compiled and were silently wrong.** `McdSphere` computed a sphere's mass
   properties from its radius read as an INTEGER; `McdCylinder`, `McdConvexMesh` and
@@ -184,7 +184,7 @@ Everything else in this file is detail. This is the work.
 
 | # | what | where | blocked on |
 |---|---|---|---|
-| 0 | **THE DROP-IN GAP: 21 shipped members, 161 symbols.** This is the goal and the metric. `tools/dropin_gap.py`, checked against a real link (111 of 111 symbols predicted). Group the 21 by CAUSE, not size: `extraout_*` is 7 members, a mislabelled `_X` is 4, one `stack0x` is 2, a guessed frame is 2, the profilers 2, four singletons. **Run the engine on anything on the `.ka` path** — `MeAssetDBXMLIO` passed all nine gates and killed init. | §3c | nothing |
+| 0 | **THE DROP-IN GAP: 20 shipped members, 148 symbols.** This is the goal and the metric. `tools/dropin_gap.py`, checked against a real link (111 of 111 symbols predicted). Group the 21 by CAUSE, not size: `extraout_*` is 7 members, a mislabelled `_X` is 3, one `stack0x` is 2, a guessed frame is 2, the profilers 2, four singletons. **Run the engine on anything on the `.ka` path** — `MeAssetDBXMLIO` passed all nine gates and killed init. | §3c | nothing |
 | 1 | ~~**The solver.**~~ **DONE. `libMdtKea` is recovered whole and the engine has RUN on it.** Every object in it is bit-identical on all three scenes; `keaIntegrate_pc` and `keaLCP_new` are released, so the build is 115. `build-subst115` executes the recovered `MdtKeaAddConstraintForces` 301 times and `keaLCPSolver::solveLCP` 85 times on `test-karma-1`. | §11 item 2, §7d | — |
 | 1a | **THE ASSOCIATION DEFECT IS A CORPUS-WIDE LEAD AND NOTHING HERE CAN SEE IT.** Ghidra prints right-leaning float `+` chains flat. On x87 that is EXACTLY inert (0 in 2,000,000 samples); under storage precision — wasm32, armv7, arm64 — it differs in **31%**. Three sites were found and fixed in one object by reading the disassembly. **Nobody has looked at the other 152.** Every gate in this project is structurally blind to it, so the first symptom will be wasm physics that drifts from native. | §11 item 2a | an instrument that does not exist yet — start from the 220-site scan |
 | 2 | ~~**`IxCylinderCylinder` is wrong and is in the build.**~~ **RE-FRAMED — `dims` is not a measurement for this pair.** The shipped library disagrees with itself, under a 1e-7 m nudge, more often than we disagree with it. Leave it in the build; do not release it either. | §11 item 0 | a live match scoring ret/count/position/separation with dims read separately |
@@ -216,14 +216,16 @@ on it.** Every object in it is bit-identical to the shipped library on all three
 | `IxCylinderCylinder` | iteration 194376, count 4/2. MOVE 3 |
 | `MdtBcl` / `MeMath` | one `stack0x` each at offset −12, both diagnosed in §5c |
 
-**MOVE 0 — WORK THE DROP-IN GAP, and work it by CAUSE.** §3c: 21 shipped members and 161
-symbols stand between here and a library with no shipped `.a` in it. Six members closed in
-one session off three generator fixes, so the families are the leverage —
+**MOVE 0 — WORK THE DROP-IN GAP, and work it by CAUSE.** §3c: 20 shipped members and 148
+symbols stand between here and a library with no shipped `.a` in it. Seven members closed in
+one session off five generator fixes, so the families are the leverage —
 `grep` the gap table's "why" column and fix the one upstream cause, not the object. The
 biggest is `extraout_*` at 7 members, and it is NOT one cause: some are gcc's variadic
 padding (now fixed), some are a genuine dataflow gap, and `MeFAsset`'s sit on top of a
-reconstructed frame. Take the mislabelled-`_X` family (4 members) first — `McdFrame` needs
-only a tie-break between two relocation candidates, and the argument's type decides it.
+reconstructed frame. The mislabelled-`_X` family is down to 3 — `McdFrame` came out on a tie-break decided by the
+argument's type, and `MeFAssetPart` (21 symbols, the biggest left after `MeFAsset`) needs a
+CONTROL-FLOW repair: `asset == NULL` jumps to 0x775 in the shipped code and Ghidra routed it
+into the body, which is where its `_DAT_00000050` comes from.
 
 **And before releasing anything on the `.ka` path, RUN THE ENGINE.** `MeAssetDBXMLIO` is
 the standing example and it cost this session an hour.
@@ -360,18 +362,18 @@ complete types. That is what makes this tractable. Ghidra consumes it directly.
 ## 2. Status
 
 ```
-compile:  121 objects in the build, and the MEASURED_WRONG quarantine (§8)
+compile:  122 objects in the build, and the MEASURED_WRONG quarantine (§8)
           is empty — read §4a before quoting any of the numbers below
-scenes:   121/121 run clean on all three substitute scenes, EVERY ONE of them
+scenes:   122/122 run clean on all three substitute scenes, EVERY ONE of them
           is individually bit-identical on the collision-free scene, and all
-          121 TOGETHER are bit-identical on it — but read §4a before reading
+          122 TOGETHER are bit-identical on it — but read §4a before reading
           anything into that number
-wasm32:   121/121 compile, exported symbol sets byte-identical to i386
-armv7:    121/121 compile, symbol sets identical — a real 32-bit-pointer port,
+wasm32:   122/122 compile, exported symbol sets byte-identical to i386
+armv7:    122/122 compile, symbol sets identical — a real 32-bit-pointer port,
           and 0 pointer-truncation diagnostics (test/ptrwidth_check.sh)
-arm64:    121/121 compile, symbol sets identical, and NOT TRUSTED — 2,680
-          pointer-truncation diagnostics across 73 of the 121 objects (§6b)
-bindings: 121/121 export what the SHIPPED object exported, binding included (§8)
+arm64:    122/122 compile, symbol sets identical, and NOT TRUSTED — 2,680
+          pointer-truncation diagnostics across 73 of the 122 objects (§6b)
+bindings: 122/122 export what the SHIPPED object exported, binding included (§8)
 difftest: 14 pairs (Cylinder x Cylinder and Cylinder x TriangleList added
           2026-08-24), reproducing the documented baseline exactly — IxBoxBox
           1 count, IxSphereTriList 137 dims, IxCylinderCylinder 1 count + 20
@@ -382,13 +384,13 @@ difftest: 14 pairs (Cylinder x Cylinder and Cylinder x TriangleList added
 vptr:     the repaired vtable dispatches are bit-identical to a devirtualised
           control on all three scenes, and both wrong versions of the repair
           segfault where the dispatch runs (test/vptr_ab.sh, §11 item 3)
-review:   19 objects recover.py labels "needs review" — and that label covers
-          TWO different states, which matters when quoting it. 13 of them
+review:   18 objects recover.py labels "needs review" — and that label covers
+          TWO different states, which matters when quoting it. 12 of them
           COMPILE and are held out of the build by the safety detectors (§8);
           the other 6 do NOT compile and their first error merely matches a
-          detector's pattern. So: 134 of 153 rebuild, 121 are in the build.
+          detector's pattern. So: 135 of 153 rebuild, 122 are in the build.
 fail:     8 more do not compile, for a total of 14 that do not
-dropin:   THE METRIC THAT MEASURES THE GOAL — 21 shipped members / 161
+dropin:   THE METRIC THAT MEASURES THE GOAL — 20 shipped members / 148
           symbols the engine still needs (tools/dropin_gap.py, §3c). Was
           27 / 192 before this session's second half
 solver:   libMdtKea IS RECOVERED. Every object in it is bit-identical on all
@@ -783,7 +785,7 @@ prints demangled names and `nm` mangled ones, so the comparison demangles both
 sides — without that three C++ symbols look like a hole in the walk when they
 are a hole in the comparison.)
 
-### Where it stands — 21 members, 161 symbols
+### Where it stands — 20 members, 148 symbols
 
 | member | syms | why it is not in the build |
 |---|---:|---|
@@ -791,7 +793,6 @@ are a hole in the comparison.)
 | `MeFAssetPart` | 21 | `_DAT_00000050` — a hoisted null-deref load |
 | `McdSpace` | 16 | the `struct _McdSpace` layout is in nobody's DWARF (§13) |
 | `MdtBcl` | 15 | one `stack0x`: the epilogue rendered as a pointer assignment |
-| `McdFrame` | 13 | one mislabelled slot with TWO candidates (`MePoolAPI+4`, `MeMemoryAPI+12`) |
 | `MeXMLParser` | 12 | `extraout_*` |
 | `MeMath` | 8 | one `stack0x`; §5c proves the target is never written |
 | `MeProfile_linux` | 6 | four families at once — `rdtsc`, a type mismatch, three `_X` externals |
@@ -804,7 +805,7 @@ are a hole in the comparison.)
 | six more | 1 each | `IxBoxTriList`, `McdContact`, `McdGjkPenetrationDepth`, `MdtLOD`, `MeAssetDBXMLOutput_1_0`, `keaMatrix_PcSparse_vanilla` |
 
 **Group them by cause, not by size** — that is what has been working. The
-families are: `extraout_*` (7 members), a mislabelled `_X` (4), one `stack0x`
+families are: `extraout_*` (7 members), a mislabelled `_X` (3), one `stack0x`
 (2), a guessed frame (2), the profilers (2), and four singletons.
 
 > ### ⚠ AND THE GATES DO NOT COVER THIS. RUN THE ENGINE.
@@ -1790,11 +1791,11 @@ with the same flags §4 uses for i386, minus `-m32`.
 
 | target | compiles | exported symbols vs i386 | pointer TRUNCATION diagnostics |
 |---|---|---|---:|
-| wasm32 | 121/121 | identical | — |
-| **armv7** | **121/121** | **identical** | **0** across 0 objects |
-| **arm64** | **121/121** | **identical** | **2,680** across **73 of 121** objects |
+| wasm32 | 122/122 | identical | — |
+| **armv7** | **122/122** | **identical** | **0** across 0 objects |
+| **arm64** | **122/122** | **identical** | **2,680** across **73 of 122** objects |
 
-Measured over **all 121 objects in the build** with `test/ptrwidth_check.sh`, which enables
+Measured over **all 122 objects in the build** with `test/ptrwidth_check.sh`, which enables
 exactly three clang diagnostics on top of `-Wno-everything` so the count is those three and
 nothing else:
 
@@ -3622,8 +3623,8 @@ box.
 4. qhull and the asset loader replaced rather than recovered.
 5. No detector suppressed, no object released without a line in `proven.txt`.
 6. The whole set builds as ordinary C for **wasm32 and arm64/armv7**, not just i386.
-   **wasm32 is done** — 121/121 compile with byte-identical exported symbols
-   (`test/wasm_check.sh`). **armv7 and arm64 both compile 121/121 with the Android NDK
+   **wasm32 is done** — 122/122 compile with byte-identical exported symbols
+   (`test/wasm_check.sh`). **armv7 and arm64 both compile 122/122 with the Android NDK
    (§6b) — but only armv7 is believed CORRECT, and arm64 is believed WRONG for a
    structural reason. Read §6b before touching either.**
    Nothing has been *executed* under wasm. See `HANDOVER-WEB.md`.
@@ -3643,7 +3644,7 @@ box.
 | 3 | all three scenes clean for every recovered object, *and* checked for sensitivity | **DONE**, and the sensitivity check (§4a) is what makes it mean anything. |
 | 4 | qhull and the asset loader **replaced**, not recovered | **DONE, both halves — but the asset half was RECOVERED, not replaced (§8c), which is a better outcome: exact rather than equivalent.** Qhull, all four tiers: `src/McdConvexCreateHull/kd_convexhull.c` replaces all 15 exported functions — 1.4 MB → 10 KB: 100,633 invariant checks, identical geometry and volumes, a collision A/B differing on 2 borderline pairs in 2.4 M, and **a live ONS match with 15,425 real GJK calls and 0 structural divergences**. wasm32 clean with an identical symbol set. The asset loader is 9 of 9 recovered (§8c) and needs no replacement. |
 | 5 | no detector suppressed, nothing released without evidence | **HOLDING, and the hole found here has been re-framed rather than closed.** 22 objects quarantined and the quarantine is load-bearing (§4a: `MdtPartition` alone turns a bit-identical scene into a SIGSEGV). `IxCylinderCylinder` is still un-held and still unreleased — but its 925 `dims_diff` is now known to be a label the shipped library **does not reproduce against itself** under a 1e-7 m nudge (§11 item 0), so it is not the defect it looked like. The general point stands unchanged: "not held" is not "validated". |
-| 6 | builds as ordinary C for wasm32 **and arm64/armv7** | **wasm32 DONE** (121/121, byte-identical symbol sets). **armv7 DONE** (121/121, symbol sets identical, **0 pointer-truncation diagnostics** — it is a 32-bit-pointer target so the recovery's core assumption holds). **arm64 COMPILES AND IS NOT TRUSTED** — 121/121 with identical symbol sets and **2,680 pointer-truncation diagnostics across 73 of the 121 objects**, measured corpus-wide by `test/ptrwidth_check.sh`, which is the gate this row used to say could not exist. The old "920 vs 23" figure was two diagnostic sets added together; §6b has the correction. Nothing has been *executed* on any of the three — **and there is now a second reason not to trust that they would agree if they did: §11 item 2a's association defect is exactly inert on x87 and 31% divergent on all three of these targets.** |
+| 6 | builds as ordinary C for wasm32 **and arm64/armv7** | **wasm32 DONE** (122/122, byte-identical symbol sets). **armv7 DONE** (122/122, symbol sets identical, **0 pointer-truncation diagnostics** — it is a 32-bit-pointer target so the recovery's core assumption holds). **arm64 COMPILES AND IS NOT TRUSTED** — 122/122 with identical symbol sets and **2,680 pointer-truncation diagnostics across 73 of the 122 objects**, measured corpus-wide by `test/ptrwidth_check.sh`, which is the gate this row used to say could not exist. The old "920 vs 23" figure was two diagnostic sets added together; §6b has the correction. Nothing has been *executed* on any of the three — **and there is now a second reason not to trust that they would agree if they did: §11 item 2a's association defect is exactly inert on x87 and 31% divergent on all three of these targets.** |
 | 7 | engine runs on recovered Karma with **no shipped `.a` in the link at all** | **COLLISION HALF DONE for the twelve validated pairs** (§7b, two maps, 11 runs/arm, indistinguishable from stock) — but those runs were on maps with no cylinder traffic, so they do not cover the two new pairs. **SOLVER HALF NO LONGER BLOCKED, AND MEASURED: 2026-08-25 the engine EXECUTES the recovered `MdtKeaAddConstraintForces` 301 times and `keaLCPSolver::solveLCP` 85 times on `test-karma-1`** (§7d), with substitution verified at the machine-code level. `libMdtKea` is recovered whole. **What is left of this row is six shipped members, of which exactly one is on the path — `keaMatrix_PcSparse_vanilla`, ~one rounding step out (§4a)** — and the fact that the runs above show START MATCH and a short tick rather than 300 s of play, because the environment's renderer now faults at the first HUD frame **for stock too**. §7d. |
 
 **So what is left, in one sentence each:**
@@ -3666,14 +3667,14 @@ box.
 - ~~**qhull and the asset loader**~~ — **both done.** Qhull is replaced and validated at
   four tiers including a live match (§8a, §8b); the asset loader turned out to be
   RECOVERABLE and is 9 of 9 (§8c).
-- **arm64** — compiles, and is measured to truncate pointers in 73 of 121 objects (2,680 sites).
+- **arm64** — compiles, and is measured to truncate pointers in 73 of 122 objects (2,680 sites).
   `test/ptrwidth_check.sh`, §6b. The fix is generator-wide, not a flag.
 - **Executing anything on wasm** — the web agent's job. `HANDOVER-WEB.md`.
 - **The tail** — 8 objects (was 12; the three dead-end-9 rows and `MeSimpleFile_linux` were
   recovered on 2026-08-25). **And it is no longer "nothing blocks anything":** five of the
   eight are in the drop-in gap — `McdSpace` 16 symbols, `MdtBcl` 15, `MeMath` 8,
   `MeProfile_linux` 6, `MeProfile` 4. §3c, §13.
-- **The drop-in gap itself** — 21 shipped members, 161 symbols, grouped by cause in §3c.
+- **The drop-in gap itself** — 20 shipped members, 148 symbols, grouped by cause in §3c.
   This is the goal; everything above is a route to it.
 
 
@@ -3715,7 +3716,7 @@ frame.
 The frame problem is down to **one `stack0x` each in `MdtBcl` and `MeMath`**, neither on
 anybody's path. §11 item 2.
 
-**Never executed on wasm.** 121/121 compile with byte-identical exported symbols. Not one
+**Never executed on wasm.** 122/122 compile with byte-identical exported symbols. Not one
 instruction has run. See `HANDOVER-WEB.md`.
 
 **Run end to end, now, for the collision layer** — §7b. Not for the solver.

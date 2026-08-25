@@ -32,9 +32,9 @@ and one of the two Android targets is known to be wrong.
 
 | | |
 |---|---|
-| Modules rebuilt and in use | **121** of a 153-module working set |
-| **Original modules the game still needs** | **21** — the number that measures the goal |
-| Rebuilt but held back until proven | 13 |
+| Modules rebuilt and in use | **122** of a 153-module working set |
+| **Original modules the game still needs** | **20** — the number that measures the goal |
+| Rebuilt but held back until proven | 12 |
 | Not yet rebuilt | 14 |
 | Movement modules rebuilt exactly | **7 of 7** — was 2 of 7 a week ago |
 | Movement modules the game runs on | **14 of the 20 shipped**; 1 of the other 6 still matters |
@@ -44,7 +44,7 @@ and one of the two Android targets is known to be wrong.
 
 Module count is a poor progress measure, and we now have a better one. The second row
 counts the original modules the game still reaches — the ones that have to be replaced
-before the rebuilt library can stand on its own. It went from 27 to 21 this week, and it
+before the rebuilt library can stand on its own. It went from 27 to 20 this week, and it
 falls only when a module is rebuilt **and proven**, not merely rebuilt.
 
 ---
@@ -128,12 +128,11 @@ does no arithmetic and therefore could not have produced it.
 **And then we built the measure this project has been missing.** Until now progress was
 counted in modules rebuilt, which does not answer the question that matters: how many of
 the ORIGINAL modules does the game still need? A new tool answers it directly, by tracing
-every function the engine calls through to whoever provides it — 21 today, 27 at the start
-of the week. It is checked against reality rather than trusted: we deleted every original
+every function the engine calls through to whoever provides it — 20 today, 27 at the start of the week. It is checked against reality rather than trusted: we deleted every original
 module, tried to build the game, and confirmed the tool had predicted all 111 things that
 went missing.
 
-Six of those 21 were closed this week, and three of them by a single correction. A note in
+Seven of those 27 were closed this week, and three of them by a single correction. A note in
 our own records had said, for months, that a particular family of failures was the
 compiler's fault and should be left alone. It was not: the compiler complains about exactly
 one of two problems on the line and is silent about the second, so fixing what it named
@@ -163,4 +162,4 @@ module that passed all nine offline tests killed the game on start-up.
 yet claim is that they behave the same way on web and Android — and this week we found a
 specific, measured reason to doubt it.**
 
-**The finish line is now countable: 21 original modules left, from 27.**
+**The finish line is now countable: 20 original modules left, from 27.**

@@ -2116,7 +2116,45 @@ Box × TriangleList at zero calls. Recorded so nobody re-derives the old number.
    signature.** Class members do not have this problem, measured rather than argued: with
    the member route alone all 109 compiled objects stay byte-identical.
 
-20. **`-w` followed by `-Wsomething` in clang.** `-w` wins, the diagnostic never fires, and
+20. **The OVERLAY repair for the fragmented solver frames.** §11 item 2 establishes that
+   those frames are described and fragmented rather than undescribed — every `stack0x`
+   site starts a contiguous run of declared locals covering at least what the copy loop
+   writes. The obvious repair follows: alias the run into one packed struct so that
+   `&stack0xNNNN` and every `in_stack_*` read see the same storage, taking offsets, sizes
+   and types from `<object>.locals` so nothing is inferred.
+
+   **It works, and it is wrong.** On `MdtWorld` it takes **10 errors to 0** — all four
+   `stack0x` sites resolved — and then:
+
+   ```
+   ./test/substitute_test.sh /tmp/kd_mw $LIB test/scene_chain.c
+     [ NaN  ] MdtWorld
+   ```
+
+   NaN over 900 steps, and the ragdoll scene will not run at all. **Both variants fail**:
+   aliasing the whole run, and aliasing only the `in_stack_*` members while leaving
+   Ghidra's invented `uVar18`/`pMVar19` as independent variables and padding their slots.
+   So it is not simply "the copy clobbers live values" — the argument block itself is not
+   the contiguous run, however it is sliced.
+
+   **The near-miss is the part to carry.** An overlay RENAMES `in_stack_*` away, and
+   `recover.py`'s two detectors match `\bkd_argslot_\w+\b` and
+   `in_stack_[0-9a-f]+|extraout_|unaff_`. A block named anything else matches NEITHER, so
+   this object — which goes NaN on the first scene that runs it — compiled clean and
+   would have been classified `ok` and put straight into the build. Naming the block
+   `kd_argslot_frameNNNN` restores the quarantine (297 hits). **Any future attempt must
+   keep a detector-visible name**, and that is a general rule for any repair that renames
+   a detector's pattern out of existence.
+
+   And one thing no naming fix can reach: in `MdtWorldStepSafeTime` Ghidra passes a frame
+   slot where the original passes `po->totalBodies`, so `num_bodies` is genuinely gone
+   from that function regardless.
+
+   **`MdtWorld` did exactly what §12 asks a validation subject to do** — a non-kea object
+   where a wrong answer is one command away, and it refuted the repair in one. That is the
+   reason to keep choosing subjects that way, not a reason to stop.
+
+21. **`-w` followed by `-Wsomething` in clang.** `-w` wins, the diagnostic never fires, and
    the run reports zero. That is how a first pass at §6b's pointer-truncation gate read
    "arm64: 0 warnings" — the most reassuring possible output for the most dangerous known
    defect in the project. Use `-Wno-everything`, which is designed to be overridden.
@@ -2431,6 +2469,12 @@ Ordered by what actually moves the project, not by what is easiest:
    > `MdtWorldStep` 900 times, so a wrong answer shows up on a gate rather than in a
    > review column. That is the subject §12's standing lesson asks for and item 2 did not
    > have.
+   >
+   > **AND THAT WAS DONE, AND THE OVERLAY IS REFUTED — dead end 20.** It takes `MdtWorld`
+   > from 10 errors to 0 and then goes **NaN on `scene_chain`**, in both the
+   > alias-everything and the alias-only-`in_stack_*` forms. The frames really are
+   > fragmented; the argument block is just not the contiguous run, however it is sliced.
+   > What is left of this lead is the fact, not the repair.
 
    **The one lead that is not a guess.** The by-value *incoming* parameters are pinned by
    the cdecl ABI, not by debug info, and Ghidra already has the signature:

@@ -77,7 +77,7 @@ Everything else in this file is detail. This is the work.
 | 2 | ~~**`IxCylinderCylinder` is wrong and is in the build.**~~ **RE-FRAMED — `dims` is not a measurement for this pair.** The shipped library disagrees with itself, under a 1e-7 m nudge, more often than we disagree with it. Leave it in the build; do not release it either. | §11 item 0 | a live match scoring ret/count/position/separation with dims read separately |
 | 3 | **arm64 truncates pointers.** 2,162 diagnostics across 65 of 109 objects; armv7 zero. **There is now a gate** — `test/ptrwidth_check.sh`. | §6b | a generator-wide change to pointer-width slots |
 | 4 | **Nothing has EXECUTED on wasm32, armv7 or arm64.** | `HANDOVER-WEB.md` | the web agent |
-| 5 | **GJK's warm cache path has never been tested** — the busiest pair family in the census, cold-path only. | §11 item 4 | nothing |
+| 5 | ~~**GJK's warm cache path has never been tested.**~~ **DONE 2026-08-25** — `KD_WARM=<K>`, 0 ret / 0 count / 0 dims over 200,000 pairs, cache verified live. §11 item 4. The 3 `ret_diff` seen in a live match are still not reproduced, and this narrows where they can be. | §11 item 4 | — |
 | 6 | **The tail: 14 objects, 271 errors — and it is finished.** 3 DEAD, 2 leave-alones, 3 dead end 9, 4 are item 1 above, 2 low-value profilers. | §13 | do not start here |
 
 
@@ -145,8 +145,9 @@ review:   25 objects held back by recover.py's eight safety detectors (§8;
           the ninth, symbol bindings, is a gate rather than a detector because
           it needs the shipped object to compare against)
 fail:     14 objects do not compile
-dumps:    out10 is current (§5b). It differs from out9 in 4 of 153 dumps, and
-          every object that already compiled is byte-identical.
+dumps:    out11 is current (§5c) — out10's dumps byte-for-byte, plus a
+          per-object `.locals` table of Ghidra's frame assignments. out10
+          differs from out9 in 4 of 153 dumps and no compiled object moved.
 ```
 
 Reproduce all of that with the commands in §4. The whole pipeline is about a minute.
@@ -536,7 +537,7 @@ metoolkit .a
 cd /home/ion/engines/engine-ut2004/karma-decomp
 rm -rf /tmp/kd_out /tmp/kd_build
 python3 tools/recover.py \
-  --dump-dir /home/ion/tools/karma-lab/out10 \
+  --dump-dir /home/ion/tools/karma-lab/out11 \
   --obj-dir  /home/ion/tools/karma-lab/allobj \
   --out-dir  /tmp/kd_out \
   --build-dir /tmp/kd_build \
@@ -554,7 +555,7 @@ It defaults to `/tmp/kd_build`, so a second run comparing a new dump set will
 overwrite the baseline you were about to compare against.
 
 Recovered `.c` lands in `/tmp/kd_out/allobj/`, objects in `/tmp/kd_build/`. `recover.py`
-prints a per-object table and a summary. **`out10` is the current dump directory** (§5b).
+prints a per-object table and a summary. **`out11` is the current dump directory** (§5c).
 `out5`–`out9` are kept deliberately — they are the fallback if a pipeline change ever has
 to be bisected against the dumps.
 
@@ -806,7 +807,8 @@ until the new dumps have passed all **eight** gates (§4 — the eighth is
 `test/ptrwidth_check.sh`); a re-run changes every object at
 once — `out6` differs from `out5` in 103 of 153 dumps.
 
-`out5`–`out10` are all on disk. **`out10` is current** (§5b).
+`out5`–`out11` are all on disk. **`out11` is current** (§5c); it is `out10`'s dumps
+plus a `.locals` table per object.
 
 ### `ParseKarmaHeaders.java` (preScript)
 
@@ -921,6 +923,51 @@ Zero objects got worse.
 > and that is not a step backwards: it never compiled in either dump. `recover.py`
 > classifies by the FIRST error's pattern, and the mislabelled-symbol error that this fix
 > resolved was masking a `stack0x` one underneath. Check the error COUNT, not the label.
+
+## 5c. `out11` — Ghidra's frame assignments, emitted beside each dump
+
+`out11` is current. Its 153 `.c` files are **byte-identical to `out10`** — the change is
+purely additive output — and it adds `<object>.locals`: one row per decompiled local that
+has stack storage, with the offset Ghidra assigned it, read out of
+`HighFunction.getLocalSymbolMap()`.
+
+**Why that is a different kind of fact from the name.** `fix_stack_address_name` resolves
+`&stack0xffffff6c` to the local `in_stack_ffffff6c` on the grounds that both names encode
+the same frame offset. That was an assumption about how Ghidra builds names. Over every
+`stack0x` site in the corpus the table says:
+
+```
+15 sites resolve to a local at exactly that offset
+48 have no covering local
+ 0 resolve to a local at a DIFFERENT offset
+```
+
+So the convention holds without exception, and the rule is right for the reason it claimed.
+It now reads the size from the table too, and **refuses if the name and the storage
+disagree** — checked with a positive control: doctoring one offset by a single byte makes
+`keaIntegrate_pc` drop from `review` back to `FAIL`.
+
+**`tools/frame_offsets.py` is what to run first on any new `stack0x`.** It separates three
+things that need different answers, and the surviving sites are one of each:
+
+| kind | example | what it means |
+|---|---|---|
+| SIZE | `MdtWorld` ffffff6c: `MeReal` (4 B) against a 76-byte copy | Ghidra split ONE outgoing argument block into eight locals — `in_stack_ffffff6c`, `in_stack_ffffff70[48]` and six scalars it also uses as ordinary variables. Same in `keaRbdCore_unified` (72 declared, 92 written) |
+| NO LOCAL, resolvable | `MdtBcl` at −12 | the accesses land inside `MeReal ref2world[4][4]` at −156, which the line above fills via `MeMatrix4MultiplyMatrix`. Repairable in principle |
+| NO LOCAL, not resolvable | `MeMath` at −12 | the mapping IS exact — the nine accesses are exactly `MeReal eR[3][3]` at −60 — and `eR` is **declared and never written**, because Ghidra emitted `fcos`/`fsin` and discarded the results. Repairing the name would buy a compile at the price of reading uninitialised memory |
+
+That last row is the useful one: a refusal that used to be a judgement call is now evidenced.
+
+**What the table did NOT do is unblock anything**, and that is worth saying plainly. Only
+six objects still carry `stack0x` after repair — `keaLCP_new` 24, `MeFGeometryFromMesh` 24
+(DEAD, §13), `keaRbdCore_unified` 3, `MdtWorld` 4, `MdtBcl` 1, `MeMath` 1 — and every one is
+a size mismatch or a missing local, not a naming problem. The remaining work on those is
+frame RECONSTRUCTION, which is what the guessed-stack-frame detector exists to quarantine.
+
+**`MdtBcl` is the one that could be done and is not**, recorded so the next person can
+weigh it rather than rediscover it: the base points 144 bytes into a 64-byte array, so
+rewriting the base is what `check_frame_bounds.py` exists to reject, and rewriting each
+access instead needs the loop trip count. One object, in the tail.
 
 ## 5b. `out10` — the C++ prototypes that were never being applied
 
@@ -2404,10 +2451,25 @@ Ordered by what actually moves the project, not by what is easiest:
      because the moment anyone warms the cache it stops being inert.
    - **The allocator** is not stubbed: the driver builds a real `MstUniverse`, so Karma's
      own allocator runs. Nothing to audit.
-   - **`McdCacheHello`/`Goodbye`** are not stubbed and never called, which is exactly why
-     GJK runs cold-path-only here. That remains a documented limit on this evidence, and
-     it is the one piece of §11 item 4 still open: **warming the GJK cache is untested
-     ground on the busiest pair family in the census.**
+   - **`McdCacheHello`/`Goodbye`** were not stubbed and never called, which is why GJK
+     ran cold-path-only here. **CLOSED 2026-08-25 — `KD_WARM=<K>`**, which runs the pair
+     as a TRACK of K consecutive frames with the cache allocated once per track and the
+     bodies nudged a few millimetres per frame instead of re-scattered. On the busiest
+     pair family in the census: **0 ret, 0 count, 0 dims over 200,000 pairs**, self-test
+     14/14 clean in the same mode.
+
+     **The cache was verified LIVE before the zeros were believed** — `KD_WARMDEBUG=1`
+     shows one block address for a whole track with the witness normal carried across
+     frames and refined. A warm run whose cache never populated reads identically from
+     the summary, and that is the failure this project keeps meeting.
+
+     **And it refuted a prediction this file made.** §7 says the shared-cache exposure is
+     "real and currently inert — the moment anyone warms the cache it stops being inert".
+     It does not: `KD_WARM=8 KD_SHARECACHE=1` reads exactly the same as isolated, with the
+     switch verified wired (both sides show the SAME block address). The reading is not
+     "sharing does not matter" — it is that the recovered `McdGjk` leaves the cache in the
+     same state the original does, so there is nothing to read differently. It agrees on
+     60 bytes of internal state it is never asked about, over eight compounding frames.
 
 5. **Chase what is left of the `IxBoxBox` and `McdGjk` divergences** (§8). Both reproduce
    synthetically once box dimensions vary — 1 and 2 count divergences in 200,000 — so they

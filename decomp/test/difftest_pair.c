@@ -49,6 +49,13 @@
 #include <MstUniverse.h>
 #include <MstUtils.h>
 
+/* Declared in McdGjk.h. Taken one at a time rather than by including that
+   header, which also pulls in the GJK simplex internals this driver has no
+   business seeing. McdCacheHello is the ONLY thing in metoolkit that assigns
+   McdModelPair.m_cachedData (§7), so these two are the whole warm-path API. */
+extern MeBool MEAPI McdCacheHello(McdModelPair *p);
+extern void   MEAPI McdCacheGoodbye(McdModelPair *p);
+
 /* The engine hands these functions a 400-contact result buffer (maxCount 400 in
    every shadow-harness dump), and so does this driver. It was 64, which was
    fine only because both boxes had one fixed size: once reshape() lets a box
@@ -163,13 +170,39 @@ static int kd_dh_n;
    different numbers" — and they need different fixes. */
 static int kd_dh_septie, kd_dh_sepdiff;
 
-/* KD_JITTER=<eps> displaces model2 by eps between the two calls. With
+/* KD_WARM=<K> runs the pair as a TRACK of K consecutive frames instead of K
+   independent poses: the same McdModelPair is kept, its coherence cache is
+   allocated with McdCacheHello once per track, and the bodies are nudged a
+   little each frame rather than re-scattered.
+
+   THIS IS THE ONLY WAY TO REACH GJK'S WARM PATH, and until now nothing in the
+   project ever did. McdGjkCgIntersect warm-starts from McdModelPair.m_cachedData
+   — McdCacheHello is the only thing in the library that assigns it — and this
+   driver handed every iteration a freshly zeroed pair, so the cache pointer was
+   NULL and only the cold path ever ran. HANDOVER.md §11 item 4 records that as
+   the open half of the callback audit, on the BUSIEST pair family in the census
+   (Box x ConvexMesh, 608,280 calls). The live divergences §8 records for McdGjk
+   are all "the same two actors over consecutive frames of one persistent
+   contact", which is exactly the shape a track reproduces and a scatter cannot.
+
+   Each side gets its OWN pair and therefore its own cache block, which is not
+   optional: §7 records months of the two implementations feeding each other
+   through one shared 60-byte block. KD_SHARECACHE=1 still restores that, and
+   with KD_WARM it is a genuine A/B rather than an inert one.
+
+   KD_JITTER=<eps> displaces model2 by eps between the two calls. With
    KD_SELFTEST=1 that runs the ORIGINAL against ITSELF on inputs that differ by
    eps, which answers a question no A/B can: is the answer a STABLE property of
    the geometry, or is it decided by rounding? A gate that demands we reproduce
    a decision the original itself cannot reproduce under a 1e-6 nudge is
    demanding the wrong thing. */
 static float kd_jitter;
+static int kd_warm;            /* KD_WARM=<K>: track length in frames, 0 = off */
+/* KD_WARMDEBUG=1 prints the cache block address and the warm-started normal for
+   the first 64 frames. It exists because a clean warm run and a warm run where
+   the cache was never populated look identical from the summary, and the first
+   thing to check about a new mode is that it changed anything at all. */
+static int kd_warmdebug;
 static void dimshist_add(int a, int b)
 {
     for (int i = 0; i < kd_dh_n; i++)
@@ -595,6 +628,9 @@ int main(int argc, char **argv)
     kd_grid = getenv("KD_GRID") != NULL;
     kd_dimshist = getenv("KD_DIMSHIST") != NULL;
     { const char *j = getenv("KD_JITTER"); kd_jitter = j ? (float)atof(j) : 0.0f; }
+    { const char *w = getenv("KD_WARM"); kd_warm = w ? atoi(w) : 0;
+      if (kd_warm < 0) kd_warm = 0; }
+    kd_warmdebug = getenv("KD_WARMDEBUG") != NULL;
     const char *e = getenv("KD_SELFTEST");
     int selftest = (e && *e == '1');
     const char *want = (argc > 1 && strcmp(argv[1], "all")) ? argv[1] : NULL;
@@ -625,21 +661,60 @@ int main(int argc, char **argv)
         int dumped = 0;
 
         int fixed2 = (PAIRS[k].g2 == mk_trilist);   /* a level does not move */
+        /* Persistent across frames when KD_WARM is on; re-made every frame
+           otherwise, which is the pre-existing behaviour. */
+        McdModelPair pair, pair_warm_b;
+        memset(&pair, 0, sizeof pair);
+        memset(&pair_warm_b, 0, sizeof pair_warm_b);
         for (int t = 0; t < N; t++) {
+            /* Derived from t rather than carried in a counter: the body below
+               has several `continue` paths and a counter updated at the bottom
+               would silently stop advancing on exactly the iterations that
+               diverge. */
+            int track_age = kd_warm ? (t % kd_warm) : 0;
             /* KD_SPREAD scales how far apart the bodies are scattered, which
                is how you move between contact REGIMES. The default puts the
                trilist tests at 92% touching with six to eleven contacts each —
                deep interpenetration. A real level is shallow resting contact,
                one or two contacts, ~20% touching. They are different tests and
                they find different things. */
-            reshape(m1, 0); reshape(m2, 1);
             void (*tmfn)(MeMatrix4Ptr, float) = kd_grid ? grid_tm : rand_tm;
-            tmfn(McdModelGetTransformPtr(m1), PAIRS[k].spread * kd_spread);
-            if (!fixed2) tmfn(McdModelGetTransformPtr(m2),
-                              PAIRS[k].spread * kd_spread);
+            if (!kd_warm || track_age == 0) {
+                reshape(m1, 0); reshape(m2, 1);
+                tmfn(McdModelGetTransformPtr(m1), PAIRS[k].spread * kd_spread);
+                if (!fixed2) tmfn(McdModelGetTransformPtr(m2),
+                                  PAIRS[k].spread * kd_spread);
+            } else {
+                /* Advance the track. A body sliding a few millimetres per frame
+                   is what keeps a contact PERSISTENT, which is the state the
+                   cache exists for — re-scattering would make every frame cold
+                   again even with the cache allocated. */
+                MeMatrix4Ptr t2 = McdModelGetTransformPtr(fixed2 ? m1 : m2);
+                for (int j = 0; j < 3; j++)
+                    t2[3][j] += frnd(-0.02f, 0.02f) * PAIRS[k].spread * kd_spread;
+                McdModelUpdate(fixed2 ? m1 : m2);
+            }
 
-            McdModelPair pair;  memset(&pair, 0, sizeof pair);
-            pair.model1 = m1; pair.model2 = m2;
+            if (kd_warm) {
+                if (track_age == 0) {
+                    /* End the previous track and start a clean one. Goodbye
+                       returns the block to Karma's pool; without it a long run
+                       exhausts the pool rather than testing anything. */
+                    if (t) { McdCacheGoodbye(&pair); McdCacheGoodbye(&pair_warm_b); }
+                    memset(&pair, 0, sizeof pair);
+                    memset(&pair_warm_b, 0, sizeof pair_warm_b);
+                    pair.model1 = m1; pair.model2 = m2;
+                    pair_warm_b.model1 = m1; pair_warm_b.model2 = m2;
+                    McdCacheHello(&pair);
+                    if (!kd_sharecache) McdCacheHello(&pair_warm_b);
+                    if (kd_warmdebug && t < 64)
+                        printf("  WARM t=%d TRACK START cacheA=%p cacheB=%p\n",
+                               t, pair.m_cachedData, pair_warm_b.m_cachedData);
+                }
+            } else {
+                memset(&pair, 0, sizeof pair);
+                pair.model1 = m1; pair.model2 = m2;
+            }
             /* The second call gets its OWN pair, and this is not paranoia —
                kd_shadow.c carries the same fix and §7 records what it cost to
                find: the two implementations shared a McdModelPair for months,
@@ -650,7 +725,8 @@ int main(int argc, char **argv)
                measures?". KD_SHARECACHE=1 restores the old behaviour, matching
                the shadow harness's escape hatch, so the two can be A/B'd. */
             McdModelPair pair_b = pair;
-            McdModelPair *pb = kd_sharecache ? &pair : &pair_b;
+            McdModelPair *pb = kd_sharecache ? &pair
+                             : (kd_warm ? &pair_warm_b : &pair_b);
 
             McdContact cA[MAXC], cB[MAXC];
             McdIntersectResult rA, rB;
@@ -659,6 +735,13 @@ int main(int argc, char **argv)
             rA.pair = &pair; rA.contacts = cA; rA.contactMaxCount = MAXC;
             rB.pair = pb;    rB.contacts = cB; rB.contactMaxCount = MAXC;
 
+            if (kd_warm && kd_warmdebug && t < 64) {
+                const float *cf = (const float *)pair.m_cachedData;
+                printf("  WARM t=%d age=%d cache=%p shared=%d normal=%.6f %.6f %.6f sep=%.6f\n",
+                       t, track_age, pair.m_cachedData, (pb == &pair),
+                       cf ? cf[0] : 0.0f, cf ? cf[1] : 0.0f, cf ? cf[2] : 0.0f,
+                       cf ? cf[12] : 0.0f);
+            }
             kd_gen_side = 0; kd_gen_calls[0] = kd_gen_calls[1] = 0;
             int a = PAIRS[k].orig(&pair, &rA);
             if (kd_jitter != 0.0f) {
@@ -745,6 +828,8 @@ int main(int argc, char **argv)
 
         int bad = retdiff + countdiff + dimsdiff;
         failures += bad;
+        if (kd_warm) { McdCacheGoodbye(&pair); 
+                       if (!kd_sharecache) McdCacheGoodbye(&pair_warm_b); }
         printf("%s%s: %d pairs, %d touching (%.1f%%)\n",
                PAIRS[k].name, selftest ? " [SELFTEST: original vs original]" : "",
                N, touching, 100.0 * touching / N);

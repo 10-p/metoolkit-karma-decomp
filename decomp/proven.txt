@@ -1346,3 +1346,67 @@ MdtUtils              Bit-identical on scene_ragdoll with 4.113e+00 m of
 #
 # Reproduce:  KD_GRID=1 ./test/difftest_pair.sh /tmp/kd_build_dt <metoolkit>
 # and always with KD_SELFTEST=1 on the same regime first.
+
+# --- 2026-08-25: GJK's WARM CACHE PATH, tested for the first time -------------
+#
+# HANDOVER.md 11 item 4 closed three of the four callback questions and left one
+# open, on the busiest pair family in the census: "McdCacheHello/Goodbye are not
+# stubbed and never called, which is exactly why GJK runs cold-path-only here.
+# That remains a documented limit on this evidence." Box x ConvexMesh is 608,280
+# real calls and NOTHING had ever driven its warm path.
+#
+# KD_WARM=<K> runs the pair as a TRACK of K consecutive frames: one McdModelPair
+# kept across frames, its coherence cache allocated once per track with
+# McdCacheHello, and the bodies nudged a few millimetres per frame instead of
+# re-scattered. That is the shape the live divergences take -- "the same two
+# actors over consecutive frames of one persistent contact" -- and a scatter
+# cannot produce it at all.
+#
+# THE CACHE IS LIVE, and this was checked before any result was believed,
+# because a warm run whose cache never populated looks identical from the
+# summary. KD_WARMDEBUG=1:
+#
+#   WARM t=16 TRACK START cacheA=0x86deab0 cacheB=0x86deaf0
+#   WARM t=17 age=1 cache=0x86deab0 normal=0.610127 -0.104324 -0.785405 sep=-0.115161
+#   WARM t=18 age=2 cache=0x86deab0 normal=0.610127 -0.104323 -0.785405 sep=-0.111420
+#   WARM t=19 age=3 cache=0x86deab0 normal=0.610127 -0.104324 -0.785405 sep=-0.088724
+#   WARM t=20 age=4 cache=0x86deab0 normal=0.610127 -0.104326 -0.785405 sep=-0.072680
+#
+# One block address for the whole track, the witness normal carried across
+# frames and refined, the separation evolving -- a persistent penetrating
+# contact being warm-started, which is the state the cache exists for.
+#
+# RESULT, 200,000 pairs, KD_WARM=8, each side with its OWN cache block:
+#
+#   McdGjkCgIntersect   47,067 touching   0 ret  0 count  0 dims
+#                                         worst 2.030e-02
+#
+#   and at K=4, 32 and 128: 0/0/0 except one count divergence at K=32.
+#
+# SELFTEST in the same mode, all 14 pairs: PASS, 100% bit-identical. So the
+# harness is sound with the cache in play, which is what makes the zeros mean
+# something.
+#
+# AND A PREDICTION THIS FILE MADE, TESTED AND NOT CONFIRMED. The KD_SHARECACHE
+# note above says the shared-cache exposure "was real and currently inert --
+# worth closing because the moment anyone warms the cache it stops being inert."
+# It does not. Warm and shared reads exactly the same as warm and isolated:
+#
+#   KD_WARM=8                  0 ret  0 count  0 dims   worst 2.030e-02
+#   KD_WARM=8 KD_SHARECACHE=1  0 ret  0 count  0 dims   worst 2.030e-02
+#
+# The switch IS wired -- KD_WARMDEBUG prints shared=1 and both sides then show
+# the SAME block address, against alternating addresses when isolated. So the
+# right reading is not "sharing does not matter" in general; it is that the
+# RECOVERED McdGjk leaves the cache in the same state the original does, so
+# there is nothing for the other side to read differently. That is a stronger
+# statement about the recovery than the zeros alone: it agrees on 60 bytes of
+# internal state it is never asked about, over eight compounding frames.
+#
+# The in-game divergences (3 ret_diff in 65,975, HANDOVER.md 8) are NOT
+# reproduced here. They remain open, and this narrows where they can come from:
+# not the cold path, not the warm path on these shapes, and not cache
+# maintenance.
+#
+# Reproduce:  KD_WARM=8 ./test/difftest_pair.sh /tmp/kd_build_dt <metoolkit>
+#             KD_WARM=8 KD_SELFTEST=1 ...   first, always.

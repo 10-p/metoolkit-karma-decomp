@@ -1185,6 +1185,38 @@ _FIXED_WIDTH = {'undefined1': 1, 'undefined2': 2, 'undefined4': 4, 'undefined8':
                 'double': 8, 'MeReal': 4}
 
 
+def read_ghidra_locals(dump):
+    """{function: {name: (stack offset, size, type)}} from `<dump>.locals`.
+
+    DumpDecomp.java emits one row per decompiled local that has stack storage,
+    with the offset out of `HighFunction.getLocalSymbolMap()`. That is Ghidra's
+    own answer to "what lives at this frame offset", as opposed to the offset
+    encoded in the NAME it invented, and the two are not the same kind of fact.
+
+    Absent for a dump directory made before this existed, in which case every
+    consumer falls back to the name — see fix_stack_address_name.
+    """
+    if not dump:
+        return {}
+    path = dump[:-2] + '.locals' if dump.endswith('.c') else dump + '.locals'
+    if not os.path.exists(path):
+        return {}
+    out = {}
+    with open(path) as f:
+        for line in f:
+            if line.startswith('#'):
+                continue
+            parts = line.rstrip('\n').split(',', 5)
+            if len(parts) != 6:
+                continue
+            fn, name, off, _hexoff, size, ty = parts
+            try:
+                out.setdefault(fn, {})[name] = (int(off), int(size), ty)
+            except ValueError:
+                continue
+    return out
+
+
 def _dwarf_type_size(obj, name):
     """Bytes of the named type, from the object's own DWARF, or None."""
     if name in _FIXED_WIDTH:
@@ -1238,6 +1270,22 @@ def fix_stack_address_name(text, diag, ctx):
     inferred. `keaIntegrate_pc` — `MdtKeaIntegrateSystem`, 900 calls per 900
     solver steps — has this as its ONLY error.
 
+    THAT USED TO BE AN ASSUMPTION ABOUT HOW GHIDRA BUILDS NAMES. It is now
+    checked against Ghidra's own symbol map, which `DumpDecomp.java` emits
+    beside each dump as `<object>.locals`. Over every `stack0x` site in the
+    corpus, every one that has a covering local sits at exactly the offset its
+    name encodes — no exceptions — so the convention holds and the rule is
+    right for the reason it claimed. Where the dump carries no table the rule
+    falls back to the name, i.e. to what it did before.
+
+    `tools/frame_offsets.py` prints that join, and it is what to run first on
+    any new `stack0x`: it separates "the name is wrong" from "the local is too
+    small" from "there is no local here at all", and those need different
+    answers. It also settled MeMath — the mapping there is exact and the target
+    `MeReal eR[3][3]` is DECLARED AND NEVER WRITTEN, because Ghidra emitted
+    `fcos`/`fsin` and discarded the results, so repairing the name would buy a
+    compile at the price of reading uninitialised memory.
+
     THIS IS NOT `materialise_alloca_frame`'S CASE, and the distinction is the
     whole reason it is allowed. That function's docstring declines to touch a
     `stack0xNNNN` because inventing storage for one repeats the fixed-buffer
@@ -1284,6 +1332,21 @@ def fix_stack_address_name(text, diag, ctx):
         else:
             unit = _dwarf_type_size(obj, base_type)
             declared = None if unit is None else unit * int(decl.group(3) or 1)
+
+        # Ghidra's own frame assignment, where the dump carried one. This does
+        # two things the name cannot: it CHECKS that `in_stack_<off>` really is
+        # at `<off>` — the assumption this rule rests on — and it supplies the
+        # size directly instead of deriving it from a type name.
+        entry = (ctx.locals.get(_fn) or {}).get('in_stack_' + off) \
+            if getattr(ctx, 'locals', None) else None
+        if entry is not None:
+            want = int(off, 16)
+            if want >= 1 << 31:
+                want -= 1 << 32
+            if entry[0] != want:
+                out.append(region)      # the name and the storage disagree
+                continue
+            declared = entry[1]
 
         # How much the copy loop writes through the pointer taken off this slot.
         need = None
@@ -2284,11 +2347,14 @@ class RepairContext:
     object, the public headers or the DWARF-derived type database — nothing in
     it is inferred from the decompiled text."""
 
-    def __init__(self, obj=None, fieldmap=None, include_dir=None):
+    def __init__(self, obj=None, fieldmap=None, include_dir=None, dump=None):
         self.obj = obj
         self.fieldmap = fieldmap or {}
         self.externals = relocation_targets(obj, per_function=True) if obj else {}
         self.extern_types = extern_var_types(include_dir)
+        # Ghidra's stack-frame assignments, if the dump carried them. Read from
+        # the decompiler's symbol map, not from the decompiled text.
+        self.locals = read_ghidra_locals(dump)
         self.n_same = 0
 
 
@@ -2748,7 +2814,8 @@ def main():
     if n_rel:
         print(f'  {n_rel} relocated data block(s) rebuilt with their pointers')
     if args.cflag:
-        ctx = RepairContext(args.object, fieldmap, args.metoolkit_include)
+        ctx = RepairContext(args.object, fieldmap, args.metoolkit_include,
+                            dump=args.input)
         n_edits, left, _log = repair_loop(args.output, args.cc, args.cflag, ctx)
         if n_edits:
             print(f'  {n_edits} line(s) repaired from compiler feedback'

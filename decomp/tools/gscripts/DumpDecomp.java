@@ -60,6 +60,21 @@ public class DumpDecomp extends GhidraScript {
         di.openProgram(currentProgram);
         PrintWriter pw  = new PrintWriter(new FileWriter(outDir + "/" + base + ".c"));
         PrintWriter csv = new PrintWriter(new FileWriter(outDir + "/stats.csv", true));
+        // Every decompiled local, with the STACK OFFSET Ghidra assigned it.
+        //
+        // Ghidra prints a slot's ADDRESS as `&stack0xffffff6c` and does not
+        // declare it, while the local that occupies that offset is printed
+        // under whatever name the decompiler invented — `kVar2`, not
+        // `in_stack_ffffff6c`. So the two can only be connected through the
+        // offset, and the offset is in the symbol map, not in the text.
+        //
+        // Reading it out of the text instead would mean inferring the base of
+        // `kVar2` from a line like `kVar2._kd[4] = in_stack_ffffff70[0]`, which
+        // is precisely the guess the guessed-stack-frame detector exists to
+        // stop. This is Ghidra's own answer.
+        PrintWriter loc = new PrintWriter(new FileWriter(outDir + "/" + base + ".locals"));
+        loc.println("# function,name,stackoff,hexoff,size,type");
+
         FunctionIterator it = currentProgram.getFunctionManager().getFunctions(true);
         while (it.hasNext()) {
             Function f = it.next();
@@ -76,6 +91,7 @@ public class DumpDecomp extends GhidraScript {
             boolean ok = r != null && r.decompileCompleted() && r.getDecompiledFunction()!=null;
             String c = ok ? r.getDecompiledFunction().getC() : "";
             if (ok) { pw.println("/* ==== " + f.getName() + " ==== */"); pw.println(c); }
+            if (ok && r.getHighFunction() != null) dumpLocals(loc, f, r);
             int lines = c.isEmpty()?0:c.split("\n").length;
             csv.printf("%s,%s,%d,%d,%b,%b,%b,%b,%b,%b,%d%n",
                 base, f.getName(), f.getBody().getNumAddresses(), lines, ok,
@@ -86,8 +102,39 @@ public class DumpDecomp extends GhidraScript {
                 c.contains("undefined") || c.contains("unaff_"),   // unknown types/regs
                 countWarn(c));
         }
-        pw.close(); csv.close();
+        pw.close(); csv.close(); loc.close();
         println("DONE " + base);
+    }
+
+    /**
+     * One row per decompiled local that lives on the stack.
+     *
+     * The offset is the one Ghidra assigns, printed both signed and as the
+     * 8-hex-digit two's complement form it uses when it builds a name — so
+     * `stack0xffffff6c` and `in_stack_ffffff6c` both key straight into this
+     * table, and so does a local whose name contains no offset at all.
+     *
+     * Locals in registers are skipped: they have no frame offset, and a row
+     * without one would invite exactly the guess this file exists to avoid.
+     */
+    private void dumpLocals(PrintWriter loc, Function f, DecompileResults r) {
+        try {
+            java.util.Iterator<HighSymbol> it =
+                r.getHighFunction().getLocalSymbolMap().getSymbols();
+            while (it.hasNext()) {
+                HighSymbol hs = it.next();
+                ghidra.program.model.listing.VariableStorage st = hs.getStorage();
+                if (st == null || !st.isStackStorage()) continue;
+                int off = st.getStackOffset();
+                DataType dt = hs.getDataType();
+                int size = dt != null ? dt.getLength() : st.size();
+                loc.printf("%s,%s,%d,%08x,%d,%s%n",
+                           f.getName(), hs.getName(), off, off & 0xFFFFFFFFL, size,
+                           dt != null ? dt.getName().replace(',', ';') : "?");
+            }
+        } catch (Exception e) {
+            println("LOCALS: " + f.getName() + ": " + e.getMessage());
+        }
     }
     /** int (McdModelPair*, McdUserTriangle*, MeVector3, MeReal, int) */
     /** Make every function plain cdecl, and say how many had to be changed. */

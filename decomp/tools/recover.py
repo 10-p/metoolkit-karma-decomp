@@ -66,6 +66,34 @@ def dump_functions(path):
     return re.findall(r'/\* ==== (\S+) ==== \*/', open(path, errors='ignore').read())
 
 
+# Objects held out of the build by a MEASUREMENT rather than by a pattern.
+#
+# Every other detector below recognises a SHAPE in the recovered source — a
+# guessed stack frame, an out-of-range frame reference, a value Ghidra could not
+# account for. That works because those shapes are what usually precedes a
+# defect. It cannot work when an object is clean by every shape and simply
+# computes the wrong answer, and HANDOVER.md §11 item 0 has been recording that
+# hole for several sessions: "the quarantine can only hold what a detector
+# recognises; an object that is simply never measured, and is wrong, walks
+# straight in."
+#
+# So this is the hole, closed. An entry here is a claim about evidence and must
+# cite the line in proven.txt that carries it. Removing one is a release and
+# needs the same standard as any other.
+#
+# NOT for a small, understood divergence: IxCylinderCylinder is measurably
+# imperfect and §11 item 0 says explicitly to leave it in the build, because
+# what it gets wrong is a field the engine does not read for that pair. This is
+# for an object whose output is wrong in a way that would make any build
+# containing it useless.
+MEASURED_WRONG = {
+    'keaLCPSolver':
+        'ragdoll step 1 is 3.772e+00 m out — a body teleports. Released '
+        'objects first differ at 1e-6 to 1e-8 and grow from there; this does '
+        'not. See proven.txt, 2026-08-25 second session.',
+}
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--dump-dir', required=True, help='Ghidra .c dumps')
@@ -338,6 +366,13 @@ def main():
             else:
                 rows.append((archive, base, 'FAIL', first.strip()[:110]))
                 counts['FAIL'] += 1
+            continue
+
+        if base in MEASURED_WRONG:
+            os.unlink(o)
+            rows.append((archive, base, 'REVIEW',
+                         'measured wrong: ' + MEASURED_WRONG[base]))
+            counts['REVIEW'] += 1
             continue
 
         src = open(csrc, errors='ignore').read()

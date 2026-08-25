@@ -2099,7 +2099,48 @@ def _demangled_param_count(mangled):
     return len(_split_args(inner))
 
 
-def fix_vptr_store(obj, text, declared=None, locals_table=None):
+_PROTO_TEXT = {}
+
+
+def _slot_fnptr_type(sym, protos):
+    """`void (**)(void *, …, int, float)` for a vtable slot, or None.
+
+    ONLY where the slot takes a FLOAT, and that restriction is the whole point.
+    Ghidra dispatches through `code *`, which kd_compat.h declares
+    `typedef int code();` — an UNPROTOTYPED function type. On i386 an argument
+    passed to one of those undergoes the default argument promotions, so a
+    `float` is pushed as a DOUBLE: eight bytes where the callee reads four, and
+    every argument after it shifted by four.
+
+    That is not theoretical. keaRbdCore_unified dispatches
+    `calcIworldandNonInertialForceandVhmf(…, int, float)` and
+    `calcJinvMandRHS(…, int, int, int, float, float)` this way, and the moment
+    the object compiled it produced 3.3e+14 on step 0 of the collision-free
+    scene and NaN on step 1. Typing those two sites takes the same object to
+    4.7e-03 m at step 0. Integer promotions need no such care — they are already
+    int-sized on the stack — so a slot with no float keeps `code *` and nothing
+    else in the corpus moves.
+
+    Declines on a prototype that mentions `kd_aggNN`: those stand-ins are only
+    emitted into a translation unit that passes one, and after
+    collapse_outgoing_aggregate_copy has done its work it may not be."""
+    if not protos:
+        return None
+    if protos not in _PROTO_TEXT:
+        try:
+            _PROTO_TEXT[protos] = open(protos, errors='ignore').read()
+        except OSError:
+            _PROTO_TEXT[protos] = ''
+    m = re.search(r'^(\S+) ' + re.escape(sym) + r'\(([^)]*)\);', _PROTO_TEXT[protos], re.M)
+    if not m:
+        return None
+    params = m.group(2)
+    if 'kd_agg' in params or not re.search(r'\b(float|double)\b', params):
+        return None
+    return '%s (**)(%s)' % (m.group(1), params)
+
+
+def fix_vptr_store(obj, text, declared=None, locals_table=None, protos=None):
     """`_vanillaQMatrix = &__gxx_personality_v0;` is `vanillaQMatrix.vptr = &vtable[2]`.
 
     A function that constructs a polymorphic class as a LOCAL stores the vtable
@@ -2172,14 +2213,15 @@ def fix_vptr_store(obj, text, declared=None, locals_table=None):
         # than costing the others their repair.
         for store in VPTR_STORE.finditer(region):
             new = _repair_vptr_store(fn, region, store.groups(), declared, obj,
-                                     corpus, locals_table)
+                                     corpus, locals_table, protos)
             if new is not None:
                 region, n = new, n + 1
         out.append(region)
     return ''.join(out), n
 
 
-def _repair_vptr_store(fn, region, groups, declared, obj, corpus, locals_table):
+def _repair_vptr_store(fn, region, groups, declared, obj, corpus, locals_table,
+                       protos=None):
     _indent, name, cast, label = groups
 
     # (3) the local, and (4) it must be the only one of its type here.
@@ -2279,12 +2321,44 @@ def _repair_vptr_store(fn, region, groups, declared, obj, corpus, locals_table):
         for t in sorted(subs, key=len, reverse=True)))
     new = combined.sub(
         lambda m: m.group(0) if m.start() in skip else subs[m.group(0)], region)
+    # A slot that takes a FLOAT cannot go through `code *` — see
+    # _slot_fnptr_type. Retype those dispatches now that the base is named.
+    new = _type_float_dispatches(new, alias, etype, name, table, protos)
     store = re.compile(r'^([ \t]*)' + re.escape(alias) + r'[ \t]*=[^;\n]*;[ \t]*$',
                        re.M)
     new, k = store.subn(
         lambda mm: f'{mm.group(1)}{alias} = ({etype} *)((char *)&{vname}[0] + 8);',
         new)
     return new if k == 1 else None
+
+
+def _type_float_dispatches(region, alias, etype, name, table, protos):
+    """Replace `(**(code **)(BASE + N))` with the slot's real function type.
+
+    Only for a slot _slot_fnptr_type accepts, i.e. one that takes a float, and
+    the shape is the same one Ghidra wrote — `(**(T (**)(…))((char *)BASE + N))`
+    — so the call site around it is untouched.
+    """
+    esize = _FIXED_WIDTH.get(etype, 1)
+    base = re.escape(alias)
+    forms = [
+        (re.compile(r'\(\*\*\(code \*\*\)\(' + base + r' \+ (0x[0-9a-f]+|\d+)\)\)'),
+         lambda g: int(g, 0) * esize),
+        (re.compile(r'\(\*\*\(code \*\*\)' + base + r'\)'), lambda g: 0),
+        (re.compile(r'\(\*\(code \*\)' + base + r'\[(0x[0-9a-f]+|\d+)\]\)'),
+         lambda g: int(g, 0) * esize),
+        (re.compile(r'\(\*\(code \*\)\*' + base + r'\)'), lambda g: 0),
+    ]
+    for pat, off_of in forms:
+        def repl(m, off_of=off_of):
+            off = off_of(m.group(1)) if m.groups() else 0
+            sym = table.get(off)
+            fnptr = _slot_fnptr_type(sym, protos) if sym else None
+            if not fnptr:
+                return m.group(0)
+            return '(**(%s)((char *)(*(%s **)&%s) + %d))' % (fnptr, etype, name, off)
+        region = pat.sub(repl, region)
+    return region
 
 
 def _vptr_call_site(region, pos, scale):
@@ -3863,7 +3937,7 @@ def main():
     # the mangled call sites below, which resolve against this unit's own
     # forward declarations as well.
     body_text, n_vptr = fix_vptr_store(args.object, body_text, _declared,
-                                       read_ghidra_locals(args.input))
+                                       read_ghidra_locals(args.input), args.protos)
     body_text, n_mangled = resolve_mangled_call_names(
         body_text, _declared + '\n' + '\n'.join(decls))
     body_text, n_voidmem = fix_void_pointer_member(args.object, body_text, _declared)

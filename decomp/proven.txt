@@ -1888,3 +1888,93 @@ MdtUtils              Bit-identical on scene_ragdoll with 4.113e+00 m of
 # `uVar6` and six regions at multiples of it, based off a named local rather
 # than a `stack0x`. The multipliers {1,2,3,5,6} are in the text and the size
 # expression is the same `+ 0xf & 0xfffffff0` the existing rule already reads.
+
+# --- 2026-08-25 (second session): THE SOLVER DRIVER, RECOVERED AND VALIDATED --
+#
+# keaRbdCore_unified -- MdtKeaAddConstraintForces, 900 calls per 900 steps, the
+# object HANDOVER.md has called "the single object standing between the
+# recovered kernels and a solver that runs" since the file was written --
+# compiles and reproduces the shipped library EXACTLY.
+#
+#   scene_chain            trajectory BIT-IDENTICAL over 900 steps
+#   scene_ragdoll          trajectory BIT-IDENTICAL over 900 steps
+#   scene_boxes_on_plane   trajectory BIT-IDENTICAL over 900 steps
+#   scene_census (chain)   MdtKeaAddConstraintForces ran 900 times
+#
+# Bit-identical on a CONTACT scene is not something any other object in this
+# project has managed; the two collision scenes diverge without bound for
+# anything on the collision path (§10). This object is not on it -- it drives
+# the solver -- so exactness there is meaningful rather than lucky.
+#
+# THE GATE IS SENSITIVE, AND THE CONTROL IS NOT SUBTLE. Rebuild the same object
+# with its four float-taking dispatches back on Ghidra's `code *`:
+#
+#   scene_chain    step 0 is 4.900e+14 out
+#   scene_ragdoll  step 0 is 3.056e+34 out, and the run reaches inf
+#
+# gate_sensitivity cannot speak here -- it reports "not demonstrated", correctly,
+# since the object has 11 float operations in total and a rounding probe cannot
+# move a driver. The control above is the answer to that zero, and it is a
+# stronger one: a FOUR-BYTE ABI difference in one argument is the difference
+# between bit-identical and NaN.
+#
+# WHAT IT TOOK, in order, and every step is in the git log:
+#   * the vptr store (§11 item 3);
+#   * the mangled call sites (§5b's debt);
+#   * gen_prelude declaring a mangled import with the REAL aggregate types
+#     instead of gen_protos' `kd_aggNN` stand-ins -- without which the collapse
+#     below is an "incompatible type";
+#   * collapse_outgoing_aggregate_copy reaching a wrapped call, the
+#     `register0x00000010` loop shape, and the incoming mirror of it;
+#   * gen_vtable_callsites resolving the ABSOLUTE `call *0x8` form, adopted as
+#     out12 -- 2 of 153 dumps changed, `.locals` differing only in ORDER;
+#   * and then the float promotion below, which was the whole difference
+#     between "compiles" and "correct".
+#
+# THE FLOAT PROMOTION, PREDICTED AND THEN CONFIRMED. Earlier the same day this
+# file recorded: "A TRAP FOR WHOEVER UNBLOCKS keaRbdCore_unified. Its vtable
+# dispatches go through `code *`, which is UNPROTOTYPED, and two of its slots
+# take a float scalar... On i386 a float argument to an unprototyped function is
+# promoted to DOUBLE, eight bytes on the stack where the callee reads four."
+#
+# That is exactly what happened. The object compiled and produced 3.3e+14 on
+# step 0. `_slot_fnptr_type` now retypes a dispatch whose slot takes a float,
+# from that slot's prototype in kd_protos10.h -- FOUR sites in this object, and
+# corpus-wide nothing else moves, because a slot with no float is already
+# int-sized on the stack and `code *` is fine for it.
+#
+# --- 2026-08-25 (second session): keaLCPSolver IS MEASURED WRONG -------------
+#
+# AND THIS CORRECTS A READING WRITTEN EARLIER THE SAME DAY. This file said its
+# collision-scene divergences were "AT the scene's own noise floor -- the gate
+# cannot tell our recovery from a one-ULP perturbation of itself". That was
+# wrong, and it was wrong because MAX-DELTA-OVER-900-STEPS IS THE WRONG
+# STATISTIC for a scene with contact. Once a last-bit difference is amplified
+# without bound, every object on the path reaches metres and the maximum stops
+# discriminating.
+#
+# The FIRST step it differs on does discriminate, and it is now printed by
+# substitute_test.sh for every object:
+#
+#   IxSphylPrimitives  released, 74,921 real calls   first@0 = 1.043e-06
+#   GeomUtils          released                      first@1 = 8.900e-08
+#   keaRbdCore_unified this session                  never differs at all
+#   keaLCPSolver                                     first@1 = 3.772e+00
+#
+# Seven orders of magnitude. Reading the rows directly: on step 1 of the ragdoll
+# body 1 goes from (0.0224, 0.0302, -0.2885) in the shipped library to
+# (3.767, -0.587, -0.888) in ours. A body teleports 3.7 metres. On
+# scene_boxes_on_plane it first differs at step 54 by 2.7e-03, five orders above
+# that scene's 1e-8 rounding baseline. scene_chain is bit-identical and says
+# nothing: scene_census reports only 4 of its 15 functions ran there.
+#
+# NOTHING HELD IT. It compiles, no detector recognises anything about it, so it
+# went straight into the build -- the hole §11 item 0 has been describing for
+# several sessions. `recover.py`'s MEASURED_WRONG now closes that: a quarantine
+# that holds an object on EVIDENCE rather than on a pattern. keaLCPSolver is its
+# first and only entry. Removing it is a release and needs the usual standard.
+#
+# The vptr repair inside it is still measured and still correct -- test/vptr_ab.sh
+# reads bit-identical against a devirtualised control with both wrong versions
+# crashing. The defect is elsewhere in the object, and the instrument to find it
+# now exists: bisect on the first differing step, not on the maximum.

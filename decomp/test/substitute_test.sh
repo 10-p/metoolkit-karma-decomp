@@ -69,17 +69,26 @@ def load(p):
     return [[float(x) for x in row] for row in r[1:]]
 a, b = load(sys.argv[1]), load(sys.argv[2])
 n = min(len(a), len(b))
-worst = 0.0
+worst, first = 0.0, None
 for i in range(n):
-    for x, y in zip(a[i][1:], b[i][1:]):
-        worst = max(worst, abs(x - y))
-print(f'{worst:.3e}')
+    step = max((abs(x - y) for x, y in zip(a[i][1:], b[i][1:])), default=0.0)
+    if step and first is None:
+        first = (i, step)
+    worst = max(worst, step)
+# The FIRST difference, not just the largest. Once contact is involved a
+# last-bit difference grows without bound, so the max says almost nothing:
+# IxSphylPrimitives -- released, 74,921 real calls -- reaches 3.677 m on the
+# ragdoll and keaLCPSolver reaches 5.928 m. They are not remotely alike, and
+# the first step says so: 1.043e-06 against 3.772e+00. An object already
+# METRES out on the step it first differs is not being amplified; it is wrong.
+print(f'{worst:.3e}' + ('' if first is None else f' first@{first[0]}={first[1]:.3e}'))
 PYEOF
 )
+            fd=""; case "$d" in *" "*) fd="${d#* }"; d="${d%% *}";; esac
             if [ "$(python3 -c "print(1 if float('$d') == 0.0 else 0)")" = "1" ]; then
                 echo "  [  ok  ] $base — trajectory bit-identical"; pass=$((pass+1))
             elif [ "$(python3 -c "print(1 if float('$d') < 1e-3 else 0)")" = "1" ]; then
-                echo "  [  ok  ] $base — max delta $d m"; pass=$((pass+1))
+                echo "  [  ok  ] $base — max delta $d m ${fd:+$fd}"; pass=$((pass+1))
             else
                 # NOT automatically a bug. Once contact is involved, a last-bit
                 # difference diverges without bound (docs/KARMA-ON-WASM.md II.3),
@@ -88,7 +97,7 @@ PYEOF
                 # 300,000 real model pairs. Treat a collision-free scene as the
                 # authoritative trajectory signal, and the per-function gate as
                 # the verdict.
-                echo "  [ diverg] $base — max delta $d m (expected if on the collision path)"
+                echo "  [ diverg] $base — max delta $d m ${fd:+$fd }(expected if on the collision path)"
                 pass=$((pass+1))
             fi
         fi

@@ -50,14 +50,15 @@ moves, move it there.
   alone would not be. The wrong repair is the one that supplies the cast Ghidra elided: it
   compiles, and it reads a `MeReal` out of the pool that the original never touches.
   §11 item 3a.
-- **What now blocks the solver is TWO objects and nine errors, where a week ago it was five
-  objects.** `keaRbdCore_unified` at 7 and `keaLCP_new` at 2, plus `keaIntegrate_pc`, which
-  compiles and is measured WRONG. Six of the nine are the frame — **the DWARF for those
-  functions declares no `DW_AT_location`**, so nothing can read it out of the debug info,
-  and §11 item 2 has the `readelf` that shows it. The other three are exported .bss names
-  and are a different, probably cheap class. `MdtBcl` and `MeMath` are blocked on the frame
-  too, at **one error each**, and are far cheaper subjects to validate a fix on than any kea
-  object. §13.
+- **What now blocks the solver is TWO objects and SIX errors, where a week ago it was five
+  objects.** `keaRbdCore_unified` at 4 and `keaLCP_new` at 2, plus `keaIntegrate_pc`, which
+  compiles and is measured WRONG. **Both are now diagnosed line by line against the shipped
+  machine code, and neither wants a frame repair.** `keaRbdCore_unified` wants
+  `gen_prelude` to declare a mangled import with the REAL aggregate types instead of the
+  `kd_aggNN` stand-ins — without that the collapse that fixed `MdtWorld` is an "incompatible
+  type" error. `keaLCP_new` wants `materialise_alloca_frame` extended, and naming its two
+  slots would be actively harmful: it would trade two visible errors for writes
+  `6*(4n+15 & ~15)` bytes below a twelve-byte local. §11 item 2, `proven.txt`.
 - **The Ghidra-side attack on that is REFUTED, in three minutes, and it cost nothing.**
   Disabling DWARF variable import leaves the `in_stack_`/`stack0x` frame model
   **byte-identical**; all it removes is names. Ghidra's native stack recovery and its DWARF
@@ -108,7 +109,7 @@ Everything else in this file is detail. This is the work.
 
 | # | what | where | blocked on |
 |---|---|---|---|
-| 1 | **THE SOLVER, and it is down to TWO objects and NINE errors.** `keaLCPSolver` and `keaMemory` came out on 2026-08-25; `MdtWorld` came out and turned out not to be on UT2004's path. What is left: **`keaRbdCore_unified` at 7 and `keaLCP_new` at 2**, plus `keaIntegrate_pc`, which compiles and is measured WRONG. Of those nine errors, **six are the frame** (5 `stack0x` + `register0x00000010`) and **three are a separate, probably cheap class** — `gDebug`, `gDebugDataFile`, `gPartition`, exported .bss symbols gen_prelude defines as `float kd_<name>[1]` while the body uses the bare name and one of them is a POINTER. See "WHERE MY HEAD IS" for the table. The DWARF declares no `DW_AT_location`, the frames are described and FRAGMENTED, the overlay repair for that is dead end 20, the aggregate-copy collapse is what worked, and the Ghidra-side re-dump is TRIED AND REFUTED (dead end 18). | §11 item 2 | the six frame errors: nothing, but it is a text-level repair on a Ghidra-invented frame. The three data names: nothing at all |
+| 1 | **THE SOLVER, and it is down to TWO objects and SIX errors.** `keaLCPSolver` and `keaMemory` came out on 2026-08-25; `MdtWorld` came out and turned out not to be on UT2004's path. What is left: **`keaRbdCore_unified` at 4 and `keaLCP_new` at 2**, plus `keaIntegrate_pc`, which compiles and is measured WRONG. **Both are diagnosed line by line against the shipped machine code and NEITHER wants a frame repair** — the first is blocked on a PROTOTYPE (`kd_aggNN` stand-ins where the real aggregate types are needed) and the second on `materialise_alloca_frame`, with naming its slots being actively harmful. See "WHERE MY HEAD IS" for the two moves and `proven.txt` for the chain. The DWARF declares no `DW_AT_location`, the frames are described and FRAGMENTED, the overlay repair for that is dead end 20, the aggregate-copy collapse is what worked, and the Ghidra-side re-dump is TRIED AND REFUTED (dead end 18). | §11 item 2 | nothing — both moves are generator changes with the evidence already read |
 | 2 | ~~**`IxCylinderCylinder` is wrong and is in the build.**~~ **RE-FRAMED — `dims` is not a measurement for this pair.** The shipped library disagrees with itself, under a 1e-7 m nudge, more often than we disagree with it. Leave it in the build; do not release it either. | §11 item 0 | a live match scoring ret/count/position/separation with dims read separately |
 | 3 | **arm64 truncates pointers.** 2,291 diagnostics across 68 of 112 objects; armv7 zero. **There is now a gate** — `test/ptrwidth_check.sh`. | §6b | a generator-wide change to pointer-width slots |
 | 4 | **Nothing has EXECUTED on wasm32, armv7 or arm64.** | `HANDOVER-WEB.md` | the web agent |
@@ -128,36 +129,36 @@ DONE and measured; this is what replaces them.
 |---|---:|---|
 | ~~`keaLCPSolver`~~ | **0** | **compiles, in the build.** The vptr store (§11 item 3) + one mangled call site |
 | ~~`keaMemory`~~ | **0** | **compiles, in the build,** and bit-identical on all three scenes |
-| `keaRbdCore_unified` | 7 | 3 `stack0x` + `register0x00000010` — **plus 3 exported-data names, a different and probably cheap class** |
-| `keaLCP_new` | 2 | 2 `stack0x`, and NOTHING else. Was 11 |
+| `keaRbdCore_unified` | **4** | 3 `stack0x` + `register0x00000010`, all three of them the outgoing-aggregate copy — **blocked on a PROTOTYPE, not on the frame.** MOVE 1 |
+| `keaLCP_new` | 2 | 2 `stack0x`, and NOTHING else. Was 11. **Do not name them** — MOVE 2 |
 | `keaIntegrate_pc` | **0** | compiles; held by a detector and measured wrong (`proven.txt`) |
 | `MdtBcl` / `MeMath` | 1 / 1 | one `stack0x` each at offset −12, both diagnosed in §5c |
 
-**MOVE 1 — `keaRbdCore_unified`'s three exported-data names, which are NOT the frame and
-are the only cheap thing left on the critical path.** `gDebug`, `gDebugDataFile` and
-`gPartition` are .bss symbols this object EXPORTS. `gen_prelude` emits them as
-`float kd_gDebug[1] KD_MANGLED("gDebug");` and the body writes the bare `gDebug`, so they
-are undeclared. Two halves, and the second is the one to think about:
+**MOVE 1 — `gen_prelude` should declare a mangled import with the REAL aggregate types,
+not the `kd_aggNN` stand-ins.** This is not a frame repair and it is the prerequisite for
+`keaRbdCore_unified`. Its three `stack0x` sites are the same outgoing by-value aggregate
+marshalling `collapse_outgoing_aggregate_copy` already solved for `MdtWorld` — sources and
+sizes read straight off the shipped prologue (`lea 0x70(%ebp),%esi` / 19 words = 76 =
+`MdtKeaParameters`; `lea 0x8(%ebp),%esi` / 23 words = 92 = `MdtKeaConstraints`) — but the
+collapse would emit `keaFunctions__checkPrintDebugInput(&vanillaFunctions, pconstraints,
+parameters, …)` and that callee is declared with `kd_agg92`/`kd_agg76`, so it is an
+"incompatible type for argument 2". **`MdtWorld` collapsed cleanly only because ITS callee
+has a public-header declaration with the real types**; the stand-in prototype is used only
+to SIZE the parameter. The stand-ins exist because `kd_protos.h` is flat and
+dependency-free FOR GHIDRA (§5); a prelude is compiled in a unit that already has
+`kd_types.h` and `kd_karma.h`. `proven.txt` has the full chain and the three smaller things
+that come after it.
 
-- the body needs to reach the `kd_` name, the same rename gap `apply_renames` closes for
-  functions;
-- **the TYPE is wrong.** `gDebug = &parameters.debug;` is a pointer, and `float kd_gDebug[1]`
-  is an array — not assignable at all. §8c already recorded why: *a zero-initialised static
-  carries no evidence of its own type*, and the answer is the object's own DWARF, which is
-  exactly what `dwarf_structs.py` reads. That is the same repair `MeFAssetCreateFunc`
-  needed and it is written down.
-
-That is 3 of 7. It does not make the object compile — the other four are §11 item 2 — but
-it is cheap, it is general (every object that exports .bss data has this latent), and it
-shrinks the frame problem to its true size.
-
-**MOVE 2 — `keaLCP_new` is TWO `stack0x` errors and nothing else.** It was 11. This is now
-the smallest §11 item 2 subject in `libMdtKea`, and `keaLCPSolver::solveLCP` runs 900 times
-in `scene_chain`, so a wrong answer shows on the trajectory gate rather than in a review
-column. **But read §13 first, which says do not text-repair this frame**, and dead end 20,
-which is the overlay attempt on the same family. If you take it on, take `MdtBcl` or
-`MeMath` first — one error each, non-kea, and §12's standing lesson is that the object
-which motivates a tool is the worst thing to validate it on.
+**MOVE 2 — `keaLCP_new` needs `materialise_alloca_frame` extended, and its two `stack0x`
+must NOT be named.** §13 already says do not text-repair this frame; the reason is worth
+more than the instruction. `auStack_3c` is a twelve-byte local and the function reads and
+writes six alloca-sized regions below it at `(int)auStack_3c + uVar6 * -1…-6`, where
+`uVar6 = this->n * 4 + 0xf & 0xfffffff0` is a RUNTIME size — the original's six merged
+allocas, re-based by Ghidra on whichever local landed at the top. Naming the slots takes
+the object to 0 errors and hands the build a function that writes `6*(4n+15 & ~15)` bytes
+below a twelve-byte array. `materialise_alloca_frame`'s own docstring records what that
+costs: "it COMPILED, passed the substitute gate, and then segfaulted on its first call in a
+real match". The compile error is the useful signal.
 
 **MOVE 3 — decide what to do about `keaLCPSolver` being in the build unmeasured.** It
 compiles, no detector objects, so it went straight in — the same posture §11 item 0 warns
@@ -169,9 +170,9 @@ boxes). That is better than "compiles" and short of released. Either find an ins
 that can see it, or write down that it is unmeasured — do not let the silence read as a
 pass.
 
-**What NOT to do next.** Do not extend `collapse_outgoing_aggregate_copy` speculatively —
-it did its job on `MdtWorld` and neither remaining kea object is blocked on the pattern it
-matches. Do not attempt `MeMath` (§5c proves the target is never written). Do not
+**What NOT to do next.** Do not extend `collapse_outgoing_aggregate_copy` before MOVE 1 —
+`keaRbdCore_unified` matches the pattern it looks for and would still fail on the callee's
+declaration, so the extension would look like it does not work. Do not attempt `MeMath` (§5c proves the target is never written). Do not
 text-repair `keaLCP_new`'s frame without reading dead end 20 first.
 
 **And there is a trap waiting in `keaRbdCore_unified` that is worth knowing before you get
@@ -2465,12 +2466,18 @@ Ordered by what actually moves the project, not by what is easiest:
    relocation.
 
 2. **THE JOB: the frames — and the DWARF does not describe them. It is now SIX ERRORS in
-   two objects.** As of 2026-08-25 (second session) `keaLCPSolver` and `keaMemory` have
-   left this item entirely, `keaLCP_new` is down from 11 errors to **2**, and
-   `keaRbdCore_unified` from 18 to **7**, of which only four are the frame — 3 `stack0x`
-   plus `register0x00000010`. The other three are exported .bss names and are a different,
-   cheaper class (see "WHERE MY HEAD IS"). So the frame problem is **five `stack0x` and one
-   `register0x` across two objects**, plus one each in `MdtBcl` and `MeMath`.
+   two objects, and NEITHER of them wants a frame repair.** As of 2026-08-25 (second
+   session) `keaLCPSolver` and `keaMemory` have left this item entirely, `keaLCP_new` is
+   down from 11 errors to **2** and `keaRbdCore_unified` from 18 to **4**.
+
+   **Both were opened far enough to say exactly what they need, and the answer in both
+   cases is somewhere else.** `keaRbdCore_unified`'s four are one construct — three
+   outgoing by-value aggregate copy loops, which `collapse_outgoing_aggregate_copy` already
+   solves — blocked on the CALLEE'S DECLARATION carrying `kd_aggNN` stand-ins. And naming
+   `keaLCP_new`'s two slots would take it to zero errors and hand the build a function that
+   writes `6*(4n+15 & ~15)` bytes below a twelve-byte local. `proven.txt` has both chains
+   and "WHERE MY HEAD IS" has them as MOVE 1 and MOVE 2. What follows is the background
+   that led there, and it still stands.
 
    "Ghidra cannot model these frames" was true and understated. For
    `MdtKeaAddConstraintForces` the debug info gives names and types but **no locations at
@@ -3248,8 +3255,8 @@ column, never by the bucket.
 | `McdSphyl` | live | 1 | **dead end 9.** `(float)s[1].mRefCtAndID + (float)s[1].prev` — GCC rejects only the second cast, and the original loads *both* as floats. The compiler is reasoning about Ghidra's types and is wrong |
 | `McdTriangleList` | live | 6 | **dead end 9, same shape.** `(float)g[1].prev` etc. |
 | `McdBox` | live | 2 | **dead end 9**, at lines 235/236. Not the cheap win the error count makes it look |
-| `keaLCP_new` | live | **2** | **solver, do not text-repair.** §11 item 2. Was 10, then 11: the nine calls short by one argument were the MANGLED-spelling debt of §5b, fixed 2026-08-25, and what is left is two bare `stack0x` |
-| `keaRbdCore_unified` | live | **7** | **the solver driver, and only FOUR of the seven are the frame** — 3 `stack0x` + `register0x00000010`. The other three are `gDebug`/`gDebugDataFile`/`gPartition`, exported .bss symbols gen_prelude defines as `float kd_<name>[1]` while the body writes the bare name, and one of them is a POINTER so the type is wrong too. §8c already records the answer: a zero-initialised static carries no evidence of its own type, and the object's DWARF does. **This is the cheapest thing on the critical path** |
+| `keaLCP_new` | live | **2** | **solver, do not name these two slots — it would be worse than the errors.** Was 10, then 11: the nine calls short by one argument were the MANGLED-spelling debt of §5b, fixed 2026-08-25. The two left sit in an alloca-shifted frame: `auStack_3c` is a twelve-byte local and the function writes six regions of `this->n*4+15 & ~15` bytes BELOW it. `materialise_alloca_frame` extended, not a naming. `proven.txt` |
+| `keaRbdCore_unified` | live | **4** | **the solver driver.** Was 18. All four are one construct — three outgoing by-value aggregate copy loops and the `register0x00000010` that is entry-ESP — and `collapse_outgoing_aggregate_copy` already solves that construct. **It is blocked on a PROTOTYPE, not on the frame**: the callee is declared with `kd_aggNN` stand-ins, so the collapse is an "incompatible type". `proven.txt` has the prologue and the four separable causes |
 | `MdtBcl` | live | **1** | **31 → 1** on 2026-08-24: 22 errors were `FUN_00021130`, which is `.eh_frame` decompiled as code, and 2 more were `halt_baddata`-only functions (see below). The one left is `&stack0xfffffff4` used as a base to read a locals block at −0x80…−0x68 — and it is Ghidra rendering the function's **epilogue** (`lea -0xc(%ebp),%esp`) as a pointer assignment. §11 item 2's family. Cheapest object in the tail, but **NOT a validation subject for §11 item 2** — its single error is an epilogue rendered as a pointer assignment, a different shape from `MdtWorld`'s outgoing by-value marshalling, so a fix for one will not show up here |
 | `MeMath` | live | **1** | one `stack0x` at line 495, genuine frame loss rather than a name: Ghidra also dropped the `fcos`/`fsin` results that build the matrix being read. Same family as `MdtBcl` and `MdtWorld` |
 | `MeProfile_linux` | live | 13 | open, **low value** (§3b puts it under platform/misc) — and §13 used to undersell it as "an `rdtsc` shim". It needs that, plus `struct timeval` as a bare tag, plus the §5 EXTERNAL-slot collision (`_select` and `_clockSpeed` are neighbours of `frameTime`, not real symbols). Four families for a profiler timer |
@@ -3262,11 +3269,10 @@ different and real defect: that is a **reclassification**, not a release.
 
 **The tail is now essentially exhausted, and that is the useful summary.** Of the 14:
 3 are DEAD, 2 are documented leave-alones, 3 are dead end 9, **4 are the §11 item 2 frame
-problem** (`MdtBcl` 1, `MeMath` 1, `keaLCP_new` 2, `keaRbdCore_unified` 4-of-7) and 2 are
-low-value profilers. There is no cheap object left that is not one of those — **with one
-exception, and it is new: `keaRbdCore_unified`'s three exported-data names.** That class is
-the same one `MeProfile` carries 5 of, so a fix pays twice. Otherwise: work item 2, or work
-the cylinder pairs (§11 item 0) — grinding the tail is done.
+problem** (`MdtBcl` 1, `MeMath` 1, `keaLCP_new` 2, `keaRbdCore_unified` 4) and 2 are
+low-value profilers. There is no cheap object left that is not one of those. Work item 2 —
+which is now two well-specified moves rather than a frame problem — or the cylinder pairs
+(§11 item 0). Grinding the tail is done.
 
 ### What has been working, and what has not
 

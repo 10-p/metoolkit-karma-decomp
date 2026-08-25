@@ -27,7 +27,7 @@ and one of the two Android targets is known to be wrong.
 | Modules rebuilt and in use | **112** of a 153-module working set |
 | Rebuilt but held back until proven | 16 |
 | Not yet rebuilt | 20 |
-| Movement modules still missing | **2** — was 5 |
+| Movement modules still missing | **2** — was 5, and both fully diagnosed |
 | Collision types the game uses | **15** — 13 proven, 1 small defect, 1 open |
 | Platforms building | PC ✅ · Web ✅ · Android 32-bit ✅ · Android 64-bit ⚠ |
 | Platforms **running** | PC only |
@@ -55,7 +55,7 @@ thirty finished ones. Judge by the "movement modules" row.
 
 | | size | |
 |---|---|---|
-| **The solver's control code** — 2 modules, 9 known problems | large | the whole remaining project |
+| **The solver's control code** — 2 modules, 6 known problems | large | the whole remaining project |
 | **64-bit Android is wrong** — 2,291 known issues | medium | compiles and looks fine; it is not |
 | **Nothing has executed on web or Android** | medium | separate workstream |
 | Two small collision defects (~1 in 4,000, ~1 in 10,000) | small | |
@@ -67,7 +67,7 @@ thirty finished ones. Judge by the "movement modules" row.
 
 **The movement half went from five missing modules to two.** Two were rebuilt — the memory
 allocator and the equation solver — and the remaining three shrank from 29 known problems
-to 9. One of the two had been blocked for months on a repair nobody could check; we built
+to 6, each one now traced to a specific cause. One of the two had been blocked for months on a repair nobody could check; we built
 the check first, then made the repair, and the check catches both ways of getting it wrong.
 
 **The part worth noting is a repair we did not make.** The obvious fix for the allocator

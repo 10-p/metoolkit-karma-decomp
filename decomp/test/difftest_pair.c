@@ -519,11 +519,20 @@ static const struct {
    plus transforms is enough to replay it exactly — which is the difference
    between a finding and a rumour. */
 #define DUMP_MAX 4
+/* KD_DUMPMAX raises the four-sample budget, and KD_DUMPONLY restricts it to one
+   KIND of divergence. Four is the right default for noticing something; it is
+   the wrong number for localising it, and worse, the kinds compete — 20 `dims`
+   divergences exhaust the budget before the single `contact count` one is ever
+   reached, so the interesting case is invisible precisely when there is a lot
+   of the boring one. */
+static int kd_dumpmax = DUMP_MAX;
+static const char *kd_dumponly;
 static void dump(int *n, const char *fn, const char *what, int iter,
                  McdModelID m1, McdModelID m2,
                  const McdIntersectResult *ra, const McdIntersectResult *rb)
 {
-    if (*n >= DUMP_MAX) return;
+    if (kd_dumponly && strcmp(kd_dumponly, what)) return;
+    if (*n >= kd_dumpmax) return;
     (*n)++;
     MeMatrix4Ptr t1 = McdModelGetTransformPtr(m1);
     MeMatrix4Ptr t2 = McdModelGetTransformPtr(m2);
@@ -631,6 +640,9 @@ int main(int argc, char **argv)
     { const char *w = getenv("KD_WARM"); kd_warm = w ? atoi(w) : 0;
       if (kd_warm < 0) kd_warm = 0; }
     kd_warmdebug = getenv("KD_WARMDEBUG") != NULL;
+    { const char *d = getenv("KD_DUMPMAX"); if (d) kd_dumpmax = atoi(d);
+      if (kd_dumpmax < 1) kd_dumpmax = 1; }
+    kd_dumponly = getenv("KD_DUMPONLY");
     const char *e = getenv("KD_SELFTEST");
     int selftest = (e && *e == '1');
     const char *want = (argc > 1 && strcmp(argv[1], "all")) ? argv[1] : NULL;

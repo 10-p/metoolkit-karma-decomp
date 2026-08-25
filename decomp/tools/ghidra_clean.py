@@ -2594,7 +2594,7 @@ def _declared_pointee(region, sig, var):
 
 
 def _expr_float_type(expr, region, sig, obj, dies):
-    """The floating type of `expr`, or None. Only shapes it can RESOLVE.
+    r"""The floating type of `expr`, or None. Only shapes it can RESOLVE.
 
     The subscript is matched with a BRACKET MATCHER, not with `.*`. A greedy
     `\[.*\]` reads `(axis->v[1] < axis->v[0])` as one subscripted member and
@@ -2679,6 +2679,173 @@ def fix_int_store_of_float(obj, text):
 
         out.append(INT_STORE.sub(rewrite, region))
     return ''.join(out), n
+
+
+# `uVar6 = this->n * 4 + 0xfU & 0xfffffff0;` — the alloca SIZE, positive. This
+# is the same `+ 0xf & 0xfffffff0` rounding materialise_alloca_frame reads, in
+# the form gcc leaves when the size is used more than once.
+ALLOCA_SIZE = re.compile(
+    r'^[ \t]*(?P<var>\w+) = (?P<expr>[^;\n]+?) \* (?P<k>0x[0-9a-f]+|\d+)'
+    r' \+ 0xfU? & 0xfffffff0;[ \t]*$', re.M)
+
+
+def _shifted_frame_refs(region, var):
+    """[(whole match, base KEY, frame offset or None, multiplier)].
+
+    The key is the base's spelling, `stack0xHHHH` included — keying on the
+    identifier alone gives every `stack0x` base the key None, and then two of
+    them at different offsets look like one base that disagrees with itself."""
+    pat = re.compile(
+        r'(?P<all>(?:&stack0x(?P<hex>[0-9a-f]{8})|&?(?P<name>[A-Za-z_]\w*))'
+        r'[ \t]*\+[ \t]*' + re.escape(var) + r'[ \t]*\*[ \t]*-(?P<k>\d+))')
+    out = []
+    for m in pat.finditer(region):
+        if m.group('hex'):
+            key = 'stack0x' + m.group('hex')
+            off = struct.unpack('<i', struct.pack('<I', int(m.group('hex'), 16)))[0]
+        else:
+            key, off = m.group('name'), None
+        out.append((m.group('all'), key, off, int(m.group('k'))))
+    return out
+
+
+def materialise_shifted_frame(text, obj, locals_table):
+    r"""Give an alloca'd frame real storage, instead of a twelve-byte local.
+
+    gcc 3.2 lowers several `alloca` calls in one function to a run of
+    `sub %edi,%esp`, and Ghidra models the result by re-basing the whole shifted
+    area on whichever declared local sits at its top and writing every address
+    as A FIXED FRAME OFFSET PLUS A RUNTIME SHIFT:
+
+        uint auStack_3c [3];                             /* twelve bytes */
+        uVar6 = this->n * 4 + 0xfU & 0xfffffff0;         /* a runtime size */
+        I         = (int *)((int)auStack_3c - uVar6);
+        unclamped = (int *)((int)auStack_3c + uVar6 * -6);
+        *(keaLCPSolver **)(&stack0xffffffb4 + uVar6 * -6) = this;
+
+    `keaLCPSolver::solveLCP` does that six times and then once more for a
+    twelve-byte outgoing argument area, and the shipped prologue says so
+    outright: six `sub %edi,%esp` followed by `sub $0xc,%esp`.
+
+    LEFT ALONE THIS COMPILES AND CORRUPTS. `auStack_3c` is twelve bytes, so
+    every one of those addresses is below a twelve-byte local and the function
+    reads and writes `6*(4n+15 & ~15)` bytes of somebody else's stack. That is
+    why HANDOVER.md said twice not to name the two `stack0x` slots: naming them
+    takes the object to zero errors and hands the build a landmine.
+
+    WHAT MAKES THE REPAIR SAFE IS THAT THE LAYOUT IS READ, NOT INVENTED.
+
+      * every base's frame offset comes from `<object>.locals` — Ghidra's own
+        symbol map — or, for a `stack0xHHHH`, from the name, which §5c checked
+        against that map over the whole corpus: 15 of 15 exact, 0 disagreements;
+      * the RELATIVE offsets are therefore preserved exactly, which is all the
+        recovered function needs. It does not have to match the original's frame
+        LAYOUT, only to be self-consistent — the same standard
+        collapse_outgoing_aggregate_copy is held to;
+      * the block is sized from the lowest offset used and the largest
+        multiplier, so it is big enough BY CONSTRUCTION;
+      * and the two areas cannot overlap, also by construction: the alloca
+        regions occupy `[base - K*size, base)` and every other base sits below
+        `base`, so shifted by the same `K*size` it stays below them.
+
+    The alloca base is identified as the base used with multiplier ONE — the
+    first region — and it is redeclared as a pointer into the block, so its own
+    uses need no rewriting at all: `auStack_3c[2]`, `(int)auStack_3c - uVar6`
+    and `auStack_3c[i - uVar6]` all keep working, the last because Ghidra's
+    element arithmetic on a `uint *` is the same bytes as `- 4*uVar6`.
+
+    Declines unless there is exactly one alloca-size variable, exactly one
+    alloca base, and a known offset for every shifted base.
+    """
+    if not locals_table:
+        return text, 0
+    out, n = [], 0
+    for fn, region in _split_definitions(text):
+        new = _materialise_one_frame(fn, region, locals_table) if fn else None
+        out.append(new if new is not None else region)
+        n += 1 if new is not None else 0
+    return ''.join(out), n
+
+
+def _materialise_one_frame(fn, region, locals_table):
+    sizes = list(ALLOCA_SIZE.finditer(region))
+    if len(sizes) != 1:
+        return None
+    var = sizes[0].group('var')
+    if len(re.findall(r'^[ \t]*' + re.escape(var) + r' = ', region, re.M)) != 1:
+        return None                      # the size must not be reassigned
+    refs = _shifted_frame_refs(region, var)
+    if not refs:
+        return None
+
+    # The alloca BASE: used with multiplier one, or as `(int)NAME - var`.
+    base = None
+    for m in re.finditer(r'\(int\)([A-Za-z_]\w*) - ' + re.escape(var) + r'\b', region):
+        if base and base != m.group(1):
+            return None
+        base = m.group(1)
+    if not base:
+        return None
+    bdecl = re.search(r'^([ \t]*)([A-Za-z_]\w*)[ \t]+' + re.escape(base)
+                      + r'[ \t]*\[[ \t]*(\d+)[ \t]*\][ \t]*;[ \t]*\n', region, re.M)
+    if not bdecl:
+        return None
+    elem = _FIXED_WIDTH.get(bdecl.group(2))
+    if not elem:
+        return None
+    bsize = int(bdecl.group(3)) * elem
+
+    locs = locals_table.get(fn, {})
+    if base not in locs:
+        return None
+    base_off = locs[base][0]
+
+    maxk = 0
+    for _all, _name, _off, k in refs:
+        maxk = max(maxk, k)
+    for m in re.finditer(re.escape(base) + r'[ \t]*\+[ \t]*' + re.escape(var)
+                         + r'[ \t]*\*[ \t]*-(\d+)', region):
+        maxk = max(maxk, int(m.group(1)))
+    maxk = max(maxk, 1)
+
+    offs = {}
+    for _all, key, off, _k in refs:
+        if key == base:
+            continue
+        if off is None:
+            if key not in locs:
+                return None
+            off = locs[key][0]
+        if offs.get(key, off) != off:
+            return None
+        offs[key] = off
+    minoff = min([base_off] + list(offs.values()))
+    top = base_off + bsize
+    if any(o >= base_off for o in offs.values()):
+        return None                      # a base at or above the alloca base
+
+    # ---- emit --------------------------------------------------------------
+    ind = bdecl.group(1)
+    region = region.replace(bdecl.group(0), '', 1)
+    setup = ('%schar *kd_frame = (char *)alloca(%s * %d + %d);\n'
+             '%s%s *%s = (%s *)(kd_frame + %s * %d + %d);\n'
+             % (ind, var, maxk, top - minoff,
+                ind, bdecl.group(2), base, bdecl.group(2), var, maxk,
+                base_off - minoff))
+    at = sizes[0].end()
+    at = region.index('\n', region.index(sizes[0].group(0))) + 1
+    region = region[:at] + setup + region[at:]
+
+    for whole, key, _off, k in refs:
+        if key == base:
+            continue
+        o = offs[key] - minoff
+        if maxk == k:
+            rep = '(kd_frame + %d)' % o
+        else:
+            rep = '(kd_frame + %s * %d + %d)' % (var, maxk - k, o)
+        region = region.replace(whole, rep)
+    return region
 
 
 def fix_mislabelled_external(text, diag, ctx):
@@ -4067,6 +4234,8 @@ def main():
         body_text, _declared + '\n' + '\n'.join(decls))
     body_text, n_voidmem = fix_void_pointer_member(args.object, body_text, _declared)
     body_text, n_intstore = fix_int_store_of_float(args.object, body_text)
+    body_text, n_frame = materialise_shifted_frame(
+        body_text, args.object, read_ghidra_locals(args.input))
     data_block, n_data = materialise_data_refs(args.object, body_text)
     # `kd_aggN` is the opaque stand-in gen_protos.py uses for an aggregate passed
     # BY VALUE. Once Ghidra has the signature it puts that type in the BODY too,
@@ -4163,6 +4332,8 @@ def main():
         print(f'  {n_voidmem} member access(es) on a void * resolved to the pointer')
     if n_intstore:
         print(f'  {n_intstore} float store(s) rendered as an int conversion')
+    if n_frame:
+        print(f'  {n_frame} alloca-shifted frame(s) given real storage')
     if n_rel:
         print(f'  {n_rel} relocated data block(s) rebuilt with their pointers')
     if args.cflag:

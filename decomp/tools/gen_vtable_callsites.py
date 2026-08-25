@@ -91,6 +91,11 @@ CALL_ABS = re.compile(r'^\s*([0-9a-f]+):\s+(?:[0-9a-f]{2} )+\s*call\s+'
 # `mov -0xb8(%ebp),%ecx` — loading a vptr out of a local.
 MOV_FROM_EBP = re.compile(r'^\s*([0-9a-f]+):\s+(?:[0-9a-f]{2} )+\s*mov\s+'
                           r'(-?0x[0-9a-f]+)\(%ebp\),%(e[a-z]{2})')
+# `mov (%edi),%esi` — loading a vptr out of the OBJECT a register points at,
+# rather than out of a frame slot. This is what a virtual call on a PARAMETER
+# looks like, and the existing frame-slot walk cannot see it.
+MOV_DEREF = re.compile(r'^\s*([0-9a-f]+):\s+(?:[0-9a-f]{2} )+\s*mov\s+'
+                       r'\(%(e[a-z]{2})\),%(e[a-z]{2})')
 # Anything else that writes the register we are tracking.
 WRITES_REG = re.compile(r'^\s*[0-9a-f]+:\s+(?:[0-9a-f]{2} )+\s*'
                         r'(?:mov|lea|add|sub|xor|or|and|pop|inc|dec|imul|movl)\S*\s+'
@@ -306,6 +311,157 @@ class ApiStructs:
                                      ', '.join(params) if params else 'void')
 
 
+_STACK_SCALARS = ('int', 'unsigned', 'long', 'short', 'char', 'bool', 'float',
+                  'signed', 'void')
+
+
+def _param_class_at(dem, ebp_off):
+    """The CLASS of the parameter at `ebp+off`, for a cdecl i386 frame.
+
+    `this` is at ebp+8 for a member function and every other parameter follows
+    in declaration order. Only four-byte parameters are stepped over — a
+    pointer, or a scalar the list below names — because anything else is a
+    by-value aggregate whose size is not in the demangling, and stepping past
+    it by a guess would name the wrong parameter. Returns None rather than
+    guess."""
+    m = re.match(r'^(.*?)\((.*)\)\s*(?:const\s*)?$', dem.strip(), re.S)
+    if not m:
+        return None
+    qual = m.group(1).strip()
+    params = []
+    if '::' in qual:                       # a member function: `this` first
+        params.append(qual.rsplit('::', 1)[0] + ' *')
+    depth, cur = 0, ''
+    for ch in m.group(2):
+        if ch in '([':
+            depth += 1
+        elif ch in ')]':
+            depth -= 1
+        if ch == ',' and depth == 0:
+            params.append(cur.strip()); cur = ''
+        else:
+            cur += ch
+    if cur.strip():
+        params.append(cur.strip())
+
+    off = 8
+    for t in params:
+        if off == ebp_off:
+            mm = re.match(r'^(?:const\s+|volatile\s+|struct\s+|class\s+)*'
+                          r'([A-Za-z_]\w*)\s*\*\s*$', t)
+            return mm.group(1) if mm else None
+        if not (t.endswith('*') or t.split()[0] in _STACK_SCALARS):
+            return None                    # a by-value aggregate; cannot step
+        off += 4
+    return None
+
+
+_subclass_cache = {}
+
+
+def _subclasses(corpus, cls):
+    """Every class in the corpus that derives, transitively, from `cls`."""
+    if corpus not in _subclass_cache:
+        bases = {}
+        for fn in sorted(os.listdir(corpus)):
+            if fn.endswith('.o'):
+                try:
+                    bases.update(dwarf_structs.rtti_bases(os.path.join(corpus, fn)))
+                except Exception:
+                    pass
+        _subclass_cache[corpus] = bases
+    bases = _subclass_cache[corpus]
+    out = set()
+    changed = True
+    while changed:
+        changed = False
+        for d, b in bases.items():
+            if (b == cls or b in out) and d not in out:
+                out.add(d); changed = True
+    return out
+
+
+def _concrete_slot(corpus, cls, slot, report):
+    """The symbol at `slot`, following through to the SUBCLASSES if it is pure.
+
+    An abstract base declares the slot `__cxa_pure_virtual`, which carries no
+    signature. The Itanium ABI puts a derived class's overrides at the SAME
+    slot, so any concrete subclass answers the question — and this requires
+    every one of them to give the same answer, so an ambiguity declines instead
+    of picking. `keaMatrix` slot +0x10 is pure; `keaMatrix_pcSparse_vanilla`
+    and `keaMatrix_tester` both say `solve(float*, float const*)`."""
+    sym = vtable_slots.slot_table(corpus, cls).get(slot)
+    if sym and sym != '__cxa_pure_virtual':
+        return sym
+    if sym != '__cxa_pure_virtual':
+        return None
+    names = set()
+    found = None
+    for sub in _subclasses(corpus, cls):
+        s2 = vtable_slots.slot_table(corpus, sub).get(slot)
+        if not s2 or s2 == '__cxa_pure_virtual':
+            continue
+        dem = run('c++filt', s2).strip()
+        names.add(re.sub(r'^.*::', '', dem))     # method name AND parameters
+        found = s2
+    if len(names) != 1:
+        report['pure_slot_ambiguous'] += 1
+        return None
+    return found
+
+
+def _resolve_member_vptr(corpus, lines, i, reg, slot, fname, obj, report):
+    """(method, class) for `mov (%p),%reg; call *N(%reg)` where `p` is a parameter.
+
+    Four steps, each of which declines rather than guesses: find the `mov` that
+    loaded the vptr out of an object; trace THAT register back to a parameter
+    slot at a positive ebp offset; read the parameter's class out of the
+    enclosing function's demangled signature; and take the slot's method from
+    that class's vtable, following through to the concrete subclasses when the
+    base declares it pure.
+
+    `keaLCPSolver::solveLCP` opens with exactly this shape — `mov (%edi),%esi;
+    push %ecx; push %eax; push %edi; call *0x10(%esi)` — and Ghidra emits it as
+    `(**(code **)(*(int *)A + 0x10))()`, with all three arguments dropped. It is
+    the last defect in keaLCP_new, the last object in libMdtKea."""
+    src = at = None
+    for j in range(i - 1, -1, -1):
+        m = MOV_DEREF.match(lines[j])
+        if m and m.group(3) == reg:
+            src, at = m.group(2), j
+            break
+        w = WRITES_REG.match(lines[j])
+        if w and w.group(1) == reg:
+            return None                    # redefined by something else
+    if src is None:
+        return None
+    ebp_off = None
+    for j in range(at - 1, -1, -1):
+        m = MOV_FROM_EBP.match(lines[j])
+        if m and m.group(3) == src:
+            ebp_off = int(m.group(2), 16)
+            break
+        w = WRITES_REG.match(lines[j])
+        if w and w.group(1) == src:
+            return None
+    if ebp_off is None or ebp_off <= 0:
+        return None                        # a local, not a parameter
+
+    # `fname` is already the DEMANGLED signature — disassemble() runs objdump
+    # with --demangle — so the parameter types are right there.
+    cls = _param_class_at(fname, ebp_off)
+    if not cls:
+        return None
+    target = _concrete_slot(corpus, cls, slot, report)
+    if not target:
+        return None
+    dem = run('c++filt', target).strip() or target
+    method = re.sub(r'\(.*', '', dem).split('::')[-1].strip()
+    if not re.fullmatch(r'[A-Za-z_]\w*', method):
+        return None
+    return method, cls
+
+
 def _vtable_class(sym):
     """`_ZTV26keaMatrix_pcSparse_vanilla` -> `keaMatrix_pcSparse_vanilla`.
 
@@ -392,6 +548,30 @@ def resolve_object(corpus, obj, report):
                     continue
                 rows.append((base + off, name, sym, disp))
                 report['resolved_api'] += 1
+
+        # --- C++ virtual calls through a PARAMETER's vptr --------------------
+        # `mov (%edi),%esi; call *0x10(%esi)`. This needs a pass of its own
+        # because the one below is gated on the function CONSTRUCTING a
+        # polymorphic local, and a function that only ever calls through a
+        # parameter constructs nothing — keaLCPSolver::solveLCP is skipped
+        # there entirely, which is how its three dropped arguments survived §5a.
+        for fname, _foff, lines in funcs:
+            for i, line in enumerate(lines):
+                m = CALL_IND.match(line)
+                if not m:
+                    continue
+                call_off, slot_txt, reg = m.group(1), m.group(2), m.group(3)
+                slot = int(slot_txt, 16) if slot_txt else 0
+                row = _resolve_member_vptr(corpus, lines, i, reg, slot,
+                                           fname, obj, report)
+                if row is None:
+                    continue
+                off = int(call_off, 16)
+                if not _is_indirect_call(data, off):
+                    report['not_an_indirect_call'] += 1
+                    continue
+                rows.append((base + off, row[0], row[1], slot))
+                report['resolved_member'] += 1
 
         # --- C++ virtual calls through a local's vptr ------------------------
         for fname, _foff, lines in funcs:
@@ -481,7 +661,8 @@ def main():
                              'not_a_vptr_local', 'slot_not_in_vtable',
                              'unnameable', 'not_an_indirect_call',
                              'abs_call_unrelocated', 'not_an_api_struct',
-                             'resolved_abs_vtable', 'abs_slot_not_in_vtable')}
+                             'resolved_abs_vtable', 'abs_slot_not_in_vtable',
+                             'resolved_member', 'pure_slot_ambiguous')}
     out_rows = []
     for fn in sorted(os.listdir(args.corpus)):
         if not fn.endswith('.o'):

@@ -2167,3 +2167,104 @@ MdtUtils              Bit-identical on scene_ragdoll with 4.113e+00 m of
 # shipped library does not disagree with ITSELF about how many contacts there
 # are. So the one count divergence is ours, and `dims` being unmeasurable for
 # this pair does not extend to `count`.
+
+# --- 2026-08-25 (fourth session): keaLCP_new — THE LAST MODULE ---------------
+#
+# `keaLCPSolver::solveLCP` and `checkForCycles` are BIT-IDENTICAL to the shipped
+# library on scene_chain, scene_ragdoll AND scene_boxes_on_plane, and
+# bit-identical on each function taken alone (test/bisect_object.sh). The object
+# is held out of the build by the `extraout_EDX` detector; see the end of this
+# entry, which is where a release decision would start.
+#
+# THE FRAME IS MATERIALISED, and the earlier "61 sites with MIXED strides" note
+# was WRONG in a way worth correcting. `auStack_3c[iVar2 - uVar6]` looks like
+# element arithmetic against a byte count, but `auStack_3c` is a `uint *`, so it
+# is `(int)auStack_3c + 4*iVar2 - 4*uVar6` -- region FOUR in byte terms, exactly
+# consistent with `(int)auStack_3c + uVar6 * -3` beside it. Every one of the 61
+# sites is consistent byte arithmetic; two of them are simply spelled in
+# elements. Nothing was mixed.
+#
+# So the layout is one contiguous run, read from `<object>.locals`:
+#
+#   -96 aiStackY_60  (12)   -84 uStackY_54  -80 iStackY_50
+#   -76 stack0xffffffb4     -72 stack0xffffffb8   -68 stack0xffffffbc
+#   -64 uStack_40           -60 auStack_3c  (12)
+#
+# with every shifted reference at `frame offset + K*(-uVar6)`, K in 1..6. One
+# block of `6*uVar6 + 48` bytes reproduces every relative offset:
+#
+#   block offset = (frame offset - -96) + (6 - K) * uVar6
+#
+# and the two areas cannot overlap, by construction: the alloca regions occupy
+# `[auStack_3c - 6*uVar6, auStack_3c)` and every other base sits BELOW
+# auStack_3c, so shifted by the same 6*uVar6 they stay below the regions.
+# `materialise_shifted_frame` emits
+#
+#   char *kd_frame = (char *)alloca(uVar6 * 6 + 48);
+#   uint *auStack_3c = (uint *)(kd_frame + uVar6 * 6 + 36);
+#
+# and redeclaring the base as a POINTER means its own uses need no rewriting at
+# all -- `auStack_3c[2]`, `(int)auStack_3c - uVar6` and `auStack_3c[i - uVar6]`
+# all keep working.
+#
+# AND THEN THE OBJECT COMPILED AND WAS WRONG, which is what the gate is for:
+# 7.844e-03 at step 0 of the collision-free scene. bisect_object.sh named
+# `solveLCP` (checkForCycles was already exact), and the defect was ONE CALL:
+#
+#     (**(code **)(*(int *)A + 0x10))();          /* three arguments dropped */
+#
+# against a shipped
+#
+#     mov (%edi),%esi ; push %ecx ; mov 0x2c(%edx),%eax ; push %eax
+#     push %edi ; call *0x10(%esi)
+#
+# i.e. `A->solve(this->x, b)`. §5a's machinery could not see it for TWO
+# independent reasons, both now fixed in gen_vtable_callsites.py:
+#
+#   * it walks back from `call *N(%reg)` to a `mov -off(%ebp),%reg` -- a vptr
+#     out of a FRAME SLOT. Here the vptr comes out of the OBJECT a parameter
+#     points at, `mov (%edi),%esi`, and there is no frame offset to look up.
+#   * and the whole loop is gated on the function CONSTRUCTING a polymorphic
+#     local. solveLCP constructs nothing, so it was skipped entirely.
+#
+# The parameter's class comes from the enclosing function's DEMANGLED signature
+# (`keaLCPSolver::solveLCP(keaMatrix*, …)`, so ebp+0xc is a `keaMatrix *`), and
+# only four-byte parameters are stepped over -- a by-value aggregate would make
+# the position a guess, so it declines instead.
+#
+# `keaMatrix` is ABSTRACT and declares slot +0x10 `__cxa_pure_virtual`, which
+# carries no signature. The Itanium ABI puts a derived class's override at the
+# SAME slot, so `_concrete_slot` follows through to the subclasses and REQUIRES
+# them to agree: `keaMatrix_pcSparse_vanilla::solve(float*, float const*)` and
+# `keaMatrix_tester::solve(float*, float const*)` do, and three arguments is
+# what the three pushes say.
+#
+# Adopted as out13: ONE of 153 dumps changed, and one `.locals` row -- Ghidra no
+# longer needs `pMStack_44` to model the outgoing argument, so that slot is now
+# spelled `stack0xffffffbc`, which the frame rule reads from the name.
+#
+#   scene_chain / ragdoll / boxes_on_plane   BIT-IDENTICAL
+#   per-function (bisect_object.sh)          both functions identical
+#   positive control                         drop those three arguments again
+#                                            and step 0 is 7.844e-03 out, the
+#                                            exact failure from before
+#
+# WHY IT IS STILL HELD, and what a release would rest on. The `extraout_EDX`
+# detector fires on two stores:
+#
+#     *(undefined4 *)((int)(kd_frame + 32)) = extraout_EDX;
+#     *(undefined4 *)((kd_frame + 28))      = extraout_EDX;
+#
+# Both are DEAD. The shipped `commonPivot` call pushes TWO padding words for
+# stack alignment before its six arguments -- `push %edx; push %edx` at 4ec/4ed
+# -- and slots 28 and 32 are that padding: beyond the six arguments the callee
+# reads, and slot 32 is never read anywhere in the function. So the detector's
+# complaint is true (Ghidra could not account for EDX) and inert (the value goes
+# into padding). The object is proven exact; releasing it is one line, and the
+# more principled alternative is to make the pass drop a store of an
+# `extraout_*` value into a slot beyond the callee's arity.
+#
+# NOTE THAT RELEASING IT DOES NOT UNLOCK §12 ITEM 7 ON ITS OWN. keaIntegrate_pc
+# is still measured wrong (first@13 = 1.500e-08) and still held, and the engine
+# calls MdtKeaIntegrateSystem directly, so a link with no shipped libMdtKea
+# needs that one too.

@@ -1,16 +1,34 @@
 # HANDOVER — Karma decompilation, for whoever picks this up next
 
-You are resuming a project to recover Karma (MathEngine `metoolkit`, UT2004's physics
-library) from shipped binaries as portable C. Read this whole file before touching
-anything. It is written for someone with no memory of how any of it came to be.
+## THE GOAL, and it is narrower than it looks
+
+**We are shipping a DROP-IN REPLACEMENT for `metoolkit` — Karma — SO THAT UT2004 RUNS ON
+WEB AND ANDROID.** That is the entire purpose. Read the next four sentences before any
+other page of this file, because they decide what is worth doing.
+
+- **The deliverable is a set of `.a` files the UT2004 engine links against instead of
+  MathEngine's, built from source we own.** Nothing else is being delivered.
+- **Nobody else will ever use this.** It does not have to be a good physics library, a
+  general-purpose one, or a faithful reproduction of MathEngine's product. It has to make
+  UT2004 behave.
+- **Therefore: an object the engine never reaches is OUT OF SCOPE, not a to-do.** §3b
+  retires 31 of them permanently and §3 shows twenty-three of thirty-seven collision pairs
+  are never called. Recovering those would be zero progress.
+- **And therefore the metric is §3c, not the object count.** `tools/dropin_gap.py` says how
+  many SHIPPED members the engine still needs: **20 members, 148 symbols**. When that
+  reaches zero and the gates below stay green, the job is done. "122 of 153 objects
+  recovered" is not the number to quote and never was.
 
 Branch: **`karma/decompile`**. `main` is untouched. **Do not merge.**
 
-**If you want the non-technical picture — counts, what is done, what is left — read
-[`STATUS-EXEC.md`](STATUS-EXEC.md) instead.** It is written for someone who knows the
-product and not the internals, and it is the right thing to hand to anyone asking "how
-far along is this?". Keep it in step with this file and `proven.txt`: if a number here
-moves, move it there.
+**If you want the non-technical picture — read [`STATUS-EXEC.md`](STATUS-EXEC.md).** It is
+one page, written for someone who knows the product and not the internals. Keep it in step
+with this file and `proven.txt`: if a number here moves, move it there. **The web/Android
+integration agent has its own file, [`HANDOVER-WEB.md`](HANDOVER-WEB.md)** — that is the
+half of the project this file does not cover.
+
+You are resuming a project to recover Karma (MathEngine `metoolkit`) from shipped binaries
+as portable C. This file is written for someone with no memory of how any of it came to be.
 
 ### Read this first — the thirty-second version
 
@@ -197,141 +215,108 @@ Everything else in this file is detail. This is the work.
 | 6 | **The tail: 12 objects in the FAIL bucket and NOTHING in it blocks anything.** 3 DEAD (`MeASELoad` 126, `MeFGeometryFromMesh` 20, `McduDebugDraw` 1), 2 documented leave-alones (`McdSpace` 22, `MeSimpleFile_linux` 1), 3 dead end 9 (`McdTriangleList` 6, `McdBox` 2, `McdSphyl` 1), 2 low-value profilers (`MeProfile` 29, `MeProfile_linux` 13) and `MdtBcl`/`MeMath` at one `stack0x` each. **197 of the errors belong to objects nobody should touch.** Sort by §13's verdict column, never by the count. | §13 | do not start here |
 
 
-### WHERE MY HEAD IS — the next three moves, in order
+### WHERE MY HEAD IS — the next moves, in order
 
-Written 2026-08-25 (fifth session). **`libMdtKea` is recovered whole, and the engine has run
-on it.** Every object in it is bit-identical to the shipped library on all three scenes, and
-`build-subst115` executes the recovered driver and LCP on a real map (§7d).
+Written 2026-08-25 (fifth session), and the framing changed this session. Until now this
+list was "which object next". **It should be "which GAP MEMBER next", and they are not the
+same list** — §3c. Seven members closed in one session and every one of them fell to a
+GENERATOR fix that also repaired objects nobody was looking at.
 
-| object | state |
-|---|---|
-| ~~`keaRbdCore_unified`~~ | the DRIVER. In the build, bit-identical, **301 calls in the engine** |
-| ~~`keaLCPSolver`~~ | in the build, bit-identical, and on all fifteen functions individually |
-| ~~`keaLCP_new`~~ | **RELEASED.** Bit-identical; **85 calls in the engine** |
-| ~~`keaMemory`~~ | in the build, bit-identical on all three scenes |
-| ~~`keaIntegrate_pc`~~ | **RELEASED.** Bit-identical on all three scenes and on 450,000 bodies |
-| `keaMatrix_PcSparse_vanilla` | the LAST `libMdtKea` object on the path. 4.28e-04 out. **MOVE 1** |
-| — everything above | **the association defect (§11 item 2a) has been checked in ONE object of 153. MOVE 2** |
-| `IxCylinderTriList` | `KD_CORNER=1`, iteration 23624, count 30/32. MOVE 3 |
-| `IxCylinderCylinder` | iteration 194376, count 4/2. MOVE 3 |
-| `MdtBcl` / `MeMath` | one `stack0x` each at offset −12, both diagnosed in §5c |
+**THE METHOD THAT HAS PRODUCED EVERY RECOVERY, and it is the only thing in this section
+that matters if you read nothing else.** Group the failures by their normalised error
+across ALL blocked objects, find the ONE upstream cause, fix the GENERATOR, then diff the
+blast radius — every already-compiling object's `.o` must stay byte-identical, and when it
+does not, **disassemble before assuming regression**. Four times now the changed objects
+turned out to have been silently wrong for months. And when a rule looks right and does
+nothing, **call it directly on the offending line**; that has now found twelve.
 
-**MOVE 0 — WORK THE DROP-IN GAP, and work it by CAUSE.** §3c: 20 shipped members and 148
-symbols stand between here and a library with no shipped `.a` in it. Seven members closed in
-one session off five generator fixes, so the families are the leverage —
-`grep` the gap table's "why" column and fix the one upstream cause, not the object. The
-biggest is `extraout_*` at 7 members, and it is NOT one cause: some are gcc's variadic
-padding (now fixed), some are a genuine dataflow gap, and `MeFAsset`'s sit on top of a
-reconstructed frame. The mislabelled-`_X` family is down to 3 — `McdFrame` came out on a tie-break decided by the
-argument's type, and `MeFAssetPart` (21 symbols, the biggest left after `MeFAsset`) needs a
-CONTROL-FLOW repair: `asset == NULL` jumps to 0x775 in the shipped code and Ghidra routed it
-into the body, which is where its `_DAT_00000050` comes from.
+**MOVE 0 — work §3c's table, by CAUSE.** 20 members, 148 symbols. The families:
 
-**And before releasing anything on the `.ka` path, RUN THE ENGINE.** `MeAssetDBXMLIO` is
-the standing example and it cost this session an hour.
+| family | members | what it needs |
+|---|---:|---|
+| `extraout_*` | 7 | NOT one cause. Some were gcc's variadic padding (fixed). `MeFAsset`'s sit on a reconstructed frame. Each needs its own diagnosis — see how `keaLCP_new` and `keaIntegrate_pc` were released |
+| mislabelled `_X` | 3 | `MeFAssetPart` needs a CONTROL-FLOW repair (below); `McdGjkPenetrationDepth` and `ReadWriteKeaInputToFile` are `_DAT_*`/`_gDebug` data references |
+| one `stack0x` | 2 | `MdtBcl` (15 symbols!) and `MeMath`, both diagnosed in §5c. `MdtBcl`'s is the function EPILOGUE rendered as a pointer assignment — a different shape from `MdtWorld`'s, so a fix for one will not show up on the other |
+| guessed frame | 2 | `MdtPartition` is the object that detector exists for; `keaMatrix_PcSparse_vanilla` is MOVE 1 |
+| profilers | 2 | `MeProfile` 4 symbols, `MeProfile_linux` 6. Low value per §3b and **they are in the gap anyway**, so they have to be done |
+| singletons | 4 | `IxBoxTriList`, `McdContact`, `MdtLOD`, `MeAssetDBXMLOutput_1_0` — one symbol each |
+| `McdSpace` | 1 | 16 symbols and the hardest: `struct _McdSpace`'s layout is in NOBODY's DWARF, including its own object (§13). Inferring it is the guess the detectors exist to stop. **Leave it last** |
 
-**MOVE 1 — `keaMatrix_PcSparse_vanilla::factorize`, and it is the ONLY thing left in the
-solver.** The object is five of six: `solve` was taken to exact on 2026-08-25 by the same
-dropped-rounding repair as `keaIntegrate_pc` — `MeReal tmp[4]` at `ebp-0x28`, which gcc 3.2
-accumulates THROUGH MEMORY (sixteen `fsts`, nineteen `fadds`, not one `flds`) — and the
-other four were already exact.
+**The two biggest are `MeFAsset` (38 symbols) and `MeFAssetPart` (21), and both are now
+diagnosed rather than merely failing.** `MeFAssetPart`'s `_DAT_00000050` is not a name
+problem: the shipped `MeFAssetPartEnableCollision` jumps to 0x775 when `asset == NULL`
+(`712: test %ebx,%ebx; 714: je 775`) and Ghidra routed that edge into the function BODY,
+so it renders `((MeFAsset *)0)->maxParts` as an absolute address. Fixing it means
+correcting the control flow, not resolving a symbol. `MeFAsset` has `kd_argslot_*` — the
+reconstructed-frame family — underneath its `extraout_*`.
 
-**`factorize`'s arithmetic is not in `factorize`.** The shipped function is 0xcc bytes with
-**zero** float instructions; it calls the file-statics `vc_strip_Cholesky` (0x48d) and
-`vc_dstrip_Cholesky` (0x48a), which gcc inlined in the recovery (0x7a2). Those two have no
-`%ebp`-relative float spills at all — they are `flds`/`fmuls`/`fadds`/`fstps` throughout,
-every intermediate going to memory through a POINTER.
+**MOVE 1 — `keaMatrix_PcSparse_vanilla::factorize`, the last `libMdtKea` object.** Five of
+six functions are exact; `solve` fell to the same dropped-rounding repair as
+`keaIntegrate_pc`. `factorize`'s arithmetic is not in `factorize`: the shipped function is
+0xcc bytes with ZERO float instructions and calls the file-statics `vc_strip_Cholesky` and
+`vc_dstrip_Cholesky`, which gcc inlined in the recovery. Blanket-rounding their 62 float
+stores makes it WORSE (`first@10` → `first@7`) — dead end 17 in miniature. Read them
+statement by statement with `test/bisect_object.sh`'s `factorize` row as the gate, **and
+check that script's TWO controls read identical first** (§4's instrument list).
 
-**And the blanket attempt is already refuted**: wrapping all 62 of their float stores in
-`KD_F32` moves the divergence from `first@10` to `first@7` — worse. Dead end 17 in
-miniature. Read them statement by statement against the recovery, with
-`test/bisect_object.sh`'s `factorize` row as the gate. **Check `bisect_object.sh`'s two
-controls read identical before believing any row** — they did not until 2026-08-25, and that
-is why this object looked like one number instead of six. Landing this gives a link with
-**no shipped `libMdtKea` at all**, which is §12 item 7's second half.
+**MOVE 2 — the association defect, §11 item 2a, and it is the largest unquantified risk in
+the project.** Ghidra prints right-leaning float `+` chains flat. On i386 that is EXACTLY
+inert — 0 differences in 2,000,000 samples — and under storage precision, which is what
+wasm32, armv7 and arm64 all give, it differs in **31%**. Three sites were fixed in one
+object of 153 by reading the disassembly; **nobody has looked at the other 152, and no gate
+here can.** Do not ship a corpus-wide rewrite: reversing all 41 flat chains in
+`keaMatrix_PcSparse_vanilla` changed the object file and changed nothing measurable, so on
+i386 the rule is *unfalsifiable*. What is needed is an oracle that reads `fadd`/`faddp`
+order out of the machine code — or a wasm-vs-native A/B, which is the web agent's side.
 
-**MOVE 2 — the association defect, corpus-wide, and it is the most important thing in this
-file.** §11 item 2a: Ghidra prints a right-leaning float `+` chain FLAT, so C re-parses it
-left-leaning over the wrong operands. **On i386 this is EXACTLY inert** — a float product
-needs 48 mantissa bits and x87 has 64, measured 0 differences in 2,000,000 samples — and
-under storage precision, which is what wasm32, armv7 and arm64 all give, it differs in
-**31%**. So every gate in this project is structurally blind to it and it will surface as
-wasm physics that drifts from native, with no offline test able to reproduce it.
+**MOVE 3 — the two cylinder defects.** Both reproduce offline; neither needs a match.
+`IxCylinderTriList` under `KD_CORNER=1` at iteration 23624 (count 30/32);
+`IxCylinderCylinder` at iteration 194376 (count 4/2). Details and refuted hypotheses in
+`proven.txt`.
 
-Three sites were found in `keaIntegrate_pc` by reading the disassembly against Ghidra's
-output. **Nobody has looked at the other 152 objects.** Do not start by writing a
-corpus-wide rewrite: the text `a + b + c` is genuinely ambiguous (Ghidra prints the same
-thing for both trees), so the association has to come from the machine code. Start by
-measuring the size of the problem — count multi-term float `+` chains per object — and by
-building an oracle that reads `fadd`/`faddp` order out of one function. `KDynStep.cpp:618`
-is a free correctness check for the integrator; nothing else has one.
+**MOVE 4 — arm64, and we have the toolchain.** The Android NDK is installed and
+`test/ptrwidth_check.sh` is a 13-second gate. armv7 reads 0; arm64 reads **2,680
+truncations across 73 of 122 objects**, because the recovery puns pointers through 4-byte
+slots. **This is a real deliverable, not a footnote — Android is half the point of the
+project.** The fix is generator-wide (widen the punned slots), not a flag.
 
-**AND THERE IS A SECOND MEASUREMENT SAYING THE SAME THING FROM THE OTHER SIDE.** Reversing
-ALL 41 unparenthesised 3+-term float `+` chains in `keaMatrix_PcSparse_vanilla` — an object
-full of the shape — **changed the object file and changed nothing measurable**, on a gate
-that had just been made sensitive enough to localise that object to two functions. So on
-i386 a corpus-wide association rewrite is **unfalsifiable**: it can be shown neither right
-nor wrong, and it would silently rewrite 152 objects on an argument. That is the state of
-this lead — a real defect with real evidence at three sites, and no way to validate a
-general rule without either an oracle or a wasm-side A/B.
+### What NOT to do
 
-**MOVE 3 — the two cylinder defects, both of which REPRODUCE OFFLINE.** Neither needs a
-match:
+- **Do not grind objects that are not in §3c's table.** They are out of scope. §3b.
+- **Do not read a max-delta as a verdict on a contact scene** — read the first differing
+  step. Believing the maximum cost this project a session.
+- **Do not attempt `MeMath`'s `stack0x` blind** — §5c proves the target is never written.
+- **Do not reach for `-ffloat-store`** — dead end 17 measured it five orders of magnitude
+  worse.
+- **Do not trust the offline gates for anything on the `.ka` path.** §3c's warning box:
+  `MeAssetDBXMLIO` passed all nine and killed engine init. Run the engine.
+- **Do not release an object because a detector's complaint looks inert.** That is exactly
+  what happened to `MeAssetDBXMLIO`, and the complaint WAS inert — the object was broken
+  for an unrelated reason the detector had been accidentally shielding.
 
-- `IxCylinderTriList` — `KD_CORNER=1`, iteration 23624, **count 30/32**. The count is the
-  length of the `footprint`→`verts` range `McdVanillaOverlapCylTri` fills, so two extra
-  contacts means two extra points. Two hypotheses are already refuted in `proven.txt`.
-- `IxCylinderCylinder` — iteration 194376, **count 4/2**. Our contact [1] carries the
-  shipped contact [0]'s separation, so the footprint differs upstream of the emission
-  filter. **It is a real defect**: §11 item 0's jitter probe reports 0 `count_diff` for the
-  shipped library against itself.
+### IS A COLLISION PAIR USED BY UT2004? ANSWERED, DEFINITIVELY — and here is the answer
 
-**Four instruments to reach for before writing any code.** `test/bisect_object.sh` drives
-a scene with exactly ONE recovered function in the link and names the one that diverges —
-it found keaLCPSolver's three casts among fifteen functions and keaLCP_new's dropped call
-among two. **`test/ab_integrate.sh` is the new one and it is the sharpest**: it calls the
-shipped and the recovered function on identical randomised state and names the FIELD that
-differs, which took `keaIntegrate_pc` from "1.5e-08 somewhere in 900 chaotic steps" to
-"`qrot`, and only `qrot`" in one run. Copy its shape for any object with a clean signature.
-`substitute_test.sh` prints the FIRST DIFFERING STEP, which is the column to read on a
-contact scene. And `test/vptr_ab.sh` measures a vtable dispatch rather than a trajectory.
+This is the question that decides what is in scope, so the whole answer is in one place.
+**37 pairs are registered. FIFTEEN are called. Twenty-two are not, and two of those
+twenty-two can never be.** §3 has the table; §3a has the proof for the two families.
 
-**And check `bisect_object.sh`'s TWO controls before believing any of its rows.** It grew a
-second one on 2026-08-25 because it was not isolating: `objcopy --localize-symbol` does not
-touch a weak OBJECT symbol, so an object's own vtable stayed global, won the weak-vs-weak
-contest against the shipped COMDAT copy, and pointed every slot back at the recovered code.
-`keaMatrix_PcSparse_vanilla` reported six identical rows including `allocate`, which does no
-float arithmetic. `--abi-only` is the control that catches it; `--none` cannot, because it
-links no recovered object at all. Six objects carry their own vtable (`CxSmallSort`,
-`keaCalcJinvMandRHS_vanilla`, `keaMatrix`, `keaMatrix_PcSparse`, `keaMatrix_tester`,
-`keaMatrix_PcSparse_vanilla`); `keaLCPSolver` is not one, so its result stands.
+| | pairs | status |
+|---|---:|---|
+| **CALLED and recovered and validated** | 13 | evidence per object in `proven.txt` |
+| **CALLED, recovered, measurably imperfect** | 2 | `IxCylinderTriList` (37 `count_diff` in 153,391 live), `IxCylinderCylinder` (1 `count_diff` in 24,111). Both reproduce offline; MOVE 3 |
+| **NEVER CALLED — and CANNOT be, from the engine source** | 2 families | `Box × TriangleList` and every `Aggregate` PAIR. `KIntersect` (`KFarfield.cpp:936`) intercepts both before Karma is consulted. **No map can change this.** OUT OF SCOPE, permanently |
+| **NEVER CALLED in 30+ runs across 20+ maps** | the rest | "no evidence of use", NOT "impossible". The list has moved **five times**. Re-run the census (§3, `KD_CENSUS=1`) on any new map before trusting a zero |
 
-**What NOT to do next.** Do not read a max-delta as a verdict on a contact scene. Do not
-attempt `MeMath` (§5c proves the target is never written). Do not grind the tail (§13) —
-nothing in it blocks anything now. Do not reach for `-ffloat-store` for the rounding lead:
-dead end 17 measured it making things five orders of magnitude worse, and the repair that
-worked is three sites chosen from the disassembly, not a flag.
+**The one trap, and it cost two sessions.** "The engine intercepts Aggregate, therefore
+aggregate geometry never reaches Karma" is FALSE. `KAggregateGenericIntersect` recurses
+into `KIntersect` once per ELEMENT (`KFarfield.cpp:878`), and `KUtils.cpp:762` wraps EVERY
+primitive collision volume in an `McdAggregate` with no single-element shortcut. So the
+aggregate PAIR never reaches Karma and every aggregate ELEMENT does, under its own type.
+§3a. **Read the whole call graph, not just the dispatcher.**
 
-**And keep the perspective §12 asks for:** `MdtWorld` was recovered and it turned out UT2004
-never calls it — and on 2026-08-25 `MdtKeaIntegrateSystem` joined it. This file had said
-"the engine calls it directly"; it does, in a branch guarded by `bUseSafeTime`, which
-defaults to 1 and routes to the engine's OWN integrator. Measured 0 calls by default and 51
-with `KSAFETIME 0` forced. **Grepping for the call is not enough — read the branch around
-it.** §7d.
-
-**IS A COLLISION PAIR USED? YES — THIS IS ANSWERED, DEFINITIVELY, AND IT IS §3.**
-37 pairs are registered. **15 are called.** Of the 22 that are not:
-
-- **2 families CANNOT EVER be called**, proven from the engine source, not from a census:
-  `Box × TriangleList` and every `Aggregate` PAIR are intercepted by `KIntersect` before
-  Karma is consulted (§3a). No map can change this.
-- **the rest have simply never been seen** in 30+ runs across 20+ maps. That is not proof,
-  and the list has moved **five times** — most recently three Cylinder pairs on
-  2026-08-24, one of which landed on a quarantined object. **Re-run the census on any new
-  map before trusting anything about it.**
-
-14 of the 15 called pairs are validated against the shipped original on live inputs. The
-fifteenth is item 2 above.
+**So: the collision half of the deliverable is DONE for thirteen of fifteen pairs, and the
+two that are not are small, located and offline-reproducible.** No map question is
+outstanding; the cylinder ask was closed by parsing the assets (§3).
 
 Reproduce the whole state in about a minute with §4.
 
@@ -1718,6 +1703,31 @@ Two other build flavours, both used and both worth keeping:
 
 ### Run a map
 
+> ### ⚠ READ THIS FIRST — THE RENDERER CHANGED UNDER US, 2026-08-25
+>
+> `test/run_map.sh` passes **`-GL4ESRENDERER`**, and in this environment that now faults at
+> the FIRST HUD frame — `REALLOC FAILED … NewSize=1351188168` in
+> `UCanvas::DrawTileStretched`, from a viewport the renderer creates at **2×1**.
+> `-OPENGLRENDERER` does the same. **The STOCK, unmodified engine does it too**: same map,
+> same URL, logs identical modulo timestamps and addresses, 523 lines each. So it is an
+> environment regression, not a recovery defect — but a run that dies at frame one is not a
+> physics test.
+>
+> **`-SOFTWARERENDERER` (Pixomatic) survives**, and is what every engine measurement since
+> has used. Four 340 s runs — stock and substituted, both integrator branches — all ran to
+> the timeout with no SIGSEGV and no NaN. Either edit `run_map.sh` or invoke the binary
+> directly:
+>
+> ```bash
+> cd /tmp/kd_runtime/System
+> URL='?Name=Player1?Class=Engine.Pawn?Character=Jakob?team=0?NumBots=4?MinPlayers=5?bAutoNumBots=False?QuickStart=True?bPlayerMustBeReady=False'
+> timeout 260 xvfb-run -a -s "-screen 0 640x480x24" ./ut2004-x.bin \
+>     "test-karma-1?game=XGame.xDeathMatch?TimeLimit=0$URL" -SOFTWARERENDERER -nohomedir
+> ```
+>
+> **And always run a STOCK control on the same map before reading a crash as yours.** That
+> is the only reason this was diagnosed in minutes rather than as a regression.
+
 ```bash
 cd /home/ion/engines/engine-ut2004/karma-decomp
 KD_BIN=/home/ion/engines/engine-ut2004/build-shadow-karma/Source/SDLLaunch/ut2004-karma-pixo.bin \
@@ -2233,6 +2243,25 @@ objects — the whole recovered solver, and `keaIntegrate_pc` on the branch that
 is as stable as stock over 340 s of live physics. **It is not a trajectory comparison**:
 neither binary carries shadow instrumentation, so this says "runs like stock", not "computes
 what stock computes".
+
+### Bisecting an engine crash — the recipe, because it is affordable
+
+The crash is at INIT, so a 200 s run settles each cycle and only the archive re-links.
+Eleven candidates took four cycles. Copy the recovered build, DELETE the objects to
+exclude, rebuild the tree, re-link, run:
+
+```bash
+rm -rf /tmp/kd_sel; cp -a /tmp/kd_build /tmp/kd_sel
+for x in "$@"; do rm -f "/tmp/kd_sel/$x.o"; done      # names to leave SHIPPED
+./test/make_hull_lib.sh ../Thirdparty/metoolkit /tmp/mt_bi
+./test/make_substituted_metoolkit.sh /tmp/kd_sel /tmp/mt_bi /tmp/mt_bisect
+cmake --build build-subst121 -j"$(nproc)"             # cache points at /tmp/mt_bisect
+# then the -SOFTWARERENDERER invocation from §6, and grep for 'START MATCH'
+```
+
+**Success is "reached `START MATCH`", never "did not SIGSEGV"** — §7c's lesson, and it
+still holds. `test/try_subst.sh` is the older harness for this; it hard-codes
+`-GL4ESRENDERER` and `build-subst108`, so update it or use the recipe above.
 
 **What this does NOT show, and the environment changed under it.** On 2026-08-25 the engine
 faults at the first HUD frame under Xvfb — `REALLOC FAILED ... NewSize=1351188168` in
@@ -3604,48 +3633,49 @@ box.
 
 ---
 
-## 12. What "complete" looks like
+## 12. What FULLY COMPLETE looks like
 
-**Complete** is not "every object recovered". It is:
+**Complete is not "every object recovered". It is "UT2004 links no shipped `metoolkit`
+member, on all three targets, and plays."** Here is the whole definition, as a checklist
+you can run.
 
-1. Every object the census (§3) shows the game *actually calls* is recovered and validated.
-   **This was marked done on 2026-08-23 and is RE-OPENED as of 2026-08-24.** Twelve of the
-   fourteen called pairs are validated; `Cylinder × TriangleList` (59,366 calls) is
-   quarantined and unmeasured, and `Cylinder × Cylinder` (24,267) compiles but has never
-   been measured. This file said to "treat any new entry in the census as re-opening it" —
-   this is that.
-2. Validated means: 0 `ret_diff`, 0 `count_diff`, 0 `dims_diff`, 0 `overrun` across a
-   multi-hour in-game session, with `KD_SELFTEST` clean on the same session, and
-   `proven.txt` carrying the evidence.
-3. All three `substitute_test.sh` scenes clean for every recovered object — **and, per
-   §4a, checked with `scene_census.sh` and `gate_sensitivity.sh`, because "clean" on a
-   scene that never ran the object is not a result.**
-4. qhull and the asset loader replaced rather than recovered.
-5. No detector suppressed, no object released without a line in `proven.txt`.
-6. The whole set builds as ordinary C for **wasm32 and arm64/armv7**, not just i386.
-   **wasm32 is done** — 122/122 compile with byte-identical exported symbols
-   (`test/wasm_check.sh`). **armv7 and arm64 both compile 122/122 with the Android NDK
-   (§6b) — but only armv7 is believed CORRECT, and arm64 is believed WRONG for a
-   structural reason. Read §6b before touching either.**
-   Nothing has been *executed* under wasm. See `HANDOVER-WEB.md`.
-7. The engine runs with `WITH_KARMA=1` against recovered Karma with **no shipped `.a` in the
-   link at all**. `test/make_substituted_metoolkit.sh` builds that tree.
-   **The collision half is done** — all eight objects behind the twelve called pairs, in
-   the driving seat, through full ONS matches (§7b). The solver half is one object away:
-   every `libMdtKea` object is recovered and bit-identical on all three scenes except
-   `keaIntegrate_pc`, which is 1.5e-08 out and which the engine calls directly.
+### The finish line, in seven checks
+
+| # | check | how you know | today |
+|---|---|---|---|
+| 1 | **`tools/dropin_gap.py` reports ZERO shipped members.** | §3c. It is checked against a real link — 111 of 111 undefined symbols predicted. | **20 members, 148 symbols** |
+| 2 | **The engine LINKS with every shipped member deleted** and plays a match on i386. | `make_hull_lib.sh` + `make_substituted_metoolkit.sh` into a tree with the rest `ar d`'d, then §6. Success is "reached `START MATCH`" and ran to the timeout, against a STOCK control on the same map. | links today only because 20 members are still shipped |
+| 3 | **Every pair the census shows the game calling is validated** — 0 `ret_diff`, 0 `count_diff`, 0 `dims_diff`, 0 `overrun` over a multi-hour session, `KD_SELFTEST` clean, evidence on a line in `proven.txt`. | §3, §7 | **13 of 15**; two cylinder pairs measurably imperfect and located |
+| 4 | **All nine gates green** on the whole build, every time. | §4's gate list | green at 122 objects |
+| 5 | **wasm32 and armv7 build and RUN**, and arm64 either runs or is retired. | `test/wasm_check.sh`, `test/ptrwidth_check.sh`, and the web agent | compiles on all three; **nothing has EXECUTED on any of them**; arm64 has 2,680 pointer truncations |
+| 6 | **The association defect is settled corpus-wide.** | §11 item 2a | 3 sites in 1 object of 153; **no gate here can see it** |
+| 7 | **No detector suppressed, nothing released without evidence.** | §8, `proven.txt` | holding |
+
+**Checks 1 and 2 are the deliverable. 3–7 are what stop it being a deliverable that
+crashes.** If you are ever unsure whether a piece of work counts as progress, ask which of
+these seven it moves; if the answer is none, it is out of scope.
+
+### What is explicitly NOT required
+
+- **Objects the engine cannot reach.** §3b retires 31 permanently — MathEngine's demo
+  viewer, its other constraint types, `MeASELoad`. They are out of scope, not a backlog.
+- **Collision pairs UT2004 never calls.** 22 of 37, two of them provably unreachable (§3a).
+- **Bit-exactness with MathEngine where the engine cannot observe the difference.**
+  `IxCylinderCylinder`'s 925 `dims_diff` is a field the engine does not read for that pair,
+  and the shipped library does not reproduce it either (§11 item 0).
+- **Being a good general-purpose physics library.** Nobody else will link this.
 
 ### The seven items, and exactly where each one stands
 
 | # | item | state |
 |---|---|---|
-| 1 | every pair the census shows the game calling is recovered and validated | **RE-OPENED 2026-08-24, and now 14 of 15.** `IxCylinderTriList` was measured and released the same day (71,417 real calls, 0 structural). `Cylinder × ConvexMesh` was already covered by `McdGjk`. **The one open pair is `Cylinder × Cylinder`, measured WRONG at 925 dims_diff in 24,111 real calls.** §3, `proven.txt`. |
+| 1 | every pair the census shows the game calling is recovered and validated | **13 of 15.** The two open ones are `IxCylinderTriList` (37 `count_diff` in 153,391 live — its 2026-08-24 release on "0 structural in 71,417" did NOT replicate) and `IxCylinderCylinder` (1 `count_diff` in 24,111). **Both now reproduce OFFLINE** and neither needs a match. §3, `proven.txt`, MOVE 3. |
 | 2 | validated = 0 ret/count/dims/overrun in a live match, `KD_SELFTEST` clean, evidence on the line | **DONE** for those twelve, and it is the standard the two new pairs have to meet. |
 | 3 | all three scenes clean for every recovered object, *and* checked for sensitivity | **DONE**, and the sensitivity check (§4a) is what makes it mean anything. |
 | 4 | qhull and the asset loader **replaced**, not recovered | **DONE, both halves — but the asset half was RECOVERED, not replaced (§8c), which is a better outcome: exact rather than equivalent.** Qhull, all four tiers: `src/McdConvexCreateHull/kd_convexhull.c` replaces all 15 exported functions — 1.4 MB → 10 KB: 100,633 invariant checks, identical geometry and volumes, a collision A/B differing on 2 borderline pairs in 2.4 M, and **a live ONS match with 15,425 real GJK calls and 0 structural divergences**. wasm32 clean with an identical symbol set. The asset loader is 9 of 9 recovered (§8c) and needs no replacement. |
 | 5 | no detector suppressed, nothing released without evidence | **HOLDING, and the hole found here has been re-framed rather than closed.** 22 objects quarantined and the quarantine is load-bearing (§4a: `MdtPartition` alone turns a bit-identical scene into a SIGSEGV). `IxCylinderCylinder` is still un-held and still unreleased — but its 925 `dims_diff` is now known to be a label the shipped library **does not reproduce against itself** under a 1e-7 m nudge (§11 item 0), so it is not the defect it looked like. The general point stands unchanged: "not held" is not "validated". |
 | 6 | builds as ordinary C for wasm32 **and arm64/armv7** | **wasm32 DONE** (122/122, byte-identical symbol sets). **armv7 DONE** (122/122, symbol sets identical, **0 pointer-truncation diagnostics** — it is a 32-bit-pointer target so the recovery's core assumption holds). **arm64 COMPILES AND IS NOT TRUSTED** — 122/122 with identical symbol sets and **2,680 pointer-truncation diagnostics across 73 of the 122 objects**, measured corpus-wide by `test/ptrwidth_check.sh`, which is the gate this row used to say could not exist. The old "920 vs 23" figure was two diagnostic sets added together; §6b has the correction. Nothing has been *executed* on any of the three — **and there is now a second reason not to trust that they would agree if they did: §11 item 2a's association defect is exactly inert on x87 and 31% divergent on all three of these targets.** |
-| 7 | engine runs on recovered Karma with **no shipped `.a` in the link at all** | **COLLISION HALF DONE for the twelve validated pairs** (§7b, two maps, 11 runs/arm, indistinguishable from stock) — but those runs were on maps with no cylinder traffic, so they do not cover the two new pairs. **SOLVER HALF NO LONGER BLOCKED, AND MEASURED: 2026-08-25 the engine EXECUTES the recovered `MdtKeaAddConstraintForces` 301 times and `keaLCPSolver::solveLCP` 85 times on `test-karma-1`** (§7d), with substitution verified at the machine-code level. `libMdtKea` is recovered whole. **What is left of this row is six shipped members, of which exactly one is on the path — `keaMatrix_PcSparse_vanilla`, ~one rounding step out (§4a)** — and the fact that the runs above show START MATCH and a short tick rather than 300 s of play, because the environment's renderer now faults at the first HUD frame **for stock too**. §7d. |
+| 7 | engine runs on recovered Karma with **no shipped `.a` in the link at all** — THE DELIVERABLE, and §3c is now the way to measure it (20 members, 148 symbols left) | **COLLISION HALF DONE for the twelve validated pairs** (§7b, two maps, 11 runs/arm, indistinguishable from stock) — but those runs were on maps with no cylinder traffic, so they do not cover the two new pairs. **SOLVER HALF NO LONGER BLOCKED, AND MEASURED: 2026-08-25 the engine EXECUTES the recovered `MdtKeaAddConstraintForces` 301 times and `keaLCPSolver::solveLCP` 85 times on `test-karma-1`** (§7d), with substitution verified at the machine-code level. `libMdtKea` is recovered whole. **What is left of this row is six shipped members, of which exactly one is on the path — `keaMatrix_PcSparse_vanilla`, ~one rounding step out (§4a)** — and the fact that the runs above show START MATCH and a short tick rather than 300 s of play, because the environment's renderer now faults at the first HUD frame **for stock too**. §7d. |
 
 **So what is left, in one sentence each:**
 

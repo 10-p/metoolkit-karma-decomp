@@ -1533,3 +1533,31 @@ MdtUtils              Bit-identical on scene_ragdoll with 4.113e+00 m of
 #   KD_BIN=.../ut2004-karma-pixo.bin KD_SHADOW_OUT=/tmp/x.csv \
 #   KD_SHADOW_DIVERGENCES=/tmp/x.txt ./test/run_map.sh test-simple-physics 420 "$URL"
 #   and the same with KD_SELFTEST=1 first, always.
+
+# ADDENDUM: THE SYNTHETIC TIER CANNOT REACH THIS DEFECT, and here is what was
+# tried, so it is not re-derived. McdCylinderTriangleListIntersect reads
+# 0 count_diff and 0 dims_diff in difftest_pair at EVERY one of:
+#
+#   KD_SPREAD 1.0, 2.0, 3.0, 4.0, 5.0, 6.0   (82.6% down to 1.6% touching)
+#   KD_GRID=1 at spread 1.0, 3.0, 5.0        (axis-aligned rotations)
+#   KD_FLAT=1 at spread 1.0, 3.0, 5.0        (coplanar mesh -- see below)
+#
+# while the game reads 37 in 153,391. So the driver is 200,000 pairs of
+# something the game is not doing.
+#
+# KD_FLAT=1 was added for this and did not do it. build_mesh() gives every
+# triangle a deterministic bump, with the comment "so faces are not coplanar" --
+# deliberate, and it excludes exactly the geometry the live divergences sit on:
+# a level FLOOR, normal exactly (0,1,0), all contacts at one y. KD_FLAT removes
+# the bump. It is a better model of UT2004's geometry and it finds nothing new
+# on any of the 14 pairs (IxSphereTriList 106 dims against 137 on the bumpy
+# mesh; everything else identical), self-test 14/14 clean. Kept as a regime that
+# CONFIRMS rather than one that found something.
+#
+# WHAT IS STILL DIFFERENT ABOUT THE GAME'S CASE, for whoever tries next. Read
+# the logged transforms: the divergent calls have TWO DIFFERENT NORMALS in the
+# same result -- (0,1,0) and (0,0,1) -- so the cylinder is in a CORNER, resting
+# on a floor and against a wall, on axis-aligned planes at coordinates that are
+# multiples of 0.64. The driver's mesh is a single 4x2 patch of 32 triangles and
+# cannot present a corner at all. That, not coplanarity alone, is the untested
+# shape. NTRI is still fixed at 32.

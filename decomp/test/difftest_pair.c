@@ -203,6 +203,7 @@ static int kd_warm;            /* KD_WARM=<K>: track length in frames, 0 = off *
    the cache was never populated look identical from the summary, and the first
    thing to check about a new mode is that it changed anything at all. */
 static int kd_warmdebug;
+static int kd_flat;            /* KD_FLAT=1: coplanar test mesh, i.e. a level floor */
 static void dimshist_add(int a, int b)
 {
     for (int i = 0; i < kd_dh_n; i++)
@@ -281,11 +282,22 @@ static void build_mesh(void)
     for (int t = 0; t < NTRI; t++) {
         int gx = t % 8, gy = t / 8;
         float x0 = -2.0f + gx * 0.5f, y0 = -1.0f + gy * 0.5f;
-        /* a deterministic bump, so faces are not coplanar */
+        /* A deterministic bump, so faces are not coplanar.
+        
+           KD_FLAT=1 removes it, and that is not a simplification — it is the
+           case UT2004 actually has. A level floor is COPLANAR triangles sharing
+           edges, and every live divergence of McdCylinderTriangleListIntersect
+           found on 2026-08-25 sits on one: normal exactly (0, 1, 0), all
+           contacts at the same y, separations of -3e-04. The bump was put here
+           on purpose and it excludes precisely that geometry, so the synthetic
+           tier read 0 count divergences at every spread from 1.0 to 6.0 while
+           the game read 37 in 153,391. Another input the game always has and
+           the test never did. */
         float h[4];
         for (int k = 0; k < 4; k++) {
             float px = x0 + (k & 1) * 0.5f, py = y0 + ((k >> 1) & 1) * 0.5f;
-            h[k] = 0.18f * sinf(2.1f * px) * cosf(1.7f * py);
+            h[k] = kd_flat ? 0.0f
+                 : 0.18f * sinf(2.1f * px) * cosf(1.7f * py);
         }
         int flip = (t & 1);
         int idx[3] = { 0, flip ? 3 : 1, flip ? 1 : 2 };
@@ -640,6 +652,7 @@ int main(int argc, char **argv)
     { const char *w = getenv("KD_WARM"); kd_warm = w ? atoi(w) : 0;
       if (kd_warm < 0) kd_warm = 0; }
     kd_warmdebug = getenv("KD_WARMDEBUG") != NULL;
+    kd_flat = getenv("KD_FLAT") != NULL;
     { const char *d = getenv("KD_DUMPMAX"); if (d) kd_dumpmax = atoi(d);
       if (kd_dumpmax < 1) kd_dumpmax = 1; }
     kd_dumponly = getenv("KD_DUMPONLY");

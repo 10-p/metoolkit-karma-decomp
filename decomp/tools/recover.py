@@ -98,6 +98,41 @@ def dump_functions(path):
 MEASURED_WRONG = {}
 
 
+# The other side of the same coin: a detector that fires on a shape which, for
+# THIS object, has been measured to be inert.
+#
+# `live_unmodelled` holds an object that READS a value Ghidra could not account
+# for. That is the right default — reading one is reading whatever happened to
+# be there. But two objects now reach the end of the evidence chain (exact on
+# all three substitute scenes, and per-function under test/bisect_object.sh)
+# while still tripping it, and in both cases the complaint has been traced to a
+# store that goes nowhere. Holding a PROVEN object back on a shape is the same
+# error as letting an UNPROVEN one through on one.
+#
+# An entry names the exact identifiers released, not the object, so a NEW
+# unmodelled read in the same object still quarantines it. Each must cite the
+# paragraph in proven.txt that carries the measurement.
+#
+# This is a release and needs the standard of any other: a measurement, plus an
+# account of why the detector's complaint is true and inert. "It compiles and
+# the scenes look fine" is not that.
+RELEASED_UNMODELLED = {
+    # proven.txt, "keaLCP_new — THE LAST MODULE". Both stores land in the two
+    # alignment-padding words the shipped `commonPivot` call pushes before its
+    # six arguments (`push %edx; push %edx` at 4ec/4ed): beyond the arity the
+    # callee reads, and slot 32 is never read anywhere in the function.
+    'keaLCP_new': ['extraout_EDX'],
+    # proven.txt, "keaIntegrate_pc — the dropped rounding". The name is the
+    # OUTGOING by-value argument area of the tail call to
+    # KeaIntegrateSystem_vanilla: `MdtKeaParameters in_stack_ffffffa0` is
+    # declared, 76 bytes, and the copy loop fills all 19 MeReal of it before it
+    # is read, so the dataflow is complete and only the SPELLING is unmodelled.
+    # fix_stack_address_name's size check already refuses the shape when the
+    # declaration is too small (HANDOVER.md §11 item 2); here it fits exactly.
+    'keaIntegrate_pc': ['in_stack_ffffffa0'],
+}
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--dump-dir', required=True, help='Ghidra .c dumps')
@@ -157,8 +192,28 @@ def main():
     # LINKS with a symbol set identical to the original — MdtPartition did, then
     # segfaulted in MeDictNext(dict, NULL). Silently-wrong code is the worst
     # outcome available, so detect the shape and refuse to call it recovered.
+    #
+    # The premise is "Ghidra INVENTED the array", i.e. the storage is not there.
+    # ghidra_clean.materialise_shifted_frame falsifies that premise for the
+    # bases it repairs: it redeclares the base as a pointer into an alloca'd
+    # block sized from <object>.locals and big enough by construction, so the
+    # same text is then ordinary address arithmetic. It marks each base it
+    # rewrote, and those are excluded below — otherwise the detector quarantines
+    # exactly the objects the repair fixed (keaLCP_new, 20 sites, measured
+    # bit-identical on all three scenes). The exclusion is scoped to the
+    # FUNCTION that carries the marker, so an unrepaired base of the same name
+    # in a sibling function still fires.
     GHIDRA_STACK_GUESS = re.compile(
-        r'\(int\)a[a-z]Stack_[0-9a-f]+\s*\+\s*[A-Za-z_]\w*')
+        r'\(int\)(a[a-z]Stack_[0-9a-f]+)\s*\+\s*[A-Za-z_]\w*')
+    KD_MATERIALISED_BASE = re.compile(r'KD_MATERIALISED_BASE\((\w+)\)')
+
+    def stack_guesses(src):
+        """Matches of the invented-frame shape, minus the materialised bases."""
+        out = []
+        for region in re.split(r'^/\* ---- ', src, flags=re.M):
+            ok = set(KD_MATERIALISED_BASE.findall(region))
+            out += [m for m in GHIDRA_STACK_GUESS.findall(region) if m not in ok]
+        return out
 
     # `stack0xNNNN` marks a variable-length stack allocation Ghidra could not
     # model. ghidra_clean.py materialises a buffer so it COMPILES, but that is
@@ -406,6 +461,17 @@ def main():
             counts['REVIEW'] += 1
             continue
         unmodelled = live_unmodelled(src)
+        released = RELEASED_UNMODELLED.get(base, ())
+        # A release that no longer applies is worse than no release: it sits
+        # there looking like evidence and covers whatever appears next under the
+        # same name. Say so rather than letting it rot silently — the stale
+        # skip-list of HANDOVER.md §12 is exactly this failure.
+        for name in released:
+            if name not in unmodelled:
+                print(f'  ! {base}: RELEASED_UNMODELLED lists {name!r}, which the '
+                      f'detector no longer reports — the entry is stale',
+                      file=sys.stderr)
+        unmodelled = [u for u in unmodelled if u not in released]
         if unmodelled:
             os.unlink(o)
             rows.append((archive, base, 'REVIEW',
@@ -413,7 +479,7 @@ def main():
                          + ', '.join(unmodelled[:3])))
             counts['REVIEW'] += 1
             continue
-        nguess = len(GHIDRA_STACK_GUESS.findall(src))
+        nguess = len(stack_guesses(src))
         nalloca = len(GHIDRA_ALLOCA_FRAME.findall(src))
         nrecon = len(GHIDRA_RECONSTRUCTED_FRAME.findall(src))
         if nrecon and base in proven:

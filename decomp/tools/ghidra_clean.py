@@ -2709,6 +2709,162 @@ def _shifted_frame_refs(region, var):
     return out
 
 
+# ---------------------------------------------------------------------------
+# FLOAT_TEXT_REPAIRS — sites where the decompiled text is arithmetically wrong
+# in a way NO compile diagnostic and NO i386 gate can see.
+#
+# Two shapes live here, both found on keaIntegrate_pc on 2026-08-25.
+#
+#   'spill'  Ghidra folded a store to a float local and its reload into one
+#            expression. On i386 the x87 keeps intermediates at 80 bits, so
+#            dropping that store drops a rounding the shipped code performed
+#            and the last bit drifts. The local is left DECLARED AND UNUSED,
+#            which is the textual fingerprint; the disassembly is the proof.
+#
+#   'assoc'  Ghidra printed a right-leaning float `+` chain FLAT — `a + b + c`
+#            for a tree that is `a + (b + c)` — so C re-parses it left-leaning
+#            over the wrong operand order. Float addition is not associative.
+#
+# THE SECOND ONE IS INVISIBLE TO EVERY GATE THIS PROJECT HAS, and that is the
+# reason it is repaired rather than left alone. A float product needs 48 bits
+# of mantissa and the x87 register has 64, so on i386 these sums are EXACT
+# whatever the association: measured 0 differences in 2,000,000 samples under
+# `-mfpmath=387`. The same probe under `-mfpmath=sse` — storage precision,
+# which is what wasm32, armv7 and arm64 all give — differs in 31% of them.
+# So the substitute scenes cannot fail on this and the actual port target can.
+#
+# Each entry carries an evidence precondition that is CHECKED, not asserted:
+# `old` must appear exactly once, and a 'spill' site must show `fst(p)s` and a
+# matching `flds` against the named local's slots in the shipped disassembly.
+# A site that stops matching raises. A repair that silently declines is the
+# failure mode this file has hit four times (HANDOVER.md §12); it must not be
+# available here.
+#
+# These are per-site because the CORRECTION is not yet derivable by rule — see
+# HANDOVER.md §11 item 2a for the 220-site scan and what a general rule needs.
+FLOAT_TEXT_REPAIRS = {
+    ('keaIntegrate_pc', 'KeaIntegrateSystem_vanilla'): [
+        # -- assoc: MeVector3Dot(myw, fastSpinAxis). KDynStep.cpp:647 has the
+        #    original source verbatim; the shipped fadd order agrees.
+        dict(kind='assoc', old="""        fVar1 = myw[2] * pMVar11->fastSpinAxis[2] +
+                myw[0] * pMVar11->fastSpinAxis[0] + myw[1] * pMVar11->fastSpinAxis[1];""",
+             new="""        fVar1 = myw[0] * pMVar11->fastSpinAxis[0] +
+                myw[1] * pMVar11->fastSpinAxis[1] + myw[2] * pMVar11->fastSpinAxis[2];"""),
+        # -- spill: `rot` is spilled as a float across the MeQuaternionFiniteRotation
+        #    call (fstps -0x48(%ebp) / flds -0x48(%ebp)), so the value the three
+        #    myw updates see is float-rounded; the multiply that forms the CALL
+        #    ARGUMENT happens before the spill and uses the 80-bit value.
+        #    myw itself is a declared MeReal[3] the shipped code writes with fstps.
+        dict(kind='spill', local='myw',
+             old="""        pMVar11 = *blist;
+        myw[0] = myw[0] - pMVar11->fastSpinAxis[0] * fVar1;
+        myw[1] = myw[1] - pMVar11->fastSpinAxis[1] * fVar1;
+        myw[2] = myw[2] - fVar1 * pMVar11->fastSpinAxis[2];""",
+             new="""        pMVar11 = *blist;
+        fVar1 = KD_F32(fVar1);
+        myw[0] = KD_F32(myw[0] - pMVar11->fastSpinAxis[0] * fVar1);
+        myw[1] = KD_F32(myw[1] - pMVar11->fastSpinAxis[1] * fVar1);
+        myw[2] = KD_F32(myw[2] - fVar1 * pMVar11->fastSpinAxis[2]);"""),
+        # -- spill + assoc: `MeReal dq[4]` at ebp-0x38. The shipped code stores
+        #    all four and RELOADS dq[1..3] before the `* stepsize` (dq[0] is kept
+        #    in st, so its store is dead and it must NOT be rounded). dq[2]'s
+        #    chain is also mis-parenthesised — KDynStep.cpp:657.
+        dict(kind='spill', local='dq',
+             old="""      (*blist)->qrot[1] =
+           ((fVar1 * myw[0] + fVar2 * myw[1]) - fVar3 * myw[2]) * 0.5 * parameters.stepsize +
+           (*blist)->qrot[1];
+      (*blist)->qrot[2] =
+           (fVar6 * myw[2] + -fVar4 * myw[0] + fVar5 * myw[1]) * 0.5 * parameters.stepsize +
+           (*blist)->qrot[2];
+      (*blist)->qrot[3] =
+           (myw[2] * fVar9 + (myw[0] * fVar7 - myw[1] * fVar8)) * 0.5 * parameters.stepsize +
+           (*blist)->qrot[3];""",
+             new="""      dq[1] = KD_F32(((fVar1 * myw[0] + fVar2 * myw[1]) - fVar3 * myw[2]) * 0.5);
+      (*blist)->qrot[1] = dq[1] * parameters.stepsize + (*blist)->qrot[1];
+      dq[2] = KD_F32((-fVar4 * myw[0] + fVar5 * myw[1] + fVar6 * myw[2]) * 0.5);
+      (*blist)->qrot[2] = dq[2] * parameters.stepsize + (*blist)->qrot[2];
+      dq[3] = KD_F32((myw[2] * fVar9 + (myw[0] * fVar7 - myw[1] * fVar8)) * 0.5);
+      (*blist)->qrot[3] = dq[3] * parameters.stepsize + (*blist)->qrot[3];"""),
+        # -- assoc: `for (j=0;j<4;j++) s += MeSqr(qrot[j])` accumulates from q0.
+        #    KDynStep.cpp:667; the shipped faddp order agrees.
+        dict(kind='assoc',
+             old="      fVar1 = 1.0 / SQRT(fVar4 * fVar4 + fVar3 * fVar3 + fVar2 * fVar2 + fVar1 * fVar1);",
+             new="      fVar1 = 1.0 / SQRT(fVar1 * fVar1 + fVar2 * fVar2 + fVar3 * fVar3 + fVar4 * fVar4);"),
+    ],
+}
+
+# `fstps -0x34(%ebp)` / `flds -0x34(%ebp)` — a 4-byte x87 spill or reload of a
+# frame slot. The width matters: `fstpl`/`fstpt` would be a double or an
+# extended spill, which loses nothing and is not what this looks for.
+_F32_SLOT = re.compile(r'\bf(?P<op>stp?|ld)s\s+-?0x(?P<off>[0-9a-f]+)\(%ebp\)')
+
+
+def _f32_spill_slots(obj, fn):
+    """({stored offsets}, {reloaded offsets}) as ebp-relative ints, from the
+    SHIPPED disassembly. ({}, {}) when the function cannot be located."""
+    for name, lo, hi in function_extents(obj):
+        if name != fn:
+            continue
+        out = subprocess.run(['objdump', '-d', '--start-address', hex(lo),
+                              '--stop-address', hex(hi), obj],
+                             capture_output=True, text=True).stdout
+        stored, loaded = set(), set()
+        for m in _F32_SLOT.finditer(out):
+            off = int(m.group('off'), 16)
+            if '-0x' in m.group(0):
+                off = -off
+            (loaded if m.group('op') == 'ld' else stored).add(off)
+        return stored, loaded
+    return set(), set()
+
+
+def restore_float_text(text, obj, locals_table):
+    """Apply FLOAT_TEXT_REPAIRS for this object, checking the evidence first.
+
+    Raises rather than declining. Every site here is a defect no gate in this
+    project can see on i386, so a silent no-op would look exactly like success
+    and would ship the bug to wasm — see the table's comment."""
+    base = os.path.basename(obj)
+    base = base[:-2] if base.endswith('.o') else base
+    sites = [(fn, s) for (o, fn), lst in FLOAT_TEXT_REPAIRS.items()
+             if o == base for s in lst]
+    if not sites:
+        return text, 0
+    n = 0
+    for fn, site in sites:
+        if site['kind'] == 'spill':
+            # The local must be declared and, because Ghidra folded its stores
+            # into the expressions, unreferenced. `<obj>.locals` gives its frame
+            # offset; the shipped code must spill AND reload inside it.
+            loc = locals_table.get(fn, {}).get(site['local'])
+            if loc is None:
+                raise SystemExit(
+                    f'restore_float_text: {base}:{fn}: no `{site["local"]}` in '
+                    f'<object>.locals — the frame evidence this repair rests on '
+                    f'is gone; re-derive it before trusting the site')
+            # `.locals` offsets are relative to the first parameter slot, which
+            # is ebp+8: `blist,4` is `0x8(%ebp)`. So ebp = stackoff + 4.
+            off, size, _ty = loc
+            lo, hi = off + 4, off + 4 + size
+            stored, loaded = _f32_spill_slots(obj, fn)
+            hit_s = {o for o in stored if lo <= o < hi}
+            hit_l = {o for o in loaded if lo <= o < hi}
+            if not (hit_s and hit_l):
+                raise SystemExit(
+                    f'restore_float_text: {base}:{fn}: `{site["local"]}` at '
+                    f'[{lo:#x},{hi:#x}) shows {len(hit_s)} f32 store(s) and '
+                    f'{len(hit_l)} reload(s) in the shipped code — the spill '
+                    f'this repair restores is not there')
+        if text.count(site['old']) != 1:
+            raise SystemExit(
+                f'restore_float_text: {base}:{fn}: site text matched '
+                f'{text.count(site["old"])} times, expected 1. The dump changed; '
+                f're-read the site against the disassembly rather than deleting it.')
+        text = text.replace(site['old'], site['new'])
+        n += 1
+    return text, n
+
+
 def materialise_shifted_frame(text, obj, locals_table):
     r"""Give an alloca'd frame real storage, instead of a twelve-byte local.
 
@@ -2827,11 +2983,20 @@ def _materialise_one_frame(fn, region, locals_table):
     # ---- emit --------------------------------------------------------------
     ind = bdecl.group(1)
     region = region.replace(bdecl.group(0), '', 1)
+    # The marker is load-bearing, not decoration. After this repair the base is
+    # a POINTER into storage sized by construction, so `(int)base + var * -K`
+    # is ordinary address arithmetic — but it is textually identical to the
+    # invented-array shape recover.py's GHIDRA_STACK_GUESS exists to catch, and
+    # that detector would otherwise quarantine the object this repair just
+    # fixed. Naming the bases it repaired is how the detector tells the two
+    # apart; a re-dump that stops triggering the repair drops the marker and
+    # re-arms it in the same edit.
     setup = ('%schar *kd_frame = (char *)alloca(%s * %d + %d);\n'
-             '%s%s *%s = (%s *)(kd_frame + %s * %d + %d);\n'
+             '%s%s *%s = (%s *)(kd_frame + %s * %d + %d);'
+             '  /* KD_MATERIALISED_BASE(%s) */\n'
              % (ind, var, maxk, top - minoff,
                 ind, bdecl.group(2), base, bdecl.group(2), var, maxk,
-                base_off - minoff))
+                base_off - minoff, base))
     at = sizes[0].end()
     at = region.index('\n', region.index(sizes[0].group(0))) + 1
     region = region[:at] + setup + region[at:]
@@ -4236,6 +4401,8 @@ def main():
     body_text, n_intstore = fix_int_store_of_float(args.object, body_text)
     body_text, n_frame = materialise_shifted_frame(
         body_text, args.object, read_ghidra_locals(args.input))
+    body_text, n_ftext = restore_float_text(
+        body_text, args.object, read_ghidra_locals(args.input))
     data_block, n_data = materialise_data_refs(args.object, body_text)
     # `kd_aggN` is the opaque stand-in gen_protos.py uses for an aggregate passed
     # BY VALUE. Once Ghidra has the signature it puts that type in the BODY too,
@@ -4334,6 +4501,9 @@ def main():
         print(f'  {n_intstore} float store(s) rendered as an int conversion')
     if n_frame:
         print(f'  {n_frame} alloca-shifted frame(s) given real storage')
+    if n_ftext:
+        print(f'  {n_ftext} float expression site(s) repaired (spill rounding / '
+              f'add-chain association)')
     if n_rel:
         print(f'  {n_rel} relocated data block(s) rebuilt with their pointers')
     if args.cflag:

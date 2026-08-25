@@ -159,6 +159,29 @@ typedef double              longdouble;
    `(int)x` would be wrong. rintf() has exactly fistp's semantics. */
 #define ROUND(x)   rintf(x)
 
+/* KD_F32 — force an intermediate to STORAGE precision.
+
+   Ghidra folds a store-to-float-local and its reload into one expression, so a
+   local the original really spilled to a 4-byte slot vanishes from the output
+   and is left declared-but-unused. On i386 the x87 keeps intermediates in
+   80-bit registers, so dropping that store drops a rounding step the shipped
+   code performed, and the last bit drifts. `keaIntegrate_pc` is the worked
+   case: `MeReal dq[4]` at ebp-0x38, four `fstps` and three `flds` against
+   those slots, and 1.5e-08 of divergence until the rounding is put back.
+
+   This is NOT -ffloat-store (dead end 17). That is a blanket flag that rounds
+   everywhere, including the many places the original did not; this rounds only
+   where the disassembly shows a spill and reload of a slot the DWARF names.
+
+   Off x87 the FPU already works at storage precision, so the cast is the whole
+   operation and no memory round-trip is emitted. */
+#if defined(__i386__) && !defined(__SSE2_MATH__)
+static __inline float kd_f32_(float x) { volatile float t = x; return t; }
+#  define KD_F32(x)  kd_f32_((float)(x))
+#else
+#  define KD_F32(x)  ((float)(x))
+#endif
+
 /* Bit-level reinterpretation helpers Ghidra emits for register subfields.
    CONCATab glues an a-byte and a b-byte value into an (a+b)-byte one;
    SUBab extracts the low b bytes of an a-byte value; ZEXT/SEXT widen. */

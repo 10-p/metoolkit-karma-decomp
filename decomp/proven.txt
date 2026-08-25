@@ -1670,3 +1670,127 @@ MdtUtils              Bit-identical on scene_ragdoll with 4.113e+00 m of
 # garbage. It is unreachable, and no scene runs it (scene_census: 4 of 55), so
 # `ok` is the right classification for the object -- but nothing here is
 # evidence about that function.
+
+# --- 2026-08-25 (second session): THE VPTR STORE, AND keaLCPSolver ------------
+#
+# keaLCPSolver COMPILES and is in the build. It was 8 errors; §11 item 3's
+# rewrite -- the one deliberately deferred because "no gate could see whether it
+# was right or wrong" -- accounts for 7 of them and the eighth was a mangled
+# call site (§5b's debt). 111 objects, then 112 with keaMemory below.
+#
+# WHAT THE REWRITE IS. `_vanillaQMatrix = &__gxx_personality_v0;` is
+# `vanillaQMatrix.vptr = &_ZTV26keaMatrix_pcSparse_vanilla[2]`. Ghidra loses the
+# vptr store of a polymorphic LOCAL and resolves its right-hand side into a
+# neighbour's EXTERNAL slot, so every virtual call in the function goes through
+# an undeclared name. ghidra_clean.fix_vptr_store, a PRE-PASS, aliases
+# `_<local>` to the local's first word and writes the address point.
+#
+# SIX STATIC CHECKS, each read from the object file, are in its docstring. The
+# one that matters most settles the only thing NOT read -- the SCALE. Ghidra
+# types the base `undefined4 *` in makeXandW, so `[2]` is the third WORD, and
+# leaves it byte-like in PrincipalSubmatrix, so `+ 0xc` is the fourth. Read the
+# second at word scale and the offsets are 48 and 64 in a table whose last slot
+# is 32; read the first at byte scale and `[2]` is not a multiple of four.
+#
+# AND THEN THE PART THAT IS EVIDENCE RATHER THAN ARGUMENT: test/vptr_ab.sh, a
+# ninth gate. It rebuilds the object with every repaired dispatch replaced by a
+# DIRECT call to the symbol that slot holds -- taken from vtable_slots.py, i.e.
+# from the relocations in the object that DEFINES the vtable, not read back out
+# of the rewrite -- so the two builds differ in exactly one way: one loads a
+# function pointer out of memory at run time and the other does not.
+#
+#   scene_chain            devirtualised control BIT-IDENTICAL   controls BLIND
+#   scene_ragdoll          devirtualised control BIT-IDENTICAL   controls CRASH
+#   scene_boxes_on_plane   devirtualised control BIT-IDENTICAL   controls CRASH
+#
+# The controls are two deliberately wrong builds -- one vtable slot rotated onto
+# another real method of the same class, and the ABI address point moved from +8
+# to +12. Both segfault on the two scenes that reach the dispatch. So the repair
+# is measured where it runs, and where it does not the gate SAYS SO.
+#
+# WHICH MATTERS, because substitute_test.sh prints
+# `keaLCPSolver -- trajectory bit-identical` on scene_chain and that reading is
+# NOT about the repair. scene_census on chain: 4 of 15 functions ran --
+# allocate, setUpper, setLower, getFirstBadIndex, 900 each -- and none of the
+# three the repair touched. On scene_ragdoll 12 of 15 run, makeXandW 747 times
+# and PrincipalSubmatrix twice. §4a's distinction, applied to a rewrite.
+#
+# THE OBJECT AS A WHOLE IS NOT RELEASED, and nothing holds it. Same posture as
+# IxCylinderCylinder: it compiles, no detector objects, so it is in the build.
+# What is known about it:
+#
+#   scene_chain              trajectory bit-identical (4 of 15 functions ran)
+#   scene_ragdoll            5.928e+00 m against 8.429e+00 m of sensitivity
+#   scene_boxes_on_plane     3.109e+01 m against 2.975e+01 m of sensitivity
+#
+# Both collision-scene divergences are AT the scene's own noise floor -- the
+# gate cannot tell our recovery from a one-ULP perturbation of itself -- and
+# the collision-free scene is exact. That is better than "compiles" and well
+# short of the shadow-harness tier that releases a collision object. Do not
+# quote it as validated.
+#
+# A TRAP FOR WHOEVER UNBLOCKS keaRbdCore_unified. Its vtable dispatches go
+# through `code *`, which is UNPROTOTYPED, and two of its slots take a float
+# scalar -- calcJinvMandRHS and calcIworldandNonInertialForceandVhmf. On i386 a
+# float argument to an unprototyped function is promoted to DOUBLE, eight bytes
+# on the stack where the callee reads four. keaLCPSolver is safe because none of
+# its four slots takes a float. That object will not be.
+#
+# --- 2026-08-25 (second session): keaMemory, THE ALLOCATOR --------------------
+#
+# COMPILES and is in the build, and unlike keaLCPSolver it is MEASURED on the
+# scene that drives it.
+#
+#   scene_chain / ragdoll / boxes_on_plane   trajectory BIT-IDENTICAL, all three
+#   scene_census (chain)                     vanillaAllocateMemory -- the
+#                                            repaired function -- 900 calls,
+#                                            keaPoolAlloc 14,400
+#   the plausible wrong repair, as a control SEGFAULTS on all three scenes
+#
+# THE HANDOVER'S DIAGNOSIS WAS WRONG AND IT IS WORTH SAYING WHY. §11 called this
+# "the EXTERNAL-slot addend collision". It is not: relocation_targets resolves
+# `_pool_ptr` to `('pool_ptr', 0)`, the IDENTITY reading, and
+# fix_mislabelled_external had the right rewrite all along. Two other things
+# stopped it.
+#
+# ONE -- the repair loop's rejection memory outlived its reason. `applied` holds
+# every edit TRIED, so a line that got a wrong candidate can be offered another,
+# and a REJECTION is then permanent. `_pool_ptr` -> `pool_ptr` exchanges three
+# `undeclared` diagnostics for three of a different kind, so on the round it was
+# first offered the count did not FALL and it was refused; by the time the
+# surrounding repairs made it a strict improvement it could never be offered
+# again. The loop now forgets its rejections and goes round once more, at most
+# max_restarts times and only after real progress. That anecdote was already in
+# the max_rounds comment -- McdBox, 29 errors, 8 on a second run by hand.
+#
+# TWO -- a `void *` has no members. Ghidra gives an untyped external its own
+# working type and spells the POINTER through it:
+#
+#     if (pool_max < (undefined1 *)((int)pool_ptr->invI0    + iVar10))
+#     piVar4    =            (int *)((int)pool_ptr->invI0[0] + iVar10);
+#     mem->rhs  = pool_ptr->invI0;
+#
+# The shipped block is `mov pool_ptr,%edx; lea (%ebx,%edx,1),%eax; cmp; ja;
+# add %ebx,%edx; mov %edx,pool_ptr; mov %esi,0xc(%ecx)` -- pointer arithmetic
+# and a store, with NO load through the pointer anywhere in the function.
+#
+# THE OBVIOUS REPAIR IS WRONG AND IT COMPILES. Supplying the cast Ghidra elided,
+# `((MdtKeaInverseMassMatrix *)pool_ptr)->invI0`, is right for the two
+# array-decay spellings and wrong for `->invI0[0]`, which then reads a MeReal
+# out of the pool. Four sites correct, one silently dereferencing. That variant
+# was built and run: it SEGFAULTS on all three scenes, which is both the reason
+# not to take it and the reason the bit-identical result above means something.
+# gate_sensitivity cannot speak here -- it reports "no float arithmetic",
+# correctly, since that is the same fact the rule's fourth check rests on.
+#
+# fix_void_pointer_member drops the member access, on four reads: the extern's
+# DWARF type is `void *`; every cast Ghidra assigns to the name agrees on one
+# struct; that struct's DWARF in THIS object puts the member at offset 0 as an
+# array of a floating type; and the shipped function contains no floating-point
+# instruction, so the only other reading of `->M[0]` is refuted by the object.
+#
+# The fourth check was itself wrong first, in the way this project keeps
+# meeting: it matched the mnemonic out of the whole objdump line and read the
+# last hex BYTE as one, so `c7 45 f0` came back as the x87 `f0` and every
+# function looked as if it did float work. It declined everywhere and looked
+# exactly like a rule that does not apply.

@@ -11,8 +11,9 @@ builds can have vehicles and ragdolls instead of nothing. Updated 2026-08-25.
 rebuilt code, indistinguishable from the original.
 
 **Movement — how things fall, bounce and swing — is not.** The mathematics is finished
-and proven exact. The control code around it is five modules short, so there is currently
-**no configuration in which the game runs on our physics engine.** That is the project.
+and proven exact. The control code around it was five modules short a week ago; it is now
+**two**, with nine known problems between them. There is still **no configuration in which
+the game runs on our physics engine.** That is the project, and it is much closer.
 
 **Nothing has run on web or Android yet.** It compiles for both — not the same thing —
 and one of the two Android targets is known to be wrong.
@@ -23,15 +24,16 @@ and one of the two Android targets is known to be wrong.
 
 | | |
 |---|---|
-| Modules rebuilt and in use | **110** of a 153-module working set |
+| Modules rebuilt and in use | **112** of a 153-module working set |
 | Rebuilt but held back until proven | 16 |
-| Not yet rebuilt | 22 |
+| Not yet rebuilt | 20 |
+| Movement modules still missing | **2** — was 5 |
 | Collision types the game uses | **15** — 13 proven, 1 small defect, 1 open |
 | Platforms building | PC ✅ · Web ✅ · Android 32-bit ✅ · Android 64-bit ⚠ |
 | Platforms **running** | PC only |
 
-Module count is a poor progress measure — a few of the 22 remaining are worth more than
-thirty finished ones. Judge by the two rows above it.
+Module count is a poor progress measure — a few of the 20 remaining are worth more than
+thirty finished ones. Judge by the "movement modules" row.
 
 ---
 
@@ -46,13 +48,15 @@ thirty finished ones. Judge by the two rows above it.
 - Two large components dealt with — the hull builder replaced (1.4 MB of third-party code
   down to 10 KB) and the asset loader rebuilt.
 - Builds for web and 32-bit Android with an interface identical to the original.
+- The memory allocator and the equation solver, both rebuilt this week, both checked by
+  building the wrong version on purpose and confirming it fails.
 
 ## Left
 
 | | size | |
 |---|---|---|
-| **The solver's control code** — 5 modules | large | the whole remaining project |
-| **64-bit Android is wrong** — 2,218 known issues | medium | compiles and looks fine; it is not |
+| **The solver's control code** — 2 modules, 9 known problems | large | the whole remaining project |
+| **64-bit Android is wrong** — 2,291 known issues | medium | compiles and looks fine; it is not |
 | **Nothing has executed on web or Android** | medium | separate workstream |
 | Two small collision defects (~1 in 4,000, ~1 in 10,000) | small | |
 | The remaining modules | small | nothing cheap left |
@@ -61,15 +65,21 @@ thirty finished ones. Judge by the two rows above it.
 
 ## This week
 
-Two dead ends disproven and a third approach found that works — it rebuilds code matching
-the game's own source line for line. One module recovered. One item closed: a
-never-before-tested code path in the busiest part of the physics, now clean.
+**The movement half went from five missing modules to two.** Two were rebuilt — the memory
+allocator and the equation solver — and the remaining three shrank from 29 known problems
+to 9. One of the two had been blocked for months on a repair nobody could check; we built
+the check first, then made the repair, and the check catches both ways of getting it wrong.
 
-Three corrections, which is the part worth noting. A component we had signed off turned
-out to have a small defect visible only in longer runs. A test switch documented for
-months had never actually been implemented. And our measurement of the 64-bit Android
-problem was wrong, so we built a proper check for it. **All three were found by re-testing
-things already marked done** — deliberate practice, not bad luck.
+**The part worth noting is a repair we did not make.** The obvious fix for the allocator
+would have compiled cleanly and been wrong — it would have read a number out of memory the
+original never touches. We built it anyway, as a control, and it crashed immediately, which
+is how we know the fix we did take is right rather than merely plausible.
+
+Earlier in the week: two dead ends disproven, one module recovered, and three corrections
+to things already marked done — a signed-off component with a defect visible only in longer
+runs, a test switch documented for months and never implemented, and a wrong measurement of
+the 64-bit Android problem. **All found by re-testing what was already green** — deliberate
+practice, not bad luck.
 
 ---
 

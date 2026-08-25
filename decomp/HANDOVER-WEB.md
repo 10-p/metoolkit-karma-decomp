@@ -22,14 +22,14 @@ freebie, the Android NDK), and to integrate the result into the engine's web bui
 
 What exists today:
 
-- **110 recovered objects**, all compiling for i386, wasm32, armv7 *and* arm64 — but see
+- **112 recovered objects**, all compiling for i386, wasm32, armv7 *and* arm64 — but see
   §3's pointer-size section: **arm64 is not trustworthy and wasm32 is**, for the same reason.
 - **The full collision-detection path the game actually uses is recovered and validated** —
   all twelve interaction pairs UT2004 calls, each measured against the shipped original on
   real inputs from a live match. Evidence per object in `karma-decomp/proven.txt`. §6 has
   the census that says "twelve" and why that is the number to plan against.
 - **The whole set already compiles under Emscripten**, and its exported symbol NAMES are
-  **byte-identical to the i386 build for all 110 objects** — nothing added or dropped. So
+  **byte-identical to the i386 build for all 112 objects** — nothing added or dropped. So
   the ABI surface the engine links against does not change between targets, which was the
   thing most likely to turn this into a rewrite. See §4. (Names only: `wasm_check.sh`
   discards the binding letter. That gap let a recovered object export a *global* `putchar`
@@ -106,7 +106,7 @@ re-deriving the type database from a 64-bit source.
 
 > ### ⚠ THIS IS NOW MEASURED, NOT ASSERTED — and it is the strongest warning in this file
 >
-> All 110 objects compile for **arm64** (64-bit pointers) as well as armv7 and wasm32.
+> All 112 objects compile for **arm64** (64-bit pointers) as well as armv7 and wasm32.
 > Every one of them compiles. The exported symbol sets are **byte-identical to i386 on all
 > three**. Every behavioural gate the project has passes. And arm64 is wrong.
 >
@@ -123,7 +123,7 @@ re-deriving the type database from a 64-bit source.
 > | target | pointer-TRUNCATION diagnostics |
 > |---|---:|
 > | armv7 (32-bit) | **0** across 0 objects |
-> | arm64 (64-bit) | **2,218** across **66 of the 110** objects |
+> | arm64 (64-bit) | **2,291** across **68 of the 112** objects |
 >
 > That is decompiled code punning pointers through `undefined4` slots — lossless at 32
 > bits, **silently truncating at 64**.
@@ -144,7 +144,7 @@ re-deriving the type database from a 64-bit source.
 >    wasm32 is at risk. Run `test/ptrwidth_check.sh` yourself before believing that; it
 >    takes 13 seconds and it is the cheapest insurance in this document.
 > 2. **Never enable memory64.** The "do not enable without re-deriving" above now has a
->    number attached: you would be turning on **2,218** truncation sites across two thirds
+>    number attached: you would be turning on **2,291** truncation sites across two thirds
 >    of the library, and *the build would still be green*.
 > 3. **The general lesson, which applies to everything you do here:** identical exported
 >    symbols and a clean compile prove nothing about a target you have not executed. That is
@@ -225,11 +225,11 @@ This had never been tried, so it was worth doing before anything else:
 
 ```
 emcc 5.0.7, no -m32, otherwise the same flags as the native build
-110 of 110 recovered objects compiled for wasm32.  0 failures.
+112 of 112 recovered objects compiled for wasm32.  0 failures.
 ```
 
 Stronger than that — the **exported symbol names are byte-identical to i386 for
-all 110 objects**, nothing added or dropped. So the ABI surface the engine links
+all 112 objects**, nothing added or dropped. So the ABI surface the engine links
 against does not change between the two targets, which was the thing most likely
 to turn this into a rewrite.
 
@@ -489,7 +489,7 @@ physics.
    all of them: `scene_chain.c` (collision-free, the authoritative trajectory signal),
    `scene_boxes_on_plane.c` (exercises the geometry dispatch), `scene_ragdoll.c` (nine
    capsules on ball-socket joints — the other two make **not one Sphyl call** between them).
-   Currently **110/110 clean on all three** on i386 — but read `HANDOVER.md` §4a before
+   Currently **112/112 clean on all three** on i386 — but read `HANDOVER.md` §4a before
    putting weight on that number: only eight of 103 objects have measurable sensitivity on
    any of these scenes, and `test/scene_census.sh` and `test/gate_sensitivity.sh` exist to
    say which. **Getting that under a wasm build is your first milestone.**
@@ -501,7 +501,7 @@ physics.
    contact regime and a figure without its regime is meaningless. `KD_GENARGS=1` and
    `KD_FIXEDSHAPE=1` are the two that found real bugs most recently.
 3. **`test/wasm_check.sh`** — compiles the whole set for wasm32 and diffs the exported
-   symbols against the native build. Currently 110/110. **Run this after any change
+   symbols against the native build. Currently 112/112. **Run this after any change
    to the recovery pipeline**; it is the cheapest possible early warning that a change has
    broken portability. It compares NAMES only — see the note at the end of §4.
 4. **`test/kd_shadow.c`** — the in-game shadow harness. Runs both implementations on the
@@ -513,7 +513,7 @@ physics.
    day because this was skipped, and it reproduces with no recovered code executing.
 
 7. **`test/ptrwidth_check.sh <out>/allobj <build>`** — the pointer-width gate. armv7
-   must read **0**; arm64 currently reads **2,218 across 66 of 110**. This is the only
+   must read **0**; arm64 currently reads **2,291 across 68 of 112**. This is the only
    gate in the project that can see a defect on a target nobody has executed, and it is
    the one that matters most to you. 13 seconds.
 
@@ -570,7 +570,7 @@ gcc -m64 ... -o /tmp/rag_hx   test/scene_ragdoll.c  <linux_hx_single/*.a>
 - **Nothing has been RUN under wasm.** The whole set compiles and exports identical
   symbols, and that is all §4 hazards 2 and 3 settle. Hazards 1, 4 and 5 are runtime and
   entirely open.
-- **110 of ~150 objects compile**, 22 do not. But read `HANDOVER.md` §3b then §3 before reading that
+- **112 of ~150 objects compile**, 20 do not. But read `HANDOVER.md` §3b then §3 before reading that
   as 60% done — see the next bullet, it is the most important thing in this file for
   planning purposes.
 - **25 objects are deliberately quarantined** by eight safety detectors. They compile but
@@ -729,6 +729,23 @@ Read `karma-decomp/HANDOVER.md` for how the recovery pipeline works, and
 
 A log of the things that would otherwise surprise you, newest first. If you have read an
 older copy of this file, start here.
+
+### 2026-08-25 (second session) — 112 objects, and the solver is two modules away
+
+Nothing here changes what the web build does. Two figures move and one is worth a look.
+
+- **112 objects, up from 110.** `keaLCPSolver` and `keaMemory` — both `libMdtKea`, i.e.
+  the SOLVER, not collision — now compile and are in the build. Neither is reachable from
+  anything the web build currently runs, because the web build has no Karma at all yet.
+- **arm64 is worse in proportion, not in kind: 2,291 truncation sites across 68 of 112,**
+  up from 2,218 across 66 of 110. armv7 is still **0**. The two new objects contribute 73
+  sites between them, which is the ordinary rate — nothing special about them.
+- **wasm32 is 112/112 with byte-identical exported symbol sets**, unchanged in character.
+
+There is now a **ninth gate**, `test/vptr_ab.sh`, and it is i386-only by construction — it
+compares a vtable dispatch against a devirtualised control by running two physics scenes.
+It is not something the web agent needs to run, but if you re-dump Ghidra output it is on
+the list `HANDOVER.md` §5 says must pass before adopting a new dump directory.
 
 ### 2026-08-25 — 110 objects, `out11`, and a gate that watches your pointer width
 

@@ -38,18 +38,32 @@ moves, move it there.
   call "the whole job". All nineteen vtable dispatches in `keaRbdCore_unified` and
   `keaLCPSolver` are restored from relocation data, and it cost only 2 changed dumps out of
   153. §5a, §11 item 1.
-- **What now blocks the solver is one thing: arguments that are genuinely missing, because
-  the DWARF does not say where the frames live.** Not "Ghidra failed to use the debug info"
-  — the `DW_AT_location` attributes are absent from the abbrevs those functions use. §11
-  item 2 has the readelf command that shows it. `MdtBcl`, `MeMath` and `MdtWorld` are now
-  blocked on exactly this too — at **one, one and ten** errors, far cheaper subjects to
-  validate a fix on than any kea object. §13.
+- **AND THE VPTR STORE IS WRITTEN, AND `keaLCPSolver` AND `keaMemory` COMPILE.** §11 item 3
+  was deferred because "no gate could see whether the rewrite was right or wrong". There is
+  now a gate — `test/vptr_ab.sh`, the ninth — and it does not measure the trajectory, it
+  measures the DISPATCH: devirtualise every repaired call site and diff. Bit-identical on
+  all three scenes; a rotated slot and a +12 address point, built as controls, both segfault
+  on the two scenes that reach the dispatch, and on the third — which does not reach it —
+  **the gate says so rather than reading green**. §11 item 3, `proven.txt`.
+- **`keaMemory` — the allocator — is bit-identical on all three scenes and the plausible
+  wrong repair segfaults on all three.** That second clause is the measurement; the first
+  alone would not be. The wrong repair is the one that supplies the cast Ghidra elided: it
+  compiles, and it reads a `MeReal` out of the pool that the original never touches.
+  §11 item 3a.
+- **What now blocks the solver is TWO objects and nine errors, where a week ago it was five
+  objects.** `keaRbdCore_unified` at 7 and `keaLCP_new` at 2, plus `keaIntegrate_pc`, which
+  compiles and is measured WRONG. Six of the nine are the frame — **the DWARF for those
+  functions declares no `DW_AT_location`**, so nothing can read it out of the debug info,
+  and §11 item 2 has the `readelf` that shows it. The other three are exported .bss names
+  and are a different, probably cheap class. `MdtBcl` and `MeMath` are blocked on the frame
+  too, at **one error each**, and are far cheaper subjects to validate a fix on than any kea
+  object. §13.
 - **The Ghidra-side attack on that is REFUTED, in three minutes, and it cost nothing.**
   Disabling DWARF variable import leaves the `in_stack_`/`stack0x` frame model
   **byte-identical**; all it removes is names. Ghidra's native stack recovery and its DWARF
   importer agree. Dead end 18, and §11 item 2 has what the experiment found instead — which
   is worth more than what it was looking for.
-- **110 objects compile**, 25 are quarantined by detectors, 13 do not. Object count is a bad
+- **112 objects compile**, 22 are quarantined by detectors, 20 do not. Object count is a bad
   progress metric — read §3 before using it.
 - **`MdtWorld` is the first object out of §11 item 2, and the engine does not use it.**
   `collapse_outgoing_aggregate_copy` takes it FAIL → ok, bit-identical on all three scenes,
@@ -58,7 +72,7 @@ moves, move it there.
   entry points directly, so `MdtWorldStep` is a third member of the §3a family. The method
   is validated; the object is not on the path. §11 item 2, `proven.txt`.
 - **They compile for wasm32, armv7 AND arm64 — and arm64 is a lie.** Identical symbol sets
-  on all three, but arm64 emits **2,162 pointer-truncation diagnostics across 65 of the 109
+  on all three, but arm64 emits **2,291 pointer-truncation diagnostics across 68 of the 112
   objects** where armv7 emits **zero**, because the recovery puns pointers through 4-byte
   slots. There **is** now a gate for it — `test/ptrwidth_check.sh`, 13 seconds — and §6b's
   old "920 vs 23" figure was two different diagnostic sets added together. §6b.
@@ -74,7 +88,10 @@ moves, move it there.
 - **All 108 go into the engine at once and it plays a match**, indistinguishable from stock
   on the same map. That is up from the eight of §7b, and getting there took one real fix: a
   static pointer table whose relocations were never applied, which passed all seven gates
-  and then segfaulted on the engine's first `.ka` file. §7c.
+  and then segfaulted on the engine's first `.ka` file. §7c. **That figure is a past
+  measurement at 108 and again at 110 (`proven.txt`, out11); the 112-object build has NOT
+  been in the engine — the two new objects are `libMdtKea`, which the collision run does
+  not reach anyway.**
 - **One whole family the engine never asks Karma about**, and one that looked like a second.
   Every `Aggregate` *pair* is intercepted by UT2004's own dispatcher, as is
   `Box × TriangleList`. But the aggregate dispatcher **recurses into `KIntersect` per
@@ -91,66 +108,83 @@ Everything else in this file is detail. This is the work.
 
 | # | what | where | blocked on |
 |---|---|---|---|
-| 1 | **THE SOLVER. `keaLCPSolver` is 8 errors and ALL of them are the vptr store — do that first, it is now measurable.** See "WHERE MY HEAD IS" above for the per-object blocker table; the frames are no longer the whole story. `MdtWorld` came out this week and turned out not to be on UT2004's path. Remaining: `keaRbdCore_unified`, `keaMemory`, `keaIntegrate_pc`, `keaLCPSolver`, `keaLCP_new`, `MdtBcl`, `MeMath`. The DWARF declares no `DW_AT_location`, and §11 item 2 now adds: the frames are described and FRAGMENTED, the overlay repair for that is dead end 20, and the aggregate-copy collapse is what worked. **The Ghidra-side re-dump is now TRIED AND REFUTED (dead end 18).** What replaces it: the frame is not lost, it is the OUTGOING ARGUMENT AREA, and `register0x00000010` is entry-ESP — both confirmed against the machine code. | §11 item 2 | nothing, but it is a text-level repair on a Ghidra-invented frame and needs a subject where a wrong answer would show |
+| 1 | **THE SOLVER, and it is down to TWO objects and NINE errors.** `keaLCPSolver` and `keaMemory` came out on 2026-08-25; `MdtWorld` came out and turned out not to be on UT2004's path. What is left: **`keaRbdCore_unified` at 7 and `keaLCP_new` at 2**, plus `keaIntegrate_pc`, which compiles and is measured WRONG. Of those nine errors, **six are the frame** (5 `stack0x` + `register0x00000010`) and **three are a separate, probably cheap class** — `gDebug`, `gDebugDataFile`, `gPartition`, exported .bss symbols gen_prelude defines as `float kd_<name>[1]` while the body uses the bare name and one of them is a POINTER. See "WHERE MY HEAD IS" for the table. The DWARF declares no `DW_AT_location`, the frames are described and FRAGMENTED, the overlay repair for that is dead end 20, the aggregate-copy collapse is what worked, and the Ghidra-side re-dump is TRIED AND REFUTED (dead end 18). | §11 item 2 | the six frame errors: nothing, but it is a text-level repair on a Ghidra-invented frame. The three data names: nothing at all |
 | 2 | ~~**`IxCylinderCylinder` is wrong and is in the build.**~~ **RE-FRAMED — `dims` is not a measurement for this pair.** The shipped library disagrees with itself, under a 1e-7 m nudge, more often than we disagree with it. Leave it in the build; do not release it either. | §11 item 0 | a live match scoring ret/count/position/separation with dims read separately |
-| 3 | **arm64 truncates pointers.** 2,218 diagnostics across 66 of 110 objects; armv7 zero. **There is now a gate** — `test/ptrwidth_check.sh`. | §6b | a generator-wide change to pointer-width slots |
+| 3 | **arm64 truncates pointers.** 2,291 diagnostics across 68 of 112 objects; armv7 zero. **There is now a gate** — `test/ptrwidth_check.sh`. | §6b | a generator-wide change to pointer-width slots |
 | 4 | **Nothing has EXECUTED on wasm32, armv7 or arm64.** | `HANDOVER-WEB.md` | the web agent |
 | 5 | ~~**GJK's warm cache path has never been tested.**~~ **DONE 2026-08-25** — `KD_WARM=<K>`, 0 ret / 0 count / 0 dims over 200,000 pairs, cache verified live. §11 item 4. The 3 `ret_diff` seen in a live match are still not reproduced, and this narrows where they can be. | §11 item 4 | — |
 | 7 | **NEW — `IxCylinderTriList` diverges in a live match and the synthetic tier cannot see it.** 37 `count_diff` in 153,391, off-by-one contacts on a cylinder resting in a CORNER of level geometry; self-test clean on 248,777. difftest reads 0 at every spread, and with `KD_GRID` and `KD_FLAT`. The driver's mesh is one 4×2 patch and cannot present a corner. | `proven.txt` | a test mesh that can be a corner; `NTRI` is still fixed at 32 |
 | 8 | **`IxCylinderCylinder`'s remaining charge is `count_diff` only** — 1 in 37,735 and 7 in 51,142 on two runs. Its `dims` is settled (§11 item 0). | §11 item 0 | nothing |
-| 6 | **The tail: 13 objects that do not compile — and it is finished.** 3 DEAD, 2 leave-alones, 3 dead end 9, 3 are item 1 above, 2 low-value profilers. `MdtWorld` left it this week. | §13 | do not start here |
+| 6 | **The tail: 14 objects in the FAIL bucket and it is still finished.** 3 DEAD, 2 leave-alones, 3 dead end 9, 2 are item 1 above, 2 low-value profilers, plus `MdtBcl`/`MeMath` at one `stack0x` each. `keaRbdCore_unified` joined it this session by getting BETTER — 18 errors to 7 — because recover.py labels by the FIRST error. Sort by §13's verdict column, never by the bucket. | §13 | do not start here |
 
 
 ### WHERE MY HEAD IS — the next three moves, in order
 
-Written 2026-08-25 at the end of a long session, so the next one does not re-derive it.
+Written 2026-08-25 (second session). The three moves the previous handover named are all
+DONE and measured; this is what replaces them.
 **The exact blockers, measured, not remembered** (`gcc -c` on `/tmp/kd_out/allobj/*.c`):
 
 | object | errs | what is actually stopping it |
 |---|---:|---|
-| `keaLCPSolver` | 8 | **ALL of it is the vptr store** — `_vanillaQMatrix` ×3 and `__gxx_personality_v0` ×3. Nothing else. |
-| `keaRbdCore_unified` | 18 | the vptr store (`_vanillaFunctions`) **plus** 3 `stack0x` + `register0x00000010` |
-| `keaMemory` | 6 | `_pool_ptr` ×3 (mislabelled external), `invI0` member, `constraints` redeclared. **Not a frame problem at all** |
-| `keaLCP_new` | 11 | 2 `stack0x` + **implicit declarations of MANGLED names** — see below |
+| ~~`keaLCPSolver`~~ | **0** | **compiles, in the build.** The vptr store (§11 item 3) + one mangled call site |
+| ~~`keaMemory`~~ | **0** | **compiles, in the build,** and bit-identical on all three scenes |
+| `keaRbdCore_unified` | 7 | 3 `stack0x` + `register0x00000010` — **plus 3 exported-data names, a different and probably cheap class** |
+| `keaLCP_new` | 2 | 2 `stack0x`, and NOTHING else. Was 11 |
 | `keaIntegrate_pc` | **0** | compiles; held by a detector and measured wrong (`proven.txt`) |
 | `MdtBcl` / `MeMath` | 1 / 1 | one `stack0x` each at offset −12, both diagnosed in §5c |
 
-**MOVE 1 — write the vptr store (§11 item 3). It is now validatable, which is the only
-reason it was deferred.** That item says "deliberately not implemented… no gate could see
-whether the rewrite was right or wrong, because the object still would not compile." That
-has changed: `keaLCPSolver` has **no other error class left**. Write the inversion and it
-either compiles or it does not, and if it does, `scene_chain` drives
-`keaLCPSolver::solveLCP` **900 times** so the trajectory gate can measure it immediately.
-The inversion itself is already computed by existing machinery —
-`ghidra_clean.relocation_targets(obj, per_function=True)` — and §11 item 3 has the exact
-shape to emit. This is the cheapest remaining step in the whole project and it is on the
-critical path.
+**MOVE 1 — `keaRbdCore_unified`'s three exported-data names, which are NOT the frame and
+are the only cheap thing left on the critical path.** `gDebug`, `gDebugDataFile` and
+`gPartition` are .bss symbols this object EXPORTS. `gen_prelude` emits them as
+`float kd_gDebug[1] KD_MANGLED("gDebug");` and the body writes the bare `gDebug`, so they
+are undeclared. Two halves, and the second is the one to think about:
 
-**MOVE 2 — `keaLCP_new`'s mangled implicit declarations, which are NEW and are mine.**
-`out10` gave every C++ function a prototype under its mangled name (§5b), and Ghidra now
-emits some intra-class calls under that name — `_ZN12keaLCPSolver9makeXandWEPfPiiS1_i` —
-which `gen_prelude` does not declare, so they are implicit-declaration errors. That is a
-gap in `gen_prelude`, not a frame problem, and it should be mechanical: it already emits
-`KD_MANGLED` declarations, so it needs to cover names Ghidra spells mangled at the CALL
-site too. Note `keaLCP_new` went 10 → 11 errors across out9 → out11 because of this;
-the trade was worth it (§5b) but the debt is real.
+- the body needs to reach the `kd_` name, the same rename gap `apply_renames` closes for
+  functions;
+- **the TYPE is wrong.** `gDebug = &parameters.debug;` is a pointer, and `float kd_gDebug[1]`
+  is an array — not assignable at all. §8c already recorded why: *a zero-initialised static
+  carries no evidence of its own type*, and the answer is the object's own DWARF, which is
+  exactly what `dwarf_structs.py` reads. That is the same repair `MeFAssetCreateFunc`
+  needed and it is written down.
 
-**MOVE 3 — `keaMemory`, which is not a frame problem and never was.** Three
-`_pool_ptr` errors are the EXTERNAL-slot addend collision §5 already inverts, and
-`proven.txt`'s `keaMemory` entry records that this was fixed once and what the two traps
-were (the pop's base, and the SCALE — Ghidra's `&X + i*4` is byte arithmetic). Re-read
-that entry before touching it.
+That is 3 of 7. It does not make the object compile — the other four are §11 item 2 — but
+it is cheap, it is general (every object that exports .bss data has this latent), and it
+shrinks the frame problem to its true size.
+
+**MOVE 2 — `keaLCP_new` is TWO `stack0x` errors and nothing else.** It was 11. This is now
+the smallest §11 item 2 subject in `libMdtKea`, and `keaLCPSolver::solveLCP` runs 900 times
+in `scene_chain`, so a wrong answer shows on the trajectory gate rather than in a review
+column. **But read §13 first, which says do not text-repair this frame**, and dead end 20,
+which is the overlay attempt on the same family. If you take it on, take `MdtBcl` or
+`MeMath` first — one error each, non-kea, and §12's standing lesson is that the object
+which motivates a tool is the worst thing to validate it on.
+
+**MOVE 3 — decide what to do about `keaLCPSolver` being in the build unmeasured.** It
+compiles, no detector objects, so it went straight in — the same posture §11 item 0 warns
+about for `IxCylinderCylinder`. The *repair* is measured (`test/vptr_ab.sh`, and the two
+wrong versions segfault); the OBJECT is not. `scene_chain` is bit-identical but the census
+says only 4 of its 15 functions ran there; the two collision scenes diverge at their own
+noise floor (5.93 m against 8.43 m of sensitivity on the ragdoll, 31.1 against 29.8 on the
+boxes). That is better than "compiles" and short of released. Either find an instrument
+that can see it, or write down that it is unmeasured — do not let the silence read as a
+pass.
 
 **What NOT to do next.** Do not extend `collapse_outgoing_aggregate_copy` speculatively —
-it did its job on `MdtWorld` and none of the four kea objects is blocked on the pattern it
+it did its job on `MdtWorld` and neither remaining kea object is blocked on the pattern it
 matches. Do not attempt `MeMath` (§5c proves the target is never written). Do not
-text-repair `keaLCP_new`'s frame (dead end, and §13 says so).
+text-repair `keaLCP_new`'s frame without reading dead end 20 first.
 
-**And keep the perspective §12 asks for:** `MdtWorld` was recovered this week and it turned
-out UT2004 never calls it. Before spending a session on an object, run the same check —
-`grep -rn "\bSymbolName\b" Source/` and look for undefined references across the corpus.
-The engine reimplements more of Karma than anyone assumed: collision dispatch (§3a),
-`KWorldStepSafeTime`, and the whole stepping loop in `KDynStep.cpp`.
+**And there is a trap waiting in `keaRbdCore_unified` that is worth knowing before you get
+there.** Its vtable dispatches go through `code *`, which is UNPROTOTYPED, and two of its
+slots take a float scalar. On i386 a float argument to an unprototyped function is promoted
+to DOUBLE — eight bytes on the stack where the callee reads four. `keaLCPSolver` is safe
+because none of its four slots takes a float; that object will not be. `proven.txt` has it.
+
+**And keep the perspective §12 asks for:** `MdtWorld` was recovered last session and it
+turned out UT2004 never calls it. Before spending a session on an object, run the same
+check — `grep -rn "\bSymbolName\b" Source/` and look for undefined references across the
+corpus. The engine reimplements more of Karma than anyone assumed: collision dispatch
+(§3a), `KWorldStepSafeTime`, and the whole stepping loop in `KDynStep.cpp`.
 
 **IS A COLLISION PAIR USED? YES — THIS IS ANSWERED, DEFINITIVELY, AND IT IS §3.**
 37 pairs are registered. **15 are called.** Of the 22 that are not:
@@ -195,16 +229,16 @@ complete types. That is what makes this tractable. Ghidra consumes it directly.
 ## 2. Status
 
 ```
-compile:  110 objects (104 clean + 6 with prelude TODOs)  = 74.3% of 148 attempted
-scenes:   110/110 run clean on all three substitute scenes, and all 110 TOGETHER
+compile:  112 objects (108 clean + 4 with prelude TODOs)  = 75.7% of 148 attempted
+scenes:   112/112 run clean on all three substitute scenes, and all 112 TOGETHER
           are bit-identical on the collision-free one — but read §4a before
           reading anything into that number
-wasm32:   110/110 compile, exported symbol sets byte-identical to i386
-armv7:    110/110 compile, symbol sets identical — a real 32-bit-pointer port,
+wasm32:   112/112 compile, exported symbol sets byte-identical to i386
+armv7:    112/112 compile, symbol sets identical — a real 32-bit-pointer port,
           and 0 pointer-truncation diagnostics (test/ptrwidth_check.sh)
-arm64:    110/110 compile, symbol sets identical, and NOT TRUSTED — 2,218
-          pointer-truncation diagnostics across 66 of the 110 objects (§6b)
-bindings: 110/110 export what the SHIPPED object exported, binding included (§8)
+arm64:    112/112 compile, symbol sets identical, and NOT TRUSTED — 2,291
+          pointer-truncation diagnostics across 68 of the 112 objects (§6b)
+bindings: 112/112 export what the SHIPPED object exported, binding included (§8)
 difftest: 14 pairs (Cylinder x Cylinder and Cylinder x TriangleList added
           2026-08-24), reproducing the documented baseline exactly — IxBoxBox
           1 count, IxSphereTriList 137 dims, IxCylinderCylinder 1 count + 20
@@ -212,12 +246,15 @@ difftest: 14 pairs (Cylinder x Cylinder and Cylinder x TriangleList added
           KD_GRID=1 puts it in the game's AXIS-ALIGNED regime, where
           IxCylinderCylinder goes to 6,385 dims — and where the shipped
           library stops reproducing ITSELF (§11 item 0)
-review:   25 objects recover.py labels "needs review" — and that label covers
+vptr:     the repaired vtable dispatches are bit-identical to a devirtualised
+          control on all three scenes, and both wrong versions of the repair
+          segfault where the dispatch runs (test/vptr_ab.sh, §11 item 3)
+review:   22 objects recover.py labels "needs review" — and that label covers
           TWO different states, which matters when quoting it. 16 of them
           COMPILE and are held out of the build by the safety detectors (§8);
-          the other 9 do NOT compile and their first error merely matches a
-          detector's pattern. So: 126 of 153 rebuild, 110 are in the build.
-fail:     13 more do not compile, for a total of 22 that do not
+          the other 6 do NOT compile and their first error merely matches a
+          detector's pattern. So: 128 of 153 rebuild, 112 are in the build.
+fail:     14 more do not compile, for a total of 20 that do not
 dumps:    out11 is current (§5c) — out10's dumps byte-for-byte, plus a
           per-object `.locals` table of Ghidra's frame assignments. out10
           differs from out9 in 4 of 153 dumps and no compiled object moved.
@@ -590,7 +627,7 @@ metoolkit .a
    ├─► gen_typedb.py    ──► kd_types.h + kd_types_fields.json
    ├─► gen_prelude.py   ──► <obj>.prelude.h + <obj>.exports.h
    ├─► gen_vtables.py   ──► <obj>.vtables.h  (C++ ABI data)
-   └─► ghidra_clean.py  ──► <obj>.c          (compilable, via the repair loop §7a)
+   └─► ghidra_clean.py  ──► <obj>.c          (pre-passes, then the repair loop §7a)
                                 │
                                 ▼
                         recover.py (drives all of the above, compiles, classifies)
@@ -632,7 +669,7 @@ prints a per-object table and a summary. **`out11` is the current dump directory
 `out5`–`out9` are kept deliberately — they are the fallback if a pipeline change ever has
 to be bisected against the dumps.
 
-### Gate what came out — all EIGHT, every time
+### Gate what came out — all NINE, every time
 
 ```bash
 MT=../Thirdparty/metoolkit
@@ -659,8 +696,14 @@ python3 tools/check_symbol_bindings.py /tmp/kd_build /home/ion/tools/karma-lab/a
 
 # pointer width: the gate §6b used to say could not exist. 13 seconds, and it
 # needs no arm64 hardware — truncation is a compile-time diagnostic.
-# armv7 must read 0; arm64 currently reads 2,162 across 65 objects.
+# armv7 must read 0; arm64 currently reads 2,291 across 68 objects.
 ./test/ptrwidth_check.sh /tmp/kd_out/allobj /tmp/kd_build
+
+# the ninth: does the repaired vtable dispatch reach the function it claims?
+# Devirtualise it and diff, with a rotated slot and a +12 address point as
+# controls that the scene MUST notice. §11 item 3.
+./test/vptr_ab.sh /tmp/kd_out/allobj /tmp/kd_build $LIB keaLCPSolver \
+    test/scene_chain.c test/scene_ragdoll.c test/scene_boxes_on_plane.c
 
 # and the two that say what the scene gate above actually proved — §4a
 # KD_CENSUS_VALIDATED is not optional: without it this sweeps in the quarantined
@@ -686,6 +729,34 @@ gcc -m32 -O2 -fno-pic -fno-strict-aliasing -std=gnu99 -w \
     -c -o /tmp/kd_build_dt/IxBoxTriList.o /tmp/kd_out/allobj/IxBoxTriList.c
 ./test/difftest_pair.sh /tmp/kd_build_dt $MT
 ```
+
+### The pre-passes, and why three of them are not repair rules
+
+`ghidra_clean.py` runs some repairs BEFORE the compile-feedback loop, on `body_text`, and
+which side of that line a repair belongs on is a real decision rather than a style choice.
+`REPAIR_RULES` picks **one** rule per diagnostic — `next((fn for pat, fn in REPAIR_RULES
+if pat.search(msg)), None)` — so a second entry with the same pattern is dead code that
+looks exactly like a rule that declines. The `undeclared` pattern is already owned by
+`fix_mislabelled_external`, so anything else that answers it has to be a pre-pass.
+
+| pre-pass | what it answers | driven by |
+|---|---|---|
+| `fix_external_base_arithmetic` | `&pool_ptr + i*4` — the addend collision, with byte scale | relocations |
+| `collapse_outgoing_aggregate_copy` | by-value aggregate marshalling; §11 item 2's one success | the loop's trip count vs the prototype |
+| **`fix_vptr_store`** | `_vanillaQMatrix = &__gxx_personality_v0;` — the vtable address point | relocations + the shipped disassembly + `<obj>.locals` |
+| **`resolve_mangled_call_names`** | a call site Ghidra spelled `_ZN12keaLCPSolver8setUpperEPf` | the asm labels this unit is about to emit |
+| **`fix_void_pointer_member`** | `pool_ptr->invI0` — a `void *` has no members | the DWARF + "this function has no FP instruction" |
+
+The last three are new on 2026-08-25 and none of them needs a diagnostic: the evidence is
+in the object file, so there is no reason to wait for GCC to complain.
+
+**One thing the repair loop does that is worth knowing before you debug it.** `applied`
+holds every edit TRIED, accepted or rejected, so a line that got a wrong candidate can be
+offered a different one — and a rejection used to be permanent. A rewrite that is exactly
+right but error-count-NEUTRAL (`_pool_ptr` → `pool_ptr` trades three diagnostics for three
+of another kind) was refused on the round it was offered and could never be offered again,
+and the loop reported a fixed point that was not one. It now forgets its rejections and
+goes round once more, after real progress, up to `max_restarts` times. §11 item 3a.
 
 `scene_chain` is collision-free and is the authoritative *trajectory* signal.
 `scene_boxes_on_plane` diverges by design but exercises the geometry dispatch — it caught
@@ -876,8 +947,8 @@ Takes 1–2 hours for the whole corpus (`out6` about 75 minutes for 153 objects;
 way in three minutes after two sessions of being budgeted at 75–120. Scripts live in
 `tools/gscripts/` and **must be copied** to `/home/ion/tools/karma-lab/gscripts/` —
 Ghidra reads them from there. **Write to a NEW output directory** and keep the old one
-until the new dumps have passed all **eight** gates (§4 — the eighth is
-`test/ptrwidth_check.sh`); a re-run changes every object at
+until the new dumps have passed all **nine** gates (§4 — the eighth is
+`test/ptrwidth_check.sh` and the ninth `test/vptr_ab.sh`); a re-run changes every object at
 once — `out6` differs from `out5` in 103 of 153 dumps.
 
 `out5`–`out11` are all on disk. **`out11` is current** (§5c); it is `out10`'s dumps
@@ -1404,11 +1475,11 @@ with the same flags §4 uses for i386, minus `-m32`.
 
 | target | compiles | exported symbols vs i386 | pointer TRUNCATION diagnostics |
 |---|---|---|---:|
-| wasm32 | 110/110 | identical | — |
-| **armv7** | **110/110** | **identical** | **0** across 0 objects |
-| **arm64** | **110/110** | **identical** | **2,218** across **66 of 110** objects |
+| wasm32 | 112/112 | identical | — |
+| **armv7** | **112/112** | **identical** | **0** across 0 objects |
+| **arm64** | **112/112** | **identical** | **2,291** across **68 of 112** objects |
 
-Measured over **all 110 objects in the build** with `test/ptrwidth_check.sh`, which enables
+Measured over **all 112 objects in the build** with `test/ptrwidth_check.sh`, which enables
 exactly three clang diagnostics on top of `-Wno-everything` so the count is those three and
 nothing else:
 
@@ -2393,8 +2464,15 @@ Ordered by what actually moves the project, not by what is easiest:
    because the technique generalises to any indirect call whose target is pinned by a
    relocation.
 
-2. **THE JOB: the frames — and the DWARF does not describe them.** This is the correction
-   that matters most. "Ghidra cannot model these frames" was true and understated. For
+2. **THE JOB: the frames — and the DWARF does not describe them. It is now SIX ERRORS in
+   two objects.** As of 2026-08-25 (second session) `keaLCPSolver` and `keaMemory` have
+   left this item entirely, `keaLCP_new` is down from 11 errors to **2**, and
+   `keaRbdCore_unified` from 18 to **7**, of which only four are the frame — 3 `stack0x`
+   plus `register0x00000010`. The other three are exported .bss names and are a different,
+   cheaper class (see "WHERE MY HEAD IS"). So the frame problem is **five `stack0x` and one
+   `register0x` across two objects**, plus one each in `MdtBcl` and `MeMath`.
+
+   "Ghidra cannot model these frames" was true and understated. For
    `MdtKeaAddConstraintForces` the debug info gives names and types but **no locations at
    all**, because the abbrevs its DIEs use do not declare `DW_AT_location`:
 
@@ -2560,10 +2638,11 @@ Ordered by what actually moves the project, not by what is easiest:
    unknown frame" to "make Ghidra model a by-value aggregate argument", which is a much
    smaller question and is Ghidra-side.
 
-3. **Then, and only then, the vptr store.** Both objects also fail on `_vanillaFunctions` /
-   `_vanillaQMatrix` being undeclared. That is the **same EXTERNAL-slot addend collision as
-   `keaMemory`** (§5) and it is **already inverted exactly and uniquely** by existing
-   machinery — `ghidra_clean.relocation_targets(obj, per_function=True)` returns:
+3. **DONE 2026-08-25 — the vptr store, and it is MEASURED.** Both objects failed on
+   `_vanillaFunctions` / `_vanillaQMatrix` being undeclared. That is the **same
+   EXTERNAL-slot addend collision as `keaMemory`** (§5) and it was **already inverted
+   exactly and uniquely** by existing machinery —
+   `ghidra_clean.relocation_targets(obj, per_function=True)`:
 
    ```
    keaRbdCore_unified  MdtKeaAddConstraintForces
@@ -2575,18 +2654,102 @@ Ordered by what actually moves the project, not by what is easiest:
 
    `+8` is the Itanium ABI address point, so `_vanillaFunctions = keaFunctions::initPool;`
    is really `vanillaFunctions.vptr = &vtable[2]`, and **`__gxx_personality_v0` is not the
-   personality routine at all**. Corpus-wide only these 2 objects import a vtable, so the
-   blast radius is contained. The shape that works is
-   `#define _vanillaFunctions (*(char **)&vanillaFunctions)` plus an
-   `extern void *_ZTV20keaFunctions_Vanilla[];`, checked by requiring the local's declared
-   type to equal the class named in the relocation.
+   personality routine at all**. Corpus-wide only these 2 objects import a vtable.
 
-   **Deliberately not implemented, and the reason is the point.** Writing it would remove
-   an error class from two objects that *still* would not compile, because of item 2 — so
-   **no gate could see whether the rewrite was right or wrong**. An unvalidatable generator
-   change is the exact risk profile that produced dead ends 9 and 10. Do item 2 first; then
-   this becomes verifiable and is an afternoon.
+   **`ghidra_clean.fix_vptr_store` is a PRE-PASS, not a REPAIR_RULES entry**, and that is
+   not a detail: nothing about it is driven by a diagnostic, and the `undeclared` pattern
+   is already spoken for by `fix_mislabelled_external` — a second entry with that pattern
+   is dead code, per the note above `REPAIR_RULES`. It aliases `_<local>` to the local's
+   first word, so nothing about the frame is reconstructed.
 
+   **Six static checks, each read from the object**, are in its docstring. The one that
+   matters settles the only thing NOT read — the SCALE. Ghidra types the base
+   `undefined4 *` in `makeXandW`, so `[2]` is the third WORD, and leaves it byte-like in
+   `PrincipalSubmatrix`, so `+ 0xc` is the fourth. Read the second at word scale and the
+   offsets are 48 and 64 in a table whose last slot is 32; read the first at byte scale and
+   `[2]` is not a multiple of four. Either error is refused rather than compiled.
+
+   **And then the measurement, which is `test/vptr_ab.sh` and is the ninth gate.** It
+   rebuilds the object with every repaired dispatch replaced by a DIRECT call to the symbol
+   that slot holds — from `vtable_slots.py`, i.e. from the relocations in the object that
+   DEFINES the vtable, not read back out of the rewrite — so the two builds differ in
+   exactly one way: one loads a function pointer out of memory at run time and the other
+   does not.
+
+   | scene | devirtualised control | rotated slot | address point +12 |
+   |---|---|---|---|
+   | `scene_chain` | bit-identical | **BLIND** | **BLIND** |
+   | `scene_ragdoll` | bit-identical | crashes | crashes |
+   | `scene_boxes_on_plane` | bit-identical | crashes | crashes |
+
+   The `BLIND` row is the point of the gate, not a gap in it. `substitute_test.sh` prints
+   `keaLCPSolver — trajectory bit-identical` on `scene_chain`, and `scene_census` says only
+   4 of 15 functions ran there — none of the three the repair touched. §4a's distinction,
+   applied to a rewrite instead of to an object.
+
+   **A site whose arguments Ghidra DROPPED is skipped, not rewritten.** `keaRbdCore_unified`
+   has one — `(*__ZN12keaLCPSolver8solveLCP...)()`, zero arguments where the slot wants two.
+   Rewriting it would compile into a call to the right function with the wrong stack, which
+   is the one outcome this project treats as worse than not compiling, so the site keeps its
+   error. Any OTHER arity mismatch declines the whole store.
+
+   **A trap for whoever unblocks `keaRbdCore_unified`.** Those dispatches go through
+   `code *`, which is UNPROTOTYPED, and two of its slots take a float scalar
+   (`calcJinvMandRHS`, `calcIworldandNonInertialForceandVhmf`). On i386 a float argument to
+   an unprototyped function is promoted to DOUBLE — eight bytes where the callee reads
+   four. `keaLCPSolver` is safe because none of its four slots takes a float.
+
+3a. **DONE 2026-08-25 — `keaMemory`, the allocator, and a `void *` has no members.**
+   The handover called this "the EXTERNAL-slot addend collision". It is not:
+   `relocation_targets` resolves `_pool_ptr` to `('pool_ptr', 0)`, the IDENTITY reading, and
+   `fix_mislabelled_external` had the right rewrite all along. Two other things stopped it,
+   and both are general.
+
+   **The repair loop's rejection memory outlived its reason.** `applied` holds every edit
+   TRIED, so a line that got a wrong candidate can be offered another — and a REJECTION is
+   then permanent. `_pool_ptr` → `pool_ptr` exchanges three `undeclared` diagnostics for
+   three of a different kind, so on the round it was first offered the count did not FALL
+   and it was refused; by the time the surrounding repairs made it a strict improvement it
+   could never be offered again. The loop now forgets its rejections and goes round once
+   more, at most `max_restarts` times and only after real progress. That anecdote was
+   already in the `max_rounds` comment — McdBox, 29 errors, 8 on a second run by hand.
+
+   **And then the typing.** Ghidra gives an untyped external its own working type and spells
+   the POINTER through it:
+
+   ```c
+   if (pool_max < (undefined1 *)((int)pool_ptr->invI0    + iVar10))
+   piVar4    =            (int *)((int)pool_ptr->invI0[0] + iVar10);
+   mem->rhs  = pool_ptr->invI0;
+   ```
+
+   The shipped block is `mov pool_ptr,%edx; lea (%ebx,%edx,1),%eax; cmp; ja; add %ebx,%edx;
+   mov %edx,pool_ptr; mov %esi,0xc(%ecx)` — pointer arithmetic and a store, with **no load
+   through the pointer anywhere in the function**.
+
+   **THE OBVIOUS REPAIR IS WRONG AND IT COMPILES.** Supplying the cast Ghidra elided —
+   `((MdtKeaInverseMassMatrix *)pool_ptr)->invI0` — is right for the two array-decay
+   spellings and wrong for `->invI0[0]`, which then reads a `MeReal` out of the pool. That
+   variant was built and run: it **segfaults on all three scenes**, which is both the reason
+   not to take it and the reason the bit-identical result below means something.
+
+   `fix_void_pointer_member` drops the member access, on four reads: the extern's DWARF type
+   is `void *`; every cast Ghidra assigns to the name agrees on one struct; that struct's
+   DWARF **in this object** puts the member at offset 0 as an array of a floating type; and
+   the shipped function contains **no floating-point instruction**, so the only other
+   reading of `->M[0]` is refuted by the object rather than argued away.
+
+   | | |
+   |---|---|
+   | all three scenes | trajectory **bit-identical** |
+   | `scene_census` (chain) | `vanillaAllocateMemory` 900 calls, `keaPoolAlloc` 14,400 |
+   | the cast repair, as a control | **segfaults on all three** |
+   | `gate_sensitivity` | "no float arithmetic" — it cannot speak here, which is the same fact the fourth check rests on |
+
+   **The fourth check was wrong first, in the way this project keeps meeting.** It matched
+   the mnemonic out of the whole objdump line and read the last hex BYTE as one, so
+   `c7 45 f0` came back as the x87 `f0`; every function looked as if it did float work and
+   the rule declined everywhere, looking exactly like a rule that does not apply.
 
 4. **DONE — the callbacks are audited.** Result: one real exposure, closed and measured
    inert; the other two do not exist in this driver.
@@ -2896,16 +3059,17 @@ box.
 4. qhull and the asset loader replaced rather than recovered.
 5. No detector suppressed, no object released without a line in `proven.txt`.
 6. The whole set builds as ordinary C for **wasm32 and arm64/armv7**, not just i386.
-   **wasm32 is done** — 106/106 compile with byte-identical exported symbols
-   (`test/wasm_check.sh`). **armv7 and arm64 both compile 110/110 with the Android NDK
+   **wasm32 is done** — 112/112 compile with byte-identical exported symbols
+   (`test/wasm_check.sh`). **armv7 and arm64 both compile 112/112 with the Android NDK
    (§6b) — but only armv7 is believed CORRECT, and arm64 is believed WRONG for a
    structural reason. Read §6b before touching either.**
    Nothing has been *executed* under wasm. See `HANDOVER-WEB.md`.
 7. The engine runs with `WITH_KARMA=1` against recovered Karma with **no shipped `.a` in the
    link at all**. `test/make_substituted_metoolkit.sh` builds that tree.
    **The collision half is done** — all eight objects behind the twelve called pairs, in
-   the driving seat, through full ONS matches (§7b). The solver half is not, and cannot be
-   until §11 items 1–3 compile.
+   the driving seat, through full ONS matches (§7b). The solver half is not — but items 1
+   and 3 are now DONE and measured, and what stands between here and a solver that links is
+   `keaRbdCore_unified` (7 errors) and `keaLCP_new` (2).
 
 ### The seven items, and exactly where each one stands
 
@@ -2915,8 +3079,8 @@ box.
 | 2 | validated = 0 ret/count/dims/overrun in a live match, `KD_SELFTEST` clean, evidence on the line | **DONE** for those twelve, and it is the standard the two new pairs have to meet. |
 | 3 | all three scenes clean for every recovered object, *and* checked for sensitivity | **DONE**, and the sensitivity check (§4a) is what makes it mean anything. |
 | 4 | qhull and the asset loader **replaced**, not recovered | **DONE, both halves — but the asset half was RECOVERED, not replaced (§8c), which is a better outcome: exact rather than equivalent.** Qhull, all four tiers: `src/McdConvexCreateHull/kd_convexhull.c` replaces all 15 exported functions — 1.4 MB → 10 KB: 100,633 invariant checks, identical geometry and volumes, a collision A/B differing on 2 borderline pairs in 2.4 M, and **a live ONS match with 15,425 real GJK calls and 0 structural divergences**. wasm32 clean with an identical symbol set. The asset loader is 9 of 9 recovered (§8c) and needs no replacement. |
-| 5 | no detector suppressed, nothing released without evidence | **HOLDING, and the hole found here has been re-framed rather than closed.** 25 objects quarantined and the quarantine is load-bearing (§4a: `MdtPartition` alone turns a bit-identical scene into a SIGSEGV). `IxCylinderCylinder` is still un-held and still unreleased — but its 925 `dims_diff` is now known to be a label the shipped library **does not reproduce against itself** under a 1e-7 m nudge (§11 item 0), so it is not the defect it looked like. The general point stands unchanged: "not held" is not "validated". |
-| 6 | builds as ordinary C for wasm32 **and arm64/armv7** | **wasm32 DONE** (110/110, byte-identical symbol sets). **armv7 DONE** (109/109, symbol sets identical, **0 pointer-truncation diagnostics** — it is a 32-bit-pointer target so the recovery's core assumption holds). **arm64 COMPILES AND IS NOT TRUSTED** — 109/109 with identical symbol sets and **2,162 pointer-truncation diagnostics across 65 of the 109 objects**, measured corpus-wide by `test/ptrwidth_check.sh`, which is the gate this row used to say could not exist. The old "920 vs 23" figure was two diagnostic sets added together; §6b has the correction. Nothing has been *executed* on any of the three. |
+| 5 | no detector suppressed, nothing released without evidence | **HOLDING, and the hole found here has been re-framed rather than closed.** 22 objects quarantined and the quarantine is load-bearing (§4a: `MdtPartition` alone turns a bit-identical scene into a SIGSEGV). `IxCylinderCylinder` is still un-held and still unreleased — but its 925 `dims_diff` is now known to be a label the shipped library **does not reproduce against itself** under a 1e-7 m nudge (§11 item 0), so it is not the defect it looked like. The general point stands unchanged: "not held" is not "validated". |
+| 6 | builds as ordinary C for wasm32 **and arm64/armv7** | **wasm32 DONE** (112/112, byte-identical symbol sets). **armv7 DONE** (112/112, symbol sets identical, **0 pointer-truncation diagnostics** — it is a 32-bit-pointer target so the recovery's core assumption holds). **arm64 COMPILES AND IS NOT TRUSTED** — 112/112 with identical symbol sets and **2,291 pointer-truncation diagnostics across 68 of the 112 objects**, measured corpus-wide by `test/ptrwidth_check.sh`, which is the gate this row used to say could not exist. The old "920 vs 23" figure was two diagnostic sets added together; §6b has the correction. Nothing has been *executed* on any of the three. |
 | 7 | engine runs on recovered Karma with **no shipped `.a` in the link at all** | **COLLISION HALF DONE for the twelve validated pairs** (§7b, two maps, 11 runs/arm, indistinguishable from stock) — but those runs were on maps with no cylinder traffic, so they do not cover the two new pairs. **SOLVER HALF BLOCKED**, on one problem — the arguments are recovered (§5a) and what remains is the frames, §11 item 2. |
 
 **So what is left, in one sentence each:**
@@ -2937,7 +3101,7 @@ box.
 - ~~**qhull and the asset loader**~~ — **both done.** Qhull is replaced and validated at
   four tiers including a live match (§8a, §8b); the asset loader turned out to be
   RECOVERABLE and is 9 of 9 (§8c).
-- **arm64** — compiles, and is measured to truncate pointers in 66 of 110 objects (2,218 sites).
+- **arm64** — compiles, and is measured to truncate pointers in 68 of 112 objects (2,291 sites).
   `test/ptrwidth_check.sh`, §6b. The fix is generator-wide, not a flag.
 - **Executing anything on wasm** — the web agent's job. `HANDOVER-WEB.md`.
 - **The tail** — 14 objects, 271 errors, fully triaged in §13, and **effectively finished**:
@@ -2966,19 +3130,24 @@ The earlier reading — "zero objects validated" — was not pessimism, it was t
 unable to distinguish a bit-identical recovery from an object that never ran (§4a). Both
 statements were derived from the same green output.
 
-**What is genuinely still missing is the solver's plumbing, and it is four objects:**
-the driver (`keaRbdCore_unified`), the allocator (`keaMemory`), the integrator
-(`keaIntegrate_pc`) and the LCP (`keaLCPSolver` + `keaLCP_new`). Each runs 900 times per
-900 steps and none compiles. Until they do there is **no configuration in which the engine
-runs on recovered kea**, however good the kernels are.
+**What is genuinely still missing is the solver's plumbing — and as of 2026-08-25 it is
+TWO objects and nine errors, not four objects and everything.** The allocator
+(`keaMemory`) and the LCP (`keaLCPSolver`) now compile and are in the build; the allocator
+is measured bit-identical on all three scenes with the plausible wrong repair segfaulting
+as a control, and the LCP's vtable dispatch is measured by `test/vptr_ab.sh`. What is left
+is the driver (`keaRbdCore_unified`, 7 errors) and the LCP driver (`keaLCP_new`, 2), plus
+the integrator (`keaIntegrate_pc`), which compiles and is measured WRONG. Each runs 900
+times per 900 steps. Until the two compile there is still **no configuration in which the
+engine runs on recovered kea**, however good the kernels are.
 
-That statement is unchanged, but the reason behind it is now much narrower. The
-argument-dropping blocker is gone (§5a), and the remaining failure in all four is one
-thing: **the DWARF for these particular functions declares no `DW_AT_location`**, so
-nothing — Ghidra or otherwise — can read the frame out of the debug info. §11 item 2 has
-the `readelf` that shows it and the one lead that is not a guess.
+The reason behind it is narrower again. The argument-dropping blocker is gone (§5a), the
+vptr store is written and measured (§11 item 3), the mangled call sites are resolved (§5b's
+debt), and what remains is **five `stack0x` and one `register0x`** — functions whose DWARF
+declares no `DW_AT_location`, so nothing can read the frame out of the debug info — plus
+three exported .bss names that are a different and probably cheap class. §11 item 2 has the
+`readelf` that shows it and the one lead that is not a guess.
 
-**Never executed on wasm.** 106/106 compile with byte-identical exported symbols. Not one
+**Never executed on wasm.** 112/112 compile with byte-identical exported symbols. Not one
 instruction has run. See `HANDOVER-WEB.md`.
 
 **Run end to end, now, for the collision layer** — §7b. Not for the solver.
@@ -2986,8 +3155,8 @@ instruction has run. See `HANDOVER-WEB.md`.
 So the honest summary is: **the collision layer is proven and drives a real match; the
 solver's arithmetic is proven and cannot yet be reached; the solver's control flow is
 untouched.** Do not read 98/148 as 66% of the way there — the denominator is wrong in both
-directions (a third of those objects are for collisions the game never makes, and the four
-kea objects in §11 are worth more than the other 38 put together).
+directions (a third of those objects are for collisions the game never makes, and the two
+kea objects left in §11 are worth more than the whole rest of the tail put together).
 
 ### The thing that should shape how you work
 
@@ -3061,8 +3230,13 @@ That checklist is worth more than the next ten objects.
 ## 13. The 14 remaining failures, triaged
 
 Written so the next session starts from a decision, not from re-deriving one. Counts are
-error counts under `out9`. **"DEAD" means `tools/reachable.py` proves nothing in the engine
-can reach it — §3b — so it is out of scope, not a to-do.**
+error counts as of 2026-08-25 (second session). **"DEAD" means `tools/reachable.py` proves
+nothing in the engine can reach it — §3b — so it is out of scope, not a to-do.**
+
+**`MdtWorld` left this table by being recovered (§11 item 2) and `keaRbdCore_unified`
+joined it by getting BETTER** — 18 errors down to 7. `recover.py` classifies by the FIRST
+error's pattern, so an object can move `review → FAIL` while improving. Sort by the verdict
+column, never by the bucket.
 
 | object | reach | errs | verdict |
 |---|---|---:|---|
@@ -3074,8 +3248,8 @@ can reach it — §3b — so it is out of scope, not a to-do.**
 | `McdSphyl` | live | 1 | **dead end 9.** `(float)s[1].mRefCtAndID + (float)s[1].prev` — GCC rejects only the second cast, and the original loads *both* as floats. The compiler is reasoning about Ghidra's types and is wrong |
 | `McdTriangleList` | live | 6 | **dead end 9, same shape.** `(float)g[1].prev` etc. |
 | `McdBox` | live | 2 | **dead end 9**, at lines 235/236. Not the cheap win the error count makes it look |
-| `keaLCP_new` | live | 10 | **solver, do not text-repair.** §11 item 2 — nine calls short by one argument at non-uniform frame offsets |
-| `MdtWorld` | live | **10** | **RECLASSIFIED — this is the solver-frame problem, §11 item 2, and it is the cheapest place to attack it.** 6 `stack0x` + 6 `incompatible type for argument N` of `MdtKeaAddConstraintForces`/`MdtKeaIntegrateSystem`. `fix_stack_address_name` refuses correctly: the copy at line 253 writes 19 `MeReal` = 76 bytes (an `MdtKeaParameters`) and Ghidra declared 4. Outgoing by-value aggregate passing, exactly as §11 item 2 predicts — but in a NON-kea object, so a fix can be validated somewhere cheap |
+| `keaLCP_new` | live | **2** | **solver, do not text-repair.** §11 item 2. Was 10, then 11: the nine calls short by one argument were the MANGLED-spelling debt of §5b, fixed 2026-08-25, and what is left is two bare `stack0x` |
+| `keaRbdCore_unified` | live | **7** | **the solver driver, and only FOUR of the seven are the frame** — 3 `stack0x` + `register0x00000010`. The other three are `gDebug`/`gDebugDataFile`/`gPartition`, exported .bss symbols gen_prelude defines as `float kd_<name>[1]` while the body writes the bare name, and one of them is a POINTER so the type is wrong too. §8c already records the answer: a zero-initialised static carries no evidence of its own type, and the object's DWARF does. **This is the cheapest thing on the critical path** |
 | `MdtBcl` | live | **1** | **31 → 1** on 2026-08-24: 22 errors were `FUN_00021130`, which is `.eh_frame` decompiled as code, and 2 more were `halt_baddata`-only functions (see below). The one left is `&stack0xfffffff4` used as a base to read a locals block at −0x80…−0x68 — and it is Ghidra rendering the function's **epilogue** (`lea -0xc(%ebp),%esp`) as a pointer assignment. §11 item 2's family. Cheapest object in the tail, but **NOT a validation subject for §11 item 2** — its single error is an epilogue rendered as a pointer assignment, a different shape from `MdtWorld`'s outgoing by-value marshalling, so a fix for one will not show up here |
 | `MeMath` | live | **1** | one `stack0x` at line 495, genuine frame loss rather than a name: Ghidra also dropped the `fcos`/`fsin` results that build the matrix being read. Same family as `MdtBcl` and `MdtWorld` |
 | `MeProfile_linux` | live | 13 | open, **low value** (§3b puts it under platform/misc) — and §13 used to undersell it as "an `rdtsc` shim". It needs that, plus `struct timeval` as a bare tag, plus the §5 EXTERNAL-slot collision (`_select` and `_clockSpeed` are neighbours of `frameTime`, not real symbols). Four families for a profiler timer |
@@ -3088,9 +3262,11 @@ different and real defect: that is a **reclassification**, not a release.
 
 **The tail is now essentially exhausted, and that is the useful summary.** Of the 14:
 3 are DEAD, 2 are documented leave-alones, 3 are dead end 9, **4 are the §11 item 2 frame
-problem** (`MdtBcl` 1, `MeMath` 1, `MdtWorld` 10, `keaLCP_new` 10) and 2 are low-value
-profilers. There is no cheap object left that is not one of those. **Work item 2, or work
-the cylinder pairs (§11 item 0) — grinding the tail is done.**
+problem** (`MdtBcl` 1, `MeMath` 1, `keaLCP_new` 2, `keaRbdCore_unified` 4-of-7) and 2 are
+low-value profilers. There is no cheap object left that is not one of those — **with one
+exception, and it is new: `keaRbdCore_unified`'s three exported-data names.** That class is
+the same one `MeProfile` carries 5 of, so a fix pays twice. Otherwise: work item 2, or work
+the cylinder pairs (§11 item 0) — grinding the tail is done.
 
 ### What has been working, and what has not
 

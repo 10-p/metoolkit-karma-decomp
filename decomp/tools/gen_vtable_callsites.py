@@ -306,6 +306,18 @@ class ApiStructs:
                                      ', '.join(params) if params else 'void')
 
 
+def _vtable_class(sym):
+    """`_ZTV26keaMatrix_pcSparse_vanilla` -> `keaMatrix_pcSparse_vanilla`.
+
+    The inverse of vtable_slots.mangle_class, and it checks the length prefix
+    rather than trusting it — a nested or templated name would not round-trip
+    and comes back None instead of a truncation."""
+    m = re.fullmatch(r'_ZTV(\d+)(.+)', sym or '')
+    if not m or len(m.group(2)) != int(m.group(1)):
+        return None
+    return m.group(2)
+
+
 def resolve_object(corpus, obj, report):
     """[(ghidra_addr, method, class, slot)] for every virtual call site resolved."""
     rows = []
@@ -339,6 +351,40 @@ def resolve_object(corpus, obj, report):
                 sym = relocs.get(section, {}).get(off + 2)
                 if sym is None:
                     report['abs_call_unrelocated'] += 1
+                    continue
+                # A VTABLE, not an API struct. gcc constant-folds the vptr
+                # load when it can prove the dynamic type, and then the virtual
+                # call is an ABSOLUTE indirect through `vtable + 8 + slot`
+                # rather than through a register — so the backward register
+                # walk below never sees it and the arguments stay dropped.
+                # keaRbdCore_unified's `vanillaAMatrix.allocate(n)` is one:
+                #
+                #   push %ebx                    ; the size
+                #   lea  -0x148(%ebp),%edx       ; &vanillaAMatrix
+                #   push %edx                    ; this
+                #   movl $0x8,-0x148(%ebp)       R_386_32 _ZTV26keaMatrix…
+                #   call *0x8                    R_386_32 _ZTV26keaMatrix…
+                #
+                # Nothing is inferred: the relocation names the class and the
+                # displacement IS the offset from the vtable's start, so the
+                # slot is `disp - 8` with 8 the Itanium address point. A
+                # displacement below the address point would be the
+                # offset-to-top or the typeinfo pointer, which is a defect
+                # rather than a slot, and is refused.
+                if sym.startswith('_ZTV'):
+                    cls = _vtable_class(sym)
+                    target = (vtable_slots.slot_table(corpus, cls).get(disp - 8)
+                              if cls and disp >= 8 else None)
+                    if target is None:
+                        report['abs_slot_not_in_vtable'] += 1
+                        continue
+                    dem = run('c++filt', target).strip() or target
+                    method = re.sub(r'\(.*', '', dem).split('::')[-1].strip()
+                    if not re.fullmatch(r'[A-Za-z_]\w*', method):
+                        report['unnameable'] += 1
+                        continue
+                    rows.append((base + off, method, cls, disp - 8))
+                    report['resolved_abs_vtable'] += 1
                     continue
                 name = api.member_at(sym, disp)
                 if name is None:
@@ -434,7 +480,8 @@ def main():
     report = {k: 0 for k in ('resolved', 'resolved_api', 'no_vptr_source',
                              'not_a_vptr_local', 'slot_not_in_vtable',
                              'unnameable', 'not_an_indirect_call',
-                             'abs_call_unrelocated', 'not_an_api_struct')}
+                             'abs_call_unrelocated', 'not_an_api_struct',
+                             'resolved_abs_vtable', 'abs_slot_not_in_vtable')}
     out_rows = []
     for fn in sorted(os.listdir(args.corpus)):
         if not fn.endswith('.o'):

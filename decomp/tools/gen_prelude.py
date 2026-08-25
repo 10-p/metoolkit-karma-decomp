@@ -314,8 +314,12 @@ def dwarf_scalar_alias(obj, names, size, c_name, qual):
     return f'#define {c_name} (*({inner} *)(void *){c_name}_kdbytes)'
 
 
-def dwarf_static_declaration(obj, name, size):
+def dwarf_static_declaration(obj, name, size, as_name=None):
     """`MeFAssetCreateFromFile MeFAssetCreateFunc[1]` for a file-scope static.
+
+    `as_name` renders the declarator under a different identifier — the `kd_`
+    spelling an EXPORTED symbol is defined as — without touching the lookup,
+    which is still by the symbol's real name.
 
     The fallback for a .data/.bss static is a guess from its BYTES, and for a
     four-byte slot of zeros that guess is `static float x = 0.0f;`. For a
@@ -344,7 +348,7 @@ def dwarf_static_declaration(obj, name, size):
         ref = int(m.group(1), 16)
         if dwarf_structs.type_size(dies, ref) != size:
             return None
-        return dwarf_structs.declarator(dies, ref, name)
+        return dwarf_structs.declarator(dies, ref, as_name or name)
     return None
 
 
@@ -514,6 +518,49 @@ def declared_names(umbrella, include_dir):
         args.append('-I' + os.path.join(inc, d))
     out = subprocess.run(args, capture_output=True, text=True).stdout
     names = set(re.findall(r'\b([A-Za-z_]\w*)\s*\(', out))
+    try:
+        open(cache, 'w').write('\n'.join(sorted(names)))
+    except OSError:
+        pass
+    return names
+
+
+def anonymous_struct_typedefs(umbrella, include_dir):
+    """Names that are a typedef of an aggregate with NO tag of the same name.
+
+    `MdtKea.h` writes `typedef struct { ... } MdtKeaDebugDataRequest;`, so in a
+    translation unit that includes it `MdtKeaDebugDataRequest` is complete and
+    `struct MdtKeaDebugDataRequest` is an incomplete type that shares nothing
+    with it but a spelling. gcc 3.2 nevertheless puts that name on the STRUCT
+    DIE, so dwarf_structs renders the declarator as `struct MdtKeaDebugDataRequest *`
+    and the object fails on "invalid use of undefined type".
+
+    The two facts that settle it are both in the preprocessed headers, which is
+    the same source declared_names() already runs: the name appears after a
+    `typedef`, and NO `struct X {`/`union X {` defines a tag of that name. Where
+    a tag IS defined — everything kd_types.h emits — the `struct` spelling is
+    correct and is left alone. Returns the set of names for which the keyword
+    must be dropped; anything not in it keeps whatever DWARF said."""
+    if not umbrella or not os.path.exists(umbrella):
+        return set()
+    cache = f'/tmp/.kd_anontd_{os.path.getmtime(umbrella):.0f}.txt'
+    if os.path.exists(cache):
+        return set(open(cache).read().split())
+    inc = include_dir or ''
+    argv = ['gcc', '-m32', '-E', '-P', '-DLINUX', '-x', 'c', umbrella,
+            '-I' + os.path.dirname(umbrella), '-I' + inc]
+    for d in ('McdCommon', 'McdPrimitives', 'McdFrame', 'MeGlobals',
+              'MdtBcl', 'MdtKea', 'Mst', 'MeApp'):
+        argv.append('-I' + os.path.join(inc, d))
+    out = subprocess.run(argv, capture_output=True, text=True).stdout
+    # kd_types.h is not in the umbrella and is included by every generated .c,
+    # so its tags count too.
+    types_h = os.path.join(os.path.dirname(umbrella), 'kd_types.h')
+    if os.path.exists(types_h):
+        out += open(types_h, errors='ignore').read()
+    tags = set(re.findall(r'\b(?:struct|union)\s+(\w+)\s*\{', out))
+    tds = set(re.findall(r'\}\s*(\w+)\s*;', out))
+    names = tds - tags
     try:
         open(cache, 'w').write('\n'.join(sorted(names)))
     except OSError:
@@ -924,6 +971,7 @@ def main():
         head.append('')
         out[stat_start:stat_start] = head
 
+    anon_tds = anonymous_struct_typedefs(args.umbrella, args.include_dir)
     exp_out = []
     exp_sections = {}
     if exported_data:
@@ -938,7 +986,23 @@ def main():
                 inits = ctor_inits.get(c_name) or ctor_inits.get(name)
                 n = max(1, (size or 4)) // 4
                 w(f'/* {name} — EXPORTED {sect} symbol, {size} bytes */')
-                if inits:
+                # A .bss symbol is all zeros, so its BYTES say nothing about its
+                # type and the fallback below guesses `float[n]`. That guess is
+                # what dead end 10 tripped over — a body that assigns a pointer
+                # to it (`gDebug = &parameters.debug`) cannot be written against
+                # an array at all. The object's own DWARF says what it is,
+                # size-checked against the symbol table, exactly as the static
+                # path already does.
+                decl = None if inits else dwarf_static_declaration(
+                    obj, name, size, as_name='kd_' + c_name)
+                if decl:
+                    decl = re.sub(
+                        r'\b(?:struct|union)\s+(\w+)\b',
+                        lambda m: m.group(1) if m.group(1) in anon_tds else m.group(0),
+                        decl)
+                    w(f'/* type from its DWARF */')
+                    w(f'{decl} KD_MANGLED("{name}");')
+                elif inits:
                     vals = ['0.0f'] * n
                     for i, (_, v) in enumerate(inits[:n]):
                         vals[i] = v if v.lower().endswith('f') else v + 'f'

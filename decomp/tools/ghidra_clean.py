@@ -2000,10 +2000,16 @@ def _declared_array_for(text, sym):
 
 
 # The identifier a declaration introduces is the last one directly followed by
-# `(` or `[` before the asm label — the declarator, in every shape this pipeline
+# `(` or `[` before the asm label — the declarator, in most shapes this pipeline
 # emits: `extern void f(...) KD_MANGLED(…)`, `void __thiscall kd_f (…) …`,
-# `extern void *v[] …`, `float kd_x[3] …`.
+# `extern void *v[] …`, `float kd_x[3] …`. A SCALAR has neither bracket
+# (`struct MdtKeaDebugDataRequest *kd_gDebug KD_MANGLED("gDebug")`), and for
+# those the declarator is simply the last identifier before the label — which is
+# wrong for a function, whose last identifier is a parameter name, so the
+# bracket rule has to be tried first and the fallback only used when it finds
+# nothing at all.
 _DECLARATOR = re.compile(r'\b([A-Za-z_]\w*)[ \t\n]*[(\[]')
+_IDENT = re.compile(r'\b([A-Za-z_]\w*)\b')
 _ASM_LABEL = re.compile(r'(?:KD_MANGLED|__asm__)\([ \t]*"([^"]+)"[ \t]*\)')
 
 
@@ -2017,6 +2023,8 @@ def declared_under(declared):
         head = stmt[:m.start()]
         idents = [d for d in _DECLARATOR.findall(head)
                   if d not in ('KD_MANGLED', '__asm__')]
+        if not idents:
+            idents = _IDENT.findall(head)
         if idents and idents[-1] != m.group(1):
             out[m.group(1)] = idents[-1]
     return out
@@ -2510,6 +2518,106 @@ def fix_mislabelled_external(text, diag, ctx):
 
 
 fix_mislabelled_external.file_wide = True
+
+
+def fix_exported_data_name(line, diag, ctx):
+    """`gDebug` is defined in this unit as `kd_gDebug` with an asm label.
+
+    A DATA symbol the object exports is emitted by gen_prelude under a `kd_`
+    name so it cannot collide with a public header's declaration of the same
+    thing, and the body still writes the bare name. For functions
+    `apply_renames` closes exactly this gap; for data it was never closed, and
+    `keaRbdCore_unified` fails on three of them — `gDebug`, `gDebugDataFile`,
+    `gPartition`.
+
+    **THIS IS DEAD END 10 AND THE CONDITION BELOW IS WHAT MAKES IT NOT ONE.**
+    The first attempt renamed every exported data symbol in every body and cost
+    `McdGjk` — released, on the busiest pair in the census — and `MeMessage`,
+    because a body that CALLS through an exported pointer resolves the bare name
+    through the public header, and `float kd_MeInfoShow[1]` is not callable. The
+    guessed `float[n]` was the whole problem: a .bss symbol is all zeros, so its
+    bytes say nothing about its type.
+
+    So the rename is allowed only where the definition is NOT a guess — where
+    the object's own DWARF gave the symbol a type whose size matches its
+    symbol-table entry, which is the same test gen_prelude applies before
+    emitting it. Under that condition the `kd_` name has the real type and every
+    use, call and dereference included, means what it did before.
+
+    And it is driven by the DIAGNOSTIC rather than applied wholesale, which
+    settles the other half of dead end 10 by construction: a name the public
+    headers already declare never comes back undeclared, so this never sees it.
+    Note the ordering in REPAIR_RULES — `fix_mislabelled_external` owns
+    `‘_name’ undeclared` and matches first; only a name with no leading
+    underscore reaches here."""
+    m = re.search(r'[‘\'"](\w+)[’\'"] undeclared', diag)
+    if not m:
+        return None
+    name = m.group(1)
+    new = ctx.declared_as.get(name)
+    if not new or new == name or not ctx.obj:
+        return None
+    if not _dwarf_typed_export(ctx.obj, name, new, ctx.declared):
+        return None
+    out = re.sub(r'(?<![\w.>])' + re.escape(name) + r'\b', new, line)
+    return out if out != line else None
+
+
+_export_typed_cache = {}
+
+
+def _dwarf_typed_export(obj, name, ident, declared):
+    """Is `ident` DEFINED at the type this object's DWARF gives `name`?
+
+    Not "does the DWARF have a type for it" — that question is the one that
+    made this rule take McduDebugDraw backwards. `boxDraw` is a `.data` export,
+    so gen_prelude renders it byte-exactly as `void *kd_boxDraw[72]` while the
+    DWARF says `MeReal boxDraw[12][2][3]`; the DWARF answer was yes, the
+    definition in the file was something else, and the body's `boxDraw[0][0]`
+    became an index into a `void *`.
+
+    So the two are compared. The declarator is rendered under the emitted name
+    and looked for in the text this unit is about to emit; `struct`/`union`
+    keywords are dropped from both sides first, because a `typedef struct {…} X`
+    is spelled `X` in the headers and `struct X` in gcc 3.2's DWARF and they are
+    the same type (gen_prelude.anonymous_struct_typedefs has the evidence).
+
+    The size check behind the declarator is not decoration: a declaration that
+    disagrees with the shipped object about how big a symbol is does not fail to
+    compile, it reads or writes the wrong number of bytes at link time."""
+    key = (obj, name, ident)
+    if key in _export_typed_cache:
+        return _export_typed_cache[key]
+    _export_typed_cache[key] = False
+    size = None
+    for row in subprocess.run(['readelf', '-sW', obj], capture_output=True,
+                              text=True).stdout.splitlines():
+        p = row.split()
+        if len(p) >= 8 and p[3] == 'OBJECT' and p[6] != 'UND' and p[7] == name:
+            size = int(p[2])
+            break
+    if size is None:
+        return False
+    dies = dwarf_structs.parse(obj)
+    for die in dies.values():
+        if die['tag'] != 'DW_TAG_variable':
+            continue
+        if die['attrs'].get('DW_AT_name') != name:
+            continue
+        ref = dwarf_structs.REF_RE.search(die['attrs'].get('DW_AT_type', ''))
+        if not ref:
+            break
+        r = int(ref.group(1), 16)
+        if dwarf_structs.type_size(dies, r) != size:
+            break
+        want = _tagless(dwarf_structs.declarator(dies, r, ident))
+        _export_typed_cache[key] = want in _tagless(declared)
+        break
+    return _export_typed_cache[key]
+
+
+def _tagless(text):
+    return re.sub(r'\s+', ' ', re.sub(r'\b(?:struct|union)\s+', '', text))
 
 
 def not_code(name, obj, body=''):
@@ -3076,6 +3184,15 @@ REPAIR_RULES = [
      fix_void_assignment),
     (re.compile(r'called object is not a function or function pointer'),
      fix_call_through_void_ptr),
+    # LAST, and the position is the whole mechanism. REPAIR_RULES takes the
+    # FIRST pattern that matches, and this one is a catch-all for `‘X’
+    # undeclared` — put anywhere earlier it shadows both the rules above that
+    # answer a NARROWER form of the same diagnostic, `‘_name’` and
+    # `‘stack0xNNNN’`. Placed before fix_stack_address_name it silently took
+    # keaIntegrate_pc back out of the build, which is what a shadowed rule looks
+    # like from the outside: a rule that declines.
+    (re.compile(r'[‘\'"]\w+[’\'"] undeclared'),
+     fix_exported_data_name),
 ]
 
 
@@ -3084,11 +3201,16 @@ class RepairContext:
     object, the public headers or the DWARF-derived type database — nothing in
     it is inferred from the decompiled text."""
 
-    def __init__(self, obj=None, fieldmap=None, include_dir=None, dump=None):
+    def __init__(self, obj=None, fieldmap=None, include_dir=None, dump=None,
+                 declared=''):
         self.obj = obj
         self.fieldmap = fieldmap or {}
         self.externals = relocation_targets(obj, per_function=True) if obj else {}
         self.extern_types = extern_var_types(include_dir)
+        # {ELF symbol: the C identifier this unit defines it as} — read from the
+        # prelude and exports this unit is about to emit, keyed on the asm label.
+        self.declared = declared
+        self.declared_as = declared_under(declared)
         # Ghidra's stack-frame assignments, if the dump carried them. Read from
         # the decompiler's symbol map, not from the decompiled text.
         self.locals = read_ghidra_locals(dump)
@@ -3506,7 +3628,7 @@ def main():
     # the mangled call sites below, which resolve against this unit's own
     # forward declarations as well.
     _declared = ''
-    for _extra in (args.prelude, args.vtables):
+    for _extra in (args.prelude, args.vtables, args.exports):
         if _extra and os.path.exists(_extra):
             _declared += open(_extra, errors='ignore').read()
     body_text, n_vptr = fix_vptr_store(args.object, body_text, _declared,
@@ -3612,7 +3734,7 @@ def main():
         print(f'  {n_rel} relocated data block(s) rebuilt with their pointers')
     if args.cflag:
         ctx = RepairContext(args.object, fieldmap, args.metoolkit_include,
-                            dump=args.input)
+                            dump=args.input, declared=_declared)
         n_edits, left, _log = repair_loop(args.output, args.cc, args.cflag, ctx)
         if n_edits:
             print(f'  {n_edits} line(s) repaired from compiler feedback'

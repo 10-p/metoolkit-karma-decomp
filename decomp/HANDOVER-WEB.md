@@ -66,7 +66,7 @@ run on any of your three targets.
 >   structs with a complete definition            :   151
 >   SIZE DIFFERS between i386 and arm64           :   128
 >   size IDENTICAL (the control — assertions pass):    23  lsVec3, McdCnvEdge, MdtLODParams, ...
->   BAKED   literal byte offset *(T *)(x + K)     :   128 across 10 object(s)
+>   OFFSET  literal byte offset *(T *)(x + K)     :   128 across 10 object(s)  (upper bound)
 >   SUSPECT NAME[k].field, element type has a pointer: 369 across 20 object(s)
 >   SAFE    NAME[k].field, element type is pointer-free: 631 across 18 object(s)
 >           (type not resolvable)                 :   211 across 12 object(s)
@@ -77,10 +77,11 @@ run on any of your three targets.
 > * **wasm32 and armv7 are unaffected, and not by luck.** They are 32-bit-pointer targets,
 >   so the layout the recovery encodes is the layout they get. Your two primary targets are
 >   fine; this is about the third.
-> * **arm64 is a real piece of engineering, not a flag.** Do not schedule it as "turn on the
->   64-bit ABI". BAKED is a defect count; SUSPECT is not — legitimate array indexing lives
->   there too and only per-site judgement separates it from Ghidra indexing a pointer through
->   a type it CHOSE. `MdtBcl` (70 baked) and `CxSmallSort` (209 suspect) are half the job.
+ > * **arm64 is a real piece of engineering, not a flag.** Do not schedule it as "turn on the
+>   64-bit ABI". None of the site counts is a defect count — read them as bounds. The
+>   demonstrated defect lives in SUSPECT (`CxSmallSort` has 209 of 369); OFFSET's 128 include
+>   strides over float blocks, which are layout-independent. What is not in doubt is that at
+>   least one site is measurably wrong and nothing in the toolchain says so.
 > * **If your Android plan is 64-bit-only, say so now**, because that changes what the
 >   recovery side works on next.
 

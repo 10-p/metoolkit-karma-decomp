@@ -144,8 +144,11 @@ def arm64_differs(sizes, inc, work):
 #
 # So the split below is by whether the arithmetic can survive a relayout:
 #
-#   BAKED    a LITERAL byte offset — `*(T *)(x + 0x18)`. The constant was
-#            derived from a 32-bit layout and no compiler will revisit it.
+#   OFFSET   a LITERAL byte offset — `*(T *)(x + 0x18)`. The constant was
+#            derived from a 32-bit layout and no compiler will revisit it — but
+#            it is only WRONG if the region it indexes contains a pointer, and
+#            many do not: MdtBcl's 0xb0 is a stride over a block of floats and
+#            is the same number on both targets. An upper bound, not a count.
 #   SUSPECT  `NAME[k].field` where the element type CONTAINS A POINTER, so
 #            `k * sizeof(T)` is a different number on arm64. Legitimate array
 #            indexing is fine here; what is not is Ghidra indexing a pointer
@@ -313,15 +316,28 @@ def main():
         if w:
             print('     worst: %s' % w)
 
-    line('BAKED   literal byte offset *(T *)(x + K)', baked)
+    line('OFFSET  literal byte offset *(T *)(x + K)', baked)
     line('SUSPECT NAME[k].field, element type has a pointer', suspect)
     line('SAFE    NAME[k].field, element type is pointer-free', safe)
     line('        (type not resolvable)', unknown)
-    print('  -> BAKED is a defect count. SUSPECT is not: legitimate array')
-    print('     indexing lives there too, and only per-site judgement separates')
-    print('     it from Ghidra indexing a pointer through a type it CHOSE.')
-    print('     kd_types.h declares real fields, so anything that NAMES a field')
-    print('     recompiles correctly — that is why SAFE is reported at all.')
+    print()
+    print('  READ THESE AS BOUNDS, NOT AS DEFECT COUNTS. Two numbers here are')
+    print('  solid and the rest are exposure:')
+    print('    * the struct table above IS solid — those sizes are measured, and')
+    print('      the 23 that match are the control that says the probe works;')
+    print('    * OFFSET counts literal byte offsets, and MANY OF THEM ARE FINE:')
+    print('      MdtBcl\'s 0xb0 is a 176-byte stride over a Jacobian block of')
+    print('      floats, which is the same number on any target. Only an offset')
+    print('      into a region that CONTAINS a pointer is baked;')
+    print('    * SUSPECT is where the demonstrated defect lives — Ghidra indexing')
+    print('      a pointer past element 0 through a struct type IT chose, e.g.')
+    print('      `trilistgeom[3].mRefCtAndID` over McdGeometry (16 bytes here, 32')
+    print('      there). Legitimate array indexing lives in the same column.')
+    print('  kd_types.h declares real fields with real types, so anything that')
+    print('  NAMES a field recompiles correctly at any pointer width — which is')
+    print('  why SAFE exists and why the exposure is far smaller than the raw')
+    print('  site count. What is NOT in doubt: at least one site is measurably')
+    print('  wrong on arm64 and nothing in the toolchain says so.')
     return 0
 
 

@@ -99,9 +99,10 @@ layout they get.
 **arm64's layout defect, and it is the only thing between here and the Android half of the
 goal.** Run `python3 tools/layout_check.py /tmp/kd_out/allobj /tmp/kd_build` first — it
 takes a minute and prints the two numbers that frame the job. Then pick the shape, not the
-object: 128 sites BAKE a literal byte offset in — `MdtBcl` alone has 70 — and 369 more index
-through a pointer-containing type, of which `CxSmallSort` has 209. Read `layout_check.py`'s
-BAKED column as a defect count and its SUSPECT column as a shortlist, not as one number. The fix is
+object. **Start from `SUSPECT`, not from `OFFSET`** — that is where the one demonstrated
+defect lives (`trilistgeom[3]` over an `McdGeometry` that is 16 bytes here and 32 there), and
+`CxSmallSort` has 209 of its 369. `OFFSET`'s 128 are an upper bound and many are strides over
+float blocks, which are layout-independent; do not start by "fixing" those. The fix is
 to make those name FIELDS instead of offsets, which the DWARF supports and which is what
 `resolve_field_names` already does elsewhere; every rewrite is a no-op on i386 by
 construction, so **the acceptance test is the one this project always uses — every
@@ -2299,8 +2300,12 @@ python3 tools/layout_check.py /tmp/kd_out/allobj /tmp/kd_build
 assertion mechanism that failed for everything would report "all of them differ" and read
 like a finding. Those ten are pointer-free and their assertions pass.
 
-**Read the columns together and none of them as the others.** BAKED is a defect count;
-SUSPECT is an EXPOSURE: a recovered object that only ever names FIELDS — `p->model1`, `group->count` —
+**Read the columns as BOUNDS, and only the struct table as a count.** The sizes are
+measured and the 23 that match are the control. `OFFSET` counts literal byte offsets and
+**many of them are fine** — `MdtBcl`'s `0xb0` is a 176-byte stride over a Jacobian block of
+floats, the same number on any target; only an offset into a region that CONTAINS a pointer
+is baked. `SUSPECT` is where the demonstrated defect lives, and legitimate array indexing
+lives there too. What is NOT in doubt is the thing that matters: a recovered object that only ever names FIELDS — `p->model1`, `group->count` —
 recompiles correctly at any pointer width, because the compiler recomputes the offset. What
 is exposed is arithmetic that BAKES a layout in: a hardcoded byte offset, or an index through
 a struct type Ghidra chose.

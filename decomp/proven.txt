@@ -3236,3 +3236,39 @@ MeAssetFactory        real, and like MeFAsset the release is about REACHABILITY,
 #   bindings 0 · difftest byte-identical to the documented baseline
 #   wasm32 134/134 · armv7 134/134, 0 truncations · arm64 7,125 across 84
 #   drop-in gap 12 -> 11 members, 58 -> 46 symbols
+
+# --- 2026-08-26: two reachability routes CLOSED, recorded so nobody re-walks --
+#
+# The reachability argument released MeFAsset, MeAssetFactory and (in effect)
+# MdtBcl. It does NOT work for the two singletons it looks like it should, and
+# both near-misses are worth having written down.
+#
+# MdtLOD — THE ROUTE IS CLOSED, and the check that said otherwise was broken.
+#   All 18 kd_argslot_ references are in `ResizeConstraint`, and the engine needs
+#   only `MdtLODLastPartition`. Searching the corpus for a relocation naming
+#   ResizeConstraint finds NOTHING — no R_386_PC32, no R_386_32 — which reads
+#   exactly like MeFAssetCreateCopy's answer and is worthless here:
+#
+#     ResizeConstraint is `t`, a FILE-STATIC, so a call from its own object
+#     needs no relocation at all. It is a PC-relative displacement fixed at
+#     assembly time.
+#
+#   Disassembling instead of grepping relocations:
+#
+#     4da: e8 81 07 00 00    call c60 <ResizeConstraint>     inside MdtLODLastPartition
+#
+#   So the frame IS reachable, from the one symbol the engine imports. MdtLOD
+#   needs a measurement or a repair, not an argument. ANY reachability claim
+#   about a static must be made from the DISASSEMBLY.
+#
+# IxBoxTriList — the route exists and is REFUSED on the merits.
+#   The 12 kd_argslot_ references are in `McdBoxTriangleListIntersect`, and the
+#   engine needs only `McdBoxTriangleListRegisterInteraction`. §3a proves
+#   Box x TriangleList is intercepted by KIntersect before Karma is consulted —
+#   "NEVER CALLED and CANNOT be, from the engine source" — so the argument is
+#   available. It is not taken, because the difference from MeFAssetCreateCopy
+#   is material: the registration function REGISTERS this one in a live dispatch
+#   table, so its ADDRESS IS TAKEN, and difftest measures it diverging on
+#   139,961 of 200,000 pairs. An object that is merely unreachable is one thing;
+#   a known-wrong collision function sitting in a dispatch table is what the
+#   detectors are for. One symbol is not worth it.

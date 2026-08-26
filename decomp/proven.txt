@@ -347,7 +347,7 @@ IxCylinderTriList     RE-RELEASED 2026-08-27 (eighth session) — the live-match
 #                     re-dump moves it. Blast radius: exactly the two objects that contain
 #                     this static, and nothing else.
 
-SPILL-SCAN           2026-08-27 (eighth session): the cylinder defect above is not a one-off,
+# SPILL-SCAN           2026-08-27 (eighth session): the cylinder defect above is not a one-off,
 #                     and tools/spill_scan.py measures how much of it there is.
 #
 #                     The fingerprint is a float local Ghidra DECLARED and then never used —
@@ -377,7 +377,7 @@ SPILL-SCAN           2026-08-27 (eighth session): the cylinder defect above is n
 #                     the 229 is a place where the recovered code computes at 80 bits where
 #                     MathEngine computed at 32.
 
-THE-DELIVERABLE      2026-08-27 (eighth session): CHECK 2 OF THE DEFINITION OF DONE, WHICH
+# THE-DELIVERABLE      2026-08-27 (eighth session): CHECK 2 OF THE DEFINITION OF DONE, WHICH
 #                     HAD NEVER BEEN ATTEMPTED. The engine LINKS against a metoolkit that
 #                     contains no MathEngine object code at all, and PLAYS.
 #
@@ -426,7 +426,7 @@ THE-DELIVERABLE      2026-08-27 (eighth session): CHECK 2 OF THE DEFINITION OF D
 #                     but does not tick" case §6 warns about. Recorded so nobody re-runs it
 #                     expecting a result.
 
-ASSOC-ON-I386        2026-08-27 (eighth session): THE ASSOCIATION DEFECT IS NOT INERT ON
+# ASSOC-ON-I386        2026-08-27 (eighth session): THE ASSOCIATION DEFECT IS NOT INERT ON
 #                     i386, and this file and §11 item 2a have both said it is.
 #
 #                     The claim was "on x87 the defect is EXACTLY inert, so no gate in this
@@ -485,7 +485,59 @@ ASSOC-ON-I386        2026-08-27 (eighth session): THE ASSOCIATION DEFECT IS NOT 
 #                     pointer-deref terms finds 7. Its docstring already calls the number a
 #                     lower bound; this is how big the gap is on one object.
 
-LP64-EXECUTES        2026-08-27 (eighth session), and it came from the project owner asking
+# LP64-SIZEOF         2026-08-27 (eighth session): the first LP64 defect class repaired, and
+#                     the iterate-and-fix loop that test/lp64_run.sh makes possible.
+#
+#                     tools/fix_baked_sizeof.py. THE DEFECT is an allocation whose SIZE was
+#                     frozen at the i386 value, in three spellings:
+#                       w      = (MeMemoryAPI.create)(0x234);          sizeof(MdtWorld) here
+#                       ppvVar2= (MeMemoryAPI.create)(poolSize << 2);  sizeof(void *) here
+#                       pMVar3 = (MeMemoryAPI.create)((n + 9) * 0x28); sizeof(a vtable) here
+#
+#                     THE REWRITE IS DERIVED FROM TWO INDEPENDENT FACTS AND REFUSES UNLESS
+#                     THEY AGREE. The ASSIGNMENT TARGET names the type — `w` is `MdtWorldID`,
+#                     which is `MdtWorld *` — and the LITERAL confirms it: sizeof measured at
+#                     i386 must equal the constant, or divide it exactly, or equal the scale.
+#                     Neither alone is enough: many structs are 0x50 bytes, and the type
+#                     alone would let a byte buffer become an array of something. 98
+#                     rewritten, 34 DECLINED AND REPORTED.
+#
+#                     `(int)sizeof(...)`, AND THE CAST IS LOAD-BEARING. `sizeof` is `size_t`,
+#                     so `count * sizeof(T)` is UNSIGNED where `count * 0x98` was `int` —
+#                     different overflow rules, and gcc 15 emits a different loop. THE i386
+#                     ACCEPTANCE TEST CAUGHT IT: CxSmallSort's object grew by 64 bytes and
+#                     the branch targets all moved. Disassembled before assuming, as the rule
+#                     says; it was a real semantic change, not drift. With the cast, all 145
+#                     objects recompile BYTE-IDENTICAL.
+#
+#                     WHAT IT BOUGHT, run after fix_ptrwidth.py on the same copy:
+#                       before          MdtWorld.c:98      heap overflow, first statement
+#                       after sizeof    MallocCreateAligned  SEGV on a truncated pointer
+#                       + fix_ptrwidth  MePoolFixedInit / MeDictInsert / McdInit
+#                       + scaled sizes  McdFrameworkSetInteractions / McdInit:85
+#                     Five sites cleared in four rounds, each one named with a file, a line
+#                     and a stack. That is the loop, and it is the thing this project did not
+#                     have for arm64 an hour earlier.
+#
+#                     THE NEXT CLASS, named so it is not re-derived: a HAND-ROLLED MEMSET.
+#                     Ghidra renders gcc's word-wise zeroing as pointer arithmetic over
+#                     struct FIELDS —
+#                         for (i = (max * 5 & 0x1fffffff) << 1; i != 0; i--) {
+#                             p->destroy = 0;
+#                             p = (McdGeometryVTable *)&p->getAABB;   /* advance one word */
+#                         }
+#                     — where the trip count is "N * 10 words" and the step is "one 4-byte
+#                     field", both of which are i386 numbers. The repair is a `memset(p, 0,
+#                     N * sizeof(T))`, and the shape is recognisable: a loop whose body sets
+#                     one field to zero and whose increment is the address of the NEXT field.
+#                     McdFrame.c:75 and :85 are the two live ones.
+#
+#                     NOT CLAIMED: the scenes still do not run to completion at LP64, and
+#                     x86-64 is a proxy for arm64 rather than a substitute (arm64 also faults
+#                     on unaligned access). This is a repaired defect class and a working
+#                     method, not a port.
+
+# LP64-EXECUTES        2026-08-27 (eighth session), and it came from the project owner asking
 #                     one question: "for the pointer issue, would testing x64 give any
 #                     advantage?" IT IS THE BEST INSTRUMENT THIS PROJECT HAS FOR arm64, IT
 #                     TOOK TWENTY MINUTES TO BUILD, AND EVERY DOCUMENT HERE SAID IT COULD NOT
@@ -553,7 +605,7 @@ LP64-EXECUTES        2026-08-27 (eighth session), and it came from the project o
 #                     file, a line, the allocation they overflowed and a stack. Use
 #                     layout_check.py to know how big the job is and lp64_run.sh to do it.
 
-ARM64-LAYOUT         2026-08-27 (eighth session): A CORRECTION. arm64 IS NOT 95% DONE, AND
+# ARM64-LAYOUT         2026-08-27 (eighth session): A CORRECTION. arm64 IS NOT 95% DONE, AND
 #                     THE NUMBER THAT SAID SO WAS MEASURING THE EASIER HALF.
 #
 #                     §6b has said since the seventh session that pointer truncation went

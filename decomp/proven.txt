@@ -3315,3 +3315,40 @@ MeAssetFactory        real, and like MeFAsset the release is about REACHABILITY,
 #   trajectory bit-identical · frame bounds 0 in the build · bindings 0
 #   difftest byte-identical to the documented baseline
 #   drop-in gap 11 -> 10 members, 46 -> 45 symbols
+
+# --- 2026-08-26: MeProfile_linux — an instruction, a tag name, a first word --
+#
+# 6 symbols, four causes, and the addend fix above had already removed two of
+# them. What was left:
+#
+#   rdtsc()          NOT A FUNCTION — the x86 instruction that reads the cycle
+#                    counter, which Ghidra renders as a call returning 64 bits.
+#   timeval t;       a tag name where C wants `struct timeval`.
+#   frameTime = ...  a four-byte store to the first word of a 24-byte struct,
+#                    spelled with the struct's own name because at addend ZERO
+#                    the name Ghidra prints is the real one — so nothing flagged
+#                    it until the compiler did. The five stores AFTER it are
+#                    already `*(int *)((char *)&frameTime + K)`; this makes the
+#                    first the same access.
+#
+# THE rdtsc SHIM IS A STAND-IN OFF x86 AND THAT IS SAID OUT LOUD, in kd_compat.h
+# and here. On x86 it is the real instruction, so i386 — where every gate in
+# this project runs — is exact. Elsewhere it is a monotonic counter, not a cycle
+# count. What makes that acceptable is reachability, and it was checked rather
+# than assumed:
+#
+#   * the ENGINE references no MeProfile symbol directly. All ten arrive
+#     through the link closure.
+#   * but they are not dead: MeProfileStartSectionFn is a real function (`T`)
+#     and MstUniverseStep CALLS it twice at the top of every step —
+#     `1bd: R_386_PC32 MeProfileStartSectionFn`. So the profiler runs.
+#   * what rdtsc's value reaches is `MeProfileTimerResult.cpuCycles` and
+#     nothing else. No physics depends on it. A profiler reporting the wrong
+#     UNITS on a target where nothing has ever executed is not a defect worth
+#     blocking the port for — but it is a difference, so it is on the record.
+#
+#   136 objects · 136/136 clean on three scenes · MeProfile_linux trajectory
+#   bit-identical · frame bounds 0 in the build · bindings 0
+#   wasm32 136/136 — the non-x86 branch of the shim compiles
+#   armv7 136/136, 0 truncations · arm64 7,149 across 86
+#   drop-in gap 10 -> 9 members, 45 -> 39 symbols

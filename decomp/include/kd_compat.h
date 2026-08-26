@@ -106,6 +106,42 @@ typedef int (*__compar_fn_t)(const void *, const void *);
 #define builtin_strcpy(d, s)             strcpy((d), (s))
 #define builtin_memcpy(d, s, n)          memcpy((d), (s), (n))
 
+/* ---- what Ghidra turns an INSTRUCTION into --------------------------------
+    `rdtsc` is not a function. It is the x86 instruction that reads the CPU's
+    cycle counter, and Ghidra renders it as a call returning 64 bits.
+    MeProfile_linux is the only object that uses it, and it is a PROFILER: the
+    value reaches `MeProfileTimerResult.cpuCycles` and nothing else. No physics
+    depends on it, which is what makes a stand-in acceptable off x86 — and is
+    stated here rather than left to be discovered.
+
+    On x86 this is the real instruction, so i386 — where every gate in this
+    project runs — is exact. Elsewhere it is a MONOTONIC COUNTER, not a cycle
+    count: nothing has ever executed on wasm32 or Android (HANDOVER.md 12), and
+    when something does, a profiler reporting the wrong units is the least of
+    what needs checking. `clock_gettime` is not used because it is not
+    guaranteed present on every target this has to compile for.
+--------------------------------------------------------------------------- */
+#if defined(__i386__) || defined(__x86_64__)
+static __inline__ unsigned long long rdtsc(void)
+{
+    unsigned int lo, hi;
+    __asm__ __volatile__("rdtsc" : "=a"(lo), "=d"(hi));
+    return ((unsigned long long)hi << 32) | lo;
+}
+#else
+static __inline__ unsigned long long rdtsc(void)
+{
+    static unsigned long long kd_tick;
+    return ++kd_tick;
+}
+#endif
+
+/* `struct timeval` without the `struct`. Ghidra prints a tag name where C
+   wants an elaborated type, and `MeProfile_linux` declares one to pass to
+   `select`. A typedef to the same type is accepted alongside the system's. */
+#include <sys/time.h>
+typedef struct timeval timeval;
+
 /* Ghidra recovers `lseek`'s return under glibc's INTERNAL spelling, which is
    the one gcc 3.2 saw in the header. It is `off_t` everywhere that matters and
    exists nowhere but glibc, so MeSimpleFile_linux failed to compile for wasm32

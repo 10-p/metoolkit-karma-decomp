@@ -1805,6 +1805,35 @@ def fix_call_through_void_ptr(line, diag, ctx):
     return line[:m.start()] + cast + line[open_paren:]
 
 
+def fix_int_store_to_aggregate(line, diag, ctx):
+    r"""`frameTime = (int)uVar1;` where `frameTime` is a 24-byte struct.
+
+    The other half of the mislabelled-slot family, and the reason it looks like
+    a different defect is that this one is spelled CORRECTLY. Ghidra stores four
+    bytes to the first word of an exported aggregate, and the relocation says so
+    — `R_386_32 frameTime` with addend 0 — but at addend ZERO the name it prints
+    is the real one, so nothing flags it until the compiler does:
+
+        57: mov %edx,0x0    R_386_32 frameTime  addend 0  ->  frameTime = ...
+        5d: mov %ecx,0x4    R_386_32 frameTime  addend 4  ->  _select   = ...
+
+    `_resolve_external` turns the second into `*(int *)((char *)&frameTime + 4)`
+    and every one after it, which leaves the first as the only reference still
+    naming the whole struct. This makes it the same access the others already
+    are — six four-byte stores filling a six-word object.
+
+    THE WIDTH IS NOT A GUESS: GCC names the source type in the diagnostic and
+    the rule only fires for `int`. The left side has to be a BARE identifier; a
+    member access or a subscript is a different shape and is left alone."""
+    if not re.search(r'incompatible types when assigning to type '
+                     r'[‘\'"][^’\'"]+[’\'"] from type [‘\'"]int[’\'"]', diag):
+        return None
+    a = re.match(r'^(\s*)([A-Za-z_]\w*)\s*=\s*([^;]+);\s*$', line)
+    if not a:
+        return None
+    return f'{a.group(1)}*(int *)&{a.group(2)} = {a.group(3)};'
+
+
 def fix_void_assignment(line, diag, ctx):
     """`uVar2 = MeMemoryAPI.destroyAligned(p);` — that function returns void.
 
@@ -5725,6 +5754,9 @@ REPAIR_RULES = [
      fix_variadic_extra_args),
     (re.compile(r'too many arguments to function'),
      fix_too_many_arguments),
+    (re.compile(r'incompatible types when assigning to type .* from type '
+                r'[‘\'"]int[’\'"]'),
+     fix_int_store_to_aggregate),
     (re.compile(r'invalid use of void expression'),
      fix_void_assignment),
     (re.compile(r'called object is not a function or function pointer'),

@@ -341,9 +341,20 @@ def materialise_alloca_frame(body, fname):
     # The `(int)` cast is not always there — Ghidra omits it when the count is
     # already an int, as in `-(triList->triangleMaxCount * 0x18 + 0xfU & ...)`.
     # Requiring it cost IxCylinderTriList and IxConvexTriList their allocas.
+    # THE ADDEND IS NOT ALWAYS 0xf. `(x + 15) & ~15` is round-up-to-16, so a
+    # request of `n*K + EXTRA` bytes is spelled `n*K + (EXTRA + 15) & ~15`.
+    # MdtLODLastPartition asks for `(n+1)*4` and gcc writes
+    #     4e: lea 0x13(,%eax,4),%ecx ; 56: and $0xfffffff0,%ecx ; 5c: sub %ecx,%esp
+    # Requiring 0xf made that not an alloca to any rule here, and took MdtLOD's
+    # whole frame with it — 243 guessed-frame sites, 237 of them in the one
+    # function the engine imports. The extra is DERIVED as `C - 15`, not
+    # guessed, and `C < 15` is not this idiom at all. One site corpus-wide.
     for m in re.finditer(r'(\w+)\s*=\s*-\(\s*(?:\(int\)\s*)?(.+?)\s*\*\s*(0x[0-9a-f]+|\d+)'
-                         r'\s*\+\s*0xfU?\s*&\s*0xfffffff0\)\s*;', body):
-        neg[m.group(1)] = (m.group(2).strip(), m.group(3))
+                         r'\s*\+\s*(0x[0-9a-f]+|\d+)U?\s*&\s*0xfffffff0\)\s*;', body):
+        if int(m.group(4), 0) < 15:
+            continue
+        neg[m.group(1)] = (m.group(2).strip(), m.group(3),
+                           str(int(m.group(4), 0) - 15))
 
     # The SPLIT form of the same idiom. Ghidra does not always fold the rounding
     # and the negation into one expression:
@@ -359,8 +370,11 @@ def materialise_alloca_frame(body, fname):
     # alloca.
     sized = {}
     for m in re.finditer(r'(\w+)\s*=\s*(?:\(int\)\s*)?(.+?)\s*\*\s*(0x[0-9a-f]+|\d+)'
-                         r'\s*\+\s*0xfU?\s*&\s*0xfffffff0\s*;', body):
-        sized[m.group(1)] = (m.group(2).strip(), m.group(3))
+                         r'\s*\+\s*(0x[0-9a-f]+|\d+)U?\s*&\s*0xfffffff0\s*;', body):
+        if int(m.group(4), 0) < 15:
+            continue
+        sized[m.group(1)] = (m.group(2).strip(), m.group(3),
+                             str(int(m.group(4), 0) - 15))
     for m in re.finditer(r'(\w+)\s*=\s*-\s*(\w+)\s*;', body):
         if m.group(2) in sized and m.group(1) not in neg:
             neg[m.group(1)] = sized[m.group(2)]
@@ -414,14 +428,14 @@ def materialise_alloca_frame(body, fname):
                 if len(vs) < 2 or len(new) != 1 or new[0] in allocated:
                     continue
                 var = new[0]
-                expr, mult = neg[var]
+                expr, mult, add = neg[var]
                 allocated.add(var)
                 alloca_base.setdefault(var, base)
                 n += 1
                 body = body.replace(
                     whole,
                     re.sub(r'\(\s*(?:\(int\)\s*)?&?\w+(?:\s*\+\s*[A-Za-z_]\w*)+\s*\)',
-                           f'(kd_alloca_{var} = (char *)alloca((size_t)({expr}) * {mult}))',
+                           f'(kd_alloca_{var} = (char *)alloca((size_t)({expr}) * {mult} + {add}))',
                            whole, count=1))
 
         def sub_alloca(m):
@@ -429,7 +443,7 @@ def materialise_alloca_frame(body, fname):
             var = m.group(3)
             if var not in neg:
                 return m.group(0)
-            expr, mult = neg[var]
+            expr, mult, add = neg[var]
             base = m.group(2)
             if var in allocated:
                 # A SECOND derivation of the block, not a second block. esp was
@@ -451,7 +465,7 @@ def materialise_alloca_frame(body, fname):
             allocated.add(var)
             alloca_base.setdefault(var, base)
             return (f'{m.group(1)}(kd_alloca_{var} = '
-                    f'(char *)alloca((size_t)({expr}) * {mult}))')
+                    f'(char *)alloca((size_t)({expr}) * {mult} + {add}))')
         # ONLY the defining use: the alloca'd pointer appearing as the RHS of an
         # assignment, i.e. `dest = (T)(&stack0xH + negVar);`. Other
         # `&stack0xH + negVar` sites are STORES into the shifted frame — Ghidra's
@@ -491,12 +505,12 @@ def materialise_alloca_frame(body, fname):
                 if var in allocated and m.group(1) == alloca_base.get(var):
                     n += 1
                     return f'= kd_alloca_{var};'
-                expr, mult = neg[var]
+                expr, mult, add = neg[var]
                 n += 1
                 allocated.add(var)
                 alloca_base.setdefault(var, m.group(1))
                 return (f'= (kd_alloca_{var} = '
-                        f'(char *)alloca((size_t)({expr}) * {mult}));')
+                        f'(char *)alloca((size_t)({expr}) * {mult} + {add}));')
             body = re.sub(r'=\s*(?:\([^()]*\)\s*)?\(?\s*(?:\(int\)\s*)?'
                           r'&?(\w+)\s*\+\s*' + re.escape(var) + r'\s*\)?\s*;',
                           sub_bare, body, count=1)

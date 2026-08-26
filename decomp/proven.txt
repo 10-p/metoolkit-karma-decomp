@@ -3934,5 +3934,39 @@ MdtPartition          RELEASED 2026-08-26 (seventh session). Four symbols of the
 # Forcing it through for ONE symbol is the McdContact mistake in a second
 # costume. The reachability argument above is sound and is not wasted: it is
 # what will make the release cheap once MdtLODLastPartition's frame is
-# materialised the way MdtPartition's was. **Do that first, then add the release
-# line.** Until then MdtLOD stays out of the build and in the gap.
+# materialised the way MdtPartition's was.
+#
+# THAT WAS THEN DONE, AND IT TOOK 243 GUESSES TO 6. One cause, one line:
+#
+#     iVar6 = -(iVar2 * 4 + 0x13U & 0xfffffff0);
+#
+# `(x + 15) & ~15` is round-up-to-16, so a request of `n*K + EXTRA` bytes is
+# spelled `n*K + (EXTRA + 15) & ~15`. MdtLODLastPartition asks for `(n+1)*4`, so
+# EXTRA is 4 and the addend is 19. Every alloca pattern here hardcoded 0xf, so
+# this was not an alloca to any of them — and the whole frame of the one
+# function the engine imports went with it. The machine code says it plainly:
+#
+#     4e: lea 0x13(,%eax,4),%ecx ; 56: and $0xfffffff0,%ecx ; 5c: sub %ecx,%esp
+#
+# The extra is DERIVED as `C - 15`, not guessed, and `C < 15` is not this idiom.
+# ONE site corpus-wide, and the blast radius is zero: all 139 pre-existing .o
+# byte-identical.
+#
+#     MdtLODLastPartition  aiStack_90 176 + auStack_78 61  ->  0
+#     ResizeConstraint     aiStack_2c   6                  ->  6
+#
+# WHAT THE LAST SIX NEED, read from the disassembly so nobody re-derives it:
+# `ResizeConstraint` allocates TWICE WITH THE SAME SIZE —
+#
+#     c8c: lea 0xf(,%ebx,4),%edx ; c95: and $0xfffffff0,%edx
+#     c98: sub %edx,%esp      <- block 1, spelled `iVar3 = -uVar7`
+#     ca9: sub %edx,%esp      <- block 2, spelled `uVar7 * -2`
+#
+# so the same size variable names two DIFFERENT blocks by its multiplier. Block
+# 1 is already materialised (`kd_alloca_iVar3`); block 2 has no rule. The six
+# sites are all `(int)aiStack_2c [+ iVar8 * 4] + uVar7 * -2`. Note the `&stack0x
+# ... + uVar7 * -2` sites at the same depth are the OUTGOING ARGUMENT AREA and
+# are already handled by materialise_shifted_frame — do not consume those.
+#
+# **Until block 2 has real storage MdtLOD stays out of the build and in the
+# gap**, and the release line goes back only after it does.

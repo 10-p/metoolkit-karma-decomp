@@ -385,7 +385,7 @@ Both were attempted in the seventh session; `proven.txt` says what each one need
 
 | what | syms | status |
 |---|---:|---|
-| `MeMath` | 8 | **REFUSE** — §5c, the target is declared and never written |
+| `MeMath` | 8 | **REFUSE** — but NOT for §5c's stated reason, which is corrected in `proven.txt`: the shipped code DOES write the target. The recovery is incomplete (Ghidra discards `fcos`/`fsin`), the job is ~60 x87 instructions of rotation arithmetic, and **no gate here could verify it** |
 | `IxBoxTriList` | 1 | **REFUSED on the merits** — its address is taken by a registration function the engine needs, and difftest measures it diverging on 139,961 of 200,000 pairs |
 | `McdContact` | 1 | **ATTEMPTED AND REVERTED in the seventh session.** Read `proven.txt` before retrying: the change that closes it also ships a stack smash no gate here can see |
 | `MdtLOD` | 1 | **THE GUARD CANNOT BE TRUE — and that still does not release it.** The engine calls `MdtLODLastPartition` at one site, `KDynStep.cpp:310`, under `rowCount > params->maxMatrixSize`; `MdtWorldCreate` sets `maxMatrixSize = 0x7ffffffc` and **nothing anywhere lowers it** (engine source 0 hits with a control at 2, engine objects 0, metoolkit 0). So the call cannot execute. What holds the object is the OTHER detector: **243 `stack_guesses`, 237 of them in `MdtLODLastPartition` itself** — unlike `MeFAsset`/`MeAssetFactory`, whose frames were MATERIALISED and whose guess count is 0. Materialise the frame as `MdtPartition`'s was, then the reachability argument in `proven.txt` releases it |
@@ -1601,7 +1601,7 @@ things that need different answers, and the surviving sites are one of each:
 |---|---|---|
 | SIZE | `MdtWorld` ffffff6c: `MeReal` (4 B) against a 76-byte copy | Ghidra split ONE outgoing argument block into eight locals — `in_stack_ffffff6c`, `in_stack_ffffff70[48]` and six scalars it also uses as ordinary variables. Same in `keaRbdCore_unified` (72 declared, 92 written) |
 | NO LOCAL, resolvable | `MdtBcl` at −12 | the accesses land inside `MeReal ref2world[4][4]` at −156, which the line above fills via `MeMatrix4MultiplyMatrix`. Repairable in principle |
-| NO LOCAL, not resolvable | `MeMath` at −12 | the mapping IS exact — the nine accesses are exactly `MeReal eR[3][3]` at −60 — and `eR` is **declared and never written**, because Ghidra emitted `fcos`/`fsin` and discarded the results. Repairing the name would buy a compile at the price of reading uninitialised memory |
+| NO LOCAL, not resolvable | `MeMath` at −12 | the mapping IS exact — the nine accesses are exactly `MeReal eR[3][3]` at −60 — and `eR` is **declared and never written IN GHIDRA'S OUTPUT**. **CORRECTED, seventh session: the SHIPPED code writes it ten times** (`fsts -0x3c` … `fstps -0x18`, exactly the 36 bytes), so the recovery is incomplete rather than the program impossible; Ghidra models the x87 `fcos`/`fsin` INSTRUCTIONS as calls and discards the results, taking the Rodrigues-formula arithmetic with them. Repairing the NAME would still buy a compile at the price of reading uninitialised memory, so the refusal stands — see `proven.txt` for what the real job is and why no gate here could check it |
 
 That last row is the useful one: a refusal that used to be a judgement call is now evidenced.
 

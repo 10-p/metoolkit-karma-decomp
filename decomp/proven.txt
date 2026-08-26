@@ -4401,3 +4401,62 @@ McdSpace              RELEASED 2026-08-26 (seventh session). Sixteen symbols, th
 #                     SHORT name; corrected at the source and Ghidra re-run, which
 #                     changed one function. Bit-identical on all three scenes with
 #                     17,087 calls. The engine links it and never calls it.
+
+# --- 2026-08-26 (seventh session): MeMath — the refusal STANDS, and the -----
+#   reason this file gives for it is WRONG
+#
+# Checked because McdSpace's "LEAVE LAST" turned out to be answering the wrong
+# question, and the same discipline says test the stated reason of anything that
+# has sat for two sessions. This one is the opposite result: the conclusion is
+# right, the evidence for it is not.
+#
+# §5c says, of `MeMatrix4TMUpdateFromVelocities`:
+#
+#   "the mapping IS exact — the nine accesses are exactly `MeReal eR[3][3]` at
+#    -60 — and `eR` is DECLARED AND NEVER WRITTEN, because Ghidra emitted
+#    fcos/fsin and discarded the results. Repairing the name would buy a compile
+#    at the price of reading uninitialised memory"
+#
+# **THE SHIPPED CODE WRITES eR TEN TIMES.** `eR[3][3]` is 36 bytes at -0x3c, and
+# the disassembly fills exactly that range:
+#
+#   fsts  -0x3c(%ebp)   fstps -0x38   fstps -0x34   fstps -0x30   fstps -0x2c
+#   fstps -0x28         fstps -0x24   fstps -0x20   fstps -0x1c   fstps -0x18
+#
+# So "never written" is a fact about GHIDRA'S OUTPUT, not about the program, and
+# the file states it as though the original discarded the work. It did not. The
+# recovery is INCOMPLETE, not the program impossible — a distinction that
+# decides whether anyone ever picks this up.
+#
+# WHAT IS ACTUALLY MISSING, so it is not re-derived: Ghidra models the x87
+# `fcos` and `fsin` INSTRUCTIONS as pseudo-function calls and throws the results
+# away, so everything between them and the ten stores is gone. What survives is
+# the consumer — a three-iteration loop that reads eR row by row and multiplies:
+#
+#     fcos(lVar9);  fsin(lVar9);            <- results discarded
+#     puVar5 = &stack0xfffffff4;            <- -12; eR row i is at puVar5-0x30
+#     ... (*paMVar4)[0] = fVar3 * aTransform[2][0] + fVar2 * aTransform[1][0]
+#                       + fVar1 * (*aTransform)[0];   /* aTransformReturn = eR * aTransform */
+#
+# i.e. the function integrates an angular velocity into a rotation matrix —
+# Rodrigues' formula — and the ~60 x87 instructions that build eR from cos and
+# sin are the recovery job. It is not a naming fix and `fix_stack_address_name`
+# is right to refuse it.
+#
+# AND THE REFUSAL STANDS ON A REASON THIS FILE CAN DEFEND: **nothing here could
+# verify a reconstruction.** The function is exercised by no scene and by no
+# engine path measured so far, so a rebuilt rotation matrix would ship with no
+# gate able to tell it from a wrong one — the same position as the association
+# defect (§11 item 2a), and the same answer.
+#
+# IT CANNOT SIMPLY BE DROPPED EITHER, which was the other thing worth checking:
+# 0 engine objects import it, but TWO IN-BUILD members do —
+#     McdModel.o          from McdModelUpdatePath
+#     McdInteractions.o   from McdIntersectAt   (twice)
+# so the symbol has to exist for the link. The engine needs only three MeMath
+# symbols directly — MeMatrix4TMInvert, MeQuaternionFiniteRotation,
+# MeQuaternionSlerp — and none of them is this one; the other five in the gap
+# are closure.
+#
+# SO: 8 symbols, REFUSED, and the entry to read before trying again is this one
+# rather than §5c's row, which is corrected here.

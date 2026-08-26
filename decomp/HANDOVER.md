@@ -82,11 +82,11 @@ arm64 IS NOT 95% DONE.  The number that said so was measuring the easier half.
 
 Pointer TRUNCATION is 95% closed and that part reproduces.  The 435 sites left
 are NOT "a local needing a widened declaration" — every one reads a pointer out
-of a struct AT A HARDCODED OFFSET, and 52 of metoolkit's 62 structs CHANGE SIZE
+of a struct AT A HARDCODED OFFSET, and 128 of 151 structs CHANGE SIZE
 between i386 and arm64.  sizeof(_McdGeometry) is 16 there and 32 here.
 IxBoxTriList reads its triangle generator from `trilistgeom[3]` — byte 48, and
 byte 96.  Nothing is truncated, clang is silent, and the address is somebody
-else's memory.  1,339 layout-baking sites across 38 objects in the build.
+else's memory.  128 literal byte offsets across 10 objects, plus 369 sites indexing through a pointer-containing type.
 
 tools/layout_check.py is the gate that measures it, needs no arm64 hardware,
 and did not exist before today.  §6b.  THE PORT TARGET THAT WORKS IS 32-BIT —
@@ -99,9 +99,9 @@ layout they get.
 **arm64's layout defect, and it is the only thing between here and the Android half of the
 goal.** Run `python3 tools/layout_check.py /tmp/kd_out/allobj /tmp/kd_build` first — it
 takes a minute and prints the two numbers that frame the job. Then pick the shape, not the
-object: of the 1,339 baked sites, `CxSmallSort` (212), `IxCylinderCylinder` (143) and
-`IxBoxBox` (111) are a third of them between them, and the sites cluster into a handful of
-idioms (`*(T *)(base + K)` and `NAME[k].field` over a Ghidra-chosen struct type). The fix is
+object: 128 sites BAKE a literal byte offset in — `MdtBcl` alone has 70 — and 369 more index
+through a pointer-containing type, of which `CxSmallSort` has 209. Read `layout_check.py`'s
+BAKED column as a defect count and its SUSPECT column as a shortlist, not as one number. The fix is
 to make those name FIELDS instead of offsets, which the DWARF supports and which is what
 `resolve_field_names` already does elsewhere; every rewrite is a no-op on i386 by
 construction, so **the acceptance test is the one this project always uses — every
@@ -2284,19 +2284,23 @@ python3 tools/layout_check.py /tmp/kd_out/allobj /tmp/kd_build
 ```
 
 ```
-  metoolkit structs with a complete definition : 62
-  SIZE DIFFERS between i386 and arm64          : 52
-  size IDENTICAL (the control — assertions pass): 10  MdtBclContactParams, MdtPartitionParams, ...
-  sites in the build that BAKE a layout in     : 1339 across 38 object(s)
-     worst: CxSmallSort:212 IxCylinderCylinder:143 IxBoxBox:111 IxBoxTriList:79 McdTriangleList:78
+  structs with a complete definition            :   151
+  SIZE DIFFERS between i386 and arm64           :   128
+  size IDENTICAL (the control — assertions pass):    23  lsVec3, McdCnvEdge, MdtLODParams, ...
+  BAKED   literal byte offset *(T *)(x + K)     :   128 across 10 object(s)
+     worst: MdtBcl:70 MdtMainLoop:25 MdtPrismatic:13 MeMath:6 IxCylinderTriList:4
+  SUSPECT NAME[k].field, element type has a pointer: 369 across 20 object(s)
+     worst: CxSmallSort:209 McdConvexMesh:26 McdContact:22 McdTriangleList:20
+  SAFE    NAME[k].field, element type is pointer-free: 631 across 18 object(s)
+          (type not resolvable)                 :   211 across 12 object(s)
 ```
 
 **The 10 that do NOT differ are the control**, and they are why the 52 means anything: an
 assertion mechanism that failed for everything would report "all of them differ" and read
 like a finding. Those ten are pointer-free and their assertions pass.
 
-**Read the two numbers together and neither as the other.** 1,339 is an EXPOSURE, not a
-defect count: a recovered object that only ever names FIELDS — `p->model1`, `group->count` —
+**Read the columns together and none of them as the others.** BAKED is a defect count;
+SUSPECT is an EXPOSURE: a recovered object that only ever names FIELDS — `p->model1`, `group->count` —
 recompiles correctly at any pointer width, because the compiler recomputes the offset. What
 is exposed is arithmetic that BAKES a layout in: a hardcoded byte offset, or an index through
 a struct type Ghidra chose.
@@ -4187,7 +4191,7 @@ moves; if the answer is none, it is out of scope.
 - ~~**qhull and the asset loader**~~ — **both done.** Qhull is replaced and validated at
   four tiers including a live match (§8a, §8b); the asset loader turned out to be
   RECOVERABLE and is 9 of 9 (§8c).
-- **arm64 — THE BIG ONE NOW, and not for the reason this file used to give.** Truncation is 95% closed (7,714 -> 435). The remainder is a LAYOUT defect: 52 of metoolkit's 62 structs change size at 64-bit pointer width and 1,339 sites in the build bake a layout in. `tools/layout_check.py`, §6b.
+- **arm64 — THE BIG ONE NOW, and not for the reason this file used to give.** Truncation is 95% closed (7,714 -> 435). The remainder is a LAYOUT defect: 128 of 151 structs change size at 64-bit pointer width; 128 sites in the build bake a literal byte offset in and 369 more index through a pointer-containing type. `tools/layout_check.py`, §6b.
   `test/ptrwidth_check.sh`, §6b. The fix is generator-wide, not a flag.
 - **Executing anything on wasm** — the web agent's job. `HANDOVER-WEB.md`.
 - **The tail** — 8 objects (was 12; the three dead-end-9 rows and `MeSimpleFile_linux` were

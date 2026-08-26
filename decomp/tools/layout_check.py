@@ -49,6 +49,8 @@ import re
 import subprocess
 import sys
 
+HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 NDK = os.environ.get(
     'KD_NDK',
     '/home/ion/Android/Sdk/ndk/30.0.14904198/toolchains/llvm/prebuilt/'
@@ -76,14 +78,17 @@ def struct_names(inc):
     return sorted(names)
 
 
-HEAD = '#include <MePrecision.h>\n#include <McdCTypes.h>\n#include <MdtTypes.h>\n' \
-       '#include <McdFrame.h>\n#include <MstTypes.h>\n#include <MeMemory.h>\n' \
-       '#include <MeMath.h>\n#include <MeHeap.h>\n'
+# Exactly what a recovered .c includes, in the same order: kd_types.h needs
+# tags (`_McdUserTriangle`) that only the umbrella header brings in, and a probe
+# that does not compile reports "type not resolvable" for the whole corpus and
+# reads like an absence of findings.
+HEAD = '#include "@HERE@/include/kd_compat.h"\n#include "@HERE@/include/kd_karma.h"\n' \
+       '#include "@HERE@/include/kd_types.h"\n'
 
 
 def i386_sizes(names, inc, work):
     """Compile and RUN a probe on the host, one struct per line."""
-    body = HEAD + '#include <stdio.h>\nint main(void){\n'
+    body = HEAD.replace('@HERE@', HERE) + '#include <stdio.h>\nint main(void){\n'
     for n in names:
         body += ('#ifdef KD_HAVE_%s\n  printf("%s %%d\\n", (int)sizeof(struct %s));\n#endif\n'
                  % (n, n, n))
@@ -94,7 +99,7 @@ def i386_sizes(names, inc, work):
     have = []
     for n in names:
         t = os.path.join(work, 't.c')
-        open(t, 'w').write(HEAD + 'char probe[sizeof(struct %s)];\n' % n)
+        open(t, 'w').write(HEAD.replace('@HERE@', HERE) + 'char probe[sizeof(struct %s)];\n' % n)
         r = subprocess.run(['gcc', '-m32', '-DLINUX', '-c', '-o', '/dev/null', t]
                            + includes(inc), capture_output=True)
         if r.returncode == 0:
@@ -117,7 +122,7 @@ def arm64_differs(sizes, inc, work):
     bad = []
     for n, sz in sorted(sizes.items()):
         t = os.path.join(work, 'a.c')
-        open(t, 'w').write(HEAD +
+        open(t, 'w').write(HEAD.replace('@HERE@', HERE) +
                            '_Static_assert(sizeof(struct %s) == %d, "differs");\n' % (n, sz))
         r = subprocess.run([cc, '-DLINUX', '-w', '-c', '-o', '/dev/null', t]
                            + includes(inc), capture_output=True, text=True)
@@ -127,13 +132,112 @@ def arm64_differs(sizes, inc, work):
     return bad
 
 
-# Arithmetic that BAKES a layout in, as opposed to naming a field.
-BAKED = [
-    (re.compile(r'\*\s*\(\s*[A-Za-z_][\w ]*\**\s*\*\s*\)\s*\(\s*[^();]*?\+\s*'
-                r'(?:0x[0-9a-f]+|\d+)\s*\)'), 'hardcoded byte offset'),
-    (re.compile(r'\b[A-Za-z_]\w*\s*\[\s*[1-9]\d*\s*\]\s*\.\s*[A-Za-z_]'),
-     'index through a struct type at a constant > 0'),
-]
+# ---------------------------------------------------------------------------
+# WHAT COUNTS AS BAKED, and this is where a first draft of this tool was wrong.
+#
+# `include/kd_types.h` declares the Karma-internal structs with REAL FIELDS and
+# real types — the `/* +0x20 */` comments are documentation, not padding — so a
+# recovered access that NAMES a field recompiles correctly at any pointer width.
+# The compiler recomputes the offset. A first version of this tool counted every
+# `NAME[k].field` and reported 1,339 sites; most of those are `row[2].v` over an
+# `lsVec3`, which is three floats and the same twelve bytes on both targets.
+#
+# So the split below is by whether the arithmetic can survive a relayout:
+#
+#   BAKED    a LITERAL byte offset — `*(T *)(x + 0x18)`. The constant was
+#            derived from a 32-bit layout and no compiler will revisit it.
+#   SUSPECT  `NAME[k].field` where the element type CONTAINS A POINTER, so
+#            `k * sizeof(T)` is a different number on arm64. Legitimate array
+#            indexing is fine here; what is not is Ghidra indexing a pointer
+#            past element 0 through a type it CHOSE — `g[1].frame` where `g` is
+#            an `McdGeometry *` and the object is an `McdTriangleList`. Telling
+#            those apart is per-site judgement, which is why this is SUSPECT and
+#            not BAKED.
+#   SAFE     the same shape over a pointer-free element type. Reported so the
+#            other two numbers cannot be inflated by it.
+LITERAL_OFFSET = re.compile(
+    r'\*\s*\(\s*[A-Za-z_][\w ]*\**\s*\*\s*\)\s*\(\s*[^();]*?\+\s*'
+    r'(?:0x[0-9a-f]+|\d+)\s*\)')
+INDEXED = re.compile(r'\b([A-Za-z_]\w*)\s*\[\s*[1-9]\d*\s*\]\s*\.\s*[A-Za-z_]')
+BANNER = re.compile(r'(?m)^/\* ---- (\S+)')
+
+
+_MEMBER_TYPES = {}
+
+
+def member_type(name, inc, here):
+    """The declared type of a STRUCT MEMBER of this name, if it is unambiguous.
+
+    Most indexed bases are not locals — `tm->row[2].v` is `lsTransform::row`,
+    and `elem_type` below sees no declaration for `row` and gives up. That put
+    845 of 1,211 sites in "type not resolvable", which is honest and useless.
+    Both the public headers and our own `kd_types.h` declare these members, so
+    the type is READ rather than inferred; a name declared with two different
+    types anywhere is left unresolved rather than guessed."""
+    if not _MEMBER_TYPES:
+        pat = re.compile(r'(?m)^[ \t]*((?:const |unsigned |struct )*[A-Za-z_]\w*)'
+                         r'[ \t]*\**[ \t]*([A-Za-z_]\w*)[ \t]*\[[ \t]*\d*[ \t]*\][ \t]*;')
+        roots = [inc, os.path.join(here, 'include')]
+        for root in roots:
+            for dirpath, _d, files in os.walk(root):
+                for fn in files:
+                    if not fn.endswith('.h'):
+                        continue
+                    txt = open(os.path.join(dirpath, fn), errors='ignore').read()
+                    for m in pat.finditer(txt):
+                        ty, nm = m.group(1).strip(), m.group(2)
+                        if ty in ('return', 'typedef', 'extern', 'static'):
+                            continue
+                        prev = _MEMBER_TYPES.get(nm, ty)
+                        _MEMBER_TYPES[nm] = ty if prev == ty else None
+    return _MEMBER_TYPES.get(name)
+
+
+def elem_type(region, name):
+    """The declared type of `name` in this function, or None."""
+    m = re.search(r'(?m)^[ \t]*((?:const |unsigned |struct )*[A-Za-z_]\w*)'
+                  r'[ \t]*\**[ \t]*' + re.escape(name)
+                  + r'[ \t]*(?:\[[ \t]*\d+[ \t]*\])?[ \t]*;', region)
+    if not m:
+        return None
+    ty = m.group(1).strip()
+    return None if ty in ('return', 'if', 'else', 'while', 'for', 'do',
+                          'goto', 'case', 'switch') else ty
+
+
+def type_differs(ty, inc, work, cache, here):
+    """Does sizeof(ty) change between i386 and arm64? ASKED of both compilers."""
+    if ty in cache:
+        return cache[ty]
+    head = HEAD.replace('@HERE@', here)
+    probe = os.path.join(work, 'sz.c')
+    # ONE `%d`, not two. This is plain concatenation, not %-formatting, so `%%d`
+    # reached the C file verbatim and the probe printed the literal text "%d" —
+    # which the guard below then rejects, but which for one measurement made
+    # every type unresolvable and, before the guard existed, made every type
+    # DIFFER. Both readings looked like findings.
+    open(probe, 'w').write(head + '#include <stdio.h>\nint main(void){printf("%d\\n",'
+                           '(int)sizeof(' + ty + '));return 0;}\n')
+    exe = os.path.join(work, 'sz')
+    if subprocess.run(['gcc', '-m32', '-DLINUX', '-w', '-o', exe, probe]
+                      + includes(inc), capture_output=True).returncode:
+        cache[ty] = None
+        return None
+    sz = subprocess.run([exe], capture_output=True, text=True).stdout.strip()
+    a = os.path.join(work, 'sz2.c')
+    # `sz` is a STRING read from the probe's stdout; an empty or malformed one
+    # writes an assertion that does not COMPILE, and a file that does not
+    # compile reports every type as differing. That happened, and it read like a
+    # finding — 1,339 "layout-baked" sites, most of them lsVec3.
+    if not sz.isdigit():
+        cache[ty] = None
+        return None
+    open(a, 'w').write(head + '_Static_assert(sizeof(' + ty + ') == ' + sz
+                       + ', "differs");\n')
+    cc = os.path.join(NDK, 'aarch64-linux-android21-clang')
+    cache[ty] = subprocess.run([cc, '-DLINUX', '-w', '-c', '-o', '/dev/null', a]
+                               + includes(inc), capture_output=True).returncode != 0
+    return cache[ty]
 
 
 def main():
@@ -160,23 +264,64 @@ def main():
         show = ', '.join('%s %d->?' % (n, sizes[n]) for n in bad[:6])
         print('     e.g. %s%s' % (show, ' ...' if len(bad) > 6 else ''))
 
-    tot, objs, worst = 0, 0, []
+    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    cache = {}
+    # ---- THE SELF-CHECK, and it is here because this tool got it wrong TWICE.
+    # `type_differs` builds two probes and compares them. A probe that does not
+    # compile, or one whose printf emits the literal text "%d" because a `%%`
+    # survived a plain concatenation, makes EVERY type read as differing — which
+    # is not an error message, it is a finding-shaped number. The first run of
+    # this tool reported 1,339 layout-baked sites on exactly that bug; the real
+    # figure is 128 baked and 369 suspect.
+    #
+    # So the tool now proves it can return BOTH answers before reporting any:
+    # `lsVec3` is three floats and must read False, `_McdGeometry` holds three
+    # pointers and must read True. If either is wrong, nothing below is worth
+    # printing.
+    probe_same = type_differs('lsVec3', inc, work, cache, here)
+    probe_diff = type_differs('struct _McdGeometry', inc, work, cache, here)
+    if probe_same is not False or probe_diff is not True:
+        sys.exit('layout_check: SELF-CHECK FAILED — lsVec3 read %r (want False) and\n'
+                 '  struct _McdGeometry read %r (want True). The size probe is not\n'
+                 '  measuring anything; every number below would be an artefact.'
+                 % (probe_same, probe_diff))
+    baked, suspect, safe, unknown = ({}, {}, {}, {})
     for fn in sorted(os.listdir(srcdir)):
         if not fn.endswith('.c') or not os.path.exists(
                 os.path.join(build, fn[:-2] + '.o')):
             continue
+        b = fn[:-2]
         txt = open(os.path.join(srcdir, fn), errors='ignore').read()
-        n = sum(len(p.findall(txt)) for p, _w in BAKED)
+        n = len(LITERAL_OFFSET.findall(txt))
         if n:
-            objs += 1
-            tot += n
-            worst.append((n, fn[:-2]))
-    worst.sort(reverse=True)
-    print('  sites in the build that BAKE a layout in     : %d across %d object(s)'
-          % (tot, objs))
-    print('     worst: %s' % ' '.join('%s:%d' % (b, n) for n, b in worst[:6]))
-    print('  -> a size difference alone is not a defect; a BAKED site over a')
-    print('     struct whose size differs is. Neither number is the other.')
+            baked[b] = n
+        parts = BANNER.split(txt)
+        for i in range(2, len(parts), 2):
+            region = parts[i]
+            for m in INDEXED.finditer(region):
+                ty = elem_type(region, m.group(1)) \
+                    or member_type(m.group(1), inc, here)
+                d = type_differs(ty, inc, work, cache, here) if ty else None
+                tgt = suspect if d is True else safe if d is False else unknown
+                tgt[b] = tgt.get(b, 0) + 1
+
+    def line(label, d):
+        tot = sum(d.values())
+        w = ' '.join('%s:%d' % (k, v) for k, v in
+                     sorted(d.items(), key=lambda kv: -kv[1])[:5])
+        print('  %-46s: %5d across %2d object(s)' % (label, tot, len(d)))
+        if w:
+            print('     worst: %s' % w)
+
+    line('BAKED   literal byte offset *(T *)(x + K)', baked)
+    line('SUSPECT NAME[k].field, element type has a pointer', suspect)
+    line('SAFE    NAME[k].field, element type is pointer-free', safe)
+    line('        (type not resolvable)', unknown)
+    print('  -> BAKED is a defect count. SUSPECT is not: legitimate array')
+    print('     indexing lives there too, and only per-site judgement separates')
+    print('     it from Ghidra indexing a pointer through a type it CHOSE.')
+    print('     kd_types.h declares real fields, so anything that NAMES a field')
+    print('     recompiles correctly — that is why SAFE is reported at all.')
     return 0
 
 

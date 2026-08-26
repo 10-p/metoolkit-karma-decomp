@@ -63,7 +63,7 @@ already flagged as working "by luck, not design".
 
 Our notes said this was 95% fixed. That was true of the problem we were measuring and the
 problem we were measuring was the easier half. Rebuilt code carries the original's memory
-layout baked into it, and **52 of the 62 data structures change shape on a 64-bit machine**.
+layout baked into it, and **128 of 151 data structures change shape on a 64-bit machine**.
 Nothing looks wrong, nothing warns, and the code reads the wrong memory. We built the check
 that measures this today; it did not exist before. **The version that works is 32-bit** —
 which covers web and the large majority of Android devices, but not all of them, and this is

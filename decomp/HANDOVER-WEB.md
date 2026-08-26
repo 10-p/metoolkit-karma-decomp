@@ -63,10 +63,13 @@ run on any of your three targets.
 > because every layout question is a compile-time constant:
 >
 > ```
->   metoolkit structs with a complete definition : 62
->   SIZE DIFFERS between i386 and arm64          : 52
->   size IDENTICAL (the control — assertions pass): 10
->   sites in the build that BAKE a layout in     : 1339 across 38 object(s)
+>   structs with a complete definition            :   151
+>   SIZE DIFFERS between i386 and arm64           :   128
+>   size IDENTICAL (the control — assertions pass):    23  lsVec3, McdCnvEdge, MdtLODParams, ...
+>   BAKED   literal byte offset *(T *)(x + K)     :   128 across 10 object(s)
+>   SUSPECT NAME[k].field, element type has a pointer: 369 across 20 object(s)
+>   SAFE    NAME[k].field, element type is pointer-free: 631 across 18 object(s)
+>           (type not resolvable)                 :   211 across 12 object(s)
 > ```
 >
 > **What this means for you, concretely:**
@@ -75,8 +78,9 @@ run on any of your three targets.
 >   so the layout the recovery encodes is the layout they get. Your two primary targets are
 >   fine; this is about the third.
 > * **arm64 is a real piece of engineering, not a flag.** Do not schedule it as "turn on the
->   64-bit ABI". Roughly a third of the 1,339 sites are in three objects
->   (`CxSmallSort` 212, `IxCylinderCylinder` 143, `IxBoxBox` 111).
+>   64-bit ABI". BAKED is a defect count; SUSPECT is not — legitimate array indexing lives
+>   there too and only per-site judgement separates it from Ghidra indexing a pointer through
+>   a type it CHOSE. `MdtBcl` (70 baked) and `CxSmallSort` (209 suspect) are half the job.
 > * **If your Android plan is 64-bit-only, say so now**, because that changes what the
 >   recovery side works on next.
 
@@ -954,8 +958,9 @@ older copy of this file, start here.
   hull, zero MathEngine) and PLAYS a 300 s match beside a stock control with an identical
   Karma warning profile.** That is the whole deliverable, on i386.
 - **arm64 was reframed and it is now the biggest open piece — see section 0's box.** The
-  95% figure was measuring pointer truncation, which is the easier half; 52 of metoolkit's
-  62 structs change size at 64-bit and 1,339 sites in the build bake a layout in.
+  95% figure was measuring pointer truncation, which is the easier half; 128 of 151 structs
+  change size at 64-bit, 128 sites bake a literal byte offset in and 369 more index through a
+  pointer-containing type.
   `tools/layout_check.py` is the new gate and it needs no arm64 hardware.
 - **The association defect's status changed and it changes what YOUR A/B is worth**: it is
   visible on i386 after all (22% of calls at one measured site) but not arbitrable there,

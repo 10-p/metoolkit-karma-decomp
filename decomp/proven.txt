@@ -431,12 +431,14 @@ ARM64-LAYOUT         2026-08-27 (eighth session): A CORRECTION. arm64 IS NOT 95%
 #                     sizes are read by running a probe, then asserted at arm64 with
 #                     _Static_assert.
 #
-#                       metoolkit structs with a complete definition : 62
-#                       SIZE DIFFERS between i386 and arm64          : 52
-#                       size IDENTICAL (the control)                 : 10
-#                       sites in the build that BAKE a layout in     : 1,339 across 38
-#                         worst: CxSmallSort 212, IxCylinderCylinder 143, IxBoxBox 111,
-#                                IxBoxTriList 79, McdTriangleList 78, IxBoxCylinder 77
+#                       structs with a complete definition            : 151
+#                       SIZE DIFFERS between i386 and arm64           : 128
+#                       size IDENTICAL (the control)                  :  23
+#                       BAKED   a literal byte offset *(T *)(x + K)   : 128 across 10
+#                         worst: MdtBcl 70, MdtMainLoop 25, MdtPrismatic 13, MeMath 6
+#                       SUSPECT NAME[k].field over a pointer-ful type : 369 across 20
+#                         worst: CxSmallSort 209, McdConvexMesh 26, McdContact 22
+#                       SAFE    the same over a pointer-free type     : 631 across 18
 #
 #                     THE 10 THAT DO NOT DIFFER ARE THE CONTROL and they are why the 52
 #                     means anything: an assertion mechanism that failed for everything
@@ -444,11 +446,25 @@ ARM64-LAYOUT         2026-08-27 (eighth session): A CORRECTION. arm64 IS NOT 95%
 #                     MdtBclContactParams, MdtPartitionParams and the rest are pointer-free
 #                     and their assertions PASS.
 #
-#                     WHAT IS AND IS NOT SAID HERE. 1,339 is an EXPOSURE, not a defect
-#                     count: a recovered object that only ever names fields recompiles
-#                     correctly at any pointer width, because the compiler recomputes the
-#                     offset. What is exposed is arithmetic that bakes a layout in. Neither
-#                     number is the other and the tool prints both.
+#                     AND THE FIRST VERSION OF THIS MEASUREMENT WAS WRONG, BY 4x. It
+#                     reported "1,339 layout-baked sites" because its size probe emitted the
+#                     literal text `%d` — a plain concatenation with a `%%` in it — so the
+#                     comparison never ran and EVERY type read as differing. A check that
+#                     cannot pass reports everything as a finding, which is this project's
+#                     own lesson arriving from the inside. Most of that 1,339 was `row[2].v`
+#                     over `lsVec3`: three floats, twelve bytes on both targets.
+#                     `layout_check.py` now REFUSES TO REPORT unless it can first show both
+#                     answers — `lsVec3` must read "same" and `struct _McdGeometry` must read
+#                     "differs" — and re-introducing the exact bug makes it exit instead of
+#                     printing.
+#
+#                     WHAT IS AND IS NOT SAID HERE. BAKED is a defect count: a literal byte
+#                     offset was derived from a 32-bit layout and no compiler will revisit
+#                     it. SUSPECT is an EXPOSURE — legitimate array indexing lives there too,
+#                     and only per-site judgement separates it from Ghidra indexing a pointer
+#                     through a type it CHOSE. `include/kd_types.h` declares real fields with
+#                     real types, so anything that NAMES a field recompiles correctly at any
+#                     pointer width; that is why SAFE is reported at all.
 #
 #                     SO THE HONEST arm64 STATUS IS: it compiles, its symbol set matches,
 #                     truncation is 95% closed, and it would not RUN, for a reason no gate

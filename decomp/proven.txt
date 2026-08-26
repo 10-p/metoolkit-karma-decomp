@@ -285,6 +285,177 @@ IxConvexPrimitives    real: 1,685 calls of McdSphylConvexMeshIntersect on ONS-CB
 #                     hour — ragdolls land on the level, not on the vehicles —
 #                     and ONS-Torlan would not start a ticking match. CBP2 and
 #                     UCMP maps reach it in minutes. See HANDOVER.md 6.
+THE-DELIVERABLE      2026-08-27 (eighth session): CHECK 2 OF THE DEFINITION OF DONE, WHICH
+#                     HAD NEVER BEEN ATTEMPTED. The engine LINKS against a metoolkit that
+#                     contains no MathEngine object code at all, and PLAYS.
+#
+#                     test/make_dropin_metoolkit.sh builds the tree: the qhull archive
+#                     replaced wholesale by src/McdConvexCreateHull/kd_convexhull.c
+#                     (1,416,194 -> 10,382 bytes, exported symbol set identical), all 145
+#                     recovered objects substituted in place of their shipped members, and
+#                     then every member still MathEngine's `ar d`'d out — 33 of them, listed
+#                     in /tmp/kd_dropin_deleted.txt and dominated by MathEngine's demo
+#                     viewer (MeViewer, Render_*, RMenu, RGeometry), MeASELoad and
+#                     McduDebugDraw, all of which §3b retires.
+#
+#                     `ar t` over the finished tree: 145 members, ours; plus our hull; and
+#                     ZERO shipped members. That is the check that makes the link mean
+#                     something — there is nothing left for it to fall back on.
+#
+#                       cmake -B build-dropin-karma -DMETOOLKIT_DIR=.../dropin-metoolkit
+#                       -> ut2004-karma-pixo.bin, 42,813,220 bytes, links clean
+#
+#                     And tools/dropin_gap.py PREDICTED this: it reports 0 members and 0
+#                     symbols by walking the symbol closure. Prediction and measurement
+#                     agree, which is the standard §3c set for itself.
+#
+#                     THE MATCH. test-karma-1, xDeathMatch, 8 bots, -SOFTWARERENDERER,
+#                     300 s, against a STOCK control on the same map in the same run:
+#
+#                                        drop-in        stock control
+#                       reached START MATCH    yes            yes
+#                       ran to the timeout     yes (124)      yes (124)
+#                       SIGSEGV/SIGABRT/assert   0              0
+#                       log lines          3,381,245      2,689,312
+#                       Karma warnings     4 KInitActorDynamics, 2 KAggregateGeomInstance,
+#                                          2 KInitConstraintKarma — IDENTICAL on both
+#
+#                     The only `Signal:` line in either log is `SIGTERM [terminate]`, which
+#                     is the timeout. The line-count difference is run-to-run scheduling on
+#                     a 300 s match, not a physics difference; the warning profile is what
+#                     to read and it matches exactly.
+#
+#                     A SECOND MAP WAS RUN AND IS NOT CLAIMED AS EVIDENCE. On
+#                     ONS-CBP2-Tropica the drop-in build ran the full 300 s with 0 faults
+#                     and THE STOCK CONTROL CRASHED — in AHUD::eventPostRender / UCanvas,
+#                     which is §7d's documented environment fault. A run whose control dies
+#                     is not a comparison, and neither build ticked much there (893 and 99
+#                     log lines against 3.4 M on test-karma-1), which is the "START MATCH
+#                     but does not tick" case §6 warns about. Recorded so nobody re-runs it
+#                     expecting a result.
+
+ASSOC-ON-I386        2026-08-27 (eighth session): THE ASSOCIATION DEFECT IS NOT INERT ON
+#                     i386, and this file and §11 item 2a have both said it is.
+#
+#                     The claim was "on x87 the defect is EXACTLY inert, so no gate in this
+#                     project can falsify a repair — measured 0 differences in 2,000,000
+#                     samples". That measurement is real and it is about REASSOCIATION:
+#                     `(a+b)+c` versus `a+(b+c)` over the SAME terms in the same order. The
+#                     index-PERMUTED case is a different thing and it is measurable here.
+#
+#                     THE SITE, with the machine read rather than inferred.
+#                     McdVanillaOverlapOBBTri stores the plane offset:
+#
+#                       Ghidra:  *outPN = fVar9 * V0[2] + fVar4 * V0[0] + fVar5 * V0[1];
+#                                                 ^[2]           ^[0]           ^[1]
+#                       machine (0xa5c-0xa84, x87 stack simulated):
+#                                a72 fmuls 0x4(%edi)   N1*V0[1]
+#                                a77 fmuls (%edi)      N0*V0[0]
+#                                a7b fmuls 0x8(%edi)   N2*V0[2]
+#                                a80 faddp %st,%st(2)  -> (N0*V0[0] + N1*V0[1])
+#                                a82 faddp %st,%st(1)  -> ... + N2*V0[2]
+#                       so the ADD order is 0,1,2 and Ghidra printed 2,0,1.
+#
+#                     MEASURED with a per-function A/B against the shipped static on live
+#                     difftest inputs: `*outPN` differs from the shipped answer on 1,108 of
+#                     5,131 calls — 22% — at one float ULP. Reordering the two permuted
+#                     sites in that object to the machine's order takes the whole body
+#                     divergence 1,149 -> 206.
+#
+#                     AND IT WAS STILL NOT APPLIED, WHICH IS THE PART TO READ. End to end,
+#                     over 200,000 difftest pairs, the reordered variant is WORSE:
+#
+#                       reciprocals only              48,380 bit-identical, 0 count  PASS
+#                       reciprocals + both reorders   42,088 bit-identical, 1 count  FAIL
+#
+#                     Both are the same code with two `+` chains permuted. The explanation
+#                     is that source order is not the whole story on x87: gcc 15 chooses its
+#                     own stack schedule, and WHERE a temporary is spilled to memory — and
+#                     rounded to 24 bits — is what actually decides the last bit. That is
+#                     the same phenomenon `restore_float_text` exists for.
+#
+#                     SO THE CORRECTED POSITION, and it is worse news than the old one:
+#                       * on i386 these permutations DO change results, so "no gate can see
+#                         it" is false — difftest_pair sees it;
+#                       * but the i386 gate cannot ARBITRATE it either, because the source
+#                         order that matches the machine measured worse than the one that
+#                         does not. Both readings are confounded by spill placement.
+#                       * on wasm32/armv7/arm64 there is no 80-bit intermediate and no
+#                         spill question, so source order IS the whole story and the
+#                         machine's order is simply correct.
+#                     The consequence for whoever settles the 575 sites corpus-wide: an
+#                     i386 A/B is not the arbiter, a wasm-vs-native A/B is, and
+#                     tools/assoc_scan.py's docstring saying otherwise is now wrong.
+#
+#                     A SECOND, SMALLER CORRECTION: assoc_scan.py under-counts. It requires
+#                     a chain to mention a float-typed LOCAL, so it reported 1 permuted site
+#                     in IxBoxTriList when a scan that also accepts struct-field and
+#                     pointer-deref terms finds 7. Its docstring already calls the number a
+#                     lower bound; this is how big the gap is on one object.
+
+ARM64-LAYOUT         2026-08-27 (eighth session): A CORRECTION. arm64 IS NOT 95% DONE, AND
+#                     THE NUMBER THAT SAID SO WAS MEASURING THE EASIER HALF.
+#
+#                     §6b has said since the seventh session that pointer truncation went
+#                     7,771 -> 411 and that the remainder is "an integer local or struct
+#                     field holding an address, needing a widened declaration". The first
+#                     half is true and reproduces (at 145 objects: 7,714 raw, 3,864 widened
+#                     by fix_ptrwidth.py, 435 left across 48 objects). THE SECOND HALF IS
+#                     WRONG ABOUT WHAT THE REMAINDER IS, and the diagnosis matters because
+#                     it says widening declarations would finish the job. It would not.
+#
+#                     Classifying all 435 by what is actually inside the cast:
+#                       351  a plain local or expression — dominated by *(int *)(base + K),
+#                            i.e. A POINTER READ AT FOUR BYTES out of a struct
+#                        59  a struct FIELD the header types as an integer
+#                        24  a load through *(int *) used directly as an address
+#                     Every one of them reads a pointer out of a struct AT A HARDCODED
+#                     OFFSET. Widening the load to eight bytes without fixing the offset
+#                     reads eight wrong bytes instead of four.
+#
+#                     THE DEFECT UNDER THEM, and it is invisible to the truncation gate by
+#                     construction:
+#
+#                       struct _McdGeometry { MeU32 mRefCtAndID; McdGeometryID prev, next;
+#                                             McdFrameworkID frame; };
+#                         i386   4 + 4 + 4 + 4        = 16 bytes   (measured, not assumed)
+#                         arm64  4 + pad + 8 + 8 + 8  = 32 bytes
+#
+#                     IxBoxTriList reads the triangle generator out of `trilistgeom[3]`.
+#                     On i386 that is byte 48; on arm64 it is byte 96. NOTHING IS
+#                     TRUNCATED — the cast is width-correct and clang is silent — and the
+#                     address is somebody else's memory.
+#
+#                     MEASURED, by tools/layout_check.py, which needs no arm64 hardware
+#                     because every layout question is a compile-time constant: the i386
+#                     sizes are read by running a probe, then asserted at arm64 with
+#                     _Static_assert.
+#
+#                       metoolkit structs with a complete definition : 62
+#                       SIZE DIFFERS between i386 and arm64          : 52
+#                       size IDENTICAL (the control)                 : 10
+#                       sites in the build that BAKE a layout in     : 1,339 across 38
+#                         worst: CxSmallSort 212, IxCylinderCylinder 143, IxBoxBox 111,
+#                                IxBoxTriList 79, McdTriangleList 78, IxBoxCylinder 77
+#
+#                     THE 10 THAT DO NOT DIFFER ARE THE CONTROL and they are why the 52
+#                     means anything: an assertion mechanism that failed for everything
+#                     would report "all of them differ" and read like a finding.
+#                     MdtBclContactParams, MdtPartitionParams and the rest are pointer-free
+#                     and their assertions PASS.
+#
+#                     WHAT IS AND IS NOT SAID HERE. 1,339 is an EXPOSURE, not a defect
+#                     count: a recovered object that only ever names fields recompiles
+#                     correctly at any pointer width, because the compiler recomputes the
+#                     offset. What is exposed is arithmetic that bakes a layout in. Neither
+#                     number is the other and the tool prints both.
+#
+#                     SO THE HONEST arm64 STATUS IS: it compiles, its symbol set matches,
+#                     truncation is 95% closed, and it would not RUN, for a reason no gate
+#                     was looking at until today. armv7 is unaffected — 32-bit pointers, so
+#                     every layout is the one the recovery encodes, and ptrwidth_check reads
+#                     0 there. wasm32 likewise. THE PORT TARGET THAT WORKS IS 32-BIT.
+
 MdtLOD                RELEASED 2026-08-27 (eighth session), and NOT on the reachability
 #                     argument the seventh session left ready to sign. That argument is
 #                     still true — MdtLODLastPartition's one call site is guarded by

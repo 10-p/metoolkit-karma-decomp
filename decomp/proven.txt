@@ -3841,3 +3841,98 @@ MdtPartition          RELEASED 2026-08-26 (seventh session). Four symbols of the
 #   BLAST RADIUS: all 139 .o BYTE-IDENTICAL after BOTH changes
 #   difftest is unchanged BY CONSTRUCTION — the objects it runs are the same
 #   bytes as the baseline that passed it — and was re-run anyway
+
+# --- 2026-08-26 (seventh session): MdtLOD — the guard cannot be true --------
+#
+# HANDOVER.md said this needed "a measurement or a repair", and recorded that an
+# earlier reachability check had LIED — `ResizeConstraint` is a file-static, so
+# a call from its own object needs no relocation, and grepping relocations for
+# it found nothing and read like an answer. Disassembling settled that: it IS
+# called, from `MdtLODLastPartition`, the one symbol the engine imports.
+#
+# ALL OF THAT IS TRUE AND IT ANSWERED THE WRONG QUESTION. Nobody had asked
+# whether `MdtLODLastPartition` itself can execute. It cannot.
+#
+#   KDynStep.cpp:309   if(po->info[p].rowCount > params->maxMatrixSize)
+#   KDynStep.cpp:310       MdtLODLastPartition(po, params);
+#
+#   KDynStep.cpp:764   KBuildPartitions(..., KAutoDisableLastPartition,
+#                                       &w->partitionParams, ...)
+#   KDynStep.cpp:281   MdtPartitionParams* params = (MdtPartitionParams*)pcbdata;
+#
+# so `params->maxMatrixSize` IS `w->partitionParams.maxMatrixSize`, and
+# `MdtWorldCreate` sets it to
+#
+#   MdtWorld.c:150   (w->partitionParams).maxMatrixSize = 0x7ffffffc;   /* 2,147,483,644 */
+#
+# NOTHING ANYWHERE LOWERS IT, and every route was checked rather than assumed:
+#
+#   engine source, any spelling of SetMaxMatrixSize          0 hits
+#     CONTROL: the same grep for MdtWorldSetGravity/SetEpsilon   2 hits
+#     (a search that cannot find what it is looking for returns 0 too — the
+#      2026-08-24 lesson; the control is what makes the 0 mean something)
+#   engine object files importing MdtWorldSetMaxMatrixSize   0
+#   metoolkit members importing MdtWorldSetMaxMatrixSize     0
+#
+# `rowCount` counts constraint ROWS in one partition, accumulated one constraint
+# at a time by MdtPartInfoAddConstraint. Reaching 2^31-4 needs on the order of
+# 350 million constraints in a single partition. **The comparison cannot be
+# true, so the call cannot execute.** This is a §3a-family result — code UT2004
+# LINKS and cannot reach — not a census zero.
+#
+# AND THE ONE UNPROVEN THING IN THE OBJECT SITS BEHIND EXACTLY THAT BRANCH:
+#   all 17 kd_argslot_ lines are in `ResizeConstraint`, which is static and
+#   called from ONE place, `MdtLODLastPartition` (line 513);
+#   `ComparePenetration` is exported but the engine imports it 0 times — it is
+#   ResizeConstraint's qsort comparator.
+#
+# MEASURED AS WELL AS ARGUED, because the argument alone is what MeAssetDBXMLIO
+# should have taught us to distrust:
+#   * stock engine, test-karma-1, 8 bots, 235 s: a breakpoint on
+#     MdtLODLastPartition fires ZERO times while the control breakpoint on
+#     MdtKeaAddConstraintForces fires more than 100,000 times in the same run.
+#     The instrument works; the function does not run.
+#   * scene_census: MdtLOD is `*NEVER RAN` — 0 of 7 functions — on BOTH
+#     scene_chain and scene_ragdoll, so the substitute gate's verdict for it is
+#     about the LINK and nothing else, and gate_sensitivity agrees at
+#     0.000e+00 ("not demonstrated"). Neither is evidence FOR the object and
+#     neither is claimed as such.
+#
+# SO THIS IS A REACHABILITY RELEASE, the MeFAsset/MeAssetFactory precedent, and
+# it is NOT the IxBoxTriList situation: MdtLODLastPartition's address is never
+# taken, it is in no dispatch table, and nothing measures it diverging. What is
+# shipped is a symbol the linker needs and a body the engine cannot enter.
+#
+# LIMIT, STATED: if a future engine build ever calls MdtWorldSetMaxMatrixSize —
+# it is a public API — this release is void and ResizeConstraint's frame becomes
+# live and unproven. That is one grep, and it is written here so it gets run.
+#
+# NOT RELEASED, AND THE FIRST DRAFT OF THIS ENTRY WAS WRONG ABOUT WHY.
+#
+# It said "all 17 unproven frame slots are in ResizeConstraint". The 17
+# `kd_argslot_` references are — but they are not the detector that holds this
+# object. `stack_guesses` counts a DIFFERENT shape, `(int)aXStack_NN + var`, and
+# MdtLOD has **243 of them, 237 in MdtLODLastPartition itself**:
+#
+#     MdtLODLastPartition  aiStack_90  176      ResizeConstraint  aiStack_2c  6
+#     MdtLODLastPartition  auStack_78   61
+#
+# THIS IS THE DIFFERENCE FROM MeFAsset AND MeAssetFactory, and it is the whole
+# reason those two could be released on reachability and this one cannot:
+#
+#     MeFAsset        stack_guesses 0   argslot_refs 169   IN THE BUILD
+#     MeAssetFactory  stack_guesses 0   argslot_refs 155   IN THE BUILD
+#     MdtLOD          stack_guesses 243 argslot_refs  18   HELD
+#
+# Their frames were MATERIALISED — the reachability argument answered the
+# `nrecon` detector, which fires on a materialised frame, and there was nothing
+# guessed left. MdtLOD's frame was never materialised at all. `proven.txt` only
+# clears `nrecon` (recover.py), and NO object has ever been pushed past
+# `nguess` — the detector whose docstring records IxSphereTriList compiling,
+# passing the substitute gate, and segfaulting on its first real call.
+#
+# Forcing it through for ONE symbol is the McdContact mistake in a second
+# costume. The reachability argument above is sound and is not wasted: it is
+# what will make the release cheap once MdtLODLastPartition's frame is
+# materialised the way MdtPartition's was. **Do that first, then add the release
+# line.** Until then MdtLOD stays out of the build and in the gap.

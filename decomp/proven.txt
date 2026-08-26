@@ -3694,3 +3694,60 @@ MdtPartition          RELEASED 2026-08-26 (seventh session). Four symbols of the
 #                     family member (linked, reimplemented, never called), and its
 #                     evidence is 900 bit-identical calls in scene_chain on an
 #                     object gate_sensitivity rates PROVEN SENSITIVE at 874 m.
+
+# --- 2026-08-26 (seventh session): McdContact — ATTEMPTED, REVERTED, and the -
+#   frame is now READ. The next attempt is cheap; this one shipped a smash.
+#
+# HANDOVER.md said the blocker was "an alloca shift whose rounding is + 0x10
+# rather than + 0xf & ~0xf, which is why ALLOCA_SIZE does not match it". That is
+# TRUE, it was fixed, and IT IS NOT THE WHOLE BLOCKER. Recording both halves.
+#
+# THE ROUNDING HALF — correct, and worth keeping when this is retried.
+# `sub %esp` must leave the stack 16-byte aligned, so where the size is ALREADY
+# a multiple of 16 gcc omits the mask entirely:
+#
+#     7c6: mov 0x18(%ebp),%ebx   ; inMaxContactPointCount
+#     7cc: shl $0x4,%ebx         ; * 16
+#     7d0: add $0x10,%ebx        ; + 16     -> (count+1) * 16
+#     7d3: sub %ebx,%esp         ; the alloca, no rounding needed
+#     7d7: mov %esp,-0x48(%ebp)  ; and THIS is list.link
+#
+# Ghidra spells it `iVar30 = -(inMaxContactPointCount * 0x10 + 0x10);`. Matching
+# it needs the multiplier AND the addend to be multiples of 16 — the exact
+# condition under which the mask is redundant, so the only condition under which
+# its absence means an alloca. One object corpus-wide satisfies that test.
+#
+# THE HALF THAT IS NOT DONE, AND WHY THE OBJECT IS STILL HELD:
+# **GHIDRA'S ANCHOR IS NOT THE BLOCK BASE.** It is the block base PLUS 0x10.
+#
+#     452:  list.link = (McdContactLink *)(auStack_8c + iVar30 + -0x10);
+#     465:  *(undefined1 **)(auStack_8c + iVar30 + -8) = auStack_8c + iVar30;
+#
+# and line 465 is line 458 of the same file written out longhand —
+# `list.link[0].next = list.link + 1` — with `next` at offset 8 and
+# sizeof(McdContactLink) 0x10. Ghidra confirms its own anchor for us.
+#
+# So the group's constants are {-0x10, -8, 0} and THE BLOCK BASE IS THE MINIMUM,
+# not the bare form. Every existing rule assumes the bare form is the base:
+#   * sub_alloca fired on `auStack_8c + iVar30` and allocated 0x10 too high;
+#   * sub_below claimed `+ -0x10` as "argument scratch below the block" and gave
+#     `list.link` a `void *[2]`, which the code then indexes as (count+1)
+#     sixteen-byte structs.
+#
+# THE RESULT COMPILED AND EVERY GATE READ CLEAN. check_frame_bounds reports 0
+# because `list.link[i]` is a VARIABLE index and it only reads constants — the
+# same blind spot recorded for MeAssetFactory. This is the shape HANDOVER.md
+# warns about in those words: it compiles, it passes the substitute scenes, and
+# it corrupts. REVERTED rather than shipped; a detector holding an object back
+# is the detector working, and one symbol does not buy a stack smash.
+#
+# WHAT THE NEXT ATTEMPT NEEDS, stated so it is not re-derived: the alloca model
+# must allow Ghidra's anchor to sit at a CONSTANT OFFSET above the block base,
+# and that offset is the minimum constant over the (anchor, shift) group. Then
+#     list.link            -> kd_alloca + 0
+#     anchor + shift + -8  -> kd_alloca + 8
+#     anchor + shift       -> kd_alloca + 0x10
+# Guard it and measure the blast radius: this rule family regressed five
+# validated objects once already today (see the MdtPartition entry), so the
+# acceptance test is every pre-existing .o byte-identical, and sub_below must
+# stop claiming a site whose value is ASSIGNED rather than dereferenced.

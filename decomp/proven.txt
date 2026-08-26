@@ -3023,3 +3023,47 @@ MeFAsset              real, and the release is about REACHABILITY, not about the
 #   wasm32 132/132 · armv7 132/132, 0 truncations · arm64 6,948 across 82
 #   engine, test-karma-1, 260 s: exit 124, START MATCH, 0 faults
 #   drop-in gap 14 -> 13 members, 68 -> 63 symbols
+
+# --- 2026-08-26: MeAssetFactory is held for the RIGHT reason now -------------
+#
+# Not a release. A detector correction, recorded because the object's stated
+# cause was a symptom and the real one was invisible.
+#
+# MeAssetFactory was held on `extraout_EAX, extraout_ECX`. Following those:
+# `uVar20` is assigned ONLY from extraout_ECX_01..06 and read ONLY at
+#
+#   *(undefined4 *)((int)(kd_alloca_iVar5) + -4) = uVar20;
+#
+# which is the outgoing-argument area again, in a THIRD anchoring — four bytes
+# BELOW an alloca'd block, because alloca lowers esp and the arguments go under
+# it. Fifteen such sites, all at -4, and check_frame_bounds reported ZERO for
+# the object twice over: `kd_alloca_iVar5` is a pointer local, and the reference
+# is spelled `(int)(name) + -4` with the name PARENTHESISED, which REF cannot
+# match because it expects the `+` immediately after the name.
+#
+#   * alloca_pointers() finds the base, including where the assignment is
+#     embedded — `*(int *)(&(*kd_argslot_ffffffa8)) = (kd_alloca_iVar5 =
+#     (char *)alloca((size_t)(count) * 4));`
+#   * a NEGATIVE offset from an alloca'd block needs no size to be a violation:
+#     alloca(n) yields n bytes and -4 is outside them however large n is
+#   * REF_PAREN is a separate pattern rather than a loosening of REF, because
+#     allowing a bare `(x) + 4` there would read `foo(arr) + 4` as a reference
+#     to `arr`. The `(int)` prefix is required.
+#
+#   corpus-wide: MeAssetFactory only, and it was already held — so this shields
+#   nothing that was validated and changes no object in the build. All 132 .o
+#   files stay byte-identical.
+#
+#   three controls, all in-build, all fire, and the in-bounds access does not:
+#     ptr = &local;              *(int *)((int)ptr + -0x10)      -> reported
+#     ptr = (int *)(buf + 0x10); *(int *)((int)ptr + -0x14)      -> reported
+#     p = alloca(n);             *(int *)((int)(p) + -4)         -> reported
+#                                *(int *)((int)(p) + 4)          -> silent
+#
+# WHAT MeAssetFactory ACTUALLY NEEDS is the treatment McdInteractions got —
+# real storage for the area below the anchor — with the anchor being an alloca
+# pointer rather than the address of a local. materialise_pointer_arg_area
+# REFUSES that shape on purpose: its guard is that every assignment to the
+# pointer is the address of a LOCAL, which is what stopped it replacing MeHeap's
+# `MeMemoryAPI.create(capacity * 4)` with a four-byte stack buffer. Extending it
+# to alloca needs that distinction made explicitly, not by loosening the guard.

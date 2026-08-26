@@ -560,8 +560,10 @@ def main():
             os.unlink(o)
             rows.append((archive, base, 'REVIEW',
                          f'{len(outside)} reference(s) outside the local they '
-                         f'name: ' + ', '.join(f'{v}{o_:+#x} of {s}' for
-                                               _, v, o_, s in outside[:2])))
+                         f'name: ' + ', '.join(
+                             f'{v}{o_:+#x} of {s}' if s else
+                             f"{v}{o_:+#x}, below an alloca'd block"
+                             for _, v, o_, s in outside[:2])))
             counts['REVIEW'] += 1
             continue
         lost = GHIDRA_LOST_STORE.findall(src)

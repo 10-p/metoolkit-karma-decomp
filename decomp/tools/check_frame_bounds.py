@@ -33,6 +33,13 @@ DECL = re.compile(r'^\s{2,4}(\w[\w ]*?)\s*(\**)\s*(\w+)\s*(?:\[\s*(\d+)\s*\]'
 # has nothing to say about the frame.
 REF = re.compile(r'(?:\(int\)\s*)?(&)?\b(\w+)\s*\+\s*'
                  r'(-?(?:0x[0-9a-fA-F]+|\d+))\b')
+# `(int)(kd_alloca_iVar5) + -4` — the same thing with the name parenthesised,
+# which REF cannot see because it expects the `+` right after the name. Kept as
+# a separate pattern rather than loosening REF: allowing a bare `(x) + 4` there
+# would read `foo(arr) + 4` as a reference to `arr`. The `(int)` prefix is
+# required, so this only ever matches a byte-offset frame reference.
+REF_PAREN = re.compile(r'\(int\)\s*\(\s*(&)?\s*(\w+)\s*\)\s*\+\s*'
+                       r'(-?(?:0x[0-9a-fA-F]+|\d+))\b')
 
 WIDTH = {
     'char': 1, 'undefined1': 1, 'byte': 1, 'bool': 1, 'MeI8': 1, 'MeU8': 1,
@@ -94,6 +101,14 @@ PTR_TO_LOCAL = re.compile(r'^\s*(\w+)\s*=\s*(?:\([\w ]*\*+\)\s*)?(&)?(\w+)\s*;\s
 PTR_TO_LOCAL_OFF = re.compile(
     r'^\s*(\w+)\s*=\s*(?:\([\w ]*\*+\)\s*)?\(\s*(\w+)\s*\+\s*'
     r'(-?(?:0x[0-9a-fA-F]+|\d+))\s*\)\s*;\s*$')
+# `kd_alloca_iVar5 = (char *)alloca((size_t)(count) * 4)` — a STACK block, so a
+# negative offset from it is below the block and inside the frame. Unlike a heap
+# pointer, that is this checker's business: `alloca(n)` yields n bytes and
+# `(int)p + -4` is outside them however large n is, so no size is needed to say
+# so. MeAssetFactory has fifteen, all carrying a value Ghidra could not account
+# for, and they are the real reason it is held.
+ALLOCA_PTR = re.compile(r'^\s*(?:\w+\s*=\s*)*\(?\s*(\w+)\s*=\s*'
+                        r'(?:\([\w ]*\*+\)\s*)?alloca\s*\(')
 
 
 def pointer_aliases(body, sizes):
@@ -155,6 +170,21 @@ def pointer_aliases(body, sizes):
     return out
 
 
+def alloca_pointers(body):
+    """Locals assigned from alloca(). Any NEGATIVE byte offset from one is out
+    of the block it names, whatever its size — see ALLOCA_PTR."""
+    out = set()
+    for line in body.splitlines():
+        m = ALLOCA_PTR.match(line)
+        if m:
+            out.add(m.group(1))
+        else:
+            m = re.search(r'\((\w+)\s*=\s*(?:\([\w ]*\*+\)\s*)?alloca\s*\(', line)
+            if m:
+                out.add(m.group(1))
+    return out
+
+
 def violations(text):
     """[(function, var, offset, size)] for every out-of-range frame reference.
 
@@ -170,14 +200,21 @@ def violations(text):
         if not sizes:
             continue
         aliases = pointer_aliases(body, sizes)
+        allocas = alloca_pointers(body)
         seen = set()
         for line in body.splitlines():
-            for m in REF.finditer(line):
+            for m in list(REF.finditer(line)) + list(REF_PAREN.finditer(line)):
                 amp, var, off = m.group(1), m.group(2), m.group(3)
                 off = int(off, 16) if off.lower().lstrip('-').startswith('0x') \
                     else int(off, 10)
                 ent = sizes.get(var)
                 if ent is None:
+                    if var in allocas and off < 0 and \
+                            m.group(0).lstrip().startswith('(int)'):
+                        if (var, off) not in seen:
+                            seen.add((var, off))
+                            out.append((name, var, off, 0))
+                        continue
                     # A pointer that was handed the address of a local IS a
                     # frame reference, but only under BYTE arithmetic — the
                     # `(int)` cast. See pointer_aliases.
@@ -225,8 +262,10 @@ def main(argv):
         shipped = build is None or os.path.exists(
             os.path.join(build, fn[:-2] + '.o'))
         for name, var, off, size in rows:
-            print(f'{fn}: {name}: {var} is {size} byte(s), '
-                  f'addressed at {off:+#x}'
+            what = (f"{var} is an alloca'd block, addressed at {off:+#x} — BELOW it"
+                    if size == 0 else
+                    f'{var} is {size} byte(s), addressed at {off:+#x}')
+            print(f'{fn}: {name}: {what}'
                   + ('' if shipped else '   [HELD — detector working]'))
         if shipped:
             in_build += len(rows)

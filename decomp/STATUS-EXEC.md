@@ -82,10 +82,19 @@ than a sweep: some of them would be made *worse* by the same fix.
 Android. It compiles for both, which is not the same thing — and the Android fix above is a
 step towards *correct*, still not towards *tested*.
 
-**2. An error that is harmless on PC and harmful on web.** A quirk in how the decompiler
-writes arithmetic changes the answer only on machines without the PC's spare precision —
-exactly web and Android. Zero difference in two million PC tests, 31% on the target. We
-fixed it in one piece of 153, and **no PC test can see the rest.**
+**2. An error that is harmless on PC and harmful on web — now counted, for the first time.**
+A quirk in how the decompiler writes arithmetic changes the answer only on machines without
+the PC's spare precision — exactly web and Android. Zero difference in two million PC tests,
+31% on the target.
+
+We have now measured how much of it there could be: **575 places, in 51 of the pieces**, of
+which we can rank **59 as most likely** because they match the one case where we have the
+original code to compare against. That is the difference between "we don't know" and "here
+is the list".
+
+**No PC test can settle any of them** — on a PC the error is exactly invisible, so we cannot
+even prove a fix works. The one thing that would settle all 575 at once is running the same
+scene on web and on PC and comparing. That is now the highest-value item on the web side.
 
 Neither is a reason to slow down. Both are reasons the next milestone is *running* on web,
 not rebuilding more.

@@ -48,10 +48,16 @@ way**, all detailed below and all measured rather than guessed:
 1. **Pointer size is load-bearing.** The recovery puns pointers through 4-byte slots
    everywhere. wasm32 and armv7 are 32-bit-pointer targets so it holds; **arm64 is not, and
    401 remaining sites prove it**. Do not treat "arm64 compiles" as "arm64 works" — section 3.
-2. **An arithmetic error that is provably inert on i386 and 31% divergent on yours.**
-   Section 6's hazard box. Every gate on the recovery side is structurally blind to it, so
-   **any wasm-vs-native A/B you build is worth more than it looks** — it measures something
-   nobody else can.
+2. **An arithmetic error that is provably inert on i386 and 31% divergent on yours — and
+   it is now COUNTED: 575 sites across 51 objects, 498 of them in the build.** Section 6's
+   hazard box, and `karma-decomp/tools/assoc_scan.py` on the recovery side.
+   **66 of those sites are index-permuted dot products, 59 in the build** — the exact shape
+   of the one site where original source exists to compare against. Every gate on the
+   recovery side is structurally blind to all of them, and **no gate on that machine can
+   even falsify a repair**, because on x87 the defect is exactly inert. So **any
+   wasm-vs-native A/B you build is worth more than it looks: it is the only instrument that
+   can settle 575 open questions at once**, and it is the single highest-value thing on your
+   side of the project.
 3. **Three shapes of indirect call that x86 corrupts silently and wasm will TRAP on**
    (section 4b). If your first wasm run dies in a call, start there, not in your glue.
 
@@ -884,6 +890,12 @@ older copy of this file, start here.
   arm64 artefact, run it first — `cp -a /tmp/kd_out /tmp/kd_out_pw` then the tool, then
   build from `/tmp/kd_out_pw`. wasm32 and armv7 are unaffected either way, which is the
   whole point of the typedef: `intptr_t` IS `int` at 32-bit pointer width.
+- **THE ASSOCIATION DEFECT IS NOW BOUNDED, AND IT IS YOURS TO SETTLE.**
+  `tools/assoc_scan.py` counts **575 sites across 51 objects, 498 in the build**, with a
+  **59-site shortlist** of index-permuted dot products — the shape of the one site with
+  ground truth. Nothing on the recovery side can decide any of them: on x87 the defect is
+  exactly inert, so a repair there is unfalsifiable. A wasm-vs-native trajectory A/B decides
+  all 575 at once. If you build one thing this cycle, build that.
 - **The remaining 401 are a different defect** — an integer local or struct field holding an
   address, which needs a widened DECLARATION, not a widened cast. Do not blanket-widen: the
   same bucket contains a float and an array index living in pointer-typed slots. armv7

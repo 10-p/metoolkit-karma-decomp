@@ -114,12 +114,35 @@ def is_zero_fill(obj, name, kind, value, size):
     return not any(value <= off < value + n for off in relocs)
 
 
+def corpus_imports(ship_dir):
+    """Every symbol any object in the corpus leaves UNDEFINED.
+
+    This is what decides whether a missing export matters. A shipped GLOBAL that
+    the recovered object does not define is a hole in the interface, but only a
+    hole somebody falls into if something actually imports it — five such
+    symbols exist today and NOTHING references any of them (three CxSmallSort
+    C++ ABI variants, McdBoxGetXYAABB, McdTriangleListGetBoundingBox), so they
+    are warnings. `gDebug` has fifteen importers, so it is an error."""
+    out = set()
+    for fn in sorted(os.listdir(ship_dir)):
+        if not fn.endswith('.o'):
+            continue
+        txt = subprocess.run(['nm', '--undefined-only', os.path.join(ship_dir, fn)],
+                             capture_output=True, text=True).stdout
+        for line in txt.splitlines():
+            parts = line.split()
+            if parts:
+                out.add(parts[-1])
+    return out
+
+
 def main():
     if len(sys.argv) != 3:
         print(__doc__)
         return 2
     rec_dir, ship_dir = sys.argv[1], sys.argv[2]
     errors, warns, checked = [], [], 0
+    imported = corpus_imports(ship_dir)
 
     for fn in sorted(os.listdir(rec_dir)):
         if not fn.endswith('.o'):
@@ -131,7 +154,21 @@ def main():
         r, s = nm_map(rec), nm_map(ship)
         for name, (skind, ssize, svalue) in sorted(s.items()):
             if name not in r:
-                continue                       # absent is a link error, not ours
+                # NOT "a link error, not ours" — that is what this line used to
+                # say, and it is how three renamed exports got past this gate.
+                # A file-wide rename went through KD_MANGLED("gDebugDataFile")
+                # and keaRbdCore_unified started exporting `kd_gDebug`,
+                # `kd_gDebugDataFile` and `kd_gPartition` instead of the names
+                # the shipped object exports. Every per-symbol check below
+                # passed, because it only ever looked at symbols present in
+                # BOTH, and a name that vanished was skipped here.
+                if skind.isupper():
+                    (errors if name in imported else warns).append(
+                        '%s: %s (%s) is EXPORTED by the shipped object and '
+                        'MISSING from the recovered one%s'
+                        % (fn, name, skind,
+                           '' if name in imported else ' — nothing imports it'))
+                continue
             rkind, rsize, _ = r[name]
             if skind == rkind:
                 pass

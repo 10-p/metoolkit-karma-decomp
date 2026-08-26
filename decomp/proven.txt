@@ -3460,3 +3460,42 @@ MeAssetFactory        real, and like MeFAsset the release is about REACHABILITY,
 #   wasm32 137/137 · armv7 137/137, 0 truncations · arm64 7,457 across 87
 #   engine, test-karma-1, 260 s: exit 124, START MATCH, 0 faults
 #   drop-in gap 10 -> 8 members, 45 -> 35 symbols
+
+# --- 2026-08-26: the hole in check_symbol_bindings, closed -------------------
+#
+# Found by walking into it. A file-wide rename went through the payload of
+# KD_MANGLED("gDebugDataFile") — which IS the ELF symbol the unit exports — and
+# `keaRbdCore_unified` began exporting `kd_gDebug`, `kd_gDebugDataFile` and
+# `kd_gPartition` in place of the three names the shipped object exports. The
+# gate whose entire job is "does each recovered object export the same INTERFACE
+# as the shipped one" reported ZERO errors.
+#
+# The reason was one line:
+#
+#     if name not in r:
+#         continue          # absent is a link error, not ours
+#
+# Every per-symbol check below it — binding, section, size — only ever ran on
+# symbols present in BOTH objects, so a name that VANISHED was skipped before
+# any of them looked at it.
+#
+# A missing shipped GLOBAL is now reported, and whether it is an ERROR or a
+# warning is decided by whether anything in the corpus IMPORTS it — which is
+# read, not assumed:
+#
+#   currently missing and imported by nothing (warnings, 5):
+#     CxSmallSort   _ZN11CxSmallSortC2Eii, D1Ev, D2Ev   (C++ ABI variants)
+#     McdBox        McdBoxGetXYAABB
+#     McdTriangleList  McdTriangleListGetBoundingBox
+#   gDebug: 1 metoolkit importer and 14 engine objects  -> ERROR
+#
+# CONTROL, and it is the defect itself rather than a stand-in: take the real
+# keaRbdCore_unified.o, `objcopy --redefine-sym` the three names exactly as the
+# bug did, and run the gate.
+#
+#     [ERROR ] keaRbdCore_unified.o: gDebug (B) is EXPORTED by the shipped
+#              object and MISSING from the recovered one
+#     interface errors : 1        exit 1
+#
+#   137 objects · 0 interface errors · 7 tolerated (the 5 above plus the two
+#   documented .rodata -> .data warnings)

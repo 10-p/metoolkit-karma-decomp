@@ -35,14 +35,14 @@ freebie, the Android NDK), and to integrate the result into the engine's web bui
 
 What exists today:
 
-- **122 recovered objects**, all compiling for i386, wasm32, armv7 *and* arm64 — but see
+- **130 recovered objects**, all compiling for i386, wasm32, armv7 *and* arm64 — but see
   §3's pointer-size section: **arm64 is not trustworthy and wasm32 is**, for the same reason.
 - **The full collision-detection path the game actually uses is recovered and validated** —
   all twelve interaction pairs UT2004 calls, each measured against the shipped original on
   real inputs from a live match. Evidence per object in `karma-decomp/proven.txt`. §6 has
   the census that says "twelve" and why that is the number to plan against.
 - **The whole set already compiles under Emscripten**, and its exported symbol NAMES are
-  **byte-identical to the i386 build for all 122 objects** — nothing added or dropped. So
+  **byte-identical to the i386 build for all 130 objects** — nothing added or dropped. So
   the ABI surface the engine links against does not change between targets, which was the
   thing most likely to turn this into a rewrite. See §4. (Names only: `wasm_check.sh`
   discards the binding letter. That gap let a recovered object export a *global* `putchar`
@@ -645,7 +645,8 @@ python3 tools/dropin_gap.py <engine-build-dir> /tmp/kd_build \
 It walks the symbol closure from the ENGINE's own object files, resolving each symbol
 against the recovered build first and only then against the shipped archives, and prints
 **every shipped member the engine still needs**. That is the distance to the deliverable.
-**20 members, 148 symbols** today, from 27/192 the same week. It is checked against ground
+**15 members, 71 symbols** today, from 20/148 one session ago and 27/192 the week before.
+It is checked against ground
 truth rather than trusted: a real link of the engine with every shipped member deleted
 reports 111 undefined symbols, and the walk predicts all 111.
 
@@ -662,8 +663,8 @@ reports 111 undefined symbols, and the walk predicts all 111.
   (`HANDOVER.md` §3b) — MathEngine's demo viewer, its unused constraint types, its ASE
   loader. They will never be recovered and that is correct.
 
-So "how much of Karma does the web build need" is not 153 objects and not 122. It is the
-122 already recovered plus the 20 in the gap, and the gap is the only number that moves.
+So "how much of Karma does the web build need" is not 153 objects and not 130. It is the
+130 already recovered plus the 15 in the gap, and the gap is the only number that moves.
 
 ### The gap that decides your schedule — REWRITTEN, the old blocker is GONE
 
@@ -680,7 +681,7 @@ machine-code level, not from the link (`HANDOVER.md` §7d).
 | | |
 |---|---|
 | **the deliverable** | UT2004 linking NO shipped `metoolkit` member, on wasm32 and Android, and playing |
-| **recovery-side remainder** | 20 shipped members / 148 symbols, tracked by `tools/dropin_gap.py` (`HANDOVER.md` §3c). Shrinking steadily — 7 members closed in one session |
+| **recovery-side remainder** | 15 shipped members / 71 symbols, tracked by `tools/dropin_gap.py` (`HANDOVER.md` §3c). Shrinking steadily — 8 members and 77 symbols closed in the sixth session, which halved it |
 | **YOUR remainder** | **nothing has ever EXECUTED on wasm32, armv7 or arm64.** Not one instruction. That is the single largest unknown in the whole project |
 
 **Sequence your work as if the physics is coming, because it is.** The right thing to
@@ -725,9 +726,9 @@ device — pointer truncation is a compile-time diagnostic.
 
 | target | compiles | symbols | truncations |
 |---|---|---|---|
-| wasm32 | 122/122 | identical to i386 | — (32-bit) |
-| **armv7** | 122/122 | identical | **0** — a real 32-bit-pointer port |
-| **arm64** | 122/122 | identical | **2,680 across 73 of 122 objects** |
+| wasm32 | 130/130 | identical to i386 | — (32-bit) |
+| **armv7** | 130/130 | identical | **0** — a real 32-bit-pointer port |
+| **arm64** | 130/130 | identical | **6,506 across 80 of 130 objects** |
 
 **arm64 compiling is a lie.** The recovery puns pointers through 4-byte slots, which is
 sound on every 32-bit target and silently truncates on a 64-bit one. The fix is
@@ -749,8 +750,8 @@ where `wasm-ld` and GNU `ld` differ, and §4b already flags COMDAT for `keaMatri
 
 
 The honest one-line summary of the project's state: *the collision layer and the solver are
-both recovered and both run inside the real engine on i386; 20 shipped members remain, and
-nothing has ever executed on any of your three targets.* Do not read 122-of-153 as 80% —
+both recovered and both run inside the real engine on i386; 15 shipped members remain, and
+nothing has ever executed on any of your three targets.* Do not read 130-of-153 as 85% —
 read `tools/dropin_gap.py`.
 
 ---
@@ -820,6 +821,33 @@ Read `karma-decomp/HANDOVER.md` for how the recovery pipeline works, and
 
 A log of the things that would otherwise surprise you, newest first. If you have read an
 older copy of this file, start here.
+
+### 2026-08-26 (sixth session) — 130 objects, and TWO OF YOUR TARGETS WERE NOT COMPILING
+
+- **READ THIS ONE FIRST, because it is about your side.** `test/ptrwidth_check.sh` counts
+  `warning:` lines, and a file clang REJECTS emits none — so armv7 reported **"0 truncation
+  warnings across 0 objects" while two objects were failing outright**, and wasm32's
+  "122/122" in the previous entry was really **121 of 122**. The two are `MeDict`
+  (`unknown type name 'ulong'`) and `MeSimpleFile_linux` (`use of undeclared identifier
+  '__off_t'`) — glibc spellings bionic and emscripten do not extend. Both are now
+  typedef'd in `karma-decomp/include/kd_compat.h`. **If you have an older wasm artefact,
+  it is missing `MeSimpleFile_linux`.**
+- **130 objects**, drop-in gap **15 members / 71 symbols** — halved in one session. wasm32
+  **130/130** with byte-identical exported symbol sets, armv7 **130/130 with 0**
+  truncations, arm64 **6,506 across 80 of 130** (up from 2,680/73, because `MdtBcl` alone
+  adds 3,242 and it is newly in the build).
+- **The asset loader is now recovered end to end and the engine runs on it.**
+  `MeFAsset` (38 symbols), `MeFAssetPart` (21), `MeAssetDBXMLInput_1_0` and
+  `MeAssetDBXMLOutput_1_0` are all in the build. That matters to you because the `.ka` path
+  is what loads vehicles and ragdolls — the whole reason this project exists.
+- **A defect that only the real engine found, for the third time.** A table of function
+  pointers came out addressing a *copy of `.text`* rather than the code, passed all nine
+  offline gates, and segfaulted in `MeXMLElementProcess` before a match started. If you see
+  a fault inside XML parsing on wasm, this is the shape to suspect first.
+- **New instrument you can borrow: `recover.prove_inert`.** It decides whether a value the
+  decompiler could not account for actually reaches anything, by compiling the object with
+  that value set to three different constants and diffing the object files. It is
+  target-agnostic and would work as well under emscripten as under gcc.
 
 ### 2026-08-25 (fifth session, last) — 122 objects, and this file was stale in one big way
 

@@ -54,6 +54,11 @@ def defined_and_undefined(obj):
 
 
 def main():
+    if len(sys.argv) < 3:
+        sys.exit('usage: reachable.py <engine-build-dir> <extracted-members-dir>\n'
+                 '  <extracted-members-dir> is ONE SUBDIRECTORY PER ARCHIVE, each\n'
+                 '  holding that archive\'s `ar x` output — NOT a flat directory of\n'
+                 '  .o files. See tools/README.md for the four lines that build it.')
     build, members = sys.argv[1], sys.argv[2]
 
     # --- index metoolkit: symbol -> defining member, and member -> imports ---
@@ -72,6 +77,17 @@ def main():
             owner[key] = archive
             for s in d:
                 defines.setdefault(s, key)
+
+    # A GATE THAT CANNOT PASS IS NOT A GATE, and this one used to print a
+    # perfectly formatted empty table and exit 0 when pointed at the FLAT
+    # object directory every other tool here takes (karma-lab/allobj). "0
+    # members, 0 reachable, 0 dead" reads like an answer. Refuse instead.
+    if not imports:
+        sys.exit(f'{members}: no archive member found.\n'
+                 f'  This tool wants one SUBDIRECTORY PER ARCHIVE, each holding that\n'
+                 f'  archive\'s `ar x` output. A flat directory of .o files (which is\n'
+                 f'  what karma-lab/allobj is, and what every other tool here takes)\n'
+                 f'  yields nothing and would otherwise be reported as "0 dead".')
 
     # --- seed from the engine's own objects ---
     engine_objs = []

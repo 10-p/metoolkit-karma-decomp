@@ -29,7 +29,7 @@ trust any schedule further down.
 142 recovered objects, all compiling for i386, wasm32, armv7 AND arm64.
   wasm32  142/142, exported symbol NAMES byte-identical to the i386 build
   armv7   142/142, ZERO pointer-truncation diagnostics
-  arm64   142/142, 405 truncations across 44 objects (was 7,771/89) - section 3
+  arm64   142/142, 411 truncations across 45 objects (was 7,771/89) - section 3
 
 The collision layer, the solver and the ENTIRE .ka asset-loading path are recovered
 and the engine has RUN on all three on i386.
@@ -47,9 +47,9 @@ way**, all detailed below and all measured rather than guessed:
 
 1. **Pointer size is load-bearing.** The recovery puns pointers through 4-byte slots
    everywhere. wasm32 and armv7 are 32-bit-pointer targets so it holds; **arm64 is not, and
-   405 remaining sites prove it**. Do not treat "arm64 compiles" as "arm64 works" — section 3.
+   411 remaining sites prove it**. Do not treat "arm64 compiles" as "arm64 works" — section 3.
 2. **An arithmetic error that is provably inert on i386 and 31% divergent on yours — and
-   it is now COUNTED: 575 sites across 51 objects, 498 of them in the build.** Section 6's
+   it is now COUNTED: 575 sites across 51 objects, 529 of them in the build.** Section 6's
    hazard box, and `karma-decomp/tools/assoc_scan.py` on the recovery side.
    **66 of those sites are index-permuted dot products, 59 in the build** — the exact shape
    of the one site where original source exists to compare against. Every gate on the
@@ -687,7 +687,7 @@ python3 tools/dropin_gap.py <engine-build-dir> /tmp/kd_build \
 It walks the symbol closure from the ENGINE's own object files, resolving each symbol
 against the recovered build first and only then against the shipped archives, and prints
 **every shipped member the engine still needs**. That is the distance to the deliverable.
-**3 members, 3 symbols** today — one symbol each — 25 of them in members deliberately not attempted, so the genuinely open work is THREE symbols — from 8/35 earlier the same day, 20/148 one session ago and 27/192 the week before.
+**3 members, 3 symbols** today — one FUNCTION each — 25 of them in members deliberately not attempted, so the genuinely open work is THREE symbols — from 8/35 earlier the same day, 20/148 one session ago and 27/192 the week before.
 It is checked against ground
 truth rather than trusted: a real link of the engine with every shipped member deleted
 reports 111 undefined symbols, and the walk predicts all 111.
@@ -770,7 +770,7 @@ device — pointer truncation is a compile-time diagnostic.
 |---|---|---|---|
 | wasm32 | 142/142 | identical to i386 | — (32-bit) |
 | **armv7** | 142/142 | identical | **0** — a real 32-bit-pointer port |
-| **arm64** | 142/142 | identical | **405 across 44** after `tools/fix_ptrwidth.py`; 6,977 without it |
+| **arm64** | 142/142 | identical | **411 across 45** after `tools/fix_ptrwidth.py`; 6,988 without it |
 
 **arm64 compiling is a lie.** The recovery puns pointers through 4-byte slots, which is
 sound on every 32-bit target and silently truncates on a 64-bit one. The fix is
@@ -859,6 +859,39 @@ Read `karma-decomp/HANDOVER.md` for how the recovery pipeline works, and
 
 ---
 
+## 8b. THE OWNER'S STANDING ORDER, and what it means for you
+
+**2026-08-26.** The project owner set a rule that overrides the older instincts in both
+handovers:
+
+> If you are hesitant about whether to properly decompile — or even implement from scratch —
+> any piece of code, take the safe route and IMPLEMENT it. It is always safer to have built
+> code we turn out not to need, than to have code we thought we did not need which performs
+> woefully incorrectly, because it compiles, the gates do not complain, and then it is much
+> harder to find.
+
+For you this cuts two ways and both matter.
+
+**It is why the recovery side stopped writing off "unreachable" code.** Two examples from
+one session: a `MeMath` function compiled cleanly, was measured **wrong on 100% of inputs**
+and no detector held it; an `McdContact` repair compiled, passed **all nine offline gates**,
+and indexed an eight-byte buffer as `count+1` sixteen-byte structs. Neither would have been
+caught by anything either of us runs today.
+
+**And it is why your wasm-vs-native A/B is not a nice-to-have.** The recovery side's gates
+all run on x87, and there is a whole class of defect — section 6's association hazard, 575
+counted sites — that is *exactly inert* there and 31% divergent on your targets. **Nothing
+on the recovery machine can even falsify a repair for it.** You are the only instrument that
+can. If you build one thing, build that.
+
+**What that means for how you read our claims.** "Bit-identical on three scenes" is a real
+result but it is i386-only, and for some objects the scenes barely execute the code at all
+(`MeMath` runs 1 of 28 functions in `scene_ragdoll`). Where we have stronger evidence we say
+so — a direct A/B against the shipped function over a million random inputs is the strongest
+thing in the project, and `karma-decomp/test/ab_matrix.sh` is the worked example.
+
+---
+
 ## 9. What changed on the recovery side, and what it means for you
 
 A log of the things that would otherwise surprise you, newest first. If you have read an
@@ -886,9 +919,9 @@ older copy of this file, start here.
   `proven.txt` argues why. It matters to you because **wasm and arm are storage-precision
   targets and x87 is not** — see the association defect in section 3.
 - **ARM64 IS ~94% REPAIRED AND THIS IS THE ONE THAT AFFECTS YOU.** Item 3 of section 3 —
-  "arm64 truncates pointers" — went **7,771 truncations across 89 objects to 405 across
-  44** (at 141 objects: 6,981 raw, 405 after the post-pass), and every i386 object is
-  byte-identical, so nothing you already test against moved. Two changes: five dead decompiled fragments dropped, and 3,498 punned
+  "arm64 truncates pointers" — went **7,771 truncations across 89 objects to 411 across
+  45** (at 142 objects: 6,988 raw, 411 after the post-pass), and every i386 object is
+  byte-identical, so nothing you already test against moved. Two changes: five dead decompiled fragments dropped, and 3,516 punned
   casts widened to `kd_iptr` (`intptr_t`), with the site list taken from **clang's own
   `-Wpointer-to-int-cast`** rather than a pattern — nothing here executes arm64 code, so a
   heuristic that is wrong 1% of the time would be invisible.
@@ -898,12 +931,12 @@ older copy of this file, start here.
   build from `/tmp/kd_out_pw`. wasm32 and armv7 are unaffected either way, which is the
   whole point of the typedef: `intptr_t` IS `int` at 32-bit pointer width.
 - **THE ASSOCIATION DEFECT IS NOW BOUNDED, AND IT IS YOURS TO SETTLE.**
-  `tools/assoc_scan.py` counts **575 sites across 51 objects, 498 in the build**, with a
+  `tools/assoc_scan.py` counts **575 sites across 51 objects, 529 in the build**, with a
   **59-site shortlist** of index-permuted dot products — the shape of the one site with
   ground truth. Nothing on the recovery side can decide any of them: on x87 the defect is
   exactly inert, so a repair there is unfalsifiable. A wasm-vs-native trajectory A/B decides
   all 575 at once. If you build one thing this cycle, build that.
-- **The remaining 405 are a different defect** — an integer local or struct field holding an
+- **The remaining 411 are a different defect** — an integer local or struct field holding an
   address, which needs a widened DECLARATION, not a widened cast. Do not blanket-widen: the
   same bucket contains a float and an array index living in pointer-typed slots. armv7
   stays at **0** truncations, wasm32 at **140/140** with byte-identical exported symbol sets.

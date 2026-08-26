@@ -970,10 +970,13 @@ def materialise_relocated_data(obj, text, renames=None, declared=''):
         return '', 0
 
     # Sections a relocation points INTO (the string pools) have to come first.
+    # `.text` is not one: a relocation into it is resolved to the function that
+    # lives at the offset, so copying its bytes would emit a large dead array
+    # and invite exactly the mistake the loop below now refuses to make.
     targets = {}
     for name, (lo, hi) in wanted.items():
         for sym in relocs[name].values():
-            if sym.startswith('.'):
+            if sym.startswith('.') and not sym.startswith('.text'):
                 targets[sym] = True
 
     externs = set()
@@ -993,6 +996,22 @@ def materialise_relocated_data(obj, text, renames=None, declared=''):
             sym = rel.get(off)
             if sym is None:
                 words.append('(void *)0x%xu' % raw)
+            elif sym.startswith('.text'):
+                # A RELOCATION AGAINST .text IS A FUNCTION POINTER, not an
+                # offset into a pool of bytes. Emitting it as the latter is what
+                # `MeAssetDBXMLInput_1_0` did: handler[0].fn came out as
+                # `&kd_relstr_text[0x1310]`, the engine loaded the table, called
+                # through it, and died in a copy of .text that is neither
+                # executable nor at that address. §7c's defect for the THIRD
+                # time, and again in an object a detector had been holding back.
+                fn = _function_at(obj, sym, raw)
+                if fn:
+                    words.append('(void *)&%s' % renames.get(fn, fn))
+                else:
+                    # Loud beats silent: an undeclared name fails the compile and
+                    # the object goes back to review. A byte-pool address would
+                    # link, pass every gate here, and segfault on a real `.ka`.
+                    words.append('(void *)&kd_unresolved_text_0x%x' % raw)
             elif sym.startswith('.'):
                 t = 'kd_relstr' + re.sub(r'\W', '_', sym)
                 words.append('(void *)&%s[0x%x]' % (t, raw))
@@ -1052,6 +1071,38 @@ def _corpus_defines(obj, sym):
 
 
 _corpus_defines.cache = {}
+
+
+def _function_at(obj, section, off):
+    """The FUNC symbol defined at `section + off`, or None.
+
+    A relocation against `.text` in a data section names a FUNCTION, and for a
+    file-static one there is no symbol in the relocation to name it with — the
+    relocation says `.text` and puts the function's offset in the addend. So the
+    offset has to be looked up in the symbol table, which is where the static's
+    name actually is."""
+    cache = _function_at.cache
+    if obj not in cache:
+        table = {}
+        sects = {}
+        for line in subprocess.run(['readelf', '-SW', obj], capture_output=True,
+                                   text=True).stdout.splitlines():
+            m = re.match(r'\s*\[\s*(\d+)\]\s+(\S+)', line)
+            if m and m.group(2) != 'Name':
+                sects[m.group(1)] = m.group(2)
+        for line in subprocess.run(['readelf', '-sW', obj], capture_output=True,
+                                   text=True).stdout.splitlines():
+            p = line.split()
+            if len(p) < 8 or p[3] != 'FUNC':
+                continue
+            sec = sects.get(p[6])
+            if sec:
+                table[(sec, int(p[1], 16))] = p[7]
+        cache[obj] = table
+    return cache[obj].get((section, off))
+
+
+_function_at.cache = {}
 
 
 def _section_relocations(obj):
@@ -2247,6 +2298,58 @@ def _printf_arity(fmt):
         pos = m.end()
 
 
+# `pcVar7 = "line %d, char %d: expected %d strings, found %d\n";`
+_FORMAT_ASSIGN = r'(?m)^[ \t]*%s[ \t]*=[ \t]*("(?:[^"\\]|\\.)*")[ \t]*;[ \t]*$'
+# any assignment at all to the same name, literal or not
+_ANY_ASSIGN = r'(?m)^[ \t]*%s[ \t]*=[^=]'
+
+
+def _resolve_arity(region, arg):
+    """How many arguments the format consumes, following a variable if it is one.
+
+    Ghidra hoists a format out of the call when one call site serves several
+    strings:
+
+        if (iVar1 == 1)      __format = " type=\"dynamics_only\"";
+        else if (iVar1 == 2) __format = " type=\"geometry_only\"";
+        else                 __format = " type=\"dynamics_and_geometry\"";
+        iVar1 = sprintf(buffer + iVar3,__format,iVar3,iVar3);
+
+    so `fix_printf_extra_args` saw a name where it wanted a literal and left the
+    two padding words alone.
+
+    EVERY ASSIGNMENT IN THE FUNCTION HAS TO BE A LITERAL, and the arity taken is
+    the LARGEST of them. Both halves are load-bearing, and MeXMLParser is why:
+
+        pcVar7 = "line %d, char %d: expected %d strings, found %d\n";   4
+        ...
+        pcVar7 = "line %d, char %d: string data greater than max of %d\n";  3
+        goto LAB_000108fc;
+        ...
+      LAB_000108fc:
+        sprintf(file->error,pcVar7,iVar1,iVar2,uVar8,puVar9,pcVar4,pcVar6);
+
+    Two definitions reach that call with DIFFERENT arities. Taking the nearer
+    one textually — which is what a reaching-definition guess would do — gives
+    3, and dropping three arguments would drop `puVar9`, which the other path
+    reads. The largest is the only safe answer: nothing beyond it is read on any
+    path. And `pcVar7 = x;` earlier in the same function is a non-literal
+    definition whose arity cannot be bounded at all, so that site is declined
+    outright rather than guessed at."""
+    a = arg.strip()
+    if a.startswith('"'):
+        return _printf_arity(a)
+    if not re.match(r'^[A-Za-z_]\w*$', a):
+        return None
+    lits = [m.group(1) for m in re.finditer(_FORMAT_ASSIGN % re.escape(a), region)]
+    if not lits:
+        return None
+    if len(re.findall(_ANY_ASSIGN % re.escape(a), region)) != len(lits):
+        return None                     # a definition this cannot bound
+    arities = [_printf_arity(l) for l in lits]
+    return None if any(x is None for x in arities) else max(arities)
+
+
 def fix_printf_extra_args(text):
     r"""`sprintf(buf, "%s", name, extraout_EDX)` — gcc's padding, not an argument.
 
@@ -2262,16 +2365,23 @@ def fix_printf_extra_args(text):
     the rest cannot change behaviour: a variadic argument the callee never
     fetches is not observable.
 
-    THREE GUARDS, because this rewrites calls in objects that are already
+    FOUR GUARDS, because this rewrites calls in objects that are already
     validated:
 
-      * the format must be a literal and every conversion in it must be one this
-        can classify. `%n` writes through its argument and is refused outright;
-        `%*d` consumes an extra int for the width and is counted.
+      * the format must resolve to a literal and every conversion in it must be
+        one this can classify. `%n` writes through its argument and is refused
+        outright; `%*d` consumes an extra int for the width and is counted.
+        Where the format is a VARIABLE, `_resolve_arity` requires every
+        assignment to it in the function to be a literal and takes the LARGEST
+        arity among them — nothing beyond that is read on any path.
       * only arguments with NO side effect are dropped — a bare identifier, a
         constant or a simple member access. Anything containing a call is left,
         and with it the whole site.
       * arguments are dropped from the END only, never reordered.
+      * at most THREE are dropped. gcc aligns the pushed block to 16 bytes, so
+        the filler is 0-3 words and nothing here can legitimately ask for more.
+        This is what bounds the damage if a resolved-through-a-variable format
+        is ever the wrong one.
 
     156 sites across 7 objects, 6 of them held out of the build. The one that is
     in it, McdMessage, has a single site."""
@@ -2293,11 +2403,13 @@ def fix_printf_extra_args(text):
                 pos = m.end()
                 if len(args) <= fi:
                     continue
-                want = _printf_arity(args[fi])
+                want = _resolve_arity(region, args[fi])
                 if want is None or len(args) <= fi + 1 + want:
                     continue
                 keep = args[:fi + 1 + want]
                 drop = args[fi + 1 + want:]
+                if len(drop) > 3:
+                    continue                # more than gcc's alignment can explain
                 if any('(' in d or '=' in d or '++' in d or '--' in d for d in drop):
                     continue                # a side effect; leave the site alone
                 new_call = region[:op + 1] + ','.join(a.strip() for a in keep) \
@@ -2514,6 +2626,73 @@ def drop_padding_arg_stores(text):
             region = '\n'.join(l for j, l in enumerate(lines) if j not in drop)
         out.append(region)
     return ''.join(out), n
+
+
+def _compat_variadic_arity():
+    """{macro name: named-parameter count} from kd_compat.h's variadic macros.
+
+    That header maps gcc 3.2's glibc spellings back to portable ones:
+
+        #define __strtod_internal(s, e, ...)     strtod((s), (e))
+
+    The `...` is there because Ghidra over-counts these call sites — the same
+    alignment padding as everywhere else — and the macro discards the surplus at
+    compile time. Reading the NAMED parameter count back out of the header lets
+    the surplus be dropped in the SOURCE instead, which is what the detector
+    reads. Deriving it here rather than tabulating it keeps the two in step."""
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    path = os.path.join(root, 'include', 'kd_compat.h')
+    out = {}
+    try:
+        text = open(path, errors='ignore').read()
+    except OSError:
+        return out
+    for m in re.finditer(r'^#define\s+(\w+)\(([^)]*\.\.\.)\)', text, re.M):
+        named = [p.strip() for p in m.group(2).split(',') if p.strip() != '...']
+        out[m.group(1)] = len(named)
+    return out
+
+
+def fix_compat_macro_extra_args(text):
+    r"""`__strtod_internal(x,&c,0,extraout_EDX)` — one more padding push.
+
+    `kd_compat.h` already declares these variadic and throws the surplus away,
+    so this changes nothing a compiler can see. What it changes is what the
+    RECOVERED SOURCE says: with the argument still written down, `extraout_EDX`
+    is read, `recover.py`'s live_unmodelled fires, and the object is held out of
+    the build for a value that provably reaches nothing. MeXMLParser is twelve
+    symbols of the drop-in gap held on exactly that.
+
+    The arity comes from the macro's own named-parameter list, and the same two
+    guards as the printf rule apply: side-effect-free arguments only, dropped
+    from the end, and never more than gcc's three words of alignment filler."""
+    arity = _compat_variadic_arity()
+    if not arity:
+        return text, 0
+    n = 0
+    for name, keep_n in arity.items():
+        pos = 0
+        while True:
+            m = re.compile(r'(?<![\w.>])' + re.escape(name) + r'[ \t\n]*\(').search(text, pos)
+            if not m:
+                break
+            op = m.end() - 1
+            end = _match_bracket(text, op)
+            if end is None:
+                pos = m.end()
+                break
+            args = _split_args(text[op + 1:end - 1])
+            pos = m.end()
+            if len(args) <= keep_n or len(args) - keep_n > 3:
+                continue
+            drop = args[keep_n:]
+            if any('(' in d or '=' in d or '++' in d or '--' in d for d in drop):
+                continue
+            text = (text[:op + 1] + ','.join(a.strip() for a in args[:keep_n])
+                    + text[end - 1:])
+            n += len(drop)
+            pos = op + 1
+    return text, n
 
 
 def fix_undeclared_underscore_local(text):
@@ -4204,10 +4383,38 @@ def fix_too_many_arguments(line, diag, ctx):
             + line[close - 1:])
 
 
+def _skip_literal(s, i):
+    """Index just past the string or character literal starting at `s[i]`.
+
+    A comma inside a literal is not an argument separator, and until this
+    existed both splitters believed it was:
+
+        sprintf(file->error,"line %d, char %d: expected %d MeReals, found %d\n",
+                iVar1,iVar2,action->max,uVar8,puVar6,puVar6)
+
+    came back as ten arguments with the format in three pieces, so
+    fix_printf_extra_args saw something that was not a literal and declined —
+    silently, and for every format in the corpus that contains a comma. That is
+    most of them. The rule looked right and did nothing."""
+    q, j = s[i], i + 1
+    while j < len(s):
+        if s[j] == '\\':
+            j += 2
+            continue
+        if s[j] == q:
+            return j + 1
+        j += 1
+    return len(s)
+
+
 def _split_arguments(s):
-    """Top-level comma split, ignoring commas inside brackets."""
-    out, depth, start = [], 0, 0
-    for i, ch in enumerate(s):
+    """Top-level comma split, ignoring commas inside brackets and literals."""
+    out, depth, start, i = [], 0, 0, 0
+    while i < len(s):
+        ch = s[i]
+        if ch in '"\'':
+            i = _skip_literal(s, i)
+            continue
         if ch in _OPEN:
             depth += 1
         elif ch in _CLOSE:
@@ -4215,6 +4422,7 @@ def _split_arguments(s):
         elif ch == ',' and depth == 0:
             out.append(s[start:i])
             start = i + 1
+        i += 1
     out.append(s[start:])
     return out
 
@@ -4789,8 +4997,14 @@ def _arg_index(arglist, name):
 
 
 def _split_args(s):
-    args, depth, cur = [], 0, ''
-    for ch in s:
+    args, depth, cur, i = [], 0, '', 0
+    while i < len(s):
+        ch = s[i]
+        if ch in '"\'':                       # a comma in a literal is not a comma
+            j = _skip_literal(s, i)
+            cur += s[i:j]
+            i = j
+            continue
         if ch in '([':
             depth += 1
         elif ch in ')]':
@@ -4799,6 +5013,7 @@ def _split_args(s):
             args.append(cur); cur = ''
         else:
             cur += ch
+        i += 1
     args.append(cur)
     return args
 
@@ -5324,6 +5539,7 @@ def main():
     body_text, n_vptr = fix_vptr_store(args.object, body_text, _declared,
                                        read_ghidra_locals(args.input), args.protos)
     body_text, n_pfmt = fix_printf_extra_args(body_text)
+    body_text, n_cmac = fix_compat_macro_extra_args(body_text)
     body_text, n_uscore = fix_undeclared_underscore_local(body_text)
     body_text, n_uninit = initialise_unmodelled_locals(body_text)
     body_text, n_mangled = resolve_mangled_call_names(
@@ -5451,6 +5667,8 @@ def main():
         print(f'  {n_pfmt} padding word(s) dropped from variadic call(s)')
     if n_pad:
         print(f'  {n_pad} padding word(s) dropped from an outgoing argument area')
+    if n_cmac:
+        print(f'  {n_cmac} padding word(s) dropped from a kd_compat.h call')
     if n_rel:
         print(f'  {n_rel} relocated data block(s) rebuilt with their pointers')
     if args.cflag:

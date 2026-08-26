@@ -32,6 +32,13 @@
 # through the same compiler at 32-bit pointer width is clean, so this is pointer
 # WIDTH and not a coding style the diagnostic happens to dislike.
 #
+# AND A ZERO IS ONLY A MEASUREMENT OVER WHAT COMPILED. A file clang rejects
+# emits no warnings either, so until the DID NOT COMPILE line below existed,
+# armv7 read "0 truncation warnings across 0 objects" while two objects were not
+# being compiled at all — MeDict on `ulong` and MeSimpleFile_linux on `__off_t`,
+# both glibc spellings bionic does not extend. Both are fixed in kd_compat.h;
+# the line stays, because that is the failure this gate is most exposed to.
+#
 # Do NOT "fix" this by adding -Wno-int-to-pointer-cast. The fix is at the
 # generator: Ghidra's undefined4 slots have to become pointer-width. §6b.
 set -euo pipefail
@@ -58,16 +65,28 @@ fi
 
 status=0
 for tc in armv7a-linux-androideabi21-clang aarch64-linux-android21-clang; do
-    tot=0; objs=0; worst=""
+    tot=0; objs=0; worst=""; broke=0; brokelist=""
     for c in "$SRCDIR"/*.c; do
         b=$(basename "$c" .c)
         [ -f "$BUILD/$b.o" ] || continue      # only what is actually in the build
-        n=$("$NDK/$tc" $CF -c -o /dev/null "$c" 2>&1 | grep -c "warning:" || true)
+        out=$("$NDK/$tc" $CF -c -o /dev/null "$c" 2>&1) || {
+            broke=$((broke + 1)); brokelist="$brokelist $b"; }
+        n=$(printf '%s' "$out" | grep -c "warning:" || true)
         tot=$((tot + n))
         if [ "$n" -gt 0 ]; then objs=$((objs + 1)); worst="$worst $b:$n"; fi
     done
     printf "  %-34s %6d truncation warning(s) across %d object(s)\n" \
            "${tc%%-*}" "$tot" "$objs"
+    # A FILE THAT DOES NOT COMPILE EMITS NO WARNINGS, so without this line a
+    # target that fails on every object reads exactly like a clean one. It did:
+    # armv7 reported "0 across 0" for months while MeDict and MeSimpleFile_linux
+    # were failing outright on `ulong` and `__off_t`. Counting warnings is only
+    # a measurement over the files that got as far as being warned about.
+    if [ "$broke" -gt 0 ]; then
+        printf "  %-34s %6d object(s) DID NOT COMPILE -- not measured:%s\n" \
+               "" "$broke" "$brokelist"
+        status=1
+    fi
     case "$tc" in
       armv7a*) [ "$tot" -eq 0 ] || { echo "  !! armv7 is a 32-bit-pointer target and MUST be 0."
                                      echo "     A non-zero here means the diagnostic is firing on"

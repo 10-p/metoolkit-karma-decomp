@@ -2632,3 +2632,96 @@ keaLCP_new            RELEASED 2026-08-25 (fifth session). Bit-identical on all 
 #   difftest at the documented baseline · frame bounds 0 · bindings 0 errors
 #   engine, test-karma-1, 200 s: ran to the timeout, 0 SIGSEGV, START MATCH
 #   drop-in gap 21 -> 20 members, 161 -> 148 symbols
+
+# --- 2026-08-26 (sixth session): asking the compiler whether a value matters ---
+#
+# `live_unmodelled` reports that the recovery READS a value Ghidra could not
+# account for. That is the right thing to report and the wrong question to stop
+# on: Ghidra also invents such a read where the machine pushed a live register
+# as stack ALIGNMENT PADDING, or where it merged a dead definition into a local
+# that is reassigned before anything looks at it. Eight members of the drop-in
+# gap were held on that, and no regex can tell the two apart — it needs to know
+# which definition reaches which read, on every path.
+#
+# THE COMPILER ALREADY KNOWS. recover.prove_inert gives the value a defined
+# constant, compiles, and does it again with a different one. Byte-identical
+# objects mean the emitted code does not depend on the value, which is exactly
+# what live_unmodelled is trying to decide — decided by GCC's dataflow instead
+# of by a pattern. Three probes, not two, because two arbitrary constants can
+# coincide: `if (v)` compiles the same for 1 and 3 but not for 0. The set is
+# {0, -1, 0x5a5a5a5a}.
+#
+#   controls, before believing any of it (test the test):
+#     dead    v = extraout_EAX; v = 7; sink(v);            -> INERT   (right)
+#     live    v = extraout_EAX; if (c) v = 7; sink(v);     -> held    (right)
+#     subtle  v = extraout_EAX; sink(v ? 1 : 2);           -> held    (right)
+#     arr     MeReal (*unaff_ESI)[3];  (no typeable decl)  -> held    (right)
+#
+#   PROVEN INERT and initialised, 5 values in 4 objects:
+#     MeAssetDBXMLInput_1_0  extraout_EDX
+#     MeAssetDBXMLOutput_1_0 extraout_ECX, extraout_EDX
+#     keaDebug               extraout_EDX
+#     keaPrintBasicTypes     extraout_EDX
+#
+# AND THE FOURTH TIME A DETECTOR TURNED OUT TO BE SHIELDING SOMETHING ELSE.
+# MeAssetDBXMLInput_1_0 passed all nine gates and killed the engine:
+#
+#     Signal: SIGSEGV
+#     [3] ut2004-subst126.bin(+0xba8e6d)          <- no symbol: not a function
+#     [4] ut2004-subst126.bin(MeXMLElementProcess+0x232)
+#     [5] ut2004-subst126.bin(+0xa97f9d)          <- Handle_Geometry_1_0+0x7d
+#
+#   with the STOCK control on the same map, same URL, reaching START MATCH and
+#   running to the timeout with 0 faults. The defect is §7c's for the THIRD
+#   time. materialise_relocated_data resolved EVERY section-relative relocation
+#   to an offset in a raw byte copy of that section, which is right for a string
+#   pool and wrong for `.text`:
+#
+#     rodata+0xc8   R_386_32  .text   addend 0x1310
+#     .text+0x1310  =  Handle_GeometryPrimitive_1_0   (a file-static, `t`)
+#     emitted as    (void *)&kd_relstr_text[0x1310]   <- a const array of bytes
+#
+#   A relocation against .text is a FUNCTION POINTER. For a file-static there is
+#   no symbol in the relocation to name it with — the relocation says `.text`
+#   and the addend is the offset — so the name has to come from the symbol
+#   table. _function_at does that; an offset that resolves to no function now
+#   emits an undeclared name, because a compile error is loud and a byte-pool
+#   address links, passes every gate here, and segfaults on a real `.ka`.
+#
+#     engine, test-karma-1, 260 s, -SOFTWARERENDERER
+#       before   SIGSEGV in MeXMLElementProcess, never reached START MATCH
+#       after    exit 124 (ran to the timeout), START MATCH reached, 0 faults
+#       stock    exit 124, START MATCH reached, 0 faults  -- the control
+#     one object in the corpus had the shape, and it was the one just released
+#
+# THE SPLITTERS WERE NOT STRING-AWARE, so fix_printf_extra_args had been
+# declining silently on every format containing a comma — which is most of them:
+#
+#     sprintf(file->error,"line %d, char %d: expected %d MeReals, found %d\n",...)
+#     -> ten arguments with the format in three pieces, so the rule saw
+#        something that was not a literal and left the site alone
+#
+# _resolve_arity then follows a format held in a VARIABLE, and both of its
+# guards are load-bearing. MeXMLParser has one call reached by two definitions
+# with DIFFERENT arities (4 and 3): taking the nearer one textually would drop
+# three arguments and lose `puVar9`, which the other path reads. It takes the
+# LARGEST arity over all literal definitions, and declines outright where any
+# definition is not a literal — that site is declined, and the object stays out.
+#
+# AND ARMV7 WAS NEVER COMPILING. ptrwidth_check.sh counts warnings, and a file
+# clang REJECTS emits none, so "0 truncation warnings across 0 objects" was
+# indistinguishable from a target that builds nothing. Two objects were failing
+# outright on glibc spellings bionic does not extend — MeDict on `ulong`,
+# MeSimpleFile_linux on `__off_t`. Both are now in kd_compat.h, and the gate
+# reports DID NOT COMPILE separately, with a broken-input control that makes it
+# exit 1. HANDOVER.md §12 item 6's "armv7 DONE, 122/122" was wrong; so was
+# "wasm32 122/122" — the baseline measures 121 compiled and 1 failed.
+#
+#   wasm32   121/122 -> 126/126, exported symbol sets identical
+#   armv7    124/126 -> 126/126, 0 truncation warnings
+#   arm64    124/126 -> 126/126, 3025 truncations across 77 (was 2680/73 at 122)
+#
+#   126 objects · 126/126 clean on three scenes · frame bounds 0 · bindings 0
+#   difftest byte-identical to the documented baseline (10 PASS, 4 known FAIL)
+#   vptr_ab bit-identical with both wrong controls seen · census/sensitivity ok
+#   drop-in gap 20 -> 18 members, 148 -> 145 symbols

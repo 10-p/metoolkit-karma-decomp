@@ -133,6 +133,94 @@ RELEASED_UNMODELLED = {
 }
 
 
+# A declaration of a value Ghidra could not account for, with its type in front:
+#   `ushort *extraout_EDX;`  `undefined4 extraout_ECX;`  `McdContact *extraout_EAX;`
+# The name must END the declarator, so `MeReal (*unaff_ESI) [3];` does not match
+# and the object stays in review — which is the right answer for a shape whose
+# type this cannot rebuild.
+UNMODELLED_DECL = r'(?m)^([ \t]*)((?:const |struct |unsigned |signed )*[A-Za-z_]\w*[ \t*]+)%s[ \t]*;[ \t]*$'
+
+# Three constants, not one. Two arbitrary values can coincide — `if (v)` folds
+# the same way for 1 and 3 — so the set includes 0, which folds the OTHER way
+# for every predicate, and -1, which is all-bits-set.
+INERT_PROBES = ('0', '-1', '0x5a5a5a5a')
+
+
+def initialise_unmodelled(src, names):
+    """Give each named value a defined one, once it is proven not to matter."""
+    for name in names:
+        src = re.sub(UNMODELLED_DECL % re.escape(name),
+                     lambda m: f'{m.group(1)}{m.group(2)}{name} = '
+                               f'({m.group(2).strip()})0;', src)
+    return src
+
+
+def prove_inert(csrc, src, names, cflags, build_dir, base):
+    """Does the emitted code depend on the value? Ask the compiler.
+
+    `live_unmodelled` reports that the recovery READS a value Ghidra could not
+    account for. That is the right thing to report and the wrong question to
+    stop on, because Ghidra also invents such a read where the machine simply
+    pushed a live register as stack padding, or where it merged a dead
+    definition into a local that is reassigned before anything looks at it.
+    `MeXMLParser` is twelve symbols of the drop-in gap held on
+
+        puVar6 = extraout_EDX;                  <- the value
+        ...  __strtod_internal(c,&d);           <- the only consumer, now gone
+        puVar6 = (ushort *)(int)*pcVar7;        <- overwritten before any read
+
+    and a regex cannot tell that from a value that matters: it needs to know
+    which definition reaches which read, on every path.
+
+    THE COMPILER ALREADY KNOWS. Give the value a defined constant, compile, and
+    do it again with a different constant. If the two objects are BYTE-IDENTICAL
+    the emitted code does not depend on the value, so nothing the value could
+    have been would change what the object does — which is exactly the property
+    `live_unmodelled` is trying to decide, decided by GCC's own dataflow instead
+    of by a pattern.
+
+    THREE probes rather than two, because two arbitrary constants can coincide.
+    `if (v)` compiles the same for 1 and for 3; it does not for 0. The set is
+    {0, -1, 0x5a5a5a5a}: a value that is false, a value that is all-bits-set and
+    a value that is neither.
+
+    THIS IS A RELEASE, so it is worth being clear about what it does NOT prove.
+    It proves the value is inert *in this object*, not that the object is
+    correct: `MeAssetDBXMLIO` passed every gate here and still killed engine
+    init, because a detector had been shielding an unrelated defect
+    (HANDOVER.md §3c). Anything on the `.ka` path still has to be run in the
+    engine before it counts.
+
+    Returns True when every name is inert, or the list of names that are not.
+    """
+    probe_src, missing = src, []
+    for name in names:
+        if not re.search(UNMODELLED_DECL % re.escape(name), src):
+            missing.append(name)                  # no declaration this can type
+    if missing:
+        return missing
+    objs, tmp_c = [], os.path.join(build_dir, base + '.inert.c')
+    for k, probe in enumerate(INERT_PROBES):
+        text = src
+        for name in names:
+            text = re.sub(UNMODELLED_DECL % re.escape(name),
+                          lambda m: f'{m.group(1)}{m.group(2)}{name} = '
+                                    f'({m.group(2).strip()})({probe});', text)
+        open(tmp_c, 'w').write(text)
+        tmp_o = os.path.join(build_dir, f'{base}.inert{k}.o')
+        run(['gcc'] + cflags + ['-c', '-o', tmp_o, tmp_c])
+        if not os.path.exists(tmp_o):
+            for p in objs + [tmp_c]:
+                if os.path.exists(p):
+                    os.unlink(p)
+            return names                          # a probe that will not build
+        objs.append(tmp_o)
+    same = all(open(objs[0], 'rb').read() == open(o, 'rb').read() for o in objs[1:])
+    for p in objs + [tmp_c]:
+        os.unlink(p)
+    return True if same else names
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--dump-dir', required=True, help='Ghidra .c dumps')
@@ -377,6 +465,7 @@ def main():
                 proven.add(line.split()[0])
 
     rows, counts = [], {'OK': 0, 'TODO': 0, 'REVIEW': 0, 'FAIL': 0, 'SKIP': 0}
+    inert_notes = {}
     for obj in objs:
         base = os.path.basename(obj)[:-2]
         archive = os.path.basename(os.path.dirname(obj))
@@ -500,6 +589,23 @@ def main():
                       file=sys.stderr)
         unmodelled = [u for u in unmodelled if u not in released]
         if unmodelled:
+            # ASK THE COMPILER WHETHER THE VALUE REACHES ANYTHING. §8.
+            proof = prove_inert(csrc, src, unmodelled, cflags, args.build_dir, base)
+            if proof is True:
+                src = initialise_unmodelled(src, unmodelled)
+                open(csrc, 'w').write(src)
+                r = run(['gcc'] + cflags + ['-c', '-o', o, csrc])
+                if not os.path.exists(o):
+                    rows.append((archive, base, 'REVIEW',
+                                 'reads a value Ghidra could not account for: '
+                                 + ', '.join(unmodelled[:3])))
+                    counts['REVIEW'] += 1
+                    continue
+                inert_notes[base] = unmodelled
+                unmodelled = []
+            elif proof:
+                unmodelled = proof
+        if unmodelled:
             os.unlink(o)
             rows.append((archive, base, 'REVIEW',
                          'reads a value Ghidra could not account for: '
@@ -566,6 +672,13 @@ def main():
     ok = counts['OK'] + counts['TODO']
     if total - counts['SKIP']:
         print(f'  -> {100.0*ok/(total-counts["SKIP"]):.1f}% of attempted objects compile')
+    if inert_notes:
+        n = sum(len(v) for v in inert_notes.values())
+        print(f'\n  {n} unmodelled value(s) in {len(inert_notes)} object(s) PROVEN INERT '
+              f'and initialised — the emitted code is byte-identical for all of '
+              f'{", ".join(INERT_PROBES)}:')
+        for base in sorted(inert_notes):
+            print(f'    {base:<34} {", ".join(inert_notes[base])}')
     return 0
 
 

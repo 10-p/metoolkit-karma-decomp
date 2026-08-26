@@ -106,11 +106,24 @@ typedef int (*__compar_fn_t)(const void *, const void *);
 #define builtin_strcpy(d, s)             strcpy((d), (s))
 #define builtin_memcpy(d, s, n)          memcpy((d), (s), (n))
 
+/* Ghidra recovers `lseek`'s return under glibc's INTERNAL spelling, which is
+   the one gcc 3.2 saw in the header. It is `off_t` everywhere that matters and
+   exists nowhere but glibc, so MeSimpleFile_linux failed to compile for wasm32
+   AND for both Android targets — the one object that did so on all three. */
+typedef off_t __off_t;
+
 /* ---- Ghidra integer vocabulary ---------------------------------------- */
 typedef unsigned int        uint;
 typedef unsigned short      ushort;
 typedef unsigned char       byte;
 typedef signed char         sbyte;
+/* `ulong` is a glibc courtesy (sys/types.h, __USE_MISC), not a C type, and
+   bionic does not extend it. MeDict's whole interface is declared in terms of
+   it, so on Android the object did not compile at all — and `ptrwidth_check.sh`
+   read that as ZERO pointer truncations, because a file that fails to compile
+   emits no warnings. Both compilers accept the redefinition where the system
+   already has it; it is the same type on every target here. */
+typedef unsigned long       ulong;
 typedef unsigned char       undefined;
 typedef unsigned char       undefined1;
 typedef unsigned short      undefined2;

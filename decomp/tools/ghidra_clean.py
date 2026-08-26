@@ -2594,11 +2594,25 @@ def drop_padding_arg_stores(text):
             eq = s.find('=', end)
             if eq > 0 and s[eq + 1:eq + 2] != '=':
                 pending[terms].append(((i, off), s[eq + 1:].strip().rstrip(';').strip()))
-        # a local whose every assignment is unmodelled and whose every read is a
-        # padding store cannot reach anything observable, on any path
+        # A local whose every assignment is unmodelled and whose every read is a
+        # padding store cannot reach anything observable, on any path — so the
+        # local goes too, assignments and all.
+        #
+        # Where the local carries real values as well, only the STORES go.
+        # MeFAsset's `iVar18` is assigned from `count` and from
+        # `MeFAssetPartIsCollisionEnabled` as well as from `extraout_EAX_03`,
+        # and is tested with `if (iVar18 == 0)`, so the whole-variable test
+        # rightly declines — but deleting a store into a word beyond the
+        # callee's arity is sound whatever the word holds, and it is what takes
+        # the unmodelled value out of the emitted code.
+        #
+        # The taint check is not part of the soundness argument; it is what
+        # keeps the blast radius on objects that have the defect. IxConvexTriList
+        # puts a live `pfVar21` in its two filler words, is validated, in the
+        # build, and is left byte-identical.
         for var, stores in via.items():
             word = re.compile(r'(?<![\w])' + re.escape(var) + r'\b')
-            assigns, reads, ok = [], [], True
+            assigns, reads, whole = [], [], True
             for i, line in enumerate(lines):
                 if not word.search(line):
                     continue
@@ -2609,18 +2623,21 @@ def drop_padding_arg_stores(text):
                     continue                                    # its declaration
                 m = re.match(r'^' + re.escape(var) + r'\s*=([^=].*);$', s)
                 if m and not word.search(m.group(1)):
-                    if not _BARE_UNMODELLED.match(m.group(1).strip()):
-                        ok = False
-                        break
-                    assigns.append(i)
+                    if _BARE_UNMODELLED.match(m.group(1).strip()):
+                        assigns.append(i)
+                    else:
+                        whole = False
                     continue
                 if i in stores and len(word.findall(line)) == 1:
                     reads.append(i)
                     continue
-                ok = False
-                break
-            if ok and assigns and set(reads) == stores:
+                whole = False
+            if not assigns:
+                continue                    # nothing unmodelled ever reaches it
+            if whole and set(reads) == stores:
                 drop |= set(assigns) | stores
+            else:
+                drop |= stores
         if drop:
             n += len(drop)
             region = '\n'.join(l for j, l in enumerate(lines) if j not in drop)

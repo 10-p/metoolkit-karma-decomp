@@ -3801,6 +3801,38 @@ MdtPartition          RELEASED 2026-08-26 (seventh session). Four symbols of the
 # validated objects once already today (see the MdtPartition entry), so the
 # acceptance test is every pre-existing .o byte-identical, and sub_below must
 # stop claiming a site whose value is ASSIGNED rather than dereferenced.
+#
+# SECOND LOOK, same session, and it found TWO MORE THINGS that make the plan
+# above insufficient. Neither was visible until the references were listed in
+# full, so they are listed in full here:
+#
+#     452:  list.link = (McdContactLink *)(auStack_8c + iVar30 + -0x10);
+#     465:  *(undefined1 **)(auStack_8c + iVar30 + -8) = auStack_8c + iVar30;
+#     605:  *(McdContact **)((int)aiStack_b0 + iVar30 + 0x10) = pMVar23;
+#     607:  *(MeReal **)((int)aiStack_b0 + iVar30 + 0xc) = normal;
+#     608:  *(McdContact **)((int)aiStack_b0 + iVar30 + 8) = pMVar23;
+#     609:  *(McdContactList **)((int)aiStack_b0 + iVar30 + 4) = &list;
+#     612:  *(undefined4 *)((int)aiStack_b0 + iVar30) = 0x10ae8;
+#     678:  iVar30 = list.ct;                          <-- !!
+#     716:  } while (iVar24 < iVar30);
+#
+#   1. TWO ANCHORS, NOT ONE. `auStack_8c` is the alloca block (constants
+#      -0x10, -8, 0) and `aiStack_b0` is the OUTGOING ARGUMENT AREA (constants
+#      0, 4, 8, 0xc, 0x10). They are different regions at the same depth and a
+#      rule that takes "the minimum constant" across both computes nonsense.
+#
+#   2. **THE SHIFT VARIABLE IS REASSIGNED AND REUSED.** At line 678, inside the
+#      SAME function, `iVar30 = list.ct` and it becomes a loop bound. So the
+#      name means the alloca shift for the first half of McdContactSimplify and
+#      a contact count for the second. Any rule keyed on the variable name alone
+#      rewrites the wrong thing, and any rule that checks "every use of the var
+#      is a frame reference" correctly DECLINES — which is what happens today.
+#
+# So this is the fourth independent reason McdContact is not the small fix the
+# old one-line diagnosis suggested. It is ONE symbol. Whoever takes it needs a
+# rule that is anchor-aware, offset-aware AND live-range-aware, and the burden
+# of proof is a byte-identical blast radius plus difftest, because
+# McdContactSimplify is on the live contact path.
 
 # --- 2026-08-26 (seventh session): arm64 — 7,771 truncations to 363 ---------
 #

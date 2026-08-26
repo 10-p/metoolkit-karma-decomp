@@ -19,6 +19,42 @@ it is, what constrains it, and where the sharp edges are. This document is self-
 
 ---
 
+## 0. START HERE — the recovery side no longer blocks you, 2026-08-26
+
+**Everything you need from the other half of this project now exists.** That was not true a
+week ago and the rest of this file was written when it was not, so read this before you
+trust any schedule further down.
+
+```
+137 recovered objects, all compiling for i386, wasm32, armv7 AND arm64.
+  wasm32  137/137, exported symbol NAMES byte-identical to the i386 build
+  armv7   137/137, ZERO pointer-truncation diagnostics
+  arm64   137/137, 7,457 truncations across 87 objects  <- NOT trustworthy, section 3
+
+The collision layer, the solver and the ENTIRE .ka asset-loading path are recovered
+and the engine has RUN on all three on i386.
+
+8 shipped members remain, and 5 of those 8 are deliberately not being rebuilt.
+NOTHING on that list blocks you.
+```
+
+**So your first move is not to wait for anything. It is section 8 step 1: get one
+recovered object to EXECUTE under wasm.** Not one instruction of this has ever run on any
+of your three targets, and that single fact is the largest unknown in the whole effort.
+
+**Three things about this codebase that will cost you a day each if you find them the hard
+way**, all detailed below and all measured rather than guessed:
+
+1. **Pointer size is load-bearing.** The recovery puns pointers through 4-byte slots
+   everywhere. wasm32 and armv7 are 32-bit-pointer targets so it holds; **arm64 is not, and
+   7,457 sites prove it**. Do not treat "arm64 compiles" as "arm64 works" — section 3.
+2. **An arithmetic error that is provably inert on i386 and 31% divergent on yours.**
+   Section 6's hazard box. Every gate on the recovery side is structurally blind to it, so
+   **any wasm-vs-native A/B you build is worth more than it looks** — it measures something
+   nobody else can.
+3. **Three shapes of indirect call that x86 corrupts silently and wasm will TRAP on**
+   (section 4b). If your first wasm run dies in a call, start there, not in your glue.
+
 ## 1. What you are being handed
 
 UT2004's physics engine is **Karma** (MathEngine `metoolkit`, 2003). It ships as

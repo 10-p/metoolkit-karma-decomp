@@ -30,6 +30,62 @@ half of the project this file does not cover.
 You are resuming a project to recover Karma (MathEngine `metoolkit`) from shipped binaries
 as portable C. This file is written for someone with no memory of how any of it came to be.
 
+### RESUME HERE — the state, in one page, 2026-08-26 (sixth session)
+
+**Everything below this block is detail and history. This is where the work is.**
+
+```
+137 objects in the build.  ALL NINE GATES GREEN.  Reproducible from scratch in 94 s,
+byte-identical on re-run.  The engine runs on it: START MATCH, 260 s, 0 faults,
+matching a stock control on the same map.
+
+DROP-IN GAP — the metric, and the only one:   8 members, 35 symbols
+   ...of which 25 are in members this file says DO NOT ATTEMPT:
+        McdSpace   16   leave last, the struct layout is in nobody's DWARF
+        MeMath      8   refuse, the target is declared and never written
+        IxBoxTriList 1  refused on the merits, known-wrong and in a dispatch table
+   GENUINELY OPEN:  10 symbols in five members
+        MdtPartition 4 · ReadWriteKeaInputToFile 3 · McdContact 1 · MdtLOD 1
+        keaMatrix_PcSparse_vanilla 1
+   Every one of the five is diagnosed to offsets and machine code — §3c and §13.
+```
+
+**Reproduce the whole state in about 95 seconds: §4. Then read §3c, then §13.**
+
+**What changed in the sixth session, because the delta is what you need:** the gap went
+20 members / 148 symbols → 8 / 35, and 122 objects → 137. Nineteen members closed, every
+one by a GENERATOR fix, never by hand-editing an object. The whole `.ka` loading path —
+`MeFAsset`, `MeFAssetPart`, `MeAssetFactory`, `MeXMLParser`, both `MeAssetDBXML*` — is in
+the build and the engine runs on it. Both profilers, `MstUtils`, `McdInteractions`,
+`MdtBcl`, `McdGjkPenetrationDepth` too.
+
+**THE ONE INSTRUMENT THAT WAS MISSING AND NOW EXISTS: `recover.prove_inert` (§8).** It
+answers "does this value Ghidra could not account for actually reach anything" by compiling
+the object with that value set to three different constants and diffing the object files.
+Byte-identical means the emitted code cannot depend on it. Four controls. It released six
+values in five objects and unblocked more.
+
+**THE HABIT THAT FOUND MOST OF THIS SESSION'S DEFECTS, and it is not "look for bugs":**
+when a check is SILENT, make it fail on purpose before believing it. Five of this session's
+findings came from that, including two gates that were reporting green on things they were
+structurally unable to see —
+
+- `ptrwidth_check.sh` reported "0 truncations" for armv7 while not compiling two objects at
+  all, because a file clang REJECTS emits no warnings. Same two made wasm32 121 of 122, not
+  the 122/122 this file claimed. Fixed, and the gate now reports DID NOT COMPILE separately.
+- `check_symbol_bindings.py` reported ZERO interface errors while `keaRbdCore_unified`
+  exported `kd_gDebug` instead of `gDebug` — because one line dismissed a vanished symbol as
+  "a link error, not ours". Fixed, with the defect itself as the control.
+
+**AND FIVE TIMES NOW A CHANGED OBJECT HAS TURNED OUT TO HAVE BEEN SILENTLY WRONG.** The
+fifth was in the build: `materialise_alloca_frame` collapsed an INDEX into an alloca'd block
+onto its anchor, so `MeFAsset` indexed a 12-byte local with an asset's part count. What
+stopped it mattering is that the function cannot be called — luck, not design, and
+`proven.txt` says so in those words. **Always diff the blast radius; when an object changes,
+DISASSEMBLE BEFORE ASSUMING REGRESSION.**
+
+---
+
 ### Read this first — the thirty-second version
 
 - Karma is UT2004's physics library, shipped binary-only. We are recovering it as portable
@@ -3926,49 +3982,35 @@ That checklist is worth more than the next ten objects.
 
 ---
 
-## 13. The 8 remaining failures, triaged
+## 13. The 11 objects still held, triaged — 2026-08-26
 
-Written so the next session starts from a decision, not from re-deriving one. Counts are
-error counts as of 2026-08-25 (second session). **"DEAD" means `tools/reachable.py` proves
-nothing in the engine can reach it — §3b — so it is out of scope, not a to-do.**
+Written so the next session starts from a decision, not from re-deriving one.
+**"DEAD" means `tools/reachable.py` proves nothing in the engine can reach it — §3b — so it
+is out of scope, not a to-do.** Sort by the §3c symbol column, never by the error count and
+never by this table's order.
 
-**`MdtWorld` and then `keaRbdCore_unified` left this table by being RECOVERED**, the second
-of them from 18 errors on 2026-08-25. Note that on the way it passed THROUGH this bucket by
-getting better: `recover.py` classifies by the FIRST error's pattern, so an object can move
-`review → FAIL` while improving. Sort by the verdict column, never by the bucket.
+**Five objects left this table on 2026-08-26 and are now in the build:** `MdtBcl`,
+`MeSimpleFile_linux`, `McdBox`, `McdSphyl`, `McdTriangleList`, plus `MeProfile` and
+`MeProfile_linux`, which this table used to call "low value" and which turned out to be
+seven generator fixes between them. `recover.py` classifies by the FIRST error's pattern,
+so an object can move `review → FAIL` while IMPROVING; that has happened twice.
 
-| object | reach | errs | verdict |
+| object | reach | §3c syms | verdict |
 |---|---|---:|---|
-| `MeASELoad` | **DEAD** | 126 | out of scope |
-| `MeFGeometryFromMesh` | **DEAD** | 20 | out of scope |
-| `McduDebugDraw` | **DEAD** | 1 | out of scope — and dead end 10 already burned time here |
-| `McdSpace` | live | 50 | **documented leave-alone**, §11 item 7: the `struct _McdSpace` layout is not in the DWARF *anywhere*, including its own object, where the DIE is `DW_AT_declaration: 1`. Inferring it is the guess the detectors exist to stop |
-| `MeSimpleFile_linux` | live | 1 | **documented leave-alone**, §11 item 7: `-D_FORTIFY_SOURCE=0` makes it compile with three garbage arguments. The compile error is the useful signal |
-| `McdSphyl` | live | 1 | **dead end 9.** `(float)s[1].mRefCtAndID + (float)s[1].prev` — GCC rejects only the second cast, and the original loads *both* as floats. The compiler is reasoning about Ghidra's types and is wrong |
-| `McdTriangleList` | live | 6 | **dead end 9, same shape.** `(float)g[1].prev` etc. |
-| `McdBox` | live | 2 | **dead end 9**, at lines 235/236. Not the cheap win the error count makes it look |
-| `MdtBcl` | live | **1** | **31 → 1** on 2026-08-24: 22 errors were `FUN_00021130`, which is `.eh_frame` decompiled as code, and 2 more were `halt_baddata`-only functions (see below). The one left is `&stack0xfffffff4` used as a base to read a locals block at −0x80…−0x68 — and it is Ghidra rendering the function's **epilogue** (`lea -0xc(%ebp),%esp`) as a pointer assignment. §11 item 2's family. Cheapest object in the tail, but **NOT a validation subject for §11 item 2** — its single error is an epilogue rendered as a pointer assignment, a different shape from `MdtWorld`'s outgoing by-value marshalling, so a fix for one will not show up here |
-| `MeMath` | live | **1** | one `stack0x` at line 495, genuine frame loss rather than a name: Ghidra also dropped the `fcos`/`fsin` results that build the matrix being read. Same family as `MdtBcl` and `MdtWorld` |
-| `MeProfile_linux` | live | 13 | open, **low value** (§3b puts it under platform/misc) — and §13 used to undersell it as "an `rdtsc` shim". It needs that, plus `struct timeval` as a bare tag, plus the §5 EXTERNAL-slot collision (`_select` and `_clockSpeed` are neighbours of `frameTime`, not real symbols). Four families for a profiler timer |
-| `MeProfile` | live | **29** | open, **low value** — 11 `request for member`, 5 `weightingData` (§11 item 7: a variable, not a type), 5 of the exported-DATA rename gap (`frameTime`/`clockSpeed` vs `kd_*`; dead end 10), 2 `__divdi3`/`__udivdi3` |
+| `McdSpace` | live | **16** | **LEAVE LAST.** `struct _McdSpace`'s layout is not in the DWARF *anywhere*, including its own object, where the DIE is `DW_AT_declaration: 1`. Inferring it is the guess the detectors exist to stop. §11 item 7 |
+| `MeMath` | live | **8** | **REFUSE.** One `stack0x`, and §5c proves the target `MeReal eR[3][3]` is DECLARED AND NEVER WRITTEN — Ghidra emitted `fcos`/`fsin` and discarded the results. Repairing the name buys a compile at the price of reading uninitialised memory. `_rebase_onto_covering_local` refuses it on exactly that ground, with the write-guard control in `proven.txt`. **Not a to-do** |
+| `MdtPartition` | live | **4** | OPEN. The outgoing area below TWO alloca shifts. §3c has the slot map; MOVE 0 has the trap |
+| `ReadWriteKeaInputToFile` | live | **3** | OPEN, and fully diagnosed. `_gDebug` is typed two ways by Ghidra; both readings confirmed against the disassembly. Declare it `char *` and normalise ONE line |
+| `McdContact` | live | **1** | OPEN. A shifted-anchor area whose alloca rounding is `+ 0x10`, not `+ 0xf & ~0xf`, so `ALLOCA_SIZE` does not match it |
+| `MdtLOD` | live | **1** | OPEN. Needs a measurement or a repair — the reachability route is CLOSED, and `proven.txt` records why the obvious check said otherwise |
+| `keaMatrix_PcSparse_vanilla` | live | **1** | OPEN. One shifted-anchor site plus six on `t`; separately `factorize` is ~one rounding step out (MOVE 1) |
+| `IxBoxTriList` | live | **1** | **REFUSED on the merits.** The reachability argument is available — §3a proves Box × TriangleList is intercepted before Karma is consulted — but its address is taken by the registration function the engine DOES need, and difftest measures it diverging on 139,961 of 200,000 pairs. One symbol does not buy shipping a known-wrong collision function that sits in a live dispatch table |
+| `MeASELoad` | **DEAD** | 0 | out of scope — MathEngine's ASE mesh importer |
+| `MeFGeometryFromMesh` | **DEAD** | 0 | out of scope |
+| `McduDebugDraw` | **DEAD** | 0 | out of scope — and dead end 10 already burned time here |
 
-**Recovered on 2026-08-24 (third session): `McdContact`, `McdMessage`, `McdBatch`,
-`mesffnmin`** — 17 failures down to 14, 106 objects up to 108, and **271 errors across the
-14**. `McdContact` compiles but is now held by the `extraout_EAX` detector, which is a
-different and real defect: that is a **reclassification**, not a release.
-
-**FOUR MORE LEFT THIS TABLE ON 2026-08-25 and the count is 8, not 12.** `McdBox`,
-`McdSphyl` and `McdTriangleList` — the three dead-end-9 rows — were all recovered by one
-generator fix once dead end 9 was re-diagnosed (§9), and `MeSimpleFile_linux` by another.
-So the rows below marked "dead end 9" and the `MeSimpleFile_linux` leave-alone are
-DISCHARGED; they are kept because the reasoning that held them is what had to be corrected.
-
-Of the 8 that remain: 3 are DEAD, 1 is a documented leave-alone (`McdSpace`), 2 are the
-§11 item 2 frame problem (`MdtBcl`, `MeMath`) and 2 are low-value profilers. **But
-"nothing in it blocks anything" is NO LONGER TRUE** — §3c changed how this is read.
-`McdSpace` (16 symbols), `MdtBcl` (15), `MeMath` (8), `MeProfile_linux` (6) and `MeProfile`
-(4) are all in the DROP-IN GAP, so five of the eight are on the path to the goal after all.
-Sort by §3c's symbol count now, not by the error count and not by this table's order.
+**So the 35-symbol gap is really TEN symbols of open work**: 16 + 8 + 1 of it is in
+`McdSpace`, `MeMath` and `IxBoxTriList`, and this file says do not attempt any of the three.
 
 **And note what is NOT in this table but is still shipped.** Six `libMdtKea` members never
 reach the FAIL bucket because they are held earlier or have no functions:

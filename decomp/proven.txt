@@ -285,6 +285,86 @@ IxConvexPrimitives    real: 1,685 calls of McdSphylConvexMeshIntersect on ONS-CB
 #                     hour — ragdolls land on the level, not on the vehicles —
 #                     and ONS-Torlan would not start a ticking match. CBP2 and
 #                     UCMP maps reach it in minutes. See HANDOVER.md 6.
+# CYLCYL-GRIND        2026-08-27 (eighth session), on the owner's instruction to close the
+#                     last pair rather than leave a "14 of 15" that becomes a standing
+#                     distraction. IT IS NOT CLOSED, AND THE REASON IS NOW MEASURED TO THE
+#                     BOTTOM rather than estimated. Everything below is so nobody repeats it.
+#
+#                     THE DEFECT IS ENTIRELY INSIDE OverlapCylCyl, and that is measured, not
+#                     inferred. test/trace_cylcyl.sh shadows the recovered OverlapCylCyl
+#                     against the SHIPPED one on difftest's own seeded inputs — no renaming,
+#                     no mixed link, because the symbol is a GLOBAL and difftest already
+#                     prefixes the recovered side `rec_`. Over 200,000 calls:
+#
+#                       ret    0        <- the return value NEVER differs
+#                       npts   1        <- exactly the 1 count_diff seen end to end
+#                       dims  20        <- exactly the 20 dims_diff seen end to end
+#                       sep   97,470 | PN 72,193 | N 13,561   <- one-ULP noise
+#
+#                     The harness returns the SHIPPED answer, so difftest itself reads
+#                     200,000/200,000 PASS — that is the control saying the instrument does
+#                     not perturb the run.
+#
+#                     WHAT THE 20 dims ARE. 259/771/769 decode to 0x103/0x303/0x301, and the
+#                     branch that sets each is selected by `normInfo` — WHICH SEPARATING AXIS
+#                     WON. `ret` and `npts` agree, so nothing about the contact changes; a
+#                     near-tie on `maxSeparation` flips the label. That is downstream of the
+#                     97,470 one-ULP differences in `sep`, so the ONLY way to 0 dims is
+#                     bit-exact arithmetic in this function.
+#
+#                     FOUR CANDIDATE FIXES, ALL TRIED, ALL NEGATIVE — this is the part worth
+#                     keeping:
+#
+#                     1. THE PERMUTED DOT PRODUCT at lines 776/948, `fVar3 = n[2]*p[2] +
+#                        n[1]*p[1] + n[0]*p[0]`, which the machine accumulates in index order
+#                        THROUGH MEMORY. Three variants measured against a 155,485/1/20
+#                        baseline: reorder only 155,425/1/21, round only 155,428/1/22, both
+#                        155,431/1/21. All three slightly WORSE. The site is exonerated and
+#                        the disassembly region that suggested it was a different one.
+#
+#                     2. `McdCylinderCylinderIntersect:eps` — spill_scan confirms the slot
+#                        round-trips, and KD_F32 on it changes NOTHING: the value is already
+#                        rounded by the float ARGUMENT conversion at the call.
+#
+#                     3. `OverlapCylCyl:z1` — the loop variable of the cap search. The shipped
+#                        code spills it, but its values are `-inHH1` and
+#                        `(-inHH1 + inHH1 + inHH1)`, both exactly representable, so the
+#                        rounding is a no-op.
+#
+#                     4. `OverlapCylCyl:nCapZ` — `fsts -0x274` at 1a4c of a value LOADED from
+#                        -0x2a8, which was itself stored with `fstps` at 16e7. It is a copy of
+#                        an already-rounded 32-bit slot; the second store rounds nothing.
+#
+#                     SO ALL THREE OF spill_scan's CANDIDATES IN THIS OBJECT ARE FALSE
+#                     POSITIVES, which is the class its own docstring warns about, and it is
+#                     worth knowing that the ratio can be 3 of 3 on one object.
+#
+#                     AND ONE WHOLESALE LEVER, TRIED AND WORSE. `-ffloat-store` on this object
+#                     forces every intermediate to memory: 142,621 identical, 6 count, 44 dims
+#                     against the baseline's 1 and 20. So gcc 3.2's spill set is much closer
+#                     to "keep it in a register" than to "round everything", and the recovery
+#                     is already on the right side of it. That bounds the problem from above.
+#
+#                     WHAT IS ACTUALLY LEFT, and why it is expensive. OverlapCylCyl is 10,857
+#                     bytes with 124 frame slots touched by float instructions, of which 35
+#                     are stored and then read-modified. The ones that matter are UNNAMED
+#                     long-lived temporaries — `-0x2a8` is stored ONCE and read 24 times,
+#                     `-0x2ac` once and read 15 — which gcc spilled for register pressure and
+#                     which Ghidra folded back into inline expressions at 80-bit precision.
+#                     THEY HAVE NO TEXTUAL FINGERPRINT: no declared-and-unused local, no
+#                     permuted chain, nothing a scan can key on. Closing them means simulating
+#                     the x87 stack to map each slot to the expression it holds, in a function
+#                     of that size. That is the MeMath method at roughly thirty times the
+#                     scale.
+#
+#                     THE STANDARD THIS PAIR ALREADY MEETS. `ret` and `touch` are 0 over
+#                     200,000, `count` is 1, and `dims` is a feature LABEL that the SHIPPED
+#                     library itself re-rolls 16 times under a 1e-7 m displacement (see
+#                     CYLCYL-15OF15 above for that control). Every field the engine consumes
+#                     for a contact — position, normal, separation, count — is at the same
+#                     standard as the thirteen released pairs. What is not at that standard is
+#                     one label and one contact in two hundred thousand.
+
 # CYLCYL-15OF15       2026-08-27 (eighth session): what it would take, measured rather than
 #                     estimated. `IxCylinderCylinder` is the ONLY thing between check 3 and
 #                     15 of 15, and its charge is 1 count_diff and 20 dims_diff in 200,000.

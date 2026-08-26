@@ -4460,3 +4460,69 @@ McdSpace              RELEASED 2026-08-26 (seventh session). Sixteen symbols, th
 #
 # SO: 8 symbols, REFUSED, and the entry to read before trying again is this one
 # rather than §5c's row, which is corrected here.
+
+# --- 2026-08-26 (seventh session): MeMath — REFUSED ON A MEASUREMENT, and ---
+#   the gate that makes it a measurement now exists
+#
+# Two corrections in one entry, one of them to something written earlier TODAY.
+#
+# CORRECTION 1 — already recorded above: §5c's "eR is declared and never
+# written" is a fact about Ghidra's output. The shipped code writes it ten times.
+#
+# CORRECTION 2 — MINE, from earlier this session: I wrote that the refusal
+# stands because "nothing here could verify a reconstruction". **That was wrong
+# in exactly the way McdSpace's "leave last" was wrong**: the gate did not
+# exist, which is not the same as being impossible. `difftest_pair.sh` and
+# `ab_integrate.sh` are both this instrument for other objects, and these
+# functions are PURE — inputs in, a transform out — so they are EASIER to A/B
+# than the collision pairs. `test/ab_matrix.sh` is that gate.
+#
+#     control  SELFTEST (shipped vs shipped): 200000 cases, 0 differ
+#     measured recovered vs shipped: 200000 cases, 200000 differ (100.000%),
+#              worst |delta| 190.63, non-finite 0, first@0
+#
+# **THE FUNCTION MEASURED IS THE ONE WITH NO DIAGNOSTIC.** Of the two MeMath
+# functions whose fcos/fsin results Ghidra discards, only
+# `MeMatrix4TMUpdateFromVelocities` produces a compile error (the `stack0x`).
+# Its sibling `...AndAcceler` COMPILES CLEANLY, no detector holds it, and it is
+# wrong on every single input — it reads `MeReal eR[3][3]` uninitialised. So the
+# price §5c predicted for repairing the name is already real and already silent
+# in the other half of the object, and nobody had measured it.
+#
+# AND SEVEN OF THE NINE fcos/fsin USERS ARE FINE, which is the other thing the
+# old note got wrong by implication. Ghidra models the x87 instructions as
+# functions and CAPTURES the result almost everywhere:
+#     MeQuaternionSlerp 3 captured · MeQuaternionFiniteRotation 2 ·
+#     MeMatrix3MakeRotationX/Y/Z 2 each · MeMatrix3FromEulerAngles 6 ·
+#     MeMatrix4TMFromEulerAnglesAndPosition 6
+# `MeMatrix3MakeRotationX` comes out as a textbook [[1,0,0],[0,c,-s],[0,s,c]].
+# Only the two `...UpdateFromVelocities*` functions discard, and both are the
+# ones that build eR through a loop Ghidra could not follow.
+#
+# REACHABILITY, measured rather than assumed:
+#     ...AndAcceler                imported by NOBODY — 0 metoolkit, 0 engine
+#     ...FromVelocities            McdModel.o (McdModelUpdatePath) and
+#                                  McdInteractions.o (McdIntersectAt, twice)
+#     McdModelUpdatePath           0 engine objects import it; NEVER RAN in
+#                                  scene_ragdoll (McdModelUpdatePathCompatible,
+#                                  a DIFFERENT function, ran 8,104 times)
+#     McdIntersectAt               0 engine imports; never ran
+# so the whole chain is dead in practice and alive at LINK time — the MdtLOD
+# and 3a pattern again. The engine needs only three MeMath symbols directly:
+# MeMatrix4TMInvert, MeQuaternionFiniteRotation, MeQuaternionSlerp, and all
+# three are among the seven that are correct.
+#
+# SO WHY NOT RELEASE IT ON REACHABILITY, the way MeFAsset was? Because this is
+# the IxBoxTriList situation and the precedent is settled: an object that is
+# merely unreachable is one thing, and one that is MEASURED WRONG is another.
+# IxBoxTriList was refused at 139,961 of 200,000; this is 200,000 of 200,000.
+# Naming the `stack0x` would buy a compile and ship two functions that are wrong
+# on every input, one of them with nothing to hold it back.
+#
+# **THE JOB IS NOW ONE FUNCTION AND IT HAS AN ORACLE.** Reconstruct
+# `MeMatrix4TMUpdateFromVelocities`'s eR — Rodrigues' formula, ~60 x87
+# instructions between the `fcos` at 0xcd8 and the ten stores at -0x3c..-0x18,
+# with heavy fxch juggling — and `ab_matrix.sh` says bit-exact or not. Do
+# `...AndAcceler` the same way by moving the stub; the driver names the function
+# under test in one place. **Do not ship either on "it is unreachable" while the
+# A/B reads 100%.**

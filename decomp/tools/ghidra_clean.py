@@ -2684,6 +2684,207 @@ def _slots_in(text):
             i = j + 2
 
 
+def _header_index(include_dir):
+    """{name: ('fn', return type)} and {name: ('fnptr', arity)} from the headers.
+
+    Two things are wanted and both are one regex each: what a public function
+    RETURNS, so the base of a struct access can be typed, and how many
+    parameters a function-pointer TYPEDEF takes, so an indirect call through it
+    can be given its arguments back."""
+    cache = _header_index.cache
+    if include_dir in cache:
+        return cache[include_dir]
+    idx = {}
+    if include_dir and os.path.isdir(include_dir):
+        for root, _d, files in os.walk(include_dir):
+            for f in files:
+                if not f.endswith('.h'):
+                    continue
+                try:
+                    txt = open(os.path.join(root, f), errors='ignore').read()
+                except OSError:
+                    continue
+                txt = re.sub(r'/\*.*?\*/', ' ', txt, flags=re.S)
+                for m in re.finditer(
+                        r'typedef\s+[\w\s\*]{0,80}?\(\s*(?:MEAPI\s*)?\*\s*(\w+)\s*\)'
+                        r'\s*\(([^;]*?)\)\s*;', txt):
+                    args = [a for a in _split_arguments(m.group(2)) if a.strip()]
+                    if len(args) == 1 and args[0].strip() in ('void', ''):
+                        args = []
+                    idx[m.group(1)] = ('fnptr', len(args))
+                for m in re.finditer(
+                        r'(?m)^\s*([A-Za-z_][\w]*\s*\**)\s+MEAPI\s+(\w+)\s*\(', txt):
+                    idx.setdefault(m.group(2), ('fn', m.group(1).strip()))
+    cache[include_dir] = idx
+    return idx
+
+
+_header_index.cache = {}
+
+
+def _struct_member_type(include_dir, tag, member):
+    """The declared TYPE of `tag.member`, read from the public headers."""
+    idx = _struct_member_type.cache.setdefault(include_dir, {})
+    if tag not in idx:
+        body = None
+        for root, _d, files in os.walk(include_dir or '.'):
+            for f in files:
+                if not f.endswith('.h'):
+                    continue
+                try:
+                    txt = open(os.path.join(root, f), errors='ignore').read()
+                except OSError:
+                    continue
+                m = re.search(r'struct\s+' + re.escape(tag) + r'\s*\{(.*?)\n\}', txt, re.S)
+                if m:
+                    body = m.group(1)
+                    break
+            if body:
+                break
+        fields = {}
+        if body:
+            body = re.sub(r'/\*.*?\*/', ' ', body, flags=re.S)
+            for line in body.split(';'):
+                mm = re.match(r'\s*([A-Za-z_][\w]*(?:\s*\*)*)\s+(\w+)\s*$', line)
+                if mm:
+                    fields[mm.group(2)] = mm.group(1).strip()
+        idx[tag] = fields
+    return idx[tag].get(member)
+
+
+_struct_member_type.cache = {}
+
+
+def restore_indirect_call_args(text, fieldmap, include_dir):
+    r"""`iVar7 = (*pcVar1)();` — Ghidra had no signature, so it dropped every argument.
+
+    This is the defect that crashed `IxSphereTriList` (§8): the callee reads
+    whatever is on the stack, and the recovery compiles, links and passes the
+    scripted scenes because they never reach the call. Two sites are left in the
+    corpus, `McdInteractions` and `MstUtils`, and between them they are eight
+    symbols of the drop-in gap.
+
+    EVERYTHING NEEDED IS ALREADY WRITTEN DOWN — the point is only that it is in
+    four different places:
+
+        pvVar4 = McdFrameworkGetInteractions(frame,type1,iVar7);
+        ...
+        *(McdIntersectResult **)((int)pMVar6 + -0xc)  = result;
+        *(McdModelPair **)((int)pMVar6 + -0x10)       = p;
+        *(undefined4 *)((int)pMVar6 + -0x14)          = 0x10232;   <- return address
+        pcVar1 = *(code **)((int)pvVar4 + 8);
+        iVar7 = (*pcVar1)();
+
+      1. `McdFrame.h` says McdFrameworkGetInteractions returns `McdInteractions*`
+      2. `kd_types_fields.json` says `_McdInteractions` +8 is `intersectFn`
+      3. `McdCTypes.h` says that member is a `McdIntersectFn`
+      4. `McdCTypes.h` says `McdIntersectFn` is
+         `int (MEAPI *)(McdModelPair *, McdIntersectResult *)` — TWO arguments
+
+    and the arguments themselves are in the slots the call sits on: the return
+    address marks the base, so argument i is at base + 4*(i+1), and the stores
+    that filled them are right there with their casts. The two words above them
+    are gcc's alignment padding, which `drop_padding_arg_stores` then removes for
+    free — it could not before, because with no arguments in the call there was
+    no top argument slot to be above.
+
+    IT DECLINES ON ANY BREAK IN THE CHAIN, and the chain is four links long, so
+    that is most of the code. The arity has to come out of a typedef; the base
+    has to be typed by a real prototype; every argument slot has to have been
+    stored with a cast this can copy. A guess here is the thing the detector
+    exists to prevent."""
+    if not fieldmap:
+        return text, 0
+    hdr = _header_index(include_dir)
+    out, n = [], 0
+    for _fn, region in _split_definitions(text):
+        for call in list(re.finditer(r'\(\*(\w+)\)\(\s*\)', region)):
+            ptr = call.group(1)
+            mtype = None
+            # SHAPE 1 — the pointer comes straight out of a function whose
+            # RETURN type is a function-pointer typedef. MstUtils:
+            #   pcVar12 = MstBridgeGetPerPairCB(...);   ->  MstPerPairCBPtr
+            direct = re.search(re.escape(ptr) + r'\s*=\s*(\w+)\s*\(', region)
+            if direct and hdr.get(direct.group(1), ('', ''))[0] == 'fn':
+                cand = hdr[direct.group(1)][1].strip()
+                if hdr.get(cand, ('', ''))[0] == 'fnptr':
+                    mtype = cand
+            # SHAPE 2 — the pointer is a STRUCT MEMBER, so the member's type has
+            # to be found before the typedef can be.
+            if mtype is None:
+                src = re.search(re.escape(ptr) + r'\s*=\s*\*\(code \*\*\)\('
+                                r'(?:\(int\))?\s*(\w+)\s*\+\s*(0x[0-9a-f]+|\d+)\s*\)\s*;',
+                                region)
+                if not src:
+                    continue
+                base, off = src.group(1), int(src.group(2), 0)
+                made = re.search(re.escape(base) + r'\s*=\s*(\w+)\s*\(', region)
+                if not made or hdr.get(made.group(1), ('', ''))[0] != 'fn':
+                    continue
+                tag = re.sub(r'\s*\*+$', '', hdr[made.group(1)][1]).strip()
+                member = (fieldmap.get(tag, {}).get(str(off))
+                          or fieldmap.get('_' + tag, {}).get(str(off)))
+                if not member:
+                    continue
+                mtype = (_struct_member_type(include_dir, '_' + tag, member)
+                         or _struct_member_type(include_dir, tag, member))
+            if not mtype or hdr.get(mtype, ('', ''))[0] != 'fnptr':
+                continue
+            arity = hdr[mtype][1]
+            # THE OUTGOING AREA IS SPELLED TWO WAYS and both occur. McdInteractions
+            # addresses it through an ORDINARY variable — `(int)pMVar6 + -0x10` —
+            # where only offsets relative to that one name are meaningful.
+            # MstUtils spreads the same area across THREE frame-named locals,
+            # `aiStack_9cb0 + 0x14`, `&fStack_9c98` and `aMStack_9c94`, which are
+            # consecutive slots only once each name is decoded to its frame
+            # offset. So both decoders are tried, absolute first.
+            head = region[:call.start()]
+            tail = head.split('\n')[-24:]
+            best = None
+            for decoder in ('abs', 'rel'):
+                slots, retaddr = {}, None
+                for line in reversed(tail):
+                    s = line.strip()
+                    if decoder == 'abs':
+                        sl = _slots_in(s)
+                        if not sl or sl[0][0] != 0:
+                            continue
+                        _, terms, o, end = sl[0]
+                        key = (terms, o)
+                    else:
+                        m = re.match(r'\*\([^()]*\*\)\(\s*(?:\(int\))?\s*(\w+)\s*'
+                                     r'\+\s*(-?(?:0x[0-9a-f]+|\d+))\s*\)', s)
+                        if not m:
+                            continue
+                        key, end = (m.group(1), int(m.group(2), 0)), m.end()
+                    if '=' not in s[end:end + 3]:
+                        continue
+                    if re.match(r'\*\(undefined4 \*\)\(.*\)\s*=\s*0x1[0-9a-f]{4}\s*;$', s):
+                        if retaddr is None:
+                            retaddr = key   # the LAST store before the call, so
+                        continue            # keep going: the arguments are above
+                    slots.setdefault(key, s[:end])
+                if retaddr is None:
+                    continue
+                args = []
+                for i in range(arity):
+                    lhs = slots.get((retaddr[0], retaddr[1] + 4 * (i + 1)))
+                    if lhs is None:
+                        break
+                    args.append(lhs)
+                if len(args) == arity:
+                    best = args
+                    break
+            if best is None:
+                continue
+            args = best
+            new = '(*(%s)%s)(%s)' % (mtype, ptr, ',\n                 '.join(args))
+            region = region[:call.start()] + new + region[call.end():]
+            n += 1
+        out.append(region)
+    return ''.join(out), n
+
+
 def drop_padding_arg_stores(text):
     r"""`*(slot above the last argument) = extraout_EDX;` — gcc's padding push.
 
@@ -5752,6 +5953,12 @@ def main():
     # After materialise_shifted_frame, because the outgoing-argument area it
     # gives real storage to is spelled `kd_argslot_*` in its output and the
     # padding slots sit in exactly that area.
+    # BEFORE drop_padding_arg_stores, and the order is the mechanism: with no
+    # arguments in the call there is no top argument slot, so the padding rule
+    # has nothing to be above. Giving the call its arguments back makes the two
+    # words over them derivable, and MstUtils' pair falls out for free.
+    body_text, n_ind = restore_indirect_call_args(
+        body_text, fieldmap, args.metoolkit_include)
     body_text, n_pad = drop_padding_arg_stores(body_text)
     body_text, n_ftext = restore_float_text(
         body_text, args.object, read_ghidra_locals(args.input))
@@ -5871,6 +6078,8 @@ def main():
         print(f'  {n_pfmt} padding word(s) dropped from variadic call(s)')
     if n_pad:
         print(f'  {n_pad} padding word(s) dropped from an outgoing argument area')
+    if n_ind:
+        print(f'  {n_ind} argument-less indirect call(s) given their arguments back')
     if n_cmac:
         print(f'  {n_cmac} padding word(s) dropped from a kd_compat.h call')
     if n_rel:

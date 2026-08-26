@@ -87,6 +87,51 @@ def locals_of(body):
     return out
 
 
+# `pMVar6 = (McdContact *)&type1;` / `pMVar6 = aMStackY_501c;`
+PTR_TO_LOCAL = re.compile(r'^\s*(\w+)\s*=\s*(?:\([\w ]*\*+\)\s*)?(&)?(\w+)\s*;\s*$')
+
+
+def pointer_aliases(body, sizes):
+    """ptr -> (target local, size) for `ptr = &local;` / `ptr = local_array;`.
+
+    THE HOLE THIS CLOSES, and it was shielding a real defect. The docstring
+    above says a pointer local is none of this checker's business, because
+    `p + 0x14` on a `void *p` is arithmetic on whatever p points at. True — but
+    not when p was assigned the address of a LOCAL two lines earlier, which is
+    how Ghidra renders an outgoing-argument area whose base it could not name:
+
+        pMVar6 = (McdContact *)&type1;              /* type1 is an int */
+        if (...) { pMVar6 = aMStackY_501c; }
+        *(void **)((int)pMVar6 + -4)  = pvVar5;     /* BELOW type1 */
+        *(McdModelPair **)((int)pMVar6 + -0x10) = p;
+
+    `McdInteractions` writes five words below a four-byte `int`, and this
+    checker reported 0 for it because the offsets go through a pointer. The
+    alias only counts where the reference is BYTE arithmetic — `(int)ptr + K` —
+    which is the shape in question; `ptr + K` without the cast is element
+    arithmetic and genuinely is someone else's memory.
+
+    Where a pointer is assigned more than one local, every target is checked and
+    the SMALLEST is reported, because the reference has to be in range for all
+    of them."""
+    out = {}
+    for line in body.splitlines():
+        m = PTR_TO_LOCAL.match(line)
+        if not m:
+            continue
+        ptr, amp, target = m.group(1), m.group(2), m.group(3)
+        ent = sizes.get(target)
+        if ent is None or ptr in sizes:
+            continue
+        size, is_array = ent
+        if not amp and not is_array:
+            continue                      # a scalar copy, not an address
+        prev = out.get(ptr)
+        if prev is None or size < prev[1]:
+            out[ptr] = (target, size)
+    return out
+
+
 def violations(text):
     """[(function, var, offset, size)] for every out-of-range frame reference.
 
@@ -101,6 +146,7 @@ def violations(text):
         sizes = locals_of(body)
         if not sizes:
             continue
+        aliases = pointer_aliases(body, sizes)
         seen = set()
         for line in body.splitlines():
             for m in REF.finditer(line):
@@ -109,12 +155,19 @@ def violations(text):
                     else int(off, 10)
                 ent = sizes.get(var)
                 if ent is None:
-                    continue
-                size, is_array = ent
-                # A scalar only names a frame object when its address is taken;
-                # an array decays on its own.
-                if not amp and not is_array:
-                    continue
+                    # A pointer that was handed the address of a local IS a
+                    # frame reference, but only under BYTE arithmetic — the
+                    # `(int)` cast. See pointer_aliases.
+                    alias = aliases.get(var)
+                    if alias is None or not m.group(0).lstrip().startswith('(int)'):
+                        continue
+                    var, size, is_array, amp = alias[0], alias[1], True, None
+                else:
+                    size, is_array = ent
+                    # A scalar only names a frame object when its address is
+                    # taken; an array decays on its own.
+                    if not amp and not is_array:
+                        continue
                 if 0 <= off < size or (var, off) in seen:
                     continue
                 seen.add((var, off))
@@ -123,18 +176,39 @@ def violations(text):
 
 
 def main(argv):
+    """check_frame_bounds.py <kd_out/allobj> [kd_build]
+
+    The optional build directory splits the report in two, and the split is the
+    difference between a gate and a list. recover.py already calls violations()
+    as a DETECTOR, so an object with a violation is held out of the build — and
+    a held object's violations are the detector working, not a regression. Only
+    a violation in an object that is IN the build is a failure, and only that
+    sets the exit status."""
     root = argv[1] if len(argv) > 1 else '/tmp/kd_out/allobj'
-    bad = 0
+    build = argv[2] if len(argv) > 2 else None
+    in_build, held = 0, 0
     for fn in sorted(os.listdir(root)):
         if not fn.endswith('.c'):
             continue
         text = open(os.path.join(root, fn), errors='ignore').read()
-        for name, var, off, size in violations(text):
-            bad += 1
+        rows = violations(text)
+        if not rows:
+            continue
+        shipped = build is None or os.path.exists(
+            os.path.join(build, fn[:-2] + '.o'))
+        for name, var, off, size in rows:
             print(f'{fn}: {name}: {var} is {size} byte(s), '
-                  f'addressed at {off:+#x}')
-    print(f'\n{bad} out-of-range frame reference(s)')
-    return 1 if bad else 0
+                  f'addressed at {off:+#x}'
+                  + ('' if shipped else '   [HELD — detector working]'))
+        if shipped:
+            in_build += len(rows)
+        else:
+            held += len(rows)
+    if held:
+        print(f'\n{held} out-of-range frame reference(s) in objects the '
+              f'detector is HOLDING — expected, not a failure')
+    print(f'\n{in_build} out-of-range frame reference(s) in the build')
+    return 1 if in_build else 0
 
 
 if __name__ == '__main__':

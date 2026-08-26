@@ -2891,3 +2891,78 @@ MeFAsset              real, and the release is about REACHABILITY, not about the
 #   wasm32 130/130 · armv7 130/130, 0 truncations
 #   arm64 3264 -> 6506 truncations across 80; MdtBcl alone is 3242 of the rise
 #   drop-in gap 16 -> 15 members, 86 -> 71 symbols
+
+# --- 2026-08-26: the argument-less indirect call, and the hole it exposed ----
+#
+# `iVar7 = (*pcVar1)();` is the defect that crashed IxSphereTriList (§8): Ghidra
+# has no signature for a call through a function pointer, so it drops every
+# argument and the callee reads whatever is on the stack. Two sites were left in
+# the corpus.
+#
+# EVERYTHING NEEDED IS ALREADY WRITTEN DOWN, in four different places:
+#
+#   1. McdFrame.h    McdFrameworkGetInteractions returns McdInteractions*
+#   2. kd_types_fields.json   _McdInteractions +8 is `intersectFn`
+#   3. McdCTypes.h   that member is a McdIntersectFn
+#   4. McdCTypes.h   McdIntersectFn is int (*)(McdModelPair*, McdIntersectResult*)
+#
+# and the arguments are in the slots the call sits on: the return-address store
+# marks the base, argument i is at base + 4*(i+1), and the stores that filled
+# them carry their own casts. MstUtils takes a shorter route — its pointer comes
+# straight out of MstBridgeGetPerPairCB, whose RETURN type is the typedef.
+#
+#   McdInteractions  (*(McdIntersectFn)pcVar1)(p, result)
+#   MstUtils         (*(MstPerPairCBPtr)pcVar12)(local_48, group)
+#
+#   both argument lists match the typedef's parameter types exactly, which is
+#   the check that the slots were read in the right order — and the two words
+#   ABOVE them are gcc's padding, which drop_padding_arg_stores then removed for
+#   free, confirming the arity from the other side.
+#
+# AND MstUtils IS RELEASED AND McdInteractions IS NOT, because restoring the
+# call exposed something the frame-bounds detector could not see:
+#
+#   pMVar6 = (McdContact *)&type1;              /* type1 is an int, 4 bytes */
+#   if (...) { pMVar6 = aMStackY_501c; }
+#   *(void **)((int)pMVar6 + -4)  = pvVar5;     /* FIVE WORDS BELOW type1 */
+#   *(McdModelPair **)((int)pMVar6 + -0x10) = p;
+#
+# `McdIntersect`'s outgoing-argument area is UNMATERIALISED: Ghidra rendered it
+# as negative offsets from the address of a local, and check_frame_bounds.py
+# reported 0 for the object because the offsets go through a POINTER, which its
+# docstring deliberately ignores — `p + 0x14` on a `void *p` really is someone
+# else's memory. Not when p was handed `&local` two lines earlier.
+#
+#   pointer_aliases() closes it: a pointer assigned the address of a local is a
+#   frame reference, but only under BYTE arithmetic — `(int)ptr + K` — because
+#   `ptr + K` without the cast is element arithmetic and genuinely is not.
+#   Where a pointer takes several locals the SMALLEST is used.
+#
+#     corpus-wide: 9 violations, ALL in McdInteractions, none in any object
+#     already in the build. So it shields nothing that was validated, and it
+#     holds the one object that needed holding.
+#
+#   MstUtils by contrast writes IN BOUNDS, and Ghidra sized the arrays to say so:
+#     int aiStack_9cb0[6]   24 bytes, accessed at +0x14
+#     float fStack_9c98      4 bytes, accessed at +0
+#     MeReal aMStack_9c94[2] 8 bytes, accessed at +0 and +4
+#
+# THE GATE NOW SPLITS ITS REPORT, because a held object's violations are the
+# detector working and only a violation in the BUILD is a failure. Controls:
+# the same source with its object present reports "1 in the build" and exits 1;
+# with the object absent it reports "1 HELD" and exits 0.
+#
+#   LIMIT, stated: neither repaired call was EXERCISED by anything run here.
+#   McdIntersect is 0 calls in scene_ragdoll (only McdGoodbyeEach 900 and
+#   McdHello 630 ran) and 0 in the engine on test-karma-1 — §3a's intercept,
+#   and the engine does not reference McdIntersect at all; it arrives through
+#   McdAggregate. So McdInteractions' scene verdict is about the LINK. The
+#   evidence for the repair is static: the typedef's parameter types, the slots
+#   the return address marks, and the padding rule agreeing on the arity from
+#   above. What it still needs is materialise_shifted_frame over that area.
+#
+#   131 objects · 131/131 clean on three scenes · frame bounds 0 IN THE BUILD
+#   bindings 0 · difftest byte-identical to the documented baseline
+#   wasm32 131/131 · armv7 131/131, 0 truncations · arm64 6,877 across 81
+#   engine, test-karma-1, 260 s: exit 124, START MATCH, 0 faults
+#   drop-in gap 15 -> 14 members, 71 -> 68 symbols

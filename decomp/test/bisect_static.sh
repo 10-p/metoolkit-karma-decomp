@@ -167,6 +167,14 @@ for o in "$W/build"/*.o; do
 done
 IF="-I$INC -I$INC/MdtBcl -I$INC/MdtKea -I$INC/McdCommon -I$INC/McdPrimitives"
 IF="$IF -I$INC/McdFrame -I$INC/Mst -I$INC/MeGlobals -I$INC/MeApp"
+# THE sh_ COPY GOES IN AN ARCHIVE, not on the command line, and this is not
+# tidiness. Linking it as a plain object forces ALL of its undefined references
+# to be resolved, which pulls archive members in a different order — and on
+# IxCylinderCylinder that made the SHIPPED OverlapCylCyl call through a null
+# pointer with NOTHING substituted, i.e. the `--none` control segfaulted. In an
+# archive it is pulled in only when a substitution actually references it, and
+# `--none` then reproduces the object's known baseline exactly.
+ar rcs "$W/sh_pref.a" "$W/sh_pref.o"
 gcc -m32 -O2 -DLINUX -no-pie $IF -o "$W/difftest" "$HERE/test/difftest_pair.c" \
-    "$W"/rec_*.o "$W/sh_pref.o" -Wl,--start-group "$LIB"/*.a -Wl,--end-group -lstdc++ -lm
+    "$W"/rec_*.o -Wl,--start-group "$LIB"/*.a "$W/sh_pref.a" -Wl,--end-group -lstdc++ -lm
 "$W/difftest" "$PAIR" "$ITERS" 2>&1 | tail -9

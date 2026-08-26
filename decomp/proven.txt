@@ -285,6 +285,56 @@ IxConvexPrimitives    real: 1,685 calls of McdSphylConvexMeshIntersect on ONS-CB
 #                     hour — ragdolls land on the level, not on the vehicles —
 #                     and ONS-Torlan would not start a ticking match. CBP2 and
 #                     UCMP maps reach it in minutes. See HANDOVER.md 6.
+# CYLCYL-15OF15       2026-08-27 (eighth session): what it would take, measured rather than
+#                     estimated. `IxCylinderCylinder` is the ONLY thing between check 3 and
+#                     15 of 15, and its charge is 1 count_diff and 20 dims_diff in 200,000.
+#
+#                     FIRST, THE STATED REASON FOR TOLERATING THE dims WAS TESTED, because
+#                     §11 item 0 asserts "the shipped library disagrees with itself, under a
+#                     1e-7 m nudge, more often than we disagree with it" and that had never
+#                     been re-measured. KD_JITTER displaces model 2 between the two calls;
+#                     KD_SELFTEST drives the SHIPPED function on both sides:
+#
+#                       shipped vs shipped, no jitter   200,000/200,000 identical, 0, 0, 0
+#                       shipped vs shipped, 1e-7 nudge  142,642 identical, 1 count, 16 dims
+#                       ours    vs shipped, 1e-7 nudge  142,634 identical, 2 count, 26 dims
+#                       ours    vs shipped, no jitter   155,485 identical, 1 count, 20 dims
+#
+#                     THE CLAIM SURVIVES, AND IT NEEDED SHARPENING. The first row is the
+#                     control and it matters: on IDENTICAL inputs the shipped library is
+#                     PERFECTLY deterministic, so our 20 dims are OUR difference and not
+#                     noise. What the second row establishes is the SENSITIVITY — a
+#                     displacement of a tenth of a micron moves 16 dims and 1 count, which is
+#                     the same order as our disagreement. So our residual is consistent with
+#                     an arithmetic difference of order 1e-7, not with a logic error.
+#
+#                     WHAT THAT MEANS FOR 15 OF 15, stated plainly: "0 dims" is not reachable
+#                     by a behavioural fix. It requires the arithmetic in this call path to
+#                     be BIT-EXACT, because anything less lands inside the sensitivity band
+#                     measured above.
+#
+#                     WHERE IT IS. `test/bisect_cylcyl.sh`'s shape (globals rather than
+#                     statics) gives one usable row:
+#                       --none                155,485 identical, 1 count, 20 dims (baseline)
+#                       kd_CylCylIntersect    162,834 identical, 1 count, 20 dims
+#                     The substitution took effect — bit-identity moved 7,349 pairs — and the
+#                     discrete divergence did not. SO IT IS NOT IN CylCylIntersect, which
+#                     agrees with the seventh session's reading that the FOOTPRINT differs
+#                     upstream of the emission filter. `kd_OverlapCylCyl` SEGFAULTS under
+#                     substitution and returned NO VERDICT; do not read that as evidence.
+#
+#                     THE WORK LEFT, so it is not re-derived: `tools/spill_scan.py` confirms
+#                     SEVEN unfixed round-trips in this object, of which two — `OverlapCylCyl:z1`
+#                     at -0x278 and `OverlapCylCyl:nCapZ` at -0x274 — are in the function the
+#                     defect is in. `nCapZ` is `fsts -0x274` at 1a4c and `fmuls -0x274` at
+#                     1ad9. Identifying which expression each one is needs the x87 stack
+#                     simulated over that region, the way MeMath's was; the region is dense
+#                     with other spills (-0x270, -0x158) so it is real work, not a grep.
+#                     Three others are in McdCylinderCylinderSafeTime, which difftest does
+#                     not drive, and `McdCylinderCylinderIntersect:eps` was TRIED and is a
+#                     no-op — the value is already rounded by the float argument conversion,
+#                     which is the false-positive class spill_scan warns about.
+
 IxCylinderTriList     RE-RELEASED 2026-08-27 (eighth session) — the live-match defect this file
 #                     has carried since 2026-08-25 is FIXED, and it was one dropped rounding.
 #

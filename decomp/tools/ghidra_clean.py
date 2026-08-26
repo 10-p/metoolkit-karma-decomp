@@ -2505,7 +2505,61 @@ _FORMAT_ASSIGN = r'(?m)^[ \t]*%s[ \t]*=[ \t]*("(?:[^"\\]|\\.)*")[ \t]*;[ \t]*$'
 _ANY_ASSIGN = r'(?m)^[ \t]*%s[ \t]*=[^=]'
 
 
-def _resolve_arity(region, arg):
+def _nearest_assignment(region, upto, var):
+    """The last `var = ...;` statement starting before `upto`, or None."""
+    last = None
+    for m in re.finditer(r'(?m)^[ \t]*' + re.escape(var) + r'[ \t]*=([^=][^;]*);', region):
+        if m.start() < upto:
+            last = m
+        else:
+            break
+    return last
+
+
+def _reaching_formats(region, call_at, var):
+    """Every definition of `var` that can reach the call, or None if unsure.
+
+    Ghidra merges two call sites that share a tail into ONE call, and where the
+    two sites push DIFFERENT format strings the format becomes a variable. That
+    is what MeXMLParseStringArray does, and the shipped code says so outright —
+    each path pushes its format as an IMMEDIATE and jumps to the shared tail:
+
+        8df: push %ecx ; push %ecx          <- 2 padding words
+        8e7: push %esi ; push %eax ; push %edi ; push %ebx     <- 4 arguments
+        8f7: push $0x280   R_386_32 .rodata.str1.1  <- "...expected %d strings..."
+        8fc: push <buffer> ; call sprintf            <- the shared tail
+        915: sub $0xc,%esp                  <- 3 padding words, the other path
+        91e: push %edx ; push %edx ; push %eax                 <- 3 arguments
+        927: push $0x2c0   R_386_32 .rodata.str1.1  <- "...greater than max..."
+        92c: jmp 8fc
+
+    Eight pushed words either way, and at most FOUR of them are ever read. So
+    the maximum over the reaching formats is the right arity — but only over the
+    ones that REACH, and `pcVar7 = x` earlier in the same function does not: it
+    is `readToNextTag`'s output buffer.
+
+    The predecessors are readable because Ghidra writes its control flow with
+    labels and gotos. The call's reaching definitions are the nearest assignment
+    before it, plus the nearest assignment before every `goto` to any label
+    between that assignment and the call. One level, no fixed point: a
+    predecessor whose own nearest assignment is not a literal returns None and
+    the site is declined."""
+    first = _nearest_assignment(region, call_at, var)
+    if first is None:
+        return None
+    span = region[first.start():call_at]
+    labels = re.findall(r'(?m)^(\w+):\s*$', span)
+    out = [first.group(1)]
+    for lab in labels:
+        for g in re.finditer(r'goto\s+' + re.escape(lab) + r'\s*;', region):
+            a = _nearest_assignment(region, g.start(), var)
+            if a is None:
+                return None
+            out.append(a.group(1))
+    return out
+
+
+def _resolve_arity(region, arg, call_at=None):
     """How many arguments the format consumes, following a variable if it is one.
 
     Ghidra hoists a format out of the call when one call site serves several
@@ -2519,8 +2573,9 @@ def _resolve_arity(region, arg):
     so `fix_printf_extra_args` saw a name where it wanted a literal and left the
     two padding words alone.
 
-    EVERY ASSIGNMENT IN THE FUNCTION HAS TO BE A LITERAL, and the arity taken is
-    the LARGEST of them. Both halves are load-bearing, and MeXMLParser is why:
+    THE ARITY TAKEN IS THE LARGEST OVER THE DEFINITIONS THAT REACH THE CALL, and
+    both halves are load-bearing. MeXMLParser has one call reached by two
+    definitions with DIFFERENT arities:
 
         pcVar7 = "line %d, char %d: expected %d strings, found %d\n";   4
         ...
@@ -2530,18 +2585,25 @@ def _resolve_arity(region, arg):
       LAB_000108fc:
         sprintf(file->error,pcVar7,iVar1,iVar2,uVar8,puVar9,pcVar4,pcVar6);
 
-    Two definitions reach that call with DIFFERENT arities. Taking the nearer
-    one textually — which is what a reaching-definition guess would do — gives
-    3, and dropping three arguments would drop `puVar9`, which the other path
-    reads. The largest is the only safe answer: nothing beyond it is read on any
-    path. And `pcVar7 = x;` earlier in the same function is a non-literal
-    definition whose arity cannot be bounded at all, so that site is declined
-    outright rather than guessed at."""
+    Taking the nearer one textually gives 3, and dropping three arguments would
+    drop `puVar9`, which the other path reads. The largest is the only safe
+    answer: nothing beyond it is read on any path.
+
+    And the same function assigns `pcVar7 = x` — `readToNextTag`'s output
+    buffer, whose arity cannot be bounded at all. `_reaching_formats` is what
+    says it does not reach this call; where every definition in the function
+    must be considered, one non-literal declines the site outright."""
     a = arg.strip()
     if a.startswith('"'):
         return _printf_arity(a)
     if not re.match(r'^[A-Za-z_]\w*$', a):
         return None
+    if call_at is not None:
+        reaching = _reaching_formats(region, call_at, a)
+        if reaching is not None:
+            arities = [_printf_arity(r.strip()) for r in reaching]
+            if not any(x is None for x in arities):
+                return max(arities)
     lits = [m.group(1) for m in re.finditer(_FORMAT_ASSIGN % re.escape(a), region)]
     if not lits:
         return None
@@ -2604,7 +2666,7 @@ def fix_printf_extra_args(text):
                 pos = m.end()
                 if len(args) <= fi:
                     continue
-                want = _resolve_arity(region, args[fi])
+                want = _resolve_arity(region, args[fi], m.start())
                 if want is None or len(args) <= fi + 1 + want:
                     continue
                 keep = args[:fi + 1 + want]

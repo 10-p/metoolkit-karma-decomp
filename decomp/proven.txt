@@ -3181,3 +3181,58 @@ MeAssetFactory        real, and like MeFAsset the release is about REACHABILITY,
 #   wasm32 133/133 · armv7 133/133, 0 truncations · arm64 7,094 across 83
 #   engine, test-karma-1, 260 s: exit 124, START MATCH, 0 faults
 #   drop-in gap 13 -> 12 members, 63 -> 58 symbols
+
+# --- 2026-08-26: MeXMLParser — two call sites Ghidra merged into one ---------
+#
+# 12 symbols, and the blocker was an arity that could not be bounded FROM THE
+# TEXT. The shipped code bounds it, and says why the text could not:
+#
+#   8df: push %ecx ; push %ecx                  <- 2 padding words
+#   8e7: push %esi ; push %eax ; push %edi ; push %ebx      <- 4 arguments
+#   8f7: push $0x280   R_386_32 .rodata.str1.1  <- "...expected %d strings..."
+#   8fc: push <buffer> ; call sprintf           <- THE SHARED TAIL
+#   915: sub $0xc,%esp                          <- 3 padding words, other path
+#   91e: push %edx ; push %edx ; push %eax                  <- 3 arguments
+#   927: push $0x2c0   R_386_32 .rodata.str1.1  <- "...greater than max..."
+#   92c: jmp 8fc
+#
+# TWO call sites sharing a tail, each pushing its format as an IMMEDIATE. Eight
+# pushed words either way, and at most FOUR of them are ever read. Ghidra merges
+# the two into one call whose format is a variable and whose argument list is
+# the union — six — so `_resolve_arity`'s max-over-literals gives 4, which is
+# exactly right, and `pcVar4, pcVar6` are the two `push %ecx`.
+#
+#   sprintf(file->error,pcVar7,iVar1,iVar2,uVar8,puVar9,pcVar4,pcVar6);
+#   ->  sprintf(file->error,pcVar7,iVar1,iVar2,uVar8,puVar9);
+#
+# WHAT WAS DECLINING IT was `pcVar7 = x;` earlier in the same function —
+# readToNextTag's OUTPUT BUFFER, a non-literal whose arity cannot be bounded at
+# all. The rule refused any site where the function held one. It does not reach
+# this call, and `_reaching_formats` is what says so rather than assuming it:
+# Ghidra writes its control flow with labels and gotos, so the reaching
+# definitions are the nearest assignment before the call plus the nearest
+# assignment before every `goto` to a label between them. One level, no fixed
+# point; a predecessor whose own nearest definition is not a literal declines.
+#
+#   controls, and the second and third are the ones that matter:
+#     both reaching definitions literal (4 and 3)   -> drops 2, keeps 4
+#     the GOTO path's definition non-literal        -> drops 0
+#     the FALL-THROUGH definition non-literal       -> drops 0
+#
+# AND THIS ONE IS MEASURED IN THE ENGINE, not argued from reachability — the
+# first of the session's asset-path releases where the repaired function itself
+# runs:
+#
+#   gdb, test-karma-1, xDeathMatch, ~130 s, 134 objects substituted
+#     MeXMLElementProcess   1,462 calls
+#     MeXMLParseMeReal      2,167 calls
+#   engine, 260 s, -SOFTWARERENDERER
+#     exit 124 (ran to the timeout), START MATCH reached, 0 faults
+#     stock control, same map and URL: exit 124, START MATCH, 0 faults
+#   substitution verified: MeXMLParseStringArray 107 vs 101 instructions,
+#   MeXMLElementProcess 231 vs 229
+#
+#   134 objects · 134/134 clean on three scenes · frame bounds 0 in the build
+#   bindings 0 · difftest byte-identical to the documented baseline
+#   wasm32 134/134 · armv7 134/134, 0 truncations · arm64 7,125 across 84
+#   drop-in gap 12 -> 11 members, 58 -> 46 symbols

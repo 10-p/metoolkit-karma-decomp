@@ -6,12 +6,14 @@
     X(McdBoxCylinderIntersect, "McdBoxCylinderIntersect", "rec_McdBoxCylinderIntersect") \
     X(McdBoxPlaneIntersect, "McdBoxPlaneIntersect", "rec_McdBoxPlaneIntersect") \
     X(McdBoxSphereIntersect, "McdBoxSphereIntersect", "rec_McdBoxSphereIntersect") \
+    X(McdBoxTriangleListIntersect, "McdBoxTriangleListIntersect", "rec_McdBoxTriangleListIntersect") \
     X(McdConvexMeshTriangleListIntersect, "McdConvexMeshTriangleListIntersect", "rec_McdConvexMeshTriangleListIntersect") \
     X(McdCylinderCylinderIntersect, "McdCylinderCylinderIntersect", "rec_McdCylinderCylinderIntersect") \
     X(McdCylinderPlaneIntersect, "McdCylinderPlaneIntersect", "rec_McdCylinderPlaneIntersect") \
     X(McdCylinderSphereIntersect, "McdCylinderSphereIntersect", "rec_McdCylinderSphereIntersect") \
     X(McdCylinderTriangleListIntersect, "McdCylinderTriangleListIntersect", "rec_McdCylinderTriangleListIntersect") \
     X(McdGjkCgIntersect, "McdGjkCgIntersect", "rec_McdGjkCgIntersect") \
+    X(McdIntersect, "McdIntersect", "rec_McdIntersect") \
     X(McdPlaneIntersect, "McdPlaneIntersect", "rec_McdPlaneIntersect") \
     X(McdSpherePlaneIntersect, "McdSpherePlaneIntersect", "rec_McdSpherePlaneIntersect") \
     X(McdSphereSphereIntersect, "McdSphereSphereIntersect", "rec_McdSphereSphereIntersect") \

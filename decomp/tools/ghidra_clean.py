@@ -518,6 +518,24 @@ def materialise_alloca_frame(body, fname):
             # wrong memory. Point it at the block instead.
             ab = alloca_base.get(var)
             if ab:
+                # INDEXED FIRST, and the order matters. `(int)aiStack_4c +
+                # i * 4 + iVar5` is element i OF THE ALLOCATED BLOCK, because
+                # `iVar5` is the shift that puts the block there. The two
+                # collapses below only see the base and the shift ADJACENT, so
+                # without this the `+ iVar5` is dropped by the generic rule at
+                # the bottom and the expression becomes `(int)aiStack_4c +
+                # i * 4` — an index into `int aiStack_4c[3]`, a twelve-byte
+                # local, with i running to `count`. MeAssetFactory has eight,
+                # and they are what its guessed-frame detector was reporting.
+                #
+                # check_frame_bounds cannot see this one: the index is a
+                # VARIABLE, and it only reads constant offsets. The detector is
+                # the only thing between it and the build.
+                body = re.sub(r'\(int\)\s*&?' + re.escape(ab) + r'\s*\+\s*'
+                              r'([A-Za-z_]\w*\s*\*\s*\d+)\s*\+\s*'
+                              + re.escape(var) + r'\b',
+                              lambda m: f'(int)(kd_alloca_{var}) + {m.group(1)}',
+                              body)
                 body = re.sub(r'\(int\)\s*&?' + re.escape(ab) + r'\s*\+\s*'
                               + re.escape(var) + r'\b',
                               f'(int)(kd_alloca_{var})', body)
@@ -2883,6 +2901,67 @@ def restore_indirect_call_args(text, fieldmap, include_dir):
             n += 1
         out.append(region)
     return ''.join(out), n
+
+
+def materialise_alloca_relative_slots(body, fname):
+    r"""`(int)(kd_alloca_iVar5) + -4` — an argument slot BELOW an alloca'd block.
+
+    `materialise_shifted_frame` gives the outgoing-argument area real storage
+    wherever Ghidra named its slots `in_stack_*`/`stack0x*`. Where a function
+    also calls `alloca`, gcc puts the allocated block immediately ABOVE that
+    area and addresses the area from it, so Ghidra spells one or more of the
+    slots as a NEGATIVE offset from the allocation instead, and
+    `materialise_shifted_frame` never sees them.
+
+    `MeAssetFactory` has one such slot, and it is a real argument — not padding,
+    which is what this looked like until the read was found:
+
+        *(MeMatrix4Ptr *)((int)(kd_alloca_iVar5) + -4) = tm;
+        *(MdtWorldID *)(&(*kd_argslot_ffffffac)) = world;
+        *(McdGeometryID *)(&(*kd_argslot_ffffffa8)) = pMVar11;
+        *(MeAssetFactory **)(&(*kd_argslot_ffffffa4)) = pMVar21;
+        *(undefined4 *)((int)auStackY_70 + 0x10) = 0x104e4;
+        pMVar16 = (*p_Var3)(*(MeFAssetPart **)(&(*kd_argslot_ffffffa4)),
+                            *(McdGeometryID *)(&(*kd_argslot_ffffffa8)),
+                            *(MdtWorldID *)(&(*kd_argslot_ffffffac)),
+                            *(MeMatrix4Ptr *)((int)(kd_alloca_iVar5) + -4));
+
+    The return address is at -0x60, so the four arguments are -0x5c, -0x58,
+    -0x54 and -0x50 — and `kd_alloca_iVar5 - 4` IS -0x50, read back by the call
+    as its fourth argument. Three of the four already have storage as
+    `kd_argslot_*`; this gives the fourth the same, which is the only reason the
+    other three are not out of bounds either.
+
+    It is a WRITE-THEN-READ of one address, so rewriting base and offset
+    together preserves the dataflow exactly, and the result is in bounds where
+    the original was four bytes under an `alloca(n)` block. `check_frame_bounds`
+    is what says so, before and after.
+
+    ONLY NEGATIVE OFFSETS, and never the pointer's own value: the block itself
+    is real memory that gets passed to callees — in `MeAssetFactory` it is
+    `MeFAssetGetPartsSortedByName`'s output array — so touching a positive
+    offset or a bare use would corrupt an actual allocation."""
+    ptrs = set(re.findall(r'\(\s*(kd_alloca_\w+)\s*=\s*\(char \*\)alloca\s*\(', body))
+    ptrs |= set(re.findall(r'^\s*(kd_alloca_\w+)\s*=\s*\(char \*\)alloca\s*\(', body, re.M))
+    if not ptrs:
+        return body, 0
+    n = 0
+    for ptr in sorted(ptrs):
+        ref = re.compile(r'\(int\)\s*\(\s*' + re.escape(ptr) + r'\s*\)\s*\+\s*'
+                         r'(-(?:0x[0-9a-f]+|\d+))\b')
+        offs = sorted({int(m.group(1), 0) for m in ref.finditer(body)})
+        if not offs:
+            continue
+        size = -offs[0]
+        if size % 4 or size > 64:
+            continue              # not an argument area this can account for
+        buf = 'kd_argslot_' + ptr
+        body = ref.sub(lambda m: f'(int)({buf}) + {int(m.group(1), 0) + size:#x}', body)
+        brace = body.find('\n{')
+        body = (body[:brace + 2] + f'\n  undefined1 {buf} [{size}];\n'
+                + body[brace + 2:])
+        n += len(offs)
+    return body, n
 
 
 def materialise_pointer_arg_area(text):
@@ -5947,6 +6026,7 @@ def main():
 
     decls, defs, dropped = [], [], []
     n_alloca_fns = 0
+    n_alloca_slots = 0
     n_proto_calls = 0
     n_saved_elems = 0
     n_agg_copies = 0
@@ -5973,6 +6053,10 @@ def main():
         body, nalloca = materialise_alloca_frame(body, name)
         if nalloca:
             n_alloca_fns += 1
+        # Immediately after, because it works on the `kd_alloca_*` names that
+        # pass creates, and before anything reads the slot expressions.
+        body, nslot = materialise_alloca_relative_slots(body, name)
+        n_alloca_slots += nslot
         body, nproto = prototype_indirect_calls(body)
         n_proto_calls += nproto
         body, nagg = collapse_outgoing_aggregate_copy(body, args.protos,
@@ -6165,6 +6249,8 @@ def main():
     if n_parea:
         print(f'  {n_parea} outgoing argument area(s) anchored on a local given '
               f'real storage')
+    if n_alloca_slots:
+        print(f'  {n_alloca_slots} argument slot(s) below an alloca given real storage')
     if n_cmac:
         print(f'  {n_cmac} padding word(s) dropped from a kd_compat.h call')
     if n_rel:

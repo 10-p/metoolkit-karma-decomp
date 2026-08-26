@@ -3067,3 +3067,117 @@ MeFAsset              real, and the release is about REACHABILITY, not about the
 # pointer is the address of a LOCAL, which is what stopped it replacing MeHeap's
 # `MeMemoryAPI.create(capacity * 4)` with a four-byte stack buffer. Extending it
 # to alloca needs that distinction made explicitly, not by loosening the guard.
+
+MeAssetFactory        real, and like MeFAsset the release is about REACHABILITY, not about the
+#                     frame — with a stronger argument, because this one is a FIFTH member of
+#                     the §3a family: code UT2004 links and REIMPLEMENTS.
+#
+#                     It took two fixes to get here and the first diagnosis was wrong.
+#
+#                     ONE: `(int)(kd_alloca_iVar5) + -4` IS AN ARGUMENT SLOT, NOT PADDING.
+#                     Fifteen sites, and it looked like the padding family until the READ
+#                     was found:
+#
+#                       *(MeMatrix4Ptr *)((int)(kd_alloca_iVar5) + -4) = tm;
+#                       *(MdtWorldID *)(&(*kd_argslot_ffffffac)) = world;
+#                       *(McdGeometryID *)(&(*kd_argslot_ffffffa8)) = pMVar11;
+#                       *(MeAssetFactory **)(&(*kd_argslot_ffffffa4)) = pMVar21;
+#                       *(undefined4 *)((int)auStackY_70 + 0x10) = 0x104e4;
+#                       pMVar16 = (*p_Var3)(*(MeFAssetPart **)(&(*kd_argslot_ffffffa4)),
+#                                           *(McdGeometryID *)(&(*kd_argslot_ffffffa8)),
+#                                           *(MdtWorldID *)(&(*kd_argslot_ffffffac)),
+#                                           *(MeMatrix4Ptr *)((int)(kd_alloca_iVar5) + -4));
+#
+#                     The return address is at -0x60, so the four arguments are -0x5c, -0x58,
+#                     -0x54 and -0x50 — and `kd_alloca_iVar5 - 4` IS -0x50, read back by the
+#                     call as its fourth argument. gcc puts an alloca'd block immediately
+#                     above the outgoing area, so Ghidra spelled that one slot relative to
+#                     the allocation and materialise_shifted_frame never saw it; the other
+#                     three are `kd_argslot_*` and already have storage.
+#                     materialise_alloca_relative_slots gives the fourth the same, rewriting
+#                     base and offset together so the write-then-read is preserved exactly.
+#                     Only NEGATIVE offsets, never the pointer's value: the block itself is
+#                     real memory passed to MeFAssetGetPartsSortedByName as its output array.
+#
+#                       check_frame_bounds  before  1 reference below an alloca'd block
+#                                            after  0
+#
+#                     TWO: ALL 155 kd_argslot_ REFERENCES ARE IN ONE FUNCTION, and it is
+#                     `MeAssetInstanceCreate` — which UT2004 DOES NOT USE:
+#
+#                       KSkeletal.cpp:387   guard(MeAssetInstanceCreate);
+#                       KSkeletal.cpp:388   skelAssIns = KAssetInstanceCreate(...);
+#
+#                     The `guard()` merely NAMES the MathEngine function the engine is
+#                     replacing — Unreal's macro takes a scope label — and the call beside it
+#                     is Epic's own. Same shape as KDynStep.cpp's integrator and KIntersect's
+#                     two intercepts. Checked four ways, because "0 calls in one run" is a
+#                     sample size:
+#
+#                       * the drop-in walk needs exactly five MeAssetFactory symbols, and
+#                         MeAssetInstanceCreate is NOT one of them: MeAssetInstanceDestroy,
+#                         MeAssetInstanceGetJoint, MeAssetInstanceGetModel,
+#                         MeAssetInstanceGetNextGeometry, MeAssetInstanceInitGeometryIterator
+#                       * no engine object imports it — 0
+#                       * NOTHING IN THE WHOLE CORPUS calls it, imports it, or takes its
+#                         address. Not one R_386_PC32, not one R_386_32, not one U. That is
+#                         stronger than MeFAssetCreateCopy, which at least had two callers
+#                       * gdb, test-karma-1, xDeathMatch, ~150 s: MeAssetInstanceCreate
+#                         0 calls, MeAssetFactoryCreate 0 calls
+#
+#                     engine, test-karma-1, 260 s, -SOFTWARERENDERER, 133 objects substituted
+#                       exit 124 (ran to the timeout), START MATCH reached, 0 faults
+#                       stock control, same map and URL: exit 124, START MATCH, 0 faults
+#                       substitution verified: MeAssetInstanceCreate 556 vs 477 instructions
+#
+#                     WHAT THIS DOES NOT SAY: that the reconstructed frame is right. The
+#                     function carrying it never executed and cannot be reached, so the
+#                     object links for its other five symbols. If anything ever calls
+#                     MeAssetInstanceCreate the frame is a hypothesis again, and the 155
+#                     references are where to start.
+
+# --- 2026-08-26: an index into the alloca'd block, collapsed onto its ANCHOR --
+#
+# THE FIFTH TIME A CHANGED OBJECT TURNED OUT TO HAVE BEEN SILENTLY WRONG, and
+# this one was in the build.
+#
+# materialise_alloca_frame collapses `(int)BASE + shiftVar` to the materialised
+# block, because BASE + shift IS the block. It only recognised the base and the
+# shift ADJACENT. Where an INDEX sits between them —
+#
+#   raw     *(undefined4 *)((int)apMStack_3c + iVar14 * 4 + iVar2)
+#   was     *(undefined4 *)((int)apMStack_3c + iVar14 * 4)
+#   now     *(undefined4 *)((int)(kd_alloca_iVar2) + iVar14 * 4)
+#
+# — the generic rule at the bottom of the pass dropped the `+ iVar2` and left an
+# index into the ANCHOR. Ghidra's own text says which is meant:
+#
+#   iVar2 = -uVar24;                                   the alloca shift
+#   *(int *)(&stack0xffffffb8 + uVar24 * -2) = (int)apMStack_3c + iVar2;
+#   MeFAssetGetPartsSortedByName(asset, THAT);         the block, as an output array
+#
+# and the anchor is `MeFAssetPart *apMStack_3c[3]` — TWELVE BYTES — indexed by
+# `iVar14`, the asset's part count. A UT2004 ragdoll has far more than three
+# parts, so every part past the third read and wrote past an unrelated local.
+#
+#   MeFAsset         12 sites, all in MeFAssetCreateCopy
+#   MeAssetFactory    8 sites, all in MeAssetInstanceCreate
+#
+# BOTH ARE IN THE ONE FUNCTION EACH OBJECT'S REACHABILITY LINE ALREADY RETIRES,
+# which is why nothing observable moved and why the two releases stand: MeFAsset
+# is bit-identical on the ragdoll scene before and after, and difftest is
+# byte-identical to the documented baseline. That is a coincidence worth stating
+# plainly rather than leaning on — the defect was real, it was in the build, and
+# what stopped it mattering was that the function cannot be called.
+#
+# check_frame_bounds CANNOT see this shape: the index is a VARIABLE and it only
+# reads constant offsets. `stack_guesses` is what was holding MeAssetFactory,
+# and it was right.
+#
+#   133 objects · 133/133 clean on three scenes · MeFAsset, MeFAssetPart,
+#   MeAssetFactory and MeAssetFactoryCreateFuncs all trajectory bit-identical
+#   frame bounds 0 in the build · bindings 0
+#   difftest byte-identical to the documented baseline
+#   wasm32 133/133 · armv7 133/133, 0 truncations · arm64 7,094 across 83
+#   engine, test-karma-1, 260 s: exit 124, START MATCH, 0 faults
+#   drop-in gap 13 -> 12 members, 63 -> 58 symbols

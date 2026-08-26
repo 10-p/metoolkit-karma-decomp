@@ -1022,10 +1022,17 @@ MT=../Thirdparty/metoolkit
 LIB=$MT/lib.rel/linux_single_gcc3.2
 
 # breadth: swap each object into a scene, diff the trajectory.
-# READ THE PER-OBJECT LINES, NOT THE SUMMARY. "substituted and ran cleanly :
-# 140" is the CRASH count; bit-identity is the `[  ok  ]` vs `[ diverg]` lines
-# above it. Reading the summary as bit-identity is a mistake that has been made
-# HERE, on MdtPartition, and it took a bisect to catch — see proven.txt.
+#
+# READ THE PER-OBJECT LINES, NOT THE SUMMARY, and know that there are THREE
+# tiers, not two. "substituted and ran cleanly : 140" counts crashes, hangs and
+# NaNs — `pass` is incremented in ALL THREE branches, INCLUDING `[ diverg]`, so
+# the summary cannot go down for a numerical difference at all:
+#     delta == 0     [  ok  ] ... trajectory bit-identical
+#     delta <  1e-3  [  ok  ] ... max delta D          <- a TOLERANCE band
+#     otherwise      [ diverg] ... max delta D
+# So `[  ok  ]` is not the same as bit-identical either. Reading the summary as
+# bit-identity is a mistake that was made HERE, on MdtPartition, and it took a
+# bisect to catch — see proven.txt.
 #     grep -c 'trajectory bit-identical'   and   grep '^  \[ diverg\]'
 ./test/substitute_test.sh /tmp/kd_build $LIB test/scene_chain.c
 ./test/substitute_test.sh /tmp/kd_build $LIB test/scene_boxes_on_plane.c

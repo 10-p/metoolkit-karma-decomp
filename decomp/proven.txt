@@ -3681,8 +3681,12 @@ ReadWriteKeaInputToFile  RELEASED 2026-08-26 (seventh session). Three symbols of
 #
 #       substituted and ran cleanly : 140    crashed / NaN / short : 0
 #
-#   and "ran cleanly" is the CRASH check. Bit-identity is in the PER-OBJECT
-#   lines, and MdtPartition's says the opposite:
+#   and "ran cleanly" is the CRASH check — `pass` is incremented in ALL THREE
+#   branches of the verdict, `[ diverg]` included, so that number cannot go down
+#   for a numerical difference at all. And there are three tiers, so `[  ok  ]`
+#   is not bit-identity either: delta 0 is "bit-identical", delta < 1e-3 is a
+#   TOLERANCE band that still prints `[  ok  ]`. MdtPartition's line says the
+#   opposite of what the summary implied:
 #
 #       [ diverg] MdtPartition — max delta 8.744e+02 m first@1=3.941e-02   (ragdoll)
 #       [ diverg] MdtPartition — max delta 4.351e+00 m first@1=3.391e-04   (chain)

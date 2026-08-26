@@ -26,10 +26,10 @@ week ago and the rest of this file was written when it was not, so read this bef
 trust any schedule further down.
 
 ```
-141 recovered objects, all compiling for i386, wasm32, armv7 AND arm64.
-  wasm32  141/141, exported symbol NAMES byte-identical to the i386 build
-  armv7   141/141, ZERO pointer-truncation diagnostics
-  arm64   141/141, 405 truncations across 44 objects (was 7,771/89) - section 3
+142 recovered objects, all compiling for i386, wasm32, armv7 AND arm64.
+  wasm32  142/142, exported symbol NAMES byte-identical to the i386 build
+  armv7   142/142, ZERO pointer-truncation diagnostics
+  arm64   142/142, 405 truncations across 44 objects (was 7,771/89) - section 3
 
 The collision layer, the solver and the ENTIRE .ka asset-loading path are recovered
 and the engine has RUN on all three on i386.
@@ -77,14 +77,14 @@ freebie, the Android NDK), and to integrate the result into the engine's web bui
 
 What exists today:
 
-- **141 recovered objects**, all compiling for i386, wasm32, armv7 *and* arm64 — but see
+- **142 recovered objects**, all compiling for i386, wasm32, armv7 *and* arm64 — but see
   §3's pointer-size section: **arm64 is not trustworthy and wasm32 is**, for the same reason.
 - **The full collision-detection path the game actually uses is recovered and validated** —
   all twelve interaction pairs UT2004 calls, each measured against the shipped original on
   real inputs from a live match. Evidence per object in `karma-decomp/proven.txt`. §6 has
   the census that says "twelve" and why that is the number to plan against.
 - **The whole set already compiles under Emscripten**, and its exported symbol NAMES are
-  **byte-identical to the i386 build for all 141 objects** — nothing added or dropped. So
+  **byte-identical to the i386 build for all 142 objects** — nothing added or dropped. So
   the ABI surface the engine links against does not change between targets, which was the
   thing most likely to turn this into a rewrite. See §4. (Names only: `wasm_check.sh`
   discards the binding letter. That gap let a recovered object export a *global* `putchar`
@@ -687,7 +687,7 @@ python3 tools/dropin_gap.py <engine-build-dir> /tmp/kd_build \
 It walks the symbol closure from the ENGINE's own object files, resolving each symbol
 against the recovered build first and only then against the shipped archives, and prints
 **every shipped member the engine still needs**. That is the distance to the deliverable.
-**4 members, 11 symbols** today — 25 of them in members deliberately not attempted, so the genuinely open work is THREE symbols — from 8/35 earlier the same day, 20/148 one session ago and 27/192 the week before.
+**3 members, 3 symbols** today — one symbol each — 25 of them in members deliberately not attempted, so the genuinely open work is THREE symbols — from 8/35 earlier the same day, 20/148 one session ago and 27/192 the week before.
 It is checked against ground
 truth rather than trusted: a real link of the engine with every shipped member deleted
 reports 111 undefined symbols, and the walk predicts all 111.
@@ -705,8 +705,8 @@ reports 111 undefined symbols, and the walk predicts all 111.
   (`HANDOVER.md` §3b) — MathEngine's demo viewer, its unused constraint types, its ASE
   loader. They will never be recovered and that is correct.
 
-So "how much of Karma does the web build need" is not 153 objects and not 141. It is the
-141 already recovered plus the 4 in the gap, and the gap is the only number that moves.
+So "how much of Karma does the web build need" is not 153 objects and not 142. It is the
+142 already recovered plus the 3 in the gap, and the gap is the only number that moves.
 
 ### The gap that decides your schedule — REWRITTEN, the old blocker is GONE
 
@@ -723,7 +723,7 @@ machine-code level, not from the link (`HANDOVER.md` §7d).
 | | |
 |---|---|
 | **the deliverable** | UT2004 linking NO shipped `metoolkit` member, on wasm32 and Android, and playing |
-| **recovery-side remainder** | 4 shipped members / 11 symbols, tracked by `tools/dropin_gap.py` (`HANDOVER.md` §3c). Shrinking steadily — 19 members and 113 symbols closed in the sixth session, two more in the seventh |
+| **recovery-side remainder** | 3 shipped members / 3 symbols, tracked by `tools/dropin_gap.py` (`HANDOVER.md` §3c). Shrinking steadily — 19 members and 113 symbols closed in the sixth session, two more in the seventh |
 | **YOUR remainder** | **nothing has ever EXECUTED on wasm32, armv7 or arm64.** Not one instruction. That is the single largest unknown in the whole project |
 
 **Sequence your work as if the physics is coming, because it is.** The right thing to
@@ -768,9 +768,9 @@ device — pointer truncation is a compile-time diagnostic.
 
 | target | compiles | symbols | truncations |
 |---|---|---|---|
-| wasm32 | 141/141 | identical to i386 | — (32-bit) |
-| **armv7** | 141/141 | identical | **0** — a real 32-bit-pointer port |
-| **arm64** | 141/141 | identical | **405 across 44** after `tools/fix_ptrwidth.py`; 6,977 without it |
+| wasm32 | 142/142 | identical to i386 | — (32-bit) |
+| **armv7** | 142/142 | identical | **0** — a real 32-bit-pointer port |
+| **arm64** | 142/142 | identical | **405 across 44** after `tools/fix_ptrwidth.py`; 6,977 without it |
 
 **arm64 compiling is a lie.** The recovery puns pointers through 4-byte slots, which is
 sound on every 32-bit target and silently truncates on a 64-bit one. The fix is
@@ -793,7 +793,7 @@ where `wasm-ld` and GNU `ld` differ, and §4b already flags COMDAT for `keaMatri
 
 The honest one-line summary of the project's state: *the collision layer and the solver are
 both recovered and both run inside the real engine on i386; 8 shipped members remain, and
-nothing has ever executed on any of your three targets.* Do not read 141-of-153 as 92% —
+nothing has ever executed on any of your three targets.* Do not read 142-of-153 as 93% —
 read `tools/dropin_gap.py`.
 
 ---
@@ -864,13 +864,19 @@ Read `karma-decomp/HANDOVER.md` for how the recovery pipeline works, and
 A log of the things that would otherwise surprise you, newest first. If you have read an
 older copy of this file, start here.
 
-### 2026-08-26 (seventh session) — 141 objects, gap 8/35 -> 4/11, libMdtKea complete
+### 2026-08-26 (seventh session) — 142 objects, gap 8/35 -> 3/3, libMdtKea complete
 
 - **Nothing on your side changed, and that is the point:** all three members closed this
   session fell to generator fixes whose blast radius was measured at **zero** — every
   pre-existing `.o` byte-identical at each step. `ReadWriteKeaInputToFile` (3 symbols),
-  `MdtPartition` (4), `keaMatrix_PcSparse_vanilla` (1) and **`McdSpace` (16)**, the largest
-  single member of the gap. **`libMdtKea` is now recovered
+  `MdtPartition` (4), `keaMatrix_PcSparse_vanilla` (1), **`McdSpace` (16)** and **`MeMath`
+  (8)**. **The gap is now THREE SYMBOLS, one per member.**
+- **ONE THING ON OUR SIDE IS NOW WRITTEN RATHER THAN RECOVERED, and you should know it.**
+  Ghidra deletes the x87 `fcos`/`fsin` results in two `MeMath` functions and everything
+  between them and their output. Both are reconstructed and **bit-exact against the shipped
+  functions over 1,000,000 random cases**. It is the only such code in the library, it is
+  marked as such in `X87_RECONSTRUCTIONS`, and the generator RAISES rather than silently
+  skipping if a re-dump moves it. **`libMdtKea` is now recovered
   whole**, and the engine runs on all of it — a breakpoint on the recovered
   `keaMatrix_pcSparse_vanilla::factorize` is hit 500+ times in a live match from
   `keaLCPSolver::solveLCP`.

@@ -5163,6 +5163,152 @@ def _names_of_incomplete(tag, include_dir):
     return direct, ptr
 
 
+# ---------------------------------------------------------------------------
+# X87_RECONSTRUCTIONS — arithmetic Ghidra DELETED, put back and proven bit-exact.
+#
+# Ghidra models the x87 transcendental INSTRUCTIONS `fcos` and `fsin` as calls
+# and, where it cannot place the result, throws it away. It says so in the dump:
+#
+#     /* Unresolved local var: float __result@[DW_OP_reg11(ST0)] */
+#     fcos(lVar9);
+#
+# In seven of MeMath's nine users it captures the value anyway and the recovery
+# is fine. In the two `MeMatrix4TMUpdateFromVelocities*` functions it does not,
+# and everything between the instruction and the ten stores into `MeReal
+# eR[3][3]` goes with it — so the recovered code reads eR UNINITIALISED. One of
+# the two produced a diagnostic (a leftover `stack0x`); the other compiled
+# cleanly and was wrong on 100% of inputs with nothing to hold it back.
+#
+# THIS IS THE ONLY PLACE IN THE PROJECT WHERE CODE IS WRITTEN RATHER THAN
+# RECOVERED, so the bar is higher, not lower, and it is met by MEASUREMENT:
+# `test/ab_matrix.sh` drives the recovered function and the SHIPPED one with
+# identical random inputs and compares bitwise. Both read 0 differences over
+# 1,000,000 cases, against a self-test control that also reads 0 and deliberate
+# wrong-variant controls that read 68% and 100%.
+#
+# The formulae were read out of the x87 stack, not guessed — and the two
+# functions do NOT use the same one, which is exactly why guessing failed:
+#
+#   ...FromVelocities   theta = dt*|w|, axis n = w/|w| normalised,
+#                       eR[i][i] = cos + n_i^2*(1-cos)
+#   ...AndAcceler       eff = |w| + |alpha|*dt, theta = eff*dt, and the axis is
+#                       NOT normalised — the code divides by `eff`, which is not
+#                       |w + alpha*dt|. Its diagonal is 1 - Cc*(vj^2+vk^2),
+#                       which equals the other form ONLY when |v| == eff.
+#                       Rounding points matter too: `inv = 1/eff` is a
+#                       reciprocal, `inv*inv` is truncated to float (feb), and
+#                       so is (1-cos)*that (ff7).
+#
+# Sign convention: both use -sin, the TRANSPOSE of the textbook Rodrigues form.
+# With +sin the same code is 100% wrong. No amount of reading the decompiled C
+# would have settled that; the oracle did, in one run.
+X87_RECONSTRUCTIONS = {
+    ('MeMath', 'MeMatrix4TMUpdateFromVelocities'): [
+        dict(old="""                    
+    fcos(lVar9);
+                    
+    fsin(lVar9);
+    puVar5 = &stack0xfffffff4;""",
+             new="""
+    {
+      long double kd_m = sqrtl((long double)aAngularVelocity[2] * (long double)aAngularVelocity[2] +
+                               (long double)aAngularVelocity[1] * (long double)aAngularVelocity[1] +
+                               (long double)aAngularVelocity[0] * (long double)aAngularVelocity[0]);
+      long double kd_i = 1.0L / kd_m;
+      long double kd_t = (long double)aTimeStep * kd_m;
+      long double n0 = (long double)aAngularVelocity[0] * kd_i;
+      long double n1 = (long double)aAngularVelocity[1] * kd_i;
+      long double n2 = (long double)aAngularVelocity[2] * kd_i;
+      long double kd_c = cosl(kd_t), kd_s = -sinl(kd_t), kd_C = 1.0L - kd_c;
+      eR[0][0] = (MeReal)(kd_c + n0 * n0 * kd_C);
+      eR[0][1] = (MeReal)(n0 * n1 * kd_C + n2 * kd_s);
+      eR[0][2] = (MeReal)(n0 * n2 * kd_C - n1 * kd_s);
+      eR[1][0] = (MeReal)(n0 * n1 * kd_C - n2 * kd_s);
+      eR[1][1] = (MeReal)(kd_c + n1 * n1 * kd_C);
+      eR[1][2] = (MeReal)(n1 * n2 * kd_C + n0 * kd_s);
+      eR[2][0] = (MeReal)(n0 * n2 * kd_C + n1 * kd_s);
+      eR[2][1] = (MeReal)(n1 * n2 * kd_C - n0 * kd_s);
+      eR[2][2] = (MeReal)(kd_c + n2 * n2 * kd_C);
+    }
+    puVar5 = (undefined1 *)&eR[0][0];"""),
+        dict(old="""      fVar1 = *(float *)(puVar5 + -0x30);
+      fVar2 = *(float *)(puVar5 + -0x2c);
+      fVar3 = *(float *)(puVar5 + -0x28);""",
+             new="""      fVar1 = *(float *)(puVar5 + 0);
+      fVar2 = *(float *)(puVar5 + 4);
+      fVar3 = *(float *)(puVar5 + 8);"""),
+    ],
+    ('MeMath', 'MeMatrix4TMUpdateFromVelocitiesAndAcceler'): [
+        dict(old="""                    
+    fcos(lVar10);
+                    
+    fsin(lVar10);
+    puVar4 = local_1c;""",
+             new="""
+    {
+      long double kd_wm = sqrtl((long double)aAngularVelocity[2] * (long double)aAngularVelocity[2] +
+                                (long double)aAngularVelocity[0] * (long double)aAngularVelocity[0] +
+                                (long double)aAngularVelocity[1] * (long double)aAngularVelocity[1]);
+      long double kd_am = sqrtl((long double)aAngularAcceler[2] * (long double)aAngularAcceler[2] +
+                                (long double)aAngularAcceler[1] * (long double)aAngularAcceler[1] +
+                                (long double)aAngularAcceler[0] * (long double)aAngularAcceler[0]);
+      long double kd_e = kd_wm + kd_am * (long double)aTimeStep;
+      long double kd_i = 1.0L / kd_e;
+      MeReal      kd_i2 = (MeReal)(kd_i * kd_i);
+      long double kd_t = kd_e * (long double)aTimeStep;
+      MeReal      kd_C = (MeReal)((1.0L - cosl(kd_t)) * (long double)kd_i2);
+      long double kd_S = -(sinl(kd_t) * kd_i);
+      long double v0 = (long double)aAngularVelocity[0] + (long double)aAngularAcceler[0] * (long double)aTimeStep;
+      long double v1 = (long double)aAngularVelocity[1] + (long double)aAngularAcceler[1] * (long double)aTimeStep;
+      long double v2 = (long double)aAngularVelocity[2] + (long double)aAngularAcceler[2] * (long double)aTimeStep;
+      eR[0][0] = (MeReal)(1.0L - kd_C * (v1 * v1 + v2 * v2));
+      eR[1][1] = (MeReal)(1.0L - kd_C * (v0 * v0 + v2 * v2));
+      eR[2][2] = (MeReal)(1.0L - kd_C * (v0 * v0 + v1 * v1));
+      eR[0][1] = (MeReal)(kd_C * v0 * v1 + kd_S * v2);
+      eR[0][2] = (MeReal)(kd_C * v0 * v2 - kd_S * v1);
+      eR[1][0] = (MeReal)(kd_C * v0 * v1 - kd_S * v2);
+      eR[1][2] = (MeReal)(kd_C * v1 * v2 + kd_S * v0);
+      eR[2][0] = (MeReal)(kd_C * v0 * v2 + kd_S * v1);
+      eR[2][1] = (MeReal)(kd_C * v1 * v2 - kd_S * v0);
+    }
+    puVar4 = (undefined1 *)&eR[0][0];"""),
+        dict(old="""      fVar1 = *(float *)(puVar4 + -0x30);
+      fVar2 = *(float *)(puVar4 + -0x2c);
+      fVar3 = *(float *)(puVar4 + -0x28);""",
+             new="""      fVar1 = *(float *)(puVar4 + 0);
+      fVar2 = *(float *)(puVar4 + 4);
+      fVar3 = *(float *)(puVar4 + 8);"""),
+    ],
+}
+
+
+def reconstruct_discarded_x87(text, obj):
+    """Apply X87_RECONSTRUCTIONS for this object, checking the evidence first.
+
+    RAISES rather than declining, for the same reason restore_float_text does:
+    every site here is code Ghidra deleted, so a silent no-op leaves the object
+    reading uninitialised memory and looks exactly like success. A re-dump that
+    changes the surrounding text must fail loudly and be re-verified against
+    test/ab_matrix.sh, not quietly skipped."""
+    base = os.path.basename(obj or '')
+    base = base[:-2] if base.endswith('.o') else base
+    sites = [s for (o, _fn), lst in X87_RECONSTRUCTIONS.items()
+             if o == base for s in lst]
+    if not sites:
+        return text, 0
+    n = 0
+    for site in sites:
+        if text.count(site['old']) != 1:
+            raise SystemExit(
+                'reconstruct_discarded_x87: %s — anchor found %d times, expected 1.\n'
+                '  The dump changed under a reconstruction that is only valid for the\n'
+                '  text it was verified against. Re-verify with test/ab_matrix.sh\n'
+                '  before touching this table.' % (base, text.count(site['old'])))
+        text = text.replace(site['old'], site['new'])
+        n += 1
+    return text, n
+
+
 def fix_incomplete_pointer_arithmetic(text, diag, ctx):
     r"""`space + 0x18` where `space` points at a struct nobody declares.
 
@@ -6972,6 +7118,7 @@ def main():
     # is gone before this looks. keaLCPSolver is validated and bit-identical on
     # three scenes and must not change.
     body_text, n_extidx = normalise_external_indexing(args.object, body_text)
+    body_text, n_x87 = reconstruct_discarded_x87(body_text, args.object)
     body_text, n_pfmt = fix_printf_extra_args(body_text)
     body_text, n_cmac = fix_compat_macro_extra_args(body_text)
     body_text, n_uscore = fix_undeclared_underscore_local(body_text)
@@ -7091,6 +7238,9 @@ def main():
         print(f'  {n_extbase} external base(s) re-resolved to byte arithmetic')
     if n_vptr:
         print(f'  {n_vptr} vptr store(s) resolved to a vtable address point')
+    if n_x87:
+        print(f'  {n_x87} site(s) of x87 arithmetic Ghidra discarded, reconstructed '
+              'and verified bit-exact (test/ab_matrix.sh)')
     if n_extidx:
         print(f'  {n_extidx} external symbol(s) typed two ways normalised to '
               'byte arithmetic, scale read from the machine code')

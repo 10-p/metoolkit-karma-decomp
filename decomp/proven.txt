@@ -4579,3 +4579,78 @@ McdSpace              RELEASED 2026-08-26 (seventh session). Sixteen symbols, th
 # than the IxBoxTriList one — but it is a decision to take on purpose with both
 # functions understood, not a side effect of fixing the one that had the
 # diagnostic. Solve the sibling, then ship both.
+
+# --- 2026-08-26 (seventh session): MeMath RELEASED — 8 symbols, gap 11 -> 3 --
+#
+# Both discarded-x87 functions are now RECONSTRUCTED AND BIT-EXACT, so the
+# reason for holding the object is gone. The earlier entries above stand as the
+# record of how it was refused twice on reasons that were wrong; this is what it
+# took to stop refusing it.
+#
+# `...AndAcceler` was the hard one, and it fell to READING THE X87 STACK rather
+# than to a sixth hypothesis. Simulating f55..1042 gave three facts that no
+# amount of guessing had produced, and each one was worth a factor:
+#
+#   1. THE AXIS IS NOT NORMALISED. The code divides by `eff = |w| + |alpha|*dt`
+#      — a MAGNITUDE sum — which is not |w + alpha*dt|. Every normalisation
+#      hypothesis failed for that reason and no other.
+#   2. THE DIAGONAL IS `1 - Cc*(vj^2 + vk^2)`, not `c + Cc*vi^2`. Those are the
+#      same thing only when |v| == eff, which here it is not. This one took the
+#      error from 0.20 to 1.19e-07 — one float ULP.
+#   3. THE ROUNDING POINTS ARE IN THE INSTRUCTIONS. `inv = 1/eff` is a
+#      RECIPROCAL (fc5), `inv*inv` is truncated to FLOAT (feb `fstps`), and so
+#      is `(1-cos)*that` (ff7). And the `fsts` copies of v at -0x58/-0x54/-0x50
+#      are DEAD STORES, never read back — so v stays 80-bit. Using the float
+#      copies instead is 68% wrong at 1 ULP, which is the control that says so.
+#
+# THE VERIFIED FORMULAE, so they are never re-derived:
+#
+#   MeMatrix4TMUpdateFromVelocities
+#     theta = dt*|w| ; n = w/|w| ; c = cos ; s = -sin ; C = 1-c
+#     eR[i][i] = c + n_i^2*C        eR[i][j] = n_i*n_j*C +/- n_k*s
+#
+#   MeMatrix4TMUpdateFromVelocitiesAndAcceler
+#     eff = |w| + |alpha|*dt ; theta = eff*dt ; inv = 1/eff
+#     inv2 = (float)(inv*inv) ; Cc = (float)((1-cos theta)*inv2)
+#     S = -(sin theta * inv) ; v = w + alpha*dt        (all 80-bit but Cc/inv2)
+#     eR[i][i] = 1 - Cc*(vj^2+vk^2) eR[i][j] = Cc*vi*vj +/- S*vk
+#
+#   BOTH use -sin, the TRANSPOSE of the textbook Rodrigues form. With +sin each
+#   is 100% wrong. That sign is not readable from the decompiled C at all.
+#
+# CONTROLS, and every one of them fails when it should:
+#     shipped vs shipped                      1,000,000   0 differ
+#     ...FromVelocities  candidate            1,000,000   0 differ
+#     ...FromVelocities  +sin variant            20,000   100%, worst 1.59
+#     ...AndAcceler      candidate            1,000,000   0 differ
+#     ...AndAcceler      +sin variant            20,000   100%, worst 1.59
+#     ...AndAcceler      v truncated to float   100,000   68%,   worst 1.19e-07
+#     and re-run against the PIPELINE-PRODUCED MeMath.o: 500,000, 0 differ, both
+#
+# THIS IS THE ONLY CODE IN THE PROJECT THAT IS WRITTEN RATHER THAN RECOVERED,
+# and `X87_RECONSTRUCTIONS` says so at the top of the table. It RAISES rather
+# than declining if a re-dump moves the anchors, because a silent no-op here
+# leaves the object reading uninitialised memory and looks exactly like success.
+#
+#   142 objects · MeMath trajectory bit-identical on all three scenes
+#   census: 1 of 28 functions runs in scene_ragdoll, so the SCENE verdict is
+#     mostly about the link — **the A/B is the evidence, not the scene**
+#   frame bounds 0 · bindings 0 · wasm32 142/142 · armv7 0 truncations
+#   difftest byte-identical to the documented baseline
+#   BLAST RADIUS: all 141 pre-existing .o BYTE-IDENTICAL
+#   engine, build-subst142, test-karma-1, 260 s: exit 124, START MATCH,
+#     0 SIGSEGV, 0 Critical Error, 0 NaN; stock control identical on each
+#     AND IT EXECUTES: the recovered MeQuaternionFromTM is hit from
+#     UpdateCOMTransform <- KInitActorDynamics (KarmaSupport.cpp:782)
+#     substitution verified in the BINARY: MeMatrix4TMUpdateFromVelocities
+#     249 -> 288 instructions, MeQuaternionFiniteRotation 121 -> 156
+#   The two RECONSTRUCTED functions are themselves not reached in a match —
+#   their callers McdModelUpdatePath and McdIntersectAt never run — so their
+#   evidence is the A/B, which is stronger than a match would have been.
+#   drop-in gap 4 -> 3 members, 11 -> 3 symbols
+MeMath                RELEASED 2026-08-26 (seventh session). Eight symbols. Refused twice
+#                     on reasons that were both wrong, then solved by simulating the
+#                     x87 stack: the axis is not normalised, the diagonal is
+#                     1 - Cc*(vj^2+vk^2), and the rounding points are in the
+#                     instructions. Both functions bit-exact vs the shipped ones
+#                     over 1,000,000 cases with controls that fail.

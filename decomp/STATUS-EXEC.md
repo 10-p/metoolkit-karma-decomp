@@ -8,26 +8,24 @@ Updated 2026-08-26.
 
 ## The one number
 
-**4.**
+**3.**
 
 Pieces of the original library the game still needs from us. It was 27 at the start of last
 week, 20 the day before yesterday, and 8 yesterday.
 
-**And 2 of the 4 we have decided not to rebuild** — pieces the game links but never calls,
-or where rebuilding would mean guessing. The other 2 we attempted today and deliberately
-did not ship. So the real remaining work is **2 pieces**, and both are documented down to
-the machine instruction.
+Each of the three is now a **single function**. One we have decided against on the merits;
+the other two we attempted today and deliberately did not ship, and both are documented down
+to the machine instruction.
 
-**And one of the two we had written off is now half solved.** A rotation
-calculation the decompiler had thrown away was rebuilt and checked against the
-original on **a million random inputs — identical every time**. The catch is
-that its twin, which no check flags at all, is wrong on *every* input; shipping
-the fixed half would quietly ship the broken one, so neither goes in until both
-are done.
+**And the piece we had twice written off is done.** A rotation calculation the decompiler
+had thrown away was rebuilt and checked against the original on **a million random inputs —
+identical every time**, and so was its twin, which no check of ours flags at all and which
+had been wrong on *every* input. It is the only part of the library we have had to write
+rather than recover, and it is labelled as such: if the inputs ever shift, the build stops
+rather than quietly carrying on.
 
 Counted in the units that matter — the individual functions the game still needs from the
-original — it went from **35 to 11 today**, and 9 of the 11 are ones we have decided
-against.
+original — it went from **35 this morning to 3**.
 
 ---
 
@@ -35,7 +33,7 @@ against.
 
 | | |
 |---|---|
-| **Pieces still needed** | **4** — of which 2 are refused and 2 are attempted-and-held |
+| **Pieces still needed** | **3** — one function each; 1 refused, 2 attempted-and-held |
 | Collision — does A hit B | done, proven in live matches |
 | Movement — how things fall and swing | done, and the game runs on it |
 | Loading vehicle and ragdoll files | done this week, and the game runs on it |

@@ -326,10 +326,19 @@ Everything else in this file is detail. This is the work.
 
 ### WHERE MY HEAD IS — the next moves, in order
 
-Written 2026-08-26 (sixth session). The framing is unchanged from the fifth and it keeps
+Written 2026-08-26 (seventh session). The framing is unchanged since the fifth and it keeps
 paying: the list is "which GAP MEMBER next", not "which object", and they are not the same
-list — §3c. **Eight members closed this session and every one fell to a GENERATOR fix that
-also repaired objects nobody was looking at.**
+list — §3c. Eight members closed in the sixth session and two in the seventh, and every one
+fell to a GENERATOR fix that also repaired objects nobody was looking at.
+
+**THE SEVENTH SESSION'S OWN LESSON, and it is about when to STOP.** Three separate repairs
+were written, measured and REVERTED — `McdContact`, and two attempts at `MdtLOD`'s last six
+guesses. Each compiled; one passed all nine gates while indexing an eight-byte buffer as
+`count+1` sixteen-byte structs, and one knocked `MeFAsset` out of the build. **The blast
+radius diff and the detectors are what caught all three, and one symbol never justifies
+overriding them.** A held object is the pipeline working. What those three attempts bought
+is written down in `proven.txt` — the correct frame readings — so the next attempt starts
+from an answer instead of a diagnosis.
 
 **THE METHOD THAT HAS PRODUCED EVERY RECOVERY, and it is the only thing in this section
 that matters if you read nothing else.** Group the failures by their normalised error
@@ -340,11 +349,17 @@ turned out to have been silently wrong for months. And when a rule looks right a
 nothing, **call it directly on the offending line**; that has now found fifteen.
 
 **AND THE SIXTH SESSION'S ADDITION TO IT: when a check is silent, make it fail on purpose
-before believing it.** Three of this session's five findings came from that, not from
-looking for bugs — `-Wuninitialized` reading clean because `-w` was in front of it,
+before believing it.** Three of that session's five findings came from it, not from looking
+for bugs — `-Wuninitialized` reading clean because `-w` was in front of it,
 `ptrwidth_check.sh` reporting 0 truncations for a target it was not compiling, and
 `_rebase_onto_covering_local` refusing MeMath for a reason that had nothing to do with why
 MeMath must be refused.
+
+**THE SEVENTH SESSION SHARPENED THAT INTO ITS OTHER HALF: CHECK THAT A NEW RULE FIRES
+BEFORE YOU BELIEVE THE CONTROLS THAT SAY IT IS SAFE.** The first version of
+`normalise_external_indexing` declined on the one object it exists for and passed all five
+of its negative controls while doing it — because a rule that never fires passes every
+negative control. Run the positive case first; the controls only become evidence afterwards.
 
 **MOVE 0 — work §3c's table, by CAUSE.** 6 members, 28 symbols — **and 25 of those are in
 members this file says NOT to attempt**, so what is genuinely open is THREE symbols across

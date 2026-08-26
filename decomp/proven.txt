@@ -4526,3 +4526,56 @@ McdSpace              RELEASED 2026-08-26 (seventh session). Sixteen symbols, th
 # `...AndAcceler` the same way by moving the stub; the driver names the function
 # under test in one place. **Do not ship either on "it is unreachable" while the
 # A/B reads 100%.**
+
+# --- 2026-08-26 (seventh session): MeMath's eR RECONSTRUCTED and PROVEN ------
+#   bit-exact for the reachable function. The other one is still open.
+#
+# With `ab_matrix.sh`'s oracle in hand the reconstruction stopped being a guess.
+# `MeMatrix4TMUpdateFromVelocities` is **SOLVED, BIT-EXACT OVER 1,000,000
+# RANDOM CASES**, and the formula is below so nobody has to re-derive it.
+#
+# WHAT THE DISASSEMBLY GIVES, which is what made the hypothesis cheap:
+#     bd0: fsqrt                       |w|
+#     c80: fld1 ; c88: fdiv %st(3),%st 1/|w|   -> the unit axis
+#     lVar9 = lVar8 * lVar9            theta = dt * |w|
+#     cd8: fcos ; ce0: fsin            and both results discarded by Ghidra
+# i.e. Rodrigues' rotation formula. The only thing not readable at a glance was
+# the SIGN convention, and the oracle settled it in one run.
+#
+#   theta = dt * |w| ;  n = w / |w| ;  c = cos(theta) ;  s = -sin(theta)
+#   C = 1 - c
+#     eR[0][0] = c + n0*n0*C     eR[0][1] = n0*n1*C + n2*s   eR[0][2] = n0*n2*C - n1*s
+#     eR[1][0] = n0*n1*C - n2*s  eR[1][1] = c + n1*n1*C      eR[1][2] = n1*n2*C + n0*s
+#     eR[2][0] = n0*n2*C + n1*s  eR[2][1] = n1*n2*C - n0*s   eR[2][2] = c + n2*n2*C
+#
+#   **NOTE THE `s = -sin`** — the TRANSPOSE of the textbook form. With `+sin`
+#   the same code reads 100% different at worst |delta| 1.59; with `-sin` it is
+#   bit-identical. That one sign is the entire difference between right and
+#   wrong here, and no amount of reading the C would have settled it.
+#
+#   Intermediates in `long double` (the x87 keeps 80 bits and the stores to
+#   eR are `fstps`, so the truncation happens at the store and nowhere else).
+#
+# THREE CONTROLS, and all three are load-bearing:
+#     SELFTEST shipped vs shipped   1,000,000 cases   0 differ
+#     candidate  s = -sin           1,000,000 cases   0 differ
+#     candidate  s = +sin              20,000 cases   20,000 differ (100%)
+# The third is what makes the second mean something: the test CAN fail.
+#
+# `MeMatrix4TMUpdateFromVelocitiesAndAcceler` IS NOT SOLVED, and the search is
+# recorded so it is not repeated. Same shape, same matrix multiply, but
+#     lVar10 = |w| + |alpha| * dt      (a MAGNITUDE sum, not a vector sum)
+#     theta  = lVar10 * dt
+# and the axis is neither of the two obvious readings:
+#     axis = w/|w|            50,000 cases, 100.000% differ, worst 0.217
+#     axis = (w + alpha*dt)   50,000 cases,  99.998% differ, worst 0.221
+# Both are FAR closer than the object as it stands (worst 190.63), so the
+# structure is right and the axis or the angle is not. Whoever takes it should
+# read the stack from `c80` forward rather than guess a third time.
+#
+# **NOT INTEGRATED, DELIBERATELY.** Landing only the solved half makes MeMath
+# COMPILE, which would put `...AndAcceler` in the build measured 100% wrong.
+# It is imported by nobody, so that is the MdtUpdatePartitions situation rather
+# than the IxBoxTriList one — but it is a decision to take on purpose with both
+# functions understood, not a side effect of fixing the one that had the
+# diagnostic. Solve the sibling, then ship both.

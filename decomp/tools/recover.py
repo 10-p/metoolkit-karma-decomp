@@ -135,10 +135,14 @@ RELEASED_UNMODELLED = {
 
 # A declaration of a value Ghidra could not account for, with its type in front:
 #   `ushort *extraout_EDX;`  `undefined4 extraout_ECX;`  `McdContact *extraout_EAX;`
-# The name must END the declarator, so `MeReal (*unaff_ESI) [3];` does not match
-# and the object stays in review — which is the right answer for a shape whose
-# type this cannot rebuild.
-UNMODELLED_DECL = r'(?m)^([ \t]*)((?:const |struct |unsigned |signed )*[A-Za-z_]\w*[ \t*]+)%s[ \t]*;[ \t]*$'
+# An INITIALISER is allowed and replaced, because initialise_unmodelled_locals
+# has already given some of these a defined value — `int unaff_EBP = 0;` — and a
+# probe has to overwrite it rather than decline. The name must END the
+# declarator, so `MeReal (*unaff_ESI) [3];` does not match and the object stays
+# in review, which is the right answer for a shape whose type this cannot
+# rebuild.
+UNMODELLED_DECL = (r'(?m)^([ \t]*)((?:const |struct |unsigned |signed )*[A-Za-z_]\w*[ \t*]+)'
+                   r'%s[ \t]*(?:=[^;]*)?;[ \t]*$')
 
 # Three constants, not one. Two arbitrary values can coincide — `if (v)` folds
 # the same way for 1 and 3 — so the set includes 0, which folds the OTHER way

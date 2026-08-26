@@ -2811,3 +2811,83 @@ MeFAsset              real, and the release is about REACHABILITY, not about the
 #   difftest byte-identical to the documented baseline
 #   wasm32 129/129 · armv7 129/129, 0 truncations · arm64 3264 across 79
 #   drop-in gap 17 -> 16 members, 107 -> 86 symbols
+
+# --- 2026-08-26: MdtBcl — a rebased frame pointer, and dead code below it ----
+#
+# 15 symbols of the drop-in gap, and it took two separate things.
+#
+# ONE: THE `stack0x` SITE IS REPAIRABLE AND MeMath'S IS NOT, and the difference
+# is now a check rather than a judgement. frame_offsets.py --cover separated
+# three cases; both of these are the third — the name is right and Ghidra
+# declared NO local at that offset. MdtBcl's accesses land inside
+# `MeReal ref2world[4][4]` at -156, which the line above fills via
+# MeMatrix4MultiplyMatrix; MeMath's land inside `MeReal eR[3][3]`, which is
+# DECLARED AND NEVER WRITTEN because Ghidra emitted fcos/fsin and discarded the
+# results.
+#
+# The pointer is at frame -12 and the array starts at -156, so pointing it at
+# the array and keeping the displacements puts the BASE 144 bytes past a 64-byte
+# object — which is what check_frame_bounds.py exists to reject. So it is
+# REBASED: pointed at the covering local, with every displacement through it
+# shifted by the same constant. Every access keeps its address exactly:
+#
+#   local_124 = &stack0xfffffff4;          ->  local_124 = (undefined1 *)ref2world;
+#     *(MeReal *)(local_124 + -0x80)       ->    *(MeReal *)(local_124 + 0x10)
+#
+#   the six accesses come out at ref2world[1][0..2] and [2][0..2], and the three
+#   statements above the loop write [0][0..2] — one 3x3 rotation block copied
+#   into clist->Jstore, which is what MdtBclAddSpring6 is for. That agreement is
+#   the evidence the offsets are right.
+#
+#   THE TRIP COUNT IS READ, NOT ASSUMED: the pointer is incremented in the loop,
+#   so the bounds check has to cover every iteration. `uVar20` starts at 1 and
+#   steps by 2 against `< 3`, so 1 — and forcing the reader to return 3 makes
+#   the rule DECLINE, because iterations 1 and 2 leave the array. The bound is
+#   live, not decoration.
+#
+#   AND MeMath DECLINED FOR THE WRONG REASON FIRST, which is why there is a
+#   second guard. Its loop is not the counted shape (`iVar7 = iVar6 + 1` rather
+#   than `v = v + K`), so it was refused before the real objection was reached.
+#   Measured: with the trip count forced, MeMath's targets -60..-28 all fit
+#   inside eR at [-60,-24) — coverage PASSES. What refuses it is that the
+#   covering local must be WRITTEN: `eR` is mentioned ONCE in its function, its
+#   declaration; `ref2world` is mentioned 69 times and assigned element by
+#   element. A guard that holds by accident is not a guard.
+#
+# TWO: THE unaff_* COMPLAINT IS IN CODE THAT IS NOT IN THE OBJECT. With the
+# stack0x site repaired, MdtBcl compiled and moved to live_unmodelled on
+# `unaff_EBP` used as a FRAME BASE — `*(float *)(unaff_EBP + -0x25c)` with
+# `int unaff_EBP = 0;`. All 578 such references are in five functions Ghidra
+# invented at addresses that already belong to real ones:
+#
+#   FUN_00020000 / 30 / 1a0   inside MdtBclAddRPROJoint (.text 0x0e5a0-0x10341)
+#   FUN_00020720              inside LimitSingleAxis
+#   FUN_00020ee0              inside MdtContactWriteRow
+#
+# They are static, nothing calls them, and gcc eliminates them: `nm` on the
+# built object reports ZERO FUN_0002* symbols. prove_inert says the same thing
+# without being told — the object is byte-identical for all three probe
+# constants, because the code carrying them is not emitted at all. It needed one
+# generalisation to see it: initialise_unmodelled_locals had already given the
+# name a value, so the probe has to REPLACE an initialiser rather than decline
+# on finding one. Controls re-run, plus two new ones for the initialised form.
+#
+#   MdtBcl, scene_ragdoll: TRAJECTORY BIT-IDENTICAL
+#   scene_census, scene_chain: 42,300 calls across 7 functions
+#     MdtBclAddBSJoint 9,900 · MdtBclEndConstraint 9,900
+#     MdtBclAddSphericalRowsWorld 9,900 · EndPartition/Init/StartPartition 900 each
+#   LIMIT, stated: MdtBclAddRPROJoint — the function Ghidra split — is NOT among
+#   the seven the chain scene runs. It is a car-suspension joint. Its recovery is
+#   unmeasured, and the fragments being dead does not make the MAIN body proven.
+#
+#   engine, test-karma-1, 260 s, -SOFTWARERENDERER, 130 objects substituted
+#     exit 124 (ran to the timeout), START MATCH reached, 0 faults
+#     stock control, same map and URL: exit 124, START MATCH, 0 faults
+#     substitution verified: AddSpring6 1122 vs 1447 instructions,
+#     AddBSJoint 190 vs 204, AddRPROJoint 1460 vs 2064
+#
+#   130 objects · 130/130 clean on three scenes · frame bounds 0 · bindings 0
+#   difftest byte-identical to the documented baseline
+#   wasm32 130/130 · armv7 130/130, 0 truncations
+#   arm64 3264 -> 6506 truncations across 80; MdtBcl alone is 3242 of the rise
+#   drop-in gap 16 -> 15 members, 86 -> 71 symbols

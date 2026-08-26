@@ -1483,6 +1483,130 @@ def _dwarf_type_size(obj, name):
     return None
 
 
+def _counted_trip_count(region, pos):
+    """Iterations of the `do { } while (v < N)` loop containing `pos`, or None.
+
+    Only the shape gcc leaves behind for a fully unrolled counted loop is read:
+    an integer initialised to a constant before the `do`, incremented by a
+    constant inside it, and compared against a constant at the `while`. Anything
+    else returns None and the caller declines."""
+    end = region.find('} while (', pos)
+    if end < 0:
+        return None
+    m = re.match(r'\}\s*while\s*\((\w+)\s*<\s*(\d+)\)\s*;', region[end:])
+    if not m:
+        return None
+    var, bound = m.group(1), int(m.group(2))
+    steps = [int(s, 0) for s in
+             re.findall(re.escape(var) + r'\s*=\s*' + re.escape(var)
+                        + r'\s*\+\s*(\d+)\s*;', region[:end])]
+    inits = [int(s, 0) for s in
+             re.findall(r'(?m)^\s*' + re.escape(var) + r'\s*=\s*(\d+)\s*;', region[:end])]
+    if len(steps) != 1 or not inits:
+        return None
+    step, init = steps[0], inits[-1]
+    if step <= 0 or init >= bound:
+        return None
+    return -(-(bound - init) // step)
+
+
+_PTR_ACCESS = r'\*\(([A-Za-z_][\w ]*?)\s*\*\)\(\s*%s\s*\+\s*(-?(?:0x[0-9a-f]+|\d+))\s*\)'
+
+
+def _rebase_onto_covering_local(region, fn, off, ctx):
+    r"""`local_124 = &stack0xfffffff4;` where NOTHING is declared at that offset.
+
+    `frame_offsets.py --cover` separated three cases, and this is the third:
+    the name is right, but Ghidra declared no local there at all. `MdtBcl` and
+    `MeMath` are the whole corpus, and they need opposite answers — MeMath's
+    accesses land in an array that is declared and NEVER WRITTEN, so repairing
+    it would buy a compile at the price of reading uninitialised memory, while
+    MdtBcl's land inside `MeReal ref2world[4][4]`, which the line above fills
+    via MeMatrix4MultiplyMatrix.
+
+    THE BASE POINTS 144 BYTES INTO A 64-BYTE ARRAY, which is why the obvious
+    repair — point the pointer at the array and keep the displacements — is what
+    `check_frame_bounds.py` exists to reject. So the pointer is REBASED instead:
+    it is pointed at the covering local, and every displacement through it is
+    shifted by the same constant. Every access keeps its address exactly, and
+    the base becomes a pointer into the object it addresses:
+
+        local_124 = &stack0xfffffff4;              frame -12
+          *(MeReal *)(local_124 + -0x80)           -> frame -140
+        becomes
+        local_124 = (undefined1 *)ref2world;       frame -156
+          *(MeReal *)(local_124 + 0x10)            -> frame -140
+
+    In `MdtBclAddSpring6` the six accesses come out at ref2world[1][0..2] and
+    [2][0..2], and the three statements above the loop write [0][0..2] — one
+    3x3 rotation block copied into `clist->Jstore`, which is what the function
+    is for. That agreement is the evidence the offsets are right; nothing about
+    the shape would have shown it.
+
+    THE TRIP COUNT IS READ, NOT ASSUMED. The pointer is incremented inside the
+    loop, so the bounds check has to cover every iteration, and `_counted_trip_count`
+    derives it from the `do { } while (v < N)` around it — 1 here, because
+    `uVar20` starts at 1 and steps by 2. A loop this cannot read declines, and so
+    does any use of the pointer other than an access or the increment."""
+    want = int(off, 16) - (1 << 32) if int(off, 16) >= (1 << 31) else int(off, 16)
+    tbl = (getattr(ctx, 'locals', None) or {}).get(fn) or {}
+    if not tbl:
+        return None
+    m = re.search(r'(?m)^\s*(\w+)\s*=\s*&stack0x' + off + r'\s*;\s*$', region)
+    if not m:
+        return None
+    ptr = m.group(1)
+    acc = list(re.finditer(_PTR_ACCESS % re.escape(ptr), region))
+    if not acc:
+        return None
+    steps = re.findall(re.escape(ptr) + r'\s*=\s*' + re.escape(ptr)
+                       + r'\s*\+\s*(0x[0-9a-f]+|\d+)\s*;', region)
+    if len(steps) > 1:
+        return None
+    step = int(steps[0], 0) if steps else 0
+    trips = 1
+    if step:
+        trips = _counted_trip_count(region, m.end())
+        if not trips:
+            return None
+    # every other mention of the pointer would move with the rebase
+    mentions = len(re.findall(r'(?<![\w])' + re.escape(ptr) + r'\b', region))
+    if mentions != 1 + len(acc) + 2 * len(steps) + 1:      # decl, accesses, increment, assign
+        return None
+    targets = []
+    for a in acc:
+        d = int(a.group(2), 0)
+        width = _dwarf_type_size(getattr(ctx, 'obj', None), a.group(1).strip()) or 4
+        for k in range(trips):
+            targets.append((want + d + k * step, width))
+    lo = min(t for t, _w in targets)
+    cover = [(n, o, s) for n, (o, s, _t) in tbl.items()
+             if o <= lo and all(o <= t and t + w <= o + s for t, w in targets)]
+    if len(cover) != 1:
+        return None
+    name, base, _size = cover[0]
+    # AND IT HAS TO BE WRITTEN. This is the guard that refuses MeMath, and it is
+    # the documented reason to refuse it (§5c): `MeReal eR[3][3]` is DECLARED AND
+    # NEVER WRITTEN, because Ghidra emitted `fcos`/`fsin` and discarded their
+    # results, so rebasing onto it would buy a compile at the price of reading
+    # uninitialised memory. MeMath already declined for an unrelated reason — its
+    # loop is not the counted shape `_counted_trip_count` reads — and a guard
+    # that holds by accident is not a guard. Measured: `eR` is mentioned ONCE in
+    # its function, which is its declaration; `ref2world` is mentioned 69 times
+    # in MdtBclAddSpring6 and assigned element by element.
+    if not (re.search(r'(?m)^\s*' + re.escape(name) + r'\s*(?:\[[^\]]*\])*\s*=[^=]', region)
+            or re.search(r'[(,]\s*' + re.escape(name) + r'\s*[,)]', region)):
+        return None
+    shift = want - base
+    new = re.sub(r'(?m)^(\s*)' + re.escape(ptr) + r'\s*=\s*&stack0x' + off + r'\s*;\s*$',
+                 lambda mm: f'{mm.group(1)}{ptr} = (undefined1 *){name};', region)
+    def _shift(mm):
+        return '*(%s *)(%s + %#x)' % (mm.group(1).strip(), ptr,
+                                      int(mm.group(2), 0) + shift)
+    new = re.sub(_PTR_ACCESS % re.escape(ptr), _shift, new)
+    return new
+
+
 def fix_stack_address_name(text, diag, ctx):
     """`&stack0xffffffa0` is the address of the local `in_stack_ffffffa0`.
 
@@ -1552,7 +1676,15 @@ def fix_stack_address_name(text, diag, ctx):
                 decl = d
                 break
         if decl is None:
-            out.append(region)          # nothing declared here — decline
+            # Nothing declared at this offset — the third case of
+            # frame_offsets.py --cover. Try rebasing onto the local the
+            # ACCESSES land in; that declines too where they land nowhere.
+            rebased = _rebase_onto_covering_local(region, _fn, off, ctx)
+            if rebased is None:
+                out.append(region)      # nothing declared here — decline
+            else:
+                out.append(rebased)
+                changed = True
             continue
         base_type = decl.group(1).strip().split()[-1] if decl.group(1).strip() else ''
         if '*' in decl.group(1):

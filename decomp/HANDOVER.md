@@ -56,7 +56,10 @@ half of the project this file does not cover.
 You are resuming a project to recover Karma (MathEngine `metoolkit`) from shipped binaries
 as portable C. This file is written for someone with no memory of how any of it came to be.
 
-### RESUME HERE — the state, in one page, 2026-08-27 (eighth session)
+### RESUME HERE — the state, in one page, 2026-08-26 (ninth session)
+
+> **On dates in this file.** The eighth session's entries are stamped `2026-08-27`; the repo clock
+> says `2026-08-26`. The stamps are a day ahead. **Order by SESSION NUMBER, not by date.**
 
 **Everything below this block is detail and history. This is where the work is.**
 
@@ -73,9 +76,34 @@ test-karma-1, 300 s, 0 faults, beside a stock control in the same run with an
 identical Karma warning profile.  §12, `proven.txt` THE-DELIVERABLE.
 
 SO CHECKS 1 AND 2 — THE TWO THAT ARE THE DELIVERABLE — ARE BOTH GREEN ON i386.
+
+AND AS OF THE NINTH SESSION THE ENGINE BUILDS AGAINST IT FOR WASM.  §6c.
+  cmake --preset wasm-karmadecomp-perf   ->  SDLLaunch.wasm, 10,628,483 bytes
+  WITH_KARMA=1, all eleven K*.cpp bridge files compiled, ZERO wasm-ld
+  diagnostics, and 125 of 146 archive members verifiably IN the binary
+  (tools/wasm_members.py).  The recovered physics costs 756 KB of shipping
+  wasm — 9,872,559 without it, measured the same day.
+  NOTHING RECOVERED HAS STILL EVER EXECUTED ON WASM.  Compiling is not running.
 ```
 
-**AND THE HEADLINE IS NOT THE MILESTONE, IT IS THE CORRECTION UNDER IT.**
+**AND THE FIRST WASM BUILD FOUND A DEFECT THAT EVERY i386 GATE IS BLIND TO — §6c.**
+
+```
+gen_prelude emitted `extern int operator_delete()` for _ZdlPv, because
+kd_protos*.h has no entry for the C++ RUNTIME's functions.  On i386 cdecl that
+is EXACTLY INERT — CxSmallSort.o is byte-identical either way, measured.  On
+wasm32 a signature is part of a function's TYPE, and wasm-ld does not error: it
+warns and REPLACES THE CALL WITH A TRAPPING STUB.  Reproduced in two files under
+node: RuntimeError: unreachable.  CxSmallSort is McdSpace's broad-phase sort.
+
+Fixed at the generator.  Blast radius: all 145 i386 objects BYTE-IDENTICAL.
+
+AND THE BIGGER HALF IS UNMEASURED: wasm-ld checks only DIRECT calls.  Karma
+dispatches through function-pointer tables everywhere, and a wasm
+call_indirect type-checks AT RUNTIME.  That class is not clean, it is untested.
+```
+
+**AND THE EIGHTH SESSION'S HEADLINE STILL STANDS, because it is the bigger correction.**
 
 ```
 arm64 IS NOT 95% DONE.  The number that said so was measuring the easier half.
@@ -106,8 +134,10 @@ the layout the recovery encodes is the layout they get.
 
 ### THE NEXT MOVE, in one paragraph
 
-**arm64's layout defect — and start by RUNNING it, not by reading it.**
-`./test/lp64_run.sh` builds all 145 recovered objects for x86-64 and drives the three scenes
+**Two candidates now, and which one is yours depends on the target.**
+
+**If Android 64-bit is in scope: arm64's layout defect — and start by RUNNING it, not by reading
+it.** `./test/lp64_run.sh` builds all 145 recovered objects for x86-64 and drives the three scenes
 under AddressSanitizer, with a built-in i386 control that must read zero. **x86-64 is LP64,
 the same data model as arm64**, so this is the arm64 defect executing on hardware you have —
 every document here said that could not be done, and the premise ("nothing on this machine
@@ -115,7 +145,15 @@ can execute arm64") was true and irrelevant. It takes about a minute and it come
 file, a line, the allocation that was overflowed and a stack. Fix the top one, re-run, take
 the next; `tools/layout_check.py` is for knowing how big the job is, not for doing it.
 
-The first three defect classes it will hand you, in the order they bite:
+**If web is the target: it is no longer a recovery job at all, it is a RUN job, and the build is
+waiting.** `cmake --preset wasm-karmadecomp-perf` links the recovered Karma into the engine with
+zero diagnostics (§6c). Nothing has executed. The ninth session's one finding says what the first
+failure will most likely look like: a **signature** mismatch, not a physics bug — and the direct-call
+half of that class is now fixed and bounded while the **indirect**-call half is untouched, because
+a wasm `call_indirect` type-checks at runtime and no static tool here can see it. `HANDOVER-WEB.md`
+§0 is written for whoever does this.
+
+The first three defect classes `lp64_run.sh` will hand you, in the order they bite:
 1. **a `sizeof` frozen into an allocation** — `(MeMemoryAPI.create)(0x234)` where 0x234 is
    `sizeof(MdtWorld)` at i386 and the struct is 880 bytes at LP64. **105 literal-sized
    allocations across 41 objects**, and neither static gate counts this shape at all;
@@ -232,6 +270,13 @@ negative control. Only the positive case makes them evidence. Check that a new r
 before you believe the controls that say it is safe.
 
 **Reproduce the whole state in about 95 seconds: §4. Then read §3c, then §13.**
+
+**And two indexes exist now that did not before: [`tools/README.md`](tools/README.md) and
+[`test/README.md`](test/README.md) — one block per file, what it answers and the exact command,
+every one of them run.** This file mentions most of those tools in passing across 4,500 lines, which
+is not the same as being able to invoke one. Two corrections in this file were found by writing
+them: §4's `IxBoxTriList` staging step is obsolete, and its arm64 truncation figure disagrees with
+§12's and with the gate.
 
 **What changed in the sixth session, because the delta is what you need:** the gap went
 20 members / 148 symbols → 8 / 35, and 122 objects → 137. Nineteen members closed, every
@@ -1248,8 +1293,10 @@ python3 tools/dropin_gap.py ../build-native-karma /tmp/kd_build \
 
 # pointer width: the gate §6b used to say could not exist. 13 seconds, and it
 # needs no arm64 hardware — truncation is a compile-time diagnostic.
-# armv7 must read 0; arm64 reads 6,981 across 89 objects on the RAW pipeline
-# output and 435 across 48 once the post-pass below has run — and READ §6b, because
+# armv7 must read 0. arm64 on the RAW pipeline output reads 7,714 across 95
+# objects (measured, ninth session — this file has also quoted 6,981/89 here
+# and 7,771/89 in §12, and neither matches; RE-MEASURE, do not quote), falling
+# to ~435 across 48 once the post-pass below has run — and READ §6b, because
 # that remainder is a LAYOUT defect, not truncation, and tools/layout_check.py is
 # the gate for it. A target that does
 # not COMPILE is reported separately — see §6b.
@@ -1320,10 +1367,15 @@ python3 tools/spill_scan.py /tmp/kd_out/allobj /tmp/kd_build /home/ion/tools/kar
         /home/ion/karma-run/dropin-metoolkit
 ```
 
-`difftest_pair.sh` needs the quarantined `IxBoxTriList` staged or it will not link
-(`undefined reference to rec_McdBoxTriangleListIntersect`). Compile it into a **copy** of
-`/tmp/kd_build` — not into `/tmp/kd_build` itself, or the other six gates start reporting
-on an object the detectors are holding back:
+`difftest_pair.sh` **used to** need the quarantined `IxBoxTriList` staged into a **copy** of
+`/tmp/kd_build` or it would not link (`undefined reference to rec_McdBoxTriangleListIntersect`).
+**That is obsolete as of the eighth session** — `IxBoxTriList` was released and is one of the 145, so
+`./test/difftest_pair.sh /tmp/kd_build $MT` links directly. Verified in the ninth session:
+`McdBoxBoxIntersect`, 20,000 pairs, 0 ret / 0 count / 0 dims, PASS.
+
+The underlying rule has not changed, and applies to any object the detectors are still holding:
+compile it into a copy, never into `/tmp/kd_build` itself, or the other gates start reporting on an
+object that is deliberately held back.
 
 ```bash
 cp -a /tmp/kd_build /tmp/kd_build_dt
@@ -1332,7 +1384,7 @@ gcc -m32 -O2 -fno-pic -fno-strict-aliasing -std=gnu99 -w \
     -Wno-int-conversion -Wno-incompatible-pointer-types -DLINUX \
     -Ikarma-decomp/include -I$INC -I$INC/McdCommon -I$INC/McdPrimitives \
     -I$INC/McdFrame -I$INC/MeGlobals -I$INC/MdtBcl -I$INC/MdtKea -I$INC/Mst -I$INC/MeApp \
-    -c -o /tmp/kd_build_dt/IxBoxTriList.o /tmp/kd_out/allobj/IxBoxTriList.c
+    -c -o /tmp/kd_build_dt/<HELD>.o /tmp/kd_out/allobj/<HELD>.c
 ./test/difftest_pair.sh /tmp/kd_build_dt $MT
 ```
 
@@ -2414,6 +2466,100 @@ and `ptrwidth_check.sh` reads 0 on armv7 for the same reason. **The port target 
 
 **Nothing has been executed on any non-i386 target.** Compiling is not running; see
 `HANDOVER-WEB.md`, which says the same thing about wasm.
+
+---
+
+## 6c. THE ENGINE BUILDS AGAINST THE RECOVERED KARMA FOR WASM — 2026-08-26 (ninth session)
+
+Two presets, added in `553f52f` and **first compiled in the ninth session**. Before that they had
+configured and never been built.
+
+```bash
+source ~/emsdk/emsdk_env.sh
+cmake --preset wasm-karmadecomp-debug && cmake --build --preset wasm-karmadecomp-debug -j"$(nproc)"
+cmake --preset wasm-karmadecomp-perf  && cmake --build --preset wasm-karmadecomp-perf  -j"$(nproc)"
+```
+
+They are plain `wasm-debug` / `wasm-perf` plus one cache variable, `USE_KARMA_DECOMP=ON`:
+
+* **compile side, identical to `BUILD_KARMA_REF`** — `WITH_KARMA=1` globally, so `NO_KARMA` is not
+  defined and all **eleven** `Source/Engine/Src/K*.cpp` bridge files compile, plus metoolkit's public
+  headers on the include path. This was the first time `WITH_KARMA=1` had ever been set for a
+  non-x86 target and **nothing engine-side broke**;
+* **link side** — a `KarmaDecomp` CMake target built from `generated/allobj/*.c` plus
+  `src/McdConvexCreateHull/kd_convexhull.c`, instead of a glob of gcc-3.2 x86 archives. No
+  `--start-group`: the archives' circular dependencies are an artefact of splitting into sixteen
+  libraries, and this is one target.
+
+Measured the same day, `.wasm` only:
+
+| preset | bytes | |
+|---|--:|--:|
+| `wasm-perf` (no Karma) | 9,872,559 | 9.4 MB |
+| `wasm-karmadecomp-perf` | 10,628,483 | 10.1 MB |
+| `wasm-karmadecomp-debug` | 38,257,380 | 36.5 MB |
+
+**A complete recovered physics engine costs 756 KB of shipping wasm**, about 7.7%.
+
+### It is genuinely in the binary, which is a separate question
+
+`libKarmaDecomp.a` is an ordinary static archive, so the linker pulls only what something
+references. A build that shipped none of it would look identical on the console.
+`tools/wasm_members.py` answers it:
+
+```
+146 archive member(s)
+  125 contribute at least one symbol to the .wasm
+    3 define only DATA — linked or not, nm cannot tell
+   18 contribute nothing — not referenced, so not pulled in
+```
+
+The 18 are `MeProfile`, `MeProfile_linux`, `keaDebug`, `keaPrintBasicTypes`, `keaMatrix_tester`,
+`MeXMLOutput`, `MeAssetDBXMLOutput_1_0`, `MeCommandLine`, `MeSimpleFile`, `MstUniverse`,
+`MeBounding`, `MeMisc`, `MePrecision` and the five unused constraint types (`MdtFixedPath`,
+`MdtLinear1`, `MdtLinear2`, `MdtSpring`, `MdtUserConstraint`). **`tools/reachable.py` calls the same
+five constraint types dead from an entirely different starting point**, which is a real
+cross-check: a symbol-closure walk over the engine's objects and a wasm linker agreeing.
+
+The collision layer, the whole solver, the `.ka` asset path and the replacement hull are all in.
+
+> **THE TOOL REFUSES A `-g0` BUILD, and that is the interesting part.** Its first run was on
+> `wasm-karmadecomp-perf` and it reported "143 contribute nothing" — because `-g0` strips the name
+> section, so `llvm-nm` returns nothing and every member scores zero. A measurement artefact
+> wearing a finding's clothes, produced by the tool's own first invocation. It now exits 1 rather
+> than printing it.
+
+### The defect the build found, and the one it cannot
+
+Full evidence in `proven.txt` `WASM-SIGMISMATCH`. In short: `gen_prelude.py` had no prototype for
+`operator delete(void*)` and emitted `extern int operator_delete()`. **On i386 cdecl that is exactly
+inert** — the caller pushes the argument and ignores `%eax`, so the two spellings assemble
+identically and `CxSmallSort.o` is byte-identical either way. **On wasm32 a signature is part of a
+function's type**, and wasm-ld responds to a mismatch with a warning and a **trapping stub**:
+
+```
+wasm-ld: warning: function signature mismatch: _ZdlPv
+>>> defined as (i32) -> i32  in libKarmaDecomp.a(CxSmallSort.c.o)
+>>> defined as (i32) -> void in libc++-debug-mt.a(new.o)
+```
+
+Reproduced in two files under node before anything was changed — `RuntimeError: unreachable`.
+`CxSmallSort` is McdSpace's broad-phase sort, so `CxSmallSort::Delete()` would have trapped the
+first time a collision space was torn down. Fixed at the generator (`ITANIUM_ABI_FUNCS`), blast
+radius all 145 objects byte-identical, and the class is bounded: across all 153 shipped objects the
+only C++ runtime imports are `__gxx_personality_v0` (66), `__cxa_pure_virtual` (2), `_ZdlPv` (1) and
+`_Unwind_Resume` (1), and only `_ZdlPv` reaches the fallback.
+
+> ### ⚠ AND THE BIGGER HALF IS UNMEASURED, NOT CLEAN
+>
+> **wasm-ld can only check DIRECT calls.** Karma dispatches through function-pointer tables
+> constantly — the API structs, every vtable, the interaction table — and a wasm `call_indirect`
+> type-checks **at runtime**. A wrong prototype there is a trap nothing static will report, in a
+> build that links with zero diagnostics. That is the first thing a real wasm run will find, and
+> there is no i386 gate that can be built for it.
+
+**This is a build, not a run.** Nothing recovered has executed on wasm. Do not let §12 check 5 be
+read as moving: it asks for wasm32 and armv7 to build **and RUN**, and only the first half is done.
 
 ---
 
@@ -4240,7 +4386,7 @@ you can run.
 | 2 | **The engine LINKS with every shipped member deleted** and plays a match on i386. | `test/make_dropin_metoolkit.sh`, then §6. Success is "reached `START MATCH`" and ran to the timeout, against a STOCK control on the same map. | **DONE, 2026-08-27.** 145 recovered members, one replacement hull, **33 shipped members `ar d`'d, `ar t` says zero remain**. test-karma-1, 300 s, 0 faults, identical Karma warning profile to the control |
 | 3 | **Every pair the census shows the game calling is validated** — 0 `ret_diff`, 0 `count_diff`, 0 `dims_diff`, 0 `overrun`, `KD_SELFTEST` clean, evidence on a line in `proven.txt`. | §3, §7 | **14 of 15, AND THE FIFTEENTH IS MEASURED TO THE BOTTOM — do not re-open it casually.** `IxCylinderTriList` closed 2026-08-27 (three dropped roundings). `IxCylinderCylinder` reads **0 ret, 1 count, 20 dims in 200,000**, all of it inside `OverlapCylCyl` and all of it a near-tie flip downstream of one-ULP arithmetic. **Four candidate fixes and one wholesale lever were tried and every one measured WORSE or made no change** — `proven.txt` `CYLCYL-GRIND` names them so they are not retried. Getting to 15 needs bit-exactness in a 10,857-byte function whose remaining precision differences have NO textual fingerprint |
 | 4 | **All nine gates green** on the whole build, every time. | §4's gate list | green at 145 objects |
-| 5 | **wasm32 and armv7 build and RUN**, and arm64 either runs or is retired. | `test/wasm_check.sh`, `test/ptrwidth_check.sh`, **`tools/layout_check.py`**, and the web agent | compiles on all three (145/145, symbol sets identical); **nothing has EXECUTED on any of them**; and **arm64 would not run** — §6b, the layout defect |
+| 5 | **wasm32 and armv7 build and RUN**, and arm64 either runs or is retired. | `test/wasm_check.sh`, `test/ptrwidth_check.sh`, **`tools/layout_check.py`**, and the web agent | **HALF, and only half.** The *engine* now builds against the recovered Karma for wasm32 — `wasm-karmadecomp-{debug,perf}`, zero wasm-ld diagnostics, 125 of 146 members verifiably in the `.wasm` (§6c). Objects compile on all three targets (145/145, symbol sets identical). **Still nothing has EXECUTED on any of them**, which is the half this row is actually asking for; and **arm64 would not run** — §6b, the layout defect |
 | 6 | **The association defect is settled corpus-wide.** | §11 item 2a, and `proven.txt` ASSOC-ON-I386 first | **BOUNDED, not settled, and the framing changed on 2026-08-27**: it is NOT inert on i386 — measured differing on 22% of calls at one site — but an i386 A/B cannot ARBITRATE it either, because the machine-order variant measured worse end to end. A wasm-vs-native A/B is the arbiter |
 | 7 | **No detector suppressed, nothing released without evidence.** | §8, `proven.txt` | **AUDITED 2026-08-27 and holding.** All 8 objects in the build that carry a reconstructed frame have a line of evidence; and this session's prose notes in `proven.txt` are now COMMENTS, because `recover.py` reads the first word of any non-comment line as an object to RELEASE — a note at column zero was a latent trap |
 

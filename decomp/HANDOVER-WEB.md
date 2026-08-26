@@ -11,7 +11,9 @@ that the game can have physics on your targets. **Nobody else will ever link thi
 
 **Your half is the half that has never been tested: nothing this project has produced has
 executed on wasm32, armv7 or arm64. Not one instruction.** That is the largest unknown in
-the whole effort, and it is yours.
+the whole effort, and it is yours. **What has changed is that the build you would run it in now
+exists** — `cmake --preset wasm-karmadecomp-perf`, links clean, recovered Karma verifiably inside
+the `.wasm`. See §0.
 
 You are picking up the **web (WebAssembly) and Android** side of getting UT2004's physics
 working outside x86. You do not need the history of how the source was obtained, only what
@@ -19,7 +21,93 @@ it is, what constrains it, and where the sharp edges are. This document is self-
 
 ---
 
-## 0. START HERE — the recovery side is FINISHED on i386, and arm64 needs you, 2026-08-27
+## 0. START HERE — THE WASM BUILD EXISTS NOW. 2026-08-26 (ninth session)
+
+**Read this box before anything else in this file, including the 2026-08-27 block under it.
+The thing you were being asked to build first has been built.**
+
+```
+cmake --preset wasm-karmadecomp-perf && cmake --build --preset wasm-karmadecomp-perf
+
+  -> build-wasm-karmadecomp-perf/Source/SDLLaunch/SDLLaunch.{js,wasm,data}
+     10,628,483 bytes of .wasm, of which the recovered Karma is 756 KB
+     WITH_KARMA=1, all eleven Source/Engine/Src/K*.cpp bridge files compiled
+     ZERO wasm-ld diagnostics
+```
+
+There are two presets, `wasm-karmadecomp-debug` (`-O0`, DWARF, assertions) and
+`wasm-karmadecomp-perf` (`-O3 -g0`). They differ from plain `wasm-debug`/`wasm-perf` by one cache
+variable, `USE_KARMA_DECOMP=ON`. `BUILD.md` has the full description; the short version is that the
+compile side is identical to `BUILD_KARMA_REF` (the metoolkit public headers are portable C and were
+never what was missing) and the link side builds a CMake target from
+`karma-decomp/generated/allobj/*.c` instead of a glob of gcc-3.2 x86 archives.
+
+**And the recovered code is genuinely IN the binary, which is a separate question from the build
+succeeding.** `libKarmaDecomp.a` is an ordinary static archive, so the linker pulls only what
+something references — a build that shipped none of it would look the same on the console:
+
+```
+python3 karma-decomp/tools/wasm_members.py build-wasm-karmadecomp-debug
+
+  146 archive member(s)
+    125 contribute at least one symbol to the .wasm
+      3 define only DATA — linked or not, nm cannot tell
+     18 contribute nothing — not referenced, so not pulled in
+```
+
+Those 18 are the profiling, debug, XML-output and unused-constraint objects, and they are the same
+set `tools/reachable.py` independently calls unreachable from the engine. The collision layer, the
+solver (`keaLCPSolver`, `keaCalc*_vanilla`, `keaMatrix_PcSparse*`, `keaIntegrate_pc`, `keaMemory`,
+`keaRbdCore_unified`), the `.ka` asset path and the replacement hull are all in.
+
+### AND THE FIRST BUILD FOUND A DEFECT THAT ONLY EXISTS ON YOUR TARGETS
+
+This is the one you should read the detail of, because **it is the shape of everything still
+waiting for you**, and all nine i386 gates were structurally blind to it.
+
+`gen_prelude.py` had no prototype for `operator delete(void*)` — `kd_protos*.h` carries
+MathEngine's functions, not the C++ runtime's — so it emitted its fallback stub,
+`extern int operator_delete() KD_MANGLED("_ZdlPv")`. On i386 cdecl that is **exactly inert**: the
+caller pushes the argument and ignores `%eax`, so `int f()` and `void f(void *)` assemble to the
+same three instructions and the recovered `CxSmallSort.o` is byte-identical either way.
+
+On wasm32 a function's signature is part of its **type**:
+
+```
+wasm-ld: warning: function signature mismatch: _ZdlPv
+>>> defined as (i32) -> i32  in libKarmaDecomp.a(CxSmallSort.c.o)
+>>> defined as (i32) -> void in libc++-debug-mt.a(new.o)
+```
+
+wasm-ld does not error on that. It **replaces the call with a trapping stub** — reproduced in two
+files under node, `RuntimeError: unreachable`. `CxSmallSort` is McdSpace's broad-phase sort, so
+`CxSmallSort::Delete()` would have died the first time a collision space was torn down. Fixed at the
+generator; `proven.txt` `WASM-SIGMISMATCH` has the whole thing including the bound (across all 153
+shipped objects the only C++ runtime imports are `__gxx_personality_v0`, `__cxa_pure_virtual`,
+`_ZdlPv` and `_Unwind_Resume`, and only `_ZdlPv` survives the pre-passes untyped).
+
+> ### ⚠ WHAT THAT DEFECT DOES NOT COVER, AND IT IS THE BIGGER HALF
+>
+> **wasm-ld can only check DIRECT calls.** Karma dispatches through function-pointer tables
+> constantly — the API structs, every vtable, the interaction table — and a wasm `call_indirect`
+> type-checks **at runtime**. A wrong prototype there is a trap that nothing static will report,
+> in a build that links with zero diagnostics.
+>
+> §4b already tells you "unprototyped indirect calls — x86 corrupts silently, wasm will TRAP".
+> That was a prediction. The direct-call half of it has now been observed and fixed; the indirect
+> half is **unmeasured, not clean**, and it is the first thing a real wasm run will find.
+
+**So your first move has changed.** It is no longer "get one recovered object to execute under
+wasm" — the build that would execute them exists and links clean. It is **run it**, and the most
+likely first failure is an indirect-call signature mismatch, which will present as a trap with a
+`call_indirect` frame rather than as anything resembling a physics bug.
+
+**What has NOT changed:** not one instruction of this has executed on wasm32, armv7 or arm64.
+A clean build is a clean build. Everything in the 2026-08-27 block below still stands.
+
+---
+
+## 0a. The recovery side is FINISHED on i386, and arm64 needs you, 2026-08-27
 
 **Everything you need from the other half of this project now exists, and the shape of what
 is left changed today.** Read this before you trust any schedule further down; the rest of
@@ -921,6 +1009,14 @@ can see) and the arm64 pointer-truncation table. They change what is worth doing
 4. **Only then** wire into the engine's wasm build behind `WITH_KARMA`. The crux: you cannot
    fall back to the shipped `.a` for what is not yet recovered, because it is x86. Use the
    census (§6) to scope what "enough" means — it is twelve collision pairs, not 150 objects.
+
+   > **STEP 4 IS DONE — 2026-08-26, ninth session.** `USE_KARMA_DECOMP` and the two
+   > `wasm-karmadecomp-*` presets exist, build clean and put the recovered Karma verifiably in
+   > the `.wasm` (§0). The "cannot fall back to the shipped `.a`" crux never arose, because the
+   > drop-in gap reached zero first — there is nothing to fall back FOR. **You can therefore do
+   > step 4 first if you want**, and a failure in the engine is often easier to read than one in
+   > a bare driver, because the engine's own Karma warning stream tells you where it got to.
+   > Steps 1–3 remain the sharper instruments for arbitrating a NUMERICAL difference.
 5. **Feed everything back to the recovery side, continuously.** If a construct is unportable
    it is almost always cheaper to fix the *generator* than to patch the output — §4a. The
    whole pipeline regenerates in about a minute and `test/wasm_check.sh` tells you in one

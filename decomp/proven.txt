@@ -2725,3 +2725,46 @@ keaLCP_new            RELEASED 2026-08-25 (fifth session). Bit-identical on all 
 #   difftest byte-identical to the documented baseline (10 PASS, 4 known FAIL)
 #   vptr_ab bit-identical with both wrong controls seen · census/sensitivity ok
 #   drop-in gap 20 -> 18 members, 148 -> 145 symbols
+
+MeFAsset              real, and the release is about REACHABILITY, not about the frame — read
+#                     this before relying on it. 38 symbols of the drop-in gap, the largest
+#                     single member, held by GHIDRA_RECONSTRUCTED_FRAME.
+#
+#                     ALL 169 kd_argslot_ REFERENCES ARE IN ONE FUNCTION, and it is
+#                     `MeFAssetCreateCopy`. The other 58 exported functions carry no
+#                     reconstructed frame at all:
+#
+#                       MeFAssetCreateCopy      169 argslot refs
+#                       every other function      0
+#
+#                     AND NOTHING CAN CALL IT. Three independent checks, because "0 calls in
+#                     one run" is a sample size and this file says so about IxCylinderTriList:
+#
+#                       * it is called from exactly two places, both in MeAssetDB.o —
+#                         MeAssetDBCreateCopy and MeAssetDBInsertCopy (objdump -dr, the two
+#                         R_386_PC32 sites at 0x276 and 0x2be);
+#                       * no engine object and no other metoolkit object imports either of
+#                         those two, or MeFAssetCreateCopy itself — 0, 0 and 0;
+#                       * none of the three has its ADDRESS taken anywhere in the corpus (no
+#                         R_386_32 relocation names them), so none is reachable through a
+#                         function pointer either. That is the check that makes the first two
+#                         mean something.
+#
+#                     MEASURED IN THE ENGINE, with MeFAsset substituted (build-subst-mf,
+#                     127 objects, substitution verified at the machine-code level:
+#                     MeFAssetCreate 48 vs 51 instructions, MeFAssetGetPart 7 vs 9):
+#
+#                       gdb breakpoint counts, test-karma-1, xDeathMatch, ~150 s
+#                         MeFAssetCreate           13 calls
+#                         MeFAssetCreateCopy        0 calls
+#                       engine, test-karma-1, 260 s, -SOFTWARERENDERER
+#                         exit 124 (ran to the timeout), START MATCH reached, 0 faults
+#                         stock control, same map and URL: exit 124, START MATCH, 0 faults
+#
+#                     SO WHAT THIS DOES AND DOES NOT SAY. It does NOT say the reconstructed
+#                     frame is right — the function carrying it never executed, and a clean
+#                     run over code that did not run is the §4a trap. It says the frame is
+#                     confined to a function the engine cannot reach by any route, so the
+#                     object can be linked for its other 37 needed symbols. If anything ever
+#                     calls MeFAssetCreateCopy the frame is a hypothesis again, and the
+#                     169 references are where to start.

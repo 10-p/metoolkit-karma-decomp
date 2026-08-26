@@ -8,7 +8,7 @@ have no physics at all. Updated 2026-08-26.
 
 ## The one number
 
-**15.**
+**13.**
 
 That is how many pieces of the original library the game still needs from us. It was 27 at
 the start of last week and 20 yesterday. When it reaches zero and the tests stay green, we
@@ -23,7 +23,7 @@ UT2004 never touches, so rebuilding it would be zero progress.
 
 | | |
 |---|---|
-| **Original pieces still needed** | **15** (was 20 yesterday, 27 last week) |
+| **Original pieces still needed** | **13** (was 20 yesterday, 27 last week) |
 | Collision — does A hit B | ✅ done, proven in live matches |
 | Movement — how things fall and swing | ✅ done, and the game runs on it |
 | Loading vehicle and ragdoll files | ✅ done this session, and the game runs on it |
@@ -34,7 +34,7 @@ UT2004 never touches, so rebuilding it would be zero progress.
 
 ## This session
 
-**The gap halved.** Not by rebuilding more modules, but by fixing five faults in the
+**The gap dropped by more than half.** Not by rebuilding more modules, but by fixing five faults in the
 *translator* — each one repaired several modules at once, including some nobody was looking
 at. The largest single piece the game needed, and the second largest, are both done.
 
@@ -54,7 +54,7 @@ this same fault has appeared, and the third time only running the real game foun
 ## The two risks
 
 **1. We cannot yet test the thing we are building it for.** Nothing has ever run on web or
-Android. It compiles for both — 130 of 130 modules, which is newly true and was overstated
+Android. It compiles for both — 132 of 132 modules, which is newly true and was overstated
 before — but that is not the same thing.
 
 **2. There is an error we can prove is harmless on PC and harmful on web.** A quirk in how

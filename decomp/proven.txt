@@ -3499,3 +3499,105 @@ MeAssetFactory        real, and like MeFAsset the release is about REACHABILITY,
 #
 #   137 objects · 0 interface errors · 7 tolerated (the 5 above plus the two
 #   documented .rodata -> .data warnings)
+
+# --- 2026-08-26 (seventh session): ReadWriteKeaInputToFile — one symbol -----
+#   typed two ways, and a variadic family nobody had counted
+#
+# THREE symbols of the drop-in gap, closed by two generator fixes and one
+# prelude fix. Neither was written for this object; both are about a shape.
+#
+# 1. `_gDebug` — ONE EXTERNAL, TWO INCOMPATIBLE TYPES, IN ONE FILE.
+#
+#      *(void **)(_gDebug + 4)                        <- byte arithmetic
+#      (*_gDebug != 0) && (_gDebug[8] == _gDebug[9])  <- element arithmetic
+#
+#    No single C declaration makes both right, and THAT is the finding: it is a
+#    contradiction visible in the text. Declaring the import `char *` makes the
+#    first correct and silently turns `_gDebug[8]` into byte 8; giving it the
+#    real `MdtKeaDebugDataRequest *` makes `+ 4` mean byte 176. Either way it
+#    COMPILES and reads the wrong memory.
+#
+#    Ghidra folds the load of a pointer variable away, so the element SIZE is
+#    nowhere in the file. It is in the machine code, and
+#    `extern_load_displacements` reads it — the byte displacements each function
+#    uses off the register the symbol was loaded into:
+#
+#      checkPrintDebugInput   text {*0, [8], [9]}   code {0, 0x20, 0x24}  -> 4
+#      writeKeaInputToFile    text {+4}             code {0x4}            -> 1
+#      readKeaInputFromFile   text {+0xc}           code {0xc}            -> 1
+#      writeLambdaToFile      text {+0x1c}          code {0x1c}           -> 1
+#
+#    Two scales for one name is the contradiction; the scale is ACCEPTED only
+#    when text and code agree exactly as sets. Every offset lands on a real
+#    member of MdtKeaDebugDataRequest (MdtKea.h): 0 writeKeaInputData,
+#    4 writeKeaInputDataFilename, 0xc readKeaInputDataFilename,
+#    0x1c writeKeaOutputDataFilename, 0x20 frame, 0x24 badFrame — and the
+#    sibling object keaRbdCore_unified, validated and bit-identical, spells the
+#    same comparison `kd_gDebug->frame == kd_gDebug->badFrame`. Six independent
+#    confirmations of one reading.
+#
+#    FIVE CONTROLS, because the first version of this rule DECLINED ON THE ONE
+#    OBJECT IT EXISTS FOR and passed every negative control while doing it — a
+#    rule that never fires passes them all. A byte-only function admits every
+#    scale, so demanding a unique scale rejected it. The controls only became
+#    evidence once the real run returned 1:
+#      A  index 8 -> 7          disagrees with the code   -> declines
+#      B  byte offset 4 -> 8    disagrees with the code   -> declines
+#      C  a use in an unaccounted shape                   -> declines
+#      D  the element form removed, no contradiction      -> declines
+#      E  keaLCPSolver, validated and in the build        -> untouched
+#    E is the one that matters: `_vanillaQMatrix` is the corpus's ONLY other
+#    two-typings site and it is not an external at all. Running after
+#    fix_vptr_store means that spelling is already gone.
+#
+# 2. `sscanf` — THE VARIADIC PADDING WORD, ON THE READING SIDE.
+#    `fix_printf_extra_args` has always known that gcc's alignment filler comes
+#    back as an argument; its family table had no scanf in it. The machine code
+#    says outright that the fourth word is not an argument:
+#
+#      62a: push %eax ; push %ecx ; push $0x100 ; push %edi
+#      632: call MeStreamReadLine
+#      637: add $0xc,%esp          <- cleans THREE of the four
+#      63a: push %esi ; push $fmt ; push %edi
+#      644: call sscanf
+#      650: add $0x10,%esp         <- FOUR words for a THREE-argument call
+#
+#    gcc pushed a filler word before the previous call, cleaned only three, and
+#    reused the leftover as sscanf's alignment slot. Ghidra recovers it as an
+#    argument sourced from whatever register was live — which is where this
+#    object's `extraout_ECX`/`extraout_EDX` come from. prove_inert says they are
+#    NOT inert (the object code differs for 0 / -1 / 0x5a5a5a5a), and it is
+#    right: the word is really pushed. It is simply never fetched.
+#
+#    COUNTED WITH ITS OWN ARITY FUNCTION. `%*d` consumes an int in printf and
+#    SUPPRESSES in scanf, so sharing `_printf_arity` would over-count — which
+#    only ever makes the rule keep an argument, i.e. it would have been wrong in
+#    the silent direction. Ten-case table, including that divergence: 0 failures.
+#
+# 3. THE PRELUDE DECLARED A TYPE THAT DOES NOT EXIST.
+#    `extern struct MdtKeaDebugDataRequest *gDebug;` — MdtKea.h writes
+#    `typedef struct {...} MdtKeaDebugDataRequest;`, so the `struct` spelling is
+#    an unrelated incomplete type. `anonymous_struct_typedefs` has existed since
+#    the sixth session and was applied to the two EXPORT paths and never to the
+#    IMPORT path. One object corpus-wide, and it was this one.
+#
+#   138 objects · 138/138 clean on three scenes · frame bounds 0 in the build
+#   bindings 0 · difftest byte-identical to the 137-object baseline (diffed
+#   run-to-run, not read off the documented numbers) · wasm32 138/138
+#   armv7 138/138, 0 truncations · arm64 7,670 across 88 · vptr_ab ok
+#   BLAST RADIUS: every one of the 137 pre-existing .o BYTE-IDENTICAL
+#   engine, build-subst138, test-karma-1, 260 s, -SOFTWARERENDERER:
+#     exit 124, START MATCH, 0 SIGSEGV, 0 Critical Error, 0 NaN
+#     stock control on the same map: identical on every one of those
+#     substitution verified in the BINARY, not from the link —
+#       writeKeaInputToFile  3198 -> 3065 insns, readKeaInputFromFile 2974 -> 2542
+#   drop-in gap 8 -> 7 members, 35 -> 32 symbols
+ReadWriteKeaInputToFile  RELEASED 2026-08-26 (seventh session). Three symbols of the
+#                     drop-in gap. `_gDebug` was typed two ways by Ghidra and the
+#                     scale that settles it was read out of the machine code and
+#                     checked against the text in all four functions; the sscanf
+#                     padding words are gcc's alignment filler, proven by
+#                     `add $0x10,%esp` cleaning four words for a three-argument
+#                     call. All nine gates green, 137 pre-existing objects
+#                     byte-identical, and the engine runs on it against a stock
+#                     control on the same map.

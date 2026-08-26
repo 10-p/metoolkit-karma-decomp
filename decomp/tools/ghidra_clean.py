@@ -2526,6 +2526,17 @@ PRINTF_FAMILY = {'printf': 0, 'fprintf': 1, 'sprintf': 1, 'snprintf': 2,
                  'vsprintf': 1, 'MeInfo': 1, 'MeWarning': 1, 'MeLog': 1,
                  'MeFatalError': 1}
 
+# The same defect on the reading side. `readIntArrayFromFile` calls
+# `sscanf(buf, "%d\n", array, uVar4)` and the machine code says outright that
+# the fourth word is not an argument: gcc pushes four words before the PRECEDING
+# MeStreamReadLine, cleans only three (`add $0xc,%esp`), and leaves the leftover
+# to serve as sscanf's alignment slot — which is why sscanf's own cleanup is
+# `add $0x10,%esp` for a three-argument call. Ghidra recovers the leftover as an
+# argument and sources it from whatever register was live, which is where this
+# object's `extraout_ECX`/`extraout_EDX` come from. Counted with _scanf_arity,
+# never _printf_arity: `%*d` means the opposite thing here.
+SCANF_FAMILY = {'sscanf': 1, 'fscanf': 1, 'scanf': 0}
+
 # One conversion. `%%` consumes nothing; a `*` width or precision consumes an
 # extra int each, which is why they are captured rather than skipped.
 PRINTF_SPEC = re.compile(
@@ -2615,7 +2626,44 @@ def _reaching_formats(region, call_at, var):
     return out
 
 
-def _resolve_arity(region, arg, call_at=None):
+def _scanf_arity(fmt):
+    """How many arguments a literal *scanf* format consumes, or None if unsure.
+
+    NOT `_printf_arity`. The two families share a syntax and disagree about the
+    one piece of it that matters here: in `printf` a `*` width is read FROM an
+    argument, and in `scanf` it SUPPRESSES the assignment and consumes none.
+    Reusing the printf counter would over-count `%*d` by two, and over-counting
+    only ever makes this rule keep an argument it could have dropped — so the
+    error would have been silent, which is the reason to spell it out rather
+    than share the function.
+
+    A conversion this cannot classify — a `%[...]` scanset, most of all —
+    returns None and the site is left alone. `%n` writes through its argument
+    and is refused, exactly as in printf.
+
+    Every scanf format in the corpus is `%d`, `%08x`, `%f` or a run of them; no
+    suppression and no scanset appear at all. This is written for what the
+    family MEANS, not for what the corpus happens to contain."""
+    body = fmt.strip()
+    if not (body.startswith('"') and body.endswith('"')):
+        return None
+    n, pos = 0, 0
+    body = body[1:-1]
+    while True:
+        i = body.find('%', pos)
+        if i < 0:
+            return n
+        m = PRINTF_SPEC.match(body, i)
+        if not m:
+            return None                     # a scanset or worse
+        if m.group('conv') == 'n':
+            return None                     # writes through its argument
+        if m.group('conv') != '%' and m.group('w') != '*':
+            n += 1                          # `*` here suppresses; it consumes nothing
+        pos = m.end()
+
+
+def _resolve_arity(region, arg, call_at=None, arity=None):
     """How many arguments the format consumes, following a variable if it is one.
 
     Ghidra hoists a format out of the call when one call site serves several
@@ -2650,14 +2698,15 @@ def _resolve_arity(region, arg, call_at=None):
     says it does not reach this call; where every definition in the function
     must be considered, one non-literal declines the site outright."""
     a = arg.strip()
+    arity = arity or _printf_arity
     if a.startswith('"'):
-        return _printf_arity(a)
+        return arity(a)
     if not re.match(r'^[A-Za-z_]\w*$', a):
         return None
     if call_at is not None:
         reaching = _reaching_formats(region, call_at, a)
         if reaching is not None:
-            arities = [_printf_arity(r.strip()) for r in reaching]
+            arities = [arity(r.strip()) for r in reaching]
             if not any(x is None for x in arities):
                 return max(arities)
     lits = [m.group(1) for m in re.finditer(_FORMAT_ASSIGN % re.escape(a), region)]
@@ -2665,7 +2714,7 @@ def _resolve_arity(region, arg, call_at=None):
         return None
     if len(re.findall(_ANY_ASSIGN % re.escape(a), region)) != len(lits):
         return None                     # a definition this cannot bound
-    arities = [_printf_arity(l) for l in lits]
+    arities = [arity(l) for l in lits]
     return None if any(x is None for x in arities) else max(arities)
 
 
@@ -2703,39 +2752,48 @@ def fix_printf_extra_args(text):
         is ever the wrong one.
 
     156 sites across 7 objects, 6 of them held out of the build. The one that is
-    in it, McdMessage, has a single site."""
+    in it, McdMessage, has a single site.
+
+    THE SCANF SIDE was added afterwards and is the same defect read backwards —
+    see SCANF_FAMILY for the machine code that proves the extra word is gcc's
+    leftover alignment slot and not an argument. It counts with `_scanf_arity`,
+    which differs from the printf counter on `%*d`; sharing one counter would
+    have been wrong in the safe direction, and therefore silent."""
     out, n = [], 0
     for _fn, region in _split_definitions(text):
-        for name, fi in PRINTF_FAMILY.items():
-            pos = 0
-            while True:
-                m = re.compile(r'(?<![\w.>])' + re.escape(name)
-                               + r'[ \t\n]*\(').search(region, pos)
-                if not m:
-                    break
-                op = m.end() - 1
-                end = _match_bracket(region, op)
-                if end is None:
+        for family, arity in ((PRINTF_FAMILY, _printf_arity),
+                              (SCANF_FAMILY, _scanf_arity)):
+            for name, fi in family.items():
+                pos = 0
+                while True:
+                    m = re.compile(r'(?<![\w.>])' + re.escape(name)
+                                   + r'[ \t\n]*\(').search(region, pos)
+                    if not m:
+                        break
+                    op = m.end() - 1
+                    end = _match_bracket(region, op)
+                    if end is None:
+                        pos = m.end()
+                        continue
+                    args = _split_args(region[op + 1:end - 1])
                     pos = m.end()
-                    continue
-                args = _split_args(region[op + 1:end - 1])
-                pos = m.end()
-                if len(args) <= fi:
-                    continue
-                want = _resolve_arity(region, args[fi], m.start())
-                if want is None or len(args) <= fi + 1 + want:
-                    continue
-                keep = args[:fi + 1 + want]
-                drop = args[fi + 1 + want:]
-                if len(drop) > 3:
-                    continue                # more than gcc's alignment can explain
-                if any('(' in d or '=' in d or '++' in d or '--' in d for d in drop):
-                    continue                # a side effect; leave the site alone
-                new_call = region[:op + 1] + ','.join(a.strip() for a in keep) \
-                    + region[end - 1:]
-                n += len(drop)
-                pos = op + 1
-                region = new_call
+                    if len(args) <= fi:
+                        continue
+                    want = _resolve_arity(region, args[fi], m.start(), arity)
+                    if want is None or len(args) <= fi + 1 + want:
+                        continue
+                    keep = args[:fi + 1 + want]
+                    drop = args[fi + 1 + want:]
+                    if len(drop) > 3:
+                        continue            # more than gcc's alignment can explain
+                    if any('(' in d or '=' in d or '++' in d or '--' in d
+                           for d in drop):
+                        continue            # a side effect; leave the site alone
+                    new_call = region[:op + 1] + ','.join(a.strip() for a in keep) \
+                        + region[end - 1:]
+                    n += len(drop)
+                    pos = op + 1
+                    region = new_call
         out.append(region)
     return ''.join(out), n
 
@@ -4669,6 +4727,208 @@ def _materialise_one_frame(fn, region, locals_table):
     return region
 
 
+_LOADED_REG = r'e(?:ax|bx|cx|dx|si|di|bp)'
+
+# A write to a register kills the fact that it still holds the symbol. Listed
+# rather than inferred, because the cost of missing one is a displacement
+# attributed to the wrong base — and the caller's check against the text is
+# what catches that, not this list.
+_REG_WRITE = (r'\b(?:mov\w*|lea|pop|add|sub|xor|and|or|inc|dec|imul|sar|shl|shr'
+              r'|neg|not|set\w+)\b[^,]*,\s*%%%s$')
+
+
+def extern_load_displacements(obj, sym):
+    """{function: {byte displacements used off the register loaded FROM sym}}.
+
+    The instrument that decides how Ghidra TYPED an external data symbol, by
+    reading the machine code instead of the decompiled text — because the text
+    does not say. Ghidra folds the load of a pointer variable away, so
+
+        mov gDebug,%edx ; mov (%edx),%eax ; mov 0x24(%edx),%ecx
+
+    comes out as `*_gDebug` and `_gDebug[9]`, and the element SIZE that turns 9
+    into 0x24 is nowhere in the file. It is here: the displacements the function
+    actually uses off the register the symbol was loaded into.
+
+    ONLY A LOAD OF THE SYMBOL'S VALUE COUNTS — `mov <sym>,%reg`, opcode 8b. An
+    address taken (`push $<sym>`, `lea`) records nothing, which is what keeps
+    this away from `fix_external_base_arithmetic`'s `&pool_ptr + i*4`: that is a
+    different shape with a different answer. Control, on
+    ReadWriteKeaInputToFile.o: `.rodata.str1.1` is referenced 456 times, every
+    one of them an address, and this returns the empty set for it.
+
+    Tracking stops at the first write to the register, so a displacement is only
+    reported while the register still holds the symbol. Where that analysis is
+    wrong the result disagrees with the text and the caller declines; it is
+    checked, not trusted."""
+    out = subprocess.run(['objdump', '-dr', obj],
+                         capture_output=True, text=True).stdout
+    res, fn, live, prev = {}, None, {}, None
+    for line in out.splitlines():
+        m = re.match(r'^[0-9a-f]+ <(.+)>:$', line)
+        if m:
+            fn, live, prev = m.group(1), {}, None
+            continue
+        m = re.match(r'^\s+[0-9a-f]+:\s+(?:[0-9a-f]{2} )+\s*\t(.*)$', line)
+        if m:
+            insn = m.group(1).strip()
+            for reg in list(live):
+                for d in re.finditer(r'(-?0x[0-9a-f]+)?\(%' + reg + r'\)', insn):
+                    res.setdefault(fn, set()).add(
+                        int(d.group(1), 16) if d.group(1) else 0)
+            for reg in list(live):
+                if re.search(_REG_WRITE % reg, insn) or \
+                        re.match(r'^(?:pop|inc|dec|neg|not)\s+%' + reg + r'$', insn):
+                    del live[reg]
+            prev = insn
+            continue
+        m = re.search(r'\bR_386_32\s+(\S+)\s*$', line)
+        if m and prev is not None and m.group(1) == sym:
+            lm = re.match(r'^mov\s+0x0,%(' + _LOADED_REG + r')$', prev)
+            if lm:
+                live[lm.group(1)] = True
+    return res
+
+
+_ELEM_WIDTH_TYPE = {1: 'char', 2: 'short', 4: 'int'}
+
+
+def normalise_external_indexing(obj, text):
+    r"""One external symbol, two incompatible types, in one file.
+
+    `ReadWriteKeaInputToFile` reads `gDebug` four times and Ghidra typed it
+    differently in three functions than in the fourth:
+
+        *(void **)(_gDebug + 4)                 /* byte arithmetic  */
+        (*_gDebug != 0) && (_gDebug[8] == _gDebug[9])   /* element arithmetic */
+
+    NO SINGLE C DECLARATION MAKES BOTH RIGHT, and that is the point: it is a
+    contradiction visible in the text, so it cannot be left alone and it cannot
+    be resolved by preferring one spelling. Declaring the import `char *` makes
+    the first three correct and silently turns `_gDebug[8]` into byte 8; giving
+    it the real `MdtKeaDebugDataRequest *` makes `+ 4` mean byte 176. Either way
+    the object COMPILES and reads the wrong memory, which is the failure mode
+    this project has been bitten by more than once.
+
+    THE SCALE IS READ OUT OF THE MACHINE CODE AND THEN CHECKED.
+    `extern_load_displacements` gives the byte displacements each function uses
+    off the register the symbol was loaded into; the text gives that function's
+    element indices and byte offsets. The rule accepts a scale only when the two
+    agree EXACTLY as sets:
+
+        checkPrintDebugInput   text {*0, [8], [9]}   code {0, 0x20, 0x24}  -> 4
+        writeKeaInputToFile    text {+4}             code {0x4}            -> 1
+        readKeaInputFromFile   text {+0xc}           code {0xc}            -> 1
+        writeLambdaToFile      text {+0x1c}          code {0x1c}           -> 1
+
+    Two scales for one name is the contradiction; every site is then rewritten
+    to explicit byte arithmetic against a `char *`, which is correct under
+    ANY declaration the prelude gives the symbol and leaves the name itself for
+    `fix_mislabelled_external` to resolve.
+
+    It declines — leaving the object in review, which is the honest outcome —
+    when the name is used in any other shape, when a function's text and code do
+    not agree under a single scale, when two scales are both consistent, or when
+    the symbol's address is taken rather than its value loaded.
+
+    Corpus-wide the contradiction appears in TWO objects and this fires on one.
+    The other is `keaLCPSolver`'s `_vanillaQMatrix`, which is not an external at
+    all — it is a local `fix_vptr_store` already resolves, and running after it
+    means that spelling is gone before this looks. `keaLCPSolver` is validated
+    and bit-identical on three scenes; it must not change, and it does not."""
+    if not obj or not os.path.exists(obj):
+        return text, 0
+    und = set(undefined_symbols(obj))
+    names = set()
+    for m in re.finditer(r'(?<![\w&])_([A-Za-z]\w*)\s*(?:\+\s*(?:0x[0-9a-f]+|\d+)|\[)',
+                         text):
+        if m.group(1) in und:
+            names.add(m.group(1))
+    if not names:
+        return text, 0
+
+    total = 0
+    for sym in sorted(names):
+        gname = '_' + sym
+        byte_re = re.compile(r'(?<![\w&])' + gname + r'\s*\+\s*(0x[0-9a-f]+|\d+)\b')
+        elem_re = re.compile(r'(?<![\w&])' + gname + r'\s*\[\s*(0x[0-9a-f]+|\d+)\s*\]')
+        star_re = re.compile(r'\*\s*' + gname + r'\b(?!\s*[\[\(])')
+        any_re = re.compile(r'(?<![\w])' + gname + r'\b')
+        if not (byte_re.search(text) and (elem_re.search(text) or star_re.search(text))):
+            continue                       # no contradiction; nothing to resolve
+        disp = extern_load_displacements(obj, sym)
+        if not disp:
+            continue
+
+        plan, ok = [], True
+        for fn, region in _split_definitions(text):
+            if not any_re.search(region):
+                continue
+            # every use must be one of the three shapes, or the anchor is
+            # load-bearing in a way this cannot see
+            accounted = (len(byte_re.findall(region)) + len(elem_re.findall(region))
+                         + len(star_re.findall(region)))
+            if accounted != len(any_re.findall(region)):
+                ok = False
+                break
+            code = disp.get(fn) or next(
+                (v for k, v in disp.items() if _demangled_short(k) == fn), None)
+            if not code:
+                ok = False
+                break
+            bytes_ = {int(x, 0) for x in byte_re.findall(region)}
+            elems = {int(x, 0) for x in elem_re.findall(region)}
+            if star_re.search(region):
+                elems.add(0)
+            if not elems:
+                # No element use, so there is no scale to infer and every one
+                # would satisfy the equation — asking for a UNIQUE scale here
+                # rejects the function and, with it, the whole name. That is
+                # what made the first version of this rule decline on the one
+                # object it exists for, silently, while passing every negative
+                # control: a rule that never fires passes them all.
+                if bytes_ != code:
+                    ok = False
+                    break
+                plan.append((fn, 1))
+                continue
+            scales = [s for s in sorted(_ELEM_WIDTH_TYPE)
+                      if bytes_ | {e * s for e in elems} == code]
+            if len(scales) != 1:
+                ok = False
+                break
+            plan.append((fn, scales[0]))
+        if not ok or len({s for _f, s in plan}) < 2:
+            continue                       # not a contradiction after all
+
+        out = []
+        for fn, region in _split_definitions(text):
+            s = dict(plan).get(fn)
+            if s is None:
+                out.append(region)
+                continue
+            typ = _ELEM_WIDTH_TYPE[s]
+            # BYTE FORM FIRST. The element rewrites emit `(char *)_X + K`,
+            # which is itself a byte-form site; running byte_re afterwards
+            # matches its own siblings' output and emits `(char *)(char *)_X`.
+            region = byte_re.sub(lambda m: '(char *)%s + %s' % (gname, m.group(1)),
+                                 region)
+            region = elem_re.sub(
+                lambda m: '*(%s *)((char *)%s + %#x)' % (typ, gname,
+                                                         int(m.group(1), 0) * s),
+                region)
+            region = star_re.sub('*(%s *)((char *)%s + 0)' % (typ, gname), region)
+            out.append(region)
+        text = ''.join(out)
+        total += 1
+    return text, total
+
+
+def _demangled_short(name):
+    d = subprocess.run(['c++filt', name], capture_output=True, text=True).stdout
+    return re.sub(r'.*::', '', d.split('(')[0]).strip()
+
+
 def fix_mislabelled_external(text, diag, ctx):
     """`(*_McdGeometryDeinit)(0x20, 0x10)` is `MeMemoryAPI.createAligned(...)`.
     Ghidra printed the wrong name for the right address; see relocation_targets()
@@ -6355,6 +6615,12 @@ def main():
     # forward declarations as well.
     body_text, n_vptr = fix_vptr_store(args.object, body_text, _declared,
                                        read_ghidra_locals(args.input), args.protos)
+    # AFTER fix_vptr_store, and the order is the whole of why this is safe.
+    # `_vanillaQMatrix` is the corpus's other two-typings site and it is not an
+    # external at all — fix_vptr_store resolves it to a local, so that spelling
+    # is gone before this looks. keaLCPSolver is validated and bit-identical on
+    # three scenes and must not change.
+    body_text, n_extidx = normalise_external_indexing(args.object, body_text)
     body_text, n_pfmt = fix_printf_extra_args(body_text)
     body_text, n_cmac = fix_compat_macro_extra_args(body_text)
     body_text, n_uscore = fix_undeclared_underscore_local(body_text)
@@ -6474,6 +6740,9 @@ def main():
         print(f'  {n_extbase} external base(s) re-resolved to byte arithmetic')
     if n_vptr:
         print(f'  {n_vptr} vptr store(s) resolved to a vtable address point')
+    if n_extidx:
+        print(f'  {n_extidx} external symbol(s) typed two ways normalised to '
+              'byte arithmetic, scale read from the machine code')
     if n_mangled:
         print(f'  {n_mangled} mangled call site(s) resolved to a declared name')
     if n_voidmem:

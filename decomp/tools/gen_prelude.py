@@ -815,6 +815,16 @@ def main():
     # ---- imports ----------------------------------------------------------
     imports = undefined(obj)
     declared = declared_names(args.umbrella, args.include_dir)
+    # Hoisted from the exported-data section below, because the IMPORT path
+    # needs it too and never had it. `extern_data_declaration` reads the DWARF
+    # of whichever object DEFINES the symbol, and gcc 3.2 puts the typedef name
+    # on the struct DIE, so a `typedef struct {...} X;` comes back as
+    # `struct X *` — an incomplete type that shares nothing with X but a
+    # spelling. ReadWriteKeaInputToFile imports `gDebug` and fails on exactly
+    # that: "invalid use of undefined type struct MdtKeaDebugDataRequest".
+    # The two export paths have dropped the keyword since they were written;
+    # this is the same substitution on the third path that needed it.
+    anon_tds = anonymous_struct_typedefs(args.umbrella, args.include_dir)
     _ = protos  # parsed above; used for both mangled and plain imports
     hdrs = set()
     decls = []
@@ -915,6 +925,10 @@ def main():
                     dd = extern_data_declaration(args.corpus, name)
                     if dd:
                         decl, owner, size = dd
+                        decl = re.sub(
+                            r'\b(?:struct|union)\s+(\w+)\b',
+                            lambda m: m.group(1) if m.group(1) in anon_tds else m.group(0),
+                            decl)
                         w(f'/* {size} bytes, defined in {owner}; type from its DWARF */')
                         w(decl)
                     else:
@@ -1085,7 +1099,6 @@ def main():
         head.append('')
         out[stat_start:stat_start] = head
 
-    anon_tds = anonymous_struct_typedefs(args.umbrella, args.include_dir)
     exp_out = []
     exp_sections = {}
     if exported_data:

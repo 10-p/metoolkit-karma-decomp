@@ -435,6 +435,41 @@ def main():
         out.append(f'typedef {kw} {n} {n};')
     out.append('')
 
+    # AND THE DE-UNDERSCORED SPELLING, where nothing else can own it.
+    # MathEngine writes `typedef struct _X { ... } X;`, so Ghidra uses `_X` for
+    # the tag and `X` for the typedef and the recovered source uses BOTH. For
+    # almost every such struct the public headers declare `X` themselves, which
+    # is why those objects compile — but not for all of them, and `MeProfile`
+    # fails on nothing else than `weightingData`.
+    #
+    # THE CONDITION IS THE WHOLE SAFETY ARGUMENT and it is deliberately blunt:
+    # the bare name must appear NOWHERE in the public headers, in any form.
+    # Measured over the 27 bare names the corpus uses this way, 25 do appear —
+    # `MeHeap`, `MeXMLInput`, `McdGjkSimplex` and the rest — and emitting a
+    # typedef for those would collide with whatever shape the header already
+    # gives them, including `typedef struct _X *X;`, which is not the same type.
+    # Two do not: `weightingData` and `McdContactLink`.
+    if args.public_headers:
+        words = set()
+        for r_, _d, fs in os.walk(args.public_headers):
+            for f in fs:
+                if not f.endswith('.h'):
+                    continue
+                try:
+                    words.update(re.findall(
+                        r'\w+', open(os.path.join(r_, f), errors='ignore').read()))
+                except OSError:
+                    pass
+        extra = [n for n in sorted(names)
+                 if n.startswith('_') and n[1:] and n[1:] not in words
+                 and n[1:] not in names and n[1:] not in typedef_names]
+        if extra:
+            out.append('/* ---- de-underscored aliases the public headers do not own ---- */')
+            for n in extra:
+                kw = 'union' if best[n][1]['tag'] == 'DW_TAG_union_type' else 'struct'
+                out.append(f'typedef {kw} {n} {n[1:]};')
+            out.append('')
+
     if real_conflicts:
         out.append('/* ---- WARNING: conflicting layouts seen for these names ---- */')
         for n, v in sorted(real_conflicts.items()):

@@ -384,6 +384,26 @@ def text_symbol_at(obj, offset):
     return best
 
 
+_reloc_off_cache = {}
+
+
+def _relocated_range(obj, sect, value, size):
+    """Does any relocation land in [value, value+size) of `sect`?"""
+    key = (obj, sect)
+    if key not in _reloc_off_cache:
+        offs, cur = set(), None
+        for line in run('readelf', '-rW', obj).splitlines():
+            m = re.match(r"Relocation section '(\S+)'", line)
+            if m:
+                cur = m.group(1)[4:] if m.group(1).startswith('.rel') else m.group(1)
+                continue
+            m = re.match(r'([0-9a-f]{8})\s+\S+\s+R_386', line)
+            if m and cur == sect:
+                offs.add(int(m.group(1), 16))
+        _reloc_off_cache[key] = offs
+    return any(value <= o < value + size for o in _reloc_off_cache[key])
+
+
 def exported_data_definition(obj, name, value, size, sect, data, c_name, sections):
     """Rebuild an EXPORTED data symbol as a C definition.
 
@@ -1105,9 +1125,45 @@ def main():
                 else:
                     w(f'float kd_{c_name}[{n}] KD_MANGLED("{name}");')
             else:
-                w(exported_data_definition(obj, name, value, size, sect,
-                                           data.get(sect, b''), c_name,
-                                           exp_sections))
+                # A .data export whose bytes are ALL ZERO can have its DWARF
+                # type instead of the byte blob, and be byte-exact anyway. The
+                # blob exists because initialised data has to be reproduced
+                # exactly; where there is nothing to reproduce, the blob only
+                # costs the type — and the type is what lets the body's
+                # references be renamed to this declaration at all
+                # (fix_exported_data_name checks the definition, not the DWARF,
+                # which is the McduDebugDraw lesson). `clockSpeed` is eight
+                # zero bytes and MeProfile fails on nothing else.
+                raw = data.get(sect, b'')
+                # AND NO RELOCATION OVER IT. Zero BYTES do not mean zero VALUE:
+                # `exported_data_definition` exists because MeMemoryAPI is 24
+                # zero bytes plus six R_386_32 relocations, i.e. a table of
+                # function pointers whose targets live only in the relocation
+                # records. MeMessage's ten `.data` exports are the same shape —
+                # `MeInfoShow` is zero bytes and one relocation against
+                # `MeShowStderr` — so a typed zero-initialised declaration would
+                # be byte-exact and VALUE-WRONG, and would move them to .bss
+                # besides. check_symbol_bindings says exactly that: ".data ->
+                # .bss but the shipped bytes are not zero — the initialiser is
+                # LOST". `clockSpeed` has no relocation at all.
+                zeros = bool(size) and value + size <= len(raw) and all(
+                    b == 0 for b in raw[value:value + size]) \
+                    and not _relocated_range(obj, sect, value, size)
+                decl = dwarf_static_declaration(
+                    obj, name, size, as_name='kd_' + c_name) if zeros else None
+                if decl:
+                    decl = re.sub(
+                        r'\b(?:struct|union)\s+(\w+)\b',
+                        lambda m: m.group(1) if m.group(1) in anon_tds else m.group(0),
+                        decl)
+                    w(f'/* {name} — EXPORTED {sect} symbol, {size} zero bytes */')
+                    w(f'/* type from its DWARF; the bytes are all zero, so this '
+                      f'is byte-exact */')
+                    w(f'{decl} KD_MANGLED("{name}");')
+                else:
+                    w(exported_data_definition(obj, name, value, size, sect,
+                                               data.get(sect, b''), c_name,
+                                               exp_sections))
             w('')
         w = prev_w
 

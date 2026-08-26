@@ -843,7 +843,13 @@ def api_member_param_types(include_dir):
     return out
 
 
-DATA_REF = re.compile(r'(?<![\w])DAT_([0-9a-f]{8})\b')
+# Both spellings. Ghidra prefixes the name with an underscore where the
+# reference came through a relocation it could not attribute — `_DAT_000136c0`
+# in MeProfile is 0x136c0, which is inside `.rodata.cst16`, a REAL section of
+# that object, not the EXTERNAL block (which starts at 0x14000). Matching only
+# the bare spelling left it to fall through to the mislabelled-external rule,
+# which had nothing to say about it, and MeProfile failed on nothing else.
+DATA_REF = re.compile(r'(?<![\w])(_?)DAT_([0-9a-f]{8})\b')
 
 # The same thing with Ghidra's leading underscore, at an address BELOW the
 # invented image base — so it names no section of this object.
@@ -913,7 +919,10 @@ def materialise_data_refs(obj, text):
     relocation record, and emitting the zero that sits in the section bytes
     would look right and be null. Anything not covered is left undefined, so
     the object keeps failing to compile, which is the honest outcome."""
-    addrs = sorted(set(int(a, 16) for a in DATA_REF.findall(text)))
+    addrs = sorted({int(a, 16) for _u, a in DATA_REF.findall(text)})
+    spellings = {int(a, 16): set() for _u, a in DATA_REF.findall(text)}
+    for u, a in DATA_REF.findall(text):
+        spellings[int(a, 16)].add(u)
     if not addrs:
         return '', 0
     secs, _ext = ghidra_memory_map(obj)
@@ -944,7 +953,8 @@ def materialise_data_refs(obj, text):
         out.append(f'static const unsigned char {c}[{max(len(data), 1)}] = {{ {rows} }};')
     for addr, name, off in defines:
         c = 'kd_sec' + re.sub(r'\W', '_', name)
-        out.append(f'#define DAT_{addr:08x} ({c}[0x{off:x}])')
+        for u in sorted(spellings.get(addr, {''})):
+            out.append(f'#define {u}DAT_{addr:08x} ({c}[0x{off:x}])')
     return '\n'.join(out) + '\n\n', len(defines)
 
 
@@ -2438,7 +2448,24 @@ _ASM_LABEL = re.compile(r'(?:KD_MANGLED|__asm__)\([ \t]*"([^"]+)"[ \t]*\)')
 
 
 def declared_under(declared):
-    """{ELF symbol: the C identifier this unit declares it as}."""
+    """{ELF symbol: the C identifier this unit declares it as}.
+
+    COMMENTS AND PREPROCESSOR LINES ARE STRIPPED FIRST, and that is not tidying.
+    The statement boundary here is `;`, and a `#define` has none — so the chunk
+    ending at `KD_MANGLED("frameTime")` ran back through the whole tail of the
+    prelude, and `_DECLARATOR` found `MeProfileOutputResults__size64` from
+
+        #define MeProfileOutputResults__size64 (*(const size_t *)...)
+
+    which is followed by `(` where `kd_frameTime` is followed by a space. The
+    LAST declarator in that chunk was therefore a macro from a different
+    declaration, and `frameTime` mapped to it. `fix_exported_data_name` then
+    renamed nothing, because the identifier it was offered does not appear on
+    the line — which from the outside is indistinguishable from a rule that
+    declined. MeProfile was the object holding it.
+    """
+    declared = re.sub(r'/\*.*?\*/', ' ', declared, flags=re.S)
+    declared = re.sub(r'(?m)^[ \t]*#.*$', ' ', declared)
     out = {}
     for stmt in declared.split(';'):
         m = _ASM_LABEL.search(stmt)
@@ -3299,7 +3326,15 @@ def _compat_variadic_arity():
         text = open(path, errors='ignore').read()
     except OSError:
         return out
-    for m in re.finditer(r'^#define\s+(\w+)\(([^)]*\.\.\.)\)', text, re.M):
+    for m in re.finditer(r'^#define\s+(\w+)\(([^)]*\.\.\.)\)(.*)$', text, re.M):
+        # A macro whose BODY uses __VA_ARGS__ keeps its extra arguments, so they
+        # are not padding and must not be dropped. `__strtod_internal(s, e, ...)`
+        # expands to `strtod((s), (e))` and discards them; `__divdi3(al, ah, ...)`
+        # expands through KD_LL_2(__VA_ARGS__, 0, 0) and the "extras" ARE the
+        # divisor. Truncating those to the named count left `__divdi3(a_lo,
+        # a_hi)` and took MeProfile from one error to a macro expansion failure.
+        if '__VA_ARGS__' in m.group(3):
+            continue
         named = [p.strip() for p in m.group(2).split(',') if p.strip() != '...']
         out[m.group(1)] = len(named)
     return out
@@ -4681,7 +4716,50 @@ def fix_mislabelled_external(text, diag, ctx):
 fix_mislabelled_external.file_wide = True
 
 
-def fix_exported_data_name(line, diag, ctx):
+def _sub_in_code(pattern, repl, text):
+    r"""Substitute outside string literals and comments.
+
+    A file-wide rename cannot use a plain `re.sub`, and the reason is not
+    hypothetical. `gDebugDataFile` is declared
+
+        int kd_gDebugDataFile KD_MANGLED("gDebugDataFile");
+
+    and the payload of KD_MANGLED is the ELF symbol this unit EXPORTS. Renaming
+    it there renamed the export: `keaRbdCore_unified` — validated, bit-identical
+    on all three scenes — started emitting `kd_gDebug`, `kd_gDebugDataFile` and
+    `kd_gPartition` in place of the three names the shipped object exports, and
+    `check_symbol_bindings` reported zero interface errors while it did.
+    """
+    out, i, n = [], 0, len(text)
+    while i < n:
+        c = text[i]
+        if c == '"' or c == "'":
+            j = i + 1
+            while j < n:
+                if text[j] == '\\':
+                    j += 2
+                    continue
+                if text[j] == c:
+                    j += 1
+                    break
+                j += 1
+            out.append(text[i:j])
+            i = j
+        elif text.startswith('/*', i):
+            j = text.find('*/', i + 2)
+            j = n if j < 0 else j + 2
+            out.append(text[i:j])
+            i = j
+        else:
+            j = i
+            while j < n and text[j] not in '"\'' and not text.startswith('/*', j):
+                j += 1
+            out.append(re.sub(pattern, repl, text[i:j]))
+            i = j
+    return ''.join(out)
+
+
+def fix_exported_data_name(text, diag, ctx):
     """`gDebug` is defined in this unit as `kd_gDebug` with an asm label.
 
     A DATA symbol the object exports is emitted by gen_prelude under a `kd_`
@@ -4710,7 +4788,18 @@ def fix_exported_data_name(line, diag, ctx):
     headers already declare never comes back undeclared, so this never sees it.
     Note the ordering in REPAIR_RULES — `fix_mislabelled_external` owns
     `‘_name’ undeclared` and matches first; only a name with no leading
-    underscore reaches here."""
+    underscore reaches here.
+
+    IT IS FILE-WIDE FOR THE ONE NAME, and per-line it could not converge. GCC
+    reports an undeclared identifier ONCE PER FUNCTION, and `frameTime` appears
+    twenty-odd times across MeProfile's, so a line-at-a-time rename needs one
+    compile per occurrence and the repair loop runs out first — which reads from
+    the outside as a rule that fixed the first line and then declined. The
+    mapping is a property of the TRANSLATION UNIT, not of a line: `declared_as`
+    says this unit declares that ELF symbol under that identifier, and
+    `_dwarf_typed_export` says the definition has the right type. Both are
+    checked before a single character is rewritten, and neither can be true of
+    one occurrence and false of another."""
     m = re.search(r'[‘\'"](\w+)[’\'"] undeclared', diag)
     if not m:
         return None
@@ -4720,8 +4809,53 @@ def fix_exported_data_name(line, diag, ctx):
         return None
     if not _dwarf_typed_export(ctx.obj, name, new, ctx.declared):
         return None
-    out = re.sub(r'(?<![\w.>])' + re.escape(name) + r'\b', new, line)
-    return out if out != line else None
+    out = _sub_in_code(r'(?<![\w.>])' + re.escape(name) + r'\b', new, text)
+    out = _rewrite_subfields_of(out, new)
+    return out if out != text else None
+
+
+def _rewrite_subfields_of(text, name):
+    r"""`kd_frameTime.cpuCycles._4_4_` -> the four bytes at offset 4.
+
+    THE RENAME UNMASKS THESE, and without rewriting them here it is rejected.
+    While `frameTime` was undeclared GCC reported that and said nothing about
+    the member accesses on it; renaming it to the identifier this unit really
+    declares makes six `request for member '_4_4_'` errors appear at once, so
+    the edit costs +5 in a single step and the repair loop reverts it — which is
+    the loop working correctly and is indistinguishable, from outside, from a
+    rule that declined. The follow-on repair that would take the count to -1
+    never gets a turn.
+
+    So the rule performs it. `fix_subfield_access` would do exactly this and the
+    transformation is a transcription — the offset and the width are both spelled
+    out in the name — but it is applied ONLY to expressions containing the
+    renamed identifier, so nothing else in the file moves."""
+    out = []
+    for line in text.split('\n'):
+        while True:
+            hit = None
+            for m in SUBFIELD.finditer(line):
+                width = SUBFIELD_WIDTH.get(int(m.group(2)))
+                if width is None:
+                    continue
+                start = scan_postfix_backward(line, m.start())
+                if start is None:
+                    continue
+                expr = line[start:m.start()].strip()
+                if not expr or not re.search(r'(?<![\w])' + re.escape(name) + r'\b', expr):
+                    continue
+                hit = (start, m.end(), expr, width, int(m.group(1)))
+                break
+            if hit is None:
+                break
+            start, end, expr, width, off = hit
+            line = (line[:start] + f'(*({width} *)((char *)&({expr}) + {off}))'
+                    + line[end:])
+        out.append(line)
+    return '\n'.join(out)
+
+
+fix_exported_data_name.file_wide = True
 
 
 _export_typed_cache = {}

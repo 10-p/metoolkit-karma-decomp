@@ -118,6 +118,10 @@ typedef struct lsVec3 lsVec3;
 struct lsVec4;
 typedef struct lsVec4 lsVec4;
 
+/* ---- de-underscored aliases the public headers do not own ---- */
+typedef struct _McdContactLink McdContactLink;
+typedef struct _weightingData weightingData;
+
 /* ---- anonymous aggregate members, named exactly ---- */
 typedef __typeof__(((struct _McdContact *)0)->element1) kd_anon_element1;
 typedef __typeof__(((struct _McdContact *)0)->element2) kd_anon_element2;

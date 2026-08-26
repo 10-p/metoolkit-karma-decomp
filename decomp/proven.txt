@@ -3352,3 +3352,111 @@ MeAssetFactory        real, and like MeFAsset the release is about REACHABILITY,
 #   wasm32 136/136 — the non-x86 branch of the shim compiles
 #   armv7 136/136, 0 truncations · arm64 7,149 across 86
 #   drop-in gap 10 -> 9 members, 45 -> 39 symbols
+
+# --- 2026-08-26: MeProfile — seven causes, and two near-misses caught --------
+#
+# 4 symbols and the last FAIL outside McdSpace/MeMath. Seven distinct causes,
+# each a generator fix; zero objects changed by any of them except the two
+# below, which were reverted.
+#
+#  1. `weightingData` USED AS A TYPE. MathEngine writes `typedef struct _X {...}
+#     X;` so Ghidra uses `_X` for the tag and `X` for the typedef, and the
+#     recovered source uses BOTH. gen_typedb emitted only `typedef struct _X _X`.
+#     THE CONDITION FOR ADDING THE BARE NAME IS DELIBERATELY BLUNT: it must
+#     appear NOWHERE in the public headers, in any form. Of the 27 bare names
+#     the corpus uses this way, 25 DO appear — MeHeap, MeXMLInput, McdGjkSimplex
+#     — and a typedef for those would collide with whatever shape the header
+#     already gives them, including `typedef struct _X *X;`, which is a
+#     different type. Two do not: `weightingData` and `McdContactLink`.
+#
+#  2. `declared_under` PARSED PAST A `#define`. Its statement boundary is `;`
+#     and a `#define` has none, so the chunk ending at KD_MANGLED("frameTime")
+#     ran back through the prelude's tail and `_DECLARATOR` matched
+#     `MeProfileOutputResults__size64` — a macro name, which is followed by `(`
+#     where `kd_frameTime` is followed by a space. `frameTime` therefore mapped
+#     to it, `fix_exported_data_name` was handed an identifier that appears
+#     nowhere on the line, and renamed nothing. Comments and preprocessor lines
+#     are stripped first now. ONE mapping changes corpus-wide, and it is that one.
+#
+#  3. THE RENAME HAS TO BE FILE-WIDE, and per-line it could not converge: GCC
+#     reports an undeclared identifier once per FUNCTION and `frameTime` appears
+#     twenty-odd times, so a line-at-a-time rename needs one compile per
+#     occurrence and the loop runs out first.
+#
+#  4. AND FILE-WIDE WENT STRAIGHT THROUGH KD_MANGLED("..."). The payload of that
+#     macro is the ELF symbol the unit EXPORTS. `keaRbdCore_unified` — validated,
+#     bit-identical on all three scenes — started exporting `kd_gDebug`,
+#     `kd_gDebugDataFile` and `kd_gPartition` in place of the three names the
+#     shipped object exports. **check_symbol_bindings reported ZERO interface
+#     errors while it did**, which is a hole worth knowing about: it compares
+#     what the recovered object exports against the SHIPPED object's list and
+#     did not notice three names replaced by three others. Caught by the
+#     blast-radius diff and by `nm`, not by the gate. `_sub_in_code` now skips
+#     string literals and comments.
+#
+#  5. THE RENAME UNMASKS `X.member._4_4_`. While `frameTime` was undeclared GCC
+#     said nothing about member accesses on it; renaming makes six appear at
+#     once, so the edit costs +5 in one step and the loop reverts it — correctly.
+#     The rule performs the subfield rewrite itself, on expressions containing
+#     the renamed identifier only.
+#
+#  6. `clockSpeed` IS `.data`, so it got the byte blob rather than its DWARF
+#     type, and `fix_exported_data_name` refuses to rename onto a definition
+#     whose type is wrong (the McduDebugDraw guard). A `.data` export whose
+#     bytes are all zero can have its DWARF type and still be byte-exact —
+#     **BUT ONLY IF NO RELOCATION COVERS IT**. Zero bytes do not mean zero
+#     value: MeMessage's ten `.data` exports are zero bytes plus a relocation
+#     each (`MeInfoShow` -> `MeShowStderr`), and without that second condition
+#     they moved to `.bss` and lost their initialisers. That one the gate DID
+#     catch, precisely: ".data -> .bss but the shipped bytes are not zero — the
+#     initialiser is LOST", 11 errors across 3 objects. `clockSpeed` has no
+#     relocation at all.
+#
+#  7. libgcc's 64-bit helpers. On i386 a `long long` divide is a CALL, and each
+#     operand arrives as two pushed words, low first. The ORDER is read, not
+#     assumed: MeProfileGetClockSpeed computes `(clockSpeed + 100000) / 1000000`
+#     — cycles to MHz — so the dividend is the first pair; reversed it returns
+#     zero. The DIVISOR'S HIGH WORD is sometimes missing from Ghidra's
+#     rendering, and defaulting it to zero is read from the machine code:
+#     MeProfile.o+0x2ac9 is `xor %eax,%eax; push %eax; push %edx; push %esi;
+#     push %ebx` — four words, the top one an explicit zero, of which Ghidra
+#     recovered three. Verified against real division at 32/64-bit values, with
+#     the 3-argument, 4-argument and padded forms, and with each argument
+#     evaluated exactly once.
+#
+#     AND THAT BROKE fix_compat_macro_extra_args, which drops arguments past a
+#     variadic kd_compat.h macro's named count. Right for
+#     `__strtod_internal(s, e, ...)`, which DISCARDS them; wrong for
+#     `__divdi3(al, ah, ...)`, where the "extras" are the divisor. The
+#     discriminator is whether the macro BODY mentions __VA_ARGS__.
+#
+#  8. `_DAT_000136c0` is at 0x136c0, inside `.rodata.cst16` — a real section of
+#     that object, not the EXTERNAL block, which starts at 0x14000. DATA_REF
+#     matched only the bare spelling, so it fell through to the
+#     mislabelled-external rule, which had nothing to say about it.
+#
+# A CORRECTION TO THE PREVIOUS ENTRY, and it is the kind this file exists for.
+# MeProfile_linux's note said "they are not dead: MeProfileStartSectionFn is a
+# real function and MstUniverseStep CALLS it twice at the top of every step. So
+# the profiler runs." That was read off a RELOCATION and is wrong as a statement
+# about UT2004. Measured:
+#
+#   gdb, test-karma-1, xDeathMatch, 137 objects substituted
+#     MeProfileStartSectionFn   0 calls
+#     MeProfileGetTimerValue    0 calls
+#     MstUniverseStep           0 calls
+#     MstBridgeUpdateContacts   0 calls
+#   and the engine imports MstUniverseStep 0 times
+#
+# `MstUniverseStep` is a SIXTH member of the §3a family — code UT2004 links and
+# reimplements, alongside MdtWorldStep, KIntersect's two intercepts,
+# MdtKeaIntegrateSystem and MeAssetInstanceCreate. So the whole profiler chain
+# links and never runs, and the rdtsc stand-in is even less consequential than
+# that entry claimed. The claim was still wrong when it was made.
+#
+#   137 objects · 137/137 clean on three scenes · MeProfile and MeProfile_linux
+#   both trajectory bit-identical · frame bounds 0 in the build · bindings 0
+#   difftest byte-identical to the documented baseline
+#   wasm32 137/137 · armv7 137/137, 0 truncations · arm64 7,457 across 87
+#   engine, test-karma-1, 260 s: exit 124, START MATCH, 0 faults
+#   drop-in gap 10 -> 8 members, 45 -> 35 symbols

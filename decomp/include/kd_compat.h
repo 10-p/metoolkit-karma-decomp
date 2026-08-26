@@ -106,6 +106,39 @@ typedef int (*__compar_fn_t)(const void *, const void *);
 #define builtin_strcpy(d, s)             strcpy((d), (s))
 #define builtin_memcpy(d, s, n)          memcpy((d), (s), (n))
 
+/* ---- libgcc's 64-bit helpers, as gcc 3.2 called them ----------------------
+    On i386 a `long long` divide is a CALL to libgcc, and Ghidra recovers the
+    call rather than the operation. Each 64-bit operand arrives as two pushed
+    words, low first, so `a / b` reads as `__divdi3(a_lo, a_hi, b_lo, b_hi)` —
+    and MeProfile has calls with FIVE and SEVEN arguments, which is the same
+    alignment padding as everywhere else, hence the `...`.
+
+    The order is not assumed. `MeProfileGetClockSpeed` computes
+    `(clockSpeed + 100000) / 1000000` — cycles to MHz — and reads
+    `__divdi3((uint)clockSpeed + 100000, <high word>, 1000000, 0)`, so the
+    dividend is the first pair. Reversed, it would return zero.
+
+    `__fixunssfdi` is the float-to-unsigned-64 conversion, one argument.
+------------------------------------------------------------------------- */
+#define KD_LL(lo, hi) ((long long)((((unsigned long long)(unsigned)(hi)) << 32) \
+                                   | (unsigned long long)(unsigned)(lo)))
+#define KD_ULL(lo, hi) ((((unsigned long long)(unsigned)(hi)) << 32) \
+                        | (unsigned long long)(unsigned)(lo))
+/* The divisor's HIGH word is sometimes missing, and defaulting it to zero is
+   read from the machine code rather than assumed. At MeProfile.o+0x2ac9 the
+   call reads `xor %eax,%eax; push %eax; push %edx; push %esi; push %ebx` — four
+   words, the top one an explicit zero — and Ghidra recovered only three of
+   them. KD_LL_2/KD_ULL_2 supply it, and evaluate every argument exactly once,
+   which a positional-default trick over __VA_ARGS__ would not. */
+#define KD_LL_2(bl, bh, ...)            KD_LL((bl), (bh))
+#define KD_ULL_2(bl, bh, ...)           KD_ULL((bl), (bh))
+#define __divdi3(al, ah, ...)   (KD_LL((al), (ah))  / KD_LL_2(__VA_ARGS__, 0, 0))
+#define __udivdi3(al, ah, ...)  (KD_ULL((al), (ah)) / KD_ULL_2(__VA_ARGS__, 0, 0))
+#define __moddi3(al, ah, ...)   (KD_LL((al), (ah))  % KD_LL_2(__VA_ARGS__, 0, 0))
+#define __umoddi3(al, ah, ...)  (KD_ULL((al), (ah)) % KD_ULL_2(__VA_ARGS__, 0, 0))
+#define __fixunssfdi(f)                 ((unsigned long long)(f))
+#define __fixsfdi(f)                    ((long long)(f))
+
 /* ---- what Ghidra turns an INSTRUCTION into --------------------------------
     `rdtsc` is not a function. It is the x86 instruction that reads the CPU's
     cycle counter, and Ghidra renders it as a call returning 64 bits.

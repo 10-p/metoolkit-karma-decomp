@@ -205,6 +205,32 @@ typedef unsigned int        uint3;
 typedef unsigned char       uchar;
 typedef unsigned short      ushort2;
 
+/* ---- pointer-width punning, and why it is a typedef and not `int` -------
+    Ghidra recovers a stack slot as an integer and the code stores a POINTER in
+    it, so the corpus is full of `*(T *)((int)base + K)`. On every target this
+    project has ever built for — i386, wasm32, armv7 — `int` and a pointer are
+    both 32 bits and that round-trip is lossless. On **arm64 it truncates a
+    64-bit pointer to 32 bits**, which is HANDOVER.md §6b's whole complaint and
+    the 7,771 diagnostics `test/ptrwidth_check.sh` counts.
+
+    `kd_iptr` is the width-correct spelling for exactly those sites.
+
+    WHAT MAKES SUBSTITUTING IT SAFE IS THAT IT IS NOT A WIDENING ANYWHERE THAT
+    CURRENTLY WORKS. `<stdint.h>`'s `intptr_t` is not merely the same SIZE as
+    `int` on i386, it is the same TYPE — `intptr_t *p = &some_int;` compiles
+    without a diagnostic — so on i386, wasm32 and armv7 this is a no-op and the
+    emitted object is byte-identical. It changes arm64 and nothing else, which
+    is why the blast-radius test for the change that introduced it passes by
+    construction rather than by luck.
+
+    Do NOT use it as a general replacement for `int`. It is for a slot that
+    holds an ADDRESS. Widening an ordinary integer changes truncation
+    behaviour on arm64 and nowhere else, which is the hardest kind of bug to
+    find here — there is no gate that executes arm64 code. */
+#include <stdint.h>
+typedef intptr_t            kd_iptr;
+typedef uintptr_t           kd_uptr;
+
 /* ---- x87 extended precision -------------------------------------------
     Ghidra emits `longdouble` where a value provably lives in an x87 register
     across operations, i.e. where the original gcc 3.2 i386 build really did

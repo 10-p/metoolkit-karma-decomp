@@ -29,7 +29,7 @@ trust any schedule further down.
 139 recovered objects, all compiling for i386, wasm32, armv7 AND arm64.
   wasm32  139/139, exported symbol NAMES byte-identical to the i386 build
   armv7   139/139, ZERO pointer-truncation diagnostics
-  arm64   139/139, 7,771 truncations across 89 objects  <- NOT trustworthy, section 3
+  arm64   139/139, 363 truncations across 42 objects (was 7,771/89) - section 3
 
 The collision layer, the solver and the ENTIRE .ka asset-loading path are recovered
 and the engine has RUN on all three on i386.
@@ -47,7 +47,7 @@ way**, all detailed below and all measured rather than guessed:
 
 1. **Pointer size is load-bearing.** The recovery puns pointers through 4-byte slots
    everywhere. wasm32 and armv7 are 32-bit-pointer targets so it holds; **arm64 is not, and
-   7,771 sites prove it**. Do not treat "arm64 compiles" as "arm64 works" — section 3.
+   363 remaining sites prove it**. Do not treat "arm64 compiles" as "arm64 works" — section 3.
 2. **An arithmetic error that is provably inert on i386 and 31% divergent on yours.**
    Section 6's hazard box. Every gate on the recovery side is structurally blind to it, so
    **any wasm-vs-native A/B you build is worth more than it looks** — it measures something
@@ -764,7 +764,7 @@ device — pointer truncation is a compile-time diagnostic.
 |---|---|---|---|
 | wasm32 | 139/139 | identical to i386 | — (32-bit) |
 | **armv7** | 139/139 | identical | **0** — a real 32-bit-pointer port |
-| **arm64** | 139/139 | identical | **7,771 across 89 of 139 objects** |
+| **arm64** | 139/139 | identical | **363 across 42** after `tools/fix_ptrwidth.py`; 6,919 without it |
 
 **arm64 compiling is a lie.** The recovery puns pointers through 4-byte slots, which is
 sound on every 32-bit target and silently truncates on a 64-bit one. The fix is
@@ -864,10 +864,22 @@ older copy of this file, start here.
   fell to generator fixes whose blast radius was measured at **zero** — every one of the
   138 pre-existing `.o` byte-identical. `ReadWriteKeaInputToFile` (3 symbols) and
   `MdtPartition` (4).
-- **arm64 went 7,457/87 to 7,771/89**, which is two more objects arriving, not a
-  regression. armv7 stays at **0** truncations, wasm32 at **139/139** with byte-identical
-  exported symbol sets. Item 3 of section 3 is unchanged and still the thing that matters
-  most to you.
+- **ARM64 IS 95.3% REPAIRED AND THIS IS THE ONE THAT AFFECTS YOU.** Item 3 of section 3 —
+  "arm64 truncates pointers" — went **7,771 truncations across 89 objects to 363 across
+  42**, and every one of the 139 i386 objects is byte-identical, so nothing you already
+  test against moved. Two changes: five dead decompiled fragments dropped, and 3,498 punned
+  casts widened to `kd_iptr` (`intptr_t`), with the site list taken from **clang's own
+  `-Wpointer-to-int-cast`** rather than a pattern — nothing here executes arm64 code, so a
+  heuristic that is wrong 1% of the time would be invisible.
+- **THE CATCH, AND YOU MUST HANDLE IT: `tools/fix_ptrwidth.py` IS A POST-PASS AND NEEDS THE
+  NDK.** The 95-second pipeline's output is NOT the arm64-correct source. If you build an
+  arm64 artefact, run it first — `cp -a /tmp/kd_out /tmp/kd_out_pw` then the tool, then
+  build from `/tmp/kd_out_pw`. wasm32 and armv7 are unaffected either way, which is the
+  whole point of the typedef: `intptr_t` IS `int` at 32-bit pointer width.
+- **The remaining 363 are a different defect** — an integer local or struct field holding an
+  address, which needs a widened DECLARATION, not a widened cast. Do not blanket-widen: the
+  same bucket contains a float and an array index living in pointer-typed slots. armv7
+  stays at **0** truncations, wasm32 at **139/139** with byte-identical exported symbol sets.
 - **One member was rebuilt, passed all nine gates, and was REVERTED** — `McdContact`. What
   it compiled to indexed an eight-byte scratch buffer as `count+1` sixteen-byte structs,
   and `check_frame_bounds` reported 0 the whole time because the index is a variable and

@@ -5288,11 +5288,11 @@ def _tagless(text):
     return re.sub(r'\s+', ' ', re.sub(r'\b(?:struct|union)\s+', '', text))
 
 
-def not_code(name, obj, body=''):
+def not_code(name, obj, body='', known=None):
     """Did Ghidra make a "function" out of bytes that are not code?
 
-    Two ways to know, and both are facts about the object file rather than
-    judgements about the decompilation.
+    Three ways to know, and all three are facts about the object file rather
+    than judgements about the decompilation.
 
     ONE — THE ADDRESS IS OUTSIDE `.text`. Ghidra names a function it found no
     symbol for after its address, and its address space is the invented one of
@@ -5309,14 +5309,36 @@ def not_code(name, obj, body=''):
     instructions. MdtBcl has two, `FUN_000200f0` and `FUN_00020120`, and nothing
     calls either.
 
+    THREE — THE ADDRESS IS *INSIDE* A FUNCTION THAT IS ALREADY DECOMPILED.
+    Ghidra sometimes cannot follow the control flow of a large function and
+    slices interior blocks off as separate "functions". They are real code, but
+    they are the SAME code the parent already carries, entered mid-frame — which
+    is why they read `unaff_EBP + -0x25c`: `%ebp` was set by the parent's
+    prologue, so from the fragment's point of view the frame base arrives in a
+    register nobody assigned. `initialise_unmodelled_locals` then honestly sets
+    it to 0 and the fragment dereferences address -604.
+
+    Nothing calls them — they are `static` and unreferenced, so gcc discards
+    them and the emitted object never depended on them, which is exactly why
+    `prove_inert` reported MdtBcl's four `unaff_` values inert. Dropping them is
+    therefore byte-identical by construction AND removes 585 of the 1,215 arm64
+    pointer-truncation diagnostics left after `tools/fix_ptrwidth.py`.
+
+    Read from the symbol table, not judged: five `FUN_` addresses in MdtBcl fall
+    strictly inside `MdtBclAddRPROJoint`, `LimitSingleAxis` and
+    `MdtContactWriteRow`, all three of which are decompiled under their own
+    names. A fragment whose parent is NOT decompiled is KEPT — dropping it would
+    lose the only copy — and one that starts exactly at a function's entry is
+    not a fragment at all, it is that function under a different name.
+
     Those diagnostics are the useful signal and must NOT be answered by defining
     `undefined6`, `SCARRY1`, `POPCOUNT` and `halt_baddata` in kd_compat.h —
     that would make the noise compile and publish bogus symbols. Dropping loses
     nothing, because there is nothing there.
 
-    Only `FUN_`-named functions are eligible for the address test, since a
+    Only `FUN_`-named functions are eligible for the address tests, since a
     symbol-named function is at an address the symbol table vouches for.
-    Corpus-wide the two tests fire on one object between them: MdtBcl."""
+    Corpus-wide all three tests fire on one object between them: MdtBcl."""
     if re.fullmatch(r'\s*\{?\s*halt_baddata\(\);\s*\}?\s*',
                     re.sub(r'/\*.*?\*/', '', body, flags=re.S).split('\n{', 1)[-1]):
         return True
@@ -5330,7 +5352,16 @@ def not_code(name, obj, body=''):
     text = [s for s in secs if s[0] == '.text']
     if not text:
         return False
-    return not (text[0][2] <= int(m.group(1), 16) < text[0][3])
+    addr = int(m.group(1), 16)
+    if not (text[0][2] <= addr < text[0][3]):
+        return True
+    if known:
+        # Ghidra lays .text out at text[0][2]; function_extents is file-relative.
+        at = addr - text[0][2]
+        for fn, lo, hi in function_extents(obj):
+            if lo < at < hi and fn in known:
+                return True
+    return False
 
 
 def _split_definitions(text):
@@ -6661,7 +6692,7 @@ def main():
         if name in args.drop:
             dropped.append(name)
             continue
-        if not_code(name, args.object, body):
+        if not_code(name, args.object, body, set(by_name)):
             n_not_code += 1
             continue
         if name in hdr_inlines and name not in exported:

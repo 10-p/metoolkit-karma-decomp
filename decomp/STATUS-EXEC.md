@@ -53,10 +53,27 @@ reasoning is on the record so the next attempt starts from the answer.
 
 ---
 
+## Android got most of the way this week
+
+**The Android 64-bit build had a defect in 7,771 places, and 95% of it is now fixed** —
+down to 363. The rebuilt code passes addresses around in slots that are the right size on
+web and on 32-bit Android and **too small on 64-bit Android**, where they would be silently
+cut in half. It was found by asking the Android compiler, which already knew; it is fixed by
+asking the same compiler to point at every site rather than by guessing at them.
+
+The PC build is unchanged **to the byte** — all 139 pieces compile to identical machine
+code — so nothing that already worked could have moved.
+
+What is left is 363 places of a different kind, which need judgement one at a time rather
+than a sweep: some of them would be made *worse* by the same fix.
+
+---
+
 ## The two risks
 
 **1. We cannot yet test the thing we are building it for.** Nothing has ever run on web or
-Android. It compiles for both, which is not the same thing.
+Android. It compiles for both, which is not the same thing — and the Android fix above is a
+step towards *correct*, still not towards *tested*.
 
 **2. An error that is harmless on PC and harmful on web.** A quirk in how the decompiler
 writes arithmetic changes the answer only on machines without the PC's spare precision —

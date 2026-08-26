@@ -3751,3 +3751,93 @@ MdtPartition          RELEASED 2026-08-26 (seventh session). Four symbols of the
 # validated objects once already today (see the MdtPartition entry), so the
 # acceptance test is every pre-existing .o byte-identical, and sub_below must
 # stop claiming a site whose value is ASSIGNED rather than dereferenced.
+
+# --- 2026-08-26 (seventh session): arm64 — 7,771 truncations to 363 ---------
+#
+# HANDOVER.md §6b has said since the fourth session that arm64 "compiles and is
+# not trustworthy", that the fix "is a generator-wide change, not a flag", and
+# that no behavioural gate here can see the defect because none of them executes
+# arm64 code. This is that change. **95.3% of the defect is closed and every
+# i386 object is BYTE-IDENTICAL.**
+#
+#     7,771 across 89 objects        the sixth session's figure, at 139 objects
+#     6,919 across 89                after dropping dead decompiled fragments
+#       363 across 42                after widening the punned casts
+#
+# PART ONE — FIVE "FUNCTIONS" THAT ARE FRAGMENTS OF THREE REAL ONES (852 sites).
+# `not_code` already refused a FUN_ outside .text and one that is nothing but
+# `halt_baddata()`. A third case was never covered: Ghidra cannot always follow
+# the control flow of a large function and slices interior blocks off as
+# separate "functions". Read from the symbol table rather than judged —
+#
+#     FUN_00020000, FUN_00020030, FUN_000201a0  inside MdtBclAddRPROJoint
+#     FUN_00020720                              inside LimitSingleAxis
+#     FUN_00020ee0                              inside MdtContactWriteRow
+#
+# — all three parents decompiled under their own names, all five fragments
+# `static` and referenced by nothing. They are entered mid-frame, which is why
+# they read `unaff_EBP + -0x25c`: `%ebp` was set by the PARENT's prologue, so
+# from the fragment's view the frame base arrives in a register nobody assigned.
+# `initialise_unmodelled_locals` then honestly sets it to 0 and the fragment
+# dereferences address -604.
+#
+#   AND THIS EXPLAINS A prove_inert RESULT THAT SHOULD HAVE LOOKED ODD. MdtBcl's
+#   four `unaff_` values were reported PROVEN INERT while being dereferenced,
+#   which reads like a contradiction. It is not: the functions are static and
+#   unreferenced, gcc discards them whole, and the emitted object never depended
+#   on them. That is also why dropping them is byte-identical BY CONSTRUCTION.
+#
+#   TWO CONTROLS, both required, because the test could easily delete real code:
+#   a fragment whose parent is NOT decompiled is KEPT (dropping it would lose
+#   the only copy), and a FUN_ whose address is exactly a function's ENTRY is
+#   kept (it is that function under another name, not a fragment). Both checked
+#   directly against MdtBcl.o.
+#
+# PART TWO — 3,498 NARROW CASTS WIDENED, AND THE COMPILER CHOSE EVERY ONE.
+# `tools/fix_ptrwidth.py`. The rewrite is only correct where the integer holds
+# an ADDRESS; widening an ordinary `int` changes truncation on arm64 and nowhere
+# else, and NO GATE HERE EXECUTES ARM64 CODE, so a heuristic that is wrong 1% of
+# the time would be undetectable. Textually `(int)x` says nothing about whether
+# `x` is a pointer — so the site set is taken from clang's own
+# `-Wpointer-to-int-cast`, which fires exactly when a pointer is narrowed and
+# names the column of the cast. It is a real compiler's judgement about types.
+#
+#   WHAT MAKES IT SAFE ON THE TARGETS THAT WORK is that it is not a widening
+#   there at all: `intptr_t` is not merely the same SIZE as `int` on i386, it is
+#   the same TYPE — `intptr_t *p = &some_int;` compiles clean. So the acceptance
+#   test passes by construction, and was run anyway:
+#
+#     139 of 139 objects recompiled from the rewritten sources are BYTE-IDENTICAL
+#
+#   `-Wint-to-pointer-cast` is deliberately NOT rewritten. It is the other half
+#   of the same round trip and most of it disappears once the inner cast is
+#   width-correct: 4,214 -> 322.
+#
+# WHAT THE REMAINING 363 ARE, so the next attempt does not start by measuring.
+# They are ALL the int-to-pointer direction, and they are NOT more casts to
+# widen — they are an integer LOCAL OR STRUCT FIELD that holds an address:
+#
+#     iVar19 = ...;  *(float *)(iVar19 + 0xb0)      an int local used as a base
+#     pool_ptr = (MdtKeaInverseMassMatrix *)iVar10;
+#     (**(code **)(*(int *)this->A + 0x18))         an int FIELD used as a base
+#
+# Closing them means widening a DECLARATION, which is type inference and not a
+# textual rewrite. And it must not be done blind, because the same bucket
+# contains sites where widening would be WRONG — `pMVar3 =
+# (McdGeometryID)KD_FBITS((dy * 0.5))` stores a FLOAT in a pointer-typed slot,
+# and `local_3c = (MdtBody *)(iVar10 + 1)` is a body INDEX in a pointer-typed
+# local. Both are Ghidra type confusion, not pointer punning. 207 distinct
+# shapes; they need judgement, one at a time.
+#
+# STATUS OF THE ARTEFACT, stated plainly: the widened sources are produced by a
+# POST-PASS that needs the NDK, so `/tmp/kd_out` from §4's 95-second pipeline is
+# NOT the arm64-correct source. An arm64 build must run tools/fix_ptrwidth.py
+# first. i386, wasm32 and armv7 are unaffected either way — that is the point of
+# the typedef.
+#
+#   139 objects · 139/139 clean on three scenes · frame bounds 0 (both source
+#   trees) · bindings 0 · wasm32 139/139 with identical exported symbol sets
+#   armv7 139/139 with 0 truncations · arm64 363 across 42 (was 7,771 across 89)
+#   BLAST RADIUS: all 139 .o BYTE-IDENTICAL after BOTH changes
+#   difftest is unchanged BY CONSTRUCTION — the objects it runs are the same
+#   bytes as the baseline that passed it — and was re-run anyway

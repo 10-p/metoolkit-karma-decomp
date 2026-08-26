@@ -285,6 +285,169 @@ IxConvexPrimitives    real: 1,685 calls of McdSphylConvexMeshIntersect on ONS-CB
 #                     hour — ragdolls land on the level, not on the vehicles —
 #                     and ONS-Torlan would not start a ticking match. CBP2 and
 #                     UCMP maps reach it in minutes. See HANDOVER.md 6.
+MdtLOD                RELEASED 2026-08-27 (eighth session), and NOT on the reachability
+#                     argument the seventh session left ready to sign. That argument is
+#                     still true — MdtLODLastPartition's one call site is guarded by
+#                     `rowCount > params->maxMatrixSize`, MdtWorldCreate sets that to
+#                     0x7ffffffc, nothing anywhere lowers it, and a breakpoint fires ZERO
+#                     times in a 235 s match against a control at >100,000. IT WAS ALSO
+#                     ABOUT TO SHIP A FUNCTION THAT SEGFAULTS ON ITS FIRST REAL CALL.
+#
+#                     `MdtWorldSetMaxMatrixSize` is a PUBLIC API, so the guard does not have
+#                     to be reasoned about — it can be made true. test/scene_ragdoll_lod.c
+#                     is scene_ragdoll with one line added, and test/ab_lod.sh builds it
+#                     against stock and against a metoolkit with ONLY MdtLOD substituted,
+#                     then diffs the trajectories:
+#
+#                       KD_MAXMATRIX  MdtLODLastPartition / ResizeConstraint   verdict
+#                       128                     0 /     0    (the control)     identical
+#                        40                     2 /    48                      identical
+#                         8                   900 / 7,200                      identical
+#
+#                     The 128 row is the negative control on the SCENE: it says the switch,
+#                     not the harness, is what makes the function run — and on the
+#                     unmodified scene_ragdoll both breakpoints are 0 too. The 8 row exits
+#                     non-zero on BOTH sides: LOD discards the contact constraints and the
+#                     ragdoll free-falls, the scene's plausibility check fails, and that is
+#                     the code working. Bit-identical is bit-identical.
+#
+#                     WHAT THE HARNESS FOUND, AND IT IS THE WHOLE POINT OF RUNNING IT.
+#                     Before this session's repairs the object read 128 identical, 40 and 8
+#                     both SEGFAULT. Three separate defects, none visible to any of the nine
+#                     gates:
+#
+#                       1. `pdataArray = (MdtLODPartitionData *)((int)&local_6c);` — the
+#                          SECOND of two chained allocas, collapsed onto a 20-byte local and
+#                          then written once per body. The chain rule declined because
+#                          Ghidra spells one defining use with parentheses and the other
+#                          without, so it saw a single set {iVar2,iVar6} introducing two new
+#                          vars at once. `iVar2` is also two live ranges — a constraint
+#                          count, then the second block's size.
+#                       2. `kd_alloca_iVar3` INDEXED `count` times by a loop ABOVE the
+#                          statement that allocates it. ghidra_clean.hoist_early_alloca, with
+#                          a matching detector in recover.py so an unplaceable one is held.
+#                       3. `&(*kd_argslot_ffffffd0) + uVar7 * -2` — a frame shift left on
+#                          storage that is no longer in the frame, and POINTER arithmetic on
+#                          a `void **`, so it moved 8*uVar7 bytes into the alloca'd blocks
+#                          the function was filling. Every store and its load carried the
+#                          same shift, so it read bit-identical while doing it.
+#                     Plus ResizeConstraint's block 2 (`(int)aiStack_2c + i*4 + uVar7*-2`),
+#                     which is materialise_secondary_blocks.
+#
+#                     THE HARNESS WAS MADE TO FAIL A SECOND TIME, on purpose, so the clean
+#                     rows are evidence: qsort's `nmemb` and `size` argument slots swapped
+#                     reads 128 identical, 40 SEGFAULT. (8 stays identical for that one —
+#                     the contact groups are too small there for the sort to matter — so 40
+#                     is the discriminating setting and 8 is the volume setting.)
+#
+#                     LIMIT, STATED, UNCHANGED FROM THE SEVENTH SESSION: if a future engine
+#                     build ever calls MdtWorldSetMaxMatrixSize, this stops being a function
+#                     the game cannot enter and becomes one it can. It is now measured
+#                     either way, which is the difference this entry records.
+
+MeFAsset              CORRECTION 2026-08-27 (eighth session), and it is a repair rather than
+#                     a release — MeFAsset has been IN THE BUILD since the sixth session.
+#                     proven.txt already recorded that `MeFAssetCreateCopy` indexes a
+#                     twelve-byte local with an asset's part count and that "what stopped it
+#                     mattering is that the function cannot be called — luck, not design".
+#                     Under the standing order that is exactly the shape to fix. Both halves
+#                     are now fixed by the rules MdtLOD needed anyway:
+#                       * `copyArray` was `(int)apMStack_3c + uVar24 * -2`, the second
+#                         alloca'd block collapsed onto a local, written `copyArray[i]` for i
+#                         up to the part count. It is now a real alloca.
+#                       * 166 `&(*kd_argslot_X) + uVar24 * -2` references wrote 8*uVar24
+#                         bytes below their own storage. The shift is dropped.
+#                     Blast radius: MeFAsset.o is the only object that changed, and the diff
+#                     is exactly those two repairs and nothing else. The .ka path is where
+#                     MeAssetDBXMLIO passed every offline gate and killed the engine at init,
+#                     so this object was re-run IN THE ENGINE before the session closed.
+McdContact            RELEASED 2026-08-27 (eighth session). It was ATTEMPTED AND REVERTED in
+#                     the seventh — it compiled, passed ALL NINE GATES, and indexed an
+#                     eight-byte scratch slot as (count+1) sixteen-byte structs. What is
+#                     different this time is not a better argument, it is an INSTRUMENT that
+#                     can see the defect the gates could not.
+#
+#                     test/ab_contact.sh + test/ab_contact.c drive the recovered
+#                     McdContactSimplify and the SHIPPED one with identical random contact
+#                     sets in one process and compare the WHOLE destination buffer bitwise —
+#                     not `ret` entries, because a write past the count is exactly the smash
+#                     this exists to catch. The inputs are shaped like a real contact set
+#                     (coplanar about a shared normal) with one in five left as noise, and
+#                     `dims` and both `element` words are filled so the comparison is not
+#                     vacuous.
+#
+#                       1,000,000 calls, 100.000% bit-identical, 0 return, 0 contacts.
+#
+#                     FOUR CONTROLS, and two of them are the point:
+#                       KD_SELFTEST=1 (shipped vs shipped)        20,000  0 differences
+#                       block base 0x10 HIGH — the exact defect
+#                         the seventh session shipped and reverted   SEGFAULT
+#                       two argument-area offsets swapped            SEGFAULT
+#                       the whole argument area shifted one word     0 differences, and that
+#                         is correct rather than a blind spot: the region is self-contained,
+#                         so a uniform relabelling of it changes nothing.
+#
+#                     THE REPAIR IS A GENERATOR RULE, not an edit:
+#                     ghidra_clean.materialise_unrounded_alloca. It recognises the alloca gcc
+#                     did not have to round (`-(count * 0x10 + 0x10)`, both terms multiples
+#                     of 16, one site corpus-wide), takes the block base from the MINIMUM
+#                     constant of the anchor group rather than the bare form, tells the block
+#                     from the outgoing argument area by which one is ASSIGNED to a pointer,
+#                     and keys every rewrite on the ANCHOR AND THE VARIABLE TOGETHER so the
+#                     other two live ranges of `iVar30` — a copy-loop counter and `list.ct` —
+#                     are not reachable by it. Blast radius zero: all 143 pre-existing .o
+#                     byte-identical.
+#
+#                     LIMIT, STATED. This is a synthetic oracle. McdContactSimplify is on the
+#                     live contact path but the engine imports it and nothing else from this
+#                     member, and no census has yet shown it executing; the evidence above is
+#                     depth, not breadth.
+IxBoxTriList          RELEASED 2026-08-27 (eighth session), and the reason it was REFUSED for
+#                     four sessions was correct at the time and is now answered on its own
+#                     terms. The charge was "difftest measures it diverging on 139,961 of
+#                     200,000 pairs, and its address is taken by a live dispatch table". The
+#                     divergence is gone. The dispatch-table fact is unchanged, which is why
+#                     the release had to be a MEASUREMENT and not a reachability argument.
+#
+#                     synth: difftest_pair, 200,000 pairs, 163,581 touching (81.8%), 48,380
+#                     bit-identical, 0 ret/touch, 0 count, 0 dims, worst delta 1.995e+00
+#                     (amplified through a mesh; read the discrete columns).
+#                       before this session: 1,463 ret/touch, 139,961 count, 12,060 dims.
+#
+#                     THE FRAME ITSELF WAS MEASURED, which is what the nrecon detector asks
+#                     for and what no synthetic run had ever given it. test/bisect_static.sh
+#                     substitutes ONE file-static at a time by forwarding it to a `sh_`-
+#                     prefixed copy of the shipped object, so inlining cannot defeat it:
+#
+#                       recovered top-level only (all four statics shipped)  20,000/20,000
+#                         bit-identical, 0 ret/touch, 0 count, 0 dims
+#
+#                     Every one of the 12 `kd_argslot_` references is in that top-level
+#                     function, McdBoxTriangleListIntersect, so that row IS the frame under
+#                     test with nothing else in the way. The alloca that hands the engine's
+#                     KTriListGenerator its triangle buffer is in the same function and in
+#                     the same row. NEGATIVE CONTROL on the same harness: the unmodified
+#                     object reads 13,910 count differences in 20,000, so the instrument can
+#                     fail and does.
+#
+#                     THE DEFECT, because it is worth knowing what four sessions of
+#                     "known-wrong collision function" actually was, and it was NOT the
+#                     frame: Ghidra deleted two of three stores in McdVanillaBoxTriIntersect
+#                     and pointed the vector eight bytes past the end of `lsVec3 axb[3]`.
+#                     ghidra_clean.X87_RECONSTRUCTIONS shape 2 has the machine code and the
+#                     two sibling branches that spell the idiom out. Blast radius zero — all
+#                     142 pre-existing .o byte-identical.
+#
+#                     A per-function A/B against the shipped static, on the live inputs
+#                     difftest generates, went 1,022 differing point counts and 25 differing
+#                     return values to ZERO of 5,131 calls.
+#
+#                     WHAT IS STILL NOT EXACT, stated rather than hidden: 1,149 of those
+#                     5,131 calls still differ in `*outPN` or `*outSep` at one float ULP.
+#                     That is the association defect (SEE THE 2026-08-27 ENTRY BELOW — it is
+#                     NOT inert on i386, which this file used to say), it changes no discrete
+#                     decision, and reordering the two sites to the machine's order measured
+#                     WORSE end to end. Recorded, not applied.
 IxCylinderTriList     RELEASED 2026-08-24 (third session), on the pair the census had just
 #                     shown to be live. It had been quarantined since it was recovered, by
 #                     the reconstructed-frame detector — "frame reconstructed by inference,

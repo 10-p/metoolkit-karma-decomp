@@ -414,18 +414,38 @@ def materialise_alloca_frame(body, fname):
         # exactly one new var, and that var is the `sub` that created this
         # block. A set that introduces none, or more than one, is not a chain
         # and is left alone.
+        #
+        # BOTH SPELLINGS OF THE DEFINING USE ARE COLLECTED, and the second one
+        # is not cosmetic. Ghidra parenthesises the RHS when it casts —
+        # `pdataArray = (MdtLODPartitionData *)((int)&local_6c + iVar2 + iVar6);`
+        # — and does not when it does not:
+        #
+        #     *(int *)((int)auStack_78 + iVar6) = (int)&local_6c + iVar6;
+        #
+        # `MdtLODLastPartition` has one of each, off the same anchor. Reading
+        # only the parenthesised one leaves a SINGLE set {iVar2, iVar6}, which
+        # introduces two new vars at once, so the chain declines as "not a
+        # chain" — and `pdataArray` collapses onto `local_6c`, a twenty-byte
+        # struct, written once per body. The bare form requires `&` so ordinary
+        # integer arithmetic cannot match it, and it is only ever used to SEED
+        # the running set: a bare site is never rewritten, because the rewrite
+        # below needs the parentheses it does not have.
         by_base = {}
-        for m in re.finditer(r'=\s*(?:\([^()]*\)\s*)?\(\s*(?:\(int\)\s*)?&?(\w+)'
-                             r'((?:\s*\+\s*[A-Za-z_]\w*)+)\s*\)\s*;', body):
-            vs = re.findall(r'\w+', m.group(2))
-            if all(v in neg for v in vs):
-                by_base.setdefault(m.group(1), []).append((m.group(0), vs))
+        for paren, pat in (
+                (True, r'=\s*(?:\([^()]*\)\s*)?\(\s*(?:\(int\)\s*)?&?(\w+)'
+                       r'((?:\s*\+\s*[A-Za-z_]\w*)+)\s*\)\s*;'),
+                (False, r'=\s*(?:\([^()]*\)\s*)?(?:\(int\)\s*)?&(\w+)'
+                        r'((?:\s*\+\s*[A-Za-z_]\w*)+)\s*;')):
+            for m in re.finditer(pat, body):
+                vs = re.findall(r'\w+', m.group(2))
+                if all(v in neg for v in vs):
+                    by_base.setdefault(m.group(1), []).append((m.group(0), vs, paren))
         for base, sites in by_base.items():
             seen = set()
-            for whole, vs in sorted(sites, key=lambda s: len(s[1])):
+            for whole, vs, paren in sorted(sites, key=lambda s: len(s[1])):
                 new = [v for v in vs if v not in seen]
                 seen.update(vs)
-                if len(vs) < 2 or len(new) != 1 or new[0] in allocated:
+                if len(vs) < 2 or len(new) != 1 or new[0] in allocated or not paren:
                     continue
                 var = new[0]
                 expr, mult, add = neg[var]
@@ -3278,6 +3298,165 @@ def restore_indirect_call_args(text, fieldmap, include_dir):
     return ''.join(out), n
 
 
+UNROUNDED_ALLOCA = re.compile(
+    r'^(?P<ind>[ \t]*)(?P<var>[A-Za-z_]\w*)[ \t]*=[ \t]*-\([ \t]*(?:\(int\)[ \t]*)?'
+    r'(?P<expr>[^;()]+?)[ \t]*\*[ \t]*(?P<mul>0x[0-9a-f]+|\d+)'
+    r'[ \t]*\+[ \t]*(?P<add>0x[0-9a-f]+|\d+)U?[ \t]*\)[ \t]*;[ \t]*$', re.M)
+
+
+def materialise_unrounded_alloca(body, fname):
+    r"""An alloca gcc did not have to round, and TWO regions below one anchor.
+
+    `materialise_alloca_frame` recognises `-(EXPR * K + 0xf & 0xfffffff0)` and
+    nothing else, because the mask is what makes an alloca an alloca rather than
+    an ordinary negation. `McdContactSimplify` has no mask:
+
+        7c6: mov 0x18(%ebp),%ebx   inMaxContactPointCount
+        7cc: shl $0x4,%ebx         * 16
+        7d0: add $0x10,%ebx        + 16      -> (count+1) * 16
+        7d3: sub %ebx,%esp         the alloca
+        7d7: mov %esp,-0x48(%ebp)  and THIS is list.link
+
+    `sub %esp` must leave the stack 16-byte aligned, so where the size is
+    ALREADY a multiple of 16 gcc omits the rounding entirely. That is exactly
+    the condition this matches — BOTH the multiplier and the addend a non-zero
+    multiple of 16 — so the mask's absence means an alloca rather than
+    ambiguity. One site corpus-wide satisfies it.
+
+    LEFT ALONE IT COMPILES AND SMASHES THE STACK. `auStack_8c` is twelve bytes;
+    `list.link` becomes twelve bytes minus `(count+1)*16` and is then indexed
+    `count` times as sixteen-byte structs. `check_frame_bounds` reports zero
+    while it does, because the index is a VARIABLE and that gate reads only
+    constants — the blind spot recorded for MeAssetFactory. A repair that fixed
+    only the rounding was measured, COMPILED, PASSED ALL NINE GATES and was
+    reverted; see proven.txt.
+
+    THE TWO THINGS THAT MADE IT MORE THAN A ROUNDING FIX, and both are handled
+    here rather than assumed away:
+
+    1. **GHIDRA'S ANCHOR IS NOT THE BLOCK BASE.** The references run
+
+           list.link = (McdContactLink *)(auStack_8c + iVar30 + -0x10);
+           *(undefined1 **)(auStack_8c + iVar30 + -8) = auStack_8c + iVar30;
+
+       and the second line is the first line's `list.link[0].next =
+       list.link + 1` written longhand, with `next` at offset 8 and
+       sizeof(McdContactLink) 0x10. So the group's constants are {-0x10,-8,0}
+       and THE BASE IS THE MINIMUM; the bare form is 0x10 high. Ghidra confirms
+       its own anchor for us. Every earlier rule took the bare form as the base
+       and allocated 0x10 too high.
+
+    2. **TWO ANCHORS, NOT ONE, AND THEY ARE DIFFERENT REGIONS.** `auStack_8c`
+       is the allocated block; `aiStack_b0` with constants {0,4,8,0xc} is the
+       OUTGOING ARGUMENT AREA for the `UpdateHull` call below it. A rule that
+       takes "the minimum constant" across both computes nonsense. They are
+       told apart by a FACT rather than a shape: the block's base is ASSIGNED
+       to something (`list.link = ...`), because a variable-length block has to
+       be named to be used; an argument area is only ever a base for stores and
+       loads. That is the discriminator proven.txt says the previous attempt
+       lacked.
+
+    3. **THE SHIFT VARIABLE IS REASSIGNED AND REUSED.** `iVar30` is a copy-loop
+       counter, then the alloca shift, then `list.ct` and a loop bound — three
+       live ranges under one name, in one function. Nothing here is keyed on the
+       variable: every rewrite matches the ANCHOR AND THE VARIABLE TOGETHER, so
+       the other two ranges are not reachable by it at all. The guard below then
+       CHECKS that reading, by requiring every surviving use of the variable to
+       lie outside the shift's live range.
+
+    Declines unless there is exactly one such size assignment, every anchor is a
+    declared local array, exactly one anchor group is a defining use, and the
+    variable's remaining uses are outside the range. It is measured by
+    `test/ab_contact.sh`, which drives the recovered `McdContactSimplify` and
+    the shipped one on identical random contact sets and compares bitwise."""
+    sizes = [m for m in UNROUNDED_ALLOCA.finditer(body)
+             if int(m.group('mul'), 0) and int(m.group('add'), 0)
+             and int(m.group('mul'), 0) % 16 == 0 and int(m.group('add'), 0) % 16 == 0]
+    if len(sizes) != 1:
+        return body, 0
+    size = sizes[0]
+    var = size.group('var')
+
+    # every `[ (int) ] [&] ANCHOR + var [ + C ]`
+    ref = re.compile(r'(?P<cast>\(int\)\s*)?&?(?P<anchor>[A-Za-z_]\w*)\s*\+\s*'
+                     + re.escape(var) + r'\b(?:\s*\+\s*(?P<c>-?\s*(?:0x[0-9a-f]+|\d+)))?')
+    groups = {}
+    for m in ref.finditer(body):
+        c = int(re.sub(r'\s+', '', m.group('c')), 0) if m.group('c') else 0
+        groups.setdefault(m.group('anchor'), []).append(c)
+    if not groups:
+        return body, 0
+    # every anchor must be a declared local ARRAY — a frame slot, not a value
+    for anchor in groups:
+        if not re.search(r'^[ \t]*[A-Za-z_]\w*[ \t]+' + re.escape(anchor)
+                         + r'[ \t]*\[[ \t]*\d+[ \t]*\][ \t]*;', body, re.M):
+            return body, 0
+
+    # THE BLOCK is the anchor group whose base is ASSIGNED to something.
+    block = None
+    for anchor, cs in groups.items():
+        lo = min(cs)
+        base = (re.escape(anchor) + r'\s*\+\s*' + re.escape(var)
+                + (r'\s*\+\s*' + re.escape(hex(lo) if lo >= 0 else '-' + hex(-lo))
+                   if lo else r''))
+        if re.search(r'=\s*(?:\([^()]*\)\s*)?\(?\s*&?' + base + r'\s*\)?\s*;', body):
+            if block:
+                return body, 0                 # two blocks: not this shape
+            block = anchor
+    if not block:
+        return body, 0
+
+    # THE LIVE RANGE. Every surviving use of `var` must be before the size
+    # assignment or after the next reassignment of it — otherwise some use of
+    # the shift is spelled in a form this did not rewrite, and would be left
+    # pointing at the unshifted frame.
+    after = body[size.end():]
+    reassign = re.search(r'^[ \t]*' + re.escape(var) + r'[ \t]*=', after, re.M)
+    end = size.end() + (reassign.start() if reassign else len(after))
+    span = body[size.end():end]
+    consumed = {m.group(0) for m in ref.finditer(span)}
+    leftover = span
+    for t in consumed:
+        leftover = leftover.replace(t, '')
+    if re.search(r'(?<![\w])' + re.escape(var) + r'\b', leftover):
+        return body, 0
+
+    # ---- emit --------------------------------------------------------------
+    ind, decls = size.group('ind'), []
+    alloca_name = 'kd_alloca_' + var
+    decls.append(f'    char *{alloca_name};')
+    lo_block = min(groups[block])
+    areas = {}
+    for anchor, cs in groups.items():
+        if anchor == block:
+            continue
+        lo, hi = min(cs), max(cs)
+        areas[anchor] = (lo, 'kd_argarea_' + anchor)
+        decls.append(f'    undefined1 {areas[anchor][1]} [{hi - lo + 4:#x}];')
+
+    def rewrite(m):
+        c = int(re.sub(r'\s+', '', m.group('c')), 0) if m.group('c') else 0
+        cast = m.group('cast') or ''
+        if m.group('anchor') == block:
+            base, d = alloca_name, c - lo_block
+        else:
+            lo, base = areas[m.group('anchor')]
+            d = c - lo
+        return cast + base + (f' + {d:#x}' if d else '')
+
+    body = ref.sub(rewrite, body)
+    # The allocation is emitted AT THE SIZE ASSIGNMENT, where its size
+    # expression is in scope. An earlier attempt in this family hoisted one to
+    # the opening brace, where the expression's variables were not yet live.
+    body = body[:size.end()] + (
+        f'\n{ind}{alloca_name} = (char *)alloca((size_t)({size.group("expr")}) * '
+        f'{size.group("mul")} + {size.group("add")});') + body[size.end():]
+    brace = body.find('\n{')
+    if brace >= 0:
+        body = body[:brace + 2] + '\n' + '\n'.join(decls) + '\n' + body[brace + 2:]
+    return body, 1
+
+
 def materialise_alloca_relative_slots(body, fname):
     r"""`(int)(kd_alloca_iVar5) + -4` — an argument slot BELOW an alloca'd block.
 
@@ -3337,6 +3516,277 @@ def materialise_alloca_relative_slots(body, fname):
                 + body[brace + 2:])
         n += len(offs)
     return body, n
+
+
+KD_MATERIALISED_BASE_RE = re.compile(r'KD_MATERIALISED_BASE\((\w+)\)')
+
+SECONDARY_SHIFT = re.compile(
+    r'(?P<cast>\(int\)[ \t]*)?(?P<amp>&)?(?P<base>[A-Za-z_]\w*)'
+    r'(?P<mid>(?:[ \t]*\+[ \t]*[A-Za-z_]\w*[ \t]*\*[ \t]*(?:0x[0-9a-f]+|\d+))*)'
+    r'[ \t]*\+[ \t]*(?P<var>[A-Za-z_]\w*)[ \t]*\*[ \t]*-(?P<k>\d+)'
+    r'(?:[ \t]*\+[ \t]*(?P<c>-[ \t]*(?:0x[0-9a-f]+|\d+)|(?:0x[0-9a-f]+|\d+)))?')
+
+SECONDARY_SIZE = re.compile(
+    r'(?m)^(?P<ind>[ \t]*)(?P<var>[A-Za-z_]\w*)[ \t]*=[ \t]*(?:\(int\)[ \t]*)?'
+    r'(?P<expr>[^;()=]+?)[ \t]*\*[ \t]*(?P<mul>0x[0-9a-f]+|\d+)[ \t]*\+[ \t]*'
+    r'(?P<add>0x[0-9a-f]+|\d+)U?[ \t]*&[ \t]*0xfffffff0[ \t]*;[ \t]*$')
+
+
+def materialise_secondary_blocks(text):
+    r"""`base + size * -2` — the SECOND alloca, where the first took the name.
+
+    gcc lowers two `alloca`s of the same size to two `sub %edx,%esp` with the
+    same register, so the second block is the SAME shift applied TWICE and
+    Ghidra writes it as a multiplier. `MdtLOD`'s `ResizeConstraint` does exactly
+    that, and the machine says so with no interpretation needed:
+
+        c8c: lea 0xf(,%ebx,4),%edx ; c95: and $0xfffffff0,%edx
+        c98: sub %edx,%esp      <- block 1, spelled `iVar3 = -uVar7`
+        ca9: sub %edx,%esp      <- block 2, spelled `uVar7 * -2`
+
+    `materialise_alloca_frame` takes block 1, because it has a negated variable
+    of its own. Nothing takes block 2, and `materialise_shifted_frame` cannot:
+    its base is "the one used with multiplier ONE", and block 1 no longer has
+    that spelling once the alloca pass has rewritten it.
+
+    THE OBVIOUS RULE FOR THIS WAS WRITTEN, MEASURED AND REVERTED ONCE ALREADY.
+    "Every `(int)BASE [+ i*4] + var * -K` with K >= 2 is the K-th block" is true
+    of `ResizeConstraint` and FALSE of `MeFAsset`, where the same shape is an
+    outgoing argument area and a return-address artefact. proven.txt: "the rule
+    needs a real discriminator between the K-th block and the argument area
+    below it, and the multiplier alone is not one."
+
+    HERE IS THE DISCRIMINATOR, and it is two facts Ghidra already gives us:
+
+      * a BLOCK is either ASSIGNED to a pointer — a variable-length block has to
+        be named to be used, `copyArray = (MeFAssetPart **)((int)apMStack_3c +
+        uVar24 * -2)` — or INDEXED BY A VARIABLE, `(int)aiStack_2c + iVar8 * 4 +
+        uVar7 * -2`. Either one means the reference is the start of storage;
+      * an ARGUMENT AREA is neither. Every one of its references is a constant
+        offset from the base and its value is never taken.
+
+    AND THE BASE IS WHEREVER THE DEFINING USE POINTS, not the minimum and not
+    the bare form. Both readings appear in this corpus and neither generalises:
+    `McdContact`'s group runs {-0x10,-8,0} with the defining use at -0x10, so
+    the minimum is the base; `MeFAsset`'s runs {-4,0} with the defining use at
+    0, so the -4 is an argument slot BELOW the block. Taking the minimum there
+    would put `copyArray` four bytes low; taking the bare form in `McdContact`
+    puts `list.link` 0x10 high, which is the defect proven.txt records shipping.
+    When there is no defining use the minimum is the base, because then there is
+    nothing below the block to confuse it with.
+
+    THIS IS NOT ONLY MdtLOD. `MeFAsset` is IN THE BUILD and validated, and its
+    `copyArray` today is a twelve-byte local minus twice the block size, written
+    `copyArray[i]` for i up to the asset's part count. proven.txt already says
+    what stops that mattering — "the function cannot be called — luck, not
+    design". Under the standing order that is the exact shape to repair rather
+    than leave: it compiles, no gate complains, and it is wrong.
+
+    Runs AFTER `materialise_shifted_frame`, which is not a detail: that pass
+    marks the bases it repaired with `KD_MATERIALISED_BASE`, and those are
+    skipped here. `keaLCP_new::solveLCP` has multipliers 2, 3, 5 and 6 under
+    that pass's model and is validated bit-identical on three scenes."""
+    out, n = [], 0
+    for _fn, region in _split_definitions(text):
+        done = set(KD_MATERIALISED_BASE_RE.findall(region))
+        sizes = {m.group('var'): m for m in SECONDARY_SIZE.finditer(region)}
+        if not sizes:
+            out.append(region)
+            continue
+        groups = {}
+        for m in SECONDARY_SHIFT.finditer(region):
+            if m.group('var') not in sizes or m.group('base') in done:
+                continue
+            if m.group('base').startswith('kd_'):
+                continue                      # already materialised storage
+            groups.setdefault((m.group('base'), m.group('var'), m.group('k')),
+                              []).append(m)
+        if not groups:
+            out.append(region)
+            continue
+        edits, decls, allocs = [], [], []
+        for (base, var, k), ms in sorted(groups.items()):
+            # the base must be a declared local, array or scalar
+            if not re.search(r'(?m)^[ \t]*[A-Za-z_][\w ]*\**[ \t]*' + re.escape(base)
+                             + r'[ \t]*(?:\[[^\]]*\])?[ \t]*;', region):
+                return text, 0
+            consts, defining, indexed = [], None, False
+            for m in ms:
+                c = int(re.sub(r'\s+', '', m.group('c')), 0) if m.group('c') else 0
+                consts.append(c)
+                if m.group('mid').strip():
+                    indexed = True
+                before = region[:m.start()].rstrip()
+                if before.endswith('(') or before.endswith('='):
+                    b2 = before.rstrip('(').rstrip()
+                    if b2.endswith('=') or re.search(r'=[ \t]*(?:\([^()]*\)[ \t]*)?\($',
+                                                     before):
+                        defining = c if defining is None else defining
+            sz = sizes[var]
+            if defining is not None or indexed:
+                base_c = defining if defining is not None else min(consts)
+                name = f'kd_blk{k}_{base}'
+                decls.append(f'    char *{name};')
+                allocs.append((sz, f'{name} = (char *)alloca((size_t)({sz.group("expr").strip()})'
+                                   f' * {sz.group("mul")} + {int(sz.group("add"), 0) - 15});'))
+                lowname, lowsize = None, 0
+                lows = [c for c in consts if c < base_c]
+                if lows:
+                    lowsize = -min(lows)
+                    lowname = f'kd_below{k}_{base}'
+                    decls.append(f'    undefined1 {lowname} [{lowsize:#x}];')
+                for m in ms:
+                    c = int(re.sub(r'\s+', '', m.group('c')), 0) if m.group('c') else 0
+                    d = c - base_c
+                    cast = m.group('cast') or ''
+                    if d < 0:
+                        rep = f'{cast}{lowname} + {lowsize + d:#x}'
+                    else:
+                        rep = (f'{cast}({name}){m.group("mid")}'
+                               + (f' + {d:#x}' if d else ''))
+                    edits.append((m.start(), m.end(), rep))
+            else:
+                lo, hi = min(consts), max(consts)
+                name = f'kd_scratch{k}_{base}'
+                decls.append(f'    undefined1 {name} [{hi - lo + 4:#x}];')
+                for m in ms:
+                    c = int(re.sub(r'\s+', '', m.group('c')), 0) if m.group('c') else 0
+                    cast = m.group('cast') or ''
+                    edits.append((m.start(), m.end(),
+                                  f'{cast}{name}' + (f' + {c - lo:#x}' if c != lo else '')))
+            n += 1
+        for a, b, rep in sorted(edits, reverse=True):
+            region = region[:a] + rep + region[b:]
+        # The allocation goes AT THE SIZE ASSIGNMENT, where its expression is in
+        # scope — an earlier attempt in this family hoisted one to the opening
+        # brace, where `group` was not yet live.
+        for sz, line in sorted(allocs, key=lambda t: -t[0].end()):
+            at = region.find(sz.group(0))
+            if at < 0:
+                return text, 0
+            at += len(sz.group(0))
+            region = region[:at] + '\n' + sz.group('ind') + line + region[at:]
+        brace = region.find('\n{')
+        if brace >= 0 and decls:
+            region = region[:brace + 2] + '\n' + '\n'.join(decls) + '\n' + region[brace + 2:]
+        out.append(region)
+    return ''.join(out), n
+
+
+def hoist_early_alloca(text):
+    r"""`kd_alloca_X` INDEXED before the line that allocates it.
+
+    `materialise_alloca_frame` emits the allocation at the DEFINING USE, which
+    is where Ghidra first assigns the block to something. That is usually also
+    the first textual reference and the docstring's justification holds. In
+    `MdtLOD::ResizeConstraint` it is not: Ghidra's defining use is buried in an
+    outgoing argument store several statements later, while the block is filled
+    by a loop above it —
+
+        uVar7 = group->count * 4 + 0xfU & 0xfffffff0;
+        iVar3 = -uVar7;
+        for (...) *(MdtContactID *)((int)(kd_alloca_iVar3) + iVar8 * 4) = pMVar2;   <- USE
+        ...
+        *(int *)(...) = (kd_alloca_iVar3 = (char *)alloca(group->count * 4));       <- ALLOC
+
+    so the loop writes `count` pointers through an UNINITIALISED `char *`. It
+    compiles; nothing in the pipeline reads declaration order; and the object is
+    only held at all because of a separate detector.
+
+    The repair moves the ALLOCATION — not the reference — up to the line that
+    assigns the shift variable the block is named after, which is by
+    construction the line where the size expression became available.
+    `recover.py` carries the matching detector, so a case this cannot place is
+    HELD rather than silently shipped: a rule that declines quietly is the
+    failure mode HANDOVER.md §12 lists four times.
+
+    One site corpus-wide; the scan that says so is in proven.txt."""
+    out, n = [], 0
+    for _fn, region in _split_definitions(text):
+        for var in sorted(set(re.findall(r'\bkd_alloca_(\w+)\b', region))):
+            name = 'kd_alloca_' + var
+            asg = re.search(r'\(' + re.escape(name) + r' = \(char \*\)alloca\('
+                            r'(?:[^()]|\([^()]*\))*\)\)', region)
+            if not asg:
+                continue
+            first = None
+            for m in re.finditer(r'(?<![\w])' + re.escape(name) + r'\b', region):
+                line = region[region.rfind('\n', 0, m.start()) + 1:
+                              region.find('\n', m.end())]
+                if re.match(r'\s*char \*' + re.escape(name) + r'\s*;', line):
+                    continue
+                first = m.start()
+                break
+            if first is None or first >= asg.start():
+                continue
+            anchor = None
+            for m in re.finditer(r'(?m)^([ \t]*)' + re.escape(var) + r'[ \t]*=[^;\n]*;[ \t]*$',
+                                 region):
+                if m.end() < first:
+                    anchor = m
+            if anchor is None:
+                continue                       # recover.py's detector catches it
+            call = asg.group(0)[1:-1]          # drop the wrapping parentheses
+            region = region[:asg.start()] + name + region[asg.end():]
+            region = (region[:anchor.end()] + f'\n{anchor.group(1)}{call};'
+                      + region[anchor.end():])
+            n += 1
+        out.append(region)
+    return ''.join(out), n
+
+
+def drop_argslot_shift(text):
+    r"""`&(*kd_argslot_ffffffd0) + uVar7 * -2` — a frame shift applied to
+    storage that is no longer in the frame, AND SCALED BY FOUR WHILE DOING IT.
+
+    The leftover-slot fallback in `materialise_alloca_frame` gives every
+    `stack0xHHHH` Ghidra could not name a real eight-byte local of its own. What
+    it does not do is remove the SHIFT those references carry when the function
+    also allocas. The result compiles and is wrong twice over:
+
+        void *kd_argslot_ffffffd0[2];
+        *(code **)(&(*kd_argslot_ffffffd0) + uVar7 * -2) = ComparePenetration;
+
+    `&(*kd_argslot_ffffffd0)` is a `void **`, so `+ uVar7 * -2` is POINTER
+    arithmetic and moves `8 * uVar7` bytes, not `2 * uVar7` — and it moves them
+    off a local that is now nowhere near the alloca'd blocks the shift was
+    measured against. For `MdtLOD::ResizeConstraint` that lands inside the very
+    blocks the function is filling.
+
+    IT HIDES BEHIND ITS OWN CONSISTENCY, which is why it has survived. Every
+    store and its matching load carry the SAME shift, so the pairing holds and
+    an A/B reads bit-identical right up until the address collides with
+    something — `test/ab_lod.sh` reports MdtLOD bit-identical over 7,200 calls
+    of the function with this defect present.
+
+    The repair is to drop the shift, and what makes that correct rather than
+    convenient is that the slot is already real storage: each `kd_argslot_HHHH`
+    is a distinct array invented for one slot, nothing else can alias it, and
+    the value never leaves the function. Declines unless every reference to a
+    given slot carries the IDENTICAL shift text, since a slot addressed two ways
+    is not one slot.
+
+    Two objects, and the other one is in the build: `MeFAsset` has 166 of these
+    in `MeFAssetCreateCopy`. proven.txt already records that function writing
+    outside a local and says what stops it mattering — "the function cannot be
+    called — luck, not design"."""
+    out, n = [], 0
+    for _fn, region in _split_definitions(text):
+        pat = re.compile(r'(&?\(\*kd_argslot_[0-9a-f]+\))'
+                         r'(\s*\+\s*[A-Za-z_]\w*\s*\*\s*-\d+)')
+        shifts = {}
+        for m in pat.finditer(region):
+            shifts.setdefault(m.group(1), set()).add(m.group(2).strip())
+        if not shifts:
+            out.append(region)
+            continue
+        if any(len(v) != 1 for v in shifts.values()):
+            out.append(region)          # one slot, two addressings: not this
+            continue
+        region, k = pat.subn(r'\1', region)
+        n += k
+        out.append(region)
+    return ''.join(out), n
 
 
 def materialise_pointer_arg_area(text):
@@ -5164,7 +5614,42 @@ def _names_of_incomplete(tag, include_dir):
 
 
 # ---------------------------------------------------------------------------
-# X87_RECONSTRUCTIONS — arithmetic Ghidra DELETED, put back and proven bit-exact.
+# X87_RECONSTRUCTIONS — code Ghidra DELETED, put back and proven bit-exact.
+#
+# TWO SHAPES LIVE HERE, and the second was added on 2026-08-27. Both are the
+# same failure: a value that lives on the x87 REGISTER STACK across control
+# flow, which Ghidra loses and then silently omits the code that consumed it.
+#
+#   1. a transcendental whose result is discarded  (MeMath, below)
+#   2. A RUN OF STORES OF WHICH ONLY THE FIRST SURVIVES. `IxBoxTriList`'s
+#      `McdVanillaBoxTriIntersect` computes three reciprocals into an `lsVec3`
+#      and passes its address to `McdVanillaSegmentCubeIntersect`:
+#
+#          12f5: fld1 ; 12f7: fdivp        1/edge[0][0]
+#          130f: fld1 ; 1311: fdivp        1/edge[0][1]
+#          132b: fld1 ; 132d: fdivp        1/edge[0][2]
+#          12e1: lea -0x28(%ebp),%edx      the vector
+#          1334: fstps (%edx) ; 1336: fstps 0x4(%edx) ; 133b: fstps 0x8(%edx)
+#
+#      All three are computed and all three are stored. The dump has ONE, and
+#      names its slot `axb[2].v[2]` — a frame offset Ghidra had no local for,
+#      which is also EIGHT BYTES PAST THE END of `lsVec3 axb[3]`, so the vector
+#      the callee then reads is one real component and two of somebody else's
+#      words. The zero-guards are out-of-line (`jne 1927/1930/1937`), which is
+#      what puts the values on the register stack across a branch and is why
+#      this is the same defect as the `fcos` one rather than a naming problem.
+#
+#      IT IS NOT GUESSWORK: the two SIBLING branches in the same function, for
+#      edge1 and edge2, decompiled correctly and spell the idiom out —
+#      `inv[k] = e[k] != 0 ? 1/e[k] : 0` for k = 0,1,2. This makes edge0 read
+#      like its siblings, which is also what the machine says.
+#
+#      MEASURED, on test/difftest_pair.sh at 200,000 pairs:
+#          before  1,463 ret/touch · 139,961 count · 12,060 dims   FAIL
+#          after       0 ret/touch ·       0 count ·      0 dims   PASS
+#      and a per-function A/B against the shipped static (the recovered function
+#      driven beside it on identical live inputs) goes 1,022 differing point
+#      counts and 25 differing return values to ZERO of 5,131 calls.
 #
 # Ghidra models the x87 transcendental INSTRUCTIONS `fcos` and `fsin` as calls
 # and, where it cannot place the result, throws it away. It says so in the dump:
@@ -5203,6 +5688,43 @@ def _names_of_incomplete(tag, include_dir):
 # With +sin the same code is 100% wrong. No amount of reading the decompiled C
 # would have settled that; the oracle did, in one run.
 X87_RECONSTRUCTIONS = {
+    ('IxBoxTriList', 'McdVanillaBoxTriIntersect'): [
+        dict(old="""  lsVec3 vCross;
+  lsVec3 axb [3];
+""",
+             new="""  lsVec3 vCross;
+  lsVec3 axb [3];
+  lsVec3 kd_invDisp0;
+"""),
+        dict(old="""    axb[2].v[2] = 0.0;
+    if ((*edge)[0] != 0.0) {
+      axb[2].v[2] = 1.0 / (*edge)[0];
+    }
+    plVar5 = (lsVec3 *)inTri->vertices[0];
+    tOut = 1.0;
+    tIn = 0.0;
+    iVar9 = McdVanillaSegmentCubeIntersect
+                      (&tIn,&tOut,plVar5,(lsVec3 *)edge,(lsVec3 *)(axb[2].v + 2),inRBox,
+                       scale * 1e-06);""",
+             new="""    kd_invDisp0.v[0] = 0.0;
+    if ((*edge)[0] != 0.0) {
+      kd_invDisp0.v[0] = 1.0 / (*edge)[0];
+    }
+    kd_invDisp0.v[1] = 0.0;
+    if ((*edge)[1] != 0.0) {
+      kd_invDisp0.v[1] = 1.0 / (*edge)[1];
+    }
+    kd_invDisp0.v[2] = 0.0;
+    if ((*edge)[2] != 0.0) {
+      kd_invDisp0.v[2] = 1.0 / (*edge)[2];
+    }
+    plVar5 = (lsVec3 *)inTri->vertices[0];
+    tOut = 1.0;
+    tIn = 0.0;
+    iVar9 = McdVanillaSegmentCubeIntersect
+                      (&tIn,&tOut,plVar5,(lsVec3 *)edge,&kd_invDisp0,inRBox,
+                       scale * 1e-06);"""),
+    ],
     ('MeMath', 'MeMatrix4TMUpdateFromVelocities'): [
         dict(old="""                    
     fcos(lVar9);
@@ -7061,6 +7583,13 @@ def main():
         body, nalloca = materialise_alloca_frame(body, name)
         if nalloca:
             n_alloca_fns += 1
+        # The unmasked spelling of the same idiom, which the pass above cannot
+        # recognise because the mask is its whole test. Separate rather than
+        # widened: its anchor sits ABOVE the block base and it has to tell two
+        # regions apart, neither of which is true of the masked form.
+        body, nunr = materialise_unrounded_alloca(body, name)
+        if nunr:
+            n_alloca_fns += 1
         # Immediately after, because it works on the `kd_alloca_*` names that
         # pass creates, and before anything reads the slot expressions.
         body, nslot = materialise_alloca_relative_slots(body, name)
@@ -7141,6 +7670,18 @@ def main():
     body_text, n_ind = restore_indirect_call_args(
         body_text, fieldmap, args.metoolkit_include)
     body_text, n_pad = drop_padding_arg_stores(body_text)
+    # AFTER materialise_shifted_frame — that pass MARKS the bases it repaired
+    # with KD_MATERIALISED_BASE and this one skips those, which is what keeps
+    # keaLCP_new's multipliers 2/3/5/6 under its model, validated bit-identical.
+    # AND AFTER drop_padding_arg_stores, which is not a preference: that rule
+    # matches gcc's padding push BY ITS ADDRESS, `(int)apMStack_3c + uVar24 * -2
+    # + -4`. Rewriting the address first makes the store unrecognisable, it
+    # survives, and it READS an `extraout_ECX` that was otherwise dead — which
+    # took MeFAsset straight back out of the build on the unmodelled-value
+    # detector. Measured, not reasoned: the object regressed, and this is why.
+    body_text, n_blk2 = materialise_secondary_blocks(body_text)
+    body_text, n_hoist = hoist_early_alloca(body_text)
+    body_text, n_ashift = drop_argslot_shift(body_text)
     body_text, n_ftext = restore_float_text(
         body_text, args.object, read_ghidra_locals(args.input))
     data_block, n_data = materialise_data_refs(args.object, body_text)

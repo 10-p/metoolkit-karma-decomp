@@ -307,6 +307,37 @@ def main():
             out += [m for m in GHIDRA_STACK_GUESS.findall(region) if m not in ok]
         return out
 
+    def early_alloca_uses(src):
+        """`kd_alloca_X` read before the statement that calls alloca for it.
+
+        The pipeline materialises a variable-length block at Ghidra's DEFINING
+        USE, which is where the block first gets assigned to something. That is
+        not always its first textual reference: `MdtLOD::ResizeConstraint` fills
+        the block in a loop several statements ABOVE the assignment, so the
+        emitted C indexes an uninitialised `char *` `count` times.
+
+        Nothing else here reads statement order — not the compiler, which sees a
+        valid program, and not `check_frame_bounds`, which reads offsets. So
+        this is the only thing between that shape and the build.
+        `ghidra_clean.hoist_early_alloca` repairs the cases it can place; this
+        holds the rest."""
+        out = []
+        for region in re.split(r'^/\* ---- ', src, flags=re.M):
+            for var in sorted(set(re.findall(r'\bkd_alloca_(\w+)\b', region))):
+                name = 'kd_alloca_' + var
+                asg = re.search(re.escape(name) + r'\s*=\s*\(char \*\)alloca\(', region)
+                if not asg:
+                    continue
+                for m in re.finditer(r'(?<![\w])' + re.escape(name) + r'\b', region):
+                    line = region[region.rfind('\n', 0, m.start()) + 1:
+                                  region.find('\n', m.end())]
+                    if re.match(r'\s*char \*' + re.escape(name) + r'\s*;', line):
+                        continue
+                    if m.start() < asg.start():
+                        out.append(name)
+                    break
+        return out
+
     # `stack0xNNNN` marks a variable-length stack allocation Ghidra could not
     # model. ghidra_clean.py materialises a buffer so it COMPILES, but that is
     # not the same as being correct: the allocation SIZE is read from the same
@@ -616,6 +647,21 @@ def main():
             rows.append((archive, base, 'REVIEW',
                          'reads a value Ghidra could not account for: '
                          + ', '.join(unmodelled[:3])))
+            counts['REVIEW'] += 1
+            continue
+        # An alloca'd block INDEXED before the line that allocates it. The
+        # allocation is materialised at Ghidra's defining use, which is not
+        # always the first reference — MdtLOD::ResizeConstraint fills the block
+        # in a loop several statements above it, through an uninitialised
+        # `char *`. ghidra_clean.hoist_early_alloca repairs the placeable cases;
+        # this is here so an unplaceable one is HELD rather than shipped, since
+        # nothing else in the pipeline reads statement order.
+        early = early_alloca_uses(src)
+        if early:
+            os.unlink(o)
+            rows.append((archive, base, 'REVIEW',
+                         'alloca block used before it is allocated: '
+                         + ', '.join(early[:3])))
             counts['REVIEW'] += 1
             continue
         nguess = len(stack_guesses(src))

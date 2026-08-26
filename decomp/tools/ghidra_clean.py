@@ -4925,9 +4925,32 @@ def _resolve_external(region, ghidra_name, candidates, ctx):
     if call.search(region):
         return None                        # a call with no prototype to give it
     zero = [s for s, a in sorted(candidates) if a == 0]
-    if len(zero) != 1:
+    if len(zero) == 1:
+        return re.sub(r'(?<![\w])' + re.escape(ghidra_name) + r'\b', zero[0], region)
+    if len(candidates) != 1:
         return None
-    return re.sub(r'(?<![\w])' + re.escape(ghidra_name) + r'\b', zero[0], region)
+    # A PLAIN READ OR WRITE AT A NON-ZERO ADDEND, which is what the docstring
+    # above has always promised and what the addend-zero branch alone could not
+    # deliver. `MeProfileStartHardwareTimer` fills a 24-byte exported object one
+    # word at a time, and every store is the SAME relocation:
+    #
+    #   57: mov %edx,0x0     R_386_32 frameTime      addend 0
+    #   5d: mov %ecx,0x4     R_386_32 frameTime      addend 4
+    #   63: movl $0x0,0x8    R_386_32 frameTime      addend 8   ... to 0x14
+    #
+    # Ghidra names each by whichever EXTERNAL slot the addend landed in, so the
+    # six come out as `frameTime`, `_select`, `_clockSpeed`, `_DAT_0001100c`,
+    # `_DAT_00011010`, `_DAT_00011014` — five of them borrowed from unrelated
+    # undefined symbols. relocation_targets already inverts that exactly; all
+    # that was missing was somewhere to put the answer.
+    #
+    # The slot is four bytes wide by construction — that is how Ghidra's block
+    # is laid out — so the access width is not a guess. Only reached when the
+    # name is never CALLED, because a call needs a prototype and this gives it
+    # none; that guard is above.
+    sym, addend = next(iter(candidates))
+    return re.sub(r'(?<![\w])' + re.escape(ghidra_name) + r'\b',
+                  '(*(int *)((char *)&%s + %#x))' % (sym, addend), region)
 
 
 def fix_variadic_extra_args(line, diag, ctx):

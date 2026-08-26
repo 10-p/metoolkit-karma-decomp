@@ -3272,3 +3272,46 @@ MeAssetFactory        real, and like MeFAsset the release is about REACHABILITY,
 #   139,961 of 200,000 pairs. An object that is merely unreachable is one thing;
 #   a known-wrong collision function sitting in a dispatch table is what the
 #   detectors are for. One symbol is not worth it.
+
+# --- 2026-08-26: a plain data reference at a NON-ZERO addend -----------------
+#
+# §5's inversion, applied to the one shape it had never been given somewhere to
+# put the answer. `_resolve_external`'s docstring has always said that a plain
+# READ of a mislabelled slot "has no calling convention to get wrong, so the
+# exact four-byte access Ghidra meant is always available" — and the code only
+# implemented the addend-ZERO case.
+#
+# MeProfileStartHardwareTimer fills a 24-byte exported object one word at a
+# time, and every store is the SAME relocation:
+#
+#   57: mov  %edx,0x0     R_386_32 frameTime   addend 0
+#   5d: mov  %ecx,0x4     R_386_32 frameTime   addend 4
+#   63: movl $0x0,0x8     R_386_32 frameTime   addend 8
+#   6d: movl $0x0,0xc                          addend 12
+#   77: movl $0x0,0x10                         addend 16
+#   81: movl $0x0,0x14                         addend 20
+#
+# Ghidra names each by whichever EXTERNAL slot the addend landed in, so the six
+# come out as `frameTime`, `_select`, `_clockSpeed`, `_DAT_0001100c`,
+# `_DAT_00011010`, `_DAT_00011014` — five borrowed from unrelated undefined
+# symbols. `relocation_targets` already inverted it exactly and had been doing
+# so all along:
+#
+#   _select        -> [('frameTime', 4)]
+#   _clockSpeed    -> [('frameTime', 8)]
+#   _DAT_0001100c  -> [('frameTime', 12)]   ... and so on
+#
+# The slot is four bytes wide BY CONSTRUCTION — that is how Ghidra lays its
+# block out — so the access width is not a guess, and the rule is only reached
+# where the name is never CALLED, because a call needs a prototype and this
+# gives it none.
+#
+#   McdGjkPenetrationDepth RELEASED on it — its `_DAT_0001205c` is the same
+#   shape, at 0x1205c in an object whose sections end at 0x110f4. That was the
+#   §3c row this file listed as "needs the relocation, not the address"; it
+#   needed neither a new tool nor a re-dump, only the branch that was missing.
+#
+#   135 objects · 135/135 clean on three scenes · McdGjkPenetrationDepth
+#   trajectory bit-identical · frame bounds 0 in the build · bindings 0
+#   difftest byte-identical to the documented baseline
+#   drop-in gap 11 -> 10 members, 46 -> 45 symbols

@@ -343,9 +343,9 @@ struct PDynamics {
 /* from MeAssetDBXMLInput_1_0.o */
 /* PJoint — 188 bytes, recovered from DWARF */
 struct PJoint {
-    MeReal pos[2];                                  /* +0x0 */
-    MeReal pax[2];                                  /* +0x18 */
-    MeReal oax[2];                                  /* +0x30 */
+    MeReal pos[2][3];                               /* +0x0 */
+    MeReal pax[2][3];                               /* +0x18 */
+    MeReal oax[2][3];                               /* +0x30 */
     MeReal stop[3];                                 /* +0x48 */
     MeReal stiff[6];                                /* +0x54 */
     MeReal damp[6];                                 /* +0x6c */
@@ -510,25 +510,25 @@ struct keaTempMemory {
     int (*bl2cbody)[8];                             /* +0x20 */
 };
 
-/* from IxConvexLineSegment.o */
+/* from IxBoxBox.o */
 /* lsVec4 — 16 bytes, recovered from DWARF */
 struct lsVec4 {
     MeReal v[4];                                    /* +0x0 */
 };
 
-/* from IxConvexLineSegment.o */
+/* from IxBoxBox.o */
 /* lsTransformRow — 16 bytes, recovered from DWARF */
 struct lsTransformRow {
     struct lsVec4 v;                                /* +0x0 */
 };
 
-/* from IxConvexLineSegment.o */
+/* from IxBoxBox.o */
 /* lsTransform — 64 bytes, recovered from DWARF */
 struct lsTransform {
     struct lsTransformRow row[4];                   /* +0x0 */
 };
 
-/* from IxConvexLineSegment.o */
+/* from IxBoxBox.o */
 /* lsVec3 — 12 bytes, recovered from DWARF */
 struct lsVec3 {
     MeReal v[3];                                    /* +0x0 */

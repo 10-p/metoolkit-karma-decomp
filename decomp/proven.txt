@@ -3970,3 +3970,24 @@ MdtPartition          RELEASED 2026-08-26 (seventh session). Four symbols of the
 #
 # **Until block 2 has real storage MdtLOD stays out of the build and in the
 # gap**, and the release line goes back only after it does.
+#
+# AND THE OBVIOUS RULE FOR IT WAS WRITTEN, MEASURED, AND REVERTED — twice-bitten
+# territory, so here is exactly how it failed. "Every `(int)BASE [+ i*4] +
+# var * -K` with K >= 2 is the K-th block; give it storage" is TRUE of
+# ResizeConstraint and takes its six guesses to zero. It also:
+#
+#   * BROKE MeFAsset, which is validated, in the build and on the .ka path.
+#     Its `uVar24 * -2` sites are NOT all block references — `*(int *)(BLOCK +
+#     -4) = iVar14` and `*(undefined4 *)(BLOCK) = 0x101bf` are the outgoing
+#     ARGUMENT AREA and a return-address artefact, at a base that is not a
+#     `stack0x` name, so excluding stack0x bases is not enough of a guard;
+#   * and hoisted `alloca((size_t)(group->count) * 4)` to the top of the
+#     function, where `group` is not yet in scope. The size expression has to be
+#     emitted AT THE DEFINING USE, the way sub_alloca does it inline, not as a
+#     declaration initialiser.
+#
+# So the rule needs a real discriminator between "the K-th block" and "the
+# argument area below it", and the multiplier alone is not one. That is the
+# third time this rule family has matched a SHAPE without the fact that makes
+# the shape mean something (see the MdtPartition and McdContact entries).
+# Blast radius is the acceptance test: 139 objects byte-identical, or revert.

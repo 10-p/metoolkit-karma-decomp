@@ -2885,6 +2885,87 @@ def restore_indirect_call_args(text, fieldmap, include_dir):
     return ''.join(out), n
 
 
+def materialise_pointer_arg_area(text):
+    r"""`pMVar6 = (McdContact *)&type1;` then writes NINE WORDS BELOW `type1`.
+
+    The outgoing-argument area again, in the one spelling
+    `materialise_shifted_frame` does not answer: Ghidra could not name the base,
+    so it anchored the area on whatever local happened to sit just above it and
+    addressed everything at a NEGATIVE offset from that. `McdIntersect` picks
+    two different anchors on two paths —
+
+        pMVar6 = (McdContact *)&type1;              /* an int, 4 bytes */
+        if (...) { pMVar6 = aMStackY_501c; }        /* a 20,440-byte array */
+        *(void **)((int)pMVar6 + -4)  = pvVar5;
+        ...
+        *(undefined4 *)((int)pMVar6 + -0x24) = 0x1027d;
+
+    — which is the giveaway: the anchor is arbitrary, because the VALUE of the
+    pointer is never used. Every one of its nineteen uses is `(int)pMVar6 + K`
+    with K negative, so what the pointer names is a 0x24-byte region below
+    itself and nothing else. That region gets real storage, and the pointer is
+    set to its top so every offset lands inside it.
+
+    THE GUARD IS THAT THE POINTER IS ONLY EVER A BASE, and it has two halves.
+    Every use must be `(int)ptr + K` with K negative, or an assignment TO it —
+    if any use reads it positively, or passes it anywhere, the anchor is
+    load-bearing after all and this declines. AND EVERY ASSIGNMENT TO IT MUST BE
+    THE ADDRESS OF A LOCAL. Without that second half the rule fires on `MeHeap`,
+    where `pvVar2 = (MeMemoryAPI.create)(capacity * 4);` is a real allocation
+    and the "repair" replaces it with a four-byte stack buffer — in an object
+    that is validated and in the build. The shape being matched is Ghidra
+    anchoring on a local it did not choose; a pointer that came from a call is
+    somebody's real object, and inventing storage for it is dead end 3.
+
+    `check_frame_bounds.pointer_aliases` reads the `+ 0x24` in the repaired
+    assignment, so the result is CHECKED rather than laundered: before, the
+    object reports nine references outside a four-byte int; after, zero, and it
+    is the same checker saying so."""
+    out, n = [], 0
+    for _fn, region in _split_definitions(text):
+        for decl in re.finditer(r'(?m)^([ \t]+)([A-Za-z_]\w*)\s*\*\s*(\w+)\s*;\s*$', region):
+            ptr = decl.group(3)
+            uses = list(re.finditer(r'(?<![\w])' + re.escape(ptr) + r'\b', region))
+            if len(uses) < 3:
+                continue
+            offs, ok = [], True
+            for u in uses:
+                if u.start() == decl.start(3):
+                    continue                                  # its declaration
+                line = region[region.rfind('\n', 0, u.start()) + 1:
+                              region.find('\n', u.end())]
+                before, after = region[:u.start()], region[u.end():]
+                if before.endswith('(int)') and \
+                        re.match(r'\s*\+\s*-(?:0x[0-9a-f]+|\d+)\s*\)', after):
+                    offs.append(int(re.match(r'\s*\+\s*(-(?:0x[0-9a-f]+|\d+))',
+                                             after).group(1), 0))
+                    continue
+                if re.match(r'^\s*' + re.escape(ptr) + r'\s*=[^=]', line):
+                    # assigned TO — and it has to be the ADDRESS OF A LOCAL,
+                    # not an allocation. See the docstring on MeHeap.
+                    if not re.match(r'^\s*' + re.escape(ptr) + r'\s*=\s*'
+                                    r'(?:\([\w ]*\*+\)\s*)?&?\w+\s*;\s*$', line):
+                        ok = False
+                        break
+                    continue
+                ok = False
+                break
+            if not ok or not offs:
+                continue
+            size = ((-min(offs)) + 3) // 4 * 4
+            buf = 'kd_argarea_' + ptr
+            region = re.sub(r'(?m)^(' + re.escape(decl.group(1)) + re.escape(decl.group(2))
+                            + r'\s*\*\s*' + re.escape(ptr) + r'\s*;)$',
+                            r'\1\n' + decl.group(1) + f'undefined1 {buf} [{size}];',
+                            region, count=1)
+            region = re.sub(r'(?m)^(\s*)' + re.escape(ptr) + r'\s*=\s*[^;]*;\s*$',
+                            lambda mm: (f'{mm.group(1)}{ptr} = ({decl.group(2)} *)'
+                                        f'({buf} + {size:#x});'), region)
+            n += 1
+        out.append(region)
+    return ''.join(out), n
+
+
 def drop_padding_arg_stores(text):
     r"""`*(slot above the last argument) = extraout_EDX;` — gcc's padding push.
 
@@ -5957,6 +6038,7 @@ def main():
     # arguments in the call there is no top argument slot, so the padding rule
     # has nothing to be above. Giving the call its arguments back makes the two
     # words over them derivable, and MstUtils' pair falls out for free.
+    body_text, n_parea = materialise_pointer_arg_area(body_text)
     body_text, n_ind = restore_indirect_call_args(
         body_text, fieldmap, args.metoolkit_include)
     body_text, n_pad = drop_padding_arg_stores(body_text)
@@ -6080,6 +6162,9 @@ def main():
         print(f'  {n_pad} padding word(s) dropped from an outgoing argument area')
     if n_ind:
         print(f'  {n_ind} argument-less indirect call(s) given their arguments back')
+    if n_parea:
+        print(f'  {n_parea} outgoing argument area(s) anchored on a local given '
+              f'real storage')
     if n_cmac:
         print(f'  {n_cmac} padding word(s) dropped from a kd_compat.h call')
     if n_rel:

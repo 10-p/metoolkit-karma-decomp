@@ -2966,3 +2966,60 @@ MeFAsset              real, and the release is about REACHABILITY, not about the
 #   wasm32 131/131 · armv7 131/131, 0 truncations · arm64 6,877 across 81
 #   engine, test-karma-1, 260 s: exit 124, START MATCH, 0 faults
 #   drop-in gap 15 -> 14 members, 71 -> 68 symbols
+
+# --- 2026-08-26: McdInteractions — an argument area anchored on a local ------
+#
+# The other spelling of the outgoing-argument area, and the one
+# materialise_shifted_frame does not answer. Ghidra could not name the base, so
+# it anchored the area on whatever local sat just above it and addressed
+# everything at a NEGATIVE offset from that — picking a DIFFERENT anchor on each
+# of two paths, which is the giveaway that the anchor is arbitrary:
+#
+#   pMVar6 = (McdContact *)&type1;              /* an int, 4 bytes */
+#   if (...) { pMVar6 = aMStackY_501c; }        /* a 20,440-byte array */
+#   *(void **)((int)pMVar6 + -4)  = pvVar5;
+#   ...
+#   *(undefined4 *)((int)pMVar6 + -0x24) = 0x1027d;
+#
+# All nineteen uses of the pointer are `(int)pMVar6 + K` with K negative, so
+# what it names is a 0x24-byte region below itself and nothing else. That gets
+# real storage and the pointer is set to its top:
+#
+#   undefined1 kd_argarea_pMVar6 [36];
+#   pMVar6 = (McdContact *)(kd_argarea_pMVar6 + 0x24);
+#
+# AND IT IS CHECKED BY THE SAME CHECKER THAT CAUGHT IT, which is the point.
+# check_frame_bounds.pointer_aliases reads the `+ 0x24`, so it follows the
+# pointer into the buffer instead of losing sight of it:
+#
+#   before   9 references outside a 4-byte int
+#   after    0
+#
+# TWO SELF-INFLICTED DEFECTS ON THE WAY, both caught by the blast-radius diff or
+# by looking before running, and both worth recording because they are the same
+# mistake in two places — a rule that recognised a SHAPE without the fact that
+# makes the shape mean something:
+#
+#   * the first version of materialise_pointer_arg_area required only that every
+#     use be a negative-offset read or an assignment. It fired on MeHeap, where
+#     `pvVar2 = (MeMemoryAPI.create)(capacity * 4);` is a REAL ALLOCATION, and
+#     replaced it with a four-byte stack buffer — in an object that is validated
+#     and in the build. The missing half is that every assignment must be the
+#     ADDRESS OF A LOCAL. A pointer that came from a call is somebody's real
+#     object; inventing storage for it is dead end 3.
+#   * the first version of PTR_TO_LOCAL_OFF matched `(T *)(i + 2)` where `i` is
+#     an int LOOP COUNTER, and reported MeFAsset's counter as a 4-byte object
+#     addressed at +5 — which took MeFAsset back out of the build. A scalar's
+#     name is its VALUE, not its address, so the offset form now requires an
+#     array or an explicit `&`.
+#
+#   controls for the extended checker, both fire and the in-bounds access does not:
+#     ptr = &local;             *(int *)((int)ptr + -0x10)   -> reported
+#     ptr = (int *)(buf + 0x10); *(int *)((int)ptr + -0x14)  -> reported
+#                                *(int *)((int)ptr + -0x10)  -> silent (offset 0)
+#
+#   132 objects · 132/132 clean on three scenes · frame bounds 0 in the build
+#   bindings 0 · difftest byte-identical to the documented baseline
+#   wasm32 132/132 · armv7 132/132, 0 truncations · arm64 6,948 across 82
+#   engine, test-karma-1, 260 s: exit 124, START MATCH, 0 faults
+#   drop-in gap 14 -> 13 members, 68 -> 63 symbols

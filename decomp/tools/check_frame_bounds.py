@@ -88,11 +88,16 @@ def locals_of(body):
 
 
 # `pMVar6 = (McdContact *)&type1;` / `pMVar6 = aMStackY_501c;`
+# and the materialised form ghidra_clean emits for the same area,
+# `pMVar6 = (McdContact *)(kd_argarea_pMVar6 + 0x24);`
 PTR_TO_LOCAL = re.compile(r'^\s*(\w+)\s*=\s*(?:\([\w ]*\*+\)\s*)?(&)?(\w+)\s*;\s*$')
+PTR_TO_LOCAL_OFF = re.compile(
+    r'^\s*(\w+)\s*=\s*(?:\([\w ]*\*+\)\s*)?\(\s*(\w+)\s*\+\s*'
+    r'(-?(?:0x[0-9a-fA-F]+|\d+))\s*\)\s*;\s*$')
 
 
 def pointer_aliases(body, sizes):
-    """ptr -> (target local, size) for `ptr = &local;` / `ptr = local_array;`.
+    """ptr -> (target local, size, base offset within it).
 
     THE HOLE THIS CLOSES, and it was shielding a real defect. The docstring
     above says a pointer local is none of this checker's business, because
@@ -105,30 +110,48 @@ def pointer_aliases(body, sizes):
         *(void **)((int)pMVar6 + -4)  = pvVar5;     /* BELOW type1 */
         *(McdModelPair **)((int)pMVar6 + -0x10) = p;
 
-    `McdInteractions` writes five words below a four-byte `int`, and this
+    `McdInteractions` writes nine words below a four-byte `int`, and this
     checker reported 0 for it because the offsets go through a pointer. The
     alias only counts where the reference is BYTE arithmetic — `(int)ptr + K` —
     which is the shape in question; `ptr + K` without the cast is element
     arithmetic and genuinely is someone else's memory.
 
-    Where a pointer is assigned more than one local, every target is checked and
-    the SMALLEST is reported, because the reference has to be in range for all
-    of them."""
+    THE BASE OFFSET IS WHAT KEEPS THIS HONEST AFTER THE REPAIR.
+    `ghidra_clean.materialise_pointer_arg_area` fixes the shape above by giving
+    the area real storage and pointing the pointer at its TOP —
+    `pMVar6 = (McdContact *)(kd_argarea_pMVar6 + 0x24)` — so every negative
+    offset lands inside the buffer. Without reading that `+ 0x24` this checker
+    would simply stop recognising the pointer, i.e. it would go blind on the
+    repaired form and report green either way. It reads it.
+
+    Where a pointer is assigned more than one local, the one leaving the LEAST
+    room is kept, because the reference has to be in range for all of them."""
     out = {}
     for line in body.splitlines():
         m = PTR_TO_LOCAL.match(line)
+        base = 0
         if not m:
-            continue
-        ptr, amp, target = m.group(1), m.group(2), m.group(3)
+            m = PTR_TO_LOCAL_OFF.match(line)
+            if not m:
+                continue
+            ptr, target = m.group(1), m.group(2)
+            base = int(m.group(3), 0)
+            amp = None
+        else:
+            ptr, amp, target = m.group(1), m.group(2), m.group(3)
         ent = sizes.get(target)
         if ent is None or ptr in sizes:
             continue
         size, is_array = ent
-        if not amp and not is_array:
-            continue                      # a scalar copy, not an address
+        if not is_array and not amp:
+            # A scalar's NAME is its value, not its address. `(T *)(i + 2)`
+            # where `i` is an int is ordinary arithmetic on a number, and
+            # reading it as a frame reference reports MeFAsset's loop counter
+            # as a 4-byte object addressed at +5.
+            continue
         prev = out.get(ptr)
-        if prev is None or size < prev[1]:
-            out[ptr] = (target, size)
+        if prev is None or (size - base) < (prev[1] - prev[2]):
+            out[ptr] = (target, size, base)
     return out
 
 
@@ -162,13 +185,18 @@ def violations(text):
                     if alias is None or not m.group(0).lstrip().startswith('(int)'):
                         continue
                     var, size, is_array, amp = alias[0], alias[1], True, None
+                    off += alias[2]
                 else:
                     size, is_array = ent
                     # A scalar only names a frame object when its address is
                     # taken; an array decays on its own.
                     if not amp and not is_array:
                         continue
-                if 0 <= off < size or (var, off) in seen:
+                # One past the end is a legal pointer value, and it is
+                # exactly what the materialised form produces: the area is
+                # addressed downwards from its top, so the base IS buf + size.
+                limit = size + 1 if PTR_TO_LOCAL_OFF.match(line) else size
+                if 0 <= off < limit or (var, off) in seen:
                     continue
                 seen.add((var, off))
                 out.append((name, var, off, size))

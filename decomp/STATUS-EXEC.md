@@ -18,6 +18,13 @@ or where rebuilding would mean guessing. The other 2 we attempted today and deli
 did not ship. So the real remaining work is **2 pieces**, and both are documented down to
 the machine instruction.
 
+**And one of the two we had written off is now half solved.** A rotation
+calculation the decompiler had thrown away was rebuilt and checked against the
+original on **a million random inputs — identical every time**. The catch is
+that its twin, which no check flags at all, is wrong on *every* input; shipping
+the fixed half would quietly ship the broken one, so neither goes in until both
+are done.
+
 Counted in the units that matter — the individual functions the game still needs from the
 original — it went from **35 to 11 today**, and 9 of the 11 are ones we have decided
 against.

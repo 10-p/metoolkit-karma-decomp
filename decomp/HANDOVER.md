@@ -41,7 +41,7 @@ matching a stock control on the same map.  libMdtKea IS COMPLETE.
 
 DROP-IN GAP — the metric, and the only one:   4 members, 11 symbols
    ...of which 9 are in members this file says DO NOT ATTEMPT or has held:
-        MeMath       8  refuse, the target is declared and never written
+        MeMath       8  HELD — half solved, and the reason once given is wrong
         IxBoxTriList 1  refused on the merits, known-wrong and in a dispatch table
    GENUINELY OPEN:  2 symbols in two members
         McdContact 1 · MdtLOD 1
@@ -328,7 +328,7 @@ Everything else in this file is detail. This is the work.
 
 | # | what | where | blocked on |
 |---|---|---|---|
-| 0 | **THE DROP-IN GAP: 4 shipped members, 11 symbols.** This is the goal and the metric. `tools/dropin_gap.py`. After the seventh session: `MeMath` 8 (**refuse**), `IxBoxTriList` 1 (**refused on the merits**), `McdContact` 1 and `MdtLOD` 1 — both attempted and deliberately held. **`McdSpace`'s 16 are GONE**, and the lesson is in `proven.txt`: the reason this file gave for parking it was true and irrelevant for two sessions. **Run the engine on anything on the `.ka` path.** | §3c | nothing |
+| 0 | **THE DROP-IN GAP: 4 shipped members, 11 symbols.** This is the goal and the metric. `tools/dropin_gap.py`. After the seventh session: `MeMath` 8 (**HELD — half solved bit-exact, see `proven.txt`**), `IxBoxTriList` 1 (**refused on the merits**), `McdContact` 1 and `MdtLOD` 1 — both attempted and deliberately held. **`McdSpace`'s 16 are GONE**, and the lesson is in `proven.txt`: the reason this file gave for parking it was true and irrelevant for two sessions. **The pattern to notice — three of this session's four biggest wins came from testing a STATED REASON rather than the code.** | §3c | nothing |
 | 0a | **`prove_inert` is the sixth session's instrument and it is not finished.** It settles "does this unmodelled value reach anything" by compiling the object with the value set to three different constants and diffing. It released four objects outright and unblocked two more. **What it cannot do is decide an argument to a VARIADIC function** — pushing 0 instead of garbage changes the object code even though `sprintf` never reads the word. That is exactly what still holds `MeXMLParser`. | §8, `proven.txt` | an oracle for variadic argument slots |
 | 1 | ~~**The solver.**~~ **DONE. `libMdtKea` is recovered whole and the engine has RUN on it.** Every object in it is bit-identical on all three scenes; `keaIntegrate_pc` and `keaLCP_new` are released, so the build is 115. `build-subst115` executes the recovered `MdtKeaAddConstraintForces` 301 times and `keaLCPSolver::solveLCP` 85 times on `test-karma-1`. | §11 item 2, §7d | — |
 | 1a | **THE ASSOCIATION DEFECT IS NOW BOUNDED — 575 sites across 51 objects, 498 of them in the build, and a 59-site shortlist.** `tools/assoc_scan.py`. Ghidra prints right-leaning float `+` chains flat; on x87 that is EXACTLY inert (0 in 2,000,000), and under storage precision — wasm32, armv7, arm64 — it differs in **31%**. The scan does not decide a site and cannot: the association half has no textual fingerprint. What it does is rank — **66 sites are INDEX-PERMUTED dot products, the exact shape of the one site with ground truth** (`KDynStep.cpp:647`), 59 of them in the build. **No gate on this machine can falsify a repair**, so the shortlist is settled either by a machine-code `fadd` oracle, one site at a time, or by executing on wasm, all at once. | §11 item 2a | the oracle, or wasm execution |
@@ -385,7 +385,7 @@ Both were attempted in the seventh session; `proven.txt` says what each one need
 
 | what | syms | status |
 |---|---:|---|
-| `MeMath` | 8 | **REFUSE** — but NOT for §5c's stated reason, which is corrected in `proven.txt`: the shipped code DOES write the target. The recovery is incomplete (Ghidra discards `fcos`/`fsin`), the job is ~60 x87 instructions of rotation arithmetic, and **no gate here could verify it** |
+| `MeMath` | 8 | **HELD, and now HALF SOLVED.** §5c's reason is wrong (the shipped code DOES write the target) and so was "no gate could verify it" — `test/ab_matrix.sh` is that gate. `MeMatrix4TMUpdateFromVelocities` is **reconstructed and bit-exact over 1,000,000 cases** (Rodrigues, `s = -sin`); its sibling `...AndAcceler` is measured **100% wrong with no diagnostic** and is not solved. Landing only the solved half would ship the other one. `proven.txt` has the formula and the refuted searches |
 | `IxBoxTriList` | 1 | **REFUSED on the merits** — its address is taken by a registration function the engine needs, and difftest measures it diverging on 139,961 of 200,000 pairs |
 | `McdContact` | 1 | **ATTEMPTED AND REVERTED in the seventh session.** Read `proven.txt` before retrying: the change that closes it also ships a stack smash no gate here can see |
 | `MdtLOD` | 1 | **THE GUARD CANNOT BE TRUE — and that still does not release it.** The engine calls `MdtLODLastPartition` at one site, `KDynStep.cpp:310`, under `rowCount > params->maxMatrixSize`; `MdtWorldCreate` sets `maxMatrixSize = 0x7ffffffc` and **nothing anywhere lowers it** (engine source 0 hits with a control at 2, engine objects 0, metoolkit 0). So the call cannot execute. What holds the object is the OTHER detector: **243 `stack_guesses`, 237 of them in `MdtLODLastPartition` itself** — unlike `MeFAsset`/`MeAssetFactory`, whose frames were MATERIALISED and whose guess count is 0. Materialise the frame as `MdtPartition`'s was, then the reachability argument in `proven.txt` releases it |
@@ -446,7 +446,7 @@ the same bucket holds floats and array indices in pointer-typed slots. 207 shape
 - **Do not grind objects that are not in §3c's table.** They are out of scope. §3b.
 - **Do not read a max-delta as a verdict on a contact scene** — read the first differing
   step. Believing the maximum cost this project a session.
-- **Do not attempt `MeMath`'s `stack0x` blind** — §5c proves the target is never written.
+- **Do not attempt `MeMath`'s `stack0x` blind** — but note §5c's reason for that is WRONG (the shipped code writes the target ten times) and the real one is in `proven.txt`. Half of it is now solved bit-exact; landing only that half ships a sibling measured 100% wrong.
 - **Do not reach for `-ffloat-store`** — dead end 17 measured it five orders of magnitude
   worse.
 - **Do not trust the offline gates for anything on the `.ka` path.** §3c's warning box:
@@ -1115,6 +1115,12 @@ python3 tools/assoc_scan.py /tmp/kd_out/allobj /tmp/kd_build          # add -v f
 KD_CENSUS_VALIDATED=/tmp/kd_build \
   ./test/scene_census.sh   /tmp/kd_out/allobj $LIB test/scene_chain.c
 ./test/gate_sensitivity.sh /tmp/kd_out/allobj $LIB test/scene_ragdoll.c
+
+# per-function A/B for MeMath's pure matrix functions. The gate §5c used to say
+# could not exist; these functions are PURE, so an A/B is EASIER for them than
+# for the collision pairs difftest_pair.sh already does this to. Its control is
+# the shipped function against itself and must read 0. §11, proven.txt.
+./test/ab_matrix.sh /tmp/kd_out/allobj/MeMath.c $LIB 200000
 
 # per-function A/B for keaIntegrate_pc: the sharpest instrument here, because it
 # names the FIELD that differs instead of the step. Both code paths — the scenes

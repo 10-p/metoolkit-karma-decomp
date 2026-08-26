@@ -4227,3 +4227,91 @@ keaMatrix_PcSparse_vanilla  IN THE BUILD 2026-08-26 (seventh session), and NOT e
 # (`fadd`/`faddp` order in the shipped disassembly) settles them one at a time;
 # and executing on wasm settles all of them at once, which is why HANDOVER-WEB's
 # item 3 and this are the same problem seen from two ends.
+
+# --- 2026-08-26 (seventh session): McdSpace — "LEAVE LAST" WAS ANSWERING ----
+#   THE WRONG QUESTION. The struct layout is never needed.
+#
+# HANDOVER.md has said since the sixth session, in §3c, §13 and WHAT REMAINS:
+#
+#   "McdSpace 16 — LEAVE LAST. The struct _McdSpace layout is in nobody's
+#    DWARF, including its own object, where the DIE is DW_AT_declaration: 1.
+#    Inferring it is the guess the detectors exist to stop."
+#
+# Every word of that is true. It is also irrelevant, and it has been parked at
+# the top of the gap — 16 of 27 remaining symbols, 59% — on that basis.
+#
+# **GHIDRA NEVER ASKS FOR THE LAYOUT.** With no struct to name fields from, it
+# emits BYTE OFFSETS, and all 22 of the object's errors were one diagnostic:
+#
+#     return *(int *)(space + 0x18) - *(int *)(space + 0x1c);
+#     error: invalid use of undefined type 'struct _McdSpace'
+#
+# which is a constraint violation only because `McdSpaceID` is a pointer to an
+# incomplete type. THERE IS NOTHING TO INFER: arithmetic on a pointer to an
+# incomplete type has no meaning in C at all, so the offsets CANNOT be
+# element-scaled and byte arithmetic is the only well-formed reading. The
+# machine code is the check, not the reason:
+#
+#     830 <McdSpaceGetModelCount>:
+#       837: mov 0x18(%edx),%eax     <- `space + 0x18` is byte 0x18
+#       83a: mov 0x1c(%edx),%ecx
+#       83d: sub %ecx,%eax
+#
+# `fix_incomplete_pointer_arithmetic` writes `(char *)space + 0x18`. It names no
+# field and cannot be wrong about one. It resolves the identifier set through
+# the public headers' typedef chain — `typedef struct _McdSpace McdSpace;
+# typedef McdSpace *McdSpaceID;` — and rewrites ONLY an identifier that is the
+# left operand of `+`/`-`. Three controls: a tag that IS defined declines, a tag
+# with no typedef declines, another diagnostic declines. It also VERIFIES the
+# type is incomplete rather than believing the message, so the first control is
+# real rather than a formality.
+#
+#   McdSpace: FAIL -> review. Blast radius ZERO — all 140 objects byte-identical.
+#
+# WHAT ACTUALLY BLOCKS IT, now that the wall is gone, is ONE MIS-DECLARED
+# PROTOTYPE. The detector holds it on `extraout_AL`, and that value is the
+# dropped RETURN of a call:
+#
+#     prelude:  extern void CxSmallSort__Remove(void *)     /* Remove(int) */
+#     recovered: CxSmallSort__Remove(cm->mSpace);
+#                if (extraout_AL != '\0') { ... }
+#
+#     machine:  6b2: mov 0x1c(%ebx),%ecx    ; cm->mSpaceID
+#               6b5: push %ecx              ; TWO arguments pushed
+#               6b6: push %eax              ; cm->mSpace
+#               6b7: call CxSmallSort::Remove
+#               6c1: test %al,%al           ; and a RETURN VALUE read
+#
+# and the DWARF of the defining object says outright what it is:
+#     DW_AT_MIPS_linkage_name: _ZN11CxSmallSort6RemoveEi
+#     DW_AT_type: <0x1ede>  ->  base_type "bool", byte_size 1
+#     formal_parameter <0x2b07> artificial:1   (this)
+#     formal_parameter <0x4e>   ->  int
+# i.e. `bool CxSmallSort::Remove(CxSmallSort *, int)`.
+#
+# `kd_protos10.h` carries `void _ZN11CxSmallSort6RemoveEi(void *);` — wrong in
+# BOTH the return type and the arity — so the mangled re-declaration inherited a
+# BARE-NAME COLLISION: `Link::Remove()` is `void (this)` and the database is
+# keyed on `Remove`.
+#
+# MEASURED, so the size of the defect class is known and not guessed: of 44 C++
+# method prototypes the corpus emits, exactly TWO disagree with the arity their
+# own demangled name implies, and one of those is a false positive —
+# `CxSmallSort::New` is STATIC, so it has no `this` and 4 args is correct. **One
+# genuine defect, in one prototype, and it is the one blocking 16 symbols.**
+#
+# WHAT IT WOULD TAKE, so the next attempt does not re-derive it:
+#   1. gen_prelude must prefer the DEFINING OBJECT'S DWARF over the bare-name
+#      protos entry when the two disagree — the artificial-parameter flag is
+#      what distinguishes a static method from an instance one, so the arity
+#      check is decidable;
+#   2. the CALL SITE still says `CxSmallSort__Remove(cm->mSpace)` with one
+#      argument, because Ghidra emitted it from the same wrong prototype. Fixing
+#      the declaration alone leaves a one-argument call to a two-argument
+#      function, which is an ABI defect, not an improvement. Either re-dump with
+#      a corrected kd_protos (§5, ~75 min, background) or restore the argument
+#      and the return value from the pushes, the way §5a does for virtual calls.
+#
+# **DO NOT ship McdSpace on the declaration fix alone**, and do not read
+# "compiles" as progress here: the detector holding it is the only thing between
+# a one-argument call and the build.

@@ -5128,6 +5128,124 @@ def _demangled_short(name):
     return re.sub(r'.*::', '', d.split('(')[0]).strip()
 
 
+def _names_of_incomplete(tag, include_dir):
+    """Type spellings that resolve to `struct <tag>`, and pointers to them.
+
+    `McdCTypes.h` writes
+
+        typedef struct _McdSpace McdSpace;
+        typedef McdSpace *McdSpaceID;
+
+    so a parameter written `McdSpaceID s` is a pointer to an incomplete struct
+    and nothing in the file says so. Read from the public headers, which is
+    where the answer actually is."""
+    direct, ptr = set(), set()
+    if not include_dir or not os.path.isdir(include_dir):
+        return direct, ptr
+    txt = ''
+    for root, _d, files in os.walk(include_dir):
+        for f in files:
+            if f.endswith('.h'):
+                try:
+                    txt += open(os.path.join(root, f), errors='ignore').read()
+                except OSError:
+                    pass
+    for m in re.finditer(r'typedef\s+struct\s+' + re.escape(tag)
+                         + r'\s+(\w+)\s*;', txt):
+        direct.add(m.group(1))
+    for _ in range(3):                       # typedef chains are short
+        for m in re.finditer(r'typedef\s+(\w+)\s*\*\s*(\w+)\s*;', txt):
+            if m.group(1) in direct:
+                ptr.add(m.group(2))
+        for m in re.finditer(r'typedef\s+(\w+)\s+(\w+)\s*;', txt):
+            if m.group(1) in direct:
+                direct.add(m.group(2))
+    return direct, ptr
+
+
+def fix_incomplete_pointer_arithmetic(text, diag, ctx):
+    r"""`space + 0x18` where `space` points at a struct nobody declares.
+
+    HANDOVER.md called `McdSpace` "LEAVE LAST — the `struct _McdSpace` layout is
+    in nobody's DWARF, including its own object, where the DIE is
+    `DW_AT_declaration: 1`. Inferring it is the guess the detectors exist to
+    stop." All of that is true and **the layout is not needed**. Ghidra never
+    asks for it: with no struct to name fields from it emits BYTE OFFSETS, and
+    all 22 of the object's errors are the same one diagnostic —
+
+        return *(int *)(space + 0x18) - *(int *)(space + 0x1c);
+
+    — which is a constraint violation only because `McdSpaceID` is a pointer to
+    an incomplete type.
+
+    THERE IS NOTHING TO INFER HERE, AND THAT IS THE WHOLE ARGUMENT. Arithmetic
+    on a pointer to an incomplete type has no meaning in C at all — the scale is
+    unknown, so the expression is ill-formed. It follows that the offsets cannot
+    be element-scaled, and byte arithmetic is the ONLY well-formed reading. The
+    machine code agrees exactly, which is the check rather than the reason:
+
+        830 <McdSpaceGetModelCount>:
+          837: mov 0x18(%edx),%eax      <- `space + 0x18` is byte 0x18
+          83a: mov 0x1c(%edx),%ecx
+          83d: sub %ecx,%eax
+
+    So the repair introduces no knowledge of the struct and cannot be wrong
+    about a field, because it never names one. It writes `(char *)space + 0x18`.
+
+    WHAT IT WILL NOT DO. It only rewrites an identifier that the PUBLIC HEADERS
+    say is a pointer to the incomplete type named in the diagnostic, and only
+    where that identifier is the left operand of `+` or `-`. Every other use —
+    passing it, assigning it, comparing it — is left exactly alone, because
+    those are all well-formed already and the diagnostic is not about them."""
+    m = re.search(r'invalid use of undefined type [‘\'"](?:struct|union)\s+(\w+)[’\'"]',
+                  diag)
+    if not m:
+        return None
+    tag = m.group(1)
+    # CHECKED, not taken on the diagnostic's word. The whole licence for this
+    # repair is that the type is INCOMPLETE — that is what makes byte arithmetic
+    # the only well-formed reading. If a definition is visible anywhere this
+    # unit can see, the premise is false and the diagnostic means something
+    # else, so decline rather than rewrite. Without this the rule would fire on
+    # any type name a caller cared to put in a message.
+    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    seen = ''
+    for d in (ctx.include_dir, os.path.join(here, 'include')):
+        if not d or not os.path.isdir(d):
+            continue
+        for root, _dirs, files in os.walk(d):
+            for f in files:
+                if f.endswith('.h'):
+                    try:
+                        seen += open(os.path.join(root, f), errors='ignore').read()
+                    except OSError:
+                        pass
+    if re.search(r'\b(?:struct|union)\s+' + re.escape(tag) + r'\s*\{', seen):
+        return None
+    direct, ptr = _names_of_incomplete(tag, ctx.include_dir)
+    if not (direct or ptr):
+        return None
+    spellings = ([r'struct\s+' + re.escape(tag) + r'\s*\*']
+                 + [re.escape(p) + r'\s+' for p in sorted(ptr)]
+                 + [re.escape(d) + r'\s*\*' for d in sorted(direct)])
+    names = set()
+    for sp in spellings:
+        for d in re.finditer(r'(?<![\w.>])' + sp + r'\s*([A-Za-z_]\w*)\s*(?=[,;)=])',
+                             text):
+            names.add(d.group(1))
+    if not names:
+        return None
+    out, n = text, 0
+    for name in sorted(names):
+        pat = re.compile(r'(?<![\w.>])' + re.escape(name) + r'(\s*[+-]\s*)')
+        out, k = pat.subn(lambda mm: f'(char *){name}{mm.group(1)}', out)
+        n += k
+    return out if n else None
+
+
+fix_incomplete_pointer_arithmetic.file_wide = True
+
+
 def fix_mislabelled_external(text, diag, ctx):
     """`(*_McdGeometryDeinit)(0x20, 0x10)` is `MeMemoryAPI.createAligned(...)`.
     Ghidra printed the wrong name for the right address; see relocation_targets()
@@ -6370,6 +6488,8 @@ REPAIR_RULES = [
     (re.compile(r'expected expression before ‘\.’ token|'
                 r"expected expression before '\.' token"),
      fix_subfield_access),
+    (re.compile(r'invalid use of undefined type'),
+     fix_incomplete_pointer_arithmetic),
     (re.compile(r'[‘\'"]_\w+[’\'"] undeclared'),
      fix_mislabelled_external),
     (re.compile(r'[‘\'"]stack0x[0-9a-f]+[’\'"] undeclared'),
@@ -6406,6 +6526,7 @@ class RepairContext:
                  declared=''):
         self.obj = obj
         self.fieldmap = fieldmap or {}
+        self.include_dir = include_dir
         self.externals = relocation_targets(obj, per_function=True) if obj else {}
         self.extern_types = extern_var_types(include_dir)
         self.api_params = api_member_param_types(include_dir)

@@ -3670,13 +3670,59 @@ ReadWriteKeaInputToFile  RELEASED 2026-08-26 (seventh session). Three symbols of
 #   `KBuildPartitions` is the engine's own reimplementation of the partitioner,
 #   which is why the MathEngine one is dead here.
 #
-#   So the behavioural evidence for MdtUpdatePartitions itself is the SCENE, and
-#   it is strong: 900 calls in scene_chain with a bit-identical trajectory, and
-#   gate_sensitivity rates the object PROVEN SENSITIVE at 8.744e+02 m — that
-#   scene would diverge by 874 metres if the code were perturbed, and it reads
-#   zero. Sensitivity PROVEN went 9 -> 10 and this is the new one.
+#   So the behavioural evidence for MdtUpdatePartitions itself is the SCENE.
 #
-#   139 objects · 139/139 clean on three scenes · frame bounds 0 in the build
+# >>> CORRECTION, same day, and it is the important part of this entry. <<<
+#
+#   The first version of this paragraph said "900 calls in scene_chain with a
+#   BIT-IDENTICAL trajectory". THAT WAS WRONG, and the mistake is one this file
+#   warns about in general terms and had not yet caught anyone doing:
+#   `substitute_test.sh`'s SUMMARY line reads
+#
+#       substituted and ran cleanly : 140    crashed / NaN / short : 0
+#
+#   and "ran cleanly" is the CRASH check. Bit-identity is in the PER-OBJECT
+#   lines, and MdtPartition's says the opposite:
+#
+#       [ diverg] MdtPartition — max delta 8.744e+02 m first@1=3.941e-02   (ragdoll)
+#       [ diverg] MdtPartition — max delta 4.351e+00 m first@1=3.391e-04   (chain)
+#       [ diverg] MdtPartition — max delta 1.045e+03 m first@52=6.988e-02  (boxes)
+#
+#   It diverges on ALL THREE scenes, and 3.9e-02 at step ONE is not rounding —
+#   the other five divergers in the build are 1e-6 to 1e-8 at their first step.
+#   The gate_sensitivity row I quoted as proof was the same number read out of
+#   the "as recovered" COLUMN, which is the divergence, not the sensitivity.
+#
+# WHAT bisect_object.sh SAYS, and it is why the release still stands — on
+# better evidence than was originally claimed. Both controls read identical:
+#
+#       --none--   (control)                  identical
+#       --abi-only-- (control)                identical
+#       FindNextUnadded                       identical
+#       MdtPartInfoAddConstraint              identical   <- the engine calls this
+#       MdtPartInfoReset                      identical   <- the engine calls this
+#       MdtPartOutCreateFromChunk             identical   <- the engine calls this
+#       MdtUpdatePartitions   first@1=3.941e-02 max=8.744e+02
+#
+#   EVERY FUNCTION THE ENGINE REACHES IS BIT-IDENTICAL. The one that diverges is
+#   the 3a-family member the engine cannot reach, and the import counts say so
+#   with their own control in the same measurement:
+#
+#       MdtPartOutCreateFromChunk   1 engine object imports it
+#       MdtPartInfoReset            1
+#       MdtPartInfoAddConstraint    1
+#       MdtUpdatePartitions         0
+#       MdtWorldStep                0   (so the route through it does not exist)
+#
+#   SO THE RELEASE IS CORRECT AND THE ORIGINAL JUSTIFICATION WAS NOT. What is
+#   NOT known is why MdtUpdatePartitions diverges — a different but valid
+#   partition ORDER would do it, since the order constraints are solved in
+#   changes the summation order — and nobody should assume that without
+#   measuring. It is unreachable, so it is out of scope by this file's own rule;
+#   it is recorded because "we shipped it and never found out" is worse.
+#
+#   139 objects · 139/139 no crash on three scenes (NOT the same as
+#   bit-identical — see the correction above) · frame bounds 0 in the build
 #   bindings 0 · difftest byte-identical to the documented baseline
 #   wasm32 139/139 · armv7 139/139, 0 truncations · arm64 7,771 across 89
 #   BLAST RADIUS: all 138 pre-existing .o BYTE-IDENTICAL
@@ -3690,10 +3736,14 @@ MdtPartition          RELEASED 2026-08-26 (seventh session). Four symbols of the
 #                     `addedConstraints` pointed at a four-byte local and the five
 #                     argument slots kept a dangling dynamic shift. Three of its
 #                     five functions are called by the engine's own KDynStep.cpp
-#                     and execute in a live match; MdtUpdatePartitions is a 3a
-#                     family member (linked, reimplemented, never called), and its
-#                     evidence is 900 bit-identical calls in scene_chain on an
-#                     object gate_sensitivity rates PROVEN SENSITIVE at 874 m.
+#                     and execute in a live match, and bisect_object.sh says ALL
+#                     THREE ARE BIT-IDENTICAL with both controls passing.
+#                     MdtUpdatePartitions is a 3a family member — 0 engine objects
+#                     import it, against 1 each for the three above — and it is the
+#                     one function that DIVERGES (first@1=3.941e-02 on ragdoll).
+#                     See the correction above: the original entry claimed it was
+#                     bit-identical, which came from misreading substitute_test's
+#                     summary line.
 
 # --- 2026-08-26 (seventh session): McdContact — ATTEMPTED, REVERTED, and the -
 #   frame is now READ. The next attempt is cheap; this one shipped a smash.
@@ -3991,3 +4041,90 @@ MdtPartition          RELEASED 2026-08-26 (seventh session). Four symbols of the
 # third time this rule family has matched a SHAPE without the fact that makes
 # the shape mean something (see the MdtPartition and McdContact entries).
 # Blast radius is the acceptance test: 139 objects byte-identical, or revert.
+
+# --- 2026-08-26 (seventh session): keaMatrix_PcSparse_vanilla ---------------
+#   an alloca whose block is never given a name — and a correction to
+#   "five of six functions are exact"
+#
+# THE LAST STILL-SHIPPED libMdtKea MEMBER. With it in the build, every object in
+# that library is recovered and the engine runs on all of them.
+#
+# THE CAUSE, and it is one shape nothing here had a rule for. Every alloca rule
+# in ghidra_clean keys on a DEFINING USE — `dest = (T)(&base + negVar)` — which
+# is where the block gets a name. `solveUnits` never gives it one:
+#
+#     iVar3 = -(numClamped * 4 + 0xfU & 0xfffffff0);
+#     *(int *)((int)aiStack_4c + iVar3) = iVar7;            /* block[0] */
+#     *(int *)((int)aiStack_4c + t * 4 + iVar3) = iVar7;    /* block[t] */
+#
+# and the machine agrees — ONE `sub %ecx,%esp` at 0x108d, sized
+# `lea 0xf(,%edx,4)` off `numClamped`. With no defining use the repair block
+# never ran at all and the seven references stayed a large NEGATIVE dynamic
+# index into `int aiStack_4c[4]`, sixteen bytes.
+#
+# FOUR GUARDS, and the third is the McdContact lesson paying for itself:
+#   * the var must have no defining use;
+#   * every reference is `(int)ANCHOR [+ terms] + negVar` naming ONE anchor;
+#   * NO reference carries a negative constant — in McdContact the group runs
+#     {-0x10, -8, 0} and the base is the MINIMUM, so the bare form is 0x10 high;
+#   * every use of the var accounted for: references + size assignment +
+#     DECLARATION. Leaving the declaration out of that count is what made the
+#     first version decline on the one object it exists for, silently, while
+#     passing all three negative controls — because A RULE THAT NEVER FIRES
+#     PASSES EVERY NEGATIVE CONTROL. That is twice in one session.
+#
+# The alloca is emitted AT THE SIZE ASSIGNMENT, not at the opening brace. A
+# neighbouring attempt earlier the same day hoisted one to the top of a function
+# where its size expression was not yet in scope; here the expression is on the
+# line above by construction.
+#
+# >>> AND A CORRECTION: "FIVE OF SIX FUNCTIONS ARE EXACT" WAS SCENE-SPECIFIC. <<<
+#
+# HANDOVER.md said five of six were exact and `factorize` was the sixth. That is
+# true ON scene_chain AND ONLY THERE. bisect_object.sh, both controls identical
+# on all three scenes:
+#
+#   function        scene_chain        scene_ragdoll        scene_boxes_on_plane
+#   solve           identical          identical            identical
+#   allocate        identical          identical            identical
+#   multiply        identical          identical            identical
+#   solveUnits      identical (0 runs) first@0=2.830e-07    first@65=6.000e-08
+#   makeFromJMJT    identical          first@0=4.770e-07    first@99=3.000e-08
+#   factorize       first@10=3.800e-09 first@0=1.072e-06    first@66=3.000e-08
+#
+# So THREE functions are imperfect, not one, and `solveUnits` reads identical on
+# scene_chain because the census says it runs ZERO times there. Every divergence
+# is ULP-scale at the FIRST differing step — 3e-08 to 1.1e-06 — which is the
+# same class as the five objects already in the build and released with it
+# (GeomUtils, IxSphylPrimitives, McdSphyl, IxBoxBox, IxBoxPlane). The max deltas
+# are metres because these scenes amplify an ULP into metres; read the first
+# step, not the maximum.
+#
+# IT IS IN THE BUILD AND IT IS NOT EXACT, and both halves are deliberate. The
+# goal is a drop-in replacement with no shipped members; holding this one keeps
+# a shipped member forever to avoid a rounding difference the project already
+# accepts in five other live objects. `factorize` remaining exact is still worth
+# doing — HANDOVER.md MOVE 1 — and the arithmetic is in `vc_strip_Cholesky` /
+# `vc_dstrip_Cholesky`, which the census confirms are separate functions in the
+# recovery (6,305 and 5,406 calls on scene_chain), not inlined as MOVE 1 assumed.
+#
+#   140 objects · no crash on three scenes · frame bounds 0 · bindings 0
+#   difftest byte-identical to the documented baseline · wasm32 140/140
+#   armv7 140/140 with 0 truncations · arm64 6,977 raw across 90
+#   BLAST RADIUS: all 139 pre-existing .o BYTE-IDENTICAL
+#   census: 10 of 10 functions run on scene_ragdoll, 8 of 10 on scene_chain
+#   gate_sensitivity: PROVEN SENSITIVE (rounded 4.787e+00) — the scene can see it
+#   engine, build-subst140, test-karma-1, 260 s, -SOFTWARERENDERER:
+#     exit 124, START MATCH, 0 SIGSEGV, 0 Critical Error, 0 NaN; stock control
+#     on the same map reads the same on every one
+#     AND IT EXECUTES: a breakpoint on the recovered factorize is hit more than
+#     500 times, from keaLCPSolver::PrincipalSubmatrix <- solveLCP
+#     substitution verified in the BINARY: factorize 87 -> 603 instructions
+#   drop-in gap 6 -> 5 members, 28 -> 27 symbols
+keaMatrix_PcSparse_vanilla  IN THE BUILD 2026-08-26 (seventh session), and NOT exact.
+#                     The last still-shipped libMdtKea member; the blocker was an
+#                     alloca whose block is never assigned to a pointer, so no rule
+#                     here claimed it. Three of six functions diverge at ULP scale
+#                     (3e-08 to 1.1e-06 first step) — the handover's "five of six
+#                     exact" was measured on scene_chain alone. Runs 500+ times in
+#                     a live match from solveLCP with no fault.

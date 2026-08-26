@@ -8,14 +8,14 @@ Updated 2026-08-26.
 
 ## The one number
 
-**6.**
+**5.**
 
 Pieces of the original library the game still needs from us. It was 27 at the start of last
 week, 20 the day before yesterday, and 8 yesterday.
 
-**And 3 of the 6 we have decided not to rebuild** — pieces the game links but never calls,
+**And 3 of the 5 we have decided not to rebuild** — pieces the game links but never calls,
 or where rebuilding would mean guessing. Those decisions are on the record. So the real
-remaining work is **3 pieces**.
+remaining work is **2 pieces**.
 
 ---
 
@@ -23,7 +23,7 @@ remaining work is **3 pieces**.
 
 | | |
 |---|---|
-| **Pieces still needed** | **6** — of which 3 are deliberately not being rebuilt |
+| **Pieces still needed** | **5** — of which 3 are deliberately not being rebuilt |
 | Collision — does A hit B | done, proven in live matches |
 | Movement — how things fall and swing | done, and the game runs on it |
 | Loading vehicle and ragdoll files | done this week, and the game runs on it |
@@ -43,13 +43,20 @@ says "this value came from somewhere I could not follow". We now settle it by as
 compiler: build the piece twice with that value set differently, and if the machine code is
 identical, the value cannot matter.
 
-**Today: two more pieces, and one deliberately not shipped.** One piece the translator had
+**Today: three more pieces, and two deliberately not shipped.** With the third, the
+**solver library is complete** — every piece of the maths engine that computes how bodies
+push on each other is now ours, and the game runs a full match on it. One piece the translator had
 described two contradictory ways at once; the contradiction was settled by reading the
 original machine code. Another had two scratch buffers where the translator modelled one, so
 what it produced would have written past the end of a four-byte slot — it had been held back
-by a safety check, correctly. A third was rebuilt, looked clean on every check, and was
-**reverted**: it would have corrupted memory in a way none of our checks can see. The
+by a safety check, correctly. Two others were rebuilt, looked clean on every check, and were
+**not shipped**: one would have corrupted memory in a way none of our checks can see. The
 reasoning is on the record so the next attempt starts from the answer.
+
+**And we caught ourselves misreading our own test.** One summary line reports "ran without
+crashing"; we read it as "produces identical results". A sharper tool showed one piece did
+not — though the parts the game actually uses are identical, which is why the decision
+stands. The correction is written down more prominently than the original claim.
 
 ---
 

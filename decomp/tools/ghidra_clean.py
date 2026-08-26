@@ -515,6 +515,78 @@ def materialise_alloca_frame(body, fname):
                           r'&?(\w+)\s*\+\s*' + re.escape(var) + r'\s*\)?\s*;',
                           sub_bare, body, count=1)
 
+        # ---- AN ALLOCA WHOSE BLOCK IS NEVER ASSIGNED TO A POINTER ----------
+        #
+        # Every rule above keys on a DEFINING USE — `dest = (T)(&base + negVar)`
+        # — because that is where the block gets a name. `solveUnits` never
+        # gives it one. It allocates and then only ever INDEXES:
+        #
+        #     iVar3 = -(numClamped * 4 + 0xfU & 0xfffffff0);
+        #     *(int *)((int)aiStack_4c + iVar3) = iVar7;              /* [0] */
+        #     *(int *)((int)aiStack_4c + t * 4 + iVar3) = iVar7;      /* [t] */
+        #
+        # and the machine agrees — ONE `sub %ecx,%esp` at 0x108d, sized
+        # `lea 0xf(,%edx,4)` from `numClamped`. With no defining use `n` stays
+        # zero, the whole repair block below is skipped, and the references are
+        # left as a large NEGATIVE dynamic index into `int aiStack_4c[4]`.
+        #
+        # THE EMISSION POINT IS THE SIZE ASSIGNMENT ITSELF, not the top of the
+        # function. That is not a detail: an earlier attempt at a neighbouring
+        # rule hoisted `alloca((size_t)(group->count) * 4)` to the opening brace,
+        # where `group` is not yet in scope. Here the size expression is
+        # literally on the line the alloca is inserted after, so it cannot be.
+        #
+        # FOUR GUARDS, and the third is the McdContact lesson:
+        #   * the var must have no defining use (nothing above claimed it);
+        #   * every reference must be `(int)ANCHOR [+ terms] + negVar`, and they
+        #     must all name ONE anchor — two anchors means Ghidra was picking
+        #     arbitrarily and this cannot say what the base is;
+        #   * NO reference may carry a negative constant. In `McdContact` the
+        #     group runs {-0x10, -8, 0} and the block base is the MINIMUM, not
+        #     the bare form — treating the bare form as the base there puts the
+        #     block 0x10 high and hands `list.link` someone else's memory;
+        #   * and every use of the var in the function must be accounted for, so
+        #     a var that is also arithmetic somewhere else is left alone.
+        for var in list(neg):
+            if var in allocated:
+                continue
+            expr, mult, add = neg[var]
+            ref = re.compile(r'\(int\)\s*&?(?<![.>])\b(\w+)\b'
+                             r'((?:\s*\+\s*[^;,()]+?)*?)\s*\+\s*'
+                             + re.escape(var) + r'\b')
+            refs = list(ref.finditer(body))
+            if not refs:
+                continue
+            anchors = {m.group(1) for m in refs}
+            if len(anchors) != 1:
+                continue
+            if any('-' in m.group(2) for m in refs):
+                continue                     # an anchor above the base; decline
+            uses = len(re.findall(r'(?<![\w])' + re.escape(var) + r'\b', body))
+            sizeline = re.search(r'(?m)^([ \t]*)' + re.escape(var) + r'\s*=\s*-[^;\n]*;\s*$',
+                                 body)
+            if not sizeline:
+                continue
+            # EVERY use accounted for, and counted rather than assumed: the
+            # references, the size assignment, and the DECLARATION. Leaving the
+            # declaration out of the arithmetic is what made the first version
+            # of this rule decline on the one object it exists for — silently,
+            # and while passing all three of its negative controls, because a
+            # rule that never fires passes every one of them.
+            decl = len(re.findall(r'(?m)^\s*(?:const\s+|unsigned\s+|signed\s+)*'
+                                  r'[A-Za-z_]\w*\s+' + re.escape(var) + r'\s*;\s*$',
+                                  body))
+            if uses != len(refs) + 1 + decl:
+                continue
+            body = ref.sub(lambda m: f'(int)(kd_alloca_{var}){m.group(2)}', body)
+            body = (body[:sizeline.end()]
+                    + f'\n{sizeline.group(1)}kd_alloca_{var} = '
+                      f'(char *)alloca((size_t)({expr}) * {mult} + {add});'
+                    + body[sizeline.end():])
+            allocated.add(var)
+            alloca_base.setdefault(var, anchors.pop())
+            n += 1
+
     if n:
         # `base + negVar - K` is BELOW the block, so it is neither the
         # allocation nor any local Ghidra named: the original decremented esp,

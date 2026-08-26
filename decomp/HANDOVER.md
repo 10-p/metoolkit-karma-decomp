@@ -323,7 +323,7 @@ Everything else in this file is detail. This is the work.
 | 0 | **THE DROP-IN GAP: 5 shipped members, 27 symbols.** This is the goal and the metric. `tools/dropin_gap.py`, checked against a real link. Group by CAUSE, not size. After the seventh session: `McdSpace` 16 (**leave last**), `MeMath` 8 (**refuse**), `IxBoxTriList` 1 (**refused on the merits**) — that is 25 of the 27 — plus `McdContact` 1 and `MdtLOD` 1, both attempted and both deliberately still held (`proven.txt`). **Run the engine on anything on the `.ka` path** — three objects have passed all nine gates and killed init. | §3c | nothing |
 | 0a | **`prove_inert` is the sixth session's instrument and it is not finished.** It settles "does this unmodelled value reach anything" by compiling the object with the value set to three different constants and diffing. It released four objects outright and unblocked two more. **What it cannot do is decide an argument to a VARIADIC function** — pushing 0 instead of garbage changes the object code even though `sprintf` never reads the word. That is exactly what still holds `MeXMLParser`. | §8, `proven.txt` | an oracle for variadic argument slots |
 | 1 | ~~**The solver.**~~ **DONE. `libMdtKea` is recovered whole and the engine has RUN on it.** Every object in it is bit-identical on all three scenes; `keaIntegrate_pc` and `keaLCP_new` are released, so the build is 115. `build-subst115` executes the recovered `MdtKeaAddConstraintForces` 301 times and `keaLCPSolver::solveLCP` 85 times on `test-karma-1`. | §11 item 2, §7d | — |
-| 1a | **THE ASSOCIATION DEFECT IS A CORPUS-WIDE LEAD AND NOTHING HERE CAN SEE IT.** Ghidra prints right-leaning float `+` chains flat. On x87 that is EXACTLY inert (0 in 2,000,000 samples); under storage precision — wasm32, armv7, arm64 — it differs in **31%**. Three sites were found and fixed in one object by reading the disassembly. **Nobody has looked at the other 152.** Every gate in this project is structurally blind to it, so the first symptom will be wasm physics that drifts from native. | §11 item 2a | an instrument that does not exist yet — start from the 220-site scan |
+| 1a | **THE ASSOCIATION DEFECT IS NOW BOUNDED — 575 sites across 51 objects, 498 of them in the build, and a 59-site shortlist.** `tools/assoc_scan.py`. Ghidra prints right-leaning float `+` chains flat; on x87 that is EXACTLY inert (0 in 2,000,000), and under storage precision — wasm32, armv7, arm64 — it differs in **31%**. The scan does not decide a site and cannot: the association half has no textual fingerprint. What it does is rank — **66 sites are INDEX-PERMUTED dot products, the exact shape of the one site with ground truth** (`KDynStep.cpp:647`), 59 of them in the build. **No gate on this machine can falsify a repair**, so the shortlist is settled either by a machine-code `fadd` oracle, one site at a time, or by executing on wasm, all at once. | §11 item 2a | the oracle, or wasm execution |
 | 2 | ~~**`IxCylinderCylinder` is wrong and is in the build.**~~ **RE-FRAMED — `dims` is not a measurement for this pair.** The shipped library disagrees with itself, under a 1e-7 m nudge, more often than we disagree with it. Leave it in the build; do not release it either. | §11 item 0 | a live match scoring ret/count/position/separation with dims read separately |
 | 3 | ~~**arm64 truncates pointers.**~~ **~94% CLOSED in the seventh session: 7,771 across 89 objects -> 401 across 43 (measured at 140 objects: 6,977 raw -> 401), with every i386 object BYTE-IDENTICAL.** Two steps: five dead decompiled FRAGMENTS dropped (`not_code` test three, 852 sites, all in `MdtBcl`), then 3,508 punned casts widened to `kd_iptr` by `tools/fix_ptrwidth.py`, which takes its site list from clang's own `-Wpointer-to-int-cast` rather than from a pattern. Safe because `intptr_t` IS `int` at 32-bit pointer width. **The remaining 401 are a DIFFERENT defect** — an integer LOCAL or FIELD holding an address, needing a widened DECLARATION — and part of that bucket must NOT be widened at all. **`fix_ptrwidth.py` is a post-pass needing the NDK: §4's output is not the arm64-correct source.** | §6b | judgement, 207 shapes |
 | 4 | **Nothing has EXECUTED on wasm32, armv7 or arm64.** | `HANDOVER-WEB.md` | the web agent |
@@ -410,8 +410,11 @@ stores makes it WORSE (`first@10` → `first@7`) — dead end 17 in miniature. R
 statement by statement with `test/bisect_object.sh`'s `factorize` row as the gate, **and
 check that script's TWO controls read identical first** (§4's instrument list).
 
-**MOVE 2 — the association defect, §11 item 2a, and it is the largest unquantified risk in
-the project.** Ghidra prints right-leaning float `+` chains flat. On i386 that is EXACTLY
+**MOVE 2 — the association defect, §11 item 2a. IT IS NO LONGER UNQUANTIFIED:
+`tools/assoc_scan.py` says 575 sites across 51 objects, 498 in the build, with a 59-site
+shortlist of index-permuted dot products — the shape of the one site where ground truth
+exists. Start from that shortlist.** The rest of this note stands, and the reason a repair
+still cannot be validated here is the point of it.** Ghidra prints right-leaning float `+` chains flat. On i386 that is EXACTLY
 inert — 0 differences in 2,000,000 samples — and under storage precision, which is what
 wasm32, armv7 and arm64 all give, it differs in **31%**. Three sites were fixed in one
 object of 153 by reading the disassembly; **nobody has looked at the other 152, and no gate
@@ -1074,6 +1077,12 @@ python3 tools/fix_ptrwidth.py /tmp/kd_out_pw/allobj /tmp/kd_build ../Thirdparty/
 # controls that the scene MUST notice. §11 item 3.
 ./test/vptr_ab.sh /tmp/kd_out/allobj /tmp/kd_build $LIB keaLCPSolver \
     test/scene_chain.c test/scene_ragdoll.c test/scene_boxes_on_plane.c
+
+# where the association defect can hide: 575 sites, 51 objects, 66 of them
+# index-permuted dot products. It DECIDES nothing — on i386 the defect is
+# exactly inert, so no gate here can falsify a repair — it BOUNDS and ranks.
+# §11 item 2a.
+python3 tools/assoc_scan.py /tmp/kd_out/allobj /tmp/kd_build          # add -v for the sites
 
 # and the two that say what the scene gate above actually proved — §4a
 # KD_CENSUS_VALIDATED is not optional: without it this sweeps in the quarantined

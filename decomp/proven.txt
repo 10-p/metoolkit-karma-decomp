@@ -4160,3 +4160,66 @@ keaMatrix_PcSparse_vanilla  IN THE BUILD 2026-08-26 (seventh session), and NOT e
 #                     (3e-08 to 1.1e-06 first step) — the handover's "five of six
 #                     exact" was measured on scene_chain alone. Runs 500+ times in
 #                     a live match from solveLCP with no fault.
+
+# --- 2026-08-26 (seventh session): the association defect, BOUNDED ----------
+#
+# WHAT REMAINS row 1a has said since the sixth session that this is "a
+# corpus-wide lead and nothing here can see it", that "three sites were found
+# and fixed in one object" and that "**nobody has looked at the other 152**".
+# `tools/assoc_scan.py` is the look. It does not fix anything and it does not
+# claim to: it turns an unbounded risk into a finite, ranked list.
+#
+#   575 candidate sites across 51 objects
+#   498 of them in objects that are IN THE BUILD
+#    66 are INDEX-PERMUTED dot products, 59 of those in the build
+#
+# WHAT A CANDIDATE IS. A `+` chain at bracket depth zero with THREE OR MORE
+# terms, at least one mentioning a float local declared in the same function.
+# Two-term chains are excluded — `a + b` has only one tree. Ghidra prints
+# `a + b + c` for both `(a+b)+c` and `a+(b+c)`, so **the association half has no
+# textual fingerprint** and no scan can do better than enumerate.
+#
+# WHY THE PERMUTED COLUMN IS WORTH RANKING BY. The one site in this project with
+# GROUND TRUTH has exactly that shape. Epic copied MathEngine's integrator
+# verbatim into KDynStep.cpp, so the original is readable:
+#
+#     Ghidra        myw[2]*axis[2] + myw[0]*axis[0] + myw[1]*axis[1]
+#     KDynStep:647  myw[0]*axis[0] + myw[1]*axis[1] + myw[2]*axis[2]
+#
+# a dot product accumulated in INDEX ORDER that Ghidra printed permuted. The 66
+# hits are the same signature — mostly a strict 2,1,0 descent — in
+# `IxSphylPrimitives` (13), `ConvexGeomUtils` (6), `MdtBcl` (5),
+# `McdPlaneIntersect` (3), `IxConvexTriList` (3) and twenty more.
+#
+# THE CONTROLS, AND THE DEFECT THEY CAUGHT IN THE TOOL ITSELF. Run against the
+# real keaIntegrate_pc.c:
+#     the site as it stands now (repaired)          -> ordered
+#     the same line reverted to Ghidra's order      -> permuted
+# The FIRST version of the scanner reported NEITHER, because it took the right
+# hand side as `s.split('=', 1)[1]` and the chunk between semicolons carries the
+# control flow that preceded it — `if ((flags & 1U) != 0) { fVar1 = ...` — so it
+# split inside the `!=` and the whole statement became one unparsable term. **It
+# was silently blind to the one site the tool exists to be able to see**, and
+# the corpus number it printed (594/69) was wrong in both directions. Fixed by
+# taking the LAST ` = ` at depth zero. Same lesson as the two rules earlier in
+# this session, in a third costume: RUN THE POSITIVE CASE FIRST.
+#
+# WHAT THIS DOES NOT DO, stated plainly:
+#   * it does not decide a single site. `permuted` means "this is the shape of
+#     the one known defect", not "this is wrong";
+#   * ON i386 A REPAIR CANNOT BE FALSIFIED. A float product needs 48 mantissa
+#     bits and the x87 register has 64, so these sums are exact whatever the
+#     association — 0 differences in 2,000,000 samples. Reversing all 41 flat
+#     chains in keaMatrix_PcSparse_vanilla changed the object file and changed
+#     nothing measurable. Under storage precision — wasm32, armv7, arm64 — the
+#     same probe differs in 31%. So the gate that would settle these is not on
+#     this machine;
+#   * the count is a LOWER BOUND: a chain over struct fields is not counted,
+#     because their types are in the DWARF and this reads only local
+#     declarations.
+#
+# NEXT STEP FOR WHOEVER TAKES IT, in the order that costs least: the 59
+# in-build permuted sites are the shortlist; the machine-code oracle
+# (`fadd`/`faddp` order in the shipped disassembly) settles them one at a time;
+# and executing on wasm settles all of them at once, which is why HANDOVER-WEB's
+# item 3 and this are the same problem seen from two ends.

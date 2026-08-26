@@ -285,6 +285,98 @@ IxConvexPrimitives    real: 1,685 calls of McdSphylConvexMeshIntersect on ONS-CB
 #                     hour — ragdolls land on the level, not on the vehicles —
 #                     and ONS-Torlan would not start a ticking match. CBP2 and
 #                     UCMP maps reach it in minutes. See HANDOVER.md 6.
+IxCylinderTriList     RE-RELEASED 2026-08-27 (eighth session) — the live-match defect this file
+#                     has carried since 2026-08-25 is FIXED, and it was one dropped rounding.
+#
+#                     The charge: 37 count_diff in 153,391 real calls, after a release on
+#                     "0 structural in 71,417" that did not replicate. It reproduces offline
+#                     under KD_CORNER=1 at iteration 23624, count 30/32.
+#
+#                     LOCALISED BY test/bisect_static.sh, in one pass:
+#                       --none                              1 count  FAIL   (the control)
+#                       --all                        30,000/30,000  PASS   (harness sound)
+#                       McdVanillaOverlapCylTri      30,000/30,000  PASS
+#                       McdVanillaAddTriCylSegmentPoints    1 count  FAIL
+#                       McdVanillaSegmentCylinderIntersect  0 count  PASS  <-- it is here
+#
+#                     A per-function A/B on the live inputs then said WHICH OUTPUT: of
+#                     885,855 calls, 107,697 differed in `tInMax` and one in the RETURN. All
+#                     the differences were about one float ULP — an arithmetic ordering
+#                     problem, not a logic error.
+#
+#                     THE CAUSE: three dropped roundings. `tEnterNum`, `tExitNum` and
+#                     `tExitNumZ` are DECLARED AND NEVER USED in the recovered function —
+#                     restore_float_text's documented 'spill' fingerprint — and Ghidra's own
+#                     frame map agrees with the shipped disassembly to the byte:
+#
+#                       tEnterNum -0x1c   18ca fstps -0x1c   192f flds   1a58 fmuls
+#                       tExitNum  -0x20   1923 fstps -0x20   1951 flds   19c6 fmuls
+#                       tExitNumZ -0x24   193e fsts  -0x24   1aa7 fcomps
+#
+#                     Each is stored to a FOUR-BYTE slot, which rounds, and read back. The
+#                     recovery kept all three in 80-bit x87 registers.
+#
+#                     TWO HYPOTHESES REFUTED FIRST, both by reading the machine rather than
+#                     guessing, and both worth recording because they look right:
+#                       * `fVar1 = fVar2 * fVar3 + fVar1 * fVar4` is an INDEX-PERMUTED dot
+#                         product (`o.y*d.y + o.x*d.x`), and the shipped fadd order is 0,1.
+#                         IT CANNOT BE THE DEFECT: two-term float addition is exactly
+#                         commutative. assoc_scan's "two-term chains are excluded because
+#                         a + b is unambiguous" is doing real work here.
+#                       * `fVar7 = 1.0/fVar3` then `fVar10 * fVar7` looked like a
+#                         reciprocal-multiply where the original divided. It is not —
+#                         MePrecision.h defines `MeRecip(x)` as `1.0/x` and the shipped code
+#                         is `fld1; fdivp`, four times.
+#
+#                     AFTER, with the three roundings restored through KD_F32:
+#                       per-function A/B  1 differing return -> 0, tOutMin 1 -> 0
+#                       difftest KD_CORNER=1   FAIL (1 count) -> PASS, 0 count, 0 dims
+#                       difftest default       PASS, 0 count, 0 dims, unchanged
+#                       bit-identical under KD_CORNER rose 2,158 -> 2,239 of 30,000
+#
+#                     STATED, NOT HIDDEN: 101,337 of 885,855 calls still differ in `tInMax`
+#                     at one ULP. They change no discrete decision on 200,000 default pairs
+#                     or 30,000 corner ones — the standard the other released pairs meet —
+#                     and the residue is unexplained. The shipped code spills to four more
+#                     unnamed compiler temporaries (-0x18 five times, -0x34 four) that Ghidra
+#                     gave no local, so restore_float_text's local-based evidence cannot
+#                     reach them. That is the next thing to try if it ever matters.
+#
+#                     The repair is a GENERATOR entry (FLOAT_TEXT_REPAIRS, kind='spill'),
+#                     which re-checks the frame evidence at generation time and RAISES if a
+#                     re-dump moves it. Blast radius: exactly the two objects that contain
+#                     this static, and nothing else.
+
+SPILL-SCAN           2026-08-27 (eighth session): the cylinder defect above is not a one-off,
+#                     and tools/spill_scan.py measures how much of it there is.
+#
+#                     The fingerprint is a float local Ghidra DECLARED and then never used —
+#                     the slot it named for a spill whose store/reload it folded away. A
+#                     textual scan alone is useless: 316 float locals in the corpus are
+#                     declared and unused, and most are not spills at all. So every candidate
+#                     is checked against the SHIPPED DISASSEMBLY for both an f32 store and a
+#                     read-back at that slot, which is the same evidence restore_float_text
+#                     demands before it will apply a repair.
+#
+#                       float locals declared and never used             : 316
+#                       CONFIRMED round-trips through a 4-byte slot      : 229
+#                       ... in objects that are IN THE BUILD             : 229
+#                         MdtBcl 44, McdConvexMeshMassProps 25, IxSphylPrimitives 21,
+#                         ConvexGeomUtils 12, IxBoxBox 12, IxCylinderCylinder 10,
+#                         IxCylinderTriList 10, GeomUtils 8, CxSmallSort 6, MeMath 6
+#
+#                     IT IS AN UPPER BOUND AND THE TOOL SAYS SO. A slot can round-trip
+#                     without the recovered expression having dropped anything. The decisive
+#                     per-site test is cheap and is written down rather than performed here:
+#                     apply KD_F32 and see whether the .o CHANGES — byte-identical means the
+#                     rounding was already present.
+#
+#                     WHY THIS MATTERS MORE THAN IT LOOKS: this is not a wasm-only or
+#                     arm64-only concern like the association defect. It changed a CONTACT
+#                     COUNT on i386, in the shipped product, in a live match. Every one of
+#                     the 229 is a place where the recovered code computes at 80 bits where
+#                     MathEngine computed at 32.
+
 THE-DELIVERABLE      2026-08-27 (eighth session): CHECK 2 OF THE DEFINITION OF DONE, WHICH
 #                     HAD NEVER BEEN ATTEMPTED. The engine LINKS against a metoolkit that
 #                     contains no MathEngine object code at all, and PLAYS.

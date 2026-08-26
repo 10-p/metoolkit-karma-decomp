@@ -5056,6 +5056,53 @@ def _shifted_frame_refs(region, var):
 # These are per-site because the CORRECTION is not yet derivable by rule — see
 # HANDOVER.md §11 item 2a for the 220-site scan and what a general rule needs.
 FLOAT_TEXT_REPAIRS = {
+    # -- IxCylinderTriList / IxCylinderCylinder: the SAME file-static, compiled
+    #    into both objects, and it was the whole of the cylinder-TriangleList
+    #    live defect. `test/bisect_static.sh` localised it: shipping this one
+    #    function takes IxCylinderTriList's KD_CORNER=1 count divergence to
+    #    zero. `tools/spill_scan.py` then named the three slots, and Ghidra's
+    #    own frame map agrees with the shipped disassembly to the byte:
+    #
+    #      tEnterNum -0x1c   18ca fstps -0x1c   192f flds -0x1c   1a58 fmuls
+    #      tExitNum  -0x20   1923 fstps -0x20   1951 flds -0x20   19c6 fmuls
+    #      tExitNumZ -0x24   193e fsts  -0x24   1aa7 fcomps -0x24
+    #
+    #    Each is stored to a FOUR-BYTE slot — which rounds — and read back. The
+    #    recovery keeps all three in 80-bit x87 registers, and all three locals
+    #    are left DECLARED AND NEVER USED, which is the fingerprint.
+    #
+    #    MEASURED, per-function A/B on live difftest inputs (885,855 calls):
+    #      before  107,697 differing tInMax, 1 differing return, 1 tOutMin
+    #      after   101,337 differing tInMax, 0 differing return, 0 tOutMin
+    #    and difftest_pair under KD_CORNER=1 goes FAIL (1 count) -> PASS, with
+    #    bit-identical rising 2,158 -> 2,239 of 30,000.
+    #
+    #    THE REMAINING tInMax ULP DIFFERENCES ARE NOT CLAIMED TO BE FIXED. They
+    #    change no discrete decision on 200,000 default pairs or 30,000 corner
+    #    ones, which is the standard the other released pairs meet, and they are
+    #    recorded rather than hidden.
+    ('IxCylinderTriList', 'McdVanillaSegmentCylinderIntersect'): [
+        dict(kind='spill', local='tEnterNum',
+             old="""  fVar10 = -fVar1 - SQRT(fVar2);""",
+             new="""  fVar10 = KD_F32(-fVar1 - SQRT(fVar2));"""),
+        dict(kind='spill', local='tExitNum',
+             old="""  fVar1 = SQRT(fVar2) - fVar1;""",
+             new="""  fVar1 = KD_F32(SQRT(fVar2) - fVar1);"""),
+        dict(kind='spill', local='tExitNumZ',
+             old="""  fVar12 = fVar12 + inHH;""",
+             new="""  fVar12 = KD_F32(fVar12 + inHH);"""),
+    ],
+    ('IxCylinderCylinder', 'McdVanillaSegmentCylinderIntersect'): [
+        dict(kind='spill', local='tEnterNum',
+             old="""  fVar10 = -fVar1 - SQRT(fVar2);""",
+             new="""  fVar10 = KD_F32(-fVar1 - SQRT(fVar2));"""),
+        dict(kind='spill', local='tExitNum',
+             old="""  fVar1 = SQRT(fVar2) - fVar1;""",
+             new="""  fVar1 = KD_F32(SQRT(fVar2) - fVar1);"""),
+        dict(kind='spill', local='tExitNumZ',
+             old="""  fVar12 = fVar12 + inHH;""",
+             new="""  fVar12 = KD_F32(fVar12 + inHH);"""),
+    ],
     ('keaIntegrate_pc', 'KeaIntegrateSystem_vanilla'): [
         # -- assoc: MeVector3Dot(myw, fastSpinAxis). KDynStep.cpp:647 has the
         #    original source verbatim; the shipped fadd order agrees.

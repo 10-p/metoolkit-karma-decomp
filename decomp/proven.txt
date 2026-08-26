@@ -3601,3 +3601,96 @@ ReadWriteKeaInputToFile  RELEASED 2026-08-26 (seventh session). Three symbols of
 #                     call. All nine gates green, 137 pre-existing objects
 #                     byte-identical, and the engine runs on it against a stock
 #                     control on the same map.
+
+# --- 2026-08-26 (seventh session): MdtPartition — a chain of allocas ---------
+#
+# FOUR symbols of the drop-in gap, and the object was not merely unbuilt: what
+# it compiled to before this was a stack smash the detector was holding back.
+#
+# TWO DEFECTS, ONE CAUSE — materialise_alloca_frame modelled ONE alloca shift,
+# and MdtUpdatePartitions has two. The prologue says so outright:
+#
+#    20: sub %esi,%esp    addedBodies      = &local_3c + iVar16   (maxBodies*4)
+#    39: sub %edx,%esp    addedConstraints = &local_3c + iVar8 + iVar16
+#    3e: sub $0xc,%esp    the outgoing argument area
+#
+#   (a) THE SECOND BLOCK WAS NEVER ALLOCATED. Only the one-shift defining use
+#       was recognised, so the generic collapse dropped `+ iVar8` and left
+#
+#           addedConstraints = (MdtBaseConstraint **)((int)&local_3c);
+#
+#       — a FOUR-BYTE local, written `maxConstraints` times at line 130. It
+#       compiles. This is the 64 KB-buffer defect of the function's own
+#       docstring, in a second spelling.
+#
+#   (b) THE ARGUMENT AREA KEPT A DANGLING SHIFT. The five slots are
+#       `(int)aiStack_50 + iVar8 + iVar16 + {0,4,8,0xc,0x10}`; the collapse
+#       removed one shift and KEPT the other, leaving a large negative DYNAMIC
+#       index into `int aiStack_50[5]`. check_frame_bounds cannot see it — the
+#       index is a variable and it only reads constants.
+#
+# WHICH VAR SIZES WHICH BLOCK IS DERIVED, NOT GUESSED. The shift sets are
+# nested by construction — each is the running total of the `sub`s so far — so
+# sorting a base's sets by length makes each introduce exactly one new var, and
+# that var is the `sub` that created the block. A set introducing none or more
+# than one is not a chain and is left alone.
+#
+# AND THE BOUND THAT MAKES (b) SAFE IS "MORE THAN ONE SHIFT", measured the hard
+# way. Written first without it, the area rule fired on SINGLE-shift sites too
+# and changed five validated objects — IxConvexTriList, IxCylinderTriList,
+# IxSphereTriList, IxSphylPrimitives, MeAssetFactory — and knocked MstUtils out
+# of the build. With one shift the existing collapse removes it outright and the
+# slot lands on its own base local, which is exactly what those seven rely on.
+# With two, one shift survives. That is the whole difference, and it is why
+# HANDOVER.md's "survey the RAW dumps, not the recovered output" warning is
+# right: the shape is everywhere, the DEFECT is not.
+#
+# An area is told from a pointer derivation by having MORE THAN ONE SLOT in it
+# — the group must carry at least one explicit constant. That is what keeps this
+# off MeAssetDBXMLOutput_1_0, validated and in the build, whose twenty-two
+# multi-shift sites are every one of them a bare `base + shifts` with no
+# constant. Measured across the corpus, not assumed.
+#
+# WHAT THE ENGINE EVIDENCE IS, AND WHAT IT IS NOT — and this is the part worth
+# reading, because the naive reading of it is wrong.
+#
+#   `MdtUpdatePartitions` is imported by MathEngine's own MdtWorld.o and by
+#   NOTHING ELSE. The engine replaces MdtWorldStep with KWorldStepSafeTime, so
+#   the partitioner is a FIFTH MEMBER OF THE 3a FAMILY: linked, in the drop-in
+#   closure, and never executed in normal play. A gdb breakpoint on it reads
+#   ZERO over a 200 s match — and that is not the instrument failing, which was
+#   CHECKED: a second breakpoint on MdtKeaAddConstraintForces in the same run
+#   stops immediately, at KDynStep.cpp:849.
+#
+#   THREE of the five functions ARE called by the engine, directly, from its own
+#   KDynStep.cpp — and they execute, in a live match, as recovered code:
+#     MdtPartOutCreateFromChunk  KWorldStepSafeTime, KDynStep.cpp:761
+#     MdtPartInfoReset           KBuildPartitions,   KDynStep.cpp:93
+#     MdtPartInfoAddConstraint   KBuildPartitions,   KDynStep.cpp:144
+#   `KBuildPartitions` is the engine's own reimplementation of the partitioner,
+#   which is why the MathEngine one is dead here.
+#
+#   So the behavioural evidence for MdtUpdatePartitions itself is the SCENE, and
+#   it is strong: 900 calls in scene_chain with a bit-identical trajectory, and
+#   gate_sensitivity rates the object PROVEN SENSITIVE at 8.744e+02 m — that
+#   scene would diverge by 874 metres if the code were perturbed, and it reads
+#   zero. Sensitivity PROVEN went 9 -> 10 and this is the new one.
+#
+#   139 objects · 139/139 clean on three scenes · frame bounds 0 in the build
+#   bindings 0 · difftest byte-identical to the documented baseline
+#   wasm32 139/139 · armv7 139/139, 0 truncations · arm64 7,771 across 89
+#   BLAST RADIUS: all 138 pre-existing .o BYTE-IDENTICAL
+#   engine, build-subst139, test-karma-1, 260 s, -SOFTWARERENDERER:
+#     exit 124, START MATCH, 0 SIGSEGV, 0 Critical Error, 0 NaN
+#     substitution verified in the BINARY: MdtUpdatePartitions 487 -> 470 insns,
+#     MdtPartOutCreateFromChunk 45 -> 38
+#   drop-in gap 7 -> 6 members, 32 -> 28 symbols
+MdtPartition          RELEASED 2026-08-26 (seventh session). Four symbols of the drop-in
+#                     gap. Two allocas in one function; only one was modelled, so
+#                     `addedConstraints` pointed at a four-byte local and the five
+#                     argument slots kept a dangling dynamic shift. Three of its
+#                     five functions are called by the engine's own KDynStep.cpp
+#                     and execute in a live match; MdtUpdatePartitions is a 3a
+#                     family member (linked, reimplemented, never called), and its
+#                     evidence is 900 bit-identical calls in scene_chain on an
+#                     object gate_sensitivity rates PROVEN SENSITIVE at 874 m.

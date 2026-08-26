@@ -377,6 +377,53 @@ def materialise_alloca_frame(body, fname):
     # Invented storage for slots BELOW the block; see sub_below().
     below = set()
     if neg:
+        # ---- A CHAIN OF ALLOCAS, and it must be resolved before anything else
+        #
+        # gcc lowers two allocas in one function to two `sub %reg,%esp`, so the
+        # SECOND block's address is BOTH shifts applied to the same anchor.
+        # MdtUpdatePartitions' prologue says it outright:
+        #
+        #    20: sub %esi,%esp    addedBodies      = &local_3c + iVar16
+        #    39: sub %edx,%esp    addedConstraints = &local_3c + iVar8 + iVar16
+        #    3e: sub $0xc,%esp    the outgoing argument area
+        #
+        # Only the ONE-shift form was recognised, so the second block was never
+        # allocated at all: the generic collapse at the bottom of this function
+        # dropped `+ iVar8` and left `addedConstraints` pointing at `local_3c`
+        # ITSELF — a four-byte local, written `maxConstraints` times. That
+        # compiles, and it is the same class of defect as the 64 KB buffer this
+        # function's docstring already records.
+        #
+        # WHICH VAR SIZES THE BLOCK IS DERIVED, NOT GUESSED. The shift sets are
+        # nested by construction — each is the running total of the `sub`s so
+        # far — so sorting a base's sets by length makes each one introduce
+        # exactly one new var, and that var is the `sub` that created this
+        # block. A set that introduces none, or more than one, is not a chain
+        # and is left alone.
+        by_base = {}
+        for m in re.finditer(r'=\s*(?:\([^()]*\)\s*)?\(\s*(?:\(int\)\s*)?&?(\w+)'
+                             r'((?:\s*\+\s*[A-Za-z_]\w*)+)\s*\)\s*;', body):
+            vs = re.findall(r'\w+', m.group(2))
+            if all(v in neg for v in vs):
+                by_base.setdefault(m.group(1), []).append((m.group(0), vs))
+        for base, sites in by_base.items():
+            seen = set()
+            for whole, vs in sorted(sites, key=lambda s: len(s[1])):
+                new = [v for v in vs if v not in seen]
+                seen.update(vs)
+                if len(vs) < 2 or len(new) != 1 or new[0] in allocated:
+                    continue
+                var = new[0]
+                expr, mult = neg[var]
+                allocated.add(var)
+                alloca_base.setdefault(var, base)
+                n += 1
+                body = body.replace(
+                    whole,
+                    re.sub(r'\(\s*(?:\(int\)\s*)?&?\w+(?:\s*\+\s*[A-Za-z_]\w*)+\s*\)',
+                           f'(kd_alloca_{var} = (char *)alloca((size_t)({expr}) * {mult}))',
+                           whole, count=1))
+
         def sub_alloca(m):
             nonlocal n
             var = m.group(3)
@@ -487,6 +534,72 @@ def materialise_alloca_frame(body, fname):
             return (f'(int)({slot})' if m.group(1) else f'({slot})')
         body = re.sub(r'(\(int\)\s*)?&?(?<![.>])\b(\w+)((?:\s*\+\s*\w+)+)'
                       r'\s*\+\s*-0x([0-9a-f]+)\b', sub_below, body)
+
+        # THE SAME AREA AT A NON-NEGATIVE OFFSET — the other half of the
+        # outgoing-argument region, and the half that had no answer at all.
+        #
+        # Where the anchor Ghidra reached for sits BELOW the block instead of
+        # above it, the very same slots come out as PLUS a small constant.
+        # MdtUpdatePartitions writes its five argument words as
+        # `(int)aiStack_50 + iVar8 + iVar16 + {0,4,8,0xc,0x10}` because
+        # `aiStack_50` is 0x14 under `local_3c`, and the machine agrees: after
+        # the two allocas comes `sub $0xc,%esp`, and the call site pushes one
+        # more word and cleans all four with `add $0x10,%esp`.
+        #
+        # Left alone the generic collapses below take `+ iVar8` off and KEEP
+        # `+ iVar16`, which is a large negative dynamic index into
+        # `int aiStack_50[5]`.
+        #
+        # AN AREA IS TOLD FROM A POINTER DERIVATION BY HAVING MORE THAN ONE
+        # SLOT IN IT — the group must carry at least one explicit constant.
+        # That is the whole discriminator and it is what keeps this off
+        # MeAssetDBXMLOutput_1_0, which is validated and in the build: every
+        # one of its twenty-two multi-shift sites is a bare `base + shifts`
+        # with no constant, i.e. a derivation of the block, and it stays with
+        # the existing collapses. Measured, not assumed — see the scan in
+        # proven.txt.
+        #
+        # And never where the base is one the ALLOCA was expressed against:
+        # there `+ K` indexes the block itself, which the collapses below
+        # already handle.
+        # AND ONLY WHERE THERE IS MORE THAN ONE SHIFT, which is the boundary
+        # between the case that already has an answer and the case that does
+        # not. With ONE shift the generic collapse at the bottom removes it
+        # outright and the slot lands on its own base local, which is what
+        # IxConvexTriList, IxCylinderTriList, IxSphereTriList,
+        # IxSphylPrimitives, MeAssetFactory, MeFAsset and MstUtils all rely on
+        # — seven objects, validated and in the build, and check_frame_bounds
+        # reports 0 for them. With TWO the collapse removes one shift and KEEPS
+        # the other, so the slot becomes a large negative DYNAMIC index into a
+        # fixed local. That is the defect, and it is the only case this takes.
+        #
+        # Written after measuring it the other way round: without this bound the
+        # rule changed five of those seven objects and knocked MstUtils out of
+        # the build entirely.
+        AREA = re.compile(r'(\(int\)\s*)?&?(?<![.>])\b(\w+)'
+                          r'((?:\s*\+\s*[A-Za-z_]\w*){2,})'
+                          r'(?:\s*\+\s*(0x[0-9a-f]+|\d+))?\b')
+        anchors = set(alloca_base.values())
+        groups = {}
+        for m in AREA.finditer(body):
+            shifts = tuple(re.findall(r'\w+', m.group(3)))
+            if any(v not in neg for v in shifts) or m.group(2) in anchors:
+                continue
+            groups.setdefault((m.group(2), shifts), set()).add(m.group(4))
+        areas = {k for k, ks in groups.items() if any(x is not None for x in ks)}
+
+        def sub_area(m):
+            shifts = tuple(re.findall(r'\w+', m.group(3)))
+            if (m.group(2), shifts) not in areas:
+                return m.group(0)
+            off = int(m.group(4), 0) if m.group(4) else 0
+            slot = ('kd_frameslot_' + m.group(2) + '_' + '_'.join(shifts)
+                    + '_p%x' % off)
+            below.add(slot)
+            return (f'(int)({slot})' if m.group(1) else f'({slot})')
+        if areas:
+            body = AREA.sub(sub_area, body)
+
         if below:
             decls = [f'    void *{s}[2];' for s in sorted(below)]
             brace = body.find('\n{')

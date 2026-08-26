@@ -507,6 +507,72 @@ IxCylinderTriList     RE-RELEASED 2026-08-27 (eighth session) — the live-match
 #                     the 229 is a place where the recovered code computes at 80 bits where
 #                     MathEngine computed at 32.
 
+# WASM-SIGMISMATCH    2026-08-26 (ninth session; the eighth's entries are stamped 2026-08-27
+#                     but the repo clock says the 26th — order these by SESSION, not date):
+#                     THE FIRST DEFECT THAT ONLY EXISTS OFF
+#                     i386, found by BUILDING the engine against the recovered library for
+#                     wasm32 for the first time. Every i386 gate reads green on it and
+#                     always would have.
+#
+#                     gen_prelude.py could not find a prototype for `operator delete(void*)`
+#                     — kd_protos*.h has no entry, because the symbol is the C++ RUNTIME's
+#                     and not MathEngine's — so it fell through to its stub:
+#
+#                       /* TODO: fill in the C signature matching the demangled form above. */
+#                       extern int operator_delete()   KD_MANGLED("_ZdlPv");
+#
+#                     ON i386 THAT IS EXACTLY INERT. cdecl puts the argument on the stack
+#                     and lets the caller ignore %eax, so `int f()` and `void f(void *)`
+#                     assemble to the same three instructions. The recovered CxSmallSort.o
+#                     is BYTE-IDENTICAL either way — measured, see the blast radius below.
+#
+#                     ON wasm32 A FUNCTION'S SIGNATURE IS PART OF ITS TYPE. wasm-ld sees
+#                     (i32)->i32 here against libc++'s (i32)->void and does NOT error: it
+#                     warns, and replaces the call with a TRAPPING STUB.
+#
+#                       wasm-ld: warning: function signature mismatch: _ZdlPv
+#                       >>> defined as (i32) -> i32  in libKarmaDecomp.a(CxSmallSort.c.o)
+#                       >>> defined as (i32) -> void in libc++-debug-mt.a(new.o)
+#
+#                     REPRODUCED RATHER THAN REASONED ABOUT, in two files — a C caller
+#                     declaring `extern int op_del() __asm__("_ZdlPv")` and a C++ main that
+#                     calls it. Node:
+#
+#                       before
+#                       RuntimeError: unreachable
+#                           at wasm-function[6]:0x2dd
+#
+#                     CxSmallSort IS the broad-phase space's sort — McdSpace's implementation
+#                     — and `CxSmallSort::Delete()` is on the engine's path, so this would
+#                     have trapped the first time a collision space was torn down. It is
+#                     precisely the standing order's failure mode: it compiles, no gate
+#                     complains, and it is much harder to find later.
+#
+#                     FIXED AT THE GENERATOR, never in a generated file: gen_prelude.py now
+#                     carries ITANIUM_ABI_FUNCS, four entries whose C shape is READ OFF THE
+#                     MANGLED NAME (operator new/new[]/delete/delete[]) rather than inferred,
+#                     and treats _ZTI/_ZTS as the DATA they are rather than as functions.
+#
+#                     BLAST RADIUS: all 145 i386 objects BYTE-IDENTICAL, which is the
+#                     acceptance test and here it is also the argument — the fix cannot have
+#                     changed i386 behaviour because i386 could not encode the difference.
+#                     recover.py: 12 prelude TODOs -> 9, still 145 objects in the build.
+#                     Relink of wasm-karmadecomp-debug: zero wasm-ld diagnostics.
+#
+#                     THE BOUND ON THE CLASS, so it is not re-derived: across all 153 SHIPPED
+#                     objects the only C++ runtime imports are __gxx_personality_v0 (66),
+#                     __cxa_pure_virtual (2), _ZdlPv (1) and _Unwind_Resume (1). The first
+#                     and last never survive the pre-passes; __cxa_pure_virtual is already
+#                     emitted `void (void)` by gen_vtables.py, which is correct. So _ZdlPv
+#                     was the whole of it.
+#
+#                     AND WHAT THIS DOES NOT COVER, because it is the next hazard and it is
+#                     bigger: wasm-ld can only check DIRECT calls. Karma dispatches through
+#                     function-pointer tables (the API structs, every vtable), and a wasm
+#                     `call_indirect` type-checks AT RUNTIME — a wrong prototype there is a
+#                     trap nothing static will report. Nothing recovered has yet executed on
+#                     wasm, so that class is unmeasured, not clean.
+
 # THE-DELIVERABLE      2026-08-27 (eighth session): CHECK 2 OF THE DEFINITION OF DONE, WHICH
 #                     HAD NEVER BEEN ATTEMPTED. The engine LINKS against a metoolkit that
 #                     contains no MathEngine object code at all, and PLAYS.

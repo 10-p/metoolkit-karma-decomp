@@ -24,8 +24,8 @@ extern void keaMatrix__writebackMatrixChol(void *)
     KD_MANGLED("_ZN9keaMatrix19writebackMatrixCholEv");
 
 /* typeinfo for keaMatrix */
-/* TODO: fill in the C signature matching the demangled form above. */
-extern int typeinfo_for_keaMatrix()
+/* an Itanium-ABI typeinfo object: DATA, not a function */
+extern const void * typeinfo_for_keaMatrix[]
     KD_MANGLED("_ZTI9keaMatrix");
 
 /* vtable for __cxxabiv1::__si_class_type_info */

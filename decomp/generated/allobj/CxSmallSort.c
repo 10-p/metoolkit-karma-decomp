@@ -24,8 +24,8 @@ extern void *vtable_for___cxxabiv1____class_type_info[]
     KD_MANGLED("_ZTVN10__cxxabiv117__class_type_infoE");
 
 /* operator delete(void*) */
-/* TODO: fill in the C signature matching the demangled form above. */
-extern int operator_delete()
+/* signature fixed by the Itanium C++ ABI, not inferred */
+extern void operator_delete(void *)
     KD_MANGLED("_ZdlPv");
 
 /* ---- forward declarations ---- */

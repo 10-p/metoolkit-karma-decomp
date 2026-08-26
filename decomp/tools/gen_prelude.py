@@ -37,6 +37,29 @@ IGNORED_IMPORTS = {
     'stderr', 'stdout',
 }
 
+# Imports whose C shape is FIXED BY THE ITANIUM C++ ABI, so it is read off the
+# mangled name rather than looked up in kd_protos*.h — which has no entry for
+# any of them, because they are the runtime's, not MathEngine's.
+#
+# WITHOUT THIS THE FALLBACK BELOW EMITS `extern int f()`, AND THAT IS NOT
+# HARMLESS OFF i386. On i386 cdecl a call to `int f()` and a call to
+# `void f(void *)` assemble to the same three instructions, so every gate in
+# this project reads green. On wasm32 a function's signature is part of its
+# TYPE: wasm-ld sees `(i32) -> i32` here against libc++'s `(i32) -> void`,
+# warns "function signature mismatch", and REPLACES THE CALL WITH A TRAPPING
+# STUB. `CxSmallSort::Delete()` — the broad-phase space's destructor, squarely
+# on the engine's path — then dies with `RuntimeError: unreachable` the first
+# time a space is torn down. Reproduced end to end in a two-file test before
+# this table was written; see HANDOVER.md §6c.
+#
+# `{n}` is the C identifier; the KD_MANGLED asm name carries the real symbol.
+ITANIUM_ABI_FUNCS = {
+    '_Znwj':  'void *{n}(unsigned int)',    # operator new(unsigned int)
+    '_Znaj':  'void *{n}(unsigned int)',    # operator new[](unsigned int)
+    '_ZdlPv': 'void {n}(void *)',           # operator delete(void *)
+    '_ZdaPv': 'void {n}(void *)',           # operator delete[](void *)
+}
+
 
 def run(*cmd):
     return subprocess.run(cmd, capture_output=True, text=True).stdout
@@ -908,6 +931,26 @@ def main():
                     w('/* an Itanium-ABI vtable: pointer-sized words, address'
                       ' point at +8 */')
                     w(f'extern void *{re.sub(r"[^A-Za-z0-9_]", "_", cname)}[]')
+                    w(f'    KD_MANGLED("{name}");')
+                elif name.startswith('_ZTI') or name.startswith('_ZTS'):
+                    # Same argument as the vtable above, for the other two
+                    # Itanium ABI objects: `_ZTI` is a typeinfo (an array of
+                    # pointers) and `_ZTS` its type-name string. Both are DATA,
+                    # and the generic path types them `extern int f()` — a
+                    # FUNCTION. On i386 that is inert because nothing calls
+                    # them and an address is an address; on wasm32 a function's
+                    # address is a table index and a datum's is a memory
+                    # offset, so the two are not even the same number.
+                    # gen_vtables.py already re-declares these correctly where
+                    # it needs them; this stops the prelude contradicting it.
+                    arr = 'const char' if name.startswith('_ZTS') else 'const void *'
+                    w(f'/* an Itanium-ABI {"type name string" if name.startswith("_ZTS") else "typeinfo object"}: DATA, not a function */')
+                    w(f'extern {arr} {re.sub(r"[^A-Za-z0-9_]", "_", cname)}[]')
+                    w(f'    KD_MANGLED("{name}");')
+                elif name in ITANIUM_ABI_FUNCS:
+                    w('/* signature fixed by the Itanium C++ ABI, not inferred */')
+                    w('extern ' + ITANIUM_ABI_FUNCS[name].format(
+                        n=re.sub(r'[^A-Za-z0-9_]', '_', cname)))
                     w(f'    KD_MANGLED("{name}");')
                 elif proto:
                     # The prelude is not flat, so it does not need gen_protos'

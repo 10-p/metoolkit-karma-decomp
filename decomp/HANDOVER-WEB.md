@@ -26,10 +26,10 @@ week ago and the rest of this file was written when it was not, so read this bef
 trust any schedule further down.
 
 ```
-137 recovered objects, all compiling for i386, wasm32, armv7 AND arm64.
-  wasm32  137/137, exported symbol NAMES byte-identical to the i386 build
-  armv7   137/137, ZERO pointer-truncation diagnostics
-  arm64   137/137, 7,457 truncations across 87 objects  <- NOT trustworthy, section 3
+139 recovered objects, all compiling for i386, wasm32, armv7 AND arm64.
+  wasm32  139/139, exported symbol NAMES byte-identical to the i386 build
+  armv7   139/139, ZERO pointer-truncation diagnostics
+  arm64   139/139, 7,771 truncations across 89 objects  <- NOT trustworthy, section 3
 
 The collision layer, the solver and the ENTIRE .ka asset-loading path are recovered
 and the engine has RUN on all three on i386.
@@ -47,7 +47,7 @@ way**, all detailed below and all measured rather than guessed:
 
 1. **Pointer size is load-bearing.** The recovery puns pointers through 4-byte slots
    everywhere. wasm32 and armv7 are 32-bit-pointer targets so it holds; **arm64 is not, and
-   7,457 sites prove it**. Do not treat "arm64 compiles" as "arm64 works" — section 3.
+   7,771 sites prove it**. Do not treat "arm64 compiles" as "arm64 works" — section 3.
 2. **An arithmetic error that is provably inert on i386 and 31% divergent on yours.**
    Section 6's hazard box. Every gate on the recovery side is structurally blind to it, so
    **any wasm-vs-native A/B you build is worth more than it looks** — it measures something
@@ -71,14 +71,14 @@ freebie, the Android NDK), and to integrate the result into the engine's web bui
 
 What exists today:
 
-- **137 recovered objects**, all compiling for i386, wasm32, armv7 *and* arm64 — but see
+- **139 recovered objects**, all compiling for i386, wasm32, armv7 *and* arm64 — but see
   §3's pointer-size section: **arm64 is not trustworthy and wasm32 is**, for the same reason.
 - **The full collision-detection path the game actually uses is recovered and validated** —
   all twelve interaction pairs UT2004 calls, each measured against the shipped original on
   real inputs from a live match. Evidence per object in `karma-decomp/proven.txt`. §6 has
   the census that says "twelve" and why that is the number to plan against.
 - **The whole set already compiles under Emscripten**, and its exported symbol NAMES are
-  **byte-identical to the i386 build for all 137 objects** — nothing added or dropped. So
+  **byte-identical to the i386 build for all 139 objects** — nothing added or dropped. So
   the ABI surface the engine links against does not change between targets, which was the
   thing most likely to turn this into a rewrite. See §4. (Names only: `wasm_check.sh`
   discards the binding letter. That gap let a recovered object export a *global* `putchar`
@@ -681,7 +681,7 @@ python3 tools/dropin_gap.py <engine-build-dir> /tmp/kd_build \
 It walks the symbol closure from the ENGINE's own object files, resolving each symbol
 against the recovered build first and only then against the shipped archives, and prints
 **every shipped member the engine still needs**. That is the distance to the deliverable.
-**8 members, 35 symbols** today — 25 of them in members deliberately not attempted — from 20/148 one session ago and 27/192 the week before.
+**6 members, 28 symbols** today — 25 of them in members deliberately not attempted, so the genuinely open work is THREE symbols — from 8/35 earlier the same day, 20/148 one session ago and 27/192 the week before.
 It is checked against ground
 truth rather than trusted: a real link of the engine with every shipped member deleted
 reports 111 undefined symbols, and the walk predicts all 111.
@@ -699,8 +699,8 @@ reports 111 undefined symbols, and the walk predicts all 111.
   (`HANDOVER.md` §3b) — MathEngine's demo viewer, its unused constraint types, its ASE
   loader. They will never be recovered and that is correct.
 
-So "how much of Karma does the web build need" is not 153 objects and not 137. It is the
-137 already recovered plus the 8 in the gap, and the gap is the only number that moves.
+So "how much of Karma does the web build need" is not 153 objects and not 139. It is the
+139 already recovered plus the 6 in the gap, and the gap is the only number that moves.
 
 ### The gap that decides your schedule — REWRITTEN, the old blocker is GONE
 
@@ -717,7 +717,7 @@ machine-code level, not from the link (`HANDOVER.md` §7d).
 | | |
 |---|---|
 | **the deliverable** | UT2004 linking NO shipped `metoolkit` member, on wasm32 and Android, and playing |
-| **recovery-side remainder** | 8 shipped members / 35 symbols, tracked by `tools/dropin_gap.py` (`HANDOVER.md` §3c). Shrinking steadily — 19 members and 113 symbols closed in the sixth session, which cut it by 76% |
+| **recovery-side remainder** | 6 shipped members / 28 symbols, tracked by `tools/dropin_gap.py` (`HANDOVER.md` §3c). Shrinking steadily — 19 members and 113 symbols closed in the sixth session, two more in the seventh |
 | **YOUR remainder** | **nothing has ever EXECUTED on wasm32, armv7 or arm64.** Not one instruction. That is the single largest unknown in the whole project |
 
 **Sequence your work as if the physics is coming, because it is.** The right thing to
@@ -762,9 +762,9 @@ device — pointer truncation is a compile-time diagnostic.
 
 | target | compiles | symbols | truncations |
 |---|---|---|---|
-| wasm32 | 137/137 | identical to i386 | — (32-bit) |
-| **armv7** | 137/137 | identical | **0** — a real 32-bit-pointer port |
-| **arm64** | 137/137 | identical | **7,457 across 87 of 137 objects** |
+| wasm32 | 139/139 | identical to i386 | — (32-bit) |
+| **armv7** | 139/139 | identical | **0** — a real 32-bit-pointer port |
+| **arm64** | 139/139 | identical | **7,771 across 89 of 139 objects** |
 
 **arm64 compiling is a lie.** The recovery puns pointers through 4-byte slots, which is
 sound on every 32-bit target and silently truncates on a 64-bit one. The fix is
@@ -787,7 +787,7 @@ where `wasm-ld` and GNU `ld` differ, and §4b already flags COMDAT for `keaMatri
 
 The honest one-line summary of the project's state: *the collision layer and the solver are
 both recovered and both run inside the real engine on i386; 8 shipped members remain, and
-nothing has ever executed on any of your three targets.* Do not read 137-of-153 as 90% —
+nothing has ever executed on any of your three targets.* Do not read 139-of-153 as 91% —
 read `tools/dropin_gap.py`.
 
 ---
@@ -857,6 +857,27 @@ Read `karma-decomp/HANDOVER.md` for how the recovery pipeline works, and
 
 A log of the things that would otherwise surprise you, newest first. If you have read an
 older copy of this file, start here.
+
+### 2026-08-26 (seventh session) — 139 objects, gap 8/35 -> 6/28
+
+- **Nothing on your side changed, and that is the point:** both members closed this session
+  fell to generator fixes whose blast radius was measured at **zero** — every one of the
+  138 pre-existing `.o` byte-identical. `ReadWriteKeaInputToFile` (3 symbols) and
+  `MdtPartition` (4).
+- **arm64 went 7,457/87 to 7,771/89**, which is two more objects arriving, not a
+  regression. armv7 stays at **0** truncations, wasm32 at **139/139** with byte-identical
+  exported symbol sets. Item 3 of section 3 is unchanged and still the thing that matters
+  most to you.
+- **One member was rebuilt, passed all nine gates, and was REVERTED** — `McdContact`. What
+  it compiled to indexed an eight-byte scratch buffer as `count+1` sixteen-byte structs,
+  and `check_frame_bounds` reported 0 the whole time because the index is a variable and
+  that gate only reads constants. **This is worth your attention even though it never
+  shipped**: it is a concrete example of a class of defect that is invisible to every
+  offline gate here, which is the same reason section 3's association defect matters. A
+  clean gate sheet is not a clean object.
+- **A rule that never fires passes every negative control.** The first version of one of
+  this session's fixes declined on the one object it was written for while passing all five
+  of its controls. If you write a check on your side, make it FIRE before you believe it.
 
 ### 2026-08-26 (sixth session) — 137 objects, and TWO OF YOUR TARGETS WERE NOT COMPILING
 

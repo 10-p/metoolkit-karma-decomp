@@ -8,7 +8,7 @@ have no physics at all. Updated 2026-08-26.
 
 ## The one number
 
-**11.**
+**8.**
 
 That is how many pieces of the original library the game still needs from us. It was 27 at
 the start of last week and 20 yesterday. When it reaches zero and the tests stay green, we
@@ -23,7 +23,7 @@ UT2004 never touches, so rebuilding it would be zero progress.
 
 | | |
 |---|---|
-| **Original pieces still needed** | **11** (was 20 yesterday, 27 last week) |
+| **Original pieces still needed** | **8** (was 20 yesterday, 27 last week) — and **5 of the 8 are pieces we have decided not to rebuild**, for reasons on the record |
 | Collision — does A hit B | ✅ done, proven in live matches |
 | Movement — how things fall and swing | ✅ done, and the game runs on it |
 | Loading vehicle and ragdoll files | ✅ done this session, and the game runs on it |
@@ -34,10 +34,10 @@ UT2004 never touches, so rebuilding it would be zero progress.
 
 ## This session
 
-**The gap fell by nearly seventy per cent.** Not by rebuilding more modules, but by fixing
-nine faults in the *translator* — each one repaired several modules at once, including some
-nobody was looking at. The three largest pieces the game still needed are all done, and the
-whole file-loading path for vehicles and ragdolls now works.
+**The gap fell by more than three quarters.** Not by rebuilding more modules, but by fixing
+twenty faults in the *translator* — each one repaired several modules at once, including
+some nobody was looking at. The three largest pieces the game still needed are all done,
+and the whole file-loading path for vehicles and ragdolls now works.
 
 **We built an instrument that answers a question we had been guessing at.** The translator
 often reports "this value came from somewhere I could not follow", and until now that held
@@ -60,7 +60,7 @@ function the game never calls, which is luck, not design; we say so on the recor
 ## The two risks
 
 **1. We cannot yet test the thing we are building it for.** Nothing has ever run on web or
-Android. It compiles for both — 134 of 134 modules, which is newly true and was overstated
+Android. It compiles for both — 137 of 137 modules, which is newly true and was overstated
 before — but that is not the same thing.
 
 **2. There is an error we can prove is harmless on PC and harmful on web.** A quirk in how
@@ -78,6 +78,8 @@ not rebuilding more.
 ## Confidence
 
 Every claim traces to a recorded measurement that can be re-run. The working rule is that a
-passing test is not believed until we have shown it could have failed. That caught three of
-our own checks this session — including one portability check that had been reporting a
-clean result for a target it was not building at all.
+passing test is not believed until we have shown it could have failed. That caught five of
+our own checks this session — including one portability check reporting a clean result for
+a target it was not building at all, and one interface check that let three renamed exports
+through while its entire job was to catch exactly that. Both are fixed, and both now have a
+test that deliberately breaks them.

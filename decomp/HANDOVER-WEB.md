@@ -26,10 +26,10 @@ week ago and the rest of this file was written when it was not, so read this bef
 trust any schedule further down.
 
 ```
-140 recovered objects, all compiling for i386, wasm32, armv7 AND arm64.
-  wasm32  140/140, exported symbol NAMES byte-identical to the i386 build
-  armv7   140/140, ZERO pointer-truncation diagnostics
-  arm64   140/140, 401 truncations across 43 objects (was 7,771/89) - section 3
+141 recovered objects, all compiling for i386, wasm32, armv7 AND arm64.
+  wasm32  141/141, exported symbol NAMES byte-identical to the i386 build
+  armv7   141/141, ZERO pointer-truncation diagnostics
+  arm64   141/141, 405 truncations across 44 objects (was 7,771/89) - section 3
 
 The collision layer, the solver and the ENTIRE .ka asset-loading path are recovered
 and the engine has RUN on all three on i386.
@@ -47,7 +47,7 @@ way**, all detailed below and all measured rather than guessed:
 
 1. **Pointer size is load-bearing.** The recovery puns pointers through 4-byte slots
    everywhere. wasm32 and armv7 are 32-bit-pointer targets so it holds; **arm64 is not, and
-   401 remaining sites prove it**. Do not treat "arm64 compiles" as "arm64 works" — section 3.
+   405 remaining sites prove it**. Do not treat "arm64 compiles" as "arm64 works" — section 3.
 2. **An arithmetic error that is provably inert on i386 and 31% divergent on yours — and
    it is now COUNTED: 575 sites across 51 objects, 498 of them in the build.** Section 6's
    hazard box, and `karma-decomp/tools/assoc_scan.py` on the recovery side.
@@ -77,14 +77,14 @@ freebie, the Android NDK), and to integrate the result into the engine's web bui
 
 What exists today:
 
-- **140 recovered objects**, all compiling for i386, wasm32, armv7 *and* arm64 — but see
+- **141 recovered objects**, all compiling for i386, wasm32, armv7 *and* arm64 — but see
   §3's pointer-size section: **arm64 is not trustworthy and wasm32 is**, for the same reason.
 - **The full collision-detection path the game actually uses is recovered and validated** —
   all twelve interaction pairs UT2004 calls, each measured against the shipped original on
   real inputs from a live match. Evidence per object in `karma-decomp/proven.txt`. §6 has
   the census that says "twelve" and why that is the number to plan against.
 - **The whole set already compiles under Emscripten**, and its exported symbol NAMES are
-  **byte-identical to the i386 build for all 140 objects** — nothing added or dropped. So
+  **byte-identical to the i386 build for all 141 objects** — nothing added or dropped. So
   the ABI surface the engine links against does not change between targets, which was the
   thing most likely to turn this into a rewrite. See §4. (Names only: `wasm_check.sh`
   discards the binding letter. That gap let a recovered object export a *global* `putchar`
@@ -687,7 +687,7 @@ python3 tools/dropin_gap.py <engine-build-dir> /tmp/kd_build \
 It walks the symbol closure from the ENGINE's own object files, resolving each symbol
 against the recovered build first and only then against the shipped archives, and prints
 **every shipped member the engine still needs**. That is the distance to the deliverable.
-**5 members, 27 symbols** today — 25 of them in members deliberately not attempted, so the genuinely open work is THREE symbols — from 8/35 earlier the same day, 20/148 one session ago and 27/192 the week before.
+**4 members, 11 symbols** today — 25 of them in members deliberately not attempted, so the genuinely open work is THREE symbols — from 8/35 earlier the same day, 20/148 one session ago and 27/192 the week before.
 It is checked against ground
 truth rather than trusted: a real link of the engine with every shipped member deleted
 reports 111 undefined symbols, and the walk predicts all 111.
@@ -705,8 +705,8 @@ reports 111 undefined symbols, and the walk predicts all 111.
   (`HANDOVER.md` §3b) — MathEngine's demo viewer, its unused constraint types, its ASE
   loader. They will never be recovered and that is correct.
 
-So "how much of Karma does the web build need" is not 153 objects and not 140. It is the
-140 already recovered plus the 5 in the gap, and the gap is the only number that moves.
+So "how much of Karma does the web build need" is not 153 objects and not 141. It is the
+141 already recovered plus the 4 in the gap, and the gap is the only number that moves.
 
 ### The gap that decides your schedule — REWRITTEN, the old blocker is GONE
 
@@ -723,7 +723,7 @@ machine-code level, not from the link (`HANDOVER.md` §7d).
 | | |
 |---|---|
 | **the deliverable** | UT2004 linking NO shipped `metoolkit` member, on wasm32 and Android, and playing |
-| **recovery-side remainder** | 5 shipped members / 27 symbols, tracked by `tools/dropin_gap.py` (`HANDOVER.md` §3c). Shrinking steadily — 19 members and 113 symbols closed in the sixth session, two more in the seventh |
+| **recovery-side remainder** | 4 shipped members / 11 symbols, tracked by `tools/dropin_gap.py` (`HANDOVER.md` §3c). Shrinking steadily — 19 members and 113 symbols closed in the sixth session, two more in the seventh |
 | **YOUR remainder** | **nothing has ever EXECUTED on wasm32, armv7 or arm64.** Not one instruction. That is the single largest unknown in the whole project |
 
 **Sequence your work as if the physics is coming, because it is.** The right thing to
@@ -768,9 +768,9 @@ device — pointer truncation is a compile-time diagnostic.
 
 | target | compiles | symbols | truncations |
 |---|---|---|---|
-| wasm32 | 140/140 | identical to i386 | — (32-bit) |
-| **armv7** | 140/140 | identical | **0** — a real 32-bit-pointer port |
-| **arm64** | 140/140 | identical | **401 across 43** after `tools/fix_ptrwidth.py`; 6,977 without it |
+| wasm32 | 141/141 | identical to i386 | — (32-bit) |
+| **armv7** | 141/141 | identical | **0** — a real 32-bit-pointer port |
+| **arm64** | 141/141 | identical | **405 across 44** after `tools/fix_ptrwidth.py`; 6,977 without it |
 
 **arm64 compiling is a lie.** The recovery puns pointers through 4-byte slots, which is
 sound on every 32-bit target and silently truncates on a 64-bit one. The fix is
@@ -793,7 +793,7 @@ where `wasm-ld` and GNU `ld` differ, and §4b already flags COMDAT for `keaMatri
 
 The honest one-line summary of the project's state: *the collision layer and the solver are
 both recovered and both run inside the real engine on i386; 8 shipped members remain, and
-nothing has ever executed on any of your three targets.* Do not read 140-of-153 as 91% —
+nothing has ever executed on any of your three targets.* Do not read 141-of-153 as 92% —
 read `tools/dropin_gap.py`.
 
 ---
@@ -864,12 +864,13 @@ Read `karma-decomp/HANDOVER.md` for how the recovery pipeline works, and
 A log of the things that would otherwise surprise you, newest first. If you have read an
 older copy of this file, start here.
 
-### 2026-08-26 (seventh session) — 140 objects, gap 8/35 -> 5/27, libMdtKea complete
+### 2026-08-26 (seventh session) — 141 objects, gap 8/35 -> 4/11, libMdtKea complete
 
 - **Nothing on your side changed, and that is the point:** all three members closed this
   session fell to generator fixes whose blast radius was measured at **zero** — every
   pre-existing `.o` byte-identical at each step. `ReadWriteKeaInputToFile` (3 symbols),
-  `MdtPartition` (4) and `keaMatrix_PcSparse_vanilla` (1). **`libMdtKea` is now recovered
+  `MdtPartition` (4), `keaMatrix_PcSparse_vanilla` (1) and **`McdSpace` (16)**, the largest
+  single member of the gap. **`libMdtKea` is now recovered
   whole**, and the engine runs on all of it — a breakpoint on the recovered
   `keaMatrix_pcSparse_vanilla::factorize` is hit 500+ times in a live match from
   `keaLCPSolver::solveLCP`.
@@ -879,8 +880,8 @@ older copy of this file, start here.
   `proven.txt` argues why. It matters to you because **wasm and arm are storage-precision
   targets and x87 is not** — see the association defect in section 3.
 - **ARM64 IS ~94% REPAIRED AND THIS IS THE ONE THAT AFFECTS YOU.** Item 3 of section 3 —
-  "arm64 truncates pointers" — went **7,771 truncations across 89 objects to 401 across
-  43** (at 140 objects: 6,977 raw, 401 after the post-pass), and every i386 object is
+  "arm64 truncates pointers" — went **7,771 truncations across 89 objects to 405 across
+  44** (at 141 objects: 6,981 raw, 405 after the post-pass), and every i386 object is
   byte-identical, so nothing you already test against moved. Two changes: five dead decompiled fragments dropped, and 3,498 punned
   casts widened to `kd_iptr` (`intptr_t`), with the site list taken from **clang's own
   `-Wpointer-to-int-cast`** rather than a pattern — nothing here executes arm64 code, so a
@@ -896,7 +897,7 @@ older copy of this file, start here.
   ground truth. Nothing on the recovery side can decide any of them: on x87 the defect is
   exactly inert, so a repair there is unfalsifiable. A wasm-vs-native trajectory A/B decides
   all 575 at once. If you build one thing this cycle, build that.
-- **The remaining 401 are a different defect** — an integer local or struct field holding an
+- **The remaining 405 are a different defect** — an integer local or struct field holding an
   address, which needs a widened DECLARATION, not a widened cast. Do not blanket-widen: the
   same bucket contains a float and an array index living in pointer-typed slots. armv7
   stays at **0** truncations, wasm32 at **140/140** with byte-identical exported symbol sets.

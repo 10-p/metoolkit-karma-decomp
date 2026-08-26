@@ -4315,3 +4315,89 @@ keaMatrix_PcSparse_vanilla  IN THE BUILD 2026-08-26 (seventh session), and NOT e
 # **DO NOT ship McdSpace on the declaration fix alone**, and do not read
 # "compiles" as progress here: the detector holding it is the only thing between
 # a one-argument call and the build.
+
+# --- 2026-08-26 (seventh session): McdSpace RELEASED — 16 symbols ----------
+#
+# The largest single member of the gap, parked since the sixth session on a
+# premise that was true and irrelevant (see the previous entry). Two changes,
+# and NEITHER of them invents anything about `struct _McdSpace`:
+#
+#  1. `fix_incomplete_pointer_arithmetic` — byte arithmetic on a pointer to an
+#     incomplete type is the only well-formed reading there is. 22 errors gone,
+#     FAIL -> review, blast radius zero.
+#  2. THE PROTOTYPE, AND THIS IS THE HALF WORTH READING. gen_prelude looked
+#     prototypes up by the C++ method's SHORT name, and short names are not
+#     unique: `Link::Remove()` is `void (this)` and `CxSmallSort::Remove(int)`
+#     is `bool (this, int)`, and both key on `Remove`. McdSpace got the wrong
+#     one. `kd_protos*.h` already carries every C++ function a SECOND time under
+#     its ELF symbol (§5b) — a mangled name cannot collide, that is what
+#     mangling is for — so the lookup now tries the mangled name first and falls
+#     back to the short one.
+#
+# WHY THE DECLARATION FIX ALONE WOULD HAVE BEEN A DEFECT, and this is why the
+# previous entry said do not ship it: Ghidra emitted the CALL from the same
+# wrong prototype, so it dropped an argument and the result —
+#
+#     old dump:  _ZN11CxSmallSort6RemoveEi(cm->mSpace);
+#                if (extraout_AL != '\0') { ... }
+#
+# and a one-argument call to a two-argument function is an ABI defect that
+# compiles. Correcting the declaration only turns it into "too many arguments",
+# which is honest and is not progress.
+#
+# SO THE PROTOTYPE WAS CORRECTED AT THE SOURCE AND GHIDRA RE-RUN, which is the
+# documented way (§5) and cost 50 seconds for one object rather than the 75
+# minutes a full re-dump takes:
+#
+#     kd_protos11.h = kd_protos10.h with ONE line changed
+#         void _ZN11CxSmallSort6RemoveEi(void *);
+#      -> char _ZN11CxSmallSort6RemoveEi(void *, int);
+#     out14 = out13 with McdSpace.o.c and McdSpace.o.locals replaced
+#
+#     new dump:  cVar1 = _ZN11CxSmallSort6RemoveEi(cm->mSpace,cm->mSpaceID);
+#                if (cVar1 != '\0') { ... }
+#
+# which matches the machine code exactly — `mov 0x1c(%ebx),%ecx; push %ecx;
+# push %eax; call; test %al,%al` — and the DWARF of the defining object:
+# `DW_AT_type -> base_type "bool"`, two formal parameters, the first artificial.
+# **The re-dump changed that ONE function and nothing else**: 16 diff lines, all
+# in McdSpaceRemoveModel, and only McdSpace.o imports the symbol at all.
+#
+# THE CORRECTION IS CHECKED CORPUS-WIDE, not asserted: of 44 C++ method
+# prototypes the corpus emits, exactly two disagree with the arity their own
+# demangled name implies, and one is a false positive (`CxSmallSort::New` is
+# static, so it has no `this` and four arguments is right). One genuine defect.
+#
+# EVIDENCE. The offsets are read, never inferred — three spot checks against the
+# shipped disassembly, chosen from different functions:
+#     space + 0x18 / 0x1c   837: mov 0x18(%edx),%eax ; 83a: mov 0x1c(%edx),%ecx
+#     s + 200 (0xc8)        2b9: mov %eax,0xc8(%ecx)
+#     s + 0xcc              77: mov 0xcc(%ecx),%edx ; 7d: test ; 7f: setne
+#
+#   141 objects · **McdSpace trajectory BIT-IDENTICAL on ALL THREE scenes**
+#   census: 17,087 calls across 10 of 34 functions on scene_ragdoll, so that
+#     verdict is about the CODE and not the link
+#   frame bounds 0 · bindings 0 · wasm32 141/141 · armv7 0 truncations
+#   difftest byte-identical to the documented baseline
+#   BLAST RADIUS: all 140 pre-existing .o BYTE-IDENTICAL
+#   engine, build-subst141, test-karma-1, 260 s: exit 124, START MATCH,
+#     0 SIGSEGV, 0 Critical Error, 0 NaN; stock control identical on each
+#   drop-in gap 5 -> 4 members, 27 -> 11 symbols
+#
+# AND THE ENGINE NEVER CALLS IT — a 3a-family member, stated so nobody reads the
+# engine run as more than it is. FOUR breakpoints (McdSpaceUpdateAll,
+# McdSpaceModelIsFrozen, McdSpaceGetPairs, McdSpaceInsertModel) over 235 s of
+# live play: ZERO hits, with the instrument controlled in the same
+# configuration — a breakpoint on MdtKeaAddConstraintForces stops immediately.
+# 0 engine objects import any McdSpace symbol directly; it is pulled in
+# transitively by the Mst layer (MstBridge, MstUniverse, MstUtils,
+# MstModelDynamics, MeAssetFactory, McdBatch), whose simulation loop UT2004
+# replaces with its own Octree broad-phase. So the behavioural evidence is the
+# SCENES, which do drive it, and it is bit-identical there.
+McdSpace              RELEASED 2026-08-26 (seventh session). Sixteen symbols, the largest
+#                     single member of the gap. The "layout is in nobody's DWARF"
+#                     premise was true and never needed: Ghidra emits byte offsets.
+#                     What blocked it was one prototype resolved by a colliding
+#                     SHORT name; corrected at the source and Ghidra re-run, which
+#                     changed one function. Bit-identical on all three scenes with
+#                     17,087 calls. The engine links it and never calls it.

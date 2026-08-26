@@ -8,14 +8,19 @@ Updated 2026-08-26.
 
 ## The one number
 
-**5.**
+**4.**
 
 Pieces of the original library the game still needs from us. It was 27 at the start of last
 week, 20 the day before yesterday, and 8 yesterday.
 
-**And 3 of the 5 we have decided not to rebuild** — pieces the game links but never calls,
-or where rebuilding would mean guessing. Those decisions are on the record. So the real
-remaining work is **2 pieces**.
+**And 2 of the 4 we have decided not to rebuild** — pieces the game links but never calls,
+or where rebuilding would mean guessing. The other 2 we attempted today and deliberately
+did not ship. So the real remaining work is **2 pieces**, and both are documented down to
+the machine instruction.
+
+Counted in the units that matter — the individual functions the game still needs from the
+original — it went from **35 to 11 today**, and 9 of the 11 are ones we have decided
+against.
 
 ---
 
@@ -23,7 +28,7 @@ remaining work is **2 pieces**.
 
 | | |
 |---|---|
-| **Pieces still needed** | **5** — of which 3 are deliberately not being rebuilt |
+| **Pieces still needed** | **4** — of which 2 are refused and 2 are attempted-and-held |
 | Collision — does A hit B | done, proven in live matches |
 | Movement — how things fall and swing | done, and the game runs on it |
 | Loading vehicle and ragdoll files | done this week, and the game runs on it |
@@ -43,7 +48,11 @@ says "this value came from somewhere I could not follow". We now settle it by as
 compiler: build the piece twice with that value set differently, and if the machine code is
 identical, the value cannot matter.
 
-**Today: three more pieces, and two deliberately not shipped.** With the third, the
+**Today: four more pieces, and two deliberately not shipped.** The largest of the four had
+been parked for two sessions behind a reason that turned out to be true but irrelevant —
+we thought we needed information nobody has, and we never needed it. One wrong line in a
+lookup table was the whole blocker, and it accounted for **16 of the 35** functions
+outstanding this morning. With the third, the
 **solver library is complete** — every piece of the maths engine that computes how bodies
 push on each other is now ours, and the game runs a full match on it. One piece the translator had
 described two contradictory ways at once; the contradiction was settled by reading the

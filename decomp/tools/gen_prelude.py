@@ -867,7 +867,19 @@ def main():
                 # fails to link. keaLCP_new lost seven keaLCPSolver methods this
                 # way.
                 cname = qualified.replace('::', '__')
-                proto = protos.get(short)
+                # THE MANGLED ENTRY FIRST, and the bare name only as a
+                # fallback. `kd_protos*.h` carries every C++ function twice —
+                # once under its short name and once under its ELF symbol (§5b)
+                # — and the SHORT name is not unique. `Link::Remove()` and
+                # `CxSmallSort::Remove(int)` both key on `Remove`, so McdSpace
+                # was declared `void CxSmallSort__Remove(void *)` when the
+                # defining object's DWARF says `bool (CxSmallSort *, int)`:
+                # wrong in the return type AND the arity, which Ghidra then
+                # copied into the call site by dropping an argument and the
+                # result. The mangled name cannot collide — that is what
+                # mangling is for.
+                proto = protos.get(name) or protos.get(short)
+                proto_key = short if protos.get(name) is None else name
                 # A C++ symbol whose demangled name a PUBLIC header also
                 # declares. McdConvexMesh.h expands
                 # MCD_DECLARE_INTERSECT_INTERACTION(Sphyl, ConvexMesh) to
@@ -901,7 +913,7 @@ def main():
                     # The prelude is not flat, so it does not need gen_protos'
                     # opaque `kd_aggNN` stand-ins and is actively hurt by them.
                     proto = real_aggregate_types(proto, dem, obj)
-                    decl = re.sub(r'\b' + re.escape(short) + r'\s*\(',
+                    decl = re.sub(r'\b' + re.escape(proto_key) + r'\s*\(',
                                   emit_name + '(', proto[:-1].strip(), count=1)
                     w(f'extern {decl}')
                     w(f'    KD_MANGLED("{name}");')

@@ -82,7 +82,17 @@ wrong, we now get a named file, a line number and a stack trace, one at a time, 
 **The version that works today is 32-bit** — which covers web and the large majority of
 Android devices — and 64-bit is now ordinary debugging rather than research.
 
-**2. We still cannot test on the thing we are building it for.** Nothing has ever run on web
+**2. One accuracy item is closed as far as it is worth closing, and it should stop being
+re-asked.** Fourteen of the fifteen collision routines the game uses now match the original
+on every decision. The fifteenth disagrees on **one contact in two hundred thousand** and on
+a descriptive *label* twenty times in two hundred thousand — and the original library
+disagrees with *itself* on that same label sixteen times if you move a body by a tenth of a
+micron. We spent a session trying to close it: four candidate fixes and one blanket approach
+were tried and every one made it the same or worse. Closing it properly means matching the
+original's arithmetic bit for bit inside one large routine, which is days of work for a
+difference nothing in the game reads. It is written down so it is not rediscovered.
+
+**3. We still cannot test on the thing we are building it for.** Nothing has ever run on web
 or Android. It compiles for both; that is not the same thing, and today's finding is exactly
 what "compiles is not runs" looks like. Closing this is the next milestone, and it is the web
 side's job.

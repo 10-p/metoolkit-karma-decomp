@@ -127,6 +127,28 @@ exactly what wasm32 and arm64 give — so the same harness then measures the ASS
 on its own, on this machine, today. `proven.txt` ASSOC-ON-I386 says an i386 A/B cannot
 arbitrate that; this is not an i386 A/B.
 
+**AND THE LOOP IS ALREADY RUNNING — do not start it from scratch.** Four post-pass rounds
+cleared five LP64 sites on 2026-08-27: `MdtWorldCreate` → `MallocCreateAligned` →
+`MePoolFixedInit`/`MeDictInsert` → `McdInit:75`. Run the three post-passes on a COPY, in this
+order, then `lp64_run.sh`:
+
+```bash
+cp -a /tmp/kd_out /tmp/kd_lp64
+python3 tools/fix_baked_sizeof.py /tmp/kd_lp64/allobj /tmp/kd_build     # 98 sites
+python3 tools/fix_ptrwidth.py    /tmp/kd_lp64/allobj /tmp/kd_build ../Thirdparty/metoolkit
+KD_OUT=/tmp/kd_lp64 ./test/lp64_run.sh
+```
+
+**The acceptance test for each is that all 145 objects recompile BYTE-IDENTICAL at i386**,
+and it earns its keep: it caught `fix_baked_sizeof` changing `CxSmallSort` by 64 bytes,
+because `count * sizeof(T)` is unsigned where `count * 0x98` was `int`. The fix is
+`(int)sizeof(...)`; the lesson is that "no-op by construction" still gets measured.
+
+**The next defect class is named in `proven.txt` (`LP64-SIZEOF`) so it is not re-derived:** a
+hand-rolled memset. Ghidra renders gcc's word-wise zeroing as pointer arithmetic over struct
+FIELDS — trip count "N × 10 words", step "one 4-byte field", both i386 numbers. `McdFrame.c`
+lines 75 and 85 are the live ones.
+
 **The second thing, and it needs the web agent more than it needs this one:** the association
 defect. It is now known to be visible on i386 and NOT arbitrable there — see `proven.txt`
 ASSOC-ON-I386 before reading §11 item 2a, which is wrong about this.
@@ -1200,6 +1222,9 @@ LIB=$MT/lib.rel/linux_single_gcc3.2
 # depth: drive one interaction, 200k randomised transforms
 ./test/difftest_pair.sh /tmp/kd_build $MT            # all pairs
 ./test/difftest_pair.sh /tmp/kd_build $MT McdBoxBoxIntersect
+# and the cylinder-TriangleList repro, which the DEFAULT mesh cannot see: the
+# 4x2 patch reads 0 and KD_CORNER=1 found the live defect at iteration 23624.
+KD_CORNER=1 ./test/difftest_pair.sh /tmp/kd_build $MT McdCylinderTriangleListIntersect 30000
 
 # portability: §12 item 6, the actual goal
 ./test/wasm_check.sh /tmp/kd_out/allobj /tmp/kd_build $MT
@@ -1284,6 +1309,11 @@ KD_SELFTEST=1 ./test/ab_contact.sh /tmp/kd_build 20000    # the control, must be
 # counts TRUNCATION; this counts the defect truncation is a symptom of — the
 # recovery encodes 32-bit struct layouts. Needs no arm64 hardware; ~1 min. §6b.
 python3 tools/layout_check.py /tmp/kd_out/allobj /tmp/kd_build
+
+# the dropped-rounding scan: a float local Ghidra declared and never used, where
+# the SHIPPED code both stores to that slot and reads it back. 229 confirmed, all
+# in the build. Not a wasm-only concern — it changed a CONTACT COUNT on i386.
+python3 tools/spill_scan.py /tmp/kd_out/allobj /tmp/kd_build /home/ion/tools/karma-lab/allobj
 
 # and CHECK 2, the deliverable: a metoolkit with NO shipped member in it. §12.
 ./test/make_dropin_metoolkit.sh /tmp/kd_build ../Thirdparty/metoolkit \
@@ -4208,11 +4238,11 @@ you can run.
 |---|---|---|---|
 | 1 | **`tools/dropin_gap.py` reports ZERO shipped members.** | §3c. Checked against a real link. | **ZERO. 2026-08-27.** |
 | 2 | **The engine LINKS with every shipped member deleted** and plays a match on i386. | `test/make_dropin_metoolkit.sh`, then §6. Success is "reached `START MATCH`" and ran to the timeout, against a STOCK control on the same map. | **DONE, 2026-08-27.** 145 recovered members, one replacement hull, **33 shipped members `ar d`'d, `ar t` says zero remain**. test-karma-1, 300 s, 0 faults, identical Karma warning profile to the control |
-| 3 | **Every pair the census shows the game calling is validated** — 0 `ret_diff`, 0 `count_diff`, 0 `dims_diff`, 0 `overrun`, `KD_SELFTEST` clean, evidence on a line in `proven.txt`. | §3, §7 | **13 of 15**; two cylinder pairs measurably imperfect and located |
+| 3 | **Every pair the census shows the game calling is validated** — 0 `ret_diff`, 0 `count_diff`, 0 `dims_diff`, 0 `overrun`, `KD_SELFTEST` clean, evidence on a line in `proven.txt`. | §3, §7 | **14 of 15.** `IxCylinderTriList` closed 2026-08-27 — its live defect was three dropped roundings, found by `test/bisect_static.sh` and `tools/spill_scan.py`. `IxCylinderCylinder` is the last one: 1 `count_diff` in 200,000, plus 20 `dims` that §11 item 0 shows the shipped library does not reproduce against itself |
 | 4 | **All nine gates green** on the whole build, every time. | §4's gate list | green at 145 objects |
 | 5 | **wasm32 and armv7 build and RUN**, and arm64 either runs or is retired. | `test/wasm_check.sh`, `test/ptrwidth_check.sh`, **`tools/layout_check.py`**, and the web agent | compiles on all three (145/145, symbol sets identical); **nothing has EXECUTED on any of them**; and **arm64 would not run** — §6b, the layout defect |
 | 6 | **The association defect is settled corpus-wide.** | §11 item 2a, and `proven.txt` ASSOC-ON-I386 first | **BOUNDED, not settled, and the framing changed on 2026-08-27**: it is NOT inert on i386 — measured differing on 22% of calls at one site — but an i386 A/B cannot ARBITRATE it either, because the machine-order variant measured worse end to end. A wasm-vs-native A/B is the arbiter |
-| 7 | **No detector suppressed, nothing released without evidence.** | §8, `proven.txt` | holding |
+| 7 | **No detector suppressed, nothing released without evidence.** | §8, `proven.txt` | **AUDITED 2026-08-27 and holding.** All 8 objects in the build that carry a reconstructed frame have a line of evidence; and this session's prose notes in `proven.txt` are now COMMENTS, because `recover.py` reads the first word of any non-comment line as an object to RELEASE — a note at column zero was a latent trap |
 
 **Checks 1 and 2 are the deliverable and BOTH ARE GREEN.** What is left is 3–7, which are
 what stop it being a deliverable that crashes — and **check 5 is now the big one**, because

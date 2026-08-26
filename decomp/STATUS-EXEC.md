@@ -37,7 +37,10 @@ built, started, and played a full match. That test had never been run before tod
 ## Today
 
 **The milestone.** The last three pieces closed, and then the whole thing was assembled and
-played. All three had been attempted before and had failed in a way that was hard to see:
+played. Separately, one of the two remaining accuracy defects was found and fixed: a
+rounding the original performed and our rebuild did not, which was enough to change how many
+contact points a cylinder generates. The same fingerprint appears in 229 other places, now
+listed. All three had been attempted before and had failed in a way that was hard to see:
 each one *compiled*, and passed every check we had.
 
 None of them was solved by thinking harder about it. Each was solved by **building a new

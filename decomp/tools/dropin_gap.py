@@ -148,6 +148,29 @@ def main():
     print('\n  %d shipped member(s), %d symbol(s); %d recovered member(s) in the closure'
           % (len(gap), sum(len(v) for v in gap.values()), len(used_rec)))
 
+    # ZERO IS THIS PROJECT'S HEADLINE NUMBER, SO IT HAS TO BE EARNED.
+    #
+    # The seed is "every symbol the ENGINE's objects import that metoolkit
+    # defines". An engine built WITHOUT Karma — the default for every preset
+    # except native-karma/karma-ref — imports none of them, so the seed is
+    # empty, the walk visits nothing, and this prints
+    #
+    #     0 shipped member(s), 0 symbol(s); 0 recovered member(s) in the closure
+    #
+    # which is indistinguishable at a glance from the goal being met. Point it
+    # at build-native (NO_KARMA=1) instead of build-native-karma and the metric
+    # that measures the whole deliverable congratulates you.
+    #
+    # A real closure is ~134 recovered members. Refuse anything that did not
+    # reach the library at all.
+    if not seed:
+        sys.exit(
+            f'\n  REFUSING TO REPORT: the engine build at {args.engine_build}\n'
+            f'  imports NOTHING that metoolkit defines, so the walk had no seed and\n'
+            f'  the zero above is vacuous. That is what a NO_KARMA engine looks like.\n'
+            f'  Use a build configured with BUILD_KARMA_REF=ON — the `native-karma`\n'
+            f'  or `karma-ref` preset — not `native` or a wasm one.')
+
     if args.verify_against:
         real = {l.strip() for l in open(args.verify_against) if l.strip()}
         covered = set().union(*gap.values()) if gap else set()

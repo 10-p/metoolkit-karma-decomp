@@ -573,6 +573,55 @@ IxCylinderTriList     RE-RELEASED 2026-08-27 (eighth session) — the live-match
 #                     trap nothing static will report. Nothing recovered has yet executed on
 #                     wasm, so that class is unmeasured, not clean.
 
+# VACUOUS-GATES        2026-08-26 (ninth session): TWO INSTRUMENTS THAT REPORTED THE ANSWER
+#                     THE PROJECT WANTS TO HEAR WHEN GIVEN THE WRONG INPUT. Neither was a
+#                     regression; both had always done it. Found by pointing each at a
+#                     plausible-but-wrong directory on purpose.
+#
+#                     1. tools/dropin_gap.py — AND THIS ONE IS THE HEADLINE METRIC.
+#                        Its seed is "every symbol the ENGINE's objects import that metoolkit
+#                        defines". An engine built WITHOUT Karma imports none of them, so the
+#                        seed is empty, the walk visits nothing, and it prints
+#
+#                          0 shipped member(s), 0 symbol(s); 0 recovered member(s) in the closure
+#
+#                        Every preset except native-karma and karma-ref is a NO_KARMA build.
+#                        Point it at build-native and the number that measures the entire
+#                        deliverable reads ZERO for the wrong reason. The only tell was the
+#                        third figure — a real closure is 134 — and nothing drew attention to
+#                        it. Now exits 1 with the reason. CONTROL: a directory holding one
+#                        engine object that touches no Karma symbol; it refuses. POSITIVE: the
+#                        real build-native-karma still reads 0 members / 0 symbols / 134.
+#
+#                     2. tools/reachable.py — given the FLAT object directory that every other
+#                        tool in this project takes (karma-lab/allobj), it printed a correctly
+#                        formatted empty table and exited 0: "0 members, 0 reached, 0 dead".
+#                        It wants one SUBDIRECTORY PER ARCHIVE. Now exits 1 and says which
+#                        shape it wants. Against the right tree: 147 reachable, 31 dead, which
+#                        is 3b's number exactly.
+#
+#                     AND THE 31 CROSS-CHECK AGAINST SOMETHING COMPLETELY DIFFERENT.
+#                     tools/wasm_members.py asks which archive members the WASM LINKER pulls
+#                     into the binary. MdtFixedPath, MdtLinear1, MdtLinear2, MdtSpring and
+#                     MdtUserConstraint are unreferenced there, and reachable.py calls the same
+#                     five dead from a symbol-closure walk over the engine's objects. A linker
+#                     and a static walk agreeing is worth more than either alone.
+#
+#                     3. AND THE NEW TOOL DID IT TO ITSELF ON ITS FIRST RUN. wasm_members.py
+#                        was pointed at build-wasm-karmadecomp-perf and reported "143 of 146
+#                        contribute nothing" — because -g0 strips the name section, so llvm-nm
+#                        returns nothing and every member scores zero. A measurement artefact
+#                        in the exact shape of a catastrophic finding, produced by the tool's
+#                        own first invocation. It now refuses a build with no usable symbol
+#                        table rather than printing it.
+#
+#                     THE PATTERN, said once so it is not re-derived: in all three the failure
+#                     mode is not a wrong number, it is a WELL-FORMED number that nothing was
+#                     at risk of contradicting. HANDOVER.md 12's checklist already says "make a
+#                     silent check fail on purpose before believing it"; these are three more
+#                     instances, and the cheapest test is to give the tool the WRONG directory
+#                     and see whether it notices.
+
 # THE-DELIVERABLE      2026-08-27 (eighth session): CHECK 2 OF THE DEFINITION OF DONE, WHICH
 #                     HAD NEVER BEEN ATTEMPTED. The engine LINKS against a metoolkit that
 #                     contains no MathEngine object code at all, and PLAYS.

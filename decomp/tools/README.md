@@ -231,6 +231,26 @@ Third argument is the **flat** directory of shipped `.o` (`karma-lab/allobj`), n
 tree. Needs an engine build only for its object files, so it costs seconds after the first. **It is
 ZERO** and has been checked against a real link twice over.
 
+> ### ⚠ IT MUST BE `build-native-karma`, AND THIS IS WHY THAT TREE IS KEPT ON DISK
+>
+> The seed is "every symbol the ENGINE's objects import that metoolkit defines". An engine built
+> **without** Karma — which is every preset except `native-karma` and `karma-ref` — imports none of
+> them. The seed is empty, the walk visits nothing, and the tool prints
+>
+> ```
+>   0 shipped member(s), 0 symbol(s); 0 recovered member(s) in the closure
+> ```
+>
+> **which is the project's headline number, arrived at vacuously.** Point it at `build-native`
+> instead of `build-native-karma` and the metric that measures the whole deliverable congratulates
+> you. It now refuses that case (exit 1) — confirmed by feeding it a directory holding one engine
+> object that touches no Karma symbol. A real closure is **134** recovered members; the count on
+> that line is what tells the two apart.
+>
+> `../../build-native-karma/` is therefore the one build tree deliberately kept in the working
+> directory. Everything else under `build-*/` is reproducible from `BUILD.md` and was deleted.
+> Rebuild it with `cmake --preset native-karma && cmake --build --preset native-karma -j"$(nproc)"`.
+
 ### `reachable.py` — is this object in scope at all?
 
 Which Karma objects can UT2004 actually reach, at symbol level. An object nothing reaches is **out

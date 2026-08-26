@@ -88,27 +88,44 @@ IxBoxTriList reads its triangle generator from `trilistgeom[3]` — byte 48, and
 byte 96.  Nothing is truncated, clang is silent, and the address is somebody
 else's memory.  128 literal byte offsets across 10 objects, plus 369 sites indexing through a pointer-containing type.
 
-tools/layout_check.py is the gate that measures it, needs no arm64 hardware,
-and did not exist before today.  §6b.  THE PORT TARGET THAT WORKS IS 32-BIT —
-armv7 and wasm32 are unaffected, because the layout the recovery encodes is the
-layout they get.
+tools/layout_check.py BOUNDS it.  test/lp64_run.sh NAMES it, by RUNNING the
+recovered library at 64-bit pointer width on this machine — x86-64 is the same
+LP64 data model as arm64, so every struct that moves there moves here.  First
+run, first statement of the first scene:
+
+    MdtWorld.c:98  heap-buffer-overflow, WRITE of size 4, 48 bytes past a
+    564-byte region from `(MeMemoryAPI.create)(0x234)`.  0x234 is 564 is
+    sizeof(MdtWorld) ON i386.  At 64-bit it is 880.
+
+CONTROL: the same sources, same sanitizer, at -m32 run 900 steps with ZERO
+errors.  So those are pointer width, not the recovery.  §6b.
+
+THE PORT TARGET THAT WORKS IS 32-BIT — armv7 and wasm32 are unaffected, because
+the layout the recovery encodes is the layout they get.
 ```
 
 ### THE NEXT MOVE, in one paragraph
 
-**arm64's layout defect, and it is the only thing between here and the Android half of the
-goal.** Run `python3 tools/layout_check.py /tmp/kd_out/allobj /tmp/kd_build` first — it
-takes a minute and prints the two numbers that frame the job. Then pick the shape, not the
-object. **Start from `SUSPECT`, not from `OFFSET`** — that is where the one demonstrated
-defect lives (`trilistgeom[3]` over an `McdGeometry` that is 16 bytes here and 32 there), and
-`CxSmallSort` has 209 of its 369. `OFFSET`'s 128 are an upper bound and many are strides over
-float blocks, which are layout-independent; do not start by "fixing" those. The fix is
-to make those name FIELDS instead of offsets, which the DWARF supports and which is what
-`resolve_field_names` already does elsewhere; every rewrite is a no-op on i386 by
-construction, so **the acceptance test is the one this project always uses — every
-pre-existing `.o` byte-identical.** Do NOT reach for `fix_ptrwidth.py`'s remaining 435 as
-the next task: they are a symptom of the layout defect, not a separate one, and widening a
-load that reads the wrong address just reads eight wrong bytes instead of four.
+**arm64's layout defect — and start by RUNNING it, not by reading it.**
+`./test/lp64_run.sh` builds all 145 recovered objects for x86-64 and drives the three scenes
+under AddressSanitizer, with a built-in i386 control that must read zero. **x86-64 is LP64,
+the same data model as arm64**, so this is the arm64 defect executing on hardware you have —
+every document here said that could not be done, and the premise ("nothing on this machine
+can execute arm64") was true and irrelevant. It takes about a minute and it comes back with a
+file, a line, the allocation that was overflowed and a stack. Fix the top one, re-run, take
+the next; `tools/layout_check.py` is for knowing how big the job is, not for doing it.
+
+The first three defect classes it will hand you, in the order they bite:
+1. **a `sizeof` frozen into an allocation** — `(MeMemoryAPI.create)(0x234)` where 0x234 is
+   `sizeof(MdtWorld)` at i386 and the struct is 880 bytes at LP64. **105 literal-sized
+   allocations across 41 objects**, and neither static gate counts this shape at all;
+2. Ghidra indexing a pointer past element 0 through a struct type it chose (`trilistgeom[3]`);
+3. literal byte offsets, of which many are innocent strides over float blocks.
+
+**And when that is clean, drop `-mfpmath=387`.** x86-64 defaults to SSE — storage precision,
+exactly what wasm32 and arm64 give — so the same harness then measures the ASSOCIATION defect
+on its own, on this machine, today. `proven.txt` ASSOC-ON-I386 says an i386 A/B cannot
+arbitrate that; this is not an i386 A/B.
 
 **The second thing, and it needs the web agent more than it needs this one:** the association
 defect. It is now known to be visible on i386 and NOT arbitrable there — see `proven.txt`
@@ -2310,8 +2327,57 @@ recompiles correctly at any pointer width, because the compiler recomputes the o
 is exposed is arithmetic that BAKES a layout in: a hardcoded byte offset, or an index through
 a struct type Ghidra chose.
 
+### And it does not have to be inferred any more — `test/lp64_run.sh` RUNS it
+
+**This file has said since the fourth session that no gate can execute arm64, and drawn the
+conclusion that only a textual gate is possible. The premise is true and the conclusion is
+wrong.** `x86-64` is the SAME DATA MODEL as arm64 — LP64: 64-bit pointers, 8-byte alignment
+— so every struct that changes size on arm64 changes size on x86-64, and this machine runs
+x86-64 natively.
+
+It became possible only today, for a reason worth noticing: a 64-bit link must resolve every
+symbol from our own code, because the shipped metoolkit is i386-only. **Closing the drop-in
+gap did not only finish check 2; it unlocked the measurement for check 5.**
+
+```bash
+./test/lp64_run.sh                      # all three scenes, ~1 min
+KD_FPMATH= ./test/lp64_run.sh           # and again with SSE, to measure the ASSOCIATION
+                                        # defect on its own — see proven.txt ASSOC-ON-I386
+```
+
+All 145 objects compile at `-m64` with no errors. The first run then reported, on the
+**first statement of the first scene**:
+
+```
+MdtWorld.c:98  heap-buffer-overflow, WRITE of size 4
+48 bytes after a 564-byte region allocated at MdtWorld.c:95
+    w = (MeMemoryAPI.create)(0x234);
+0x234 == 564 == sizeof(MdtWorld) ON i386.   At LP64 it is 880.
+```
+
+**A `sizeof` frozen into an allocation — a THIRD defect class, counted by neither static
+gate.** 105 literal-sized allocations exist across 41 objects in the build.
+
+> **THE CONTROL IS BUILT IN AND IS THE WHOLE REASON THE ROWS MEAN ANYTHING.** These sources
+> are decompiled from a 32-bit binary and could simply contain bugs. So the harness first
+> builds the SAME sources with the SAME sanitizer at `-m32` and requires ZERO errors —
+> measured: 900 steps, exit 0, clean, against five errors and an abort at LP64. If the
+> control is ever dirty the tool exits rather than reporting, because an unattributed row is
+> worse than no row.
+
+**`-mfpmath=387` is deliberate.** x86-64 defaults to SSE, which is storage precision — the
+same thing wasm32 and arm64 give. Forcing x87 holds the arithmetic identical to the i386
+build so that any divergence is POINTER WIDTH and nothing else. Dropping the flag afterwards
+turns the same harness into the association-defect instrument that `HANDOVER-WEB.md` hands to
+the web agent; it no longer has to wait for wasm.
+
+**What this is NOT.** x86-64 is a PROXY for arm64, not a substitute — arm64 faults on
+unaligned access where x86-64 tolerates it, so clean here is necessary and not sufficient.
+UT2004 is a 32-bit binary, so there is no in-engine evidence from this, only the scenes. And
+it says nothing about wasm32, which is a 32-bit target with its own question.
+
 **So the honest arm64 status: it compiles, its symbol set matches i386's exactly, truncation
-is 95% closed, and it would not RUN.** armv7 and wasm32 are unaffected and that is not luck —
+is 95% closed, and it DOES NOT RUN — measured, not inferred, above.** armv7 and wasm32 are unaffected and that is not luck —
 they are 32-bit-pointer targets, so the layout the recovery encodes is the layout they get,
 and `ptrwidth_check.sh` reads 0 on armv7 for the same reason. **The port target that works is
 32-bit.**

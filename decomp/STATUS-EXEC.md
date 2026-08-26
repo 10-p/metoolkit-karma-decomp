@@ -61,13 +61,23 @@ already flagged as working "by luck, not design".
 
 **1. 64-bit Android will not work yet, and we had the wrong picture of why.**
 
-Our notes said this was 95% fixed. That was true of the problem we were measuring and the
+Our notes said this was 95% fixed. That was true of the problem we were measuring, and the
 problem we were measuring was the easier half. Rebuilt code carries the original's memory
 layout baked into it, and **128 of 151 data structures change shape on a 64-bit machine**.
-Nothing looks wrong, nothing warns, and the code reads the wrong memory. We built the check
-that measures this today; it did not exist before. **The version that works is 32-bit** —
-which covers web and the large majority of Android devices, but not all of them, and this is
-now the main piece of engineering left.
+Nothing looks wrong and nothing warns.
+
+**On your question about testing 64-bit: yes, and it was the single most useful thing done
+today.** We had written down that we could not test this without an Android device. That was
+wrong — an ordinary 64-bit PC build has the same memory layout as 64-bit Android, and we have
+one of those. It took twenty minutes, and it failed on the *first line of the first test*:
+the code asks the system for 564 bytes of memory and then writes 880 bytes into it, because
+564 was the right answer on a 32-bit machine. We also proved the same code is clean at 32-bit,
+so that is definitely the 64-bit problem and not a general bug.
+
+That turns an unknown into a work queue: instead of a count of places something *might* be
+wrong, we now get a named file, a line number and a stack trace, one at a time, until it runs.
+**The version that works today is 32-bit** — which covers web and the large majority of
+Android devices — and 64-bit is now ordinary debugging rather than research.
 
 **2. We still cannot test on the thing we are building it for.** Nothing has ever run on web
 or Android. It compiles for both; that is not the same thing, and today's finding is exactly

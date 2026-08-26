@@ -85,6 +85,28 @@ run on any of your three targets.
 > * **If your Android plan is 64-bit-only, say so now**, because that changes what the
 >   recovery side works on next.
 
+> **AND IT IS NO LONGER A STATIC ARGUMENT — IT EXECUTES.** `karma-decomp/test/lp64_run.sh`
+> builds all 145 recovered objects for **x86-64**, which is the SAME LP64 data model as
+> arm64, and drives the scenes under AddressSanitizer. This file said "nothing on this
+> machine can execute arm64" and concluded only a textual gate was possible; the premise is
+> true and the conclusion was wrong. First run, first statement of the first scene:
+>
+> ```
+> MdtWorld.c:98  heap-buffer-overflow, WRITE of size 4, 48 bytes past a 564-byte
+> region from `(MeMemoryAPI.create)(0x234)`.  0x234 is sizeof(MdtWorld) at i386;
+> at LP64 the struct is 880 bytes.
+> ```
+>
+> with a built-in control — the same sources, same sanitizer, at `-m32` — reading ZERO
+> errors over 900 steps. **What that means for your schedule: the 64-bit work can be done
+> and verified here, before it ever reaches a device.**
+>
+> **AND IT CAN DO YOUR ASSOCIATION-DEFECT A/B TOO.** Run it with `KD_FPMATH=` and x86-64
+> falls back to SSE — storage precision, exactly what your targets give. That is the
+> instrument this file has been calling "the highest-value thing on your side", available on
+> the recovery machine today. It does not replace a real wasm run; it does mean the 575 sites
+> can be narrowed before you get there.
+
 **Three things about this codebase that will cost you a day each if you find them the hard
 way**, all detailed below and all measured rather than guessed:
 

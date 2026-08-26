@@ -393,6 +393,74 @@ ASSOC-ON-I386        2026-08-27 (eighth session): THE ASSOCIATION DEFECT IS NOT 
 #                     pointer-deref terms finds 7. Its docstring already calls the number a
 #                     lower bound; this is how big the gap is on one object.
 
+LP64-EXECUTES        2026-08-27 (eighth session), and it came from the project owner asking
+#                     one question: "for the pointer issue, would testing x64 give any
+#                     advantage?" IT IS THE BEST INSTRUMENT THIS PROJECT HAS FOR arm64, IT
+#                     TOOK TWENTY MINUTES TO BUILD, AND EVERY DOCUMENT HERE SAID IT COULD NOT
+#                     EXIST.
+#
+#                     THE STATED REASON, and it is wrong in the way §12's closing checklist
+#                     keeps describing: HANDOVER.md and HANDOVER-WEB.md both say "nothing on
+#                     this machine can execute arm64", and conclude that only a static gate
+#                     is possible. The premise is true. The conclusion does not follow.
+#                     **x86-64 IS THE SAME DATA MODEL AS arm64** — LP64, 64-bit pointers,
+#                     8-byte alignment — so every struct that changes size on arm64 changes
+#                     size here, and this machine runs it natively. The question was never
+#                     "can we execute arm64", it was "can we execute LP64".
+#
+#                     AND IT ONLY BECAME POSSIBLE TODAY. A 64-bit link has to resolve every
+#                     symbol from our own code, because the shipped metoolkit is i386-only.
+#                     The drop-in gap reaching zero is the precondition. That is worth
+#                     noticing: closing the gap did not just finish check 2, it unlocked the
+#                     measurement for check 5.
+#
+#                     WHAT IT FOUND, IN ABOUT A SECOND, on the FIRST STATEMENT of the first
+#                     scene — after all 145 objects compiled at -m64 with no errors:
+#
+#                       MdtWorld.c:98  heap-buffer-overflow, WRITE of size 4
+#                       48 bytes after a 564-byte region allocated at MdtWorld.c:95
+#                           w = (MeMemoryAPI.create)(0x234);
+#                       0x234 == 564 == sizeof(MdtWorld) on i386.  At LP64 it is 880.
+#
+#                     A `sizeof` FROZEN INTO AN ALLOCATION — and that is a THIRD defect
+#                     class, counted by neither static gate: not a truncated pointer, not a
+#                     byte offset, not a struct index. 105 literal-sized allocations exist
+#                     across 41 objects in the build.
+#
+#                     THE CONTROL IS WHAT MAKES IT ATTRIBUTABLE, and it is built into
+#                     test/lp64_run.sh so it cannot be skipped by accident:
+#
+#                       same sources, same sanitizer, -m32 : 900 steps, exit 0, 0 errors
+#                       same sources, same sanitizer, -m64 : abort, 5 errors
+#
+#                     These sources are decompiled from a 32-bit binary and could simply
+#                     contain bugs; the clean i386 run is what says these five are POINTER
+#                     WIDTH and not the recovery. Without it the rows are unattributed and
+#                     the tool says so.
+#
+#                     `-mfpmath=387` IS LOAD-BEARING AND DELIBERATE. x86-64 defaults to SSE,
+#                     which is storage precision — the same thing wasm32 and arm64 give, and
+#                     the regime the association defect shows up in. Forcing x87 holds the
+#                     arithmetic identical to i386 so that any divergence is pointer width
+#                     and nothing else. DROPPING the flag afterwards is how the association
+#                     defect gets measured on its own, on this machine, today — which
+#                     ASSOC-ON-I386 says an i386 A/B cannot do and HANDOVER-WEB.md hands to
+#                     the web agent. It does not have to wait for wasm any more.
+#
+#                     WHAT IT IS NOT, stated so nobody over-reads a future clean run:
+#                       * x86-64 is a PROXY for arm64, not a substitute. arm64 faults on
+#                         unaligned access where x86-64 tolerates it, so clean here is
+#                         necessary and not sufficient.
+#                       * UT2004 is a 32-bit binary, so this gives no IN-ENGINE evidence —
+#                         only the offline scenes. It is the depth tier, not the breadth one.
+#                       * it says nothing about wasm32, which is a 32-bit target with its
+#                         own separate question.
+#
+#                     AND IT DEMOTES THE TOOL WRITTEN EARLIER THE SAME DAY. layout_check.py
+#                     bounds the exposure and cannot name a defect; this names them with a
+#                     file, a line, the allocation they overflowed and a stack. Use
+#                     layout_check.py to know how big the job is and lp64_run.sh to do it.
+
 ARM64-LAYOUT         2026-08-27 (eighth session): A CORRECTION. arm64 IS NOT 95% DONE, AND
 #                     THE NUMBER THAT SAID SO WAS MEASURING THE EASIER HALF.
 #

@@ -827,6 +827,57 @@ def api_member_param_types(include_dir):
 
 DATA_REF = re.compile(r'(?<![\w])DAT_([0-9a-f]{8})\b')
 
+# The same thing with Ghidra's leading underscore, at an address BELOW the
+# invented image base — so it names no section of this object.
+ABS_DATA_REF = re.compile(r'(?<![\w])(_?DAT_([0-9a-f]{8}))\b')
+
+
+def resolve_absolute_data_refs(obj, text):
+    r"""`_DAT_00000050` — an absolute address, not a symbol and not a section.
+
+    `ghidra_memory_map()` lays this object's sections out from 0x10000, so an
+    address below that is in none of them. It is what it says: a load from a
+    literal address, and the machine code has exactly that instruction.
+
+    `MeFAssetPartEnableCollision` is the worked case, and it is worth reading
+    because the recovery is faithful to something that looks like a decompiler
+    artefact and is not. The shipped function:
+
+        70f: mov 0x4(%eax),%ebx      ebx = p1->asset
+        712: test %ebx,%ebx
+        714: je  775                 asset == NULL: skip the range check
+        716: mov 0x50(%ebx),%ecx     ecx = asset->maxParts
+        719: cmp %ecx,0x4c(%ebx)
+        71c: jg  761                 partCount > maxParts: return
+        71e: ...                     BODY, and it needs ecx
+        775: mov 0x50,%ecx           <-- ecx = *(int *)0x50
+        77b: jmp 71e
+
+    MathEngine wrote `asset == NULL || asset->partCount <= asset->maxParts`,
+    which lets NULL through into a body that then uses `asset->maxParts`; gcc
+    rematerialised that load on the branch where it knows the base is zero, and
+    `mov 0x50,%ecx` is `((MeFAsset *)0)->maxParts` with the zero folded in. The
+    original dereferences NULL on that path — at 0x775 and again at 0x74b — so
+    reproducing the load reproduces the program, including the fault, which is
+    the standard everything else here is held to.
+
+    Two sites in the corpus, in two objects, both held out of the build on it.
+    Anything at or above the image base is left to materialise_data_refs, which
+    reads real section bytes; this only ever fires where there is no section to
+    read."""
+    secs, _ext = ghidra_memory_map(obj)
+    base = min((lo for _n, _t, lo, _hi in secs), default=0x10000)
+    seen = {}
+    for full, addr in ABS_DATA_REF.findall(text):
+        if int(addr, 16) < base:
+            seen[full] = int(addr, 16)
+    if not seen:
+        return '', 0
+    out = ['/* ---- absolute addresses, below any section of this object ---- */']
+    for full, addr in sorted(seen.items(), key=lambda kv: kv[1]):
+        out.append(f'#define {full} (*(int *)0x{addr:x})')
+    return '\n'.join(out) + '\n\n', len(seen)
+
 
 def materialise_data_refs(obj, text):
     """Give `DAT_00010405` the bytes it names.
@@ -5573,6 +5624,8 @@ def main():
     body_text, n_ftext = restore_float_text(
         body_text, args.object, read_ghidra_locals(args.input))
     data_block, n_data = materialise_data_refs(args.object, body_text)
+    abs_block, n_abs = resolve_absolute_data_refs(args.object, body_text)
+    data_block = abs_block + data_block
     # `kd_aggN` is the opaque stand-in gen_protos.py uses for an aggregate passed
     # BY VALUE. Once Ghidra has the signature it puts that type in the BODY too,
     # not only in the imported declaration — MdtWorld declares `kd_agg76 kVar2;`
@@ -5655,6 +5708,8 @@ def main():
         print(f'  {n_saved_elems} save-and-restore(s) of an array element reordered')
     if n_data:
         print(f'  {n_data} unnamed data reference(s) read from the object')
+    if n_abs:
+        print(f'  {n_abs} absolute address(es) below any section resolved')
     if n_ftype:
         print(f'  {n_ftype} function type(s) declared from the name Ghidra gave them')
     if n_ptr:

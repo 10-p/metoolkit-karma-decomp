@@ -2768,3 +2768,46 @@ MeFAsset              real, and the release is about REACHABILITY, not about the
 #                     object can be linked for its other 37 needed symbols. If anything ever
 #                     calls MeFAssetCreateCopy the frame is a hypothesis again, and the
 #                     169 references are where to start.
+
+# --- 2026-08-26: `_DAT_00000050` is an address, and the original derefs NULL ---
+#
+# MeFAssetPart was 21 symbols of the drop-in gap, held on a name that is not a
+# name. ghidra_memory_map lays an object's sections out from 0x10000, so an
+# address BELOW that is in none of them — it is a literal absolute address, and
+# the machine code has exactly that instruction:
+#
+#   70f: mov 0x4(%eax),%ebx      ebx = p1->asset
+#   712: test %ebx,%ebx
+#   714: je  775                 asset == NULL: skip the range check
+#   716: mov 0x50(%ebx),%ecx     ecx = asset->maxParts
+#   719: cmp %ecx,0x4c(%ebx)
+#   71c: jg  761                 partCount > maxParts: return
+#   71e: ...                     BODY, and it needs ecx
+#   775: mov 0x50,%ecx           <-- ecx = *(int *)0x50
+#   77b: jmp 71e
+#
+# MathEngine wrote `asset == NULL || asset->partCount <= asset->maxParts`, which
+# lets NULL through into a body that then uses `asset->maxParts`, and gcc
+# rematerialised that load on the branch where it knows the base is zero. So
+# `mov 0x50,%ecx` IS `((MeFAsset *)0)->maxParts` with the zero folded in, and
+# the shipped function dereferences NULL on that path — at 0x775 and again at
+# 0x74b. Reproducing the load reproduces the program, fault included, which is
+# the standard everything else here is held to. HANDOVER.md's diagnosis said
+# "correct the control flow"; the control flow is right and it is the ADDRESS
+# that needed resolving.
+#
+#   two sites in the corpus, both in objects held out of the build on them:
+#     MeFAssetPart   _DAT_00000050   MeCommandLine   _DAT_00000000
+#
+#   engine, test-karma-1, 260 s, -SOFTWARERENDERER, 129 objects substituted
+#     gdb breakpoint count   MeFAssetPartEnableCollision  252 calls
+#       — the function carrying the resolved load, in a real match
+#     exit 124 (ran to the timeout), START MATCH reached, 0 faults
+#     stock control, same map and URL: exit 124, START MATCH, 0 faults
+#     substitution verified at machine-code level: EnableCollision 43 vs 54
+#     instructions, IsCollisionEnabled 27 vs 42
+#
+#   129 objects · 129/129 clean on three scenes · frame bounds 0 · bindings 0
+#   difftest byte-identical to the documented baseline
+#   wasm32 129/129 · armv7 129/129, 0 truncations · arm64 3264 across 79
+#   drop-in gap 17 -> 16 members, 107 -> 86 symbols

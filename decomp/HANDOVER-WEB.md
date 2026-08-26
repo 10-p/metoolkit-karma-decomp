@@ -19,47 +19,90 @@ it is, what constrains it, and where the sharp edges are. This document is self-
 
 ---
 
-## 0. START HERE — the recovery side no longer blocks you, 2026-08-26
+## 0. START HERE — the recovery side is FINISHED on i386, and arm64 needs you, 2026-08-27
 
-**Everything you need from the other half of this project now exists.** That was not true a
-week ago and the rest of this file was written when it was not, so read this before you
-trust any schedule further down.
+**Everything you need from the other half of this project now exists, and the shape of what
+is left changed today.** Read this before you trust any schedule further down; the rest of
+this file was written when several of these numbers were different.
 
 ```
-142 recovered objects, all compiling for i386, wasm32, armv7 AND arm64.
-  wasm32  142/142, exported symbol NAMES byte-identical to the i386 build
-  armv7   142/142, ZERO pointer-truncation diagnostics
-  arm64   142/142, 411 truncations across 45 objects (was 7,771/89) - section 3
+145 recovered objects, all compiling for i386, wasm32, armv7 AND arm64.
+  wasm32  145/145, exported symbol NAMES byte-identical to the i386 build
+  armv7   145/145, ZERO pointer-truncation diagnostics
+  arm64   145/145, and SEE THE BOX BELOW — it compiles and it would not run
 
-The collision layer, the solver and the ENTIRE .ka asset-loading path are recovered
-and the engine has RUN on all three on i386.
+THE DROP-IN GAP IS ZERO. Nothing is still needed from MathEngine's binaries.
 
-8 shipped members remain, and 5 of those 8 are deliberately not being rebuilt.
-NOTHING on that list blocks you.
+AND IT IS NO LONGER A CALCULATION. The engine has been built against a metoolkit
+with every shipped member DELETED — 145 of ours, one replacement hull, `ar t` says
+zero of MathEngine's — and it played a 300 s match beside a stock control with an
+identical Karma warning profile.
 ```
 
-**So your first move is not to wait for anything. It is section 8 step 1: get one
-recovered object to EXECUTE under wasm.** Not one instruction of this has ever run on any
-of your three targets, and that single fact is the largest unknown in the whole effort.
+**So your first move is unchanged and is now the ONLY thing between this project and its
+goal: get one recovered object to EXECUTE under wasm.** Not one instruction of this has ever
+run on any of your three targets.
+
+> ### ⚠ arm64 IS NOT 95% DONE. THAT NUMBER WAS MEASURING THE EASIER HALF.
+>
+> This file and the recovery-side one have both said arm64 was ~95% repaired, on the
+> strength of pointer TRUNCATION going 7,771 → 435. That part is true and reproduces. **It
+> is not the defect that stops arm64 running.**
+>
+> ```c
+> struct _McdGeometry { MeU32 mRefCtAndID; McdGeometryID prev, next; McdFrameworkID frame; };
+>     i386   4 + 4 + 4 + 4       = 16 bytes
+>     arm64  4 + pad + 8 + 8 + 8 = 32 bytes
+> ```
+>
+> The recovered code reads `trilistgeom[3].mRefCtAndID` to get a triangle-generator function
+> pointer. On i386 that is byte 48. On arm64 it is byte 96. **Nothing is truncated** — the
+> cast is width-correct and clang is silent — and the address is somebody else's memory.
+>
+> Measured today by `karma-decomp/tools/layout_check.py`, which needs no arm64 hardware
+> because every layout question is a compile-time constant:
+>
+> ```
+>   metoolkit structs with a complete definition : 62
+>   SIZE DIFFERS between i386 and arm64          : 52
+>   size IDENTICAL (the control — assertions pass): 10
+>   sites in the build that BAKE a layout in     : 1339 across 38 object(s)
+> ```
+>
+> **What this means for you, concretely:**
+>
+> * **wasm32 and armv7 are unaffected, and not by luck.** They are 32-bit-pointer targets,
+>   so the layout the recovery encodes is the layout they get. Your two primary targets are
+>   fine; this is about the third.
+> * **arm64 is a real piece of engineering, not a flag.** Do not schedule it as "turn on the
+>   64-bit ABI". Roughly a third of the 1,339 sites are in three objects
+>   (`CxSmallSort` 212, `IxCylinderCylinder` 143, `IxBoxBox` 111).
+> * **If your Android plan is 64-bit-only, say so now**, because that changes what the
+>   recovery side works on next.
 
 **Three things about this codebase that will cost you a day each if you find them the hard
 way**, all detailed below and all measured rather than guessed:
 
-1. **Pointer size is load-bearing.** The recovery puns pointers through 4-byte slots
-   everywhere. wasm32 and armv7 are 32-bit-pointer targets so it holds; **arm64 is not, and
-   411 remaining sites prove it**. Do not treat "arm64 compiles" as "arm64 works" — section 3.
-2. **An arithmetic error that is provably inert on i386 and 31% divergent on yours — and
-   it is now COUNTED: 575 sites across 51 objects, 529 of them in the build.** Section 6's
-   hazard box, and `karma-decomp/tools/assoc_scan.py` on the recovery side.
-   **66 of those sites are index-permuted dot products, 59 in the build** — the exact shape
-   of the one site where original source exists to compare against. Every gate on the
-   recovery side is structurally blind to all of them, and **no gate on that machine can
-   even falsify a repair**, because on x87 the defect is exactly inert. So **any
-   wasm-vs-native A/B you build is worth more than it looks: it is the only instrument that
-   can settle 575 open questions at once**, and it is the single highest-value thing on your
-   side of the project.
-3. **Three shapes of indirect call that x86 corrupts silently and wasm will TRAP on**
-   (section 4b). If your first wasm run dies in a call, start there, not in your glue.
+1. **Pointer size is load-bearing, and so is pointer LAYOUT.** See the box above. wasm32 and
+   armv7 hold; arm64 does not, for two separate reasons, and the second one is invisible to
+   the compiler.
+2. **An arithmetic error whose status changed today.** The association defect — Ghidra prints
+   right-leaning float `+` chains flat — is **575 sites across 51 objects, 529 in the build,
+   66 of them index-permuted dot products.** This file has said it is "provably inert on
+   i386", and that is now known to be **wrong**: at one site it was measured differing from
+   the shipped answer on **22% of live calls**, and the x87 stack was simulated to confirm
+   the machine's add order is 0,1,2 where Ghidra printed 2,0,1.
+   **But an i386 A/B still cannot ARBITRATE it**, and this is the part that matters to you:
+   putting the machine's order back measured *worse* end to end, because on x87 it is where a
+   temporary gets SPILLED — and rounded to 24 bits — that decides the last bit, not the
+   source order. On your targets there is no 80-bit intermediate and no spill question, so
+   **source order is the whole story and the machine's order is simply correct**. A
+   wasm-vs-native A/B remains the only instrument that can settle all 575, and it is now the
+   only one that can settle them CORRECTLY. It is still the highest-value thing on your side.
+   See `karma-decomp/proven.txt`, entry `ASSOC-ON-I386`.
+3. **"It compiles" has now been caught being wrong twice in one day**, once on arm64's
+   layout and once on a function that compiled, passed all nine gates, and segfaulted the
+   moment it was forced to execute. Treat a clean wasm build as the start of the test.
 
 ## 1. What you are being handed
 
@@ -77,14 +120,14 @@ freebie, the Android NDK), and to integrate the result into the engine's web bui
 
 What exists today:
 
-- **142 recovered objects**, all compiling for i386, wasm32, armv7 *and* arm64 — but see
+- **145 recovered objects**, all compiling for i386, wasm32, armv7 *and* arm64 — but see
   §3's pointer-size section: **arm64 is not trustworthy and wasm32 is**, for the same reason.
 - **The full collision-detection path the game actually uses is recovered and validated** —
   all twelve interaction pairs UT2004 calls, each measured against the shipped original on
   real inputs from a live match. Evidence per object in `karma-decomp/proven.txt`. §6 has
   the census that says "twelve" and why that is the number to plan against.
 - **The whole set already compiles under Emscripten**, and its exported symbol NAMES are
-  **byte-identical to the i386 build for all 142 objects** — nothing added or dropped. So
+  **byte-identical to the i386 build for all 145 objects** — nothing added or dropped. So
   the ABI surface the engine links against does not change between targets, which was the
   thing most likely to turn this into a rewrite. See §4. (Names only: `wasm_check.sh`
   discards the binding letter. That gap let a recovered object export a *global* `putchar`
@@ -118,7 +161,9 @@ What does **not** exist, and you need to know this before planning anything:
 > chains without the parentheses they need, so C re-parses them in a different order. Float
 > addition is not associative, so that is a real change.
 >
-> On i386 it is **exactly inert**: the x87 register carries 64 mantissa bits and a float
+> On i386 REASSOCIATION is **exactly inert** — but INDEX-PERMUTED chains are not, and that
+> correction is section 0 item 2 and `proven.txt` ASSOC-ON-I386. For reassociation proper:
+> the x87 register carries 64 mantissa bits and a float
 > product needs only 48, so these sums come out identical whatever the order — measured **0
 > differences in 2,000,000 samples** under `-mfpmath=387`. Under `-mfpmath=sse`, which is
 > the same storage-precision arithmetic **wasm32, armv7 and arm64 all use**, the identical
@@ -705,8 +750,8 @@ reports 111 undefined symbols, and the walk predicts all 111.
   (`HANDOVER.md` §3b) — MathEngine's demo viewer, its unused constraint types, its ASE
   loader. They will never be recovered and that is correct.
 
-So "how much of Karma does the web build need" is not 153 objects and not 142. It is the
-142 already recovered plus the 3 in the gap, and the gap is the only number that moves.
+So "how much of Karma does the web build need" is not 153 objects and not 145. It is the
+145 recovered, and **the gap is zero** — there is nothing left for that number to move to.
 
 ### The gap that decides your schedule — REWRITTEN, the old blocker is GONE
 
@@ -740,7 +785,8 @@ Ghidra prints right-leaning floating-point `+` chains without the parentheses th
 C re-parses them in a different order. Float addition is not associative, so that is a real
 change of program.
 
-- On i386 it is **exactly inert**: the x87 register carries 64 mantissa bits and a float
+- On i386 REASSOCIATION is **exactly inert** (and index-PERMUTED chains are NOT — section 0
+  item 2): the x87 register carries 64 mantissa bits and a float
   product needs only 48, so these sums come out identical whatever the order — **measured 0
   differences in 2,000,000 samples** under `-mfpmath=387`.
 - Under `-mfpmath=sse`, which is the same storage-precision arithmetic **wasm32, armv7 and
@@ -768,9 +814,9 @@ device — pointer truncation is a compile-time diagnostic.
 
 | target | compiles | symbols | truncations |
 |---|---|---|---|
-| wasm32 | 142/142 | identical to i386 | — (32-bit) |
-| **armv7** | 142/142 | identical | **0** — a real 32-bit-pointer port |
-| **arm64** | 142/142 | identical | **411 across 45** after `tools/fix_ptrwidth.py`; 6,988 without it |
+| wasm32 | 145/145 | identical to i386 | — (32-bit) |
+| **armv7** | 145/145 | identical | **0** — a real 32-bit-pointer port |
+| **arm64** | 145/145 | identical | **435 across 48** after `tools/fix_ptrwidth.py`; 7,714 without it — **and truncation is not what stops arm64, section 0** |
 
 **arm64 compiling is a lie.** The recovery puns pointers through 4-byte slots, which is
 sound on every 32-bit target and silently truncates on a 64-bit one. The fix is
@@ -792,8 +838,8 @@ where `wasm-ld` and GNU `ld` differ, and §4b already flags COMDAT for `keaMatri
 
 
 The honest one-line summary of the project's state: *the collision layer and the solver are
-both recovered and both run inside the real engine on i386; 8 shipped members remain, and
-nothing has ever executed on any of your three targets.* Do not read 142-of-153 as 93% —
+both recovered and both run inside the real engine on i386; **zero shipped members remain**,
+and nothing has ever executed on any of your three targets.* Do not read 145-of-153 as 95% —
 read `tools/dropin_gap.py`.
 
 ---
@@ -880,7 +926,8 @@ caught by anything either of us runs today.
 
 **And it is why your wasm-vs-native A/B is not a nice-to-have.** The recovery side's gates
 all run on x87, and there is a whole class of defect — section 6's association hazard, 575
-counted sites — that is *exactly inert* there and 31% divergent on your targets. **Nothing
+counted sites — reassociation is *exactly inert* there, index permutation is not (section 0
+item 2), and both are 31% divergent on your targets. **Nothing
 on the recovery machine can even falsify a repair for it.** You are the only instrument that
 can. If you build one thing, build that.
 
@@ -896,6 +943,26 @@ thing in the project, and `karma-decomp/test/ab_matrix.sh` is the worked example
 
 A log of the things that would otherwise surprise you, newest first. If you have read an
 older copy of this file, start here.
+
+### 2026-08-27 (eighth session) — GAP ZERO, the engine plays with no shipped member, and arm64 reframed
+
+- **The drop-in gap is 0 members / 0 symbols.** `IxBoxTriList`, `McdContact` and `MdtLOD`
+  closed — one function each, all three with a recorded attempt that had compiled and been
+  wrong. None fell to a better argument; each fell to a new instrument.
+- **Check 2 of the definition of done, which had never been attempted: the engine LINKS
+  against a metoolkit with every shipped member `ar d`'d out (145 ours, one replacement
+  hull, zero MathEngine) and PLAYS a 300 s match beside a stock control with an identical
+  Karma warning profile.** That is the whole deliverable, on i386.
+- **arm64 was reframed and it is now the biggest open piece — see section 0's box.** The
+  95% figure was measuring pointer truncation, which is the easier half; 52 of metoolkit's
+  62 structs change size at 64-bit and 1,339 sites in the build bake a layout in.
+  `tools/layout_check.py` is the new gate and it needs no arm64 hardware.
+- **The association defect's status changed and it changes what YOUR A/B is worth**: it is
+  visible on i386 after all (22% of calls at one measured site) but not arbitrable there,
+  because spill placement rather than source order decides the last bit on x87. On your
+  targets source order IS the whole story. `proven.txt` `ASSOC-ON-I386`.
+- **"It compiles" was caught being wrong twice in one day** — arm64's layout, and a function
+  that passed all nine gates and segfaulted on its first forced execution.
 
 ### 2026-08-26 (seventh session) — 142 objects, gap 8/35 -> 3/3, libMdtKea complete
 

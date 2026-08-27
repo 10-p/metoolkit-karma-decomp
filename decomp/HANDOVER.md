@@ -56,10 +56,10 @@ half of the project this file does not cover.
 You are resuming a project to recover Karma (MathEngine `metoolkit`) from shipped binaries
 as portable C. This file is written for someone with no memory of how any of it came to be.
 
-### RESUME HERE — the state, in one page, 2026-08-26 (ninth session)
+### RESUME HERE — the state, in one page, 2026-08-27 (ninth session)
 
-> **On dates in this file.** The eighth session's entries are stamped `2026-08-27`; the repo clock
-> says `2026-08-26`. The stamps are a day ahead. **Order by SESSION NUMBER, not by date.**
+> **On dates in this file.** The eighth and ninth sessions both land on `2026-08-27` — they ran
+> either side of midnight. **Order by SESSION NUMBER, not by date.**
 
 **Everything below this block is detail and history. This is where the work is.**
 
@@ -271,12 +271,29 @@ before you believe the controls that say it is safe.
 
 **Reproduce the whole state in about 95 seconds: §4. Then read §3c, then §13.**
 
+**EVERY TOOL AND HARNESS WAS RUN IN THE NINTH SESSION** — all 22 tools, both Ghidra scripts and all
+36 test harnesses, engine builds and live matches included. The results are tabulated in
+[`test/README.md`](test/README.md) and [`tools/README.md`](tools/README.md) and the evidence is in
+`proven.txt` `FULL-SWEEP`. Three things came out of it that change what this file says:
+
+- **The front end is REPRODUCIBLE.** A single-object Ghidra re-dump of `McdSpace.o` — same Ghidra,
+  same `gscripts`, same `kd_protos11.h` — is **byte-identical to `out14`'s `.c` and `.locals`**.
+  §5 warns that a re-run "changes every object at once" and that `out5`–`out14` must be kept; that
+  is true when the PROTOS or the SCRIPTS change, which is what those re-runs were. With the inputs
+  fixed the decompiler is deterministic, so **`out14` is a cache, not an irreplaceable artefact**.
+- **`KD_JITTER` puts the last open pair in proportion.** The SHIPPED library against ITSELF under a
+  1e-7 m nudge reads **64,033 ret / 9,744 count / 975 dims**; our recovery against it reads
+  **0 / 1 / 20**. See §12 check 3.
+- **`-GL4ESRENDERER` works here.** §7d and §3c both say to use `-SOFTWARERENDERER` because GL4ES
+  faults at the first HUD frame "for stock too". It did not, in any of the **eight** matches run
+  this session, stock or recovered. `run_map.sh` hardcodes `-GL4ESRENDERER` and is fine.
+
 **And two indexes exist now that did not before: [`tools/README.md`](tools/README.md) and
 [`test/README.md`](test/README.md) — one block per file, what it answers and the exact command,
 every one of them run.** This file mentions most of those tools in passing across 4,500 lines, which
-is not the same as being able to invoke one. Two corrections in this file were found by writing
-them: §4's `IxBoxTriList` staging step is obsolete, and its arm64 truncation figure disagrees with
-§12's and with the gate.
+is not the same as being able to invoke one. Several corrections to this file were found by writing
+them: §4's `IxBoxTriList` staging step is obsolete, its arm64 truncation figure disagrees with §12's
+and with the gate, and the renderer advice above.
 
 **What changed in the sixth session, because the delta is what you need:** the gap went
 20 members / 148 symbols → 8 / 35, and 122 objects → 137. Nineteen members closed, every
@@ -2167,6 +2184,16 @@ Two other build flavours, both used and both worth keeping:
 > has used. Four 340 s runs — stock and substituted, both integrator branches — all ran to
 > the timeout with no SIGSEGV and no NaN. Either edit `run_map.sh` or invoke the binary
 > directly:
+>
+> ### ⚠ CORRECTION, ninth session: `-GL4ESRENDERER` DOES NOT FAULT ANY MORE
+>
+> `run_map.sh` hardcodes `-GL4ESRENDERER`, and **eight matches were run through it in the ninth
+> session — stock, drop-in, shadow-instrumented and substituted, on four maps — with zero
+> SIGSEGV and zero Critical Error in any of them.** Including a 180 s stock run and a 180 s
+> drop-in run on `test-karma-1` compared side by side. So the fault above is either fixed or
+> was environment-specific to that session. **Neither switch is now known to be required**; the
+> advice to prefer `-SOFTWARERENDERER` is retained below because it is harmless and was correct
+> when written, but do not treat a `-GL4ESRENDERER` run as invalid on its account.
 >
 > ```bash
 > cd /tmp/kd_runtime/System
@@ -4384,7 +4411,7 @@ you can run.
 |---|---|---|---|
 | 1 | **`tools/dropin_gap.py` reports ZERO shipped members.** | §3c. Checked against a real link. | **ZERO. 2026-08-27.** |
 | 2 | **The engine LINKS with every shipped member deleted** and plays a match on i386. | `test/make_dropin_metoolkit.sh`, then §6. Success is "reached `START MATCH`" and ran to the timeout, against a STOCK control on the same map. | **DONE, 2026-08-27.** 145 recovered members, one replacement hull, **33 shipped members `ar d`'d, `ar t` says zero remain**. test-karma-1, 300 s, 0 faults, identical Karma warning profile to the control |
-| 3 | **Every pair the census shows the game calling is validated** — 0 `ret_diff`, 0 `count_diff`, 0 `dims_diff`, 0 `overrun`, `KD_SELFTEST` clean, evidence on a line in `proven.txt`. | §3, §7 | **14 of 15, AND THE FIFTEENTH IS MEASURED TO THE BOTTOM — do not re-open it casually.** `IxCylinderTriList` closed 2026-08-27 (three dropped roundings). `IxCylinderCylinder` reads **0 ret, 1 count, 20 dims in 200,000**, all of it inside `OverlapCylCyl` and all of it a near-tie flip downstream of one-ULP arithmetic. **Four candidate fixes and one wholesale lever were tried and every one measured WORSE or made no change** — `proven.txt` `CYLCYL-GRIND` names them so they are not retried. Getting to 15 needs bit-exactness in a 10,857-byte function whose remaining precision differences have NO textual fingerprint |
+| 3 | **Every pair the census shows the game calling is validated** — 0 `ret_diff`, 0 `count_diff`, 0 `dims_diff`, 0 `overrun`, `KD_SELFTEST` clean, evidence on a line in `proven.txt`. | §3, §7 | **14 of 15, AND THE FIFTEENTH IS MEASURED TO THE BOTTOM — do not re-open it casually.** `IxCylinderTriList` closed 2026-08-27 (three dropped roundings). `IxCylinderCylinder` reads **0 ret, 1 count, 20 dims in 200,000**, all of it inside `OverlapCylCyl` and all of it a near-tie flip downstream of one-ULP arithmetic. **Four candidate fixes and one wholesale lever were tried and every one measured WORSE or made no change** — `proven.txt` `CYLCYL-GRIND` names them so they are not retried. **AND THE NINTH SESSION MEASURED WHAT THAT RESIDUE IS RELATIVE TO: `KD_JITTER=1` runs the SHIPPED library against ITSELF on inputs 1e-7 m apart and it reads 64,033 ret / 9,744 count / 975 dims. The reference is an ORDER OF MAGNITUDE less self-consistent than the replacement, so closing this would demand more consistency than MathEngine has.** Getting to 15 needs bit-exactness in a 10,857-byte function whose remaining precision differences have NO textual fingerprint |
 | 4 | **All nine gates green** on the whole build, every time. | §4's gate list | green at 145 objects |
 | 5 | **wasm32 and armv7 build and RUN**, and arm64 either runs or is retired. | `test/wasm_check.sh`, `test/ptrwidth_check.sh`, **`tools/layout_check.py`**, and the web agent | **HALF, and only half.** The *engine* now builds against the recovered Karma for wasm32 — `wasm-karmadecomp-{debug,perf}`, zero wasm-ld diagnostics, 125 of 146 members verifiably in the `.wasm` (§6c). Objects compile on all three targets (145/145, symbol sets identical). **Still nothing has EXECUTED on any of them**, which is the half this row is actually asking for; and **arm64 would not run** — §6b, the layout defect |
 | 6 | **The association defect is settled corpus-wide.** | §11 item 2a, and `proven.txt` ASSOC-ON-I386 first | **BOUNDED, not settled, and the framing changed on 2026-08-27**: it is NOT inert on i386 — measured differing on 22% of calls at one site — but an i386 A/B cannot ARBITRATE it either, because the machine-order variant measured worse end to end. A wasm-vs-native A/B is the arbiter |

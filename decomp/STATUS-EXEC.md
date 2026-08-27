@@ -2,7 +2,7 @@
 
 **What this is:** UT2004's physics engine, rebuilt from the shipped binaries so the **web
 and Android** versions can have vehicles and ragdolls. Today they have no physics at all.
-Updated 2026-08-26.
+Updated 2026-08-27.
 
 ---
 
@@ -69,6 +69,23 @@ and then verified by following them. The internal tooling (60 scripts) had no in
 has one, with every command tested rather than transcribed — which caught several of the
 instructions being wrong as written. Two scripts turned out to be superseded and were deleted, and
 ~15 GB of stale build output was cleared.
+
+**And then every one of those 60 was actually run**, including the expensive ones that need a
+playable build of the game — four separate versions of the engine were compiled for it. The whole
+project's state was re-measured in a single pass rather than trusted. Three things came out of it:
+
+- **The decompiler stage is reproducible, which nobody had ever checked.** Re-running it on a file
+  produces a byte-for-byte identical result. The project had been treating the ~1 GB of decompiler
+  output as irreplaceable and archiving every version of it; it is a cache.
+- **The one remaining accuracy item is smaller than it looked, in a way that settles it.** We can
+  now say what our 1-in-200,000 disagreement is *relative to*: nudge a body by a tenth of a micron
+  and **the original library disagrees with itself nearly ten thousand times** in the same test.
+  Matching it more closely would mean being more self-consistent than the thing we are copying.
+- **The finished physics library was re-assembled, linked into the game, and played** — 180 seconds,
+  no faults, beside an unmodified copy of the game running the same map in the same session, with
+  an identical physics-warning profile. That is the deliverable, re-proved rather than quoted. A
+  further test drove 1.57 million real physics calls through both versions simultaneously and found
+  **zero** disagreements on any decision either one makes.
 
 ---
 

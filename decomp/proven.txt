@@ -507,8 +507,8 @@ IxCylinderTriList     RE-RELEASED 2026-08-27 (eighth session) — the live-match
 #                     the 229 is a place where the recovered code computes at 80 bits where
 #                     MathEngine computed at 32.
 
-# WASM-SIGMISMATCH    2026-08-26 (ninth session; the eighth's entries are stamped 2026-08-27
-#                     but the repo clock says the 26th — order these by SESSION, not date):
+# WASM-SIGMISMATCH    2026-08-27 (ninth session; the eighth and ninth ran either side of
+#                     midnight and share a date — order these by SESSION, not date):
 #                     THE FIRST DEFECT THAT ONLY EXISTS OFF
 #                     i386, found by BUILDING the engine against the recovered library for
 #                     wasm32 for the first time. Every i386 gate reads green on it and

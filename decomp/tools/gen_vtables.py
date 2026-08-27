@@ -137,8 +137,8 @@ def main():
     for cls, s in sorted(sect['ZTS'].items()):
         data = section_data(obj, s)
         text = data.split(b'\0')[0].decode('ascii', 'replace')
-        body.append(f'__attribute__((weak)) const char kd_ZTS{cls}[]')
-        body.append(f'    __asm__("_ZTS{cls}") = "{text}";')
+        body.append(f'KD_WEAK_DATA const char kd_ZTS{cls}[]')
+        body.append(f'    KD_MANGLED("_ZTS{cls}") = "{text}";')
         body.append('')
         n += 1
 
@@ -156,8 +156,8 @@ def main():
                 entries.append(f'(const void *){abi_ref("ZTI", sym[4:])}')
             else:
                 entries.append(f'(const void *)&{cname(sym)}')
-        body.append(f'__attribute__((weak)) const void *kd_ZTI{cls}[{len(entries)}]')
-        body.append(f'    __asm__("_ZTI{cls}") = {{')
+        body.append(f'KD_WEAK_DATA const void *kd_ZTI{cls}[{len(entries)}]')
+        body.append(f'    KD_MANGLED("_ZTI{cls}") = {{')
         body.append('        ' + ',\n        '.join(entries))
         body.append('    };')
         body.append('')
@@ -177,8 +177,8 @@ def main():
                 entries.append(f'(const void *){abi_ref("ZTI", sym[4:])}')
             else:
                 entries.append(f'(const void *)&{cname(sym)}')
-        body.append(f'__attribute__((weak)) const void *kd_ZTV{cls}[{len(entries)}]')
-        body.append(f'    __asm__("_ZTV{cls}") = {{')
+        body.append(f'KD_WEAK_DATA const void *kd_ZTV{cls}[{len(entries)}]')
+        body.append(f'    KD_MANGLED("_ZTV{cls}") = {{')
         body.append('        ' + ',\n        '.join(entries))
         body.append('    };')
         body.append('')
@@ -189,18 +189,18 @@ def main():
                    ' typeinfo) */')
         for kind, cls in sorted(ext_abi):
             if kind == 'ZTS':
-                out.append(f'extern const char kd_ZTS{cls}[] __asm__("_ZTS{cls}");')
+                out.append(f'extern const char kd_ZTS{cls}[] KD_MANGLED("_ZTS{cls}");')
             else:
-                out.append(f'extern const void *kd_ZTI{cls}[] __asm__("_ZTI{cls}");')
+                out.append(f'extern const void *kd_ZTI{cls}[] KD_MANGLED("_ZTI{cls}");')
         out.append('')
 
     if externs:
         out.append('/* symbols the tables point at that this object does not define */')
         for safe, sym in sorted(externs):
             if sym.startswith('_ZTVN10__cxxabiv1'):
-                out.append(f'extern const void *{safe}[] __asm__("{sym}");')
+                out.append(f'extern const void *{safe}[] KD_MANGLED("{sym}");')
             else:
-                out.append(f'extern void {safe}(void) __asm__("{sym}");')
+                out.append(f'extern void {safe}(void) KD_MANGLED("{sym}");')
         out.append('')
 
     open(args.output, 'w').write('\n'.join(out + body) + '\n')

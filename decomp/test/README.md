@@ -22,6 +22,41 @@ volatile.** Copy out anything you want to keep.
 
 ## The nine gates — run all of them, every time
 
+### `ons_smoke.sh` — does this build survive five minutes of Onslaught?
+
+```bash
+./test/ons_smoke.sh <binary> <label> [seconds]          # 300 s default
+ONS_MAP=ONS-Adara ONS_RENDERER=-OPENGLRENDERER ./test/ons_smoke.sh ...
+```
+
+Exit 0 = survived, 1 = crashed or died early. **ONS is the gametype that spawns VEHICLES**, and
+vehicles plus ragdolls are most of what Karma exists for; a DM map exercises almost none of it.
+This is the gate that caught `McdGjkFaceQueueInit` writing float bit patterns into
+`_McdGjkFace.fi[]` — a fault the 51/51 browser suite could not see, because that suite is almost
+entirely DM.
+
+⚠ **The renderer is not the same on every target.** Windows has no GLES; passing the default
+`-GL4ESRENDERER` there produces a crash that looks like a physics bug and is not one.
+
+### `gjk_bisect.sh` / `gjk_bisect_complement.sh` — WHICH function of an object is wrong?
+
+```bash
+./test/gjk_bisect.sh [seconds]              # take F from theirs: does it fix the crash?
+./test/gjk_bisect_complement.sh [seconds]   # keep F of ours: does it break theirs?
+```
+
+The forward form has a blind spot the complement does not: with TWO defective functions, swapping
+one still leaves the other, so every single swap reads "no fix" while the whole object reads
+"fixed". That is exactly what McdGjkPenetrationDepth did.
+
+⚠ **Read a positive as a lead, not a verdict.** These measure a COMBINATION, and a mixed pair can
+fail where either whole pair succeeds — the complement named the driver defective and repairing
+`FaceQueueInit` alone took the match to a clean 300 s with the driver untouched.
+
+Both carry a control (the forward one takes nothing from theirs and must still crash; the
+complement takes nothing of ours and must survive) and both refuse to run against a build
+directory left holding a hybrid.
+
 ### `substitute_test.sh` — breadth: does each object crash a scene?
 
 Swaps each recovered object into the link in place of the shipped one and runs a physics scene.

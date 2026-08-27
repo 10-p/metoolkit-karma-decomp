@@ -507,6 +507,451 @@ IxCylinderTriList     RE-RELEASED 2026-08-27 (eighth session) — the live-match
 #                     the 229 is a place where the recovered code computes at 80 bits where
 #                     MathEngine computed at 32.
 
+# WIN32-PORT-3       2026-08-27 (tenth session): THREE PORTABILITY DEFECTS THAT ONLY A WINDOWS
+#                     BUILD COULD FIND, all of which produced a clean compile and a broken link or
+#                     a wrong ABI. Surfaced by making USE_KARMA_DECOMP the default on the `windows`
+#                     preset (MinGW-w64, i686), which had always been NO_KARMA.
+#
+#                     1. alloca.h. MinGW has no such header and declares alloca() in <malloc.h>.
+#                        Fourth defect of this exact shape after __ctype_b_loc, __compar_fn_t and
+#                        ulong/__off_t. kd_compat.h. (MeProfile_linux additionally wanted fd_set,
+#                        which on MinGW lives in <winsock2.h>; it is one of the 18 members the
+#                        linker never pulls in, so it needs to compile and nothing more.)
+#
+#                     2. MEAPI IS __stdcall ON WIN32 AND THE RECOVERED CODE IS CDECL. MeCall.h
+#                        declares the whole Karma API __stdcall when WIN32 is defined, and MinGW
+#                        predefines WIN32 itself. The recovered sources came from the Linux i386
+#                        build and are cdecl throughout, so the engine's C++ would have called them
+#                        stdcall — caller and callee disagreeing about who pops the arguments, on
+#                        every Karma call. It surfaces only as "conflicting types for CDataFreeFunc"
+#                        against kd_types.h.
+#                        ⚠ MAKING kd_types.h SAY MEAPI TOO WOULD HAVE SILENCED THE ONLY WARNING AND
+#                        KEPT THE BUG. Fixed by forcing the CONVENTION instead: ME_FORCE_CDECL,
+#                        defined globally beside WITH_KARMA. MathEngine's Windows archives are not
+#                        linkable here in any case — they are 32-bit Linux ELF.
+#
+#                     3. ASM LABELS DROP THE USER LABEL PREFIX. `__asm__("name")` is literal and
+#                        bypasses the automatic prefixing the platform's C ABI applies. On ELF that
+#                        prefix is empty; on i686 PE it is `_`, so the library exported
+#                        `MdtBSJointCreate` while every caller referenced `_MdtBSJointCreate` —
+#                        100+ undefined references from objects that had all compiled cleanly.
+#                        KD_MANGLED now prepends __USER_LABEL_PREFIX__, the compiler's own answer.
+#                        gen_vtables.py's 42 raw __asm__ labels were routed through it too.
+#                        BLAST RADIUS: all 145 i386 objects BYTE-IDENTICAL, because stringifying an
+#                        empty macro yields "" and the ELF spelling does not move.
+#
+#                     AND A FOURTH, IN THE ENGINE RATHER THAN THE RECOVERY: KSkeletal.cpp and
+#                     KUtils.cpp guard wcstombs() with `#if WIN32`, but TCHAR is wide only under
+#                     _UNICODE (Core.h:219) and this tree is ANSI everywhere. Linux never saw it.
+#                     The original author's own comment on those lines reads "!!! FIXME: this
+#                     conflicts on Linux. --ryan." — the same defect, from the other side.
+#
+#                     ⚠ AND THE WINDOWS KARMA BUILD DOES NOT RUN, WHICH IS A REAL DEFECT AND NOT
+#                     A PRE-EXISTING ONE. This entry first recorded the opposite, from a run that
+#                     used `-GL4ESRENDERER` — the WRONG renderer for Windows, which has no GLES.
+#                     With `-OPENGLRENDERER`, the owner's tested configuration:
+#
+#                       windows-nokarma   exit 124 — a full 330 s ONS-Torlan match, no fault
+#                       windows (Karma)   EXCEPTION_ACCESS_VIOLATION during startup
+#
+#                     So Windows works and the Karma build breaks it. Corrected here rather than
+#                     quietly, because the wrong-renderer run had produced a confident and wrong
+#                     conclusion in both directions at once.
+#
+#                     WHERE, AND WHY IT IS A SYMPTOM RATHER THAN THE BUG: it faults in
+#                     MeFAssetPartEnableCollision (MeFAssetPart.c:465) reading address 0x50 —
+#                     which is `((MeFAsset *)0)->maxParts`. ghidra_clean.absolute_data_refs'
+#                     docstring shows the SHIPPED machine code doing exactly the same thing
+#                     (`mov 0x50,%ecx` at 0x775): gcc rematerialised `asset->maxParts` on the branch
+#                     where it has proved `asset == NULL`, so the ORIGINAL dereferences NULL there
+#                     too. Reproducing it reproduces the program. The defect is therefore UPSTREAM —
+#                     `p1->asset` is NULL on Windows and is not on Linux or wasm — and the first
+#                     place to look is Karma's file layer, because the only file implementation in
+#                     the corpus is `MeSimpleFile_linux`.
+#
+#                     ⚠ THAT DOCSTRING IS ALSO NOW STALE: it says the two objects with this shape
+#                     are "both held out of the build on it". MeFAssetPart is IN the build.
+#
+#                     WHERE IT SITS, from the crash's own stack scan:
+#                       KCreateAssetDB -> MeAssetDBXMLInputRead -> Handle_KaFile_0_1
+#                                      -> KaFileCreate_1_0 -> ... -> MeFAssetPartEnableCollision
+#                     i.e. the `.ka` XML parse, during KInitGameKarma, before any level loads. So
+#                     it reproduces on a plain menu boot and needs no map.
+#
+#                     ONE HYPOTHESIS TESTED AND REJECTED, recorded so it is not retried: MeOpen
+#                     bakes LINUX O_* values in as literals (0x241 == O_WRONLY|O_CREAT|O_TRUNC at
+#                     O_CREAT==0x40; MinGW's is 0x100) and carries no O_BINARY, because on Linux
+#                     there is no text/binary distinction — so every Karma read on Windows was
+#                     CRLF-translated. That is a REAL portability defect and is fixed
+#                     (ghidra_clean.PORTABILITY_CONSTANTS + KD_O_BINARY, all 145 i386 objects
+#                     byte-identical because the macros fold to the same constants). It is NOT this
+#                     crash: the fault address does not move.
+#
+#                     ⚠ AND THE USUAL INSTRUMENT IS NOT AVAILABLE HERE. Every localisation in this
+#                     file rests on substituting MathEngine's shipped member — and those are 32-bit
+#                     LINUX ELF, so on Windows there is nothing to substitute.
+#
+#                     ── FOUND AND FIXED: A NULL-BRANCH-ONLY LOAD, HOISTED BY A COMMA OPERATOR ──
+#
+#                     Not a Windows defect at all — a landmine in every build, which only Windows
+#                     was unlucky enough to step on. The shipped code reads address 0x50 ONLY where
+#                     it has proved `asset == 0` (`je 775; ... 775: mov 0x50,%ecx`), because gcc
+#                     rematerialised `asset->maxParts` on that branch. Ghidra flattened it into a
+#                     comma operator:
+#
+#                       (pMVar2 = p1->asset, iVar5 = _DAT_00000050, pMVar2 == 0 || ...)
+#
+#                     so the read happens on EVERY call where p1 != p2, live asset or not. 0x50 is
+#                     below Linux's mmap_min_addr (65536), so it is a fault wherever it executes.
+#
+#                     WHY IT DID NOT KILL EVERYTHING: at -O2 gcc sinks the dead load back onto the
+#                     null branch by itself, and the recovery's own objects are built -O2 — which is
+#                     why every offline gate and every kd_build object is clean, and why the two
+#                     forms are BYTE-IDENTICAL there. The ENGINE is a different matter (below).
+#                     On wasm it is doubly hidden: address 0x50 is ordinary readable linear memory,
+#                     so there is nothing to trap.
+#
+#                     ★ AND THE REASON THE ENGINE IS EXPOSED IS WORTH ITS OWN LINE: CMakeLists'
+#                     optimisation block ends in an `else()` marked "Match Phase 1's -O0
+#                     debug-oriented build for now", and EVERY native build lands there —
+#                     RelWithDebInfo included, because the test is `STREQUAL "Debug"`. The flag line
+#                     reads `... -O2 -g -DNDEBUG ... -m32 -O0 -g ...` and the last -O wins, so the
+#                     whole engine AND the recovered physics compile at -O0 on Linux and Windows.
+#                     That is pre-existing and not Karma's doing, but it is what turns this
+#                     particular defect from dormant into fatal, and it is a standing performance
+#                     question for the native targets.
+#
+#                     FIXED by restoring the branch: the read is now inside a conditional, which is
+#                     what the machine code does. Verified in the emitted Windows code —
+#                     `cmpl $0x0,-0x10(%ebp); jne ...` now precedes it. i386 objects: ZERO changed,
+#                     because -O2 already produced this. Native ONS-Torlan still clean at 180 s, and
+#                     the wasm binary is BYTE-IDENTICAL before and after, so neither working target
+#                     moved.
+#
+#                     RESULT ON WINDOWS: KCreateAssetDB now completes, the level loads, and
+#                     ONSOnslaughtGame starts. The build gets a great deal further and then hits a
+#                     DIFFERENT fault — see below.
+#
+#                     ── AND THE LAST ONE: `#ifndef __thiscall` ──
+#
+#                     THE DEFECT WITH THE WIDEST REACH IN THIS ENTRY, and the shortest fix.
+#                     kd_compat.h defined the MSVC calling-convention keywords away like this:
+#
+#                       #ifndef __thiscall
+#                       #  define __thiscall
+#                       #endif
+#
+#                     On Linux none of them are defined, so the define-away applies and the
+#                     annotation is the no-op the docstring describes. MinGW PREDEFINES them:
+#
+#                       #define __thiscall __attribute__((__thiscall__))
+#                       #define __fastcall __attribute__((__fastcall__))
+#
+#                     so `#ifndef` is FALSE, the define-away is SKIPPED, and all 140 recovered C++
+#                     methods acquire MSVC's real thiscall — `this` in ECX rather than on the stack.
+#                     Callers push it, so every argument after `this` arrives one word early.
+#
+#                     MEASURED, by instrumenting both sides of one dispatch rather than reasoning
+#                     about ABIs:
+#
+#                       linux    caller np=0 ncp=0x7b08c378 nb=1
+#                                callee np=0 ncp=0x7b08c378 nb=1     intact
+#                       windows  caller np=0 ncp=0ceee900  nb=1
+#                                callee np=2289596 ncp=0ceee8fc nb=0  shifted 4 bytes
+#
+#                     The callee reads the field its caller had 4 bytes further on, and num_bodies
+#                     arrives as 0. That is what made `constraints.num_constraints_partition` read
+#                     as ~1 and killed vanillaAllocateMemory at keaMemory.c:124.
+#
+#                     FIXED by `#undef` first and defining away unconditionally — the recovered code
+#                     is decompiled from a Linux i386 build where all of these are plain cdecl, so
+#                     the annotation must be inert on EVERY target, not merely where the platform
+#                     happens not to claim the keyword.
+#
+#                     BLAST RADIUS: ZERO i386 objects change, because on Linux the two spellings do
+#                     the same thing, and the wasm binary is BYTE-IDENTICAL. Which is also why
+#                     nothing but a Windows build could ever have found it.
+#
+#                     ── RESULT: ALL THREE 32-BIT TARGETS PLAY ONSLAUGHT ──
+#
+#                       wasm32       ONS-Torlan + bots, 330 s in the browser, no trap
+#                       native i386  ONS-Torlan 300 s x2, ONS-Adara 240 s, ONS-Ascendancy 240 s
+#                       windows      ONS-Torlan + bots, 330 s under wine, -OPENGLRENDERER
+#
+#                     Android is the one target still without Karma, by the owner's decision to fix
+#                     the LP64 struct layouts first rather than ship an APK whose physics depends on
+#                     the ABI.
+#
+#                     ── HISTORICAL: the solver fault this section chased ──
+#
+#                       vanillaAllocateMemory (keaMemory.c:124), READ of address 0x00000001
+#                         <- keaFunctions_Vanilla::allocateMemory
+#                         <- MdtKeaAddConstraintForces <- KWorldStepSafeTime
+#                         (ASVehicle::execUpdateVehicle on the stack — a vehicle physics step)
+#
+#                     `constraints.num_constraints_partition` is ~1, i.e. the by-value
+#                     `MdtKeaConstraints` arrives wrong or arrives with garbage in it. Struct LAYOUT
+#                     is ruled out and measured: sizeof is 92 with num_constraints_partition@16,
+#                     Jsize@80, num_partitions@0 on BOTH toolchains. So it is not MinGW's double
+#                     alignment, and the next thing to look at is how the by-value struct crosses
+#                     the vtable dispatch in MdtKeaAddConstraintForces.
+
+# ONS-CRASH-GJKPD    2026-08-27 (tenth session): McdGjkPenetrationDepth CRASHES A LIVE ONSLAUGHT
+#                     MATCH, on native i386 AND on wasm32, and it is the ONLY one of the 145 that
+#                     does. It is IN the build and has never been in this file — which is the
+#                     "not quarantined does not mean validated" hazard, in its purest form.
+#
+#                     FOUND by the acceptance run the owner asked for when the recovered Karma
+#                     became the default on every 32-bit target: a 5-minute ONS-Torlan match per
+#                     build (karma-decomp/test/ons_smoke.sh). ONS is the gametype that spawns
+#                     VEHICLES, which is most of what Karma exists for; the ut2004 browser suite is
+#                     51/51 and is almost entirely DM, so it never touched this path.
+#
+#                     native i386, ONS-Torlan, Onslaught.ONSOnslaughtGame:
+#                       SIGSEGV at McdGjkPenetrationDepth.c:143, in McdGjkFaceLoad
+#                         McdGjkFaceLoad <- McdGjkPenetrationDepth <- McdGjkTest
+#                         <- McdGjkCgIntersect2 <- McdGjkCgIntersect <- KIntersect
+#                         <- KHandleCollisions <- KUpdateContacts <- KTickLevelKarma
+#                     wasm32, same map and gametype:
+#                       RuntimeError: memory access out of bounds
+#
+#                     LOCALISED TO THIS ONE OBJECT BY SUBSTITUTION, four measurements:
+#                       recovered, all 145            crash at 26s / 25s / 23s (three runs)
+#                       `legacy-karma` preset          300 s, no fault
+#                       recovered + SHIPPED McdGjkPenetrationDepth.o   300 s, no fault
+#                       restored to pure recovered     crash again
+#                     So 144 of 145 objects survive a five-minute ONS match and this one does not.
+#
+#                     ⚠ THE FIRST SUBSTITUTION TEST WAS VACUOUS AND SAID SO ONLY BECAUSE IT WAS
+#                     CHECKED. Swapping the member inside libKarmaDecomp.a and re-running
+#                     `cmake --build` looked like a clean reproduction of the crash — but cmake
+#                     REBUILDS the archive from its objects, so the swap was discarded and the test
+#                     measured nothing. `ar t` showed `McdGjkPenetrationDepth.c.o` still there.
+#                     Replacing the compiled .o and touching it works WITH the build system.
+#                     A second check in the same session was vacuous too: `nm | grep kd_McdGjkFaceLoad`
+#                     can never match, because KD_MANGLED's asm label REPLACES the kd_ identifier.
+#
+#                     ── NARROWED TO TWO FUNCTIONS, AND ONE OF THEM DIAGNOSED (same session) ──
+#
+#                     test/gjk_bisect.sh asks "does taking function F from the shipped object fix
+#                     it?" — and every one of the nine answered NO while the whole object answered
+#                     YES. That is the signature of MORE THAN ONE defective function: swapping one
+#                     leaves the other, so no single swap can pass.
+#
+#                     test/gjk_bisect_complement.sh asks the complement, which has no such blind
+#                     spot: keep exactly ONE function of OURS, take the rest from theirs.
+#
+#                       (positive control: nothing of ours)  survived      <- harness is sound
+#                       McdGjkFaceLoad                       survived
+#                       McdGjkFaceAdd                        survived
+#                       McdGjkFaceAddPoint                   survived
+#                       McdGjkFacePop                        survived
+#                       McdGjkFaceCompare                    survived
+#                       McdGjkFaceQueueInit                  CRASHES 27s   <- DEFECTIVE
+#                       McdGjkFindNextInflatePoint           survived
+#                       McdGjkResultIsReasonable             survived
+#                       McdGjkPenetrationDepth               CRASHES 26s   <- DEFECTIVE
+#
+#                     Corroborated independently: a hybrid of the SHIPPED driver calling OUR helpers
+#                     (weak symbols rather than renaming, so the calls reach ours) also crashes,
+#                     which rules the driver in and is consistent with FaceQueueInit being bad.
+#
+#                     McdGjkFaceQueueInit's DEFECT, read off the shipped machine code rather than
+#                     guessed: `MePoolxGet` returns the new face and Ghidra typed it `MeReal *`, so
+#                     the recovered code writes FLOATS into fields the original writes as INTEGERS.
+#                     _McdGjkFace is { MeVector3 v; MeReal v_len; int depth; int bits; int fi[4];
+#                     int slant; }, i.e. v_len at 0xc, depth 0x10, bits 0x14, fi[] 0x18..0x24:
+#
+#                       shipped                              recovered
+#                       5c3: mov   %esi,0x14(%eax)   bits    pMVar3[5] = MVar5;          (float)
+#                       5f0: fstps 0xc(%ebx)         v_len   pMVar3[3] = MVar6;          (float, RIGHT)
+#                       5f6: mov   %ecx,0x18(%ebx)   fi[0]   pMVar3[6] = (MeReal)q->si[0];
+#                       5fc: mov   %esi,0x1c(%ebx)   fi[1]   pMVar3[7] = (MeReal)q->si[1];
+#
+#                     `(MeReal)q->si[0]` is an int->float CONVERSION where the original is a plain
+#                     move: si[0]==1 stores 0x3F800000 into an int field instead of 1. The mask is
+#                     the same defect one level earlier — `*(MeReal *)(McdGjkBinarySubset+0x3c...)`
+#                     against the shipped `mov 0x4(%ebx,%eax,4),%esi`. So `f->bits` and `f->fi[]`
+#                     are float bit patterns, which is precisely the garbage McdGjkFaceLoad's loop
+#                     needs to walk off the end of `q->s->point[4]`.
+#
+#                     Note `pMVar3[4] = 0.0` (depth) and `pMVar3[10] = 1.4013e-45` (slant) are
+#                     RIGHT BY ACCIDENT: 0.0f is 0x00000000 and 1.4013e-45 is 0x00000001, so those
+#                     two happen to lay down the integer the original does. Only the fields whose
+#                     integer value is neither 0 nor a denormal-sized constant are corrupted.
+#
+#                     ── FIXED, AND THE MATCH SURVIVES (same session) ──
+#
+#                     ghidra_clean.FLOAT_TYPED_INT_FIELDS retypes the seventeen stores: the mask
+#                     gets its own integer local (MVar5 cannot serve — the shared tail reassigns it
+#                     to MeVector3Normalize's float result), the table load becomes an int load, and
+#                     bits/depth/fi[]/slant are written through `(int *)pMVar3`.
+#
+#                       native i386, ONS-Torlan   300 s x2, no fault   (was: SIGSEGV at ~25 s)
+#                       native i386, ONS-Adara    240 s, no fault
+#                       native i386, ONS-Ascendancy 240 s, no fault
+#                       wasm32,      ONS-Torlan   330 s in the browser, no trap, 12 .ka loaded
+#
+#                     BLAST RADIUS: one source file; McdGjkPenetrationDepth.o is the only i386
+#                     object that moves, and it is the object being repaired.
+#
+#                     ⚠ AND THE COMPLEMENT BISECT'S SECOND ANSWER DID NOT SURVIVE CONTACT.
+#                     It named McdGjkPenetrationDepth defective as well, on the strength of "our
+#                     driver + their helpers crashes". Repairing FaceQueueInit ALONE takes the match
+#                     to 300 s, and the diff touches only lines 223-371 — entirely inside
+#                     FaceQueueInit, with the driver (line 432 on) untouched. So the driver reading
+#                     as defective was an artefact of MIXING implementations, not a defect in it:
+#                     the useful lesson is that a substitution harness measures a COMBINATION, and
+#                     a mixed pair can fail where either whole pair succeeds. Read a positive from
+#                     one as a lead, not a verdict.
+#
+#                     STILL OPEN: nothing on this crash. Windows is a SEPARATE fault — see
+#                     WIN32-PORT-3.
+#
+#                     WHAT IS KNOWN ABOUT THE ORIGINAL FAULT SITE: the faulting statement writes
+#                     `q->s->point[]` at a running byte offset while reading `q->point[f->fi[i]]`,
+#                     so either `f->bits` (documented 0..15) or `f->fi[]` is garbage by the time
+#                     FaceLoad runs — i.e. the face is corrupt BEFORE this function, and the bug may
+#                     be in any of the object's eight functions rather than in FaceLoad itself.
+#                     The object carries ZERO of the usual markers — no kd_argslot_, no extraout_,
+#                     no in_stack_, no alloca, check_frame_bounds clean — which is exactly why
+#                     every offline gate passed it.
+#
+#                     NO FALLBACK EXISTS OFF x86. The substitution above is only possible on i386
+#                     Linux, because the shipped member is 32-bit Linux ELF; wasm32 and Windows have
+#                     nothing to fall back to, so this has to be fixed rather than worked around.
+
+# WASM-INDIRECT-SIGS  2026-08-27 (tenth session): THE INDIRECT HALF OF WASM-SIGMISMATCH,
+#                     WHICH THAT ENTRY CLOSES BY PREDICTING. It was right. Found by RUNNING
+#                     the engine on wasm for the first time — nothing recovered had ever
+#                     executed on wasm32 before this session — and all nine i386 gates read
+#                     green on every one of these, before and after.
+#
+#                     THE CLASS. wasm-ld type-checks DIRECT calls only. A `call_indirect`
+#                     type-checks AT RUNTIME against the callee's exact type, and on wasm a
+#                     function's type includes its RESULT and its ARITY. Both are free on
+#                     i386 cdecl: the caller cleans the stack, so a surplus argument is never
+#                     read, and a caller that ignores %eax may call a void function through
+#                     any prototype it likes. So this whole class is inert on i386 BY
+#                     CONSTRUCTION and no gate on the recovery side can see it.
+#
+#                     49 CALL SITES IN SIX OBJECTS, all reached the same way — Ghidra
+#                     reconstructs an i386 call from the stack slots written before it, and
+#                     `code` is `typedef int code();`, an UNPROTOTYPED type returning int.
+#                     tools/code_call_check.py counts 47 of them (calls THROUGH `code`) on the
+#                     pre-fix tree and 0 after; the other two are MeXMLParser's, which were
+#                     already typed and merely over-supplied.
+#
+#                       MeXMLParser        MeXMLHandler.fn, both branches. Rendered with FOUR
+#                                          arguments where MeXMLParser.h:105-106 declares two
+#                                          (MeXMLCallback) and three (MeXMLParseFn).
+#                       McdInteractions    helloFn (+0), goodbyeFn x2 (+4) and safetimeFn
+#                                          (+0xc), through `code *` off
+#                                          McdFrameworkGetInteractions' result.
+#                       keaLCPSolver       17 lines of keaMatrix vtable dispatch.
+#                       keaLCP_new         keaMatrix::solve (+0x10), inside solveLCP.
+#                       keaRbdCore_unified platformInit (+0x10), allocateMemory (+0x14),
+#                                          calculateConstraintAndResultantForces (+8),
+#                                          calculateAcceleration (+0xc) and allocate (+0).
+#                       keaMatrix_tester   18 lines — NOT linked, typed anyway so the gate can
+#                                          read a true zero instead of a zero with a footnote.
+#
+#                     REPRODUCED, THREE TIMES, IN THE ENGINE — not reasoned about:
+#
+#                       RuntimeError: function signature mismatch
+#                         at MeXMLElementProcess <- MeXMLInputProcess
+#                            <- MeAssetDBXMLInputRead <- KCreateAssetDB <- KInitGameKarma
+#
+#                     i.e. on the `.ka` path that instances every ragdoll and vehicle, right
+#                     after KarmaData/Alien.ka was read. Fixing it moved the fault to
+#
+#                       at MdtKeaAddConstraintForces <- KWorldStepSafeTime <- KTickLevelKarma
+#
+#                     the first physics tick; fixing THAT moved it back to the same function at
+#                     keaRbdCore_unified.c:225, reachable only once a match has real constraints
+#                     (`?map=DM-Rankin&Game=XGame.XDeathMatch&NumBots=2&QuickStart=1` — a bare
+#                     `?map=` loads the level without starting a match and never reaches it).
+#                     The link emitted ZERO wasm-ld diagnostics every time.
+#
+#                     ⚠ THE METHOD LESSON, AND IT IS THE MOST USEFUL LINE IN THIS ENTRY:
+#                     THIS CLASS WAS DECLARED CLOSED TWICE ON THE STRENGTH OF A `grep`, AND A
+#                     RUNNING ENGINE FOUND A SITE BOTH TIMES. The greps were for
+#                     `(\*\*(code \*\*)`. Ghidra spells one dispatch at least five ways, and the
+#                     site that trapped is spelled
+#
+#                       (*(*(code **)((*(char **)&vanillaAMatrix))))(&vanillaAMatrix, uVar10)
+#
+#                     — the two dereferences split and the base in its own parentheses, which
+#                     that pattern does not match. tools/code_call_check.py replaces the pattern
+#                     with a PARSE: it walks parentheses, takes every group in callee position,
+#                     and asks whether it dispatches through `code`. A sixth spelling is caught
+#                     for free. Enumerating spellings is how this was got wrong twice.
+#
+#                     AND THE ONE THAT DID NOT TRAP IS THE MOST INSTRUCTIVE. McdInteractions'
+#                     helloFn is slot +0, `MeBool (McdModelPair *)`, and `MeBool` is
+#                     `typedef int` — so the `code` call site's `(i32) -> i32` IS the callee's
+#                     real type and McdHello has always worked. It worked by luck, not by
+#                     construction, and it is typed now for that reason.
+#
+#                     THE ONE THAT WAS AN i386 BUG TOO, which was not expected. Ghidra
+#                     rendered McdSafeTimeIntersect's dispatch with a surplus argument AND its
+#                     `MeReal maxTime` went through the unprototyped call, so gcc promoted it:
+#
+#                       before   push %ecx / flds 0x38(%esp) / fstpl (%esp)   <- float as f64
+#                       after    push 0x2c(%esp)                             <- float as f32
+#
+#                     the exact `flds`+`fstpl` signature §4b names. Dormant in UT2004 only
+#                     because McdSafeTime is not linked — KDynStep.cpp reimplements the
+#                     safe-time stepper — so it was wrong on both targets and reachable on
+#                     neither. This is the second time Ghidra's over-count has been recorded
+#                     as harmless; it is harmless only in the cdecl sense.
+#
+#                     ARITY OVER-COUNT IS SELF-REVEALING, and that is what makes these safe
+#                     to trim rather than a judgement call: two call sites of keaMatrix's
+#                     +0x18 slot in the SAME object disagree, 8 arguments at keaLCPSolver.c:278
+#                     against 6 at :651, and keaMatrix.h — which carries a _Static_assert on
+#                     every slot offset — declares 6. Same shape at +0x14 (4 vs 3) and in
+#                     MeXMLParser (4 vs the header's 2 and 3). The corpus was inconsistent
+#                     with ITSELF, not merely with the vendor.
+#
+#                     FIXED AT THE GENERATOR, never in a generated file. Three changes, each
+#                     taking ARITY and RESULT from a declaration in this repository and each
+#                     leaving parameter TYPES alone where they were already right:
+#                       ghidra_clean.VOID_PTR_CALL_ARITY        (MeXMLHandler.fn)
+#                       ghidra_clean._slot_fnptr_type           (dropped its float-only
+#                                                                restriction — that was an
+#                                                                i386 statement)
+#                       ghidra_clean.type_code_slot_dispatches  (new pre-pass; the shapes
+#                                                                neither prototype_indirect_calls
+#                                                                nor fix_vptr_store can reach)
+#
+#                     BLAST RADIUS, and it is most of the argument. Six objects change SOURCE
+#                     and 140 of 145 i386 objects are BYTE-IDENTICAL. keaLCP_new is
+#                     byte-identical despite its source changing — i386 cannot encode the
+#                     difference — which is the same acceptance argument WASM-SIGMISMATCH
+#                     makes. substitute_test on scene_chain and scene_ragdoll reads
+#                     IDENTICALLY to baseline: 143/1 and 140/5, same objects, same deltas,
+#                     and all six changed objects trajectory bit-identical on both.
+#                     recover.py's classification table does not move (136/9/0/3/5).
+#
+#                     END TO END: the ut2004 browser suite is 51/51 against a NO_KARMA control
+#                     built from the same tree, and 51/51 with the recovered Karma linked.
+#
+#                     THE RESIDUE, stated because two zeroes here would otherwise mislead.
+#                     TWO gates now exist and they see different halves, and NEITHER would have
+#                     caught every defect above:
+#                       tools/code_call_check.py    reads the SOURCE; 47 -> 0. Catches sites
+#                                                   nothing has executed, misses a call typed
+#                                                   through a wrong-but-concrete prototype.
+#                       tools/wasm_indirect_check.py reads the LINKED .wasm; 0 unsatisfiable on
+#                                                   both presets. Catches a type NO table
+#                                                   function has — so it would NOT have caught
+#                                                   goodbyeFn, whose `(i32) -> i32` hundreds of
+#                                                   table functions do have.
+#                     goodbyeFn was caught by reading the vendor's struct; keaMatrix::allocate
+#                     by running the engine. Both gates are floors, and the engine is still the
+#                     only instrument that has found every one of these.
+
 # WASM-SIGMISMATCH    2026-08-27 (ninth session; the eighth and ninth ran either side of
 #                     midnight and share a date — order these by SESSION, not date):
 #                     THE FIRST DEFECT THAT ONLY EXISTS OFF

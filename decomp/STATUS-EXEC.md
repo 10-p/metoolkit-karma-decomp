@@ -28,20 +28,115 @@ built, started, and played a full match.
 | Movement — how things fall and swing | done, and the game runs on it |
 | Loading vehicle and ragdoll files | done, and the game runs on it |
 | **Runs on PC with none of the original library** | **yes — 5-minute match, no faults, indistinguishable from the original** |
-| **The web version of the game builds with physics in it** | **yes — new today** |
-| Runs on web | **still never executed** |
+| **The web version of the game builds with physics in it** | yes |
+| **Runs on web** | **yes — including a 5-minute Onslaught match with vehicles and bots** |
+| **Runs on PC (Linux) on the rebuilt physics** | **yes — 5-minute Onslaught matches on three maps** |
+| **Runs on Windows** | **yes — 5-minute Onslaught matches on three maps** |
 | Runs on Android, 32-bit | compiles; never executed |
 | Runs on Android, 64-bit | **no — see the risk below** |
 
 ---
 
+## Today, last — Windows works too, and the last fault was one line
+
+All three 32-bit versions — web, Linux and Windows — now play a five-minute Onslaught match with
+vehicles and bots. Windows took four separate fixes, and the final one is worth recording because
+of how small it was and how far its effects reached.
+
+The rebuilt code carries annotations marking which functions were originally C++ methods. On Linux
+those annotations mean nothing and the file switched them off — but only *if the compiler had not
+already defined them*. Windows compilers define them, so the switch-off was skipped and all 140 of
+those functions silently changed how they receive their first argument. Every argument after it
+arrived one position early. The physics engine read a count where it expected a pointer and stopped.
+
+We found it by printing the same values on both sides of one call, on Linux and on Windows, and
+comparing — rather than reasoning about compiler conventions. The difference was immediate and
+unambiguous. The fix makes the switch-off unconditional; it changes nothing at all on Linux or the
+web (identical machine code, identical web file), which is exactly why only a Windows build could
+ever have found it.
+
+**One thing we found along the way that is not ours and is worth a decision:** every PC build of
+this game — engine and physics alike — is compiled with optimisation switched *off*, because of a
+build rule marked "for now" that catches every configuration. It predates this work. It matters
+beyond speed: an unoptimised build kept a dormant defect alive that an optimised one removes by
+itself.
+
+## Today, earlier — the rebuilt physics is now the DEFAULT everywhere it is sound
+
+The web, Linux and Windows builds all take the rebuilt physics now rather than the original; the
+original stays available side by side, as the thing we measure against. Android is deliberately
+still without it, because two of its three processor types are 64-bit and the rebuilt code carries
+32-bit memory layouts (see risk 2).
+
+**And a five-minute Onslaught match is now part of accepting a build — which immediately found a
+fault the entire 51-test suite could not.** Onslaught is the mode with VEHICLES, and vehicles and
+ragdolls are most of what this physics engine is for; the test suite is almost entirely ordinary
+deathmatch, so it never touched that code at all. The game crashed 25 seconds in, on both the web
+and the PC.
+
+The cause was one routine writing whole numbers into memory as if they were decimals — the
+decompiler had guessed the wrong kind of number for a block of data, so "vertex 1" was stored as
+the decimal 1.0 and read back as roughly 1,065,000,000. Two of the fields it filled were correct
+by pure chance, because the decimal patterns for 0, 1, 2, 4 and 8 happen to be the whole numbers
+0, 1, 2, 4 and 8 — which is part of why it looked fine. Fixed at the source; the PC machine code
+for the other 144 pieces is unchanged, and Onslaught now runs for five minutes on three maps and
+in a browser.
+
+Two things went wrong with our own tooling while chasing it, both worth recording: a search harness
+reported that **all nine** candidate routines were the culprit, because it looked for the word
+"PASS" in output that prints that word on every run — a check that could not fail. And a harness
+that swaps one routine at a time measures a *combination*, so it accused a second routine that
+turned out to be innocent.
+
 ## Today
 
-**The web version of the game now builds with the rebuilt physics inside it.** That had never
-been done: the pieces were known to compile individually, but the game had never been assembled
-around them for anything other than a PC. It went together cleanly — including eleven files of
-glue code between the game and the physics engine that had only ever been compiled for 1990s
-PC hardware.
+**The rebuilt physics now runs in a web browser.** That is the thing every previous version of
+this page listed as never done, and it was the largest unknown in the project: the code had been
+compiled for the web, checked, and measured, but not one instruction of it had ever been
+*executed* outside a PC. The game now starts in a browser, loads its ragdoll definition files,
+and runs physics — fifteen minutes without a fault.
+
+**Getting there took four fixes, and they were all the same mistake.** In each case our
+rebuilt code called a function *through a pointer* while describing it slightly wrongly — one
+argument too many, or expecting an answer from something that returns nothing. **A PC does not
+care about either.** Its calling convention lets the caller push spare arguments and ignore
+unwanted answers, so the machine code is correct on a PC whichever way it is written, and every
+one of our nine checks passed on all three, before and after. The web is stricter: it verifies
+the description against the real function at the moment of the call and stops the program dead
+if they differ. So these were not latent risks that the web made worse — they were invisible on
+a PC **by construction**, and the web is the only place they can be seen at all.
+
+**The fixes changed almost nothing on the PC, which is how we know they are safe.** Of 145
+rebuilt pieces, **140 are byte-for-byte identical** afterwards, and the five that moved changed
+in exactly the way predicted. Both physics test scenes give results identical to before.
+
+**One of the four is worth recording as a process failure, not a technical one.** We twice
+announced this class of mistake fixed on the strength of a text search, and twice a running
+game found another one — because the decompiler writes the same construct at least five
+different ways and the search knew four of them. The replacement does not search for spellings;
+it parses the code and asks which expressions are being *called*. It found the rest immediately.
+
+**And one of the three turned out to be a PC bug as well** — the first time the web work has
+found a fault on the PC side rather than the other way round. A number that should have been
+passed as a 4-byte value was being widened to 8 bytes, so the receiving function would have read
+it wrong. It is harmless today only because that particular routine is never used by UT2004,
+which reimplements it. Nobody was looking for it, and nothing on the PC side would have.
+
+**We also built the check that was missing.** The web toolchain verifies these descriptions only
+for functions called *by name*; the whole class of fault above is in functions called *through a
+pointer*, which it does not check at all. The new tool inspects the finished web file directly
+and proves which of those calls could never succeed. It reports none today — and it is written
+to say plainly what it cannot see, because it would not have caught the third fault on its own.
+
+**The game's own automated test suite is the real verdict, and it passes: 51 of 51** — startup,
+caching, mod loading, menus, renderers and two-player networked matches. To be sure that number
+meant something, we built the game *without* the rebuilt physics from the same source on the same
+machine in the same session and ran the identical suite: also 51 of 51. So adding a complete
+physics engine costs nothing the test suite can detect.
+
+---
+
+## Previously (2026-08-26)
 
 **What it costs: 756 KB.** The web download goes from 9.4 MB to 10.1 MB — about 7.7% — for a
 complete physics engine. We also checked that the physics is genuinely *inside* the file rather
@@ -61,6 +156,11 @@ and confirmed that all 145 pieces still produce byte-identical PC code afterward
 **The uncomfortable part, and it is the honest headline:** the check that caught this can only see
 one of the two ways this fault can occur. The other way is invisible until the code actually runs.
 So the fix is real and the class of fault is not closed.
+
+> **That prediction was correct, and running the code closed it — see Today.** The "other way"
+> occurred three more times, and every one was found by actually running rather than by any
+> check. We have since built a tool for it, which finds some of them without running — but not
+> all, and it says which.
 
 **Also today:** the build instructions were wrong. The first two commands in the project's own
 setup guide named build configurations that have not existed for some time, so a new person's first
@@ -91,11 +191,12 @@ project's state was re-measured in a single pass rather than trusted. Three thin
 
 ## The risks
 
-**1. "It builds" is not "it works", and today is the clearest example we have had.** Nothing has
-ever run on web or Android. Today moved us from "the pieces compile" to "the game assembles around
-them", which is real progress and is still not the same as running. The fault described above is
-exactly what the gap between those two looks like, and the remaining half of that fault can only be
-found by running.
+**1. "It builds" is not "it works" — and this is now measured rather than warned about.** The web
+half of this risk is closed: the game runs. It took three faults to get there, none of which any
+check on the PC side could have found, which is the strongest evidence the project has produced
+for the gap between compiling and working. **Android is still entirely open** — neither the
+32-bit nor the 64-bit build has ever executed a single instruction, and the 32-bit one is the
+same kind of target as the web, so the same class of fault is plausible there and unmeasured.
 
 **2. 64-bit Android will not work yet, and we had the wrong picture of why.**
 Our notes said this was 95% fixed. That was true of the problem we were measuring, and the

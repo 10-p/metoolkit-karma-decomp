@@ -221,6 +221,7 @@ void kd_McdGjkFaceQueueInit(McdGjkFaceQueue *q,McdGjkSimplex *s)
   MeReal MVar6;
   int i;
   MeReal v [3];
+  int kd_mask;
 
   iVar4 = q->nump;
   q->s = s;
@@ -272,84 +273,84 @@ void kd_McdGjkFaceQueueInit(McdGjkFaceQueue *q,McdGjkSimplex *s)
   q->nump = iVar4 + 1;
   i = 0;
   do {
-    MVar5 = *(MeReal *)((*(int *)((char *)&McdGjkBinarySubset + 0x3c)) + 4 + i * 4);
-    iVar4 = McdGjkComputeVector(v,(int)MVar5,0,s);
+    kd_mask = *(int *)((*(int *)((char *)&McdGjkBinarySubset + 0x3c)) + 4 + i * 4);
+    iVar4 = McdGjkComputeVector(v,kd_mask,0,s);
     if (iVar4 == 0) {
-      if (((uint)MVar5 & 1) != 0) {
-        iVar4 = McdGjkComputeVector(v,(int)MVar5 - 1,0,s);
+      if ((kd_mask & 1) != 0) {
+        iVar4 = McdGjkComputeVector(v,kd_mask - 1,0,s);
         if (iVar4 != 0) {
                     
           pMVar3 = MePoolxGet(&q->fpool);
           if (pMVar3 != (MeReal *)0x0) {
-            pMVar3[5] = MVar5;
-            pMVar3[4] = 0.0;
-            pMVar3[10] = 1.4013e-45;
+            ((int *)pMVar3)[5] = kd_mask;
+            ((int *)pMVar3)[4] = 0;
+            ((int *)pMVar3)[10] = 1;
             *pMVar3 = v[0];
             pMVar3[1] = v[1];
             pMVar3[2] = v[2];
             MVar6 = MeVector3Normalize(pMVar3);
             pMVar3[3] = MVar6;
-            pMVar3[6] = (MeReal)q->si[0];
-            pMVar3[7] = (MeReal)q->si[1];
-            pMVar3[8] = (MeReal)q->si[2];
-            pMVar3[9] = (MeReal)q->si[3];
+            ((int *)pMVar3)[6] = q->si[0];
+            ((int *)pMVar3)[7] = q->si[1];
+            ((int *)pMVar3)[8] = q->si[2];
+            ((int *)pMVar3)[9] = q->si[3];
             MeHeapPush(&q->face,pMVar3);
           }
         }
       }
-      if (((uint)MVar5 & 2) != 0) {
-        iVar4 = McdGjkComputeVector(v,(int)MVar5 - 2,0,s);
+      if ((kd_mask & 2) != 0) {
+        iVar4 = McdGjkComputeVector(v,kd_mask - 2,0,s);
         if (iVar4 != 0) {
                     
           pMVar3 = MePoolxGet(&q->fpool);
           if (pMVar3 != (MeReal *)0x0) {
-            pMVar3[5] = MVar5;
-            pMVar3[4] = 0.0;
-            pMVar3[10] = 2.8026e-45;
+            ((int *)pMVar3)[5] = kd_mask;
+            ((int *)pMVar3)[4] = 0;
+            ((int *)pMVar3)[10] = 2;
             *pMVar3 = v[0];
             pMVar3[1] = v[1];
             pMVar3[2] = v[2];
             MVar6 = MeVector3Normalize(pMVar3);
             pMVar3[3] = MVar6;
-            pMVar3[6] = (MeReal)q->si[0];
-            pMVar3[7] = (MeReal)q->si[1];
-            pMVar3[8] = (MeReal)q->si[2];
-            pMVar3[9] = (MeReal)q->si[3];
+            ((int *)pMVar3)[6] = q->si[0];
+            ((int *)pMVar3)[7] = q->si[1];
+            ((int *)pMVar3)[8] = q->si[2];
+            ((int *)pMVar3)[9] = q->si[3];
             MeHeapPush(&q->face,pMVar3);
           }
         }
       }
-      if (((uint)MVar5 & 4) != 0) {
-        iVar4 = McdGjkComputeVector(v,(int)MVar5 - 4,0,s);
+      if ((kd_mask & 4) != 0) {
+        iVar4 = McdGjkComputeVector(v,kd_mask - 4,0,s);
         if (iVar4 != 0) {
                     
           pMVar3 = MePoolxGet(&q->fpool);
           if (pMVar3 != (MeReal *)0x0) {
-            pMVar3[5] = MVar5;
-            pMVar3[4] = 0.0;
-            pMVar3[10] = 5.60519e-45;
+            ((int *)pMVar3)[5] = kd_mask;
+            ((int *)pMVar3)[4] = 0;
+            ((int *)pMVar3)[10] = 4;
             *pMVar3 = v[0];
             pMVar3[1] = v[1];
             pMVar3[2] = v[2];
             MVar6 = MeVector3Normalize(pMVar3);
             pMVar3[3] = MVar6;
-            pMVar3[6] = (MeReal)q->si[0];
-            pMVar3[7] = (MeReal)q->si[1];
-            pMVar3[8] = (MeReal)q->si[2];
-            pMVar3[9] = (MeReal)q->si[3];
+            ((int *)pMVar3)[6] = q->si[0];
+            ((int *)pMVar3)[7] = q->si[1];
+            ((int *)pMVar3)[8] = q->si[2];
+            ((int *)pMVar3)[9] = q->si[3];
             MeHeapPush(&q->face,pMVar3);
           }
         }
       }
-      if (((uint)MVar5 & 8) != 0) {
-        iVar4 = McdGjkComputeVector(v,(int)MVar5 - 8,0,s);
+      if ((kd_mask & 8) != 0) {
+        iVar4 = McdGjkComputeVector(v,kd_mask - 8,0,s);
         if (iVar4 != 0) {
                     
           pMVar3 = MePoolxGet(&q->fpool);
           if (pMVar3 != (MeReal *)0x0) {
-            pMVar3[5] = MVar5;
-            pMVar3[4] = 0.0;
-            pMVar3[10] = 1.12104e-44;
+            ((int *)pMVar3)[5] = kd_mask;
+            ((int *)pMVar3)[4] = 0;
+            ((int *)pMVar3)[10] = 8;
             goto LAB_000105d4;
           }
         }
@@ -359,19 +360,19 @@ void kd_McdGjkFaceQueueInit(McdGjkFaceQueue *q,McdGjkSimplex *s)
                     
       pMVar3 = MePoolxGet(&q->fpool);
       if (pMVar3 != (MeReal *)0x0) {
-        pMVar3[5] = MVar5;
-        pMVar3[4] = 0.0;
-        pMVar3[10] = 0.0;
+        ((int *)pMVar3)[5] = kd_mask;
+        ((int *)pMVar3)[4] = 0;
+        ((int *)pMVar3)[10] = 0;
 LAB_000105d4:
         *pMVar3 = v[0];
         pMVar3[1] = v[1];
         pMVar3[2] = v[2];
         MVar5 = MeVector3Normalize(pMVar3);
         pMVar3[3] = MVar5;
-        pMVar3[6] = (MeReal)q->si[0];
-        pMVar3[7] = (MeReal)q->si[1];
-        pMVar3[8] = (MeReal)q->si[2];
-        pMVar3[9] = (MeReal)q->si[3];
+        ((int *)pMVar3)[6] = q->si[0];
+        ((int *)pMVar3)[7] = q->si[1];
+        ((int *)pMVar3)[8] = q->si[2];
+        ((int *)pMVar3)[9] = q->si[3];
         MeHeapPush(&q->face,pMVar3);
       }
     }

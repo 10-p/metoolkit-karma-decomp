@@ -462,8 +462,9 @@ void kd_MeFAssetPartEnableCollision(MeFAssetPart *p1,MeFAssetPart *p2,MeBool ena
   uint uVar7;
 
   if ((p1 != p2) &&
-     ((pMVar2 = p1->asset, iVar5 = _DAT_00000050, pMVar2 == (MeFAsset *)0x0 ||
-      (iVar5 = pMVar2->maxParts, pMVar2->partCount <= pMVar2->maxParts)))) {
+     ((pMVar2 = p1->asset, pMVar2 == (MeFAsset *)0x0
+        ? (iVar5 = _DAT_00000050, 1)
+        : (iVar5 = pMVar2->maxParts, pMVar2->partCount <= pMVar2->maxParts)))) {
                     
     iVar6 = p1->index;
     iVar3 = p2->index;

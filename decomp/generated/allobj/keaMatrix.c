@@ -31,20 +31,20 @@ void __thiscall kd_keaMatrix__prefetchMatrixChol(keaMatrix *this) KD_MANGLED("_Z
  * originals are COMDAT. */
 
 /* symbols the tables point at that this object does not define */
-extern const void *kd_ext__ZTVN10__cxxabiv117__class_type_infoE[] __asm__("_ZTVN10__cxxabiv117__class_type_infoE");
-extern void kd_ext___cxa_pure_virtual(void) __asm__("__cxa_pure_virtual");
+extern const void *kd_ext__ZTVN10__cxxabiv117__class_type_infoE[] KD_MANGLED("_ZTVN10__cxxabiv117__class_type_infoE");
+extern void kd_ext___cxa_pure_virtual(void) KD_MANGLED("__cxa_pure_virtual");
 
-__attribute__((weak)) const char kd_ZTS9keaMatrix[]
-    __asm__("_ZTS9keaMatrix") = "9keaMatrix";
+KD_WEAK_DATA const char kd_ZTS9keaMatrix[]
+    KD_MANGLED("_ZTS9keaMatrix") = "9keaMatrix";
 
-__attribute__((weak)) const void *kd_ZTI9keaMatrix[2]
-    __asm__("_ZTI9keaMatrix") = {
+KD_WEAK_DATA const void *kd_ZTI9keaMatrix[2]
+    KD_MANGLED("_ZTI9keaMatrix") = {
         (const void *)((const char *)&kd_ext__ZTVN10__cxxabiv117__class_type_infoE[0] + 8),
         (const void *)kd_ZTS9keaMatrix
     };
 
-__attribute__((weak)) const void *kd_ZTV9keaMatrix[11]
-    __asm__("_ZTV9keaMatrix") = {
+KD_WEAK_DATA const void *kd_ZTV9keaMatrix[11]
+    KD_MANGLED("_ZTV9keaMatrix") = {
         (const void *)0,
         (const void *)kd_ZTI9keaMatrix,
         (const void *)&kd_ext___cxa_pure_virtual,

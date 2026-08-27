@@ -59,26 +59,26 @@ static void vc_dstrip_Cholesky(MeReal *tmp,MeReal *rsD,int z,int d,int s,MeReal 
  * originals are COMDAT. */
 
 /* C++ ABI objects defined in OTHER objects (a base class's typeinfo) */
-extern const void *kd_ZTI18keaMatrix_pcSparse[] __asm__("_ZTI18keaMatrix_pcSparse");
+extern const void *kd_ZTI18keaMatrix_pcSparse[] KD_MANGLED("_ZTI18keaMatrix_pcSparse");
 
 /* symbols the tables point at that this object does not define */
-extern void kd_ext__ZN18keaMatrix_pcSparse19makeFromColMajorPSMEPfPKfS2_S2_PKiS4_iii(void) __asm__("_ZN18keaMatrix_pcSparse19makeFromColMajorPSMEPfPKfS2_S2_PKiS4_iii");
-extern void kd_ext__ZN9keaMatrix18prefetchMatrixCholEv(void) __asm__("_ZN9keaMatrix18prefetchMatrixCholEv");
-extern void kd_ext__ZN9keaMatrix19writebackMatrixCholEv(void) __asm__("_ZN9keaMatrix19writebackMatrixCholEv");
-extern const void *kd_ext__ZTVN10__cxxabiv120__si_class_type_infoE[] __asm__("_ZTVN10__cxxabiv120__si_class_type_infoE");
+extern void kd_ext__ZN18keaMatrix_pcSparse19makeFromColMajorPSMEPfPKfS2_S2_PKiS4_iii(void) KD_MANGLED("_ZN18keaMatrix_pcSparse19makeFromColMajorPSMEPfPKfS2_S2_PKiS4_iii");
+extern void kd_ext__ZN9keaMatrix18prefetchMatrixCholEv(void) KD_MANGLED("_ZN9keaMatrix18prefetchMatrixCholEv");
+extern void kd_ext__ZN9keaMatrix19writebackMatrixCholEv(void) KD_MANGLED("_ZN9keaMatrix19writebackMatrixCholEv");
+extern const void *kd_ext__ZTVN10__cxxabiv120__si_class_type_infoE[] KD_MANGLED("_ZTVN10__cxxabiv120__si_class_type_infoE");
 
-__attribute__((weak)) const char kd_ZTS26keaMatrix_pcSparse_vanilla[]
-    __asm__("_ZTS26keaMatrix_pcSparse_vanilla") = "26keaMatrix_pcSparse_vanilla";
+KD_WEAK_DATA const char kd_ZTS26keaMatrix_pcSparse_vanilla[]
+    KD_MANGLED("_ZTS26keaMatrix_pcSparse_vanilla") = "26keaMatrix_pcSparse_vanilla";
 
-__attribute__((weak)) const void *kd_ZTI26keaMatrix_pcSparse_vanilla[3]
-    __asm__("_ZTI26keaMatrix_pcSparse_vanilla") = {
+KD_WEAK_DATA const void *kd_ZTI26keaMatrix_pcSparse_vanilla[3]
+    KD_MANGLED("_ZTI26keaMatrix_pcSparse_vanilla") = {
         (const void *)((const char *)&kd_ext__ZTVN10__cxxabiv120__si_class_type_infoE[0] + 8),
         (const void *)kd_ZTS26keaMatrix_pcSparse_vanilla,
         (const void *)kd_ZTI18keaMatrix_pcSparse
     };
 
-__attribute__((weak)) const void *kd_ZTV26keaMatrix_pcSparse_vanilla[11]
-    __asm__("_ZTV26keaMatrix_pcSparse_vanilla") = {
+KD_WEAK_DATA const void *kd_ZTV26keaMatrix_pcSparse_vanilla[11]
+    KD_MANGLED("_ZTV26keaMatrix_pcSparse_vanilla") = {
         (const void *)0,
         (const void *)kd_ZTI26keaMatrix_pcSparse_vanilla,
         (const void *)&kd_keaMatrix_pcSparse_vanilla__allocate,

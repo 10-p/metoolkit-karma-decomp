@@ -384,8 +384,30 @@ typedef int code();
 
 /* Variable-length stack allocations are restored as real alloca() calls; see
    materialise_alloca_frame() in tools/ghidra_clean.py for why a fixed-size
-   buffer was the wrong answer. */
-#include <alloca.h>
+   buffer was the wrong answer.
+
+   WHERE alloca() IS DECLARED IS NOT PORTABLE, and this is the fourth defect of
+   that shape after __ctype_b_loc, __compar_fn_t and ulong/__off_t: glibc,
+   musl (Emscripten) and bionic put it in <alloca.h>; MinGW-w64 has no such
+   header and declares it in <malloc.h>. Found by building the `windows` preset
+   for the first time with Karma on — the native and wasm builds could not see
+   it, which is exactly what the portability gates exist for. */
+#if defined(__MINGW32__) || defined(_WIN32)
+#  include <malloc.h>
+/* MeProfile_linux's clock calibration is `select(0,0,0,0,&onesecond)` — a sleep, not I/O — so
+   it needs `fd_set`, `timeval` and `select` to COMPILE. On MinGW those live in <winsock2.h>
+   rather than <sys/select.h>. It must come before any <windows.h> to avoid the winsock1 clash,
+   and kd_compat.h is the first include in every recovered file, so this is the right place.
+   Contained to the recovered C: the engine's own translation units never see this header.
+
+   RUNTIME IS MOOT AND THAT IS MEASURED, NOT ASSUMED: MeProfile_linux is one of the 18 archive
+   members the linker never pulls in (tools/wasm_members.py), and the whole profiler chain is
+   measured at ZERO calls in a real match. Same standing as the rdtsc stand-in below — it
+   compiles honestly and is never reached. */
+#  include <winsock2.h>
+#else
+#  include <alloca.h>
+#endif
 
 /* ---- calling-convention annotations ------------------------------------
     Ghidra tags recovered C++ methods with MSVC's `__thiscall`. On GCC's i386
@@ -400,15 +422,30 @@ typedef int code();
     keyword away rather than strip it, so the recovered sources keep the
     annotation as documentation of which functions were methods.
 ------------------------------------------------------------------------- */
-#ifndef __thiscall
-#  define __thiscall
-#endif
-#ifndef __cdecl
-#  define __cdecl
-#endif
-#ifndef __fastcall
-#  define __fastcall
-#endif
+/* ⚠ #undef FIRST, AND UNCONDITIONALLY. `#ifndef` was the whole bug on Windows.
+   MinGW PREDEFINES these as real attributes —
+
+       #define __thiscall __attribute__((__thiscall__))
+       #define __fastcall __attribute__((__fastcall__))
+
+   — so `#ifndef __thiscall` is FALSE there, the define-away is skipped, and all 140 recovered
+   C++ methods acquire MSVC's real thiscall: `this` in ECX instead of on the stack. Callers push
+   it, so every argument after `this` arrives one word early. Measured rather than deduced —
+   instrumenting both sides of one dispatch showed the callee reading the field its caller had
+   4 bytes further on, and `num_bodies` arriving as 0 instead of 1:
+
+       linux    caller np=0 ncp=0x7b08c378 nb=1  ->  callee np=0 ncp=0x7b08c378 nb=1
+       windows  caller np=0 ncp=0ceee900  nb=1  ->  callee np=<junk> ncp=0ceee8fc nb=0
+
+   It killed the solver in MdtKeaAddConstraintForces (proven.txt WIN32-PORT-3). On Linux none of
+   these are defined at all, so the `#ifndef` form happened to be correct there and nothing but a
+   Windows build could show it. */
+#undef __thiscall
+#define __thiscall
+#undef __cdecl
+#define __cdecl
+#undef __fastcall
+#define __fastcall
 
 /* Ghidra also emits __regparmN, claiming the first N arguments arrive in
    registers. As a CALLING CONVENTION it is a misdetection, and defining it away
@@ -499,8 +536,65 @@ typedef struct McdErrorDescription McdErrorDescription;
 typedef struct MePoolFixed         MePoolFixed;
 typedef struct MePoolMalloc        MePoolMalloc;
 
-/* Call a C++-mangled Karma symbol from C without a C++ compiler. */
-#define KD_MANGLED(sym) __asm__(sym)
+/* Call a C++-mangled Karma symbol from C without a C++ compiler.
+
+   ★ THE ASM LABEL MUST CARRY THE TARGET'S USER LABEL PREFIX, and this is the one place that
+   can know it. An `__asm__("name")` label is LITERAL: it bypasses the automatic prefixing the
+   platform's C ABI applies. On ELF (Linux i386, wasm32, Android) that prefix is empty and the
+   literal name is already right, which is why this was `__asm__(sym)` for the whole life of
+   the project. On i686 PE it is `_`, so the recovered library exported `MdtBSJointCreate`
+   while every C++ caller in the engine referenced `_MdtBSJointCreate` — 100+ undefined
+   references at link, on a build where every object had compiled cleanly.
+
+   `__USER_LABEL_PREFIX__` is the compiler's own answer to this question and is defined
+   everywhere: `_` on MinGW, empty on gcc/Linux and emcc. Stringifying an empty macro yields
+   "", so the ELF spelling is byte-identical to what it always was — verified by the i386
+   objects staying byte-identical across this change. */
+/* Karma's file layer opens every file with Linux's own O_* VALUES baked in as literals — the
+   original is a Linux build, so `O_WRONLY|O_CREAT|O_TRUNC` was folded to 0x241 at compile time.
+   Those numbers are not portable: MinGW's O_CREAT is 0x100, not 0x40.
+
+   And the one that actually breaks things has no Linux counterpart at all. On Linux there is NO
+   distinction between text and binary opens, so the original never needed O_BINARY; on Windows
+   its absence means CRLF TRANSLATION on every read, which corrupts the `.ka` asset files and
+   leaves MeFAssetPart with a null asset. Adding it is what REPRODUCES the original's behaviour,
+   not a deviation from it — and it is a no-op wherever O_BINARY does not exist, so the i386
+   objects stay byte-identical. */
+#ifdef O_BINARY
+#  define KD_O_BINARY O_BINARY
+#else
+#  define KD_O_BINARY 0
+#endif
+
+#define KD_STR_(x) #x
+#define KD_STR(x) KD_STR_(x)
+#define KD_MANGLED(sym) __asm__(KD_STR(__USER_LABEL_PREFIX__) sym)
+
+/* COMDAT-style definition for the C++ ABI data gen_vtables.py re-emits (_ZTV/_ZTI/_ZTS).
+   MathEngine's originals are COMDAT, so these must be pick-any rather than strong.
+
+   ⚠ `__attribute__((weak))` DOES NOT MEAN THE SAME THING ON PE/COFF. On ELF it is a weak
+   DEFINITION and the linker is happy. On i686 PE, binutils emulates it as a COFF *weak
+   external* — nm shows `w` plus a `.weak.<sym>.<fallback>` alias — which supplies no
+   definition at all, so `vtable for keaFunctions_Vanilla` came out UNDEFINED at link even
+   though the object plainly defines it. `selectany` is PE's real COMDAT pick-any and is what
+   the ELF `weak` was standing in for. Nothing else in the corpus defines these symbols, so
+   either spelling links; this one keeps the ODR semantics on both. */
+#if defined(__MINGW32__) || defined(_WIN32)
+   /* Strong, and that is safe HERE for a reason that is checked rather than assumed: every
+      _ZTV/_ZTI/_ZTS symbol in the corpus is defined EXACTLY ONCE (gen_vtables.py emits the
+      definition in the owning object and `extern` everywhere else), so there is no second
+      definition for pick-any semantics to choose between.
+
+      `selectany` was tried first and is WRONG here in a way worth recording: GCC builds its
+      COMDAT from the DECLARATION's name and DROPS the asm label, so the object exported
+      `_kd_ZTV20keaFunctions_Vanilla` — the C identifier — while every reference wanted the
+      labelled `__ZTV20keaFunctions_Vanilla`, and the link failed with the same "undefined
+      reference to `vtable for ...`" as before, from a symbol that nm showed as defined. */
+#  define KD_WEAK_DATA
+#else
+#  define KD_WEAK_DATA __attribute__((weak))
+#endif
 
 /* A symbol the shipped object exports WEAKLY has to stay weak, and this is not
    cosmetic. gcc emits `putchar` weakly into keaDebug.o, keaMatrix_tester.o and

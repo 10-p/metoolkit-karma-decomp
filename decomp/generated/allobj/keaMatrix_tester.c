@@ -52,23 +52,23 @@ int kd_putchar(int __c) KD_MANGLED("putchar") KD_WEAK;
  * originals are COMDAT. */
 
 /* C++ ABI objects defined in OTHER objects (a base class's typeinfo) */
-extern const void *kd_ZTI9keaMatrix[] __asm__("_ZTI9keaMatrix");
+extern const void *kd_ZTI9keaMatrix[] KD_MANGLED("_ZTI9keaMatrix");
 
 /* symbols the tables point at that this object does not define */
-extern const void *kd_ext__ZTVN10__cxxabiv120__si_class_type_infoE[] __asm__("_ZTVN10__cxxabiv120__si_class_type_infoE");
+extern const void *kd_ext__ZTVN10__cxxabiv120__si_class_type_infoE[] KD_MANGLED("_ZTVN10__cxxabiv120__si_class_type_infoE");
 
-__attribute__((weak)) const char kd_ZTS16keaMatrix_tester[]
-    __asm__("_ZTS16keaMatrix_tester") = "16keaMatrix_tester";
+KD_WEAK_DATA const char kd_ZTS16keaMatrix_tester[]
+    KD_MANGLED("_ZTS16keaMatrix_tester") = "16keaMatrix_tester";
 
-__attribute__((weak)) const void *kd_ZTI16keaMatrix_tester[3]
-    __asm__("_ZTI16keaMatrix_tester") = {
+KD_WEAK_DATA const void *kd_ZTI16keaMatrix_tester[3]
+    KD_MANGLED("_ZTI16keaMatrix_tester") = {
         (const void *)((const char *)&kd_ext__ZTVN10__cxxabiv120__si_class_type_infoE[0] + 8),
         (const void *)kd_ZTS16keaMatrix_tester,
         (const void *)kd_ZTI9keaMatrix
     };
 
-__attribute__((weak)) const void *kd_ZTV16keaMatrix_tester[11]
-    __asm__("_ZTV16keaMatrix_tester") = {
+KD_WEAK_DATA const void *kd_ZTV16keaMatrix_tester[11]
+    KD_MANGLED("_ZTV16keaMatrix_tester") = {
         (const void *)0,
         (const void *)kd_ZTI16keaMatrix_tester,
         (const void *)&kd_keaMatrix_tester__allocate,
@@ -200,8 +200,8 @@ void __thiscall kd_keaMatrix_tester__allocate(keaMatrix_tester *this,int n)
     iVar1 = (uVar4 & 0xfffffffc) + 4;
   }
   *(int *)&this->m_padded = iVar1;
-  (*(code *)**(undefined4 **)this->suspect)(this->suspect,n);
-  (*(code *)**(undefined4 **)this->correct)(this->correct,n);
+  (**(void (**)(keaMatrix *, int))(*(int *)this->suspect))(this->suspect,n);
+  (**(void (**)(keaMatrix *, int))(*(int *)this->correct))(this->correct,n);
   uVar4 = n;
   if (n % 0xc != 0) {
     uVar4 = (n - n % 0xc) + 0xc;
@@ -339,10 +339,8 @@ kd_keaMatrix_tester__makeFromJMJT
           MeReal *slipfactor,MeReal epsilon,MeReal hinv)
 
 {
-  (**(code **)(*(int *)this->suspect + 4))
-            (this->suspect,JM,Js,num_in_strip,block2body,slipfactor,epsilon,hinv);
-  (**(code **)(*(int *)this->correct + 4))
-            (this->correct,JM,Js,num_in_strip,block2body,slipfactor,epsilon,hinv);
+  (**(void (**)(keaMatrix *, const MeReal *, const MeReal *, const int *, const int *, const MeReal *, MeReal, MeReal))(*(int *)this->suspect + 4))(this->suspect,JM,Js,num_in_strip,block2body,slipfactor,epsilon,hinv);
+  (**(void (**)(keaMatrix *, const MeReal *, const MeReal *, const int *, const int *, const MeReal *, MeReal, MeReal))(*(int *)this->correct + 4))(this->correct,JM,Js,num_in_strip,block2body,slipfactor,epsilon,hinv);
   return;
 }
 
@@ -358,12 +356,8 @@ kd_keaMatrix_tester__makeFromColMajorPSM
   uint uVar2;
   int iVar3;
 
-  (**(code **)(*(int *)this->suspect + 8))
-            (this->suspect,this->suspectQrhs,Ainv,clampedValues,initialSolve,unclamped,clamped,
-             numUnclamped,numClamped,n_padded);
-  (**(code **)(*(int *)this->correct + 8))
-            (this->correct,this->correctQrhs,Ainv,clampedValues,initialSolve,unclamped,clamped,
-             numUnclamped,numClamped,n_padded);
+  (**(void (**)(keaMatrix *, MeReal *, const MeReal *, const MeReal *, const MeReal *, const int *, const int *, int, int, int))(*(int *)this->suspect + 8))(this->suspect,this->suspectQrhs,Ainv,clampedValues,initialSolve,unclamped,clamped,numUnclamped,numClamped,n_padded);
+  (**(void (**)(keaMatrix *, MeReal *, const MeReal *, const MeReal *, const MeReal *, const int *, const int *, int, int, int))(*(int *)this->correct + 8))(this->correct,this->correctQrhs,Ainv,clampedValues,initialSolve,unclamped,clamped,numUnclamped,numClamped,n_padded);
   kd_checkNorm(this->correctQrhs,this->suspectQrhs,numClamped,"make from col major PSM");
   iVar3 = 0;
   if (numClamped != 0) {
@@ -399,8 +393,8 @@ kd_keaMatrix_tester__makeFromColMajorPSM
 void __thiscall kd_keaMatrix_tester__factorize(keaMatrix_tester *this)
 
 {
-  (**(code **)(*(int *)this->suspect + 0xc))(this->suspect);
-  (**(code **)(*(int *)this->correct + 0xc))(this->correct);
+  (**(void (**)(keaMatrix *))(*(int *)this->suspect + 0xc))(this->suspect);
+  (**(void (**)(keaMatrix *))(*(int *)this->correct + 0xc))(this->correct);
   return;
 }
 
@@ -410,8 +404,8 @@ void __thiscall kd_keaMatrix_tester__solve(keaMatrix_tester *this,MeReal *x,MeRe
 {
   int iVar1;
 
-  (**(code **)(*(int *)this->suspect + 0x10))(this->suspect,this->suspectX,rhs);
-  (**(code **)(*(int *)this->correct + 0x10))(this->correct,this->correctX,rhs);
+  (**(void (**)(keaMatrix *, MeReal *, const MeReal *))(*(int *)this->suspect + 0x10))(this->suspect,this->suspectX,rhs);
+  (**(void (**)(keaMatrix *, MeReal *, const MeReal *))(*(int *)this->correct + 0x10))(this->correct,this->correctX,rhs);
   kd_checkNorm(this->correctX,this->suspectX,*(int *)&this->m_padded,"solve");
   iVar1 = 0;
   if (*(int *)&this->m_padded != 0) {
@@ -429,8 +423,8 @@ void __thiscall kd_keaMatrix_tester__multiply(keaMatrix_tester *this,MeReal *b,M
 {
   int iVar1;
 
-  (**(code **)(*(int *)this->suspect + 0x14))(this->suspect,this->suspectB,x);
-  (**(code **)(*(int *)this->correct + 0x14))(this->correct,this->correctB,x);
+  (**(void (**)(keaMatrix *, MeReal *, const MeReal *))(*(int *)this->suspect + 0x14))(this->suspect,this->suspectB,x);
+  (**(void (**)(keaMatrix *, MeReal *, const MeReal *))(*(int *)this->correct + 0x14))(this->correct,this->correctB,x);
   kd_checkNorm(this->correctB,this->suspectB,*(int *)&this->m_padded,"multiply");
   iVar1 = 0;
   if (*(int *)&this->m_padded != 0) {
@@ -503,12 +497,9 @@ kd_keaMatrix_tester__solveUnits
     } while (uVar7 != uVar3);
   }
 LAB_0001095a:
-  (**(code **)(*(int *)this->suspect + 0x18))
-            (this->suspect,this->suspectAinv,this->suspectCached,clamped,numClamped,AinvStride,MVar4
-             ,MVar4);
+  (**(void (**)(keaMatrix *, MeReal *, int *, const int *, int, int))(*(int *)this->suspect + 0x18))(this->suspect,this->suspectAinv,this->suspectCached,clamped,numClamped,AinvStride);
   iVar6 = 0;
-  (**(code **)(*(int *)this->correct + 0x18))
-            (this->correct,this->correctAinv,this->correctCached,clamped,numClamped,AinvStride);
+  (**(void (**)(keaMatrix *, MeReal *, int *, const int *, int, int))(*(int *)this->correct + 0x18))(this->correct,this->correctAinv,this->correctCached,clamped,numClamped,AinvStride);
   if (*(int *)&this->m_numRows != 0) {
     do {
       cached[iVar6] = this->correctCached[iVar6];
@@ -584,8 +575,8 @@ LAB_00010b05:
 void __thiscall kd_keaMatrix_tester__writebackMatrixChol(keaMatrix_tester *this)
 
 {
-  (**(code **)(*(int *)this->suspect + 0x1c))(this->suspect);
-  (**(code **)(*(int *)this->correct + 0x1c))(this->correct);
+  (**(void (**)(keaMatrix *))(*(int *)this->suspect + 0x1c))(this->suspect);
+  (**(void (**)(keaMatrix *))(*(int *)this->correct + 0x1c))(this->correct);
   return;
 }
 
@@ -593,8 +584,8 @@ void __thiscall kd_keaMatrix_tester__writebackMatrixChol(keaMatrix_tester *this)
 void __thiscall kd_keaMatrix_tester__prefetchMatrixChol(keaMatrix_tester *this)
 
 {
-  (**(code **)(*(int *)this->suspect + 0x20))(this->suspect);
-  (**(code **)(*(int *)this->correct + 0x20))(this->correct);
+  (**(void (**)(keaMatrix *))(*(int *)this->suspect + 0x20))(this->suspect);
+  (**(void (**)(keaMatrix *))(*(int *)this->correct + 0x20))(this->correct);
   return;
 }
 

@@ -1,0 +1,1059 @@
+Begin Map
+	Begin Actor Class=LevelInfo Name=LevelInfo0
+		TimeSeconds=90.596352
+		Title="Karma Playground"
+		Author="OpenAI"
+		IdealPlayerCountMin=1
+		IdealPlayerCountMax=4
+		MaxRagdolls=8
+		Summary=LevelSummary'MyLevel.LevelSummary'
+		bPathsRebuilt=True
+		CameraLocationDynamic=(X=-725.960815,Y=-1803.128052,Z=658.668091)
+		CameraLocationTop=(X=-1710.304932,Y=-1582.377563,Z=46406.722656)
+		CameraLocationFront=(X=-1015.271606,Y=176.697968,Z=42533.457031)
+		CameraLocationSide=(X=-1592.526001,Y=206.104492,Z=103179.343750)
+		CameraRotationDynamic=(Pitch=208,Yaw=32592)
+		DefaultGameType="Onslaught.ONSOnslaughtGame"
+		NavigationPointList=PlayerStart'MyLevel.PlayerStart0'
+		bTerrainZone=True
+		Level=LevelInfo'MyLevel.LevelInfo0'
+		Region=(Zone=LevelInfo'MyLevel.LevelInfo0',iLeaf=-1)
+		Tag="LevelInfo"
+		PhysicsVolume=DefaultPhysicsVolume'MyLevel.DefaultPhysicsVolume3'
+	End Actor
+	Begin Actor Class=Brush Name=Brush3
+		MainScale=(SheerAxis=SHEER_ZX)
+		PostScale=(SheerAxis=SHEER_ZX)
+		Level=LevelInfo'MyLevel.LevelInfo0'
+		Region=(Zone=LevelInfo'MyLevel.LevelInfo0',iLeaf=-1)
+		Tag="Brush"
+		Group="Cube"
+		PhysicsVolume=DefaultPhysicsVolume'MyLevel.DefaultPhysicsVolume3'
+		Location=(X=-1824.000000,Y=-2368.000000,Z=656.000000)
+		Begin Brush Name=Brush
+			Begin PolyList
+				Begin Polygon
+					Origin   -00128.000000,-00128.000000,-00128.000000
+					Normal   -00001.000000,+00000.000000,+00000.000000
+					TextureU +00000.000000,+00001.000000,+00000.000000
+					TextureV +00000.000000,+00000.000000,-00001.000000
+					Vertex   -00128.000000,-00128.000000,-00128.000000
+					Vertex   -00128.000000,-00128.000000,+00128.000000
+					Vertex   -00128.000000,+00128.000000,+00128.000000
+					Vertex   -00128.000000,+00128.000000,-00128.000000
+				End Polygon
+				Begin Polygon
+					Origin   -00128.000000,+00128.000000,-00128.000000
+					Normal   +00000.000000,+00001.000000,+00000.000000
+					TextureU +00001.000000,-00000.000000,+00000.000000
+					TextureV +00000.000000,+00000.000000,-00001.000000
+					Vertex   -00128.000000,+00128.000000,-00128.000000
+					Vertex   -00128.000000,+00128.000000,+00128.000000
+					Vertex   +00128.000000,+00128.000000,+00128.000000
+					Vertex   +00128.000000,+00128.000000,-00128.000000
+				End Polygon
+				Begin Polygon
+					Origin   +00128.000000,+00128.000000,-00128.000000
+					Normal   +00001.000000,+00000.000000,+00000.000000
+					TextureU +00000.000000,-00001.000000,+00000.000000
+					TextureV +00000.000000,+00000.000000,-00001.000000
+					Vertex   +00128.000000,+00128.000000,-00128.000000
+					Vertex   +00128.000000,+00128.000000,+00128.000000
+					Vertex   +00128.000000,-00128.000000,+00128.000000
+					Vertex   +00128.000000,-00128.000000,-00128.000000
+				End Polygon
+				Begin Polygon
+					Origin   +00128.000000,-00128.000000,-00128.000000
+					Normal   +00000.000000,-00001.000000,+00000.000000
+					TextureU -00001.000000,-00000.000000,-00000.000000
+					TextureV +00000.000000,+00000.000000,-00001.000000
+					Vertex   +00128.000000,-00128.000000,-00128.000000
+					Vertex   +00128.000000,-00128.000000,+00128.000000
+					Vertex   -00128.000000,-00128.000000,+00128.000000
+					Vertex   -00128.000000,-00128.000000,-00128.000000
+				End Polygon
+				Begin Polygon
+					Origin   -00128.000000,+00128.000000,+00128.000000
+					Normal   +00000.000000,+00000.000000,+00001.000000
+					TextureU +00001.000000,+00000.000000,+00000.000000
+					TextureV +00000.000000,+00001.000000,+00000.000000
+					Vertex   -00128.000000,+00128.000000,+00128.000000
+					Vertex   -00128.000000,-00128.000000,+00128.000000
+					Vertex   +00128.000000,-00128.000000,+00128.000000
+					Vertex   +00128.000000,+00128.000000,+00128.000000
+				End Polygon
+				Begin Polygon
+					Origin   -00128.000000,-00128.000000,-00128.000000
+					Normal   +00000.000000,+00000.000000,-00001.000000
+					TextureU +00001.000000,+00000.000000,+00000.000000
+					TextureV +00000.000000,-00001.000000,+00000.000000
+					Vertex   -00128.000000,-00128.000000,-00128.000000
+					Vertex   -00128.000000,+00128.000000,-00128.000000
+					Vertex   +00128.000000,+00128.000000,-00128.000000
+					Vertex   +00128.000000,-00128.000000,-00128.000000
+				End Polygon
+			End PolyList
+		End Brush
+		Brush=Model'MyLevel.Brush'
+
+	End Actor
+	Begin Actor Class=DefaultPhysicsVolume Name=DefaultPhysicsVolume3
+		Priority=-1000000
+		bNoDelete=True
+		Level=LevelInfo'MyLevel.LevelInfo0'
+		Region=(Zone=ZoneInfo'MyLevel.ZoneInfo0',ZoneNumber=1)
+		Tag="DefaultPhysicsVolume"
+		PhysicsVolume=DefaultPhysicsVolume'MyLevel.DefaultPhysicsVolume3'
+	End Actor
+	Begin Actor Class=PlayerStart Name=PlayerStart0
+		Level=LevelInfo'MyLevel.LevelInfo0'
+		Region=(Zone=ZoneInfo'MyLevel.ZoneInfo0',ZoneNumber=1)
+		Tag="PlayerStart"
+		PhysicsVolume=DefaultPhysicsVolume'MyLevel.DefaultPhysicsVolume3'
+		Location=(X=-1818.771851,Y=-1533.000000,Z=888.000000)
+		Rotation=(Yaw=8192)
+	End Actor
+	Begin Actor Class=Light Name=Light0
+		LightBrightness=128.000000
+		Level=LevelInfo'MyLevel.LevelInfo0'
+		Region=(Zone=ZoneInfo'MyLevel.ZoneInfo0',ZoneNumber=1)
+		Tag="Light"
+		PhysicsVolume=DefaultPhysicsVolume'MyLevel.DefaultPhysicsVolume3'
+		Location=(Z=900.000000)
+	End Actor
+	Begin Actor Class=Light Name=Light1
+		LightBrightness=128.000000
+		Level=LevelInfo'MyLevel.LevelInfo0'
+		Region=(Zone=ZoneInfo'MyLevel.ZoneInfo0',ZoneNumber=1)
+		Tag="Light"
+		PhysicsVolume=DefaultPhysicsVolume'MyLevel.DefaultPhysicsVolume3'
+		Location=(X=1400.000000,Z=600.000000)
+	End Actor
+	Begin Actor Class=Light Name=Light2
+		LightBrightness=128.000000
+		Level=LevelInfo'MyLevel.LevelInfo0'
+		Region=(Zone=ZoneInfo'MyLevel.ZoneInfo0',ZoneNumber=1)
+		Tag="Light"
+		PhysicsVolume=DefaultPhysicsVolume'MyLevel.DefaultPhysicsVolume3'
+		Location=(X=-900.000000,Y=1100.000000,Z=600.000000)
+	End Actor
+	Begin Actor Class=KActor Name=KActor0
+		StaticMesh=StaticMesh'MyLevel.Test.suzanneBig'
+		Level=LevelInfo'MyLevel.LevelInfo0'
+		Region=(Zone=ZoneInfo'MyLevel.ZoneInfo0',ZoneNumber=1)
+		Tag="KActor"
+		PhysicsVolume=DefaultPhysicsVolume'MyLevel.DefaultPhysicsVolume3'
+		Location=(X=-1508.000000,Y=-700.000000,Z=280.000000)
+		DrawScale3D=(X=2.000000,Y=2.000000,Z=2.000000)
+		CollisionRadius=34.000000
+		CollisionHeight=34.000000
+		bCollideWorld=True
+		ColLocation=(X=-1508.000000,Y=-700.000000,Z=280.000000)
+		Begin Object Class=KarmaParams Name=KarmaParams1
+			KMass=5.000000
+			KStartEnabled=True
+			bHighDetailOnly=False
+			bClientOnly=False
+			KFriction=0.700000
+			KRestitution=0.150000
+			KImpactThreshold=200.000000
+		End Object
+		KParams=KarmaParams'MyLevel.KarmaParams1'
+
+	End Actor
+	Begin Actor Class=KActor Name=KBox_Heavy
+		StaticMesh=StaticMesh'BulldogMeshes.Simple.S_RearWheel'
+		Level=LevelInfo'MyLevel.LevelInfo0'
+		Region=(Zone=ZoneInfo'MyLevel.ZoneInfo0',ZoneNumber=1)
+		Tag="KActor"
+		PhysicsVolume=DefaultPhysicsVolume'MyLevel.DefaultPhysicsVolume3'
+		Location=(X=-450.000000,Y=-700.000000,Z=500.000000)
+		DrawScale3D=(X=2.000000,Y=2.000000,Z=2.000000)
+		CollisionRadius=34.000000
+		CollisionHeight=34.000000
+		bCollideWorld=True
+		ColLocation=(X=-450.000000,Y=-700.000000,Z=500.000000)
+		Begin Object Class=KarmaParams Name=KBox_HeavyParams
+			KMass=100.000000
+			KStartEnabled=True
+			bHighDetailOnly=False
+			bClientOnly=False
+			KFriction=0.700000
+			KRestitution=0.150000
+			KImpactThreshold=200.000000
+		End Object
+		KParams=KarmaParams'MyLevel.KBox_HeavyParams'
+
+	End Actor
+	Begin Actor Class=KActor Name=KBox_Bouncy
+		StaticMesh=StaticMesh'BulldogMeshes.Simple.S_RearWheel'
+		Level=LevelInfo'MyLevel.LevelInfo0'
+		Region=(Zone=ZoneInfo'MyLevel.ZoneInfo0',ZoneNumber=1)
+		Tag="KActor"
+		PhysicsVolume=DefaultPhysicsVolume'MyLevel.DefaultPhysicsVolume3'
+		Location=(Y=-700.000000,Z=700.000000)
+		DrawScale3D=(X=2.000000,Y=2.000000,Z=2.000000)
+		CollisionRadius=34.000000
+		CollisionHeight=34.000000
+		bCollideWorld=True
+		ColLocation=(Y=-700.000000,Z=700.000000)
+		Begin Object Class=KarmaParams Name=KBox_BouncyParams
+			KMass=10.000000
+			KStartEnabled=True
+			bHighDetailOnly=False
+			bClientOnly=False
+			KFriction=0.700000
+			KRestitution=0.150000
+			KImpactThreshold=200.000000
+		End Object
+		KParams=KarmaParams'MyLevel.KBox_BouncyParams'
+
+	End Actor
+	Begin Actor Class=KActor Name=KBox_Friction
+		StaticMesh=StaticMesh'BulldogMeshes.Simple.S_RearWheel'
+		Level=LevelInfo'MyLevel.LevelInfo0'
+		Region=(Zone=ZoneInfo'MyLevel.ZoneInfo0',ZoneNumber=1)
+		Tag="KActor"
+		PhysicsVolume=DefaultPhysicsVolume'MyLevel.DefaultPhysicsVolume3'
+		Location=(X=450.000000,Y=-700.000000,Z=500.000000)
+		DrawScale3D=(X=2.000000,Y=2.000000,Z=2.000000)
+		CollisionRadius=34.000000
+		CollisionHeight=34.000000
+		bCollideWorld=True
+		ColLocation=(X=450.000000,Y=-700.000000,Z=500.000000)
+		Begin Object Class=KarmaParams Name=KBox_FrictionParams
+			KMass=30.000000
+			KStartEnabled=True
+			bHighDetailOnly=False
+			bClientOnly=False
+			KFriction=0.700000
+			KRestitution=0.150000
+			KImpactThreshold=200.000000
+		End Object
+		KParams=KarmaParams'MyLevel.KBox_FrictionParams'
+
+	End Actor
+	Begin Actor Class=KActor Name=KBox_Impulse
+		StaticMesh=StaticMesh'BulldogMeshes.Simple.S_RearWheel'
+		Level=LevelInfo'MyLevel.LevelInfo0'
+		Region=(Zone=ZoneInfo'MyLevel.ZoneInfo0',ZoneNumber=1)
+		Tag="KActor"
+		PhysicsVolume=DefaultPhysicsVolume'MyLevel.DefaultPhysicsVolume3'
+		Location=(X=900.000000,Y=-700.000000,Z=700.000000)
+		Rotation=(Roll=8192)
+		DrawScale3D=(X=2.000000,Y=2.000000,Z=2.000000)
+		CollisionRadius=34.000000
+		CollisionHeight=34.000000
+		bCollideWorld=True
+		ColLocation=(X=900.000000,Y=-700.000000,Z=700.000000)
+		Begin Object Class=KarmaParams Name=KBox_ImpulseParams
+			KMass=20.000000
+			KStartEnabled=True
+			bHighDetailOnly=False
+			bClientOnly=False
+			KFriction=0.700000
+			KRestitution=0.150000
+			KImpactThreshold=200.000000
+		End Object
+		KParams=KarmaParams'MyLevel.KBox_ImpulseParams'
+
+	End Actor
+	Begin Actor Class=KActor Name=KHinge_Door
+		StaticMesh=StaticMesh'BulldogMeshes.Simple.S_RearWheel'
+		Level=LevelInfo'MyLevel.LevelInfo0'
+		Region=(Zone=ZoneInfo'MyLevel.ZoneInfo0',ZoneNumber=1)
+		Tag="KActor"
+		PhysicsVolume=DefaultPhysicsVolume'MyLevel.DefaultPhysicsVolume3'
+		Location=(X=-800.000000,Y=250.000000,Z=350.000000)
+		DrawScale3D=(X=3.000000,Z=4.000000)
+		CollisionRadius=34.000000
+		CollisionHeight=34.000000
+		bCollideWorld=True
+		ColLocation=(X=-800.000000,Y=250.000000,Z=350.000000)
+		Begin Object Class=KarmaParams Name=KHinge_DoorParams
+			KMass=25.000000
+			KStartEnabled=True
+			bHighDetailOnly=False
+			bClientOnly=False
+			KFriction=0.700000
+			KRestitution=0.150000
+			KImpactThreshold=200.000000
+		End Object
+		KParams=KarmaParams'MyLevel.KHinge_DoorParams'
+
+	End Actor
+	Begin Actor Class=KActor Name=KHinge_Door2
+		StaticMesh=StaticMesh'BulldogMeshes.Simple.S_RearWheel'
+		Level=LevelInfo'MyLevel.LevelInfo0'
+		Region=(Zone=ZoneInfo'MyLevel.ZoneInfo0',ZoneNumber=1)
+		Tag="KActor"
+		PhysicsVolume=DefaultPhysicsVolume'MyLevel.DefaultPhysicsVolume3'
+		Location=(X=-350.000000,Y=250.000000,Z=350.000000)
+		DrawScale3D=(X=3.000000,Z=4.000000)
+		CollisionRadius=34.000000
+		CollisionHeight=34.000000
+		bCollideWorld=True
+		ColLocation=(X=-350.000000,Y=250.000000,Z=350.000000)
+		Begin Object Class=KarmaParams Name=KHinge_Door2Params
+			KMass=25.000000
+			KStartEnabled=True
+			bHighDetailOnly=False
+			bClientOnly=False
+			KFriction=0.700000
+			KRestitution=0.150000
+			KImpactThreshold=200.000000
+		End Object
+		KParams=KarmaParams'MyLevel.KHinge_Door2Params'
+
+	End Actor
+	Begin Actor Class=KHinge Name=Hinge_Door
+		KStiffness=0.000000
+		KDamping=1.000000
+		KMaxTorque=100000.000000
+		KConstraintActor1=KActor'MyLevel.KHinge_Door'
+		KPos1=(Z=5.000000)
+		KPos2=(X=-16.000000,Y=5.000000,Z=12.000000)
+		Level=LevelInfo'MyLevel.LevelInfo0'
+		Region=(Zone=ZoneInfo'MyLevel.ZoneInfo0',ZoneNumber=1)
+		Tag="KHinge"
+		PhysicsVolume=DefaultPhysicsVolume'MyLevel.DefaultPhysicsVolume3'
+		Location=(X=-800.000000,Y=250.000000,Z=600.000000)
+	End Actor
+	Begin Actor Class=KHinge Name=Hinge_Motor
+		KHingeType=HT_Motor
+		KStiffness=10.000000
+		KDamping=2.000000
+		KDesiredAngVel=1.000000
+		KMaxTorque=5000.000000
+		KConstraintActor1=KActor'MyLevel.KHinge_Door2'
+		KPos1=(Z=5.000000)
+		KPos2=(X=-7.000000,Y=5.000000,Z=12.000000)
+		Level=LevelInfo'MyLevel.LevelInfo0'
+		Region=(Zone=ZoneInfo'MyLevel.ZoneInfo0',ZoneNumber=1)
+		Tag="KHinge"
+		PhysicsVolume=DefaultPhysicsVolume'MyLevel.DefaultPhysicsVolume3'
+		Location=(X=-350.000000,Y=250.000000,Z=600.000000)
+	End Actor
+	Begin Actor Class=KActor Name=KCone_Ball
+		StaticMesh=StaticMesh'BulldogMeshes.Simple.S_RearWheel'
+		Level=LevelInfo'MyLevel.LevelInfo0'
+		Region=(Zone=ZoneInfo'MyLevel.ZoneInfo0',ZoneNumber=1)
+		Tag="KActor"
+		PhysicsVolume=DefaultPhysicsVolume'MyLevel.DefaultPhysicsVolume3'
+		Location=(X=350.000000,Y=300.000000,Z=650.000000)
+		DrawScale3D=(X=2.000000,Y=2.000000,Z=2.000000)
+		CollisionRadius=34.000000
+		CollisionHeight=34.000000
+		bCollideWorld=True
+		ColLocation=(X=350.000000,Y=300.000000,Z=650.000000)
+		Begin Object Class=KarmaParams Name=KCone_BallParams
+			KMass=20.000000
+			KStartEnabled=True
+			bHighDetailOnly=False
+			bClientOnly=False
+			KFriction=0.700000
+			KRestitution=0.150000
+			KImpactThreshold=200.000000
+		End Object
+		KParams=KarmaParams'MyLevel.KCone_BallParams'
+
+	End Actor
+	Begin Actor Class=KConeLimit Name=ConeLimit
+		KConstraintActor1=KActor'MyLevel.KCone_Ball'
+		KPos1=(Z=5.000000)
+		KPos2=(X=7.000000,Y=6.000000,Z=18.000000)
+		Level=LevelInfo'MyLevel.LevelInfo0'
+		Region=(Zone=ZoneInfo'MyLevel.ZoneInfo0',ZoneNumber=1)
+		Tag="KConeLimit"
+		PhysicsVolume=DefaultPhysicsVolume'MyLevel.DefaultPhysicsVolume3'
+		Location=(X=350.000000,Y=300.000000,Z=900.000000)
+	End Actor
+	Begin Actor Class=KActor Name=KSpring_A
+		StaticMesh=StaticMesh'BulldogMeshes.Simple.S_RearWheel'
+		Level=LevelInfo'MyLevel.LevelInfo0'
+		Region=(Zone=ZoneInfo'MyLevel.ZoneInfo0',ZoneNumber=1)
+		Tag="KActor"
+		PhysicsVolume=DefaultPhysicsVolume'MyLevel.DefaultPhysicsVolume3'
+		Location=(X=850.000000,Y=350.000000,Z=500.000000)
+		DrawScale3D=(X=2.000000,Y=2.000000,Z=2.000000)
+		CollisionRadius=34.000000
+		CollisionHeight=34.000000
+		bCollideWorld=True
+		ColLocation=(X=850.000000,Y=350.000000,Z=500.000000)
+		Begin Object Class=KarmaParams Name=KSpring_AParams
+			KMass=15.000000
+			KStartEnabled=True
+			bHighDetailOnly=False
+			bClientOnly=False
+			KFriction=0.700000
+			KRestitution=0.150000
+			KImpactThreshold=200.000000
+		End Object
+		KParams=KarmaParams'MyLevel.KSpring_AParams'
+
+	End Actor
+	Begin Actor Class=KActor Name=KSpring_B
+		StaticMesh=StaticMesh'BulldogMeshes.Simple.S_RearWheel'
+		Level=LevelInfo'MyLevel.LevelInfo0'
+		Region=(Zone=ZoneInfo'MyLevel.ZoneInfo0',ZoneNumber=1)
+		Tag="KActor"
+		PhysicsVolume=DefaultPhysicsVolume'MyLevel.DefaultPhysicsVolume3'
+		Location=(X=850.000000,Y=350.000000,Z=900.000000)
+		DrawScale3D=(X=2.000000,Y=2.000000,Z=2.000000)
+		CollisionRadius=34.000000
+		CollisionHeight=34.000000
+		bCollideWorld=True
+		ColLocation=(X=850.000000,Y=350.000000,Z=900.000000)
+		Begin Object Class=KarmaParams Name=KSpring_BParams
+			KMass=15.000000
+			KStartEnabled=True
+			bHighDetailOnly=False
+			bClientOnly=False
+			KFriction=0.700000
+			KRestitution=0.150000
+			KImpactThreshold=200.000000
+		End Object
+		KParams=KarmaParams'MyLevel.KSpring_BParams'
+
+	End Actor
+	Begin Actor Class=KBSJoint Name=SpringJoint
+		KConstraintActor1=KActor'MyLevel.KSpring_A'
+		KConstraintActor2=KActor'MyLevel.KSpring_B'
+		bKDisableCollision=False
+		KPos1=(Z=3.000000)
+		KPos2=(Z=-5.000000)
+		Level=LevelInfo'MyLevel.LevelInfo0'
+		Region=(Zone=ZoneInfo'MyLevel.ZoneInfo0',ZoneNumber=1)
+		Tag="KBSJoint"
+		PhysicsVolume=DefaultPhysicsVolume'MyLevel.DefaultPhysicsVolume3'
+		Location=(X=850.000000,Y=350.000000,Z=650.000000)
+	End Actor
+	Begin Actor Class=ONSRV Name=ONSRV0
+		Begin Object Class=SVehicleWheel Name=SVehicleWheel8
+			bPoweredWheel=True
+			bHandbrakeWheel=True
+			BoneName="tire02"
+			BoneRollAxis=AXIS_Y
+			BoneOffset=(Y=7.000000)
+			WheelRadius=24.000000
+			SupportBoneName="RrearStrut"
+			SupportBoneAxis=AXIS_X
+			WheelPosition=(X=-75.262833,Y=63.806019,Z=-26.803160)
+			SupportPivotDistance=54.520927
+		End Object
+		Wheels(0)=SVehicleWheel'MyLevel.SVehicleWheel8'
+
+		Begin Object Class=SVehicleWheel Name=SVehicleWheel9
+			bPoweredWheel=True
+			bHandbrakeWheel=True
+			BoneName="tire04"
+			BoneRollAxis=AXIS_Y
+			BoneOffset=(Y=-7.000000)
+			WheelRadius=24.000000
+			SupportBoneName="LrearStrut"
+			SupportBoneAxis=AXIS_X
+			WheelPosition=(X=-75.161751,Y=-62.865276,Z=-26.803175)
+			SupportPivotDistance=-54.866291
+		End Object
+		Wheels(1)=SVehicleWheel'MyLevel.SVehicleWheel9'
+
+		Begin Object Class=SVehicleWheel Name=SVehicleWheel10
+			bPoweredWheel=True
+			SteerType=VST_Steered
+			BoneName="tire"
+			BoneRollAxis=AXIS_Y
+			BoneOffset=(Y=7.000000)
+			WheelRadius=24.000000
+			SupportBoneName="RFrontStrut"
+			SupportBoneAxis=AXIS_X
+			WheelPosition=(X=60.299686,Y=64.468544,Z=-26.803160)
+			SupportPivotDistance=55.105389
+		End Object
+		Wheels(2)=SVehicleWheel'MyLevel.SVehicleWheel10'
+
+		Begin Object Class=SVehicleWheel Name=SVehicleWheel11
+			bPoweredWheel=True
+			SteerType=VST_Steered
+			BoneName="tire03"
+			BoneRollAxis=AXIS_Y
+			BoneOffset=(Y=-7.000000)
+			WheelRadius=24.000000
+			SupportBoneName="LfrontStrut"
+			SupportBoneAxis=AXIS_X
+			WheelPosition=(X=60.299679,Y=-62.865276,Z=-26.803179)
+			SupportPivotDistance=-54.843002
+		End Object
+		Wheels(3)=SVehicleWheel'MyLevel.SVehicleWheel11'
+
+		HeadVolume=DefaultPhysicsVolume'MyLevel.DefaultPhysicsVolume3'
+		Level=LevelInfo'MyLevel.LevelInfo0'
+		Region=(Zone=ZoneInfo'MyLevel.ZoneInfo0',ZoneNumber=1)
+		Tag="ONSRV"
+		PhysicsVolume=DefaultPhysicsVolume'MyLevel.DefaultPhysicsVolume3'
+		Location=(X=-1316.000000,Y=-1812.000000,Z=-148.000000)
+		Rotation=(Yaw=32768)
+		ColLocation=(X=-1316.000000,Y=-1812.000000,Z=-148.000000)
+		Begin Object Class=KarmaParamsRBFull Name=KarmaParamsRBFull11
+			KInertiaTensor(0)=1.000000
+			KInertiaTensor(3)=3.000000
+			KInertiaTensor(5)=3.000000
+			KCOMOffset=(X=-0.250000,Z=-0.400000)
+			KLinearDamping=0.050000
+			KAngularDamping=0.050000
+			KStartEnabled=True
+			bKNonSphericalInertia=True
+			bHighDetailOnly=False
+			bClientOnly=False
+			bKDoubleTickRate=True
+			bDestroyOnWorldPenetrate=True
+			bDoSafetime=True
+			KFriction=0.500000
+			KImpactThreshold=700.000000
+		End Object
+		KParams=KarmaParamsRBFull'MyLevel.KarmaParamsRBFull11'
+
+	End Actor
+	Begin Actor Class=Brush Name=Brush5
+		CsgOper=CSG_Subtract
+		MainScale=(SheerAxis=SHEER_ZX)
+		PostScale=(SheerAxis=SHEER_ZX)
+		Level=LevelInfo'MyLevel.LevelInfo0'
+		Region=(Zone=ZoneInfo'MyLevel.ZoneInfo0',ZoneNumber=1)
+		Tag="Brush"
+		PhysicsVolume=DefaultPhysicsVolume'MyLevel.DefaultPhysicsVolume3'
+		Location=(X=16.000000,Z=1824.000000)
+		Begin Brush Name=Model6
+			Begin PolyList
+				Begin Polygon Texture=MyLevel.fogringtorlan
+					Origin   -02048.000000,-02048.000000,-02048.000000
+					Normal   -00001.000000,+00000.000000,+00000.000000
+					TextureU +00000.000000,+00001.000000,+00000.000000
+					TextureV +00000.000000,+00000.000000,-00001.000000
+					Vertex   -02048.000000,-02048.000000,-02048.000000
+					Vertex   -02048.000000,-02048.000000,+02048.000000
+					Vertex   -02048.000000,+02048.000000,+02048.000000
+					Vertex   -02048.000000,+02048.000000,-02048.000000
+				End Polygon
+				Begin Polygon Texture=MyLevel.fogringtorlan
+					Origin   -02048.000000,+02048.000000,-02048.000000
+					Normal   +00000.000000,+00001.000000,+00000.000000
+					TextureU +00001.000000,-00000.000000,+00000.000000
+					TextureV +00000.000000,+00000.000000,-00001.000000
+					Vertex   -02048.000000,+02048.000000,-02048.000000
+					Vertex   -02048.000000,+02048.000000,+02048.000000
+					Vertex   +02048.000000,+02048.000000,+02048.000000
+					Vertex   +02048.000000,+02048.000000,-02048.000000
+				End Polygon
+				Begin Polygon Texture=MyLevel.fogringtorlan
+					Origin   +02048.000000,+02048.000000,-02048.000000
+					Normal   +00001.000000,+00000.000000,+00000.000000
+					TextureU +00000.000000,-00001.000000,+00000.000000
+					TextureV +00000.000000,+00000.000000,-00001.000000
+					Vertex   +02048.000000,+02048.000000,-02048.000000
+					Vertex   +02048.000000,+02048.000000,+02048.000000
+					Vertex   +02048.000000,-02048.000000,+02048.000000
+					Vertex   +02048.000000,-02048.000000,-02048.000000
+				End Polygon
+				Begin Polygon Texture=MyLevel.fogringtorlan
+					Origin   +02048.000000,-02048.000000,-02048.000000
+					Normal   +00000.000000,-00001.000000,+00000.000000
+					TextureU -00001.000000,-00000.000000,-00000.000000
+					TextureV +00000.000000,+00000.000000,-00001.000000
+					Vertex   +02048.000000,-02048.000000,-02048.000000
+					Vertex   +02048.000000,-02048.000000,+02048.000000
+					Vertex   -02048.000000,-02048.000000,+02048.000000
+					Vertex   -02048.000000,-02048.000000,-02048.000000
+				End Polygon
+				Begin Polygon Texture=MyLevel.fogringtorlan
+					Origin   -02048.000000,+02048.000000,+02048.000000
+					Normal   +00000.000000,+00000.000000,+00001.000000
+					TextureU +00001.000000,+00000.000000,+00000.000000
+					TextureV +00000.000000,+00001.000000,+00000.000000
+					Vertex   -02048.000000,+02048.000000,+02048.000000
+					Vertex   -02048.000000,-02048.000000,+02048.000000
+					Vertex   +02048.000000,-02048.000000,+02048.000000
+					Vertex   +02048.000000,+02048.000000,+02048.000000
+				End Polygon
+				Begin Polygon Texture=MyLevel.fogringtorlan
+					Origin   -02048.000000,-02048.000000,-02048.000000
+					Normal   +00000.000000,+00000.000000,-00001.000000
+					TextureU +00001.000000,+00000.000000,+00000.000000
+					TextureV +00000.000000,-00001.000000,+00000.000000
+					Vertex   -02048.000000,-02048.000000,-02048.000000
+					Vertex   -02048.000000,+02048.000000,-02048.000000
+					Vertex   +02048.000000,+02048.000000,-02048.000000
+					Vertex   +02048.000000,-02048.000000,-02048.000000
+				End Polygon
+			End PolyList
+		End Brush
+		Brush=Model'MyLevel.Model6'
+
+	End Actor
+	Begin Actor Class=Light Name=Light3
+		LightBrightness=255.000000
+		LightRadius=512.000000
+		Level=LevelInfo'MyLevel.LevelInfo0'
+		Region=(Zone=ZoneInfo'MyLevel.ZoneInfo0',ZoneNumber=1)
+		Tag="Light"
+		PhysicsVolume=DefaultPhysicsVolume'MyLevel.DefaultPhysicsVolume3'
+		Location=(X=1106.681641,Y=1012.900024,Z=3445.101074)
+	End Actor
+	Begin Actor Class=Light Name=Light4
+		LightHue=90
+		LightSaturation=104
+		LightBrightness=250.000000
+		LightRadius=256.000000
+		Level=LevelInfo'MyLevel.LevelInfo0'
+		Region=(Zone=ZoneInfo'MyLevel.ZoneInfo0',ZoneNumber=1)
+		Tag="Light"
+		PhysicsVolume=DefaultPhysicsVolume'MyLevel.DefaultPhysicsVolume3'
+		Location=(X=-434.045166,Y=-2023.900024,Z=390.761536)
+	End Actor
+	Begin Actor Class=KActor Name=KBox_Light
+		StaticMesh=StaticMesh'BulldogMeshes.Simple.S_RearWheel'
+		Level=LevelInfo'MyLevel.LevelInfo0'
+		Region=(Zone=ZoneInfo'MyLevel.ZoneInfo0',ZoneNumber=1)
+		Tag="KActor"
+		PhysicsVolume=DefaultPhysicsVolume'MyLevel.DefaultPhysicsVolume3'
+		Location=(X=-868.000000,Y=-668.000000,Z=312.000000)
+		DrawScale3D=(X=2.000000,Y=2.000000,Z=2.000000)
+		CollisionRadius=34.000000
+		CollisionHeight=34.000000
+		bCollideWorld=True
+		ColLocation=(X=-868.000000,Y=-668.000000,Z=312.000000)
+		Begin Object Class=KarmaParams Name=KBox_LightParams
+			KMass=5.000000
+			KStartEnabled=True
+			bHighDetailOnly=False
+			bClientOnly=False
+			KFriction=0.700000
+			KRestitution=0.150000
+			KImpactThreshold=200.000000
+		End Object
+		KParams=KarmaParams'MyLevel.KBox_LightParams'
+
+	End Actor
+	Begin Actor Class=ONSRV Name=ScorpionDemo
+		Begin Object Class=SVehicleWheel Name=SVehicleWheel0
+			bPoweredWheel=True
+			bHandbrakeWheel=True
+			BoneName="tire02"
+			BoneRollAxis=AXIS_Y
+			BoneOffset=(Y=7.000000)
+			WheelRadius=24.000000
+			SupportBoneName="RrearStrut"
+			SupportBoneAxis=AXIS_X
+			WheelPosition=(X=-75.262833,Y=63.806019,Z=-26.803160)
+			SupportPivotDistance=54.520927
+		End Object
+		Wheels(0)=SVehicleWheel'MyLevel.SVehicleWheel0'
+
+		Begin Object Class=SVehicleWheel Name=SVehicleWheel1
+			bPoweredWheel=True
+			bHandbrakeWheel=True
+			BoneName="tire04"
+			BoneRollAxis=AXIS_Y
+			BoneOffset=(Y=-7.000000)
+			WheelRadius=24.000000
+			SupportBoneName="LrearStrut"
+			SupportBoneAxis=AXIS_X
+			WheelPosition=(X=-75.161751,Y=-62.865276,Z=-26.803175)
+			SupportPivotDistance=-54.866291
+		End Object
+		Wheels(1)=SVehicleWheel'MyLevel.SVehicleWheel1'
+
+		Begin Object Class=SVehicleWheel Name=SVehicleWheel2
+			bPoweredWheel=True
+			SteerType=VST_Steered
+			BoneName="tire"
+			BoneRollAxis=AXIS_Y
+			BoneOffset=(Y=7.000000)
+			WheelRadius=24.000000
+			SupportBoneName="RFrontStrut"
+			SupportBoneAxis=AXIS_X
+			WheelPosition=(X=60.299686,Y=64.468544,Z=-26.803160)
+			SupportPivotDistance=55.105389
+		End Object
+		Wheels(2)=SVehicleWheel'MyLevel.SVehicleWheel2'
+
+		Begin Object Class=SVehicleWheel Name=SVehicleWheel3
+			bPoweredWheel=True
+			SteerType=VST_Steered
+			BoneName="tire03"
+			BoneRollAxis=AXIS_Y
+			BoneOffset=(Y=-7.000000)
+			WheelRadius=24.000000
+			SupportBoneName="LfrontStrut"
+			SupportBoneAxis=AXIS_X
+			WheelPosition=(X=60.299679,Y=-62.865276,Z=-26.803179)
+			SupportPivotDistance=-54.843002
+		End Object
+		Wheels(3)=SVehicleWheel'MyLevel.SVehicleWheel3'
+
+		HeadVolume=DefaultPhysicsVolume'MyLevel.DefaultPhysicsVolume3'
+		Level=LevelInfo'MyLevel.LevelInfo0'
+		Region=(Zone=ZoneInfo'MyLevel.ZoneInfo0',ZoneNumber=1)
+		Tag="ONSRV"
+		PhysicsVolume=DefaultPhysicsVolume'MyLevel.DefaultPhysicsVolume3'
+		Location=(X=-1284.000000,Y=-1828.000000,Z=-68.000000)
+		Rotation=(Yaw=32768)
+		ColLocation=(X=-1284.000000,Y=-1828.000000,Z=-68.000000)
+		Begin Object Class=KarmaParamsRBFull Name=KarmaParamsRBFull10
+			KInertiaTensor(0)=1.000000
+			KInertiaTensor(3)=3.000000
+			KInertiaTensor(5)=3.000000
+			KCOMOffset=(X=-0.250000,Z=-0.400000)
+			KLinearDamping=0.050000
+			KAngularDamping=0.050000
+			KStartEnabled=True
+			bKNonSphericalInertia=True
+			bHighDetailOnly=False
+			bClientOnly=False
+			bKDoubleTickRate=True
+			bDestroyOnWorldPenetrate=True
+			bDoSafetime=True
+			KFriction=0.500000
+			KImpactThreshold=700.000000
+		End Object
+		KParams=KarmaParamsRBFull'MyLevel.KarmaParamsRBFull10'
+
+	End Actor
+	Begin Actor Class=ONSHoverBike Name=ONSHoverBike2
+		HeadVolume=DefaultPhysicsVolume'MyLevel.DefaultPhysicsVolume3'
+		Level=LevelInfo'MyLevel.LevelInfo0'
+		Region=(Zone=ZoneInfo'MyLevel.ZoneInfo0',ZoneNumber=1)
+		Tag="ONSHoverBike"
+		PhysicsVolume=DefaultPhysicsVolume'MyLevel.DefaultPhysicsVolume3'
+		Location=(X=-1517.996094,Y=-1526.884766,Z=-189.899994)
+		ColLocation=(X=-1517.996094,Y=-1526.884766,Z=-189.899994)
+		Begin Object Class=KarmaParamsRBFull Name=KarmaParamsRBFull12
+			KInertiaTensor(0)=1.300000
+			KInertiaTensor(3)=4.000000
+			KInertiaTensor(5)=4.500000
+			KLinearDamping=0.150000
+			KAngularDamping=0.000000
+			KStartEnabled=True
+			bHighDetailOnly=False
+			bClientOnly=False
+			bKDoubleTickRate=True
+			bKStayUpright=True
+			bKAllowRotate=True
+			bDestroyOnWorldPenetrate=True
+			bDoSafetime=True
+			KFriction=0.500000
+			KImpactThreshold=700.000000
+		End Object
+		KParams=KarmaParamsRBFull'MyLevel.KarmaParamsRBFull12'
+
+	End Actor
+	Begin Actor Class=ZoneInfo Name=ZoneInfo0
+		bTerrainZone=True
+		Level=LevelInfo'MyLevel.LevelInfo0'
+		Region=(Zone=ZoneInfo'MyLevel.ZoneInfo0',ZoneNumber=1)
+		Tag="ZoneInfo"
+		PhysicsVolume=DefaultPhysicsVolume'MyLevel.DefaultPhysicsVolume3'
+		Location=(X=-211.390503,Y=-1612.797607,Z=-201.900009)
+	End Actor
+	Begin Actor Class=ONSHoverBike Name=ONSHoverBike4
+		HeadVolume=DefaultPhysicsVolume'MyLevel.DefaultPhysicsVolume3'
+		Level=LevelInfo'MyLevel.LevelInfo0'
+		Region=(Zone=ZoneInfo'MyLevel.ZoneInfo0',ZoneNumber=1)
+		Tag="ONSHoverBike"
+		PhysicsVolume=DefaultPhysicsVolume'MyLevel.DefaultPhysicsVolume3'
+		Location=(X=-1181.996094,Y=-1526.884766,Z=-189.899994)
+		ColLocation=(X=-1181.996094,Y=-1526.884766,Z=-189.899994)
+		Begin Object Class=KarmaParamsRBFull Name=KarmaParamsRBFull13
+			KInertiaTensor(0)=1.300000
+			KInertiaTensor(3)=4.000000
+			KInertiaTensor(5)=4.500000
+			KLinearDamping=0.150000
+			KAngularDamping=0.000000
+			KStartEnabled=True
+			bHighDetailOnly=False
+			bClientOnly=False
+			bKDoubleTickRate=True
+			bKStayUpright=True
+			bKAllowRotate=True
+			bDestroyOnWorldPenetrate=True
+			bDoSafetime=True
+			KFriction=0.500000
+			KImpactThreshold=700.000000
+		End Object
+		KParams=KarmaParamsRBFull'MyLevel.KarmaParamsRBFull13'
+
+	End Actor
+	Begin Actor Class=ONSHoverBike Name=ONSHoverBike1
+		HeadVolume=DefaultPhysicsVolume'MyLevel.DefaultPhysicsVolume3'
+		Level=LevelInfo'MyLevel.LevelInfo0'
+		Region=(Zone=ZoneInfo'MyLevel.ZoneInfo0',ZoneNumber=1)
+		Tag="ONSHoverBike"
+		PhysicsVolume=DefaultPhysicsVolume'MyLevel.DefaultPhysicsVolume3'
+		Location=(X=-1517.996094,Y=-1222.884766,Z=-189.899994)
+		ColLocation=(X=-1517.996094,Y=-1222.884766,Z=-189.899994)
+		Begin Object Class=KarmaParamsRBFull Name=KarmaParamsRBFull7
+			KInertiaTensor(0)=1.300000
+			KInertiaTensor(3)=4.000000
+			KInertiaTensor(5)=4.500000
+			KLinearDamping=0.150000
+			KAngularDamping=0.000000
+			KStartEnabled=True
+			bHighDetailOnly=False
+			bClientOnly=False
+			bKDoubleTickRate=True
+			bKStayUpright=True
+			bKAllowRotate=True
+			bDestroyOnWorldPenetrate=True
+			bDoSafetime=True
+			KFriction=0.500000
+			KImpactThreshold=700.000000
+		End Object
+		KParams=KarmaParamsRBFull'MyLevel.KarmaParamsRBFull7'
+
+	End Actor
+	Begin Actor Class=ONSHoverBike Name=ONSHoverBike0
+		HeadVolume=DefaultPhysicsVolume'MyLevel.DefaultPhysicsVolume3'
+		Level=LevelInfo'MyLevel.LevelInfo0'
+		Region=(Zone=ZoneInfo'MyLevel.ZoneInfo0',ZoneNumber=1)
+		Tag="ONSHoverBike"
+		PhysicsVolume=DefaultPhysicsVolume'MyLevel.DefaultPhysicsVolume3'
+		Location=(X=-1517.996094,Y=-1222.884766,Z=-93.899994)
+		ColLocation=(X=-1517.996094,Y=-1222.884766,Z=-93.899994)
+		Begin Object Class=KarmaParamsRBFull Name=KarmaParamsRBFull8
+			KInertiaTensor(0)=1.300000
+			KInertiaTensor(3)=4.000000
+			KInertiaTensor(5)=4.500000
+			KLinearDamping=0.150000
+			KAngularDamping=0.000000
+			KStartEnabled=True
+			bHighDetailOnly=False
+			bClientOnly=False
+			bKDoubleTickRate=True
+			bKStayUpright=True
+			bKAllowRotate=True
+			bDestroyOnWorldPenetrate=True
+			bDoSafetime=True
+			KFriction=0.500000
+			KImpactThreshold=700.000000
+		End Object
+		KParams=KarmaParamsRBFull'MyLevel.KarmaParamsRBFull8'
+
+	End Actor
+	Begin Actor Class=StaticMeshActor Name=StaticMeshActor1
+		StaticMesh=StaticMesh'HumanoidHardware.Beams.jribbedcolumn01HA'
+		Level=LevelInfo'MyLevel.LevelInfo0'
+		Region=(Zone=ZoneInfo'MyLevel.ZoneInfo0',ZoneNumber=1)
+		Tag="StaticMeshActor"
+		PhysicsVolume=DefaultPhysicsVolume'MyLevel.DefaultPhysicsVolume3'
+		Location=(X=-1824.000000,Y=-1456.000000,Z=272.000000)
+		Rotation=(Pitch=8192,Yaw=-16384)
+		StaticMeshInstance=StaticMeshInstance'MyLevel.StaticMeshInstance15'
+		ColLocation=(X=-1824.000000,Y=-1456.000000,Z=272.000000)
+	End Actor
+	Begin Actor Class=BlockingVolume Name=BlockingVolume0
+		MainScale=(SheerAxis=SHEER_ZX)
+		PostScale=(SheerAxis=SHEER_ZX)
+		Level=LevelInfo'MyLevel.LevelInfo0'
+		Region=(Zone=ZoneInfo'MyLevel.ZoneInfo0',ZoneNumber=1)
+		Tag="BlockingVolume"
+		PhysicsVolume=DefaultPhysicsVolume'MyLevel.DefaultPhysicsVolume3'
+		Location=(X=-1808.000000,Y=-1920.000000,Z=-96.000000)
+		Begin Brush Name=Model11
+			Begin PolyList
+				Begin Polygon Link=0
+					Origin   -00128.000000,-00128.000000,-00128.000000
+					Normal   -00001.000000,+00000.000000,+00000.000000
+					TextureU +00000.000000,+00001.000000,+00000.000000
+					TextureV +00000.000000,+00000.000000,-00001.000000
+					Vertex   -00128.000000,-00128.000000,-00128.000000
+					Vertex   -00128.000000,-00128.000000,+00128.000000
+					Vertex   -00128.000000,+00128.000000,+00128.000000
+					Vertex   -00128.000000,+00128.000000,-00128.000000
+				End Polygon
+				Begin Polygon Link=1
+					Origin   -00128.000000,+00128.000000,-00128.000000
+					Normal   +00000.000000,+00001.000000,+00000.000000
+					TextureU +00001.000000,-00000.000000,+00000.000000
+					TextureV +00000.000000,+00000.000000,-00001.000000
+					Vertex   -00128.000000,+00128.000000,-00128.000000
+					Vertex   -00128.000000,+00128.000000,+00128.000000
+					Vertex   +00128.000000,+00128.000000,+00128.000000
+					Vertex   +00128.000000,+00128.000000,-00128.000000
+				End Polygon
+				Begin Polygon Link=2
+					Origin   +00128.000000,+00128.000000,-00128.000000
+					Normal   +00001.000000,+00000.000000,+00000.000000
+					TextureU +00000.000000,-00001.000000,+00000.000000
+					TextureV +00000.000000,+00000.000000,-00001.000000
+					Vertex   +00128.000000,+00128.000000,-00128.000000
+					Vertex   +00128.000000,+00128.000000,+00128.000000
+					Vertex   +00128.000000,-00128.000000,+00128.000000
+					Vertex   +00128.000000,-00128.000000,-00128.000000
+				End Polygon
+				Begin Polygon Link=3
+					Origin   +00128.000000,-00128.000000,-00128.000000
+					Normal   +00000.000000,-00001.000000,+00000.000000
+					TextureU -00001.000000,-00000.000000,-00000.000000
+					TextureV +00000.000000,+00000.000000,-00001.000000
+					Vertex   +00128.000000,-00128.000000,-00128.000000
+					Vertex   +00128.000000,-00128.000000,+00128.000000
+					Vertex   -00128.000000,-00128.000000,+00128.000000
+					Vertex   -00128.000000,-00128.000000,-00128.000000
+				End Polygon
+				Begin Polygon Link=4
+					Origin   -00128.000000,+00128.000000,+00128.000000
+					Normal   +00000.000000,+00000.000000,+00001.000000
+					TextureU +00001.000000,+00000.000000,+00000.000000
+					TextureV +00000.000000,+00001.000000,+00000.000000
+					Vertex   -00128.000000,+00128.000000,+00128.000000
+					Vertex   -00128.000000,-00128.000000,+00128.000000
+					Vertex   +00128.000000,-00128.000000,+00128.000000
+					Vertex   +00128.000000,+00128.000000,+00128.000000
+				End Polygon
+				Begin Polygon Link=5
+					Origin   -00128.000000,-00128.000000,-00128.000000
+					Normal   +00000.000000,+00000.000000,-00001.000000
+					TextureU +00001.000000,+00000.000000,+00000.000000
+					TextureV +00000.000000,-00001.000000,+00000.000000
+					Vertex   -00128.000000,-00128.000000,-00128.000000
+					Vertex   -00128.000000,+00128.000000,-00128.000000
+					Vertex   +00128.000000,+00128.000000,-00128.000000
+					Vertex   +00128.000000,-00128.000000,-00128.000000
+				End Polygon
+			End PolyList
+		End Brush
+		Brush=Model'MyLevel.Model11'
+
+		ColLocation=(X=-1808.000000,Y=-1920.000000,Z=-96.000000)
+	End Actor
+	Begin Actor Class=StaticMeshActor Name=StaticMeshActor2
+		StaticMesh=StaticMesh'HumanoidHardware.Beams.jribbedcolumn01HA'
+		Level=LevelInfo'MyLevel.LevelInfo0'
+		Region=(Zone=ZoneInfo'MyLevel.ZoneInfo0',ZoneNumber=1)
+		Tag="StaticMeshActor"
+		PhysicsVolume=DefaultPhysicsVolume'MyLevel.DefaultPhysicsVolume3'
+		Location=(X=-400.000000,Y=-1424.000000,Z=272.000000)
+		Rotation=(Pitch=8192,Yaw=-16384)
+		StaticMeshInstance=StaticMeshInstance'MyLevel.StaticMeshInstance16'
+		ColLocation=(X=-400.000000,Y=-1424.000000,Z=272.000000)
+	End Actor
+	Begin Actor Class=ONSHoverBike Name=ONSHoverBike3
+		HeadVolume=DefaultPhysicsVolume'MyLevel.DefaultPhysicsVolume3'
+		Level=LevelInfo'MyLevel.LevelInfo0'
+		Region=(Zone=ZoneInfo'MyLevel.ZoneInfo0',ZoneNumber=1)
+		Tag="ONSHoverBike"
+		PhysicsVolume=DefaultPhysicsVolume'MyLevel.DefaultPhysicsVolume3'
+		Location=(X=-429.996094,Y=-1494.884766,Z=530.099976)
+		ColLocation=(X=-429.996094,Y=-1494.884766,Z=530.099976)
+		Begin Object Class=KarmaParamsRBFull Name=KarmaParamsRBFull9
+			KInertiaTensor(0)=1.300000
+			KInertiaTensor(3)=4.000000
+			KInertiaTensor(5)=4.500000
+			KLinearDamping=0.150000
+			KAngularDamping=0.000000
+			KStartEnabled=True
+			bHighDetailOnly=False
+			bClientOnly=False
+			bKDoubleTickRate=True
+			bKStayUpright=True
+			bKAllowRotate=True
+			bDestroyOnWorldPenetrate=True
+			bDoSafetime=True
+			KFriction=0.500000
+			KImpactThreshold=700.000000
+		End Object
+		KParams=KarmaParamsRBFull'MyLevel.KarmaParamsRBFull9'
+
+	End Actor
+	Begin Actor Class=StaticMeshActor Name=StaticMeshActor0
+		StaticMesh=StaticMesh'HumanoidHardware.Beams.jribbedcolumn01HA'
+		Level=LevelInfo'MyLevel.LevelInfo0'
+		Region=(Zone=ZoneInfo'MyLevel.ZoneInfo0',ZoneNumber=1)
+		Tag="StaticMeshActor"
+		PhysicsVolume=DefaultPhysicsVolume'MyLevel.DefaultPhysicsVolume3'
+		Location=(X=-400.000000,Y=-1680.000000,Z=32.000000)
+		Rotation=(Pitch=8192,Yaw=-16384)
+		StaticMeshInstance=StaticMeshInstance'MyLevel.StaticMeshInstance17'
+		ColLocation=(X=-400.000000,Y=-1680.000000,Z=32.000000)
+	End Actor
+	Begin Actor Class=LavaVolume Name=LavaVolume0
+		DamagePerSec=100.000000
+		MainScale=(SheerAxis=SHEER_ZX)
+		PostScale=(SheerAxis=SHEER_ZX)
+		bLightChanged=True
+		Level=LevelInfo'MyLevel.LevelInfo0'
+		Region=(Zone=ZoneInfo'MyLevel.ZoneInfo0',ZoneNumber=1)
+		Tag="LavaVolume"
+		PhysicsVolume=LavaVolume'MyLevel.LavaVolume0'
+		Location=(X=-1824.000000,Y=-1536.000000,Z=656.000000)
+		Begin Brush Name=Model12
+			Begin PolyList
+				Begin Polygon Link=0
+					Origin   -00128.000000,-00128.000000,-00128.000000
+					Normal   -00001.000000,+00000.000000,+00000.000000
+					TextureU +00000.000000,+00001.000000,+00000.000000
+					TextureV +00000.000000,+00000.000000,-00001.000000
+					Vertex   -00128.000000,-00128.000000,-00128.000000
+					Vertex   -00128.000000,-00128.000000,+00128.000000
+					Vertex   -00128.000000,+00128.000000,+00128.000000
+					Vertex   -00128.000000,+00128.000000,-00128.000000
+				End Polygon
+				Begin Polygon Link=1
+					Origin   -00128.000000,+00128.000000,-00128.000000
+					Normal   +00000.000000,+00001.000000,+00000.000000
+					TextureU +00001.000000,-00000.000000,+00000.000000
+					TextureV +00000.000000,+00000.000000,-00001.000000
+					Vertex   -00128.000000,+00128.000000,-00128.000000
+					Vertex   -00128.000000,+00128.000000,+00128.000000
+					Vertex   +00128.000000,+00128.000000,+00128.000000
+					Vertex   +00128.000000,+00128.000000,-00128.000000
+				End Polygon
+				Begin Polygon Link=2
+					Origin   +00128.000000,+00128.000000,-00128.000000
+					Normal   +00001.000000,+00000.000000,+00000.000000
+					TextureU +00000.000000,-00001.000000,+00000.000000
+					TextureV +00000.000000,+00000.000000,-00001.000000
+					Vertex   +00128.000000,+00128.000000,-00128.000000
+					Vertex   +00128.000000,+00128.000000,+00128.000000
+					Vertex   +00128.000000,-00128.000000,+00128.000000
+					Vertex   +00128.000000,-00128.000000,-00128.000000
+				End Polygon
+				Begin Polygon Link=3
+					Origin   +00128.000000,-00128.000000,-00128.000000
+					Normal   +00000.000000,-00001.000000,+00000.000000
+					TextureU -00001.000000,-00000.000000,-00000.000000
+					TextureV +00000.000000,+00000.000000,-00001.000000
+					Vertex   +00128.000000,-00128.000000,-00128.000000
+					Vertex   +00128.000000,-00128.000000,+00128.000000
+					Vertex   -00128.000000,-00128.000000,+00128.000000
+					Vertex   -00128.000000,-00128.000000,-00128.000000
+				End Polygon
+				Begin Polygon Link=4
+					Origin   -00128.000000,+00128.000000,+00128.000000
+					Normal   +00000.000000,+00000.000000,+00001.000000
+					TextureU +00001.000000,+00000.000000,+00000.000000
+					TextureV +00000.000000,+00001.000000,+00000.000000
+					Vertex   -00128.000000,+00128.000000,+00128.000000
+					Vertex   -00128.000000,-00128.000000,+00128.000000
+					Vertex   +00128.000000,-00128.000000,+00128.000000
+					Vertex   +00128.000000,+00128.000000,+00128.000000
+				End Polygon
+				Begin Polygon Link=5
+					Origin   -00128.000000,-00128.000000,-00128.000000
+					Normal   +00000.000000,+00000.000000,-00001.000000
+					TextureU +00001.000000,+00000.000000,+00000.000000
+					TextureV +00000.000000,-00001.000000,+00000.000000
+					Vertex   -00128.000000,-00128.000000,-00128.000000
+					Vertex   -00128.000000,+00128.000000,-00128.000000
+					Vertex   +00128.000000,+00128.000000,-00128.000000
+					Vertex   +00128.000000,-00128.000000,-00128.000000
+				End Polygon
+			End PolyList
+		End Brush
+		Brush=Model'MyLevel.Model12'
+
+		ColLocation=(X=-1824.000000,Y=-1536.000000,Z=656.000000)
+		bSelected=True
+	End Actor
+Begin Surface
+End Surface
+End Map

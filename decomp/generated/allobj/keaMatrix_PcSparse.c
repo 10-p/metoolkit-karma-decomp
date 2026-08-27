@@ -44,26 +44,26 @@ void __thiscall kd_keaMatrix_pcSparse__makeFromColMajorPSM (keaMatrix_pcSparse *
  * originals are COMDAT. */
 
 /* C++ ABI objects defined in OTHER objects (a base class's typeinfo) */
-extern const void *kd_ZTI9keaMatrix[] __asm__("_ZTI9keaMatrix");
+extern const void *kd_ZTI9keaMatrix[] KD_MANGLED("_ZTI9keaMatrix");
 
 /* symbols the tables point at that this object does not define */
-extern void kd_ext__ZN9keaMatrix18prefetchMatrixCholEv(void) __asm__("_ZN9keaMatrix18prefetchMatrixCholEv");
-extern void kd_ext__ZN9keaMatrix19writebackMatrixCholEv(void) __asm__("_ZN9keaMatrix19writebackMatrixCholEv");
-extern const void *kd_ext__ZTVN10__cxxabiv120__si_class_type_infoE[] __asm__("_ZTVN10__cxxabiv120__si_class_type_infoE");
-extern void kd_ext___cxa_pure_virtual(void) __asm__("__cxa_pure_virtual");
+extern void kd_ext__ZN9keaMatrix18prefetchMatrixCholEv(void) KD_MANGLED("_ZN9keaMatrix18prefetchMatrixCholEv");
+extern void kd_ext__ZN9keaMatrix19writebackMatrixCholEv(void) KD_MANGLED("_ZN9keaMatrix19writebackMatrixCholEv");
+extern const void *kd_ext__ZTVN10__cxxabiv120__si_class_type_infoE[] KD_MANGLED("_ZTVN10__cxxabiv120__si_class_type_infoE");
+extern void kd_ext___cxa_pure_virtual(void) KD_MANGLED("__cxa_pure_virtual");
 
-__attribute__((weak)) const char kd_ZTS18keaMatrix_pcSparse[]
-    __asm__("_ZTS18keaMatrix_pcSparse") = "18keaMatrix_pcSparse";
+KD_WEAK_DATA const char kd_ZTS18keaMatrix_pcSparse[]
+    KD_MANGLED("_ZTS18keaMatrix_pcSparse") = "18keaMatrix_pcSparse";
 
-__attribute__((weak)) const void *kd_ZTI18keaMatrix_pcSparse[3]
-    __asm__("_ZTI18keaMatrix_pcSparse") = {
+KD_WEAK_DATA const void *kd_ZTI18keaMatrix_pcSparse[3]
+    KD_MANGLED("_ZTI18keaMatrix_pcSparse") = {
         (const void *)((const char *)&kd_ext__ZTVN10__cxxabiv120__si_class_type_infoE[0] + 8),
         (const void *)kd_ZTS18keaMatrix_pcSparse,
         (const void *)kd_ZTI9keaMatrix
     };
 
-__attribute__((weak)) const void *kd_ZTV18keaMatrix_pcSparse[11]
-    __asm__("_ZTV18keaMatrix_pcSparse") = {
+KD_WEAK_DATA const void *kd_ZTV18keaMatrix_pcSparse[11]
+    KD_MANGLED("_ZTV18keaMatrix_pcSparse") = {
         (const void *)0,
         (const void *)kd_ZTI18keaMatrix_pcSparse,
         (const void *)&kd_ext___cxa_pure_virtual,

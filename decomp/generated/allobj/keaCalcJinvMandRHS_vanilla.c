@@ -57,35 +57,35 @@ static void Multiply46BlockBy61Vector(MeReal *arhs,MdtKeaJBlock *jblock,MdtKeaVe
  * originals are COMDAT. */
 
 /* symbols the tables point at that this object does not define */
-extern void kd_ext__ZN20keaFunctions_Vanilla12platformInitEv(void) __asm__("_ZN20keaFunctions_Vanilla12platformInitEv");
-extern void kd_ext__ZN20keaFunctions_Vanilla14allocateMemoryEP13keaTempMemory17MdtKeaConstraintsi(void) __asm__("_ZN20keaFunctions_Vanilla14allocateMemoryEP13keaTempMemory17MdtKeaConstraintsi");
-extern void kd_ext__ZN20keaFunctions_Vanilla21calculateAccelerationEPKP10MdtKeaBodyPK23MdtKeaInverseMassMatrixi(void) __asm__("_ZN20keaFunctions_Vanilla21calculateAccelerationEPKP10MdtKeaBodyPK23MdtKeaInverseMassMatrixi");
-extern void kd_ext__ZN20keaFunctions_Vanilla36calcIworldandNonInertialForceandVhmfEP23MdtKeaInverseMassMatrixP14MdtKeaVelocityPKPK10MdtKeaBodyPK20MdtKeaTransformationif(void) __asm__("_ZN20keaFunctions_Vanilla36calcIworldandNonInertialForceandVhmfEP23MdtKeaInverseMassMatrixP14MdtKeaVelocityPKPK10MdtKeaBodyPK20MdtKeaTransformationif");
-extern void kd_ext__ZN20keaFunctions_Vanilla37calculateConstraintAndResultantForcesEPKP10MdtKeaBodyP15MdtKeaForcePairPA2_K12MdtKeaJBlockPA2_KiPKfPA8_SA_SG_PSA_iiii(void) __asm__("_ZN20keaFunctions_Vanilla37calculateConstraintAndResultantForcesEPKP10MdtKeaBodyP15MdtKeaForcePairPA2_K12MdtKeaJBlockPA2_KiPKfPA8_SA_SG_PSA_iiii");
-extern const void *kd_ext__ZTVN10__cxxabiv117__class_type_infoE[] __asm__("_ZTVN10__cxxabiv117__class_type_infoE");
-extern const void *kd_ext__ZTVN10__cxxabiv120__si_class_type_infoE[] __asm__("_ZTVN10__cxxabiv120__si_class_type_infoE");
+extern void kd_ext__ZN20keaFunctions_Vanilla12platformInitEv(void) KD_MANGLED("_ZN20keaFunctions_Vanilla12platformInitEv");
+extern void kd_ext__ZN20keaFunctions_Vanilla14allocateMemoryEP13keaTempMemory17MdtKeaConstraintsi(void) KD_MANGLED("_ZN20keaFunctions_Vanilla14allocateMemoryEP13keaTempMemory17MdtKeaConstraintsi");
+extern void kd_ext__ZN20keaFunctions_Vanilla21calculateAccelerationEPKP10MdtKeaBodyPK23MdtKeaInverseMassMatrixi(void) KD_MANGLED("_ZN20keaFunctions_Vanilla21calculateAccelerationEPKP10MdtKeaBodyPK23MdtKeaInverseMassMatrixi");
+extern void kd_ext__ZN20keaFunctions_Vanilla36calcIworldandNonInertialForceandVhmfEP23MdtKeaInverseMassMatrixP14MdtKeaVelocityPKPK10MdtKeaBodyPK20MdtKeaTransformationif(void) KD_MANGLED("_ZN20keaFunctions_Vanilla36calcIworldandNonInertialForceandVhmfEP23MdtKeaInverseMassMatrixP14MdtKeaVelocityPKPK10MdtKeaBodyPK20MdtKeaTransformationif");
+extern void kd_ext__ZN20keaFunctions_Vanilla37calculateConstraintAndResultantForcesEPKP10MdtKeaBodyP15MdtKeaForcePairPA2_K12MdtKeaJBlockPA2_KiPKfPA8_SA_SG_PSA_iiii(void) KD_MANGLED("_ZN20keaFunctions_Vanilla37calculateConstraintAndResultantForcesEPKP10MdtKeaBodyP15MdtKeaForcePairPA2_K12MdtKeaJBlockPA2_KiPKfPA8_SA_SG_PSA_iiii");
+extern const void *kd_ext__ZTVN10__cxxabiv117__class_type_infoE[] KD_MANGLED("_ZTVN10__cxxabiv117__class_type_infoE");
+extern const void *kd_ext__ZTVN10__cxxabiv120__si_class_type_infoE[] KD_MANGLED("_ZTVN10__cxxabiv120__si_class_type_infoE");
 
-__attribute__((weak)) const char kd_ZTS12keaFunctions[]
-    __asm__("_ZTS12keaFunctions") = "12keaFunctions";
+KD_WEAK_DATA const char kd_ZTS12keaFunctions[]
+    KD_MANGLED("_ZTS12keaFunctions") = "12keaFunctions";
 
-__attribute__((weak)) const char kd_ZTS20keaFunctions_Vanilla[]
-    __asm__("_ZTS20keaFunctions_Vanilla") = "20keaFunctions_Vanilla";
+KD_WEAK_DATA const char kd_ZTS20keaFunctions_Vanilla[]
+    KD_MANGLED("_ZTS20keaFunctions_Vanilla") = "20keaFunctions_Vanilla";
 
-__attribute__((weak)) const void *kd_ZTI12keaFunctions[2]
-    __asm__("_ZTI12keaFunctions") = {
+KD_WEAK_DATA const void *kd_ZTI12keaFunctions[2]
+    KD_MANGLED("_ZTI12keaFunctions") = {
         (const void *)((const char *)&kd_ext__ZTVN10__cxxabiv117__class_type_infoE[0] + 8),
         (const void *)kd_ZTS12keaFunctions
     };
 
-__attribute__((weak)) const void *kd_ZTI20keaFunctions_Vanilla[3]
-    __asm__("_ZTI20keaFunctions_Vanilla") = {
+KD_WEAK_DATA const void *kd_ZTI20keaFunctions_Vanilla[3]
+    KD_MANGLED("_ZTI20keaFunctions_Vanilla") = {
         (const void *)((const char *)&kd_ext__ZTVN10__cxxabiv120__si_class_type_infoE[0] + 8),
         (const void *)kd_ZTS20keaFunctions_Vanilla,
         (const void *)kd_ZTI12keaFunctions
     };
 
-__attribute__((weak)) const void *kd_ZTV20keaFunctions_Vanilla[8]
-    __asm__("_ZTV20keaFunctions_Vanilla") = {
+KD_WEAK_DATA const void *kd_ZTV20keaFunctions_Vanilla[8]
+    KD_MANGLED("_ZTV20keaFunctions_Vanilla") = {
         (const void *)0,
         (const void *)kd_ZTI20keaFunctions_Vanilla,
         (const void *)&kd_keaFunctions_Vanilla__calcJinvMandRHS,

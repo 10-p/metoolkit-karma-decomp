@@ -45,7 +45,7 @@ numbers are the numbers of the day each part was written.
 | Milestone 2 — `MdtKea` C++/vtable spike | ✅ **done — no blocker** |
 | Milestone 3 — scale validation | ✅ **done** — the engine runs on the recovered set |
 | Milestone 4 — the grind | 🔶 **collision done, solver DONE and running** — 115 objects; `libMdtKea` is bit-identical throughout and the engine executes it (HANDOVER §7d). What is open is §11 item 2a: an association defect that is inert on i386 and 31% divergent on wasm/ARM |
-| Milestone 5 — wasm + Android bring-up | ⬜ compiles, never executed. `HANDOVER-WEB.md` |
+| Milestone 5 — wasm + Android bring-up | 🔶 **wasm32 RUNS** — the engine boots, loads its `.ka` ragdoll assets and ticks physics in a browser, on recovered Karma (`HANDOVER-WEB.md` §0). Android has still never executed |
 
 ### Milestone 1 result
 
@@ -498,6 +498,8 @@ tools/ghidra_clean.py                Ghidra dump -> compilable C (the pre-passes
 tools/recover.py                     drives the whole pipeline and classifies each object
 tools/gen_*.py                       preludes, prototypes, the type database, vtables
 tools/*_check.py, *_scan.py          the offline gates
+tools/code_call_check.py             calls still made through the unprototyped `code` type
+tools/wasm_indirect_check.py         call_indirect sites that can never succeed (wasm-only defect)
 
 test/README.md                       every gate and harness, with the command
 test/scene_*.c                       whole-simulation scenes

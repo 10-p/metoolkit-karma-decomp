@@ -228,7 +228,7 @@ kd_keaLCPSolver__solveLCP
   this->A = A;
   this->cpuType = cpuType;
   iStackY_50 = 0x1024c;
-  (**(code **)(*(int *)A + 0x10))(A,this->x,b);
+  (**(void (**)(keaMatrix *, MeReal *, const MeReal *))(*(int *)A + 0x10))(A,this->x,b);
   iStackY_50 = 0x1025b;
   keaLCPSolver__setUpper(this,upper);
   iStackY_50 = 0x1026a;

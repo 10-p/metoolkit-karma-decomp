@@ -63,19 +63,19 @@ void __thiscall kd_CxSmallSort__SetCullingParameters (CxSmallSort *this,MeI32 in
  * originals are COMDAT. */
 
 /* symbols the tables point at that this object does not define */
-extern const void *kd_ext__ZTVN10__cxxabiv117__class_type_infoE[] __asm__("_ZTVN10__cxxabiv117__class_type_infoE");
+extern const void *kd_ext__ZTVN10__cxxabiv117__class_type_infoE[] KD_MANGLED("_ZTVN10__cxxabiv117__class_type_infoE");
 
-__attribute__((weak)) const char kd_ZTS11CxSmallSort[]
-    __asm__("_ZTS11CxSmallSort") = "11CxSmallSort";
+KD_WEAK_DATA const char kd_ZTS11CxSmallSort[]
+    KD_MANGLED("_ZTS11CxSmallSort") = "11CxSmallSort";
 
-__attribute__((weak)) const void *kd_ZTI11CxSmallSort[2]
-    __asm__("_ZTI11CxSmallSort") = {
+KD_WEAK_DATA const void *kd_ZTI11CxSmallSort[2]
+    KD_MANGLED("_ZTI11CxSmallSort") = {
         (const void *)((const char *)&kd_ext__ZTVN10__cxxabiv117__class_type_infoE[0] + 8),
         (const void *)kd_ZTS11CxSmallSort
     };
 
-__attribute__((weak)) const void *kd_ZTV11CxSmallSort[4]
-    __asm__("_ZTV11CxSmallSort") = {
+KD_WEAK_DATA const void *kd_ZTV11CxSmallSort[4]
+    KD_MANGLED("_ZTV11CxSmallSort") = {
         (const void *)0,
         (const void *)kd_ZTI11CxSmallSort,
         (const void *)&kd_CxSmallSort__dtor_CxSmallSort,

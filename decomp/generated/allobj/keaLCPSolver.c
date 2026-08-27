@@ -275,15 +275,14 @@ LAB_0001043c:
     }
                     
     (*(undefined4 **)&vanillaQMatrix) = (undefined4 *)((char *)&vtable_for_keaMatrix_pcSparse_vanilla[0] + 8);
-    (**(code **)(*(int *)this->A + 0x18))
-              (this->A,this->Ainv,this->cached,clamped,numClamped,this->AinvStride,iVar4,iVar4);
-    (*(code *)*(*(undefined4 **)&vanillaQMatrix))((keaLCPSolver *)&vanillaQMatrix,numClamped);
-    (*(code *)(*(undefined4 **)&vanillaQMatrix)[2])
+    (**(void (**)(keaMatrix *, MeReal *, int *, const int *, int, int))(*(int *)this->A + 0x18))(this->A,this->Ainv,this->cached,clamped,numClamped,this->AinvStride);
+    (**(void (**)(void *, int))((char *)(*(undefined4 **)&vanillaQMatrix) + 0))((keaLCPSolver *)&vanillaQMatrix,numClamped);
+    (**(void (**)(void *, void *, void *, void *, void *, void *, void *, int, int, int))((char *)(*(undefined4 **)&vanillaQMatrix) + 8))
               ((keaLCPSolver *)&vanillaQMatrix,this->Qrhs,this->Ainv,this->clampedValues,
                this->initialSolve,unclamped,clamped,numUnclamped,numClamped,this->AinvStride);
-    (*(code *)(*(undefined4 **)&vanillaQMatrix)[3])((keaLCPSolver *)&vanillaQMatrix);
-    (*(code *)(*(undefined4 **)&vanillaQMatrix)[4])((keaLCPSolver *)&vanillaQMatrix,this->Qrhs,this->Qrhs);
-    (**(code **)(*(int *)this->A + 0x20))(this->A);
+    (**(void (**)(void *))((char *)(*(undefined4 **)&vanillaQMatrix) + 12))((keaLCPSolver *)&vanillaQMatrix);
+    (**(void (**)(void *, void *, void *))((char *)(*(undefined4 **)&vanillaQMatrix) + 16))((keaLCPSolver *)&vanillaQMatrix,this->Qrhs,this->Qrhs);
+    (**(void (**)(keaMatrix *))(*(int *)this->A + 0x20))(this->A);
     kd_keaLCPSolver__PrincipalPivotTransformMakeW(this,this->w,this->Qrhs,clamped,unclamped,numClamped,numUnclamped);
     kd_keaLCPSolver__PrincipalPivotTransformMakeX
               (this,this->x,this->initialSolve,this->Ainv,this->Qrhs,clamped,unclamped,numClamped,
@@ -292,7 +291,7 @@ LAB_0001043c:
   }
                     
   iVar4 = 0;
-  (**(code **)(*(int *)this->A + 0x14))(this->A,this->w,this->clampedValues);
+  (**(void (**)(keaMatrix *, MeReal *, const MeReal *))(*(int *)this->A + 0x14))(this->A,this->w,this->clampedValues);
   if (numClamped < 1) goto LAB_0001060b;
   uVar5 = numClamped & 3;
   if (numClamped < 2) {
@@ -347,12 +346,12 @@ kd_keaLCPSolver__PrincipalSubmatrix
 
   this_00 = (keaLCPSolver *)&vanillaQMatrix;
   (*(char **)&vanillaQMatrix) = (char *)((char *)&vtable_for_keaMatrix_pcSparse_vanilla[0] + 8);
-  (*(*(code **)((*(char **)&vanillaQMatrix))))(this_00,numUnclamped);
+  (**(void (**)(void *, int))((char *)(*(char **)&vanillaQMatrix) + 0))(this_00,numUnclamped);
   keaMatrix_pcSparse__makeFromPcSparsePSM
             (this_00,this->Qrhs,this->A,b,this->clampedValues,unclamped,clamped,numUnclamped,
              numClamped,this->n_blocks);
-  (**(code **)((*(char **)&vanillaQMatrix) + 0xc))(this_00);
-  (**(code **)((*(char **)&vanillaQMatrix) + 0x10))(this_00,this->Qrhs,this->Qrhs);
+  (**(void (**)(void *))((char *)(*(char **)&vanillaQMatrix) + 12))(this_00);
+  (**(void (**)(void *, void *, void *))((char *)(*(char **)&vanillaQMatrix) + 16))(this_00,this->Qrhs,this->Qrhs);
   pMVar4 = this->x + this->n;
   for (uVar3 = this->n_padded - this->n & 0x3fffffff; uVar3 != 0; uVar3 = uVar3 - 1) {
     *pMVar4 = 0.0;
@@ -424,7 +423,7 @@ LAB_00010794:
   } while (iVar5 < numUnclamped);
 LAB_00010809:
   iVar5 = 0;
-  (**(code **)(*(int *)this->A + 0x14))(this->A,this->w,this->x,this_00);
+  (**(void (**)(keaMatrix *, MeReal *, const MeReal *))(*(int *)this->A + 0x14))(this->A,this->w,this->x);
   if (0 < this->n) {
     do {
       this->w[iVar5] = this->w[iVar5] - b[iVar5];
@@ -648,15 +647,14 @@ kd_keaLCPSolver__PrincipalPivotTransform
   keaMatrix_pcSparse_vanilla vanillaQMatrix;
 
   (*(undefined4 **)&vanillaQMatrix) = (undefined4 *)((char *)&vtable_for_keaMatrix_pcSparse_vanilla[0] + 8);
-  (**(code **)(*(int *)this->A + 0x18))
-            (this->A,this->Ainv,this->cached,clamped,numClamped,this->AinvStride);
-  (*(code *)*(*(undefined4 **)&vanillaQMatrix))((keaLCPSolver *)&vanillaQMatrix,numClamped);
-  (*(code *)(*(undefined4 **)&vanillaQMatrix)[2])
+  (**(void (**)(keaMatrix *, MeReal *, int *, const int *, int, int))(*(int *)this->A + 0x18))(this->A,this->Ainv,this->cached,clamped,numClamped,this->AinvStride);
+  (**(void (**)(void *, int))((char *)(*(undefined4 **)&vanillaQMatrix) + 0))((keaLCPSolver *)&vanillaQMatrix,numClamped);
+  (**(void (**)(void *, void *, void *, void *, void *, void *, void *, int, int, int))((char *)(*(undefined4 **)&vanillaQMatrix) + 8))
             ((keaLCPSolver *)&vanillaQMatrix,this->Qrhs,this->Ainv,this->clampedValues,
              this->initialSolve,unclamped,clamped,numUnclamped,numClamped,this->AinvStride);
-  (*(code *)(*(undefined4 **)&vanillaQMatrix)[3])((keaLCPSolver *)&vanillaQMatrix);
-  (*(code *)(*(undefined4 **)&vanillaQMatrix)[4])((keaLCPSolver *)&vanillaQMatrix,this->Qrhs,this->Qrhs);
-  (**(code **)(*(int *)this->A + 0x20))(this->A);
+  (**(void (**)(void *))((char *)(*(undefined4 **)&vanillaQMatrix) + 12))((keaLCPSolver *)&vanillaQMatrix);
+  (**(void (**)(void *, void *, void *))((char *)(*(undefined4 **)&vanillaQMatrix) + 16))((keaLCPSolver *)&vanillaQMatrix,this->Qrhs,this->Qrhs);
+  (**(void (**)(keaMatrix *))(*(int *)this->A + 0x20))(this->A);
   kd_keaLCPSolver__PrincipalPivotTransformMakeW(this,this->w,this->Qrhs,clamped,unclamped,numClamped,numUnclamped);
   kd_keaLCPSolver__PrincipalPivotTransformMakeX
             (this,this->x,this->initialSolve,this->Ainv,this->Qrhs,clamped,unclamped,numClamped,

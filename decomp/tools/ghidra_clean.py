@@ -1104,10 +1104,17 @@ def resolve_absolute_data_refs(obj, text):
     reproducing the load reproduces the program, including the fault, which is
     the standard everything else here is held to.
 
-    Two sites in the corpus, in two objects, both held out of the build on it.
-    Anything at or above the image base is left to materialise_data_refs, which
-    reads real section bytes; this only ever fires where there is no section to
-    read."""
+    Two sites in the corpus, in two objects. Anything at or above the image base
+    is left to materialise_data_refs, which reads real section bytes; this only
+    ever fires where there is no section to read.
+
+    ⚠ THIS USED TO END "both held out of the build on it", AND THAT IS NO LONGER
+    TRUE — MeFAssetPart is in the build, and on 2026-08-27 the Windows target
+    faulted on exactly this load during startup (proven.txt WIN32-PORT-3). The
+    reproduction is faithful and the fault is therefore not this pass's bug: it
+    means `asset` is NULL there, which it is not on Linux or wasm. Read a crash
+    at one of these addresses as "the caller handed us NULL", not as a bad
+    recovery."""
     secs, _ext = ghidra_memory_map(obj)
     base = min((lo for _n, _t, lo, _hi in secs), default=0x10000)
     seen = {}
@@ -1980,6 +1987,60 @@ fix_stack_address_name.file_wide = True
 VOID_CALL = re.compile(r'\(\s*\*\s*([A-Za-z_]\w*(?:\s*(?:->|\.)\s*[A-Za-z_]\w*)+)\s*\)\s*\(')
 
 
+# ── Vendor-declared ARITY for a call through a `void *` function-pointer member.
+#
+# WHY THIS EXISTS, AND WHY IT IS NOT A GUESS. Ghidra reconstructs an i386 cdecl
+# call site from the stack slots it sees written before the call, and it
+# OVER-COUNTS: at both MeXMLParser sites it renders FOUR arguments where the
+# vendor declares two and three. On i386 that is exactly inert — the caller
+# cleans the stack, so a surplus slot is never read and the recovered object is
+# byte-identical either way. That is precisely why the rule below shipped with
+# the surplus in place, and why every i386 gate reads green on it.
+#
+# ON wasm32 ARITY IS PART OF A FUNCTION'S TYPE. `call_indirect` type-checks
+# against the callee's real type AT RUN TIME, so a surplus argument is not inert
+# — it traps. This is the indirect half of proven.txt's WASM-SIGMISMATCH, which
+# that entry closes by naming: "wasm-ld can only check DIRECT calls ... a wrong
+# prototype there is a trap nothing static will report".
+#
+# MEASURED, NOT PREDICTED. The first wasm boot of the engine against the
+# recovered library died with
+#     RuntimeError: function signature mismatch
+#         at MeXMLElementProcess <- MeXMLInputProcess <- MeAssetDBXMLInputRead
+#            <- KCreateAssetDB <- KInitGameKarma <- UGameEngine::Init
+# i.e. on the `.ka` path that instances every ragdoll and vehicle, immediately
+# after KarmaData/Alien.ka was read. The link emitted ZERO wasm-ld diagnostics.
+#
+# THE ARITY IS TRIPLE-SOURCED, which is why this is a table and not a heuristic:
+#   1. MeXMLParser.h:105-106 — the vendor's own typedefs:
+#          MeXMLCallback (const MeXMLElement *, void *)                    -> 2
+#          MeXMLParseFn  (MeXMLInput *, const MeXMLHandler *, void *)      -> 3
+#   2. the SHIPPED machine code, read when this rule was first written and
+#      recorded in its docstring: the callback branch pushes `(&start,
+#      userdata)`, the parse branch `(fi, handler, data)`.
+#   3. the RECOVERED CALLEES, which are what the wasm build actually calls —
+#      kd_MeXMLParseMeReal(MeXMLInput *, MeXMLHandler *, void *) and its twelve
+#      siblings are all three-parameter. So the corpus was self-inconsistent:
+#      a 4-argument call site against its own 3-parameter callees.
+#
+# Only the COUNT comes from here. The parameter TYPES still come from
+# `__typeof__` of the argument expressions, for the reason the docstring gives —
+# a hand-written parameter list is how the `-0` radius bug survived three
+# sessions.
+#
+# The discriminator is a property of the VENDOR's signatures rather than of
+# Ghidra's rendering: an `MeXMLParseFn` is handed the very handler whose `fn` is
+# being called (its second parameter is `const MeXMLHandler *`), so argument 2
+# is the call target's own base expression. An `MeXMLCallback` never is.
+VOID_PTR_CALL_ARITY = {
+    # member -> ordered candidates: (vendor typedef, arity, predicate(base, args))
+    'fn': (
+        ('MeXMLParseFn', 3, lambda base, args: len(args) > 1 and args[1] == base),
+        ('MeXMLCallback', 2, lambda base, args: True),
+    ),
+}
+
+
 def fix_call_through_void_ptr(line, diag, ctx):
     """`(*handler->fn)(a,b,c)` where the header declares `fn` as `void *`.
 
@@ -2008,9 +2069,22 @@ def fix_call_through_void_ptr(line, diag, ctx):
     `MeXMLParser`. Both of its sites were checked against the machine code
     before this rule was written: the `MeXMLActionCallback` branch pushes
     `(&start, userdata)` and the parse branch pushes `(fi, handler, data)`,
-    matching `MeXMLCallback` and `MeXMLParseFn` exactly. Ghidra supplies one
-    extra argument at each — harmless, and what the original does too, since it
-    pushes four slots and the callee reads its own declared parameters."""
+    matching `MeXMLCallback` and `MeXMLParseFn` exactly.
+
+    ⚠ THAT VERIFICATION WAS RIGHT AND THE CONCLUSION DRAWN FROM IT WAS WRONG.
+    This docstring used to end: "Ghidra supplies one extra argument at each —
+    harmless, and what the original does too, since it pushes four slots and the
+    callee reads its own declared parameters." Harmless is an i386 statement. On
+    wasm32 arity is part of a function's type and the surplus argument TRAPS —
+    measured, on the `.ka` asset path, on the first wasm boot. So the arity now
+    comes from VOID_PTR_CALL_ARITY above, which records the very machine-code
+    reading this paragraph describes; the parameter TYPES still come from
+    `__typeof__`, which was always the right call.
+
+    A member with no entry in that table RAISES rather than emitting a call of
+    Ghidra's arity, because the failure mode being avoided is silent: the
+    surplus costs nothing on i386, no gate here can see it, and wasm-ld does not
+    report it either."""
     if 'called object is not a function or function pointer' not in diag:
         return None
     m = VOID_CALL.search(line)
@@ -2027,11 +2101,38 @@ def fix_call_through_void_ptr(line, diag, ctx):
     if not args or args == ['']:
         return None                     # no arguments: nothing to build a type from
 
+    # ARITY comes from the vendor's declaration, not from Ghidra's slot count.
+    # See VOID_PTR_CALL_ARITY: the surplus is inert on i386 and traps on wasm32.
+    member = re.split(r'->|\.', target)[-1].strip()
+    if member not in VOID_PTR_CALL_ARITY:
+        raise SystemExit(
+            f'fix_call_through_void_ptr: no declared arity for `{target}` '
+            f'(member `{member}`).\n'
+            f'  line: {line.strip()}\n'
+            "  Ghidra's argument count is an i386 stack-slot count and is not "
+            'the callee\'s arity; emitting it would build a call that is inert '
+            'on i386 and TRAPS on wasm32 (proven.txt WASM-SIGMISMATCH). Add an '
+            'entry to VOID_PTR_CALL_ARITY sourced from the vendor header and '
+            'the shipped machine code.')
+
+    base = re.split(r'->|\.', target)[0].strip()
+    for name, arity, applies in VOID_PTR_CALL_ARITY[member]:
+        if applies(base, args):
+            break
+    if len(args) < arity:
+        raise SystemExit(
+            f'fix_call_through_void_ptr: `{target}` matched {name} (arity '
+            f'{arity}) but Ghidra rendered only {len(args)} argument(s).\n'
+            f'  line: {line.strip()}\n'
+            '  Under-counting is a different defect from the surplus this rule '
+            'trims, and inventing an argument would be a guess.')
+    kept = args[:arity]
+
     lhs = re.match(r'^\s*([A-Za-z_]\w*)\s*=\s*', line)
     ret = '__typeof__(%s)' % lhs.group(1) if lhs else 'int'
-    params = ', '.join('__typeof__(%s)' % a for a in args)
+    params = ', '.join('__typeof__(%s)' % a for a in kept)
     cast = '(*(%s (*)(%s))%s)' % (ret, params, target)
-    return line[:m.start()] + cast + line[open_paren:]
+    return line[:m.start()] + cast + '(' + ','.join(kept) + ')' + line[close:]
 
 
 def fix_int_store_to_aggregate(line, diag, ctx):
@@ -4211,10 +4312,9 @@ def _demangled_param_count(mangled):
 _PROTO_TEXT = {}
 
 
-def _slot_fnptr_type(sym, protos):
+def _slot_fnptr_type(sym, protos, args=None):
     """`void (**)(void *, …, int, float)` for a vtable slot, or None.
 
-    ONLY where the slot takes a FLOAT, and that restriction is the whole point.
     Ghidra dispatches through `code *`, which kd_compat.h declares
     `typedef int code();` — an UNPROTOTYPED function type. On i386 an argument
     passed to one of those undergoes the default argument promotions, so a
@@ -4226,13 +4326,36 @@ def _slot_fnptr_type(sym, protos):
     `calcJinvMandRHS(…, int, int, int, float, float)` this way, and the moment
     the object compiled it produced 3.3e+14 on step 0 of the collision-free
     scene and NaN on step 1. Typing those two sites takes the same object to
-    4.7e-03 m at step 0. Integer promotions need no such care — they are already
-    int-sized on the stack — so a slot with no float keeps `code *` and nothing
-    else in the corpus moves.
+    4.7e-03 m at step 0.
 
-    Declines on a prototype that mentions `kd_aggNN`: those stand-ins are only
-    emitted into a translation unit that passes one, and after
-    collapse_outgoing_aggregate_copy has done its work it may not be."""
+    ⚠ THIS USED TO ACCEPT ONLY SLOTS TAKING A FLOAT, and that restriction was
+    an i386 statement that does not survive the port. It read: "Integer
+    promotions need no such care — they are already int-sized on the stack — so
+    a slot with no float keeps `code *` and nothing else in the corpus moves."
+    Both halves are true on i386 and neither is true on wasm32:
+
+      * `code` RETURNS INT. A slot returning void keeps a `code *` cast, so the
+        call asks for an i32 result from a `(i32) -> nil` function. On i386 the
+        caller simply ignores %eax; on wasm32 the RESULT is part of the type and
+        `call_indirect` traps. Measured, not predicted — the second wasm boot of
+        the engine died in `MdtKeaAddConstraintForces` on
+        `keaFunctions_Vanilla::platformInit()`, whose real type is `(i32) -> nil`
+        against a call site asking `(i32) -> i32`.
+      * ARITY and by-value aggregates are part of the type too.
+        `allocateMemory(keaTempMemory *, MdtKeaConstraints, int)` is
+        `(i32,i32,i32,i32) -> nil` — the struct goes indirect — and the
+        unprototyped call site asked for thirteen i32 parameters returning i32.
+
+    So every slot with a recoverable prototype is typed now, not just the float
+    ones. This is the same class as proven.txt's WASM-SIGMISMATCH: correct on
+    i386, inert to every gate here, and a trap on the target.
+
+    A `kd_aggNN` parameter is a size-only stand-in that is emitted only into a
+    translation unit that passes one, and keaRbdCore_unified declares no
+    `kd_agg92` even though it passes an `MdtKeaConstraints` by value. Where the
+    call's own argument expression is in hand, `__typeof__` of it names the type
+    exactly and needs no stand-in — the same device, and for the same reason, as
+    fix_call_through_void_ptr. Without the arguments it still declines."""
     if not protos:
         return None
     if protos not in _PROTO_TEXT:
@@ -4244,9 +4367,17 @@ def _slot_fnptr_type(sym, protos):
     if not m:
         return None
     params = m.group(2)
-    if 'kd_agg' in params or not re.search(r'\b(float|double)\b', params):
+    if 'kd_agg' not in params:
+        # Unchanged spelling, so every site this already typed stays byte-identical.
+        return '%s (**)(%s)' % (m.group(1), params)
+    if args is None:
         return None
-    return '%s (**)(%s)' % (m.group(1), params)
+    parts = [p.strip() for p in params.split(',')]
+    if len(parts) != len(args):
+        return None                     # the proto and the call site disagree: decline
+    named = [f'__typeof__({args[i]})' if 'kd_agg' in p else p
+             for i, p in enumerate(parts)]
+    return '%s (**)(%s)' % (m.group(1), ', '.join(named))
 
 
 def fix_vptr_store(obj, text, declared=None, locals_table=None, protos=None):
@@ -4430,8 +4561,9 @@ def _repair_vptr_store(fn, region, groups, declared, obj, corpus, locals_table,
         for t in sorted(subs, key=len, reverse=True)))
     new = combined.sub(
         lambda m: m.group(0) if m.start() in skip else subs[m.group(0)], region)
-    # A slot that takes a FLOAT cannot go through `code *` — see
-    # _slot_fnptr_type. Retype those dispatches now that the base is named.
+    # No vtable slot can go through `code *` on wasm32 — its int return and its
+    # arity are both part of a call_indirect's type — see _slot_fnptr_type.
+    # Retype those dispatches now that the base is named.
     new = _type_float_dispatches(new, alias, etype, name, table, protos)
     store = re.compile(r'^([ \t]*)' + re.escape(alias) + r'[ \t]*=[^;\n]*;[ \t]*$',
                        re.M)
@@ -4444,9 +4576,15 @@ def _repair_vptr_store(fn, region, groups, declared, obj, corpus, locals_table,
 def _type_float_dispatches(region, alias, etype, name, table, protos):
     """Replace `(**(code **)(BASE + N))` with the slot's real function type.
 
-    Only for a slot _slot_fnptr_type accepts, i.e. one that takes a float, and
-    the shape is the same one Ghidra wrote — `(**(T (**)(…))((char *)BASE + N))`
+    The shape is the same one Ghidra wrote — `(**(T (**)(…))((char *)BASE + N))`
     — so the call site around it is untouched.
+
+    The name is historical: this ran only on slots taking a float until the
+    wasm port showed that `code`'s INT RETURN and its arity are equally part of
+    a `call_indirect`'s type. _slot_fnptr_type has the measurement. Argument
+    expressions are read here and handed down so a by-value aggregate parameter
+    can be named with `__typeof__` rather than a stand-in the TU may not
+    declare.
     """
     esize = _FIXED_WIDTH.get(etype, 1)
     base = re.escape(alias)
@@ -4457,17 +4595,45 @@ def _type_float_dispatches(region, alias, etype, name, table, protos):
         (re.compile(r'\(\*\(code \*\)' + base + r'\[(0x[0-9a-f]+|\d+)\]\)'),
          lambda g: int(g, 0) * esize),
         (re.compile(r'\(\*\(code \*\)\*' + base + r'\)'), lambda g: 0),
+        # Slot +0 again, and the spelling that reached a RUNNING engine: Ghidra
+        # splits the two dereferences and wraps the base in its own parentheses,
+        # so neither of the forms above matches and a plain `grep '(\*\*(code'`
+        # does not find it either. `keaMatrix::allocate` is slot +0 and returns
+        # void, so through `code *` it asks for an i32 result and traps — which
+        # is what MdtKeaAddConstraintForces did on the first physics tick of a
+        # match with constraints. See proven.txt WASM-INDIRECT-SIGS.
+        (re.compile(r'\(\*\(\*\(code \*\*\)\(' + base + r'\)\)\)'), lambda g: 0),
     ]
     for pat, off_of in forms:
         def repl(m, off_of=off_of):
             off = off_of(m.group(1)) if m.groups() else 0
             sym = table.get(off)
-            fnptr = _slot_fnptr_type(sym, protos) if sym else None
+            fnptr = _slot_fnptr_type(sym, protos, _dispatch_args(m.string, m.end())) \
+                if sym else None
             if not fnptr:
                 return m.group(0)
             return '(**(%s)((char *)(*(%s **)&%s) + %d))' % (fnptr, etype, name, off)
         region = pat.sub(repl, region)
     return region
+
+
+def _dispatch_args(region, pos):
+    """The argument expressions of the call that starts at `pos`, or None.
+
+    `pos` is just past a dispatch prefix, so what follows is the call's own
+    `(...)`. Returns None for anything else — the prefix is then being read
+    rather than called, and a caller that cannot see the arguments must decline
+    rather than assume them.
+    """
+    j = pos
+    while j < len(region) and region[j] in ' \t\n':
+        j += 1
+    if j >= len(region) or region[j] != '(':
+        return None
+    end = _match_bracket(region, j)
+    if end is None:
+        return None
+    return [a.strip() for a in _split_args(region[j + 1:end - 1]) if a.strip()]
 
 
 def _vptr_call_site(region, pos, scale):
@@ -5851,6 +6017,211 @@ X87_RECONSTRUCTIONS = {
 }
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# FLOAT_TYPED_INT_FIELDS — Ghidra typed a struct pointer `MeReal *`, so integer
+# fields get written as FLOATS.
+#
+# THE DEFECT. `MePoolxGet` returns `void *`; Ghidra picked `MeReal *` for the
+# result and then indexed it, so every field of the struct is written with a
+# float store. Where the field really is a float that is right, and where it is
+# an INT the value laid down is a float BIT PATTERN:
+#
+#     f->fi[0] = 1     becomes   store 1.0f   ->   0x3F800000, not 1
+#
+# _McdGjkFace is { MeVector3 v; MeReal v_len; int depth; int bits; int fi[4];
+# int slant; } — v_len at 0xc, depth 0x10, bits 0x14, fi[] 0x18..0x24, slant
+# 0x28 — and the shipped code says which stores are integer moves:
+#
+#     5c3: mov   %esi,0x14(%eax)     bits     <- integer
+#     5f0: fstps 0xc(%ebx)           v_len    <- float, and the recovery has it right
+#     5f6: mov   %ecx,0x18(%ebx)     fi[0]    <- integer
+#     5fc: mov   %esi,0x1c(%ebx)     fi[1]    <- integer
+#
+# The mask is the same defect one level earlier: `*(MeReal *)(McdGjkBinarySubset
+# +0x3c ...)` against the shipped `mov 0x4(%ebx,%eax,4),%esi`, and Ghidra then
+# reuses that same MVar5 for MeVector3Normalize's float result in the shared
+# tail — which is why the repair needs a separate integer local rather than a
+# cast at each site.
+#
+# WHY IT REACHED A RUNNING GAME. `depth` and `slant` are stored as 0.0f and the
+# denormals 1.4013e-45 / 2.8026e-45 / 5.60519e-45 / 1.12104e-44 — whose bit
+# patterns ARE 0, 1, 2, 4 and 8. Those five fields are correct by accident, so
+# the object looks plausible; only `bits` and `fi[]`, whose values are neither
+# zero nor denormal-sized, are corrupted. Nothing offline can see it: the object
+# carries no kd_argslot_, no extraout_, no alloca, and check_frame_bounds is
+# clean.
+#
+# MEASURED, not argued. test/gjk_bisect_complement.sh keeps ONE function of ours
+# and takes the rest from the shipped object; McdGjkFaceQueueInit was one of
+# exactly two that crash a live ONS-Torlan match (proven.txt ONS-CRASH-GJKPD).
+# The garbage `bits`/`fi[]` is what makes McdGjkFaceLoad's loop walk off the end
+# of `q->s->point[4]`.
+#
+# Each entry carries the number of occurrences it expects, and a mismatch RAISES
+# rather than declining — a silent no-op here leaves the corruption in place and
+# looks exactly like success.
+FLOAT_TYPED_INT_FIELDS = {
+    ('McdGjkPenetrationDepth', 'McdGjkFaceQueueInit'): [
+        # An integer local for the subset mask. MVar5 cannot serve: the shared
+        # tail reassigns it to MeVector3Normalize's float result.
+        dict(n=1, old="""  MeReal MVar5;
+  MeReal MVar6;
+  int i;
+  MeReal v [3];
+""",     new="""  MeReal MVar5;
+  MeReal MVar6;
+  int i;
+  MeReal v [3];
+  int kd_mask;
+"""),
+        # The table holds ints; the shipped load is `mov`, not `flds`.
+        # ⚠ ANCHORED ON THE STAGE-TIME TEXT, not the final file. This pass runs
+        # BEFORE absolute_data_refs materialises `_DAT_0001205c` into
+        # `(*(int *)((char *)&McdGjkBinarySubset + 0x3c))`, so anchoring on the
+        # finished spelling finds nothing — which is how the guard earned its
+        # keep the first time it ran. Only the outer deref changes here; the
+        # later pass still rewrites the _DAT_ name inside it.
+        dict(n=1,
+             old="    MVar5 = *(MeReal *)(_DAT_0001205c + 4 + i * 4);",
+             new="    kd_mask = *(int *)(_DAT_0001205c + 4 + i * 4);"),
+        dict(n=1, old="McdGjkComputeVector(v,(int)MVar5,0,s)",
+                  new="McdGjkComputeVector(v,kd_mask,0,s)"),
+        dict(n=1, old="((uint)MVar5 & 1)", new="(kd_mask & 1)"),
+        dict(n=1, old="((uint)MVar5 & 2)", new="(kd_mask & 2)"),
+        dict(n=1, old="((uint)MVar5 & 4)", new="(kd_mask & 4)"),
+        dict(n=1, old="((uint)MVar5 & 8)", new="(kd_mask & 8)"),
+        dict(n=1, old="(int)MVar5 - 1", new="kd_mask - 1"),
+        dict(n=1, old="(int)MVar5 - 2", new="kd_mask - 2"),
+        dict(n=1, old="(int)MVar5 - 4", new="kd_mask - 4"),
+        dict(n=1, old="(int)MVar5 - 8", new="kd_mask - 8"),
+        # bits (0x14) and depth (0x10): integer stores in the shipped code.
+        dict(n=5, old="pMVar3[5] = MVar5;", new="((int *)pMVar3)[5] = kd_mask;"),
+        dict(n=5, old="pMVar3[4] = 0.0;",   new="((int *)pMVar3)[4] = 0;"),
+        # slant (0x28). These five were already laying down the right BITS; they
+        # are rewritten as the integers they are so the next reader is not asked
+        # to recognise a denormal.
+        dict(n=1, old="pMVar3[10] = 1.4013e-45;",  new="((int *)pMVar3)[10] = 1;"),
+        dict(n=1, old="pMVar3[10] = 2.8026e-45;",  new="((int *)pMVar3)[10] = 2;"),
+        dict(n=1, old="pMVar3[10] = 5.60519e-45;", new="((int *)pMVar3)[10] = 4;"),
+        dict(n=1, old="pMVar3[10] = 1.12104e-44;", new="((int *)pMVar3)[10] = 8;"),
+        dict(n=1, old="pMVar3[10] = 0.0;",         new="((int *)pMVar3)[10] = 0;"),
+        # fi[0..3] (0x18..0x24). `(MeReal)q->si[k]` is an int->float CONVERSION
+        # where the shipped code does a plain move.
+        dict(n=4, old="pMVar3[6] = (MeReal)q->si[0];", new="((int *)pMVar3)[6] = q->si[0];"),
+        dict(n=4, old="pMVar3[7] = (MeReal)q->si[1];", new="((int *)pMVar3)[7] = q->si[1];"),
+        dict(n=4, old="pMVar3[8] = (MeReal)q->si[2];", new="((int *)pMVar3)[8] = q->si[2];"),
+        dict(n=4, old="pMVar3[9] = (MeReal)q->si[3];", new="((int *)pMVar3)[9] = q->si[3];"),
+    ],
+}
+
+
+# PORTABILITY_CONSTANTS — a literal that is only correct on the target the original was built for.
+#
+# Same mechanism and same discipline as FLOAT_TYPED_INT_FIELDS above: anchored, counted, and it
+# RAISES on drift. What differs is the reason a repair is needed at all — nothing here is
+# mis-recovered. The recovery is FAITHFUL and the original is what is not portable.
+#
+# MeOpen folds Linux's O_* values into constants (0x241 == O_WRONLY|O_CREAT|O_TRUNC at
+# O_CREAT==0x40). MinGW's O_CREAT is 0x100, so 0x241 there is O_WRONLY|O_TRUNC plus a stray bit —
+# and no open in the object carries O_BINARY, because on Linux there is nothing to carry. On
+# Windows that means CRLF translation on every read of a `.ka` file, which is why the Windows
+# build faulted in MeFAssetPartEnableCollision with a null asset while Linux and wasm were fine
+# (proven.txt WIN32-PORT-3).
+#
+# Writing the flags as the MACROS the original folded reproduces the original exactly on Linux —
+# the constants are identical, so the i386 objects do not move — and correctly everywhere else.
+PORTABILITY_CONSTANTS = {
+    ('MeFAssetPart', 'MeFAssetPartEnableCollision'): [
+        # ⚠ A NULL-BRANCH-ONLY LOAD, HOISTED TO UNCONDITIONAL BY A COMMA OPERATOR.
+        #
+        # absolute_data_refs' docstring has the shipped code: gcc rematerialised
+        # `asset->maxParts` on the branch where it has PROVED asset == 0, so
+        # `mov 0x50,%ecx` sits at 0x775, after `je 775`. It runs only when the
+        # asset is null, where the original is dereferencing null anyway.
+        #
+        # Ghidra flattened that into `(… , iVar5 = _DAT_00000050, asset == 0 || …)`
+        # — a comma operator, so the read of address 0x50 happens on EVERY call
+        # where p1 != p2, whether the asset is null or not. Both the i386 and the
+        # MinGW builds emit it unconditionally (`mov $0x50,%eax; mov (%eax),%eax`
+        # BEFORE `cmpl $0x0`), and 0x50 is below Linux's mmap_min_addr of 65536,
+        # so any target that reaches this line with a live asset faults on a
+        # pointer the original never dereferences.
+        #
+        # This is what killed the Windows build during KCreateAssetDB
+        # (proven.txt WIN32-PORT-3). Restoring the branch restores the original's
+        # behaviour exactly — including that it still faults when the asset really
+        # IS null, which is what the shipped code does and is not ours to
+        # improve on.
+        dict(n=1,
+             old="""     ((pMVar2 = p1->asset, iVar5 = _DAT_00000050, pMVar2 == (MeFAsset *)0x0 ||
+      (iVar5 = pMVar2->maxParts, pMVar2->partCount <= pMVar2->maxParts)))) {""",
+             new="""     ((pMVar2 = p1->asset, pMVar2 == (MeFAsset *)0x0
+        ? (iVar5 = _DAT_00000050, 1)
+        : (iVar5 = pMVar2->maxParts, pMVar2->partCount <= pMVar2->maxParts)))) {"""),
+    ],
+    ('MeSimpleFile_linux', 'MeOpen'): [
+        dict(n=1, old="    unaff_EBX = 0x241;",
+                  new="    unaff_EBX = O_WRONLY | O_CREAT | O_TRUNC | KD_O_BINARY;"),
+        dict(n=1, old="        unaff_EBX = 2;",
+                  new="        unaff_EBX = O_RDWR | KD_O_BINARY;"),
+        dict(n=1, old="    unaff_EBX = 0;\n  }",
+                  new="    unaff_EBX = O_RDONLY | KD_O_BINARY;\n  }"),
+    ],
+}
+
+
+def apply_portability_constants(text, obj):
+    """Apply PORTABILITY_CONSTANTS for this object. Raises on drift."""
+    return _apply_anchored_repairs(text, obj, PORTABILITY_CONSTANTS,
+                                   'apply_portability_constants',
+                                   'test/ons_smoke.sh, and a Windows build')
+
+
+def _apply_anchored_repairs(text, obj, table, who, reverify):
+    """Anchored, COUNTED source repairs for one object. Raises on any drift.
+
+    Shared by FLOAT_TYPED_INT_FIELDS and PORTABILITY_CONSTANTS. Counting is the
+    point: several of these anchors appear five times in one function and a
+    `replace` that silently hit four would leave the corruption in place and
+    look exactly like success.
+
+    ⚠ ANCHOR ON THE TEXT AS IT IS AT THIS STAGE, not as it appears in the
+    finished file. This runs before absolute_data_refs, so `_DAT_0001205c` has
+    not yet become `(*(int *)((char *)&McdGjkBinarySubset + 0x3c))` — the first
+    version of the GJK table anchored on the finished spelling and matched
+    nothing, which is what the raise is for."""
+    base = os.path.basename(obj or '')
+    base = base[:-2] if base.endswith('.o') else base
+    sites = [s for (o, _fn), lst in table.items() if o == base for s in lst]
+    if not sites:
+        return text, 0
+    n = 0
+    for site in sites:
+        found = text.count(site['old'])
+        if found != site['n']:
+            if os.environ.get('KD_RETYPE_DEBUG'):
+                import sys as _s
+                for _q in sites:
+                    print('  %2d/%2d  %r' % (text.count(_q['old']), _q['n'], _q['old'][:64]),
+                          file=_s.stderr)
+            raise SystemExit(
+                '%s: %s — anchor found %d time(s), expected %d.\n'
+                '  %r\n'
+                '  The dump moved under a repair that is only valid for the text it was\n'
+                '  verified against. Re-verify with %s before touching this table.'
+                % (who, base, found, site['n'], site['old'][:70], reverify))
+        text = text.replace(site['old'], site['new'])
+        n += found
+    return text, n
+
+
+def retype_float_typed_int_fields(text, obj):
+    """Apply FLOAT_TYPED_INT_FIELDS for this object. Raises on any drift."""
+    return _apply_anchored_repairs(text, obj, FLOAT_TYPED_INT_FIELDS,
+                                   'retype_float_typed_int_fields',
+                                   'test/ons_smoke.sh (a 5-minute ONS-Torlan match)')
+
+
 def reconstruct_discarded_x87(text, obj):
     """Apply X87_RECONSTRUCTIONS for this object, checking the evidence first.
 
@@ -6557,6 +6928,219 @@ def _split_arguments(s):
         i += 1
     out.append(s[start:])
     return out
+
+
+# ── Dispatches through `code *` at a byte offset from a base whose TYPE Ghidra
+# lost. These are NOT what prototype_indirect_calls covers: that pass rewrites a
+# call through a declared `code *` LOCAL, and these are casts of an integer
+# expression, so it never sees them. They are also not what fix_vptr_store
+# covers, which resolves a vptr stored into a LOCAL by the function itself.
+#
+# WHY THEY MATTER, AND WHY NOTHING HERE COULD SEE IT. `code` is
+# `typedef int code();`, so every one of these asks for an i32 RESULT. On i386 a
+# caller that ignores %eax is free to do that whatever the callee returns; on
+# wasm32 the result is part of a function's type and `call_indirect` traps. Same
+# class as proven.txt WASM-SIGMISMATCH, third instance.
+#
+# `McdCacheGoodbye` is the measurement that makes this concrete rather than
+# theoretical: it is `(i32) -> nil` in the .wasm, McdGjkRegistration installs it
+# as the goodbyeFn of five of the six GJK pair families — the busiest in the
+# game — and McdInteractions calls it through `code *`, i.e. as `(i32) -> i32`.
+# The engine reaches that dispatch from KFarfield.cpp:590 and :881.
+#
+# EVERY ENTRY IS READ FROM A DECLARATION IN THIS REPOSITORY, none is inferred:
+#
+#   McdInteractions   Thirdparty/metoolkit/include/McdCTypes.h:625-643 declares
+#                     the four function-pointer members and their typedefs, and
+#                     include/kd_types_fields.json — generated from the shipped
+#                     DWARF — independently gives the same offsets:
+#                     {0: helloFn, 4: goodbyeFn, 8: intersectFn, 12: safetimeFn}.
+#                     The base is identified by its PRODUCER: McdFrame.h:125
+#                     declares `McdInteractions *McdFrameworkGetInteractions(...)`,
+#                     so a variable assigned from it points at one.
+#
+#   keaMatrix         src/MdtKea/keaMatrix.h, which carries the recovered vtable
+#                     layout with a `_Static_assert` on every slot offset, and
+#                     whose +0x0c/+0x10 assignment was cross-checked against the
+#                     disassembly of keaMatrix_tester::factorize and ::solve.
+#
+# ARITY IS PART OF THESE TOO. safetimeFn is declared with THREE parameters and
+# Ghidra renders the call with four, the same over-count as VOID_PTR_CALL_ARITY
+# — and its second parameter is a `MeReal`, so on i386 the unprototyped call
+# also promotes that float to a double. That is the defect class
+# prototype_indirect_calls exists for, at a site it structurally cannot reach.
+CODE_SLOT_DISPATCH = {
+    # base kind -> {byte offset: (function-pointer type, declared arity)}
+    'McdFrameworkGetInteractions': {
+        0:  ('MeBool (**)(McdModelPair *)', 1),
+        4:  ('void (**)(McdModelPair *)', 1),
+        8:  ('int (**)(McdModelPair *, McdIntersectResult *)', 2),
+        12: ('int (**)(McdModelPair *, MeReal, McdSafeTimeResult *)', 3),
+    },
+    # src/MdtKea/keaMatrix.h's `struct keaMatrix_vtbl`, slot for slot. EVERY ONE
+    # RETURNS void, which is the whole defect: through `code *` each of these
+    # asks for an i32 result. That header carries a _Static_assert on each
+    # offset and its +0x0c/+0x10 assignment was cross-checked against the
+    # disassembly of keaMatrix_tester::factorize and ::solve.
+    'keaMatrix': {
+        0:  ('void (**)(keaMatrix *, int)', 2),
+        4:  ('void (**)(keaMatrix *, const MeReal *, const MeReal *, const int *,'
+             ' const int *, const MeReal *, MeReal, MeReal)', 8),
+        8:  ('void (**)(keaMatrix *, MeReal *, const MeReal *, const MeReal *,'
+             ' const MeReal *, const int *, const int *, int, int, int)', 10),
+        12: ('void (**)(keaMatrix *)', 1),
+        16: ('void (**)(keaMatrix *, MeReal *, const MeReal *)', 3),
+        20: ('void (**)(keaMatrix *, MeReal *, const MeReal *)', 3),
+        24: ('void (**)(keaMatrix *, MeReal *, int *, const int *, int, int)', 6),
+        28: ('void (**)(keaMatrix *)', 1),
+        32: ('void (**)(keaMatrix *)', 1),
+    },
+}
+
+# `(**(code **)((int)pvVar3 + 4))(...)`  — base is a plain pointer variable
+_SLOT_VIA_VAR = re.compile(
+    r'\(\*\*\(code \*\*\)\(\(int\)(\w+) \+ (0x[0-9a-f]+|\d+)\)\)')
+# `(**(code **)(*(int *)A + 0x10))(...)` — base is the VPTR of a typed pointer,
+# which is either a bare name (`A`) or a member (`this->A`).
+_SLOT_VIA_VPTR = re.compile(
+    r'\(\*\*\(code \*\*\)\(\*\(int \*\)(\w+(?:->\w+)*) \+ (0x[0-9a-f]+|\d+)\)\)')
+
+_TYPEDB_TEXT = {}
+
+# `(*(code *)*puVar4)(p)` — slot +0 of the struct `puVar4` points at, spelled with the
+# two dereferences split. McdInteractions' `helloFn` is this, and it is the one member of
+# the family that does NOT trap: `MeBool` is `typedef int`, so `(i32) -> i32` happens to be
+# the callee's real type. It is typed here anyway — an accidental match is not a property to
+# rely on, and the next slot that gets this spelling will not be so lucky.
+_SLOT0_VIA_VAR = re.compile(r'\(\*\(code \*\)\*(\w+)\)')
+
+# `(*(code *)**(undefined4 **)this->suspect)(this->suspect, n)` — slot +0 again, reached
+# through a typed pointer's vptr with the cast spelled inline. Only keaMatrix_tester has
+# this, and that object is never linked into UT2004; it is covered anyway so that
+# tools/code_call_check.py can read a true zero rather than a zero with a footnote.
+_SLOT0_VIA_VPTR_CAST = re.compile(
+    r'\(\*\(code \*\)\*\*\([A-Za-z_][\w ]*\*\*\)(\w+(?:->\w+)*)\)')
+
+
+def _typedb(path=None):
+    """The generated type database's text, or '' if it cannot be read."""
+    if 'text' not in _TYPEDB_TEXT:
+        p = path or os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                 '..', 'include', 'kd_types.h')
+        try:
+            _TYPEDB_TEXT['text'] = open(p, errors='ignore').read()
+        except OSError:
+            _TYPEDB_TEXT['text'] = ''
+    return _TYPEDB_TEXT['text']
+
+
+def _member_pointee(struct, member):
+    """`struct keaMatrix *A;` inside `struct keaLCPSolver { … }` -> 'keaMatrix'.
+
+    Read from include/kd_types.h, which gen_typedb.py unions out of the shipped
+    DWARF, so the answer is the original's own declaration rather than an
+    inference from the decompiled text. Scoped to the owning struct on purpose:
+    `A` is a common member name and a corpus-wide search would collide."""
+    m = re.search(r'^struct ' + re.escape(struct) + r' \{(.*?)^\};',
+                  _typedb(), re.M | re.S)
+    if not m:
+        return None
+    d = re.search(r'^\s*(?:struct\s+)?(\w+)\s*\*\s*' + re.escape(member) + r'\s*;',
+                  m.group(1), re.M)
+    return d.group(1) if d else None
+
+
+def type_code_slot_dispatches(body):
+    """Give `(**(code **)(BASE + N))(...)` the declared type of slot N.
+
+    Returns (body, n). See CODE_SLOT_DISPATCH for where every type comes from.
+
+    A site whose base cannot be identified is LEFT ALONE rather than guessed —
+    it then remains an untyped dispatch, which is loud on wasm (a trap with a
+    named frame) and silent nowhere. A site whose base IS identified but whose
+    offset is not a declared slot RAISES, because that means the offset and the
+    declaration disagree and picking either would be a guess."""
+    n = 0
+    # (pattern, how to name the base's TYPE, how to spell the SLOT ADDRESS the
+    # rewrite reads the function pointer out of). The third is per-shape because
+    # Ghidra spells the same dispatch several ways and the slot address is not a
+    # substring of the match in all of them.
+    shapes = (
+        (_SLOT_VIA_VAR,  _producer_kind,  lambda m: '(int)%s + %s' % (m.group(1), m.group(2))),
+        (_SLOT_VIA_VPTR, _declared_kind,  lambda m: '*(int *)%s + %s' % (m.group(1), m.group(2))),
+        (_SLOT0_VIA_VAR, _producer_kind,  lambda m: m.group(1)),
+        (_SLOT0_VIA_VPTR_CAST, _declared_kind, lambda m: '*(int *)%s' % m.group(1)),
+    )
+    for pat, kind_of, inner_of in shapes:
+        # Back to front, so a rewrite cannot move a site not yet visited.
+        for m in reversed(list(pat.finditer(body))):
+            var = m.group(1)
+            # A pattern with no offset group is the slot at byte 0.
+            off = int(m.group(2), 0) if m.lastindex and m.lastindex >= 2 else 0
+            kind = kind_of(body, var)
+            if kind is None:
+                continue                # base not identified: leave it alone
+            slots = CODE_SLOT_DISPATCH[kind]
+            if off not in slots:
+                raise SystemExit(
+                    f'type_code_slot_dispatches: `{var} + {off}` is a dispatch '
+                    f'through a {kind}, which declares no slot at byte {off}.\n'
+                    f'  slots: {sorted(slots)}\n'
+                    '  Refusing to guess: a wrong slot calls the wrong function '
+                    'and still compiles.')
+            fnptr, arity = slots[off]
+            args = _dispatch_args(body, m.end())
+            if args is None or len(args) < arity:
+                continue                # not a call, or fewer args than declared
+            open_paren = body.index('(', m.end() - 1)
+            end = _match_bracket(body, open_paren)
+            if end is None:
+                continue
+            # Keep the base expression exactly as Ghidra wrote it and change only
+            # the TYPE it is read through, plus any argument the declaration does
+            # not have.
+            inner = inner_of(m)
+            body = (body[:m.start()]
+                    + '(**(%s)(%s))(%s)' % (fnptr, inner, ','.join(args[:arity]))
+                    + body[end:])
+            n += 1
+    return body, n
+
+
+def _producer_kind(body, var):
+    """The CODE_SLOT_DISPATCH key for `var` when a known function produced it."""
+    for name in CODE_SLOT_DISPATCH:
+        if re.search(r'\b' + re.escape(var) + r'\s*=\s*(?:\([^)]*\))?\s*'
+                     + re.escape(name) + r'\s*\(', body):
+            return name
+    return None
+
+
+def _declared_kind(body, var):
+    """The CODE_SLOT_DISPATCH key for `var` when it is a DECLARED pointer.
+
+    Reads the declaration Ghidra emitted — a parameter or a local — rather than
+    inferring, so an untyped `undefined4` base returns None and is left alone.
+
+    `this->A` is resolved in two documented steps rather than by pattern: the
+    OWNER's type comes from its declaration in this function, and the member's
+    type from include/kd_types.h, which gen_typedb.py builds out of the shipped
+    DWARF. Both ends are the original's own statement of the type.
+    """
+    if '->' in var:
+        owner, member = var.split('->', 1)
+        if '->' in member:
+            return None                 # deeper than one hop: not resolved here
+        d = re.search(r'\b(\w+)\s*\*\s*' + re.escape(owner) + r'\b', body)
+        if not d:
+            return None
+        kind = _member_pointee(d.group(1), member)
+        return kind if kind in CODE_SLOT_DISPATCH else None
+    for kind in CODE_SLOT_DISPATCH:
+        if re.search(r'\b' + re.escape(kind) + r'\s*\*\s*' + re.escape(var)
+                     + r'\b', body):
+            return kind
+    return None
 
 
 CODE_PTR_DECL = re.compile(r'^\s*code\s*\*\s*(\w+)\s*;\s*$', re.M)
@@ -7605,6 +8189,7 @@ def main():
     n_alloca_fns = 0
     n_alloca_slots = 0
     n_proto_calls = 0
+    n_slot_dispatches = 0
     n_saved_elems = 0
     n_agg_copies = 0
     n_inline_dropped = 0
@@ -7643,6 +8228,12 @@ def main():
         n_alloca_slots += nslot
         body, nproto = prototype_indirect_calls(body)
         n_proto_calls += nproto
+        # The sibling shape prototype_indirect_calls cannot reach: a dispatch
+        # through `code *` at a byte offset from a base whose type Ghidra lost,
+        # rather than through a declared `code *` local. Untyped it asks for an
+        # i32 result — inert on i386, a call_indirect trap on wasm32.
+        body, nslotd = type_code_slot_dispatches(body)
+        n_slot_dispatches += nslotd
         body, nagg = collapse_outgoing_aggregate_copy(body, args.protos,
                                                        args.object, _declared)
         n_agg_copies += nagg
@@ -7695,6 +8286,8 @@ def main():
     # three scenes and must not change.
     body_text, n_extidx = normalise_external_indexing(args.object, body_text)
     body_text, n_x87 = reconstruct_discarded_x87(body_text, args.object)
+    body_text, n_intf = retype_float_typed_int_fields(body_text, args.object)
+    body_text, n_pconst = apply_portability_constants(body_text, args.object)
     body_text, n_pfmt = fix_printf_extra_args(body_text)
     body_text, n_cmac = fix_compat_macro_extra_args(body_text)
     body_text, n_uscore = fix_undeclared_underscore_local(body_text)
@@ -7809,6 +8402,9 @@ def main():
     if n_proto_calls:
         print(f'  {n_proto_calls} indirect call(s) given a prototype '
               f'(a float argument was being promoted to double)')
+    if n_slot_dispatches:
+        print(f'  {n_slot_dispatches} `code *` slot dispatch(es) given their '
+              f'declared type (untyped they trap on wasm32)')
     if n_agg_copies:
         print(f'  {n_agg_copies} outgoing by-value aggregate copy(s) collapsed '
               f'to the source')

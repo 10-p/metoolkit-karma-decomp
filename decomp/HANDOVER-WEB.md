@@ -21,10 +21,165 @@ it is, what constrains it, and where the sharp edges are. This document is self-
 
 ---
 
-## 0. START HERE — THE WASM BUILD EXISTS NOW. 2026-08-26 (ninth session)
+## 0. IT RUNS. 2026-08-27 (tenth session)
 
-**Read this box before anything else in this file, including the 2026-08-27 block under it.
-The thing you were being asked to build first has been built.**
+**Read this box before anything else in this file. The line every previous version of this
+document called "the largest unknown in the whole effort" has been crossed: recovered Karma
+has EXECUTED on wasm32.**
+
+```
+UT2004, in a browser, on the RTX 3090, on recovered Karma:
+  boots, loads twelve KarmaData/*.ka ragdoll assets, ticks physics,
+  plays bot deathmatches, and passes the FULL ut2004 E2E suite.
+
+    ut2004-wasm-boot + ut2004-wasm-net   51 passed / 0 failed  (36.4 min)
+    NO_KARMA control, same tree, same box 51 passed / 0 failed  (36.2 min)
+
+cmake --preset wasm-karmadecomp-perf   -> 10,628,373 bytes    ZERO wasm-ld diagnostics
+cmake --preset wasm-karmadecomp-debug  -> 38,257,644 bytes    ZERO wasm-ld diagnostics
+  125 of 146 archive members contribute symbols (unchanged; the 21 are the
+  diagnostics/unused set two independent methods already agreed on)
+```
+
+**It took four defects to get there, and they were all the same defect.** §0b's old box
+predicted this exactly — "the most likely first failure is an indirect-call signature
+mismatch, which will present as a trap with a `call_indirect` frame rather than as anything
+resembling a physics bug". That is what happened, four times, and `proven.txt`
+`WASM-INDIRECT-SIGS` has all of it. The short version:
+
+| # | where it died | what was wrong | found by |
+|---|---|---|---|
+| 1 | `MeXMLElementProcess` ← `KCreateAssetDB` ← `KInitGameKarma` | `MeXMLHandler.fn` called with **4** arguments where the vendor declares 2 and 3 | running |
+| 2 | `MdtKeaAddConstraintForces` ← `KWorldStepSafeTime` ← `ULevel::Tick` | two vtable slots dispatched through `code *`, i.e. asking an **i32 result** of `void` methods | running |
+| 3 | *(before it fired)* | `McdInteractions`' `goodbyeFn`, `keaLCPSolver`'s slots, `keaLCP_new`'s `keaMatrix::solve` — same thing | reading the vendor's structs |
+| 4 | `MdtKeaAddConstraintForces` again, `keaRbdCore_unified.c:225` | `keaMatrix::allocate`, slot **+0**, in a spelling my own grep missed | running, **after I had declared the class closed** |
+
+**49 call sites across six objects.** `tools/code_call_check.py` counts the calls made through
+`code` at **47 before and 0 after**. Every one is inert on i386 by construction, which is why
+nine gates and a 300 s native match never saw them: cdecl lets the caller clean a surplus
+argument and ignore `%eax`. On wasm32 a function's type includes its result and its arity, so
+`call_indirect` traps. 140 of 145 i386 objects stay byte-identical, and `substitute_test` on
+`scene_chain` and `scene_ragdoll` reads identically to baseline (143/1 and 140/5, all six
+changed objects trajectory bit-identical).
+
+> ### ⚠ READ THIS ONE EVEN IF YOU SKIP THE REST — I DECLARED THIS CLASS CLOSED TWICE ON A GREP, AND A RUNNING ENGINE FOUND A SITE BOTH TIMES
+>
+> Both greps were for `(\*\*(code \*\*)`. Ghidra spells a single dispatch **at least five
+> ways**, and the one that trapped is
+>
+> ```c
+> (*(*(code **)((*(char **)&vanillaAMatrix))))(&vanillaAMatrix, uVar10)
+> ```
+>
+> — the two dereferences split, the base in its own parentheses. That pattern does not match
+> it, and neither did my "zero remaining" check. **`tools/code_call_check.py` replaces the
+> pattern with a parse**: it walks parentheses, takes every group in *callee position*, and
+> asks whether it dispatches through `code`. A sixth spelling is caught for free. If you take
+> one method lesson from this session, take that one — enumerating spellings is how it was got
+> wrong twice.
+>
+> **And the reproduction needs a real match.** `?map=DM-Rankin` loads the level and never
+> starts one, so no bots, no deaths, no constraints, and defect 4 never fires. Use
+> `?map=DM-Rankin&Game=XGame.XDeathMatch&NumBots=2&QuickStart=1`.
+
+> ### ⚠ ONE OF THEM WAS AN i386 BUG TOO, AND NOBODY WAS LOOKING FOR THAT
+>
+> `McdSafeTimeIntersect` passed its `MeReal maxTime` through an unprototyped `code *` call,
+> so gcc promoted it — `flds` then **`fstpl`**, the exact signature §4b names — against a
+> callee taking a float, plus a surplus argument. It is dormant in UT2004 only because
+> `McdSafeTime` is never linked (`KDynStep.cpp` reimplements the safe-time stepper). **The
+> wasm port found a defect on the recovery side's own target.** If you are looking for
+> justification that a second target is worth the trouble, this is it.
+>
+> And the mirror of it: `McdInteractions`' `helloFn` is slot +0, `MeBool (McdModelPair *)`,
+> and `MeBool` is `typedef int` — so the untyped call site's `(i32) -> i32` *is* the callee's
+> real type and `McdHello` has always worked. **By luck, not by construction.** It is typed
+> now for exactly that reason.
+
+### Three instruments came out of this, and you should know what each cannot do
+
+- **`tools/code_call_check.py <dir>`** — every call still made through `code`, by parsing
+  rather than pattern-matching. 47 → 0. Catches sites nothing has executed; **cannot** see a
+  call typed through a wrong-but-concrete prototype.
+- **`tools/wasm_indirect_check.py <build>`** — the static report `wasm-ld` cannot give you.
+  For every `call_indirect`, is there any function in the table with that type? If not the
+  site can never succeed, reachable or not. Reads **0 unsatisfiable** on both presets.
+  **It would NOT have caught defect 3**, whose `(i32) -> i32` is a type hundreds of table
+  functions have.
+- **`packages/e2e/tools/karma-trap-probe.cjs`** (in the monorepo) — boots and prints the full
+  `error.stack` of the first uncaught trap. It found defects 1, 2 and 4.
+
+**Both gates are floors. The engine is still the only instrument that has found every one of
+these**, which is the standing order's whole point.
+
+> ### ⚠ THE TRAP IS NOT IN THE CONSOLE LOG, AND THAT COSTS YOU A CYCLE
+>
+> The glue's crash panel (step 2.13.5) catches the error, so `t.consoleLogs` contains **no
+> `RuntimeError` at all** — the first boot reported "Console: 708, Engine errors: 0" and then
+> failed an OCR timeout 180 s later, which reads like a rendering problem. The trap was in
+> the page snapshot, as an `alertdialog "Game crashed!"`. **Grep the crash panel, not the
+> console**, or use the probe above.
+
+**Build the DEBUG preset to read a trap.** Its name section gives you named frames directly
+in the browser console — `symbolize-wasm.cjs` is not needed, and offsets do not transfer
+between optimisation levels anyway.
+
+### 2026-08-27, later: KARMA IS THE DEFAULT ON EVERY 32-BIT TARGET, AND ONSLAUGHT RUNS
+
+`USE_KARMA_DECOMP` is ON by default — `native`, `windows`, `wasm`, `wasm-debug`, `wasm-perf`.
+`legacy-karma` links MathEngine's originals for A/B and the `*-nokarma` presets are the controls.
+A `UT_PTR_BYTES` gate makes a 64-bit-pointer Karma build a hard CMake error, which is what keeps
+Android's LP64 ABIs honest while the layout work waits.
+
+**A five-minute ONS match per build is now the acceptance test** (`test/ons_smoke.sh`), and it
+immediately found what the 51/51 browser suite could not, because that suite is almost entirely
+DM and ONS is the gametype that spawns VEHICLES:
+
+| | |
+|---|---|
+| wasm32, ONS-Torlan + bots | **330 s, no trap, 12 `.ka` loaded** |
+| native i386, ONS-Torlan | **300 s x2**; ONS-Adara and ONS-Ascendancy 240 s each |
+| Windows (MinGW, `-OPENGLRENDERER`) | **330 s, no fault**; ONS-Adara and ONS-Ascendancy too |
+| Android | Karma off until LP64 — one line in `Android/app/build.gradle` |
+
+The defect was `McdGjkFaceQueueInit` writing `_McdGjkFace`'s INT fields as FLOATS, because Ghidra
+typed `MePoolxGet`'s result `MeReal *`: `fi[0] = 1` laid down `0x3F800000` and `McdGjkFaceLoad`
+then walked off the end of the simplex. `depth` and `slant` were right BY ACCIDENT — `0.0f` and
+the denormals 1.4013e-45/2.8026e-45/… have bit patterns 0/1/2/4/8 — which is part of why it looked
+plausible. `proven.txt` `ONS-CRASH-GJKPD` has the bisect and the machine-code comparison.
+
+> **Two harness lessons from that hunt, both of which cost a run.** A bisect that grepped its
+> child's output for `"PASS"` reported all nine functions as the culprit, because `ons_smoke.sh`
+> prints "(124 = … which is the PASS case)" on every run — a check that could not fail. And a
+> substitution harness measures a COMBINATION: the complement bisect named the driver defective,
+> and repairing `FaceQueueInit` alone fixed the match with the driver untouched.
+
+> ### ⚠ THE ONE THAT WOULD HAVE BITTEN YOU ON ANDROID TOO
+>
+> `kd_compat.h` switched off the MSVC calling-convention keywords with `#ifndef __thiscall`, which
+> is correct only where the platform does not already define them. **MinGW predefines all of them
+> as real attributes**, so the switch-off was skipped and all 140 recovered C++ methods took
+> `this` in ECX while their callers pushed it — every later argument one word early. Zero i386
+> objects change and the `.wasm` is byte-identical either way, so no gate here could see it.
+>
+> **Read that as a pattern, not an anecdote**: a `#ifndef` guard around a platform annotation is
+> only as good as the assumption that no target claims the name. Check the same shape before you
+> trust anything in `kd_compat.h` on a new toolchain — the NDK is the next one.
+
+### What is still open on your side
+
+- **armv7 and arm64 have still never executed.** Only wasm32 has. Everything §0a says about
+  arm64's struct layouts stands untouched.
+- **The association defect is still unsettled**, and it is still the highest-value thing you
+  can build. Nothing this session measured it: these three defects were signature errors, not
+  arithmetic ones, and fixing them changed no float result on i386.
+- **A clean `wasm_indirect_check` is not a clean build.** Defect 3 proves the gap.
+
+---
+
+## 0b. THE WASM BUILD EXISTS. 2026-08-26 (ninth session)
+
+**Superseded by §0 above — kept because its reasoning is what made §0 possible.**
 
 ```
 cmake --preset wasm-karmadecomp-perf && cmake --build --preset wasm-karmadecomp-perf
@@ -96,14 +251,23 @@ shipped objects the only C++ runtime imports are `__gxx_personality_v0`, `__cxa_
 > §4b already tells you "unprototyped indirect calls — x86 corrupts silently, wasm will TRAP".
 > That was a prediction. The direct-call half of it has now been observed and fixed; the indirect
 > half is **unmeasured, not clean**, and it is the first thing a real wasm run will find.
+>
+> **✅ SETTLED IN THE TENTH SESSION, AND THE PREDICTION WAS EXACTLY RIGHT — §0.** A real wasm
+> run found it three times over, in `MeXMLParser`, `keaRbdCore_unified` and (by reading, before
+> it fired) `McdInteractions` / `keaLCPSolver` / `keaLCP_new`. All fixed at the generator;
+> `proven.txt` `WASM-INDIRECT-SIGS`.
 
 **So your first move has changed.** It is no longer "get one recovered object to execute under
 wasm" — the build that would execute them exists and links clean. It is **run it**, and the most
 likely first failure is an indirect-call signature mismatch, which will present as a trap with a
 `call_indirect` frame rather than as anything resembling a physics bug.
 
-**What has NOT changed:** not one instruction of this has executed on wasm32, armv7 or arm64.
-A clean build is a clean build. Everything in the 2026-08-27 block below still stands.
+**✅ DONE — §0.** It was run, and the first failure was an indirect-call signature mismatch
+presenting as a `RuntimeError` with a `call_indirect` frame, in the `.ka` asset loader.
+
+**What has NOT changed** *(as written in the ninth session; wasm32 has since executed — §0.
+armv7 and arm64 still have not)*: not one instruction of this had executed on wasm32, armv7 or
+arm64. A clean build is a clean build. Everything in the 2026-08-27 block below still stands.
 
 ---
 
@@ -130,6 +294,10 @@ identical Karma warning profile.
 **So your first move is unchanged and is now the ONLY thing between this project and its
 goal: get one recovered object to EXECUTE under wasm.** Not one instruction of this has ever
 run on any of your three targets.
+
+> **✅ DONE FOR wasm32 IN THE TENTH SESSION — §0.** The whole recovered library executes
+> inside the engine in a browser. **armv7 and arm64 are still exactly as this paragraph
+> describes them**, so read the rest of §0a as written.
 
 > ### ⚠ arm64 IS NOT 95% DONE. THAT NUMBER WAS MEASURING THE EASIER HALF.
 >
@@ -807,9 +975,11 @@ gcc -m64 ... -o /tmp/rag_hx   test/scene_ragdoll.c  <linux_hx_single/*.a>
 
 ## 6. What is not done, and what you should not assume
 
-- **Nothing has been RUN under wasm.** The whole set compiles and exports identical
-  symbols, and that is all §4 hazards 2 and 3 settle. Hazards 1, 4 and 5 are runtime and
-  entirely open.
+- ~~**Nothing has been RUN under wasm.**~~ **RUN — §0.** The engine boots, loads its `.ka`
+  ragdoll assets and ticks physics on recovered Karma in a browser. Hazard 4
+  (function-pointer signatures) is the one that fired, three times, and is fixed; hazard 1
+  (`alloca` stack sizing) never fired, because the preset already links `-sSTACK_SIZE=2MB`,
+  double what §4b asks for. Hazard 5 (`-m32`) was never real for this build.
 - **115 of ~150 objects compile**, 17 do not. But read `HANDOVER.md` §3b then §3 before reading that
   as 60% done — see the next bullet, it is the most important thing in this file for
   planning purposes.
@@ -884,7 +1054,7 @@ machine-code level, not from the link (`HANDOVER.md` §7d).
 |---|---|
 | **the deliverable** | UT2004 linking NO shipped `metoolkit` member, on wasm32 and Android, and playing |
 | **recovery-side remainder** | 3 shipped members / 3 symbols, tracked by `tools/dropin_gap.py` (`HANDOVER.md` §3c). Shrinking steadily — 19 members and 113 symbols closed in the sixth session, two more in the seventh |
-| **YOUR remainder** | **nothing has ever EXECUTED on wasm32, armv7 or arm64.** Not one instruction. That is the single largest unknown in the whole project |
+| **YOUR remainder** | ~~nothing has ever EXECUTED on wasm32, armv7 or arm64~~ — **wasm32 EXECUTES (§0)**. armv7 and arm64 still have not, and the association defect is still unsettled |
 
 **Sequence your work as if the physics is coming, because it is.** The right thing to
 front-load is not "wait for the solver" — it is **getting anything at all to run under
@@ -1066,6 +1236,48 @@ thing in the project, and `karma-decomp/test/ab_matrix.sh` is the worked example
 
 A log of the things that would otherwise surprise you, newest first. If you have read an
 older copy of this file, start here.
+
+### 2026-08-27 (tenth session) — IT RUNS ON wasm32, and three defects that only wasm could see
+
+**This is the web workstream's own entry, and it closes the item every earlier one left open.**
+Full detail in §0; `proven.txt` `WASM-INDIRECT-SIGS` has the evidence.
+
+- **Recovered Karma EXECUTES on wasm32, and the suite is green.** UT2004 boots in a browser,
+  loads twelve `KarmaData/*.ka` ragdoll assets, ticks physics and plays bot deathmatches.
+  **ut2004 E2E: 51/51**, equal to a NO_KARMA control built from the same tree and run on the
+  same box in the same session. Both presets build with zero `wasm-ld` diagnostics; 125 of 146
+  members contribute, unchanged.
+- **Four indirect-call signature defects, 49 call sites, all invisible to i386.**
+  `MeXMLHandler.fn` called with four arguments against declarations of two and three; vtable
+  slots dispatched through `code *` (`typedef int code()`) asking an i32 result of `void`
+  methods, in `keaRbdCore_unified`, `keaLCPSolver`, `keaLCP_new`, `McdInteractions` and
+  `keaMatrix_tester`. Fixed at the generator. **140 of 145 i386 objects byte-identical**;
+  `substitute_test` on `scene_chain` and `scene_ragdoll` identical to baseline.
+- **The class was declared closed TWICE on the strength of a `grep`, and a running engine
+  found a site both times.** Ghidra spells one dispatch at least five ways.
+  `tools/code_call_check.py` replaces the pattern with a parse — every parenthesised group in
+  callee position, asked whether it dispatches through `code`. 47 before, 0 after.
+- **One of them was an i386 bug as well**, which nobody was looking for:
+  `McdSafeTimeIntersect` promoted its `MeReal maxTime` to a double through the unprototyped
+  call — `flds`/`fstpl`, the signature §4b names — plus a surplus argument. Dormant only
+  because `McdSafeTime` is never linked. **The wasm port found a defect on the recovery
+  side's own target.**
+- **Ghidra's argument over-count is self-revealing where it matters**: two call sites of the
+  same `keaMatrix` vtable slot in the same object disagreed, 8 arguments against 6, and
+  `keaMatrix.h`'s `_Static_assert`ed layout says 6. The corpus was inconsistent with itself,
+  not merely with the vendor.
+- **Two new gates, and neither would have caught every defect.**
+  `tools/code_call_check.py` reads the source (47 -> 0); `tools/wasm_indirect_check.py` reads
+  the linked `.wasm` and reports every `call_indirect` whose type NO table function has
+  (0 on both presets). The second would not have caught defect 3 — `(i32) -> i32` is a type
+  hundreds of table functions have. Both say so rather than implying coverage they lack.
+- **A trap does not appear in the console.** The glue's crash panel swallows it, so the first
+  boot logged "Console: 708, Engine errors: 0" and then failed an OCR timeout, which reads
+  like a rendering bug. `packages/e2e/tools/karma-trap-probe.cjs` prints the real stack.
+- **Build the DEBUG preset to read a trap** — its name section gives named frames straight in
+  the browser, and offsets do not transfer between optimisation levels anyway.
+- **Still untouched:** armv7 and arm64 have never executed, and the association defect is
+  still unsettled — these three were signature errors, not arithmetic ones.
 
 ### 2026-08-27 (eighth session) — GAP ZERO, the engine plays with no shipped member, and arm64 reframed
 

@@ -54,14 +54,14 @@ int kd_MeOpenRaw(char *filename,MeOpenMode_enum mode)
   undefined4 unaff_ESI = 0;
 
   if (mode == kMeOpenModeWRONLY) {
-    unaff_EBX = 0x241;
+    unaff_EBX = O_WRONLY | O_CREAT | O_TRUNC | KD_O_BINARY;
 LAB_00010049:
     unaff_ESI = 0x1a0;
   }
   else {
     if (mode != kMeOpenModeRDONLY) {
       if (mode == kMeOpenModeRDWR) {
-        unaff_EBX = 2;
+        unaff_EBX = O_RDWR | KD_O_BINARY;
         goto LAB_00010049;
       }
       if (mode != kMeOpenModeRDBINARY) {
@@ -70,7 +70,7 @@ LAB_00010049:
         goto LAB_0001002d;
       }
     }
-    unaff_EBX = 0;
+    unaff_EBX = O_RDONLY | KD_O_BINARY;
   }
 LAB_0001002d:
   iVar1 = open(filename,unaff_EBX,unaff_ESI);

@@ -102,7 +102,7 @@ void kd_McdHello(McdModelPair *p)
     (*p_Var3)(p);
   }
   if ((code *)*puVar4 != (code *)0x0) {
-    (*(code *)*puVar4)(p);
+    (**(MeBool (**)(McdModelPair *))(puVar4))(p);
   }
   return;
 }
@@ -120,7 +120,7 @@ void kd_McdGoodbye(McdModelPair *p)
   sVar1 = McdModelGetGeometryType(p->model1);
   pvVar3 = McdFrameworkGetInteractions(p->model1->frame,(int)sVar1,iVar2);
   if (*(code **)((int)pvVar3 + 4) != (code *)0x0) {
-    (**(code **)((int)pvVar3 + 4))(p);
+    (**(void (**)(McdModelPair *))((int)pvVar3 + 4))(p);
   }
   return;
 }
@@ -246,7 +246,7 @@ MeBool kd_McdSafeTime(McdModelPair *p,MeReal maxTime,McdSafeTimeResult *result)
     result->time = maxTime;
   }
   else {
-    (**(code **)((int)pvVar2 + 0xc))(p,maxTime,result,pMVar1);
+    (**(int (**)(McdModelPair *, MeReal, McdSafeTimeResult *))((int)pvVar2 + 0xc))(p,maxTime,result);
   }
   return (uint)(*(int *)((int)pvVar2 + 0xc) != 0);
 }
@@ -327,7 +327,7 @@ void kd_McdGoodbyeEach(McdModelPairContainer *pairs)
       sVar2 = McdModelGetGeometryType(pMVar1->model1);
       pvVar4 = McdFrameworkGetInteractions(pMVar1->model1->frame,(int)sVar2,iVar3);
       if (*(code **)((int)pvVar4 + 4) != (code *)0x0) {
-        (**(code **)((int)pvVar4 + 4))(pMVar1);
+        (**(void (**)(McdModelPair *))((int)pvVar4 + 4))(pMVar1);
       }
       iVar5 = iVar5 + 1;
     } while (iVar5 < pairs->goodbyeEnd);

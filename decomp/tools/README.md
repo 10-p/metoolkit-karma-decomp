@@ -291,6 +291,58 @@ wasm linker pulling in none of them.
 > unreachability argument and was one signature away from shipping a function that segfaults on its
 > first real call. See the standing order.
 
+### `code_call_check.py` — every call still made through the unprototyped `code` type
+
+`kd_compat.h` has `typedef int code();` — no parameter list, `int` result — and Ghidra dispatches
+every function-pointer call through it. Free on i386 (the caller cleans the stack and may ignore
+`%eax`); on wasm32 the result and the arity are part of a function's type, so each one is a
+`call_indirect` trap waiting for the right code path.
+
+```bash
+python3 tools/code_call_check.py generated/allobj      # 0
+python3 tools/code_call_check.py /tmp/kd_out/allobj
+```
+
+Exit status is the site count, so it composes into a gate run.
+
+> **IT DOES NOT MATCH SPELLINGS, AND THAT IS THE WHOLE DESIGN.** This class was declared closed
+> **twice** on the strength of `grep '(\*\*(code \*\*)'`, and a running engine trapped both times.
+> Ghidra spells one dispatch at least five ways; the site that reached a live match is
+> `(*(*(code **)((*(char **)&vanillaAMatrix))))(…)` — two dereferences split, base in its own
+> parentheses. So this **parses**: every parenthesised group in *callee* position (a cast's own
+> parentheses excluded), asked whether it dispatches through `code`. A sixth spelling is caught
+> for free.
+
+A zero means no call goes through `code` and nothing more — a call typed through a
+*wrong-but-concrete* prototype is invisible here. It and `wasm_indirect_check.py` see different
+halves: this reads the source and catches sites nothing has executed; that reads the linked
+`.wasm` and catches types no table function has. `proven.txt` `WASM-INDIRECT-SIGS`.
+
+### `wasm_indirect_check.py` — the traps `wasm-ld` structurally cannot report
+
+`wasm-ld` type-checks **direct** calls only, which is how `_ZdlPv` was caught (`proven.txt`
+`WASM-SIGMISMATCH`) and why the indirect half of that class reached a running engine. On wasm a
+function's type includes its **result** and its **arity**, and `call_indirect` checks it at run
+time — so a surplus argument or a wrong return type is inert on i386 cdecl and a trap here.
+
+```bash
+python3 tools/wasm_indirect_check.py build-wasm-karmadecomp-debug
+```
+
+Needs `wasm-objdump` (wabt), ~5 s. For every `call_indirect` it asks whether **any** function in
+the table has that type; if none does, that site can never succeed on any input, reachable or
+not. That is a proof, not a suspicion.
+
+> **READ WHAT IT CANNOT DO, because the number is reassuring.** The converse does not hold: a
+> site whose type IS in the table may still reach the wrong function. It reads 0 today and it
+> would **not** have caught `McdInteractions`' `goodbyeFn` — `(i32) -> i32` is a type hundreds of
+> table functions have, and the callee `McdCacheGoodbye` is `(i32) -> nil`. That one was found by
+> reading the vendor's struct against the call site. A floor, not a ceiling.
+
+Use the `-g` presets: without a name section it can still count sites but cannot say which
+function each is in, which is most of the value. It **refuses** rather than printing a zero when
+handed a module it cannot parse or one with no element segment.
+
 ### `layout_check.py` — the arm64 defect the truncation gate cannot see
 
 `ptrwidth_check.sh` counts pointer **truncation**. This counts the defect truncation is a symptom

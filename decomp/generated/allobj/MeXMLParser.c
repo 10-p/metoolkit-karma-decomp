@@ -718,7 +718,7 @@ kd_MeXMLElementProcess(MeXMLElement *terminator,MeXMLHandler *actions,void *data
     }
     if (MVar3 == MeXMLActionCallback) {
       pMVar7->called = 1;
-      MVar4 = (*(__typeof__(MVar4) (*)(__typeof__(&start), __typeof__(userdata), __typeof__(iVar6), __typeof__(iVar6)))pMVar7->fn)(&start,userdata,iVar6,iVar6);
+      MVar4 = (*(__typeof__(MVar4) (*)(__typeof__(&start), __typeof__(userdata)))pMVar7->fn)(&start,userdata);
       MVar8 = MVar4;
     }
     else if (MVar3 == MeXMLActionEnd) {
@@ -727,7 +727,7 @@ kd_MeXMLElementProcess(MeXMLElement *terminator,MeXMLHandler *actions,void *data
     }
     else {
       pMVar7->called = 1;
-      MVar4 = (*(__typeof__(MVar4) (*)(__typeof__(fi), __typeof__(pMVar7), __typeof__(data), __typeof__(MVar3)))pMVar7->fn)(fi,pMVar7,data,MVar3);
+      MVar4 = (*(__typeof__(MVar4) (*)(__typeof__(fi), __typeof__(pMVar7), __typeof__(data)))pMVar7->fn)(fi,pMVar7,data);
       if (MVar4 != MeXMLErrorNone) {
         return MVar4;
       }

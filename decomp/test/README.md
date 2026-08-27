@@ -412,33 +412,58 @@ says.
 
 ---
 
-## What was actually run when this file was written — 2026-08-26, ninth session
+## What was actually run when this file was written — 2026-08-27, ninth session
 
-Because "documented" and "works" are different claims, and this project has been bitten by the
-difference more than once.
+**Every script in this directory was run, including the ones that need a built engine and a live
+match.** Because "documented" and "works" are different claims, and this project has been bitten by
+the difference more than once.
 
-**Run, and passing:** `substitute_test.sh` (all three scenes, 145/145 clean, 0 crashes) ·
-`difftest_pair.sh` (`McdBoxBoxIntersect`, PASS) · `wasm_check.sh` (145/145, symbol sets identical) ·
-`ptrwidth_check.sh` (armv7 0, plus its DID-NOT-COMPILE branch confirmed on a deliberately broken
-source) · `scene_census.sh` · `gate_sensitivity.sh` · `vptr_ab.sh` · `ab_matrix.sh` ·
-`ab_contact.sh` + its `KD_SELFTEST` control · `ab_integrate.sh` · `ab_lod.sh` · `bisect_static.sh` ·
-`trace_cylcyl.sh` · `hull_probe.sh` · `hull_ab.sh` · `make_hull_lib.sh` ·
-`make_substituted_metoolkit.sh` · `make_shadow_metoolkit.sh` · `make_dropin_metoolkit.sh`.
+| harness | result |
+|---|---|
+| `substitute_test.sh` ×3 scenes | 145/145 ran cleanly, 0 crashes; divergences only the known seven |
+| `difftest_pair.sh` all 14 pairs | **reproduces the documented baseline EXACTLY** — IxBoxBox 1 count, IxSphereTriList 137 dims, IxCylinderCylinder 1 count + 20 dims, the other eleven 0/0/0. Exits 1 on that aggregate: **the three FAILs are the known limits, not a regression** |
+| `difftest_pair.sh` `KD_CORNER=1` | cylinder×TriList 0/0/0 PASS (was 1,463/139,961/12,060 before the dropped-rounding fix) |
+| `difftest_pair.sh` `KD_GRID=1` | IxCylinderCylinder 6,385 dims — the documented axis-aligned figure |
+| `difftest_pair.sh` `KD_JITTER=1` | **the SHIPPED library against ITSELF: 64,033 ret, 9,744 count, 975 dims.** Our recovery reads 1 count / 20 dims. The reference is less self-consistent than the replacement |
+| `wasm_check.sh` | 145/145, exported symbol sets identical |
+| `ptrwidth_check.sh` | armv7 0 across 145; arm64 7,714 across 95. DID-NOT-COMPILE branch confirmed by feeding it a broken source |
+| `scene_census.sh` ×3 scenes | 103 / 311 / 312 functions executed |
+| `gate_sensitivity.sh` ×3 scenes | matches §4a's table (keaCalcConstraintForces 4.3e-04 chain → 6.8e+01 boxes) |
+| `vptr_ab.sh` ×3 scenes | control bit-identical on all three; **both wrong versions CRASH** on ragdoll and boxes — `[blind]` on chain, which is the honest reading |
+| `lp64_run.sh` ×3 scenes | **FAILS as designed** — i386 control 0 errors, LP64 5 ASan errors per scene in `MdtWorldCreate`/`MallocCreateAligned`. A clean run here would mean the harness had stopped working |
+| `ab_matrix.sh` | 50,000 cases, 0 differ; control (shipped vs shipped) 0 differ |
+| `ab_contact.sh` | 50,000 calls bit-identical; `KD_SELFTEST` 100% |
+| `ab_integrate.sh` | 90,000 bodies, qrot=0 vel=0 velrot=0 T=0 |
+| `ab_lod.sh` | `KD_MAXMATRIX` 128 / 40 / 8 — all three trajectory bit-identical |
+| `bisect_object.sh` | keaLCPSolver, every function `identical` |
+| `bisect_static.sh` `--none` / `--all` | both PASS |
+| `trace_cylcyl.sh` | 500 calls, 340 diverged (ret 0, dims 0) — the residue §12 check 3 records |
+| `hull_probe.sh` shipped + `KD_HULL_IMPL` | both build hulls at every tolerance |
+| `hull_ab.sh` | all volumes identical; the diff is last-digit float noise in one normal |
+| `make_hull_lib.sh` | 1,416,194 → 10,382 bytes, 15 symbols identical |
+| `make_substituted_metoolkit.sh` | 145 substituted, 0 not library members |
+| `make_shadow_metoolkit.sh` | 19 objects staged, 24 functions compared |
+| `make_dropin_metoolkit.sh` | 146 members — 145 ours + `kd_convexhull.o`, **ZERO MathEngine**, 33 deleted |
+| **the drop-in engine** | links (42,813,220 bytes) and **plays 180 s, 0 faults, with a stock control on the same map showing an IDENTICAL Karma warning profile** (4/2/2/2). Check 2, end to end |
+| `crash_ab.sh` | stock vs drop-in, 2 runs each interleaved, 120 s — 0 crashes both arms |
+| `run_map.sh` + the SHADOW engine | test-karma-1, 240 s: **1,571,707 real calls, 0 ret_diff / 0 count_diff / 0 dims_diff / 0 overrun / 0 nonfinite** |
+| `run_map.sh` `KD_SELFTEST=1` | 850,177 calls shipped-vs-shipped, 100% identical, worst delta exactly 0 — which is what makes the row above evidence |
+| `try_subst.sh` | all 145 substituted: **RUNS, reached START MATCH** |
 
-**Run, and FAILING as designed:** `lp64_run.sh` — i386 control 0 errors, LP64 five ASan errors in
-`MdtWorldCreate`/`MallocCreateAligned`. That is the open arm64 defect, and a clean run here would
-mean the harness had stopped working.
+### Three operational facts learned by running them
 
-**NOT re-run this session**, because each needs a built engine and a live match rather than a
-scene: `run_map.sh`, `crash_ab.sh`, `try_subst.sh`, and `bisect_object.sh` (which additionally needs
-a known-wrong object to bisect). Their invocations above are transcribed from the scripts, not
-verified by execution — treat them accordingly.
+1. **`try_subst.sh` hardcodes `$ROOT/build-subst108` and only *builds* it — it does not configure
+   it.** If that directory does not exist the tool fails. Create it first:
+   `cmake --preset native-karma -B build-subst108 -DMETOOLKIT_DIR=/tmp/mt_subst`.
+2. **`run_map.sh` hardcodes `-GL4ESRENDERER`, and in this environment it works.** `HANDOVER.md`
+   §7d and §3c both say to use `-SOFTWARERENDERER` because GL4ES faults at the first HUD frame
+   "for stock too". That did not happen in any of the eight matches run this session, stock or
+   recovered. The advice may be stale or environment-dependent; the script's default is fine.
+3. **Bot-dependent maps produce NO Karma traffic headless here.** `ONS-CBP2-Tropica` (twice, 240 s
+   and 360 s) and `DM-BE-Clearing` all loaded, ticked to "Finished precaching textures" and exercised
+   **0 of 38** pairs, with 0 faults. `test-karma-1` is reliable precisely because §6 says it needs no
+   bots — its Karma load is scripted actors. Use it unless you specifically need another pair.
 
-**And one half-claim, stated precisely.** `make_dropin_metoolkit.sh` was re-run and its tree
-re-verified — 146 members, of which 145 are ours and one is `kd_convexhull.o`, **zero MathEngine
-members**, 33 deleted. The *engine links and plays against it* half is carried from the eighth
-session and was not repeated. It is unchanged by construction: every one of the 145 objects is
-byte-identical to the ones that link was made from, which was checked rather than assumed.
 
 ---
 

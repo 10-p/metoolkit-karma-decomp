@@ -622,6 +622,76 @@ IxCylinderTriList     RE-RELEASED 2026-08-27 (eighth session) — the live-match
 #                     instances, and the cheapest test is to give the tool the WRONG directory
 #                     and see whether it notices.
 
+# FULL-SWEEP           2026-08-27 (ninth session): EVERY tool in tools/ and test/ run, including
+#                     the ones needing a built engine and a live match. The whole state
+#                     re-measured in one pass, on the owner's instruction. What it found:
+#
+#                     THE FRONT END IS REPRODUCIBLE, and nobody had ever checked. A
+#                     single-object Ghidra re-dump of McdSpace.o — same Ghidra 12.1.3, same
+#                     gscripts, same kd_protos11.h — came back BYTE-IDENTICAL to out14's
+#                     McdSpace.o.c AND .locals. HANDOVER.md 5 warns that a re-run "changes
+#                     every object at once" and that out5..out14 must be kept; that is true
+#                     when the PROTOS or the SCRIPTS change, which is what those re-runs were.
+#                     With the inputs held fixed the decompiler is deterministic. out14 is a
+#                     cache, not an irreplaceable artefact.
+#
+#                     THE FULL DIFFTEST REPRODUCES THE DOCUMENTED BASELINE EXACTLY. 14 pairs,
+#                     200,000 each: IxBoxBox 1 count, IxSphereTriList 137 dims,
+#                     IxCylinderCylinder 1 count + 20 dims, the other eleven 0/0/0. The
+#                     aggregate exit is 1 — those three FAILs ARE the baseline, not a
+#                     regression, and a future session should not read them as one.
+#
+#                     AND KD_JITTER PUTS THE CYLINDER RESIDUE IN PROPORTION. The SHIPPED
+#                     library against ITSELF, inputs differing by 1e-7 m:
+#                         64,033 ret_diff   9,744 count_diff   975 dims_diff
+#                     Our recovery against it reads 0 ret / 1 count / 20 dims. THE REFERENCE
+#                     IS AN ORDER OF MAGNITUDE LESS SELF-CONSISTENT THAN THE REPLACEMENT.
+#                     CYLCYL-GRIND's conclusion is not just "not worth closing"; it is
+#                     "closing it would demand more consistency than MathEngine has".
+#
+#                     CHECK 2 RE-VERIFIED END TO END, not carried. The drop-in tree rebuilt
+#                     (146 members: 145 ours + kd_convexhull, ZERO MathEngine, 33 ar d'd), the
+#                     engine LINKED against it (42,813,220 bytes, 0 undefined), and PLAYED
+#                     test-karma-1 for 180 s with 0 SIGSEGV and 0 Critical Error — beside a
+#                     STOCK control on the same map in the same session with an IDENTICAL
+#                     Karma warning profile (4 KInitActorDynamics, 2+2 KAggregateGeomInstance,
+#                     2 KInitConstraintKarma). crash_ab.sh then alternated the two arms
+#                     A,B,A,B at 120 s: 0 crashes, both.
+#
+#                     THE SHADOW HARNESS, WHICH IS THE TRUTH TIER, ON REAL INPUTS:
+#                         test-karma-1, 240 s, 1,571,707 real calls
+#                         Sphere/Sphere        121,121   ret 0  count 0  dims 0  overrun 0
+#                         Sphere/TriangleList  1,450,586 ret 0  count 0  dims 0  overrun 0
+#                         nonfinite 0 on both; worst fp deltas 5.96e-08 and 5.72e-06
+#                     and KD_SELFTEST=1 on the same map: 850,177 calls shipped-vs-shipped,
+#                     100% identical, worst delta EXACTLY 0. That control is what makes the
+#                     row above evidence rather than a coincidence of the harness.
+#
+#                     try_subst.sh with all 145 substituted: RUNS, reached START MATCH.
+#
+#                     THREE OPERATIONAL FACTS, all of which cost time to rediscover:
+#                       * try_subst.sh hardcodes $ROOT/build-subst108 and only BUILDS it — it
+#                         does not configure it. Create it first with
+#                         cmake --preset native-karma -B build-subst108 -DMETOOLKIT_DIR=/tmp/mt_subst
+#                       * run_map.sh hardcodes -GL4ESRENDERER and IT WORKS HERE. HANDOVER.md
+#                         7d and 3c both say to use -SOFTWARERENDERER because GL4ES faults at
+#                         the first HUD frame "for stock too". That did not happen in any of
+#                         the EIGHT matches run this session, stock or recovered. Stale or
+#                         environment-dependent; the script's default is fine.
+#                       * BOT-DEPENDENT MAPS PRODUCE NO KARMA TRAFFIC HEADLESS HERE.
+#                         ONS-CBP2-Tropica (240 s and 360 s) and DM-BE-Clearing all loaded,
+#                         reached "Finished precaching textures" and exercised 0 of 38 pairs
+#                         with 0 faults. test-karma-1 is reliable precisely because 6 says it
+#                         needs no bots — its load is scripted actors.
+#
+#                     Everything else reproduced its documented figure: layout_check
+#                     151/128/23/128/369/631; assoc_scan 575 sites / 51 objects; ptrwidth
+#                     armv7 0, arm64 7,714/95; wasm_check 145/145; frame bounds 0; bindings 0;
+#                     drop-in gap 0; scene census 103/311/312; gate_sensitivity matching 4a's
+#                     table; vptr_ab control bit-identical with BOTH wrong versions crashing
+#                     on the two scenes that reach the dispatch; lp64_run failing as designed
+#                     with a clean i386 control.
+
 # THE-DELIVERABLE      2026-08-27 (eighth session): CHECK 2 OF THE DEFINITION OF DONE, WHICH
 #                     HAD NEVER BEEN ATTEMPTED. The engine LINKS against a metoolkit that
 #                     contains no MathEngine object code at all, and PLAYS.

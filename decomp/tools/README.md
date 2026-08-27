@@ -27,7 +27,11 @@ for a in "$LIB"/*.a; do n=$(basename "$a" .a); mkdir -p /tmp/kd_members/$n
 
 **Every command below has been run.** Where a tool takes a directory, the shape of that directory is
 stated, because two of them want different shapes and one used to fail silently when given the wrong
-one.
+one. Writing this file caught six invocations that were wrong as transcribed from the docstrings —
+`gen_typedb` takes `--public-headers`, not `--metoolkit`; `gen_vtables` takes `-o`, not `--out`;
+`reachable.py` has no `--why`; `ghidra_clean` takes `--object`, not `--obj`; the Ghidra dumps are
+named `<object>.o.c`, not `<object>.c`; and `dwarf_structs --type` must be pointed at the object
+that DEFINES the class. **Read the rule, then run it** applies to documentation too.
 
 ---
 
@@ -65,9 +69,22 @@ Ghidra's output into C that compiles and means the same thing. `recover.py` driv
 directly only when debugging a rule.
 
 ```bash
-python3 tools/ghidra_clean.py $LAB/out14/McdSpace.c -o /tmp/one.c \
-        --obj $LAB/allobj/McdSpace.o --prelude /tmp/kd_out/allobj/McdSpace.prelude.h
+# NOTE THE DUMP FILENAME: Ghidra writes `<object>.o.c`, not `<object>.c`.
+python3 tools/gen_prelude.py $LAB/allobj/McdSpace.o --protos $LAB/kd_protos11.h \
+        --corpus $LAB/allobj --include-dir $MT/include --dump $LAB/out14/McdSpace.o.c \
+        -o /tmp/McdSpace.prelude.h --exports-out /tmp/McdSpace.exports.h
+python3 tools/gen_vtables.py $LAB/allobj/McdSpace.o -o /tmp/McdSpace.vtables.h
+
+python3 tools/ghidra_clean.py $LAB/out14/McdSpace.o.c -o /tmp/McdSpace.c \
+        --object $LAB/allobj/McdSpace.o --prelude /tmp/McdSpace.prelude.h \
+        --exports /tmp/McdSpace.exports.h --vtables /tmp/McdSpace.vtables.h \
+        --protos $LAB/kd_protos11.h --metoolkit-include $MT/include
+#   -> /tmp/McdSpace.c: 34 functions (1 static)
 ```
+
+The result will **not** match the pipeline's output for that object, and that is expected rather
+than a fault: `recover.py` also passes the field map and the compile flags, and runs the repair loop
+against real diagnostics. Use this to debug a rule, not to produce a build input.
 
 > **Read the rule, then RUN it.** Six rules have looked correct and silently declined; reading alone
 > has a 0/6 record here. Call the rule directly on the offending line.
@@ -80,8 +97,9 @@ from `.data`/`.rodata`, and explicit TODOs for anything it cannot determine.
 ```bash
 python3 tools/gen_prelude.py $LAB/allobj/McdSpace.o \
         --protos $LAB/kd_protos11.h --corpus $LAB/allobj \
-        --include-dir $MT/include --dump $LAB/out14/McdSpace.c \
+        --include-dir $MT/include --dump $LAB/out14/McdSpace.o.c \
         -o /tmp/McdSpace.prelude.h --exports-out /tmp/McdSpace.exports.h
+#   -> 26 imports, 0 statics, 1 TODO(s) needing a human
 ```
 
 Carries `ITANIUM_ABI_FUNCS`: `operator new`/`delete` and friends, whose C shape is read off the
@@ -438,5 +456,30 @@ it).
 
 `ParseKarmaHeaders.java` (preScript, consumes `kd_protos11.h`) and `DumpDecomp.java` (postScript,
 emits the per-function dump, `stats.csv` and `<object>.locals`). Ghidra lives at
-`/home/ion/tools/ghidra_12.1.3_PUBLIC`; a single-object re-dump is ~50 s. `../HANDOVER.md` §5 has
-the invocation and `KD_GHIDRA_OPTS`.
+`/home/ion/tools/ghidra_12.1.3_PUBLIC` (Java 21, headless only). `../HANDOVER.md` §5 has the
+full-corpus invocation and `KD_GHIDRA_OPTS`. **The scripts must be COPIED to
+`/home/ion/tools/karma-lab/gscripts/`** — Ghidra reads them from there, not from this repo.
+
+A single-object re-dump, which is the form you actually want when testing a hypothesis:
+
+```bash
+cd /home/ion/tools/karma-lab
+cp /home/ion/engines/engine-ut2004/karma-decomp/tools/gscripts/*.java gscripts/
+mkdir -p one_obj out_verify gproj_verify && cp allobj/McdSpace.o one_obj/
+export KARMA_PROTOS=/home/ion/tools/karma-lab/kd_protos11.h
+export KARMA_OUTDIR=/home/ion/tools/karma-lab/out_verify
+/home/ion/tools/ghidra_12.1.3_PUBLIC/support/analyzeHeadless \
+  gproj_verify Proj -import /home/ion/tools/karma-lab/one_obj \
+  -scriptPath /home/ion/tools/karma-lab/gscripts \
+  -preScript ParseKarmaHeaders.java -postScript DumpDecomp.java -deleteProject
+#   -> out_verify/McdSpace.o.{c,locals} + stats.csv
+```
+
+> **THE FRONT END IS REPRODUCIBLE, and that had never been demonstrated.** The dump above came back
+> **byte-identical to `out14/McdSpace.o.{c,locals}`** — same Ghidra, same scripts, same
+> `kd_protos11.h`, same answer. §5 warns that a re-run "changes every object at once" and that
+> `out5`–`out14` must be kept; that is true when the PROTOS or the SCRIPTS change, which is what
+> those re-runs were. With the inputs held fixed the decompiler is deterministic, so `out14` is a
+> cache rather than an irreplaceable artefact. Full corpus is 75–120 minutes; one object is under a
+> minute.
+

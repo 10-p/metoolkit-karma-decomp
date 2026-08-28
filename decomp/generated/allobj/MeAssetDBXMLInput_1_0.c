@@ -1008,14 +1008,14 @@ MeFPrimitive * kd_MeFPrimitiveCreateFromFile_1_0(MeFGeometry *parent,PElement *e
                     
               iVar4 = 0;
               p = MeFPrimitiveCreate(pvVar2,6);
-              if (0 < (int)pfVar1[3]) {
+              if (0 < *(int *)&pfVar1[3]) {
                 iVar5 = 0;
                 do {
                   iVar4 = iVar4 + 1;
-                  pvVar2 = (void *)((int)pfVar1[4] + iVar5);
+                  pvVar2 = (void *)(*(int *)&pfVar1[4] + iVar5);
                   iVar5 = iVar5 + 0xc;
                   MeFPrimitiveAddVertex(p,pvVar2);
-                } while (iVar4 < (int)pfVar1[3]);
+                } while (iVar4 < *(int *)&pfVar1[3]);
               }
             }
           }
@@ -1286,8 +1286,8 @@ LAB_00010ec5:
       MeFJointSetProperty1f(fj,1,pfVar1[0x13]);
       MeFJointSetProperty1f(fj,3,pfVar1[0x15]);
       MeFJointSetProperty1f(fj,4,pfVar1[0x16]);
-      MeFJointSetProperty1b(fj,0xf,(int)pfVar1[0x21]);
-      MeFJointSetProperty1b(fj,0x10,(int)pfVar1[0x22]);
+      MeFJointSetProperty1b(fj,0xf,*(int *)&pfVar1[0x21]);
+      MeFJointSetProperty1b(fj,0x10,*(int *)&pfVar1[0x22]);
       MeFJointSetProperty1f(fj,0x17,pfVar1[0x29]);
       fVar9 = pfVar1[0x23];
       iVar5 = 0x11;
@@ -1311,7 +1311,7 @@ LAB_00010ec5:
         MeFJointSetProperty1f(fj,0x11,pfVar1[0x23]);
         MeFJointSetProperty1f(fj,0x18,pfVar1[0x2a]);
         MeFJointSetProperty1f(fj,0x12,pfVar1[0x24]);
-        MeFJointSetProperty1b(fj,0x1c,(int)pfVar1[0x2e]);
+        MeFJointSetProperty1b(fj,0x1c,*(int *)&pfVar1[0x2e]);
         MeFJointSetProperty1f(fj,9,pfVar1[0x1b]);
         MeFJointSetProperty1f(fj,0,pfVar1[0x12]);
         MeFJointSetProperty1f(fj,1,pfVar1[0x13]);
@@ -1409,16 +1409,16 @@ LAB_00010ec5:
             } while (bVar8);
             if (bVar8) {
               fj = MeFJointCreate(pvVar2,8);
-              MeFJointSetProperty1i(fj,0x1a,(int)pfVar1[0x2c]);
+              MeFJointSetProperty1i(fj,0x1a,*(int *)&pfVar1[0x2c]);
               MeFJointSetProperty1f(fj,0,pfVar1[0x12]);
               MeFJointSetProperty1f(fj,1,pfVar1[0x13]);
               MeFJointSetProperty1f(fj,3,pfVar1[0x15]);
               MeFJointSetProperty1f(fj,9,pfVar1[0x1b]);
-              MeFJointSetProperty1i(fj,0x1b,(int)pfVar1[0x2d]);
+              MeFJointSetProperty1i(fj,0x1b,*(int *)&pfVar1[0x2d]);
               MeFJointSetProperty1f(fj,2,pfVar1[0x14]);
               MeFJointSetProperty1f(fj,4,pfVar1[0x16]);
               MeFJointSetProperty1f(fj,10,pfVar1[0x1c]);
-              MeFJointSetProperty1b(fj,0x1c,(int)pfVar1[0x2e]);
+              MeFJointSetProperty1b(fj,0x1c,*(int *)&pfVar1[0x2e]);
               goto LAB_00010b70;
             }
                     
@@ -1435,7 +1435,7 @@ LAB_00010ec5:
             } while (bVar8);
             if (bVar8) {
               fj = MeFJointCreate(pvVar2,9);
-              MeFJointSetProperty1b(fj,0x1c,(int)pfVar1[0x2e]);
+              MeFJointSetProperty1b(fj,0x1c,*(int *)&pfVar1[0x2e]);
               MeFJointSetProperty1f(fj,3,pfVar1[0x15]);
               fVar9 = pfVar1[0x1b];
               iVar5 = 9;

@@ -86,11 +86,26 @@ echo "=== $LABEL: ${#OBJS[@]} object(s) taken from MathEngine's shipped library 
     echo "  BUILD FAILED — $(grep -m1 -iE 'undefined reference|error:' "/tmp/ktrace-subst-$LABEL.build.log")"
     exit 3; }
 
-KD_FRAMES="$FRAMES" KD_GAME=Onslaught.ONSOnslaughtGame \
-    "$ENG/karma-decomp/test/ktrace_run.sh" "$BIN" "$LABEL" 120 > "/tmp/ktrace-subst-$LABEL.run.log" 2>&1
+# KD_SCENARIO=ragdoll switches the whole harness to the RAGDOLL question: one bot on
+# test-karma-1, bone bodies traced, and scored on the two invariants the owner's report is about
+# (self-intersection and range of motion) rather than on where the scripted actors came to rest.
+# The default scenario cannot see a ragdoll defect at all — it scores rest position and sleep state,
+# and both arms MATCH 30/30 while the ragdolls differ by 38%.
+if [ "${KD_SCENARIO:-}" = "ragdoll" ]; then
+    KD_FRAMES="${KD_RAG_FRAMES:-3000}" KD_EVERY=1 KD_BONES=1 KD_GAME=Onslaught.ONSOnslaughtGame \
+        KD_URLOPTS="?SpectatorOnly=1?NumBots=1" \
+        "$ENG/karma-decomp/test/ktrace_run.sh" "$BIN" "$LABEL" 300 > "/tmp/ktrace-subst-$LABEL.run.log" 2>&1
+else
+    KD_FRAMES="$FRAMES" KD_GAME=Onslaught.ONSOnslaughtGame \
+        "$ENG/karma-decomp/test/ktrace_run.sh" "$BIN" "$LABEL" 120 > "/tmp/ktrace-subst-$LABEL.run.log" 2>&1
+fi
 if [ ! -s "/tmp/ktrace-$LABEL.csv" ]; then
     echo "  NO TRACE — $(tail -3 "/tmp/ktrace-subst-$LABEL.run.log" | tr '\n' ' ')"
     exit 3
 fi
 
-python3 "$ENG/karma-decomp/test/ktrace_score.py" "$REF" "/tmp/ktrace-$LABEL.csv"
+if [ "${KD_SCENARIO:-}" = "ragdoll" ]; then
+    python3 "$ENG/karma-decomp/test/ragdoll_score.py" "${KD_RAG_REF:-/tmp/rd-L.csv}" "/tmp/ktrace-$LABEL.csv"
+else
+    python3 "$ENG/karma-decomp/test/ktrace_score.py" "$REF" "/tmp/ktrace-$LABEL.csv"
+fi

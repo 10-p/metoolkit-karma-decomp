@@ -6299,6 +6299,75 @@ X87_RECONSTRUCTIONS = {
 # Each entry carries the number of occurrences it expects, and a mismatch RAISES
 # rather than declining — a silent no-op here leaves the corruption in place and
 # looks exactly like success.
+# XML_INT_CDATA — `(int)pfVar1[N]` where the buffer holds an INT. THE RAGDOLL DEFECT.
+#
+# `MeXMLElement.cdata` is `void *` in MeXMLTree.h and Ghidra typed it `float *`, so every read
+# through it is a float. Where the buffer holds an integer, C CONVERTS the bit pattern instead of
+# reading the integer that is there — a boolean stored as 1 reads back as 1.4e-45 and converts to
+# ZERO. The five sites are MeFJoint's boolean properties, parsed out of the .ka:
+#
+#     recovered  MeFJointSetProperty1b(fj, 0xf, (int)pfVar1[0x21]);
+#     shipped    mov 0x84(%edx),%esi   (0x84 == 0x21*4)   push %esi   push $0xf   call ...
+#
+# With every one of them false, joint limits are never enabled and a ragdoll's limbs rotate
+# without bound — the owner's "legs opening 180 degrees, limbs doing multiple rotations, as if it
+# were ignoring its .ka files". That last phrase was exactly right.
+#
+# LOCALISED BY BISECT, NOT BY READING. test/ragdoll_score.py scores two invariants a constrained
+# ragdoll has (self-intersection gap, range of motion) against a legacy-karma reference; the
+# scenario is deterministic under -FIXEDFPS and two runs of one binary give IDENTICAL numbers, so
+# the instrument has no noise to hide in. Complement bisect: every family MATCHED except Me, and
+# inside Me every object MATCHED except this one, which reproduces the whole defect alone
+# (-38% gap, +17% twist). Forward: taking it from the shipped library restores the reference twist
+# EXACTLY and most of the gap.
+#
+# THE MACHINE-CODE GATE: a float-to-int conversion on i386 is fistp/fisttp/cvtt*2si, and the
+# shipped MeAssetDBXMLInput_1_0 contains NOT ONE in any function.
+#
+# ⚠ WHY A TABLE AND NOT A RULE. The general form — "an (int) cast of a float expression in a
+# function that never converts is a reinterpretation" — is correct and was written, measured, and
+# REVERTED: its blast radius was SIXTEEN objects, several of them released in this file
+# (IxSphereTriList, IxBoxTriList, keaLCPSolver), and it took one object from compiling to not
+# compiling. A rule that repairs the object you were looking at and silently rewrites fifteen you
+# were not is not ready, however sound its reasoning. The sites below are the ones checked against
+# the shipped instruction stream one at a time.
+XML_INT_CDATA = {
+    ('MeAssetDBXMLInput_1_0', 'MeFJointCreateFromFile_1_0'): [
+        dict(n=1, old="      MeFJointSetProperty1b(fj,0xf,(int)pfVar1[0x21]);",
+                  new="      MeFJointSetProperty1b(fj,0xf,*(int *)&pfVar1[0x21]);"),
+        dict(n=1, old="      MeFJointSetProperty1b(fj,0x10,(int)pfVar1[0x22]);",
+                  new="      MeFJointSetProperty1b(fj,0x10,*(int *)&pfVar1[0x22]);"),
+        dict(n=3, old="MeFJointSetProperty1b(fj,0x1c,(int)pfVar1[0x2e]);",
+                  new="MeFJointSetProperty1b(fj,0x1c,*(int *)&pfVar1[0x2e]);"),
+        # The INTEGER properties beside them. Fixing only the booleans moved the ragdoll's
+        # self-intersection gap (-38% -> -23%) and left its range of motion where it was, while
+        # substituting the WHOLE shipped object restored the range EXACTLY — which is what said
+        # there were more sites in here than the five obvious ones.
+        dict(n=1, old="              MeFJointSetProperty1i(fj,0x1a,(int)pfVar1[0x2c]);",
+                  new="              MeFJointSetProperty1i(fj,0x1a,*(int *)&pfVar1[0x2c]);"),
+        dict(n=1, old="              MeFJointSetProperty1i(fj,0x1b,(int)pfVar1[0x2d]);",
+                  new="              MeFJointSetProperty1i(fj,0x1b,*(int *)&pfVar1[0x2d]);"),
+    ],
+    # A COUNT and a POINTER read out of the same buffer, in the primitive parser. `(int)pfVar1[4]`
+    # is the vertex ARRAY ADDRESS — converting a pointer to float and back is not an approximation,
+    # it is a different address — and `pfVar1[3]` is the vertex count that bounds the loop.
+    ('MeAssetDBXMLInput_1_0', 'MeFPrimitiveCreateFromFile_1_0'): [
+        dict(n=1, old="              if (0 < (int)pfVar1[3]) {",
+                  new="              if (0 < *(int *)&pfVar1[3]) {"),
+        dict(n=1, old="                  pvVar2 = (void *)((int)pfVar1[4] + iVar5);",
+                  new="                  pvVar2 = (void *)(*(int *)&pfVar1[4] + iVar5);"),
+        dict(n=1, old="                } while (iVar4 < (int)pfVar1[3]);",
+                  new="                } while (iVar4 < *(int *)&pfVar1[3]);"),
+    ],
+}
+
+
+def apply_xml_int_cdata(text, obj):
+    """Apply XML_INT_CDATA for this object. Raises on any drift."""
+    return _apply_anchored_repairs(text, obj, XML_INT_CDATA, 'apply_xml_int_cdata',
+                                   'test/ragdoll_score.py against a legacy-karma reference')
+
+
 FLOAT_TYPED_INT_FIELDS = {
     ('McdGjkPenetrationDepth', 'McdGjkFaceQueueInit'): [
         # An integer local for the subset mask. MVar5 cannot serve: the shared
@@ -8526,6 +8595,7 @@ def main():
     body_text, n_extidx = normalise_external_indexing(args.object, body_text)
     body_text, n_x87 = reconstruct_discarded_x87(body_text, args.object)
     body_text, n_intf = retype_float_typed_int_fields(body_text, args.object)
+    body_text, n_xmlint = apply_xml_int_cdata(body_text, args.object)
     body_text, n_pconst = apply_portability_constants(body_text, args.object)
     body_text, n_assoc = apply_assoc_order(body_text, args.object)
     body_text, n_pfmt = fix_printf_extra_args(body_text)

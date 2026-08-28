@@ -27,6 +27,11 @@ FPS="${KD_FPS:-30}"
 EVERY="${KD_EVERY:-1}"
 FRAMES="${KD_FRAMES:-0}"
 EXTRA="${KD_EXTRA:-}"
+# The default is a bot-free scripted run — the vehicle/box scenario, where a bot spawning
+# ragdolls would add bodies whose indices churn between runs. KD_URLOPTS REPLACES it rather
+# than appending, because appending `?NumBots=1` after `?NumBots=0` leaves two of the same
+# option in one URL and which one wins is not a thing to find out by accident.
+URLOPTS="${KD_URLOPTS:-?NumBots=0?QuickStart=True?bPlayerMustBeReady=False}"
 
 CSV="/tmp/ktrace-${LABEL}.csv"
 LOG="/tmp/ktrace-${LABEL}.log"
@@ -43,9 +48,10 @@ echo "=== $LABEL: $MAP for ${SECS}s at ${FPS} fixed fps -> $CSV ==="
 # spawning ragdolls on top of them adds bodies whose indices churn between runs.
 timeout --signal=TERM "$SECS" xvfb-run -a -s "-screen 0 640x480x24" \
     "./ktrace-${LABEL}.bin" \
-    "${MAP}?game=${GAME}?TimeLimit=0?NumBots=0?QuickStart=True?bPlayerMustBeReady=False${EXTRA}" \
+    "${MAP}?game=${GAME}?TimeLimit=0${URLOPTS}${EXTRA}" \
     -SOFTWARERENDERER -nohomedir \
     "-FIXEDFPS=${FPS}" "-KTRACE=${CSV}" "-KTRACEEVERY=${EVERY}" "-KTRACEFRAMES=${FRAMES}" \
+    ${KD_BONES:+-KTRACEBONES} \
     > "$LOG" 2>&1
 rc=$?
 rm -f "./ktrace-${LABEL}.bin"

@@ -1256,7 +1256,74 @@ McdTriangleList       real: same run, same evidence. These two objects account f
 #                     nothing, and reporting them as refusals buries the ones that can be repaired.
 #                     They are counted on their own line.
 
-# LP64-DERIVED-FIELDS 2026-08-28 (twelfth session, later): ★ THE 281-SITE COUNT IN
+# LP64-DERIVED-FIELDS 2026-08-29 (twelfth session): ★ REPAIRED — 186 of 281 sites, and the scenes
+#                     now fail ONLY in dynamics. Supersedes the entry of the same name below, which
+#                     characterised the class and predicted the shape correctly.
+#                     tools/fix_derived_fields.py.
+#
+#                     UT2004's geometry types derive from McdGeometry by PREFIXING it and Ghidra
+#                     has only `McdGeometry *`, so it addresses a derived field as an index past
+#                     the base: byte `k * 16 + {0,4,8,12}` at i386, which lands exactly right. At
+#                     LP64 the base is 32 and its fields are at {0,8,16,24}, and those move
+#                     DIFFERENTLY from the derived struct's own layout:
+#
+#                       McdBox at LP64   m_g 0..32   mR[3] 32..44   mRadius 44..48
+#                         g[1].mRefCtAndID -> 32   mR[0]   correct, BY LUCK
+#                         g[1].prev        -> 40   mR[1] is at 36        WRONG
+#                         g[1].next        -> 48   past the end of the struct
+#                         g[1].frame       -> 56   past the end of the struct
+#
+#                     ★ THE ACCESS TYPE HAS TO CHANGE TOO, WHICH IS WHY THIS IS NOT AN ADDRESS
+#                     RE-SPELLING LIKE LP64-FIELD-OFFSETS. The recovery stores through the BASE
+#                     field's type — `pMVar4[1].prev` is a POINTER — into what is really a 4-byte
+#                     MeReal. At i386 both are four bytes and only the bytes matter; at LP64 the
+#                     pointer is eight and would overwrite the next field. So three shapes each
+#                     need the VALUE adapted, and the candidates are offered to the compiler rather
+#                     than chosen by reasoning:
+#
+#                       *(float *)&(g[1].F)          -> *(float *)&((C *)g)->PATH   (cast survives)
+#                       p[1].F = (T)KD_FBITS(EXPR);  -> ((C *)p)->PATH = EXPR;
+#                       p[1].F = VAR;                -> ((C *)p)->PATH = *(__typeof__(...) *)&VAR;
+#                       VAR = p[1].F;                -> VAR = (__typeof__(VAR))KD_FBITS(((C *)p)->PATH);
+#
+#                     The last two are mirror images: Ghidra types the local as `McdGeometryID`
+#                     because the base field is, and every use spells it `*(float *)&pMVar1` — a
+#                     float in a pointer's clothing. Re-laundering keeps the bits, and at 64-bit
+#                     they sit in the low four bytes where `*(float *)&` finds them.
+#
+#                     ★ AND HERE THE BYTE-IDENTITY GATE IS STRONG, unlike in LP64-WRONG-TYPE. There
+#                     any type of the right i386 size passed, which is how seven wrong ones shipped.
+#                     HERE a wrong field is a different ADDRESS and a wrong type is a different
+#                     STORE WIDTH, and either changes the i386 object. Every one of the 186 was
+#                     compiled and compared; the 95 declines are declines, not guesses.
+#
+#                     ⚠ TWO MEASUREMENT BUGS THE SELF-CHECKS CAUGHT, both of which would have read
+#                     as "there is nothing here":
+#                       * `MeVector3 center;` is a `MeReal[3]` BEHIND A TYPEDEF, so scanning for
+#                         `TYPE NAME[N];` recorded only its first element. McdTriangleList's map
+#                         then had holes at +20 and +24, its nine offsets could not all land, the
+#                         concrete type came back AMBIGUOUS and all 70 sites declined — a decline
+#                         that looks like a decision. Array-ness is now measured (`sizeof(f)` over
+#                         `sizeof(f[0])`), with an `esz >= 2` floor because GNU C gives
+#                         `sizeof(void)` and `sizeof(function)` as 1 and a function-pointer member
+#                         would otherwise read as an array of its own byte count.
+#                       * registering the bare member name at the same offset as element 0 let `mR`
+#                         win over `mR[0]`, and `p->mR` is not an assignable lvalue.
+#
+#                     WHAT IS LEFT, 95 sites in two groups:
+#                       44  the concrete type is genuinely AMBIGUOUS — IxBoxTriList,
+#                           IxSphereTriList, IxSphylPrimitives, McdPlaneIntersect,
+#                           McdGjkMaximumPoint. An Ix* function handles TWO geometries, so the
+#                           per-file inference cannot work and these need per-SITE typing.
+#                       51  inside resolved objects, declined on byte-identity: McdAggregate 28,
+#                           McdTriangleList 12, McdConvexMesh 6, McdCylinder 3, McdBox 2.
+#
+#                     THE RESULT THAT MATTERS: scene_ragdoll now fails ENTIRELY in
+#                     MdtPartition/MdtMainLoop with no collision site at all, and scene_boxes has
+#                     one Mcd site left. The whole Mcd half of the library is effectively LP64-clean
+#                     under these scenes; what remains is dynamics.
+
+# LP64-DERIVED-FIELDS-ORIG 2026-08-28 (twelfth session, later): ★ THE 281-SITE COUNT IN
 #                     LP64-BAKED-SIZES IS AN UNDERCOUNT, and the class is not about geometry.
 #                     That figure came from grepping for the FIELD NAMES of `_McdGeometry`
 #                     (mRefCtAndID / prev / next / frame), which finds the geometry instances and

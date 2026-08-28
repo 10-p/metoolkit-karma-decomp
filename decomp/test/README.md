@@ -353,15 +353,16 @@ Where it stands as of 2026-08-28, with the baked-size class closed:
 |---|---|
 | before any post-pass | `MdtWorld.c:98` — the FIRST STATEMENT of the first scene |
 | post-passes as they were | `MeDictInsert`, two files from the `MdtBody` pool stride that caused it |
-| + pool strides, product counts, rebuilt data, strides, field offsets | **all three scenes converge on the same front** |
+| + sizes, strides, field offsets, derived fields | **`scene_ragdoll` fails only in DYNAMICS** — no collision site at all |
 
-**Still FAIL, and that is the honest reading.** What changed is that all three scenes now run
-through world creation, the framework, every pool, the interaction table and the whole broadphase
-before finding anything. The remaining sites are `MdtPartition` 7, `MdtMainLoop` 5, `McdBox` 5,
-`MstUtils` 4, `McdBatch` 2, `McdSphyl` 1 — and the `McdBox`/`McdSphyl` ones are the derived-field
-accessors, so that class is now ON the critical path rather than merely counted. See
-`../proven.txt` `LP64-BAKED-SIZES`, `LP64-WRONG-TYPE`, `LP64-WORD-LOOPS`, `LP64-REBUILT-DATA`,
-`LP64-FIELD-OFFSETS`, `LP64-STRIDE-AS-ADDR` and `LP64-DERIVED-FIELDS`.
+**Still FAIL, and that is the honest reading.** But the whole Mcd half is now effectively LP64-clean
+under these scenes: `scene_ragdoll`'s 19 errors are all `MdtPartition`/`MdtMainLoop`, and
+`scene_boxes_on_plane` has one `McdBox` read left. What remains is the dynamics partitioner —
+`MdtPartOutCreateFromChunk` carves one arena with a baked total, a baked per-body stride and a
+cursor typed `MdtBaseConstraint ***` stepping over `int` arrays — plus Ghidra's invented stack
+frames in `MstUtils`. Neither is a re-spelling; see `../proven.txt` `LP64-DERIVED-FIELDS`,
+`LP64-STRIDE-AS-ADDR`, `LP64-FIELD-OFFSETS`, `LP64-WRONG-TYPE`, `LP64-WORD-LOOPS`,
+`LP64-REBUILT-DATA` and `LP64-BAKED-SIZES`.
 
 ---
 

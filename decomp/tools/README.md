@@ -716,6 +716,43 @@ as `T x;` at the top of a body and parameters in the signature; the other 19 wer
 scope, not declined** — a `void *` base carries no structure, and reporting those as refusals buries
 the ones that can be repaired.
 
+### `fix_derived_fields.py` — a derived struct's field addressed as an index past its base
+
+```bash
+python3 tools/fix_derived_fields.py /tmp/kd_lp64/allobj /tmp/kd_build
+#   -> 186 of 281 rewritten, 95 declined
+```
+
+`*(float *)&(g[1].mRefCtAndID)` is `((McdSphere *)g)->mRadius`. The geometry types derive from
+`McdGeometry` by prefixing it and Ghidra has only `McdGeometry *`, so it addresses a derived field
+as `k * 16 + {0,4,8,12}` — exactly right at i386. At LP64 the base is 32 and its fields are at
+`{0,8,16,24}`, which move *differently* from the derived struct: for `McdBox`, `[1].prev` lands at
+40 where `mR[1]` is at 36, and `[1].next`/`[1].frame` run off the end.
+
+★ **The access type has to change too**, which is what separates this from `fix_literal_offsets.py`.
+The recovery stores through the *base* field's type — `pMVar4[1].prev` is a **pointer** — into what
+is really a 4-byte `MeReal`. Four shapes each need the value adapted, and the candidates are offered
+to the compiler rather than chosen by reasoning; the read and write cases are mirror images, because
+Ghidra types the local as `McdGeometryID` and every use spells it `*(float *)&pMVar1` — a float in a
+pointer's clothing.
+
+★ **Here the byte-identity gate is strong**, unlike in `fix_baked_sizeof.py`: a wrong field is a
+different *address* and a wrong type is a different *store width*, and either changes the i386
+object. All 186 were compiled and compared.
+
+⚠ **Two measurement bugs the self-checks caught, both of which would have read as "nothing here".**
+`MeVector3 center;` is a `MeReal[3]` **behind a typedef**, so scanning for `TYPE NAME[N];` recorded
+only its first element; `McdTriangleList`'s map then had holes, its offsets could not all land, the
+concrete type came back ambiguous and **all 70 sites declined** — a decline that looks like a
+decision. Array-ness is now measured, with an `esz >= 2` floor because GNU C gives `sizeof(void)` and
+`sizeof(function)` as 1. And registering the bare member name at element 0's offset let `mR` win
+over `mR[0]`, which is not an assignable lvalue.
+
+**What is left (95):** 44 where the concrete type is genuinely ambiguous — an `Ix*` function handles
+**two** geometries, so per-file inference cannot work and those need per-site typing — and 51 inside
+resolved objects declined on byte-identity (`McdAggregate` 28, `McdTriangleList` 12, `McdConvexMesh`
+6, `McdCylinder` 3, `McdBox` 2).
+
 ---
 
 ## The investigative tools — reach for these when something is wrong

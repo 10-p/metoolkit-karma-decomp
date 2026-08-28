@@ -67,8 +67,10 @@ void kd_MeQuaternionFromTM(MeReal *q,MeReal (*tm) [4])
   int i;
   MeReal qt [4];
 
-  fVar3 = tm[1][1] + (*tm)[0] + tm[2][2];
-  if (fVar3 <= 0.0) {
+  /* st(0), 80-bit in the original — see X87_WIDE_INTERMEDIATE. */
+  double kd_tr = (double)tm[1][1] + (double)(*tm)[0] + (double)tm[2][2];
+  fVar3 = (float)kd_tr;
+  if (kd_tr <= 0.0) {
     i = (int)((*tm)[0] < tm[1][1]);
     if (*(float *)((int)tm + i * 0x14) < tm[2][2]) {
       i = 2;
@@ -90,8 +92,8 @@ void kd_MeQuaternionFromTM(MeReal *q,MeReal (*tm) [4])
     *q = qt[3];
   }
   else {
-    fVar3 = SQRT(fVar3 + 1.0);
-    fVar4 = (1.0 / fVar3) * 0.5;
+    fVar3 = (float)sqrt(kd_tr + 1.0);
+    fVar4 = (float)((1.0 / (double)fVar3) * 0.5);
     *q = fVar3 * 0.5;
     q[1] = (tm[1][2] - tm[2][1]) * fVar4;
     q[2] = (tm[2][0] - (*tm)[2]) * fVar4;

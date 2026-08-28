@@ -6331,6 +6331,54 @@ X87_RECONSTRUCTIONS = {
 # compiling. A rule that repairs the object you were looking at and silently rewrites fifteen you
 # were not is not ready, however sound its reasoning. The sites below are the ones checked against
 # the shipped instruction stream one at a time.
+# X87_WIDE_INTERMEDIATE — the MIRROR of spill_scan.py, and the harder direction.
+#
+# spill_scan finds 229 sites where gcc 3.2 SPILLED an x87 register to a 4-byte slot (rounding it)
+# and Ghidra folded the store/reload away, so the recovery carries 80 bits where the shipped code
+# carried 32. This is the other way round: a value the shipped code keeps in st(0) THROUGHOUT, and
+# that Ghidra gave a `float` local — so the recovery carries 32 bits where the original carried 80.
+# Neither scan can find it; a spilled slot has a fingerprint and an unspilled register has none.
+#
+# MeQuaternionFromTM keeps the matrix trace in st(0) across the compare, the +1.0 AND the fsqrt:
+#
+#     e:  flds 0x14(%esi)   fadds (%esi)   fadds 0x28(%esi)   <- never stored
+#     23: fadd %st,%st(1)   27: fsqrt                          <- still st(0), still 80-bit
+#
+# so `sqrtf((float)trace + 1.0f)` is not what the original computes. `double` is not 80 bits either,
+# but it is far closer than float, and it closes the gap the bisect found.
+#
+# ⚠ AND THE TWO SHIPPED BUILDS DISAGREE HERE, WHICH IS WORTH KNOWING BEFORE TRUSTING THIS. The
+# x86-64 build computes the same trace entirely in FLOAT (movss/addss/addss) and plays correctly,
+# so 80-bit intermediates are NOT necessary for correct physics — this is about which reference we
+# match, not about which is right. The same disagreement appears in the ADDITION ORDER: i386 sums
+# the trace 1,0,2 and amd64 sums it 0,1,2. Our recovery already matches i386 on that, and it is
+# deliberately left alone; picking MSVC's schedule over gcc's would be a coin toss dressed as a fix.
+#
+# MEASURED: localised by complement bisect on test/ragdoll_score.py — every family MATCHED except
+# Me, inside Me only MeMath, and MeMath alone accounted for the whole residual. This one function
+# closes it: gap -6% -> -0.7%, twist +1.7%, MATCH.
+X87_WIDE_INTERMEDIATE = {
+    ('MeMath', 'MeQuaternionFromTM'): [
+        dict(n=1,
+             old="  fVar3 = tm[1][1] + (*tm)[0] + tm[2][2];\n  if (fVar3 <= 0.0) {",
+             new="  /* st(0), 80-bit in the original — see X87_WIDE_INTERMEDIATE. */\n"
+                 "  double kd_tr = (double)tm[1][1] + (double)(*tm)[0] + (double)tm[2][2];\n"
+                 "  fVar3 = (float)kd_tr;\n  if (kd_tr <= 0.0) {"),
+        dict(n=1,
+             old="    fVar3 = SQRT(fVar3 + 1.0);\n    fVar4 = (1.0 / fVar3) * 0.5;",
+             new="    fVar3 = (float)sqrt(kd_tr + 1.0);\n"
+                 "    fVar4 = (float)((1.0 / (double)fVar3) * 0.5);"),
+    ],
+}
+
+
+def apply_x87_wide_intermediate(text, obj):
+    """Apply X87_WIDE_INTERMEDIATE for this object. Raises on any drift."""
+    return _apply_anchored_repairs(text, obj, X87_WIDE_INTERMEDIATE,
+                                   'apply_x87_wide_intermediate',
+                                   'test/ragdoll_score.py against a legacy-karma reference')
+
+
 XML_INT_CDATA = {
     ('MeAssetDBXMLInput_1_0', 'MeFJointCreateFromFile_1_0'): [
         dict(n=1, old="      MeFJointSetProperty1b(fj,0xf,(int)pfVar1[0x21]);",
@@ -8596,6 +8644,7 @@ def main():
     body_text, n_x87 = reconstruct_discarded_x87(body_text, args.object)
     body_text, n_intf = retype_float_typed_int_fields(body_text, args.object)
     body_text, n_xmlint = apply_xml_int_cdata(body_text, args.object)
+    body_text, n_x87w = apply_x87_wide_intermediate(body_text, args.object)
     body_text, n_pconst = apply_portability_constants(body_text, args.object)
     body_text, n_assoc = apply_assoc_order(body_text, args.object)
     body_text, n_pfmt = fix_printf_extra_args(body_text)

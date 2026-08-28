@@ -343,6 +343,40 @@ Use the `-g` presets: without a name section it can still count sites but cannot
 function each is in, which is most of the value. It **refuses** rather than printing a zero when
 handed a module it cannot parse or one with no element segment.
 
+### `census_report.py` — which recovered functions has the REAL GAME ever entered?
+
+**The denominator for everything else in `proven.txt`.** Every other tool here answers "does this
+object reproduce the original"; none answers "was this code reached", and the two produce the
+identical line of output. A whole-library A/B that reads bit-identical proves the recovery exact
+*on the paths the map exercised* and says nothing whatever about the rest.
+
+```bash
+cmake --preset native -B ../build-native-census -DKD_CENSUS=ON -DCMAKE_EXE_LINKER_FLAGS=-no-pie
+cmake --build ../build-native-census -j"$(nproc)"
+
+cd /home/ion/karma-run/System && cp <binary> census.bin
+KD_INSTR_OUT=/tmp/c1.txt timeout 150 xvfb-run -a ./census.bin \
+  "test-karma-1?game=Onslaught.ONSOnslaughtGame?TimeLimit=0?SpectatorOnly=1?NumBots=2" \
+  -SOFTWARERENDERER -nohomedir
+# … repeat per map; the union is what matters
+
+python3 tools/census_report.py /tmp/c1.txt /tmp/c2.txt … ../build-native-census/…/ut2004-pixo.bin
+```
+
+Reads **555 of 2,025 functions (27.4%)** across four maps and two gametypes today. It names every
+cold function, per object.
+
+⚠ **`-no-pie` MUST GO ON THE EXECUTABLE.** `kd_instr.c` records RUNTIME addresses and `nm` prints
+link-time offsets; in a PIE they differ by the load bias, nothing resolves, and the report reads
+"0 of 2025 entered" — indistinguishable from "the physics never ran". Putting the flag on the
+Engine static library instead changes nothing and the build still succeeds. The report now
+REFUSES a zero rather than printing one.
+
+⚠ **`SpectatorOnly=1` is what makes a match actually run.** Without it the level loads and
+`LevelInfo->Pauser` is set, `ULevel::Tick` skips the Karma tick entirely, and the census counts
+almost nothing while the HUD — which ticks on the render path, outside that guard — keeps logging
+every frame.
+
 ### `layout_check.py` — the arm64 defect the truncation gate cannot see
 
 `ptrwidth_check.sh` counts pointer **truncation**. This counts the defect truncation is a symptom

@@ -929,6 +929,88 @@ McdTriangleList       real: same run, same evidence. These two objects account f
 #                     instruction anywhere in the function), but test-karma-1 did not isolate them —
 #                     they are not released above. Repaired is not the same as validated.
 
+# KA-NEVER-LOADED    2026-08-28 (eleventh session): NO NATIVE BUILD IN THIS PROJECT HAS EVER
+#                     LOADED A KARMA ASSET, so every native acceptance run ever recorded in this
+#                     file — the 300 s ONS-Torlan matches, ONS-Adara, ONS-Ascendancy, the drop-in
+#                     check — exercised ZERO of the .ka path and zero ragdoll code.
+#
+#                     ⚠ NOT A RECOVERY DEFECT. `legacy-karma`, linking MathEngine's own archives,
+#                     fails identically: 27,160 "KInitSkeletonKarma: Asset not found" on BOTH arms
+#                     of a five-minute match. That A/B is what rules the recovery out and the
+#                     engine glue in, and it is why this is recorded here rather than chased there.
+#
+#                     THE DEFECT, in KUtils.cpp's KCreateAssetDB — the block whose own comment
+#                     called it "a nasty little hack":
+#
+#                       TArray<TCHAR> chararray = Temp.GetCharArray();
+#                       char *data = (char*)chararray.GetData();
+#                       strncpy(out, appToAnsi((TCHAR *) data), 512);
+#
+#                     Measured with the two side by side rather than reasoned about:
+#
+#                       Temp='../KarmaData/Alien.ka'   outlen=8   filename='0\xc9\xfa\xec0\xc9\xfa\xec'
+#
+#                     `Temp` is perfect and `out` is eight bytes of uninitialised heap. MeStreamOpen
+#                     then failed on that name for all six assets and `if(stream)` was simply not
+#                     taken — SILENTLY, because a NULL stream is a skip here and not an error. Fixed
+#                     by deleting the dance: TCHAR is `char` unless _UNICODE is defined and this tree
+#                     is ANSI everywhere, so `appToAnsi(*Temp)` is the whole conversion.
+#
+#                       before   6 files found, 0 opened, 27,160 "Asset not found"
+#                       after    6 files opened, 0 "Asset not found", 0 MeFileLoad errors
+#
+#                     ⚠ AND THE FIRST INSTRUMENT LIED. `grep -c "Creating MeAssetDB"` read 0 and
+#                     looked like proof that KCreateAssetDB was never called — but that line is a
+#                     debugf(NAME_DevKarma), and NAME_DevKarma is NOT logged in this configuration.
+#                     The messages that DO appear ("KInitActorDynamics: No Model") are plain
+#                     debugfs. A zero from a channel that cannot print is not evidence of absence.
+#                     What settled it was tools/census_report.py — direct instrumentation — showing
+#                     MeStreamOpen ENTERED while MeStreamRead and MeStreamClose stayed cold, i.e.
+#                     the open was reached and failed, which strace then confirmed byte for byte.
+#
+#                     STILL OPEN, AND IT IS THE NEXT THING: the assets now parse and ragdolls STILL
+#                     do not initialise — "Asset not found" returns once bots start dying, at 5,314
+#                     in a longer match, IDENTICALLY on both arms again. So the lookup by skeleton
+#                     NAME fails for a second and separate reason. Until that is fixed, MdtLimit
+#                     (34 functions), MdtHinge (7) and the whole MeFJoint/MeFAsset family remain
+#                     unreachable natively and can only run on wasm — see COVERAGE-CENSUS.
+
+# COVERAGE-CENSUS    2026-08-28 (eleventh session): 464 OF 2,025 RECOVERED FUNCTIONS (22.9%) HAVE
+#                     EVER EXECUTED IN A REAL MATCH, measured across four maps and two gametypes
+#                     with -finstrument-functions inside the engine (CMake -DKD_CENSUS=ON,
+#                     tools/census_report.py). Everything else in this file is evidence about the
+#                     functions the game CALLS; this is the denominator.
+#
+#                     WHY IT MATTERS MOST AFTER A PASS. The whole-library A/B on test-karma-1 reads
+#                     bit-identical against MathEngine for 13 of 15 bodies over 3,000 frames. That
+#                     is strong evidence for the paths the map exercised and says NOTHING about the
+#                     rest. "The recovered Karma matches the original" and "it matches on the 23%
+#                     of its functions anything has ever called" are different claims.
+#
+#                     THE RAGDOLL ANSWER THE OWNER ASKED FOR IS IN THIS TABLE:
+#
+#                       MdtLimit      34 functions   NEVER ENTERED   <- the joint-limit machinery
+#                       MdtHinge       7 functions   NEVER ENTERED
+#                       MdtSkeletal    1/25 entered
+#                       MdtConeLimit   6/11 entered
+#                       MdtBSJoint     2/5  entered
+#                       MeFJoint      89 functions   NEVER ENTERED
+#                       MeFAsset       1/66 entered  (and the 1 is KD_FBITS, an inline helper)
+#
+#                     "Limbs open 180 degrees and rotate freely, as if there were no limits" is
+#                     exactly what an unvalidated MdtLimit would look like, and MdtLimit has never
+#                     executed on ANY native run — so on wasm the game is running 34 functions that
+#                     nothing has ever measured. That is a LEAD, not a verdict: it has not been
+#                     bisected, and the ranked-suspect lesson in MCD-GEOM-FLOAT-FIELDS is that a
+#                     good hypothesis about which subsystem is at fault can be confidently wrong.
+#
+#                     ⚠ THE FIRST CENSUS READ "0 of 2025 FUNCTIONS ENTERED", which is
+#                     indistinguishable from "the physics never ran". The binary was a PIE, so the
+#                     runtime addresses kd_instr.c records differ from nm's link-time offsets by the
+#                     load bias and nothing resolved. -no-pie must go on the EXECUTABLE; putting it
+#                     on the Engine static library changes nothing and the build still succeeds.
+#                     census_report.py now REFUSES a zero rather than printing one.
+
 # WASM-INDIRECT-SIGS  2026-08-27 (tenth session): THE INDIRECT HALF OF WASM-SIGMISMATCH,
 #                     WHICH THAT ENTRY CLOSES BY PREDICTING. It was right. Found by RUNNING
 #                     the engine on wasm for the first time — nothing recovered had ever

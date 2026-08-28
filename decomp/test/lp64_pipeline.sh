@@ -24,6 +24,7 @@ python3 "$HERE/tools/fix_baked_sizeof.py" "$DST/allobj" "$BUILD" "$MT" || exit 2
 python3 "$HERE/tools/fix_strides.py"   "$DST/allobj" "$BUILD" "$MT" || exit 2
 python3 "$HERE/tools/fix_literal_offsets.py" "$DST/allobj" "$BUILD" "$MT" | tail -3 || exit 2
 python3 "$HERE/tools/fix_derived_fields.py" "$DST/allobj" "$BUILD" "$MT" | head -2 || exit 2
+python3 "$HERE/tools/fix_arena_carve.py" "$DST/allobj" "$BUILD" "$MT" | head -3 || exit 2
 python3 "$HERE/tools/fix_ptrwidth.py"    "$DST/allobj" "$BUILD" "$MT" || exit 2
 
 # ---- THE ACCEPTANCE TEST. `intptr_t` IS `int` at 32-bit pointer width and the

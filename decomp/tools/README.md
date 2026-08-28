@@ -753,6 +753,38 @@ over `mR[0]`, which is not an assignable lvalue.
 resolved objects declined on byte-identity (`McdAggregate` 28, `McdTriangleList` 12, `McdConvexMesh`
 6, `McdCylinder` 3, `McdBox` 2).
 
+### `fix_arena_carve.py` — one allocation carved into arrays with baked strides
+
+```bash
+python3 tools/fix_arena_carve.py /tmp/kd_lp64/allobj /tmp/kd_build
+#   -> 6 edits, 0 declined
+```
+
+`MdtPartOutCreateFromChunk` asks for one block and cuts it into seven arrays. Three things are
+frozen at i386: `0x40` is `sizeof(MdtPartitionOutput)` (64 → 96), `0x20` is the per-body total
+(32 → 36, because `bodies` is a *pointer* array and the other four are `int`), and the cursor is
+pointer-sized so `+ maxBodies` steps 4 here and 8 there — right for the one pointer array it walks
+and wrong for the four `int` ones. Every downstream `po->bodies[i]` is correct code indexing arrays
+that overlap.
+
+★ **This class was recorded as "almost certainly not" byte-identical. It is** — the third wrong
+prediction of that kind in one session, all three from reasoning about gcc instead of asking it.
+The obvious repair does fail: `info` and `constraints` **share** the subexpression
+`(pppMVar2 + maxBodies)`, so rewriting both changes what gcc CSEs — five of six edits compose and
+the sixth breaks it, while each is byte-identical alone. **Anchor-and-correct** fixes it: keep the
+original expression verbatim and add `maxBodies * (int)(sizeof(int) - sizeof(T **))`, which is zero
+here. Two for two now on cases that looked unfixable under the gate.
+
+**The rule, derivable and not yet generalised:** `X->field = (T *)cursor;` *names* the element type
+of the array at the cursor, so the next advance must be `count * sizeof(T)`. Every element type is
+written down in the cast that consumes it.
+
+⚠ **One of six.** The other carve-ups (`MdtKeaConstraintsCreateFromChunk`, four in `MdtWorld.c`) are
+a different shape — a dozen sizes accumulated across thirty lines with alignment rounding and
+branches — and need a static analysis, not a pattern match. Edits are keyed to exact source text and
+applied **all or nothing**, because a half-carved arena overlaps *differently* rather than not at
+all and would still pass byte-identity piece by piece.
+
 ---
 
 ## The investigative tools — reach for these when something is wrong

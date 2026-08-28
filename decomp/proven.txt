@@ -1256,6 +1256,65 @@ McdTriangleList       real: same run, same evidence. These two objects account f
 #                     nothing, and reporting them as refusals buries the ones that can be repaired.
 #                     They are counted on their own line.
 
+# LP64-ARENA-CARVE   2026-08-29 (twelfth session): ONE ALLOCATION CARVED INTO ARRAYS WITH BAKED
+#                     STRIDES — and ★ A CORRECTION: this file and STATE.md both predicted the class
+#                     would "almost certainly not" survive the byte-identity gate. IT DOES. That is
+#                     the THIRD wrong prediction of that kind in one session, all three made by
+#                     reasoning about what gcc would emit instead of asking it.
+#
+#                     `MdtPartOutCreateFromChunk` asks for one block and cuts it into seven arrays:
+#
+#                       pMVar1 = MeChunkGetMem(chunk, maxBodies * 0x20 + 0x40 + maxConstraints * 4);
+#                       pppMVar2 = &pMVar1[1].constraints + maxBodies;   /* MdtBaseConstraint *** */
+#                       pMVar1->bodiesSize = (int *)pppMVar2;
+#                       pppMVar2 = pppMVar2 + maxBodies;                 /* steps sizeof(ptr) */
+#
+#                     Three things frozen at i386, all wrong at LP64:
+#                       0x40  sizeof(MdtPartitionOutput)      64 here,  96 there
+#                       0x20  the per-body total              32 here,  36 there — `bodies` is a
+#                             POINTER array and the other four are `int`
+#                       the cursor is POINTER-sized, so `+ maxBodies` steps 4 here and 8 there:
+#                       right for the one pointer array it walks, wrong for the four `int` ones
+#
+#                     Every downstream `po->bodies[i]` is CORRECT CODE indexing arrays that overlap
+#                     each other, which is why the reports land in MdtUpdatePartitions and
+#                     MdtPackAllPartitions with nothing pointing at the carve-up.
+#
+#                     ★ WHY IT IS BYTE-IDENTICAL, AND WHY THE OBVIOUS ATTEMPT IS NOT. Rewriting each
+#                     expression outright fails: `info` and `constraints` SHARE the subexpression
+#                     `(pppMVar2 + maxBodies)`, and rewriting both changes what gcc
+#                     common-subexpression-eliminates. Measured: five of the six edits compose and
+#                     the sixth breaks it; each of the six is byte-identical ALONE. Keeping the
+#                     original expression verbatim and adding a delta that is ZERO at i386 —
+#
+#                       (char *)(pppMVar2 + maxBodies)
+#                           + maxBodies * (int)(sizeof(int) - sizeof(MdtBaseConstraint **))
+#
+#                     — leaves the shared subexpression intact, folds away here, and corrects the
+#                     stride elsewhere. All six then compose. ANCHOR-AND-CORRECT, the same
+#                     technique LP64-STRIDE-AS-ADDR found, is now two for two on cases that looked
+#                     unfixable under the gate.
+#
+#                     THE RULE, DERIVABLE AND NOT YET GENERALISED: `X->field = (T *)cursor;` NAMES
+#                     the element type of the array at the cursor, so the next advance must be
+#                     `count * sizeof(T)`. Every element type in a carve-up is written down in the
+#                     cast that consumes it; nothing needs guessing. The total is their sum plus the
+#                     header.
+#
+#                     ⚠ SCOPE IS ONE OF SIX. `MeChunkGetMem` carve-ups exist in MdtPartition (this
+#                     one, repaired), MdtMainLoop's MdtKeaConstraintsCreateFromChunk, and FOUR in
+#                     MdtWorld. The others are NOT this shape — MdtMainLoop accumulates a dozen
+#                     sizes across thirty lines with alignment rounding and branches before it
+#                     allocates — and covering them needs a static analysis, not a pattern match.
+#                     tools/fix_arena_carve.py keys its edits to exact source text and applies them
+#                     ALL OR NOTHING, because a half-carved arena overlaps differently rather than
+#                     not at all and would still pass byte-identity piece by piece.
+#
+#                     EFFECT: scene_chain 25 -> 3 errors, scene_ragdoll 19 -> 3, and ragdoll's three
+#                     are ALL the invented-stack-frame class (MstUtils, with McdBatch as a
+#                     consequence), which is a DECOMPILATION defect and belongs upstream in the dump
+#                     rather than in any post-pass.
+
 # LP64-DERIVED-FIELDS 2026-08-29 (twelfth session): ★ REPAIRED — 186 of 281 sites, and the scenes
 #                     now fail ONLY in dynamics. Supersedes the entry of the same name below, which
 #                     characterised the class and predicted the shape correctly.

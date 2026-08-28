@@ -353,16 +353,19 @@ Where it stands as of 2026-08-28, with the baked-size class closed:
 |---|---|
 | before any post-pass | `MdtWorld.c:98` — the FIRST STATEMENT of the first scene |
 | post-passes as they were | `MeDictInsert`, two files from the `MdtBody` pool stride that caused it |
-| + sizes, strides, field offsets, derived fields | **`scene_ragdoll` fails only in DYNAMICS** — no collision site at all |
+| + sizes, strides, offsets, derived fields, the partition arena | **`scene_ragdoll` is down to THREE errors, and all three are a decompilation defect** |
 
-**Still FAIL, and that is the honest reading.** But the whole Mcd half is now effectively LP64-clean
-under these scenes: `scene_ragdoll`'s 19 errors are all `MdtPartition`/`MdtMainLoop`, and
-`scene_boxes_on_plane` has one `McdBox` read left. What remains is the dynamics partitioner —
-`MdtPartOutCreateFromChunk` carves one arena with a baked total, a baked per-body stride and a
-cursor typed `MdtBaseConstraint ***` stepping over `int` arrays — plus Ghidra's invented stack
-frames in `MstUtils`. Neither is a re-spelling; see `../proven.txt` `LP64-DERIVED-FIELDS`,
-`LP64-STRIDE-AS-ADDR`, `LP64-FIELD-OFFSETS`, `LP64-WRONG-TYPE`, `LP64-WORD-LOOPS`,
-`LP64-REBUILT-DATA` and `LP64-BAKED-SIZES`.
+**Still FAIL, and that is the honest reading.** `scene_chain` went 25 → 3 and `scene_ragdoll`
+19 → 3; ragdoll's three are `MstUtils` + `McdBatch`, which is Ghidra's INVENTED STACK FRAMES
+(`*(T **)((kd_iptr)aiStack_9cb0 + 0x14)`) — a decompilation defect, not a layout one, and it belongs
+upstream in the dump rather than in any post-pass. `scene_chain` and `scene_boxes_on_plane` still
+have `MdtUpdatePartitions` sites beyond the arena, plus one `McdBox` read.
+
+⚠ **The error COUNTS move between runs** (ASan `-fsanitize-recover` keeps going, so how far a scene
+gets changes what it reports). Read the SITE LIST, not the number.
+
+See `../proven.txt` `LP64-ARENA-CARVE`, `LP64-DERIVED-FIELDS`, `LP64-STRIDE-AS-ADDR`,
+`LP64-FIELD-OFFSETS`, `LP64-WRONG-TYPE`, `LP64-WORD-LOOPS`, `LP64-REBUILT-DATA`, `LP64-BAKED-SIZES`.
 
 ---
 

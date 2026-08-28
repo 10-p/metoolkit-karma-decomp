@@ -929,51 +929,56 @@ McdTriangleList       real: same run, same evidence. These two objects account f
 #                     instruction anywhere in the function), but test-karma-1 did not isolate them —
 #                     they are not released above. Repaired is not the same as validated.
 
-# KA-NEVER-LOADED    2026-08-28 (eleventh session): NO NATIVE BUILD IN THIS PROJECT HAS EVER
-#                     LOADED A KARMA ASSET, so every native acceptance run ever recorded in this
-#                     file — the 300 s ONS-Torlan matches, ONS-Adara, ONS-Ascendancy, the drop-in
-#                     check — exercised ZERO of the .ka path and zero ragdoll code.
+# UNICODE-GUARD-REGRESSION  2026-08-28 (eleventh session): A CORRECTION TO THIS FILE'S OWN
+#                     PREVIOUS ENTRY, AND THE DEFECT WAS MINE. An earlier version of this entry was
+#                     headed "NO NATIVE BUILD HAS EVER LOADED A .ka ASSET" and concluded that every
+#                     native acceptance run ever recorded here had missed the ragdoll path. That is
+#                     WRONG. The original code worked; the tenth session broke it; I then found the
+#                     breakage and mistook it for archaeology.
 #
-#                     ⚠ NOT A RECOVERY DEFECT. `legacy-karma`, linking MathEngine's own archives,
-#                     fails identically: 27,160 "KInitSkeletonKarma: Asset not found" on BOTH arms
-#                     of a five-minute match. That A/B is what rules the recovery out and the
-#                     engine glue in, and it is why this is recorded here rather than chased there.
+#                     WHAT I CHANGED, and why the reasoning was wrong. WIN32-PORT-3 records a fourth
+#                     defect "IN THE ENGINE RATHER THAN THE RECOVERY": KSkeletal.cpp and KUtils.cpp
+#                     guarded wcstombs() with `#if WIN32`, and MinGW rejected `char*` against
+#                     `const wchar_t*`. I changed the guard to `#if defined(_UNICODE)` on the stated
+#                     grounds that "TCHAR is wide only under _UNICODE and this tree is ANSI
+#                     everywhere". THE SECOND HALF IS FALSE. CMakeLists defines UNICODE and _UNICODE
+#                     on every target EXCEPT the two that set NO_UNICODE_OS_SUPPORT — the web build
+#                     and MinGW. So on Linux _UNICODE IS defined, TCHAR is a 2-byte UNICHAR, and the
+#                     new guard routed Linux into wcstombs, where glibc's FOUR-byte wchar_t cannot
+#                     read a 2-byte UNICHAR at all.
 #
-#                     THE DEFECT, in KUtils.cpp's KCreateAssetDB — the block whose own comment
-#                     called it "a nasty little hack":
+#                     ⚠ THE SYMPTOM I DIAGNOSED WAS REAL AND THE CAUSE I ASSIGNED WAS NOT. Both
+#                     sites really did produce garbage; I traced the .ka one to the "nasty little
+#                     hack" beside it (a TArray<TCHAR> copy taken through a char*) and rewrote that.
+#                     The hack is pointless and the rewrite is an improvement, but it was NEVER the
+#                     bug — the round trip is the identity whatever TCHAR is. Rewriting the innocent
+#                     line made the guilty `#if` disappear from view for another hour.
 #
-#                       TArray<TCHAR> chararray = Temp.GetCharArray();
-#                       char *data = (char*)chararray.GetData();
-#                       strncpy(out, appToAnsi((TCHAR *) data), 512);
+#                     MEASURED, three ways:
 #
-#                     Measured with the two side by side rather than reasoned about:
+#                       #error inside the branch     _UNICODE IS DEFINED in this TU
+#                       raw / conv / copied          raw='Male2' conv='Male2' cSkelName='\u0404\xa1a\x9cG\xbfZ'
+#                       pre-tenth-session sources    0 "Asset not found", 5,190 ragdoll bone rows
 #
-#                       Temp='../KarmaData/Alien.ka'   outlen=8   filename='0\xc9\xfa\xec0\xc9\xfa\xec'
+#                     That last row is what settles it: checking KSkeletal.cpp and KUtils.cpp out at
+#                     bd3b80d and rebuilding gives working ragdolls. The regression is the change,
+#                     not the codebase.
 #
-#                     `Temp` is perfect and `out` is eight bytes of uninitialised heap. MeStreamOpen
-#                     then failed on that name for all six assets and `if(stream)` was simply not
-#                     taken — SILENTLY, because a NULL stream is a skip here and not an error. Fixed
-#                     by deleting the dance: TCHAR is `char` unless _UNICODE is defined and this tree
-#                     is ANSI everywhere, so `appToAnsi(*Temp)` is the whole conversion.
+#                     ⚠ AND A COMPILE PROBE TOLD ME THE OPPOSITE FIRST. I tested for _UNICODE by
+#                     scraping -D flags out of flags.make with a grep and compiling a scratch file
+#                     with them; it printed "_UNICODE not defined" and I believed it for three
+#                     measurements. A `#error` INSIDE the real translation unit is the only form of
+#                     this question that cannot be answered by a mis-assembled command line.
 #
-#                       before   6 files found, 0 opened, 27,160 "Asset not found"
-#                       after    6 files opened, 0 "Asset not found", 0 MeFileLoad errors
+#                     FIXED by removing the #if from all three sites rather than re-choosing it:
+#                     appToAnsi IS the engine's own TCHAR->ANSI conversion, correct on every target
+#                     whatever TCHAR is, so no platform predicate is needed. Verified natively —
+#                     0 "Asset not found", 3,453 bone rows, and the scripted actors still MATCH.
 #
-#                     ⚠ AND THE FIRST INSTRUMENT LIED. `grep -c "Creating MeAssetDB"` read 0 and
-#                     looked like proof that KCreateAssetDB was never called — but that line is a
-#                     debugf(NAME_DevKarma), and NAME_DevKarma is NOT logged in this configuration.
-#                     The messages that DO appear ("KInitActorDynamics: No Model") are plain
-#                     debugfs. A zero from a channel that cannot print is not evidence of absence.
-#                     What settled it was tools/census_report.py — direct instrumentation — showing
-#                     MeStreamOpen ENTERED while MeStreamRead and MeStreamClose stayed cold, i.e.
-#                     the open was reached and failed, which strace then confirmed byte for byte.
-#
-#                     STILL OPEN, AND IT IS THE NEXT THING: the assets now parse and ragdolls STILL
-#                     do not initialise — "Asset not found" returns once bots start dying, at 5,314
-#                     in a longer match, IDENTICALLY on both arms again. So the lookup by skeleton
-#                     NAME fails for a second and separate reason. Until that is fixed, MdtLimit
-#                     (34 functions), MdtHinge (7) and the whole MeFJoint/MeFAsset family remain
-#                     unreachable natively and can only run on wasm — see COVERAGE-CENSUS.
+#                     THE LESSON WORTH KEEPING: a portability guard is a claim about the platform,
+#                     and this one was never tested against the platform it was rewritten for. The
+#                     Windows build compiled, which is all the change was checked against, and the
+#                     property it asserted about Linux was simply assumed.
 
 # COVERAGE-CENSUS    2026-08-28 (eleventh session): 464 OF 2,025 RECOVERED FUNCTIONS (22.9%) HAVE
 #                     EVER EXECUTED IN A REAL MATCH, measured across four maps and two gametypes

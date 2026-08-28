@@ -129,23 +129,23 @@ static void defaultPoolFullHandler(McdModelID model1,McdModelID model2);
 /* ---- exported data symbols (need the declarations above) ---- */
 /* --- exported data symbols --- */
 /* McdXAxis — EXPORTED .data symbol, 4 bytes */
-void *kd_McdXAxis[1] KD_MANGLED("McdXAxis") = {
-    (void *)0x1u
+MeU32 kd_McdXAxis[1] KD_MANGLED("McdXAxis") = {
+    0x1u
 };
 
 /* McdYAxis — EXPORTED .data symbol, 4 bytes */
-void *kd_McdYAxis[1] KD_MANGLED("McdYAxis") = {
-    (void *)0x2u
+MeU32 kd_McdYAxis[1] KD_MANGLED("McdYAxis") = {
+    0x2u
 };
 
 /* McdZAxis — EXPORTED .data symbol, 4 bytes */
-void *kd_McdZAxis[1] KD_MANGLED("McdZAxis") = {
-    (void *)0x4u
+MeU32 kd_McdZAxis[1] KD_MANGLED("McdZAxis") = {
+    0x4u
 };
 
 /* McdAllAxes — EXPORTED .data symbol, 4 bytes */
-void *kd_McdAllAxes[1] KD_MANGLED("McdAllAxes") = {
-    (void *)0x7u
+MeU32 kd_McdAllAxes[1] KD_MANGLED("McdAllAxes") = {
+    0x7u
 };
 
 

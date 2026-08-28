@@ -29,8 +29,8 @@ McdFrameworkID kd_MstUniverseGetFramework(MstUniverseID u) KD_MANGLED("MstUniver
 /* ---- exported data symbols (need the declarations above) ---- */
 /* --- exported data symbols --- */
 /* MstUniverseDefaultSizes — EXPORTED .rodata symbol, 36 bytes */
-void *kd_MstUniverseDefaultSizes[9] KD_MANGLED("MstUniverseDefaultSizes") = {
-    (void *)0x64u, (void *)0x1f4u, (void *)0x0u, (void *)0x64u, (void *)0x1f4u, (void *)0x64u, (void *)0xau, (void *)0x3f800000u, (void *)0x3f800000u
+MeU32 kd_MstUniverseDefaultSizes[9] KD_MANGLED("MstUniverseDefaultSizes") = {
+    0x64u, 0x1f4u, 0x0u, 0x64u, 0x1f4u, 0x64u, 0xau, 0x3f800000u, 0x3f800000u
 };
 
 

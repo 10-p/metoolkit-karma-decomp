@@ -353,11 +353,12 @@ Where it stands as of 2026-08-28, with the baked-size class closed:
 |---|---|
 | before any post-pass | `MdtWorld.c:98` — the FIRST STATEMENT of the first scene |
 | post-passes as they were | `MeDictInsert`, two files from the `MdtBody` pool stride that caused it |
-| after the pool + product forms | `scene_chain` → `MdtPartition`/`MdtMainLoop`; `boxes`/`ragdoll` → one site, `McdFrame.c:84` |
+| + pool strides, product counts, rebuilt data, word loops | `scene_chain` → `MdtPartition`/`MdtMainLoop`; **boxes + ragdoll → ONE site**, `McdSpace.c:160` |
 
-**Still FAIL, and that is the honest reading** — three classes remain, counted in `../proven.txt`
-`LP64-BAKED-SIZES`. What moved is that the harness now gets through world creation, framework
-creation, every pool and the interaction table before it finds anything.
+**Still FAIL, and that is the honest reading** — but boxes and ragdoll are down to a single
+literal byte offset (`*(void **)((char *)pMVar1 + 0x2c)`, which is `CxSmallSort::mManager`), and
+`scene_chain` is a separate front in `MdtPartition`/`MdtMainLoop`. Counted in `../proven.txt`
+`LP64-BAKED-SIZES`, `LP64-WRONG-TYPE`, `LP64-WORD-LOOPS` and `LP64-REBUILT-DATA`.
 
 ---
 

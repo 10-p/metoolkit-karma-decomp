@@ -442,7 +442,31 @@ def exported_data_definition(obj, name, value, size, sect, data, c_name, section
     the linker gets for a string or float constant that never had a name of its
     own. `(void *)&.rodata` is not C. The bytes are in the object and the addend
     says where, so the section is materialised alongside the table and the entry
-    points into it. `sections` collects what has to be emitted."""
+    points into it. `sections` collects what has to be emitted.
+
+    ★ AND THE SLOT TYPE IS NOT ALWAYS `void *`, WHICH IS AN LP64 DEFECT THIS
+    EMITTED FOR THE PROJECT'S WHOLE LIFE. A symbol whose slots carry NO
+    relocation is not a pointer table at all — it is plain data that happens to
+    be 4 bytes wide per word:
+
+        /* MstUniverseDefaultSizes — EXPORTED .rodata symbol, 36 bytes */
+        void *kd_MstUniverseDefaultSizes[9] = { (void *)0x64u, (void *)0x1f4u, ... };
+
+    `MstTypes.h` declares it `extern const MstUniverseSizes` — seven ints and
+    two floats, THIRTY-SIX BYTES ON EVERY TARGET, with no pointer in it. As
+    `void *[9]` that is 36 bytes at i386 and **72 at LP64**, so a consumer
+    reading it as the struct takes field 0 from the low half of slot 0, field 1
+    from the HIGH half — zero — field 2 from slot 1, and so on. Every other
+    field reads 0. Measured: `CxSmallSort::New` received `nobj=0 npairs=0`,
+    returned NULL, and `McdSpaceAxisSortCreate` wrote through it.
+
+    `has_ptr` is the discriminator and it is authoritative rather than inferred:
+    a slot holding a real address HAS a relocation in this object, one holding
+    an integer has none. `readelf -r` says the same thing from outside
+    (McdGjkBinarySubset 2, MstUniverseDefaultSizes 0).
+
+    i386 stays byte-identical by construction — 4 * N either way, same bytes,
+    same alignment, same section — which is the acceptance test."""
     entries, has_ptr = reloc_entries(obj, value, size, sect, data, sections,
                                      'kd_exp')
     n = len(entries)
@@ -450,8 +474,14 @@ def exported_data_definition(obj, name, value, size, sect, data, c_name, section
              + (', rebuilt from relocations */' if has_ptr else ' */')]
     # An asm label keeps our spelling from clashing with the public header's
     # declaration, exactly as for exported functions.
-    lines.append(f'void *kd_{c_name}[{n}] KD_MANGLED("{name}") = {{')
-    lines.append('    ' + ', '.join(entries))
+    if has_ptr:
+        slot, init = 'void *', entries
+    else:
+        # No relocation in any slot: plain data, 4 bytes per word on every
+        # target this builds for. See the header of this function.
+        slot, init = 'MeU32 ', [e.replace('(void *)', '') for e in entries]
+    lines.append(f'{slot}kd_{c_name}[{n}] KD_MANGLED("{name}") = {{')
+    lines.append('    ' + ', '.join(init))
     lines.append('};')
     return '\n'.join(lines)
 

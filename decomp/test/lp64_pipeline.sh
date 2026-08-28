@@ -21,6 +21,7 @@ BUILD="${KD_BUILD:-/tmp/kd_build}"
 rm -rf "$DST" && cp -a "$SRC" "$DST" || exit 2
 echo "== post-passes on a COPY ($DST) =="
 python3 "$HERE/tools/fix_baked_sizeof.py" "$DST/allobj" "$BUILD" "$MT" || exit 2
+python3 "$HERE/tools/fix_word_loops.py"   "$DST/allobj" "$BUILD" "$MT" || exit 2
 python3 "$HERE/tools/fix_ptrwidth.py"    "$DST/allobj" "$BUILD" "$MT" || exit 2
 
 # ---- THE ACCEPTANCE TEST. `intptr_t` IS `int` at 32-bit pointer width and the

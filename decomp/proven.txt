@@ -1152,6 +1152,108 @@ McdTriangleList       real: same run, same evidence. These two objects account f
 #                     a build that no longer existed. `cmake` will not rebuild what it thinks is
 #                     current, so the failure is silent. Check the newest `.c.o` against `git log`.
 
+# LP64-WRONG-TYPE     2026-08-28 (twelfth session, later): ★ A CORRECTION TO LP64-BAKED-SIZES, AND
+#                     THE COMMIT THAT ENTRY DESCRIBES SHIPPED SEVEN WRONG REWRITES. Every one of
+#                     them passed the i386 byte-identity gate. The gate cannot see this class and
+#                     never could.
+#
+#                     THE BUG. `fix_baked_sizeof.py` took the allocation target's type from
+#
+#                       re.search(r'^[ \t]*(TYPE)[ \t]*VAR[ \t]*;', text)     <- the whole FILE
+#
+#                     and Ghidra names a local `pMVar1` in every function it decompiles. In
+#                     McdModelPairManager.c `pMVar1` is declared FOUR ways — McdModelPairManagerHash
+#                     *, McdModelPairManagerID, McdModelPairManagerLink * — and a site at line 87
+#                     was typed from the declaration at line 43.
+#
+#                     WHY THE GATE IS BLIND TO IT BY CONSTRUCTION, which is the part worth keeping.
+#                     The rewrite is only OFFERED when `literal == sizeof_i386(T)`. So any type of
+#                     the right i386 size is accepted, produces the identical i386 object — that is
+#                     what the gate checks — and a DIFFERENT size at 64-bit, which is the entire
+#                     point of the rewrite. A gate that can only see the target you are not
+#                     changing proves nothing about the change.
+#
+#                     WHAT WAS ACTUALLY WRONG, found by diffing the two runs:
+#
+#                       McdBatch.c:732          4 * McdBatchPairData   -> McdBatchContext
+#                       McdConvexMesh.c:281     4 * McdCnvVertex       -> 4 * McdConvexMeshID
+#                       MeAssetDBXMLIO.c:294    MeAssetDBXMLInput      -> MeAssetDBXMLOutput
+#                       MeFAsset.c:1464         MeFGeometryNode        -> MeFAssetPartNode
+#                       MeFGeometry.c:167       3 * MeFPrimitiveNode   -> MeFGeometry
+#                       MeXMLTree.c:285/286     Attribute and AttributeNode SWAPPED WITH EACH OTHER
+#
+#                     THE FIX IS TWO THINGS, and the second is what makes it sound rather than
+#                     merely better:
+#
+#                       1  the declaration is read from the site's OWN FUNCTION (region_of), not
+#                          the file. That alone took 102 rewrites to 126.
+#                       2  the chosen type is CONFIRMED against the shipped amd64 build, exactly as
+#                          the pool strides already were: this type's win64 sizeof must be a
+#                          constant that same function passes. 107 of 120 confirm; 13 sit in
+#                          functions that build does not contain and are counted separately rather
+#                          than quietly called confirmed.
+#
+#                     ⚠ THE CONFIRMATION MAY ONLY VETO WHEN THE COUNT IS A COMPILE-TIME CONSTANT.
+#                     `create(sizeof(T))` and `create(4 * sizeof(T))` reach the allocator as an
+#                     immediate; `create(n * sizeof(T))` does NOT, because MSVC strength-reduces a
+#                     runtime multiply — `n * 48` comes out as `lea (%rax,%rax,2)` then `shl $4`
+#                     and the number 48 is nowhere in the function. Vetoing on those rejected five
+#                     sites that were correct, including McdInit's interaction table.
+#
+#                     ★ AND THE CONFIRMATION FOUND A DEFECT OF ITS OWN — THE THIRD FACE OF THE
+#                     BASE-VERSUS-DERIVED PROBLEM. Ghidra declares the target with the BASE handle
+#                     while the code allocates the DERIVED struct:
+#
+#                       McdBoxCreate         reads as 2 * sizeof(McdGeometry) = 32   amd64 passes 0x30
+#                       McdNullCreate        reads as 2 * sizeof(McdGeometry) = 32   amd64 passes 0x30
+#                       McdConvexMeshCreate  reads as 4 * sizeof(McdGeometry) = 64   amd64 passes 0x68
+#                       McdCylinderCreate    McdCylinderID is 16 and does not even divide 28
+#
+#                     All four are right at i386 and all four allocate too little at LP64. The
+#                     two-build pin names the concrete type — the type whose i386 size IS the
+#                     literal and whose 64-bit size that function is seen to pass — and all seven
+#                     concrete geometry types now allocate their own sizeof. ⚠ The pin is often
+#                     NOT unique and does not need to be: McdBox and McdNull are declared
+#                     identically, so no size on any target separates them. The function's own
+#                     name settles it, and a site where it does not is declined.
+
+# LP64-WORD-LOOPS    2026-08-28 (twelfth session, later): A TABLE-ZEROING LOOP COUNTING IN 4-BYTE
+#                     WORDS. Two in the corpus, both repaired, and the entry above them predicted
+#                     this could not be done under the byte-identity gate. THAT PREDICTION WAS
+#                     WRONG, and it was never measured.
+#
+#                     Ghidra renders `memset(table, 0, n)` as a loop that walks ONE FIELD at a time:
+#
+#                       for (uVar7 = (uint)(count * count * 0x1c) >> 2; uVar7 != 0; uVar7--) {
+#                           pMVar4->helloFn = 0;
+#                           pMVar4 = (McdInteractions *)&pMVar4->goodbyeFn;    <- steps 4 bytes
+#                       }
+#
+#                     That is correct on i386 for one reason: every field of McdInteractions is
+#                     four bytes there. At LP64 the step is EIGHT and `>> 2` still divides by four,
+#                     so the loop walks twice the length of the table.
+#
+#                     ★ THE REASONING THAT SAID THIS WAS UNFIXABLE: the i386 code is correct only
+#                     by a coincidence of field widths, so a repair must change the ARITHMETIC
+#                     rather than re-spell it, and the gate rejects changed arithmetic. The premise
+#                     is true; the conclusion does not follow. The trip count is a constant-folded
+#                     expression, and
+#
+#                       (uint)(A * A * 0x1c) >> 2
+#                       (uint)(A * A * (int)sizeof(*(McdInteractions *)0))
+#                           / (uint)((char *)&((McdInteractions *)0)->goodbyeFn - (char *)0)
+#
+#                     compile BYTE-IDENTICALLY, because both fold to `A * A * 7`. Two spellings
+#                     were tried and both reproduced the object exactly. ASK THE COMPILER. This
+#                     project has now recorded that lesson three times in one session — the
+#                     spelling of a `sizeof` product, this, and the `_UNICODE` probe before it.
+#
+#                     The repair is derived rather than pattern-matched: the step is
+#                     `offsetof(T, F2)` — the second field the loop actually names — and the total
+#                     is `n * sizeof(T)`, both compile-time constants on every target.
+#                     tools/fix_word_loops.py. The other site is MeAssetDBXMLInput_1_0's
+#                     MeXMLHandler table, whose count is a bare literal 0x30.
+
 # LP64-BAKED-SIZES   2026-08-28 (twelfth session): AN ALLOCATION SIZE FROZEN AT THE i386 VALUE IS
 #                     THREE DEFECTS, NOT ONE, AND THE THIRD IS AN ELEMENT STRIDE. The class
 #                     fix_baked_sizeof.py was written for is closed; 102 allocations and 7 pool
@@ -1277,19 +1379,47 @@ McdTriangleList       real: same run, same evidence. These two objects account f
 #                                                re-spelling of the same offset, not new
 #                                                arithmetic.
 #                       128 sites / 10 objects   literal byte offsets `*(T *)(x + K)`
-#                                                (layout_check.py's OFFSET column). One is live and
-#                                                already identified: McdGeometryInstance.c:135
-#                                                does `(int)frame + 0x60` for
-#                                                &frame->instancePool, where the amd64 build uses
-#                                                0x90.
+#                                                (layout_check.py's OFFSET column). ⚠ THAT COUNT
+#                                                IS TWO CLASSES ADDED TOGETHER. Only 27 are
+#                                                STRUCT-FIELD offsets — `*(T *)((char *)p + 0x2c)`,
+#                                                21 of them in McdSpace.c and 6 in
+#                                                ReadWriteKeaInputToFile.c. The other ~100 are
+#                                                Ghidra's INVENTED STACK FRAMES (`(int)&local + K`,
+#                                                MdtBcl 70 and MdtMainLoop 25), which are a
+#                                                decompilation defect rather than a layout one and
+#                                                do not belong in this bucket at all.
+#
+#                                                The struct-field 27 are the LAST thing between
+#                                                scene_boxes_on_plane / scene_ragdoll and a clean
+#                                                LP64 run: they reduce to ONE surviving site,
+#                                                McdSpace.c:160, `*(void **)((char *)pMVar1 + 0x2c)`.
+#                                                Everything needed is already measured —
+#                                                `kd_types.h` defines CxSmallSort with real fields
+#                                                and 0x2c is `mManager`, 200 is `mAABBUpdateFn` —
+#                                                so the repair is `*(T *)&p->FIELD`, a pure address
+#                                                re-spelling that keeps the expression's type and
+#                                                is byte-identical at i386 by construction.
+#
+#                                                ⚠ IT NEEDS ONE NEW MECHANISM: the base is declared
+#                                                `McdSpaceID`, i.e. `McdSpace *`, and McdSpace is
+#                                                OPAQUE — the object really is a `CxSmallSort`.
+#                                                That is the base-versus-derived problem for the
+#                                                THIRD time (after the geometry allocations and the
+#                                                constraint pool), so whatever resolves it should
+#                                                be written once. The evidence is already there:
+#                                                the value comes from `CxSmallSort::New`, and every
+#                                                offset used fits CxSmallSort's layout.
+#                                                One live example: McdGeometryInstance.c:135 does
+#                                                `(int)frame + 0x60` for &frame->instancePool,
+#                                                where the amd64 build uses 0x90.
 #                        19 sites /  8 objects   WORD-WALKING LOOPS, `p = (T *)&p->field` with a
-#                                                trip count of bytes/4. McdFrame.c:82 is the one
-#                                                still firing. ⚠ THIS CLASS MAY NOT BE CLOSABLE
-#                                                UNDER THE BYTE-IDENTITY GATE: the i386 code is
-#                                                correct only because every field is 4 bytes
-#                                                there, so the repair changes the arithmetic
-#                                                rather than re-spelling it. Decide the acceptance
-#                                                test before writing the pass.
+#                                                trip count of bytes/4. ⚠ SUPERSEDED — see
+#                                                LP64-WORD-LOOPS above. Only TWO of the nineteen
+#                                                are the defect (the rest are ordinary array
+#                                                iteration, where the step IS the whole struct and
+#                                                scales on its own), both are repaired, and the
+#                                                warning below that the class might not be closable
+#                                                under the byte-identity gate was wrong.
 #
 #                     ⚠ layout_check.py's NUMBERS DID NOT MOVE, AND THAT IS NOT A FAILURE. It
 #                     counts offset and index SITES; it has never counted a baked allocation size

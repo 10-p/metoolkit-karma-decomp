@@ -259,10 +259,18 @@ def region_of(text, pos):
 
 
 def declared_type(region, var):
-    """`T *x;` -> 'T *'. Ghidra declares every local at the top of its body."""
-    m = re.search(r'(?m)^[ \t]*((?:const |struct )*[A-Za-z_]\w*[ \t]*\**)'
-                  r'[ \t]*' + re.escape(var) + r'[ \t]*;', region)
-    return re.sub(r'\s+', ' ', m.group(1)).strip() if m else None
+    """`T *x;` -> 'T *'. Ghidra declares every local at the top of its body.
+
+    ⚠ `return pMVar1;` matches the same shape and yields the "type" `return`.
+    Harmless downstream — `sizeof(*(return)0)` does not compile, so the site is
+    declined — but it turns a real answer into a decline whenever a `return`
+    precedes the declaration, so it is excluded here rather than later."""
+    for m in re.finditer(r'(?m)^[ \t]*((?:const |struct )*[A-Za-z_]\w*[ \t]*\**)'
+                         r'[ \t]*' + re.escape(var) + r'[ \t]*;', region):
+        ty = re.sub(r'\s+', ' ', m.group(1)).strip()
+        if ty.split()[0] not in ('return', 'goto', 'break', 'continue'):
+            return ty
+    return None
 
 
 def pool_key(expr):
@@ -507,6 +515,7 @@ def main():
     member_pools, local_pools = pool_elem_types(corpus)
 
     fixed = declined = 0
+    confirmed = unconfirmed = 0
     pooled = pool_declined = 0
     pool_notes = []
     reasons = {}
@@ -524,18 +533,29 @@ def main():
                 scaled = None          # `A + B * K`: the K binds to B alone
             lit = 0 if scaled else (int(raw, 0) if re.fullmatch(
                 r'0x[0-9a-f]+|\d+', raw) else None)
-            d = re.search(r'(?m)^[ \t]*((?:const |struct )*[A-Za-z_]\w*[ \t]*\**)'
-                          r'[ \t]*' + re.escape(m.group('var')) + r'[ \t]*;', text)
+            # ★ THE DECLARATION MUST COME FROM THIS FUNCTION, NOT THIS FILE.
+            # Ghidra names locals `pMVar1` in every function it decompiles, so a
+            # file-wide search returns whichever came first. In
+            # McdModelPairManager.c `pMVar1` is declared FOUR different ways —
+            # McdModelPairManagerHash *, McdModelPairManagerID,
+            # McdModelPairManagerLink * — and the file-wide lookup took the one
+            # from line 43 for a site at line 87. That is worse than a missed
+            # repair: where the wrong type's size happens to equal or divide the
+            # literal, the site is rewritten with it, the LP64 size is wrong,
+            # and i386 byte-identity STILL PASSES, because the match required
+            # the two to coincide there. The gate cannot see this class at all.
+            ty = declared_type(region_of(text, m.start()), m.group('var'))
             why = None
             reps = []
+            want64 = None       # the constant the shipped amd64 build should pass
+            ask_oracle = False  # declared type did not fit; let the oracle try
             if lit is None:
                 why = 'size is neither a literal nor count * size'
             elif not scaled and lit < 8:
                 why = 'size below 8 bytes'
-            elif not d:
-                why = 'target has no local declaration'
+            elif not ty:
+                why = 'target has no declaration in its own function'
             else:
-                ty = re.sub(r'\s+', ' ', d.group(1)).strip()
                 sz = elem_size(ty, inc, cache)
                 if sz is None:
                     why = 'target type %s is not a pointer to a complete type' % ty
@@ -547,13 +567,100 @@ def main():
                                % (ty, sz, k))
                     else:
                         reps = spellings(scaled.group('expr'), ty)
+                        want64 = 1      # the ELEMENT size; the count is runtime
+                elif sz < 2:
+                    # `void *` and `MeU8 *` have an element size of 1, so EVERY
+                    # literal divides them and the type has told us nothing. A
+                    # byte buffer must stay a byte buffer.
+                    why = ('%s elements are %d byte, which any literal divides'
+                           % (ty, sz))
                 elif lit == sz:
                     reps = ['(int)sizeof(*(%s)0)' % ty]
+                    want64 = 1
                 elif lit % sz == 0:
                     reps = spellings(str(lit // sz), ty)
+                    want64 = lit // sz
                 else:
+                    # The DECLARED type does not fit the literal at all, which
+                    # is the same base-vs-derived mistake as the vetoes below in
+                    # a louder form: `McdCylinderCreate` asks for 28 bytes and
+                    # its target is typed `McdCylinderID`, i.e. `McdGeometry *`,
+                    # which is 16. Ask the oracle rather than give up.
                     why = ('%s is %d bytes and does not divide %d'
                            % (ty, sz, lit))
+                    ask_oracle = (scaled is None and lit >= 8)
+            # ---- THE SECOND FACT, and without it the i386 gate is not enough.
+            #
+            # Compiling each rewrite and comparing the object proves the CODE
+            # SHAPE is unchanged on i386. It proves NOTHING about the type,
+            # because the rewrite is only offered when `lit == sizeof_i386(T)`
+            # — so ANY type of the right i386 size passes, while giving a
+            # different size at LP64, which is the entire point of the change.
+            #
+            # That is not hypothetical. Before the declaration lookup was made
+            # per-function, SEVEN sites were rewritten with the wrong type and
+            # all seven passed the byte-identity gate; MeXMLTree.c:285 and :286
+            # had `Attribute` and `AttributeNode` swapped with each other.
+            #
+            # So the type is confirmed against a build nobody here made: the
+            # shipped amd64 metoolkit must pass this type's win64 size in this
+            # same function. Where that build has no such function the check
+            # cannot speak, and the site is counted separately rather than
+            # quietly treated as confirmed.
+            #
+            # ⚠ IT MAY ONLY VETO WHEN THE COUNT IS A COMPILE-TIME CONSTANT.
+            # `create(sizeof(T))` and `create(4 * sizeof(T))` reach the
+            # allocator as an immediate in any sane codegen, so ABSENCE is
+            # evidence. `create(n * sizeof(T))` does not: MSVC strength-reduces
+            # a runtime multiply into shifts and scaled LEAs — `n * 48` comes
+            # out as `lea (%rax,%rax,2)` then `shl $4` and the number 48 appears
+            # nowhere. Vetoing on that rejected five sites that were correct,
+            # including McdInit's interaction table. For those the check can
+            # only confirm.
+            if (not why or ask_oracle) and (want64 is not None or ask_oracle):
+                fname = enclosing(text, m.start())
+                seen = amd64_constants(fname)
+                w = win_elem_size(ty, inc, cache) if want64 is not None else None
+                may_veto = scaled is None
+                if not pool_ok or seen is None or (want64 is not None and w is None):
+                    if not why:
+                        unconfirmed += 1
+                elif want64 is not None and want64 * w in seen:
+                    confirmed += 1
+                elif may_veto:
+                    # ---- BEFORE VETOING, ASK THE ORACLE WHICH TYPE IT IS.
+                    # Four of these are one defect: Ghidra declares the target
+                    # with the BASE handle and the code allocates the DERIVED
+                    # struct. `McdBoxCreate` reads as `2 * sizeof(McdGeometry)`
+                    # — 32 at i386, which is right — while the shipped amd64
+                    # build passes 0x30, i.e. `sizeof(McdBox)` at 64-bit. Same
+                    # two-build pin the pool sites use: the type whose i386 size
+                    # IS the literal and whose 64-bit size this function is seen
+                    # to pass.
+                    pin = pin_by_size(lit, seen, inc, cache)
+                    # ⚠ THE PIN IS OFTEN NOT UNIQUE AND DOES NOT NEED TO BE.
+                    # McdBox and McdNull are declared identically, so no size on
+                    # any target can separate them; McdNullCreate's candidate
+                    # list also picks up MeXMLHandler and _MeStream, which are
+                    # the same size by coincidence. The function's own NAME is
+                    # the discriminator that costs nothing to check, and a
+                    # single name match settles it.
+                    if len(pin) > 1:
+                        named = [t for t in pin if t.split()[-1] in (fname or '')]
+                        if len(named) == 1:
+                            pin = named
+                    if len(pin) == 1:
+                        ty = pin[0] + ' *'
+                        reps = ['(int)sizeof(*(%s)0)' % ty]
+                        why = None
+                        confirmed += 1
+                    elif not why:
+                        why = ('%s is %d at win64 and the shipped amd64 %s does '
+                               'not pass %d%s'
+                               % (ty, w, fname, want64 * w,
+                                  '; candidates ' + ', '.join(pin) if pin else ''))
+                else:
+                    unconfirmed += 1
             if why:
                 declined += 1
                 reasons[why.split(' is ')[0][:40]] = reasons.get(
@@ -667,6 +774,8 @@ def main():
         if dirty:
             open(path, 'w').write(text)
     print('  allocation sizes rewritten from a literal to sizeof : %d' % fixed)
+    print('    …type CONFIRMED against the shipped amd64 build    : %d' % confirmed)
+    print('    …not confirmable (that build has no such function) : %d' % unconfirmed)
     print('  declined (reported, not guessed)                    : %d' % declined)
     for r, c in sorted(reasons.items(), key=lambda kv: -kv[1])[:6]:
         print('     %4d  %s' % (c, r))

@@ -583,7 +583,6 @@ The recovery puns pointers through integer slots constantly (`*(T *)((int)base +
 executes arm64 code and a heuristic wrong 1% of the time would be undetectable.
 
 ### `fix_baked_sizeof.py` — an allocation size frozen at the i386 value
-
 `(MeMemoryAPI.create)(0x234)` where `0x234` is 564 is `sizeof(MdtWorld)` **on i386**; at LP64 the
 struct is 880, so the first allocation is 316 bytes short and the next statement writes past it.
 Nothing is truncated, no cast is narrowed, and neither static gate counts this shape at all.
@@ -614,8 +613,54 @@ constraint pool for the base class. Facts 2 and 3 catch it, and the fallback —
 i386 size is the stride AND whose 64-bit size the shipped build is seen to pass — names `MdtContact`
 uniquely. **Fact 2 alone would not:** fourteen metoolkit types are 20 bytes at i386.
 
-Current output: **102 allocations + 7 pool strides rewritten, 0 pool sites declined**, every one
+Current output: **120 allocations + 7 pool strides rewritten, 0 pool sites declined**, every one
 compiled and compared against its baseline object.
+
+★ **AND THE BYTE-IDENTITY GATE CANNOT VALIDATE THE TYPE — it never could.** The rewrite is only
+offered when `literal == sizeof_i386(T)`, so *any* type of the right i386 size produces the
+identical i386 object and a **different** size at 64-bit, which is the whole point of the change.
+The first version of this tool read the target's declaration from the whole FILE, and Ghidra names
+a local `pMVar1` in every function it decompiles — `McdModelPairManager.c` declares it four
+different ways. **Seven sites shipped with the wrong type and all seven passed the gate**;
+`MeXMLTree.c:285` and `:286` had `Attribute` and `AttributeNode` swapped with each other. Two
+changes fix it: the declaration is read from the site's own function, and the chosen type is
+**confirmed against the shipped amd64 build** — its win64 `sizeof` must be a constant that same
+function passes. 107 of 120 confirm; 13 sit in functions that build does not contain and are
+counted separately rather than quietly called confirmed.
+
+⚠ **The confirmation may only VETO when the count is a compile-time constant.** `create(sizeof(T))`
+and `create(4 * sizeof(T))` reach the allocator as an immediate; `create(n * sizeof(T))` does not,
+because MSVC strength-reduces a runtime multiply — `n * 48` comes out as `lea (%rax,%rax,2)` then
+`shl $4` and the number 48 is nowhere in the function. Vetoing on those rejected five correct sites.
+
+> **The confirmation found a defect of its own.** Ghidra declares the target with the BASE handle
+> while the code allocates the DERIVED struct: `McdBoxCreate` reads as `2 * sizeof(McdGeometry)`
+> = 32, right at i386, while the amd64 build passes `0x30`. Same for `McdNull`, `McdConvexMesh`,
+> and `McdCylinder` (whose `McdCylinderID` is 16 and does not even divide 28). The two-build pin
+> names the concrete type and all seven geometry types now allocate their own `sizeof`.
+
+### `fix_word_loops.py` — a table-zeroing loop counting in 4-byte words
+
+Ghidra renders `memset(table, 0, n)` over a struct table as a loop that walks ONE FIELD at a time
+and counts in words. That is correct on i386 for one reason — every field of `McdInteractions` is
+four bytes there — and at LP64 the step `&p->goodbyeFn` becomes eight while `>> 2` still divides by
+four, so the loop walks twice the length of the table.
+
+```bash
+python3 tools/fix_word_loops.py /tmp/kd_lp64/allobj /tmp/kd_build
+#   -> 2 repaired, 0 declined
+```
+
+★ **This was recorded as possibly unfixable under the byte-identity gate, and that was never
+measured.** The reasoning — the i386 code is correct only by a coincidence of field widths, so a
+repair must change the arithmetic rather than re-spell it — is true and the conclusion does not
+follow. The trip count is constant-folded, and `(uint)(A * A * 0x1c) >> 2` and
+`(uint)(A * A * sizeof(T)) / (uint)offsetof(T, goodbyeFn)` compile **byte-identically**, because
+both fold to `A * A * 7`. Ask the compiler.
+
+Only **two** of the nineteen `p = (T *)&p->field` sites are this defect; in the rest the step IS the
+whole struct, which is ordinary array iteration and scales on its own. The tool checks that and
+skips them.
 
 ---
 

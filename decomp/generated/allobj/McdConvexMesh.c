@@ -260,7 +260,7 @@ McdGeometry * kd_McdConvexMeshCreate(McdFramework *frame,McdConvexHull *poly,MeR
   kd_MeBoundingSphereCalc2
             ((McdCnvVertex *)pMVar1[1].mRefCtAndID,pMVar1[2].mRefCtAndID,(MeReal *)&pMVar1[3].prev,
              (MeReal *)(pMVar1 + 3));
-  pMVar1[3].mRefCtAndID = (MeU32)(fatness + *(float *)&(pMVar1[3].mRefCtAndID));
+  *(MeReal *)&pMVar1[3].mRefCtAndID = (fatness + *(float *)&(pMVar1[3].mRefCtAndID));
   return pMVar1;
 }
 
@@ -291,7 +291,7 @@ kd_McdConvexMeshCreateHull
     kd_MeBoundingSphereCalc2
               ((McdCnvVertex *)pMVar2[1].mRefCtAndID,pMVar2[2].mRefCtAndID,(MeReal *)&pMVar2[3].prev
                ,(MeReal *)(pMVar2 + 3));
-    pMVar2[3].mRefCtAndID = (MeU32)(fatnessRadius + *(float *)&(pMVar2[3].mRefCtAndID));
+    *(MeReal *)&pMVar2[3].mRefCtAndID = (fatnessRadius + *(float *)&(pMVar2[3].mRefCtAndID));
   }
   return pMVar2;
 }
@@ -458,10 +458,10 @@ void kd_McdConvexMeshGetBSphere(McdGeometryID g,MeReal *center,MeReal *radius)
 
 {
                     
-  *center = (*(MeReal *)&(g[3].prev));
-  center[1] = (*(MeReal *)&(g[3].next));
-  center[2] = (*(MeReal *)&(g[3].frame));
-  *radius = (MeReal)g[3].mRefCtAndID;
+  *center = *(float *)&(g[3].prev);
+  center[1] = *(float *)&(g[3].next);
+  center[2] = *(float *)&(g[3].frame);
+  *radius = *(float *)&(g[3].mRefCtAndID);
   return;
 }
 
@@ -532,7 +532,7 @@ MeReal kd_McdConvexMeshGetFatness(McdConvexMeshID g)
 
 {
                     
-  return (*(MeReal *)&(g[2].frame));
+  return *(float *)&(g[2].frame);
 }
 
 /* ---- McdConvexMeshGetPolygonNormal (exported as kd_McdConvexMeshGetPolygonNormal, asm label "McdConvexMeshGetPolygonNormal") ---- */
@@ -542,9 +542,9 @@ void kd_McdConvexMeshGetPolygonNormal(McdConvexMeshID m,int polyID,MeReal *coord
   McdGeometryID pMVar1;
 
   pMVar1 = m[1].prev + polyID;
-  *coords = (MeReal)pMVar1->mRefCtAndID;
-  coords[1] = (*(MeReal *)&(pMVar1->prev));
-  coords[2] = (*(MeReal *)&(pMVar1->next));
+  *coords = *(float *)&(pMVar1->mRefCtAndID);
+  coords[1] = *(float *)&(pMVar1->prev);
+  coords[2] = *(float *)&(pMVar1->next);
   return;
 }
 

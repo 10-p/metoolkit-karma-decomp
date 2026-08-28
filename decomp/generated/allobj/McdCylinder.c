@@ -86,7 +86,7 @@ McdCylinderID kd_McdCylinderCreate(McdFramework *frame,MeReal inRadius,MeReal in
 MeReal kd_McdCylinderGetRadius(McdCylinderID g)
 
 {
-  return (MeReal)g[1].mRefCtAndID;
+  return *(float *)&(g[1].mRefCtAndID);
 }
 
 /* ---- McdCylinderGetHeight (exported as kd_McdCylinderGetHeight, asm label "McdCylinderGetHeight") ---- */
@@ -100,7 +100,7 @@ MeReal kd_McdCylinderGetHeight(McdCylinderID g)
 MeReal kd_McdCylinderGetHalfHeight(McdCylinderID g)
 
 {
-  return (*(MeReal *)&(g[1].prev));
+  return *(float *)&(g[1].prev);
 }
 
 /* ---- McdCylinderSetRadius (exported as kd_McdCylinderSetRadius, asm label "McdCylinderSetRadius") ---- */
@@ -286,7 +286,7 @@ void kd_McdCylinderGetBSphere(McdGeometry *g,MeReal *center,MeReal *radius)
   *center = 0.0;
   center[2] = 0.0;
   center[1] = 0.0;
-  *radius = (*(MeReal *)&(g[1].next));
+  *radius = *(float *)&(g[1].next);
   return;
 }
 
@@ -294,7 +294,7 @@ void kd_McdCylinderGetBSphere(McdGeometry *g,MeReal *center,MeReal *radius)
 MeReal kd_McdCylinderGetBSphereRadius(McdGeometryID g)
 
 {
-  return (*(MeReal *)&(g[1].next));
+  return *(float *)&(g[1].next);
 }
 
 /* ---- McdCylinderMaximumPoint (exported as kd_McdCylinderMaximumPoint, asm label "McdCylinderMaximumPoint") ---- */

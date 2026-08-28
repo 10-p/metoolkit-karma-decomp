@@ -166,6 +166,61 @@ plausible. `proven.txt` `ONS-CRASH-GJKPD` has the bisect and the machine-code co
 > only as good as the assumption that no target claims the name. Check the same shape before you
 > trust anything in `kd_compat.h` on a new toolchain — the NDK is the next one.
 
+### 2026-08-28, eleventh session: IT RUNS *RIGHT* — the behavioural defect was TWO objects
+
+The owner played it and reported physics that runs but does not run correctly: vehicles sinking
+through terrain until `bDestroyOnWorldPenetrate` blew them up, every KActor falling through the
+floor immediately, friction feeling too high. **All of it was `McdSphere` and `McdTriangleList`,
+and it reproduced on native i386** — so it was never the association defect, and every instrument
+in `karma-decomp/test/` applied.
+
+```
+recovered Karma vs MathEngine's own library, test-karma-1, 30 fps pinned, same engine source
+
+  before   KBox_Light  falls to -819 and never stops   (reference: rests at +0.88)
+           all 5 hoverbikes still ENABLED, sinking     (reference: asleep)
+  after    14 of 15 bodies BIT-IDENTICAL for 600 frames; 13 of 15 for 3,000
+           wasm32 vs the i386 oracle: 12 of 15 bit-identical, all 15 matching
+           rest position and sleep state -> MATCH
+```
+
+**The defect.** UT2004's geometry types derive from `McdGeometry` by PREFIXING it, so a sphere's
+radius lives past the base struct and Ghidra — holding only `McdGeometry *` — addresses it as
+`g[1].<field-of-the-base>`. Three of those four fields are pointers and were already repaired;
+the fourth, `mRefCtAndID`, is a `MeU32`, and C obligingly **converts** where the original moves
+four bytes. `McdSphereGetRadius` returned 1.06e9 for a 0.91 radius. The world triangle list's
+bounding box was built by storing floats through `(MeU32)`. Seventeen sites, six objects, all
+verified against the shipped machine code. `proven.txt` `MCD-GEOM-FLOAT-FIELDS`.
+
+> ### ⚠ NINE GATES, 145 OBJECTS, AND NOT ONE OF THEM COULD SEE IT
+>
+> `difftest_pair.sh` reads **byte-identically before and after the repair**, because the driver
+> substitutes the Ix* INTERACTION object and links the GEOMETRY objects from the shipped library —
+> the broken accessor was never in the loop. That is the general shape: **"145 objects pass" is a
+> statement about 145 separate links, not about the program.** Every gate here holds one object up
+> against the original in isolation, and this defect only exists when the recovered objects run
+> *together, inside the engine, over time*.
+>
+> The instrument that found it is new and is the one to reach for next time:
+> `test/ktrace_run.sh` records every simulated body's state per frame from inside
+> `KTickLevelKarma`, and `test/ktrace_subst.sh` bisects by rebuilding with a chosen SET taken from
+> the shipped library. Both controls, then the COMPLEMENT (keep one family of ours), which has no
+> blind spot when two objects are defective — and two were.
+
+> ### ⚠ AND THE RANKED SUSPECTS WERE REASONED, CONFIDENT AND WRONG
+>
+> The previous handover led with `MdtContactParams` (23 friction references, not in `proven.txt`)
+> because friction is a *dynamics* concern and 25 of 27 `Mdt` objects have never been measured.
+> `keep Mdt` **MATCHES**: the whole family is innocent. The symptom named a subsystem and the defect
+> was in the one next door — collision detection was handing the dynamics a wrong radius, and every
+> downstream effect looked like a dynamics bug. Bisect before you believe a hypothesis, even a good
+> one.
+
+**Still open on wasm specifically.** Three of the fifteen bodies diverge late and slightly
+(frames 9, 38 and 82, by ~0.004 units) where native is bit-identical. That is the right size and
+shape for the association defect below, and it is now measurable for the first time — a
+wasm-vs-native A/B exists.
+
 ### What is still open on your side
 
 - **armv7 and arm64 have still never executed.** Only wasm32 has. Everything §0a says about

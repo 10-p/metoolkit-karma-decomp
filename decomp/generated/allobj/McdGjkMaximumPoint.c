@@ -40,7 +40,7 @@ MeReal kd_McdGjkFatness(McdGeometryInstanceID ins)
   if (bVar2 == 5) {
 LAB_00010020:
                     
-    MVar1 = (MeReal)pMVar3[1].mRefCtAndID;
+    MVar1 = *(float *)&(pMVar3[1].mRefCtAndID);
   }
   else {
     if (bVar2 < 6) {
@@ -48,7 +48,7 @@ LAB_00010020:
     }
     else if (bVar2 == 7) {
                     
-      return (*(MeReal *)&(pMVar3[2].frame));
+      return *(float *)&(pMVar3[2].frame);
     }
     MVar1 = 0.0;
   }

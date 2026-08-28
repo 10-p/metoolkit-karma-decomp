@@ -84,7 +84,7 @@ void kd_McdSphereSetRadius(McdSphereID g,MeReal inRadius)
 MeReal kd_McdSphereGetRadius(McdSphereID g)
 
 {
-  return (MeReal)g[1].mRefCtAndID;
+  return *(float *)&(g[1].mRefCtAndID);
 }
 
 /* ---- McdSphereDestroy (exported as kd_McdSphereDestroy, asm label "McdSphereDestroy") ---- */
@@ -163,7 +163,7 @@ void kd_McdSphereGetBSphere(McdSphereID g,MeReal *center,MeReal *radius)
   *center = 0.0;
   center[2] = 0.0;
   center[1] = 0.0;
-  *radius = (MeReal)g[1].mRefCtAndID;
+  *radius = *(float *)&(g[1].mRefCtAndID);
   return;
 }
 

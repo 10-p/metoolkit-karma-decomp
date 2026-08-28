@@ -38,6 +38,54 @@ entirely DM.
 ⚠ **The renderer is not the same on every target.** Windows has no GLES; passing the default
 `-GL4ESRENDERER` there produces a crash that looks like a physics bug and is not one.
 
+### `ktrace_run.sh` / `ktrace_diff.py` / `ktrace_score.py` / `ktrace_subst.sh` — does it BEHAVE?
+
+The gate the other twelve could not be. Everything else here compares CALLS — shadow divergences,
+per-pair difftests, per-object scene trajectories. This compares the TRAJECTORY THE CALLS ADD UP
+TO, on a real map, against a `legacy-karma` build linking MathEngine's originals.
+
+```bash
+# 1. the oracle, from the build that links the shipped archives
+KD_FRAMES=600 KD_GAME=Onslaught.ONSOnslaughtGame \
+  ./test/ktrace_run.sh ../build-legacy-karma/Source/SDLLaunch/ut2004-legacykarma-pixo.bin legacy600 120
+# 2. the candidate
+KD_FRAMES=600 KD_GAME=Onslaught.ONSOnslaughtGame \
+  ./test/ktrace_run.sh ../build-native/Source/SDLLaunch/ut2004-pixo.bin cand 120
+# 3. read it
+python3 test/ktrace_diff.py  /tmp/ktrace-legacy600.csv /tmp/ktrace-cand.csv   # per body
+python3 test/ktrace_score.py /tmp/ktrace-legacy600.csv /tmp/ktrace-cand.csv   # MATCH / N MISMATCH
+
+# and to LOCALISE — both controls first, then the complement
+./test/ktrace_subst.sh ctl-all  ALL          # must MATCH   — the mechanic works
+./test/ktrace_subst.sh ctl-none NONE         # must MISMATCH — the defect is present
+./test/ktrace_subst.sh keep-mcd ALL '^@Mcd'  # keep OUR Mcd, take the rest from theirs
+./test/ktrace_subst.sh fwd      NONE McdSphere McdTriangleList
+```
+
+★ **`-FIXEDFPS` IS NOT OPTIONAL AND THE ENGINE ENFORCES IT.** `KTickLevelKarma` derives its
+timestep AND its substep count from `DeltaSeconds`, so two runs at different frame rates integrate
+different equations. The hook `appErrorf`s rather than write a trace that would be diffed in good
+faith. `ktrace_run.sh` passes it; a browser run must too.
+
+**Read `first`, not `restZ`, when the two traces have different lengths.** `restZ` is the LAST frame
+of each file, so comparing a 600-frame run against an 85-frame one compares different instants and
+reads like catastrophe. Truncate the longer one first.
+
+`packages/e2e/tools/ktrace-probe.cjs` in the monorepo is the wasm side, driving the launcher FORM
+because `?map=` deliberately refuses arbitrary engine switches. Two things cost a run each there:
+a console filter containing "Karma" matches every ONS HUD warning on a map called `test-karma-1`
+and floods CDP until the trace crawls; and the match PAUSES itself (`ULevel::Tick` guards Karma with
+`IsPaused()`), which stops the trace dead at 85 frames while the HUD — which ticks on the render
+path, outside that guard — keeps logging every frame. **HUD output is not evidence the level is
+running.** 85 frames still answers the question the tool exists for, because the defect it was built
+to catch is born at the first ground contact (frame 25) and is over by frame 30.
+
+⚠ **This found what nothing else could, and `difftest_pair.sh` shows why.** That driver substitutes
+the Ix* INTERACTION object and links the GEOMETRY objects from the shipped library, so a broken
+`McdSphereGetRadius` is never in the loop — it reads byte-identical before and after the repair.
+"145 objects pass" is a statement about 145 separate links, not about the program. See
+`../proven.txt` `MCD-GEOM-FLOAT-FIELDS`.
+
 ### `gjk_bisect.sh` / `gjk_bisect_complement.sh` — WHICH function of an object is wrong?
 
 ```bash

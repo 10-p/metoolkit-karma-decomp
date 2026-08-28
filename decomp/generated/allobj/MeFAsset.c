@@ -205,7 +205,7 @@ MeFAsset * kd_MeFAssetCreateCopy(MeFAsset *asset,MeBool recurse)
   asset_1->graphicScale = asset->graphicScale;
   pMVar25 = (MeFAsset *)KD_FBITS(asset->massScale);
   MVar3 = asset->lengthScale;
-  asset_1->massScale = (*(MeReal *)&(pMVar25));
+  asset_1->massScale = *(float *)&(pMVar25);
   asset_1->lengthScale = MVar3;
   if (recurse == 0) {
     return asset_1;

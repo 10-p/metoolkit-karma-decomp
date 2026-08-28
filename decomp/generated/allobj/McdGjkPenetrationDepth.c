@@ -509,7 +509,7 @@ int kd_McdGjkPenetrationDepth(McdCache *c,McdGjkSimplex *s)
               if ((uVar1 == 0) &&
                  (iVar4 = McdGjkComputeVector(v,(int)MVar6 - s->next_bit,0,s), iVar4 != 0)) {
                     
-                MVar2 = (MeReal)s->next_bit;
+                MVar2 = *(float *)&(s->next_bit);
                 v_00 = MePoolxGet(&qmem.fpool);
                 if (v_00 != (MeReal *)0x0) {
                   v_00[5] = MVar6;

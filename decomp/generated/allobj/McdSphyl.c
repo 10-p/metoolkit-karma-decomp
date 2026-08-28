@@ -91,7 +91,7 @@ void kd_McdSphylSetRadius(McdSphylID s,MeReal r)
 MeReal kd_McdSphylGetRadius(McdSphylID s)
 
 {
-  return (MeReal)s[1].mRefCtAndID;
+  return *(float *)&(s[1].mRefCtAndID);
 }
 
 /* ---- McdSphylSetHeight (exported as kd_McdSphylSetHeight, asm label "McdSphylSetHeight") ---- */

@@ -83,17 +83,17 @@ kd_McdTriangleListCreate
     pMVar1 = (MeMemoryAPI.createAligned)(0x38,0x10);
     McdGeometryInit(pMVar1,frame,6);
                     
-    pMVar1[1].mRefCtAndID = (MeU32)(*max + *min);
+    *(MeReal *)&pMVar1[1].mRefCtAndID = (*max + *min);
     pMVar1[1].prev = (McdGeometryID)KD_FBITS((max[1] + min[1]));
     pMVar1[1].next = (McdGeometryID)KD_FBITS((max[2] + min[2]));
-    pMVar1[1].mRefCtAndID = (MeU32)(*(float *)&(pMVar1[1].mRefCtAndID) * 0.5);
+    *(float *)&pMVar1[1].mRefCtAndID = (*(float *)&(pMVar1[1].mRefCtAndID) * 0.5);
     pMVar1[1].prev = (McdGeometryID)KD_FBITS((*(float *)&(pMVar1[1].prev) * 0.5));
     pMVar1[1].next = (McdGeometryID)KD_FBITS((*(float *)&(pMVar1[1].next) * 0.5));
     pMVar1[1].frame = (McdFrameworkID)KD_FBITS((*max - *min));
-    pMVar1[2].mRefCtAndID = (MeU32)(max[1] - min[1]);
+    *(MeReal *)&pMVar1[2].mRefCtAndID = (max[1] - min[1]);
     pMVar1[2].prev = (McdGeometryID)KD_FBITS((max[2] - min[2]));
     pMVar1[1].frame = (McdFrameworkID)KD_FBITS((*(float *)&(pMVar1[1].frame) * 0.5));
-    pMVar1[2].mRefCtAndID = (MeU32)(*(float *)&(pMVar1[2].mRefCtAndID) * 0.5);
+    *(float *)&pMVar1[2].mRefCtAndID = (*(float *)&(pMVar1[2].mRefCtAndID) * 0.5);
     pMVar1[2].prev = (McdGeometryID)KD_FBITS((*(float *)&(pMVar1[2].prev) * 0.5));
     pMVar1[3].mRefCtAndID = (MeU32)f;
     pMVar1[2].next = (McdGeometryID)maxCount;
@@ -106,17 +106,17 @@ void kd_McdTriangleListSetBoundingBox(McdTriangleListID g,MeReal *min,MeReal *ma
 
 {
                     
-  g[1].mRefCtAndID = (MeU32)(*max + *min);
+  *(MeReal *)&g[1].mRefCtAndID = (*max + *min);
   g[1].prev = (McdGeometryID)KD_FBITS((max[1] + min[1]));
   g[1].next = (McdGeometryID)KD_FBITS((max[2] + min[2]));
-  g[1].mRefCtAndID = (MeU32)(*(float *)&(g[1].mRefCtAndID) * 0.5);
+  *(float *)&g[1].mRefCtAndID = (*(float *)&(g[1].mRefCtAndID) * 0.5);
   g[1].prev = (McdGeometryID)KD_FBITS((*(float *)&(g[1].prev) * 0.5));
   g[1].next = (McdGeometryID)KD_FBITS((*(float *)&(g[1].next) * 0.5));
   g[1].frame = (McdFrameworkID)KD_FBITS((*max - *min));
-  g[2].mRefCtAndID = (MeU32)(max[1] - min[1]);
+  *(MeReal *)&g[2].mRefCtAndID = (max[1] - min[1]);
   g[2].prev = (McdGeometryID)KD_FBITS((max[2] - min[2]));
   g[1].frame = (McdFrameworkID)KD_FBITS((*(float *)&(g[1].frame) * 0.5));
-  g[2].mRefCtAndID = (MeU32)(*(float *)&(g[2].mRefCtAndID) * 0.5);
+  *(float *)&g[2].mRefCtAndID = (*(float *)&(g[2].mRefCtAndID) * 0.5);
   g[2].prev = (McdGeometryID)KD_FBITS((*(float *)&(g[2].prev) * 0.5));
   return;
 }
@@ -305,9 +305,9 @@ void kd_McdTriangleListGetBSphere(McdGeometry *g,MeReal *center,MeReal *radius)
 
 {
                     
-  *center = (MeReal)g[1].mRefCtAndID;
-  center[1] = (*(MeReal *)&(g[1].prev));
-  center[2] = (*(MeReal *)&(g[1].next));
+  *center = *(float *)&(g[1].mRefCtAndID);
+  center[1] = *(float *)&(g[1].prev);
+  center[2] = *(float *)&(g[1].next);
                     
   *radius = SQRT(*(float *)&(g[2].prev) * *(float *)&(g[2].prev) +
                  *(float *)&(g[2].mRefCtAndID) * *(float *)&(g[2].mRefCtAndID) +

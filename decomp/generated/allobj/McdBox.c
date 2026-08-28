@@ -124,7 +124,7 @@ void kd_McdBoxGetDimensions(McdGeometryID g,MeReal *dx,MeReal *dy,MeReal *dz)
 MeReal kd_McdBoxGetBSphereRadius(McdGeometryID g)
 
 {
-  return (*(MeReal *)&(g[1].frame));
+  return *(float *)&(g[1].frame);
 }
 
 /* ---- McdBoxGetRadii (exported as kd_McdBoxGetRadii, asm label "McdBoxGetRadii") ---- */
@@ -247,7 +247,7 @@ void kd_McdBoxGetBSphere(McdGeometry *g,MeReal *center,MeReal *radius)
   *center = 0.0;
   center[2] = 0.0;
   center[1] = 0.0;
-  *radius = (*(MeReal *)&(g[1].frame));
+  *radius = *(float *)&(g[1].frame);
   return;
 }
 

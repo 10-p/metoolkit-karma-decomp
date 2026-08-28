@@ -4880,6 +4880,56 @@ def _expr_float_type(expr, region, sig, obj, dies):
     e = expr.strip()
     while e.startswith('(') and _match_bracket(e, 0) == len(e):
         e = e[1:-1].strip()
+
+    # ── SPLIT FIRST, then classify each ATOM. ──
+    #
+    # Everything below this point resolves ONE lvalue, which was enough for the
+    # sites the rule was written for and is not enough for the geometry
+    # constructors, where the value stored is computed:
+    #
+    #     g[1].mRefCtAndID = (MeU32)(*max + *min);                    <- fstps
+    #     g[1].mRefCtAndID = (MeU32)(*(float *)&(g[1].…) * 0.5);      <- fstps
+    #     p[3].mRefCtAndID = (MeU32)(fatness + *(float *)&(p[3].…));  <- fstps
+    #
+    # Each is a float-to-int CONVERSION in C and a plain float store in the
+    # shipped code, so the bounding box of every world triangle list had its X
+    # centre and Y half-extent replaced by a truncated integer read back as a
+    # denormal. Ten sites in two objects, all declining HERE rather than at the
+    # machine-code gate, which reads False for every one of them.
+    #
+    # ⚠ THE SPLIT COMES FIRST BECAUSE A PREFIX IS NOT A TYPE. The first version
+    # tested `*(float *)…` against the whole expression, so
+    # `*(float *)&(x) * 0.5` typed as float for the wrong reason — and so would
+    # `*(float *)&(x) + someInt`, which is not float at all. Classifying only
+    # after the expression is known to be a single atom removes that.
+    parts = _split_top_arith(e)
+    if parts is None:
+        return None                     # a top-level operator that is not arithmetic
+    if len(parts) > 1:
+        types = [_expr_float_type(p, region, sig, obj, dies) for p in parts]
+        if not all(types):
+            return None
+        return 'double' if 'double' in types else types[0]
+
+    # Two atoms that state their own type and need no resolution. One of them is
+    # this rule's OWN earlier output: `*(float *)&(g[1].mRefCtAndID)` is what the
+    # load-direction repair leaves behind, and the constructor then halves it and
+    # stores it back.
+    if _FLOAT_LIT.match(e):
+        return 'float'
+    m = _FLOAT_PTR_DEREF.match(e)
+    if m:
+        return 'float' if m.group(1) == 'MeReal' else m.group(1)
+    # A cast to a floating type IS float-typed, whatever the cast is doing. The
+    # constructors halve their box through one — `(MeU32)((float)g[1].… * 0.5)`
+    # is what Ghidra dumps — and the store repair has to be able to type the
+    # product before the LOAD repair, which runs later, turns the inner cast
+    # into the reinterpret it should have been. Casts to an INTEGER type are not
+    # accepted here, which is what keeps `(MeU32)x * 2` from typing as float.
+    m = _FLOAT_CAST_ATOM.match(e)
+    if m:
+        return 'float' if m.group(1) == 'MeReal' else m.group(1)
+
     base = e
     i = e.find('[')
     if i >= 0:
@@ -4902,7 +4952,104 @@ def _expr_float_type(expr, region, sig, obj, dies):
         got = _dwarf_member(dies, owner, m.group(2)) if owner else None
         if got and re.match(r'^(' + '|'.join(_FLOAT_TYPES) + r')\b', got[1]):
             return got[1].split()[0]
+
     return None
+
+
+# An explicit dereference through a float pointer states its own type — the
+# operand needs no resolution because the cast already answered the question.
+# This is what `*(float *)&(g[1].mRefCtAndID) * 0.5` is made of, and it is the
+# rule's own earlier output being read back.
+_FLOAT_PTR_DEREF = re.compile(r'^\*[ \t]*\([ \t]*(float|double|MeReal)[ \t]*\*[ \t]*\)')
+# A literal with a decimal point or an exponent. `0.5`, `1e-06`, `0.0`. An
+# integer literal deliberately does NOT match: `x * 2` is arithmetic on
+# something whose type must come from `x`, and typing the `2` as float would
+# make the operand list agree for the wrong reason.
+_FLOAT_LIT = re.compile(r'^[+-]?(?:\d+\.\d*|\.\d+|\d+(?=[eE]))(?:[eE][+-]?\d+)?[fF]?$')
+# A cast to a floating type. Only ever consulted on an ATOM — the split has
+# already run — so a prefix match is the whole expression's type.
+_FLOAT_CAST_ATOM = re.compile(r'^\([ \t]*(float|double|MeReal)[ \t]*\)')
+
+
+def _ends_an_operand(prefix):
+    """Can `prefix` be the left-hand side of a BINARY operator?
+
+    A closing parenthesis usually ends an operand — and does NOT when it closes
+    a CAST. `*(float *)&(x)` has an address-of, not a bitwise and, and reading
+    that `)` as the end of an operand made the whole expression decline. A cast
+    is recognised by what it encloses: a pointer type, or a bare scalar type
+    name. `(x)` around a variable is left as an operand, which is the safe way
+    round — the worst case is a decline."""
+    p = prefix.rstrip()
+    if not p:
+        return False
+    if p[-1] != ')':
+        return p[-1].isalnum() or p[-1] in ']_'
+    depth = 0
+    for i in range(len(p) - 1, -1, -1):
+        if p[i] == ')':
+            depth += 1
+        elif p[i] == '(':
+            depth -= 1
+            if depth == 0:
+                inner = p[i + 1:-1].strip()
+                if inner.endswith('*'):
+                    return False                        # (float *) — a cast
+                head = inner.replace('struct ', '').split()
+                return not (len(head) == 1 and head[0] in SCALAR_KEYWORDS)
+    return True
+
+
+def _split_top_arith(e):
+    """`e` split at its top-level binary `+ - * /`. [] for an atom, None to decline.
+
+    THREE RETURNS, and the difference matters. `None` means "this expression
+    carries a top-level operator that is not arithmetic" and the caller must
+    give up — a comparison must never be typed as a sum, which is the confusion
+    that silently changed IxCylinderCylinder once through a greedy subscript.
+    `[]` means "no top-level operator at all", i.e. an atom for the caller to
+    classify. A list of two or more is the split.
+
+    UNARY AND BINARY ARE NOT THE SAME CHARACTER, and every one of the four bugs
+    a unit test caught here was that distinction:
+
+      `*(float *)&(x) * 0.5`  the leading `*` is a dereference; the `&` is an
+                              address-of; and the `)` before it closes a CAST,
+                              so it does not end an operand either
+      `1e-06`                 the `-` is an exponent sign, not a subtraction
+      `p->m + q->m`           `->` is not a minus
+
+    So an operator counts as binary only when what precedes it can END an
+    operand, `->` is stepped over whole, and a sign directly after an exponent
+    `e`/`E` that itself follows a digit is part of the literal."""
+    depth, parts, last, i, n = 0, [], 0, 0, len(e)
+    while i < n:
+        c = e[i]
+        if c in '([':
+            depth += 1
+        elif c in ')]':
+            depth -= 1
+        elif depth == 0:
+            prev = e[:i].rstrip()
+            binary = _ends_an_operand(prev)
+            if c in '<>=!|^%?:,':
+                return None
+            if c == '&' and binary:
+                return None             # bitwise and; an address-of is unary
+            if c == '-' and i + 1 < n and e[i + 1] == '>':
+                i += 2
+                continue
+            if c in '+-' and prev[-1:] in ('e', 'E') and prev[-2:-1].isdigit():
+                i += 1                  # the sign of an exponent
+                continue
+            if c in '+-*/' and binary:
+                parts.append(e[last:i])
+                last = i + 1
+        i += 1
+    if not parts:
+        return []
+    parts.append(e[last:])
+    return [p.strip() for p in parts if p.strip()]
 
 
 def _function_has_int_to_float(obj, fn):
@@ -5017,7 +5164,28 @@ def _expr_int_type(expr, region, sig, obj, dies):
 # not already a pointer dereference of the right type. The operand is captured
 # with the postfix scanner rather than `.*` so a following binary operator is
 # not swallowed; see _expr_float_type on the greedy-subscript bug.
-FLOAT_CAST = re.compile(r'\(float\)[ \t]*(?=[A-Za-z_*])')
+#
+# ⚠ `MeReal` IS THE SPELLING THAT MATTERS, AND MATCHING ONLY `(float)` MISSED
+# EVERY REAL SITE. This is the identical mistake INT_STORE above records against
+# itself — "Ghidra spells the destination with whatever integer type the SLOT
+# has, not with `int`" — and the store side was widened while the load side was
+# not. `MeReal` is a typedef of `float`, so Ghidra emits whichever name the
+# DWARF gives it, and for the geometry objects that is always `MeReal`. Seven
+# sites in six objects survived on that one word:
+#
+#     McdSphereGetRadius       return (MeReal)g[1].mRefCtAndID;   <- flds 0x10(%edx)
+#     McdSphylGetRadius        "                                  <- flds 0x10(%edx)
+#     McdCylinderGetRadius     "                                  <- flds 0x10(%edx)
+#     McdGjkFatness            MVar1 = (MeReal)pMVar3[1].…;       <- flds 0x10(%eax)
+#     McdSphereGetBSphere      *radius = (MeReal)g[1].…;          <- mov  0x10(%ecx),%edx
+#     McdTriangleListGetBSphere  *center = (MeReal)g[1].…;        <- mov  0x10(%ecx),%eax
+#     McdConvexMeshGetBSphere  *radius = (MeReal)g[3].…;          <- mov  0x30(%ecx),%eax
+#
+# Every one converts a float BIT PATTERN to a float: a 0.91 radius comes back as
+# 1.06e9. MEASURED, not argued — karma-decomp/test/ktrace_subst.sh localised a
+# live behavioural defect on test-karma-1 to McdSphere and McdTriangleList by
+# substitution, with both controls, and the two of them account for it entirely.
+FLOAT_CAST = re.compile(r'\((?:float|MeReal)\)[ \t]*(?=[A-Za-z_*])')
 
 
 def fix_float_load_of_int(obj, text):
@@ -5062,7 +5230,17 @@ def fix_float_load_of_int(obj, text):
         return text, 0
     dies, out, n = None, [], 0
     for fn, region in _split_definitions(text):
-        if not fn or '(float)' not in region:
+        # Test the PATTERN, not a literal spelling — the sixth instance of this
+        # exact mistake in this file, and the second in this rule's own pair.
+        # fix_int_store_of_float records it against itself: "A cheap guard that
+        # disagrees with the rule it guards is a rule that silently declines."
+        # Widening FLOAT_CAST to `(MeReal)` changed NOTHING while this said
+        # `'(float)' not in region`, because the geometry objects contain the
+        # typedef spelling and nothing else — McdSphere, McdSphyl, McdCylinder,
+        # McdConvexMesh and McdGjkMaximumPoint were all skipped before the regex
+        # ever ran, and the blast-radius check reported one changed object where
+        # six were intended. That disagreement is what caught it.
+        if not fn or not FLOAT_CAST.search(region):
             out.append(region)
             continue
         if _function_has_int_to_float(obj, fn) is not False:

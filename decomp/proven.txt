@@ -821,6 +821,114 @@ IxCylinderTriList     RE-RELEASED 2026-08-27 (eighth session) — the live-match
 #                     Linux, because the shipped member is 32-bit Linux ELF; wasm32 and Windows have
 #                     nothing to fall back to, so this has to be fixed rather than worked around.
 
+McdSphere             real: test-karma-1 (ONS gametype), 600 frames at a pinned 30 fps, the whole
+#                     level's Karma state diffed against a `legacy-karma` run of the SAME engine
+#                     source — 14 of 15 bodies BIT-IDENTICAL for the entire run, the 15th
+#                     (ONSHoverBike3, wedged against a ramp) differing by 0.005 in final Z and
+#                     coming to rest in the same place. Held over 3,000 frames / 100 simulated
+#                     seconds: 13 of 15 bit-identical, all 15 at identical rest positions.
+#                     Localised BY SUBSTITUTION with both controls — see MCD-GEOM-FLOAT-FIELDS.
+McdTriangleList       real: same run, same evidence. These two objects account for the ENTIRE
+#                     behavioural defect the owner reported; taking both from the shipped library
+#                     restored the reference behaviour exactly, and taking either alone did not.
+
+# MCD-GEOM-FLOAT-FIELDS  2026-08-28 (eleventh session): A NUMERIC CONVERSION WHERE THE ORIGINAL
+#                     MOVES FOUR BYTES. Seventeen sites in six geometry objects, every one of them
+#                     compiling cleanly, passing all nine gates, and destroying the value it
+#                     touched. This is the defect behind the owner's report that vehicles sink
+#                     through terrain, boxes fall through the floor and friction "feels too high".
+#
+#                     THE SHAPE. UT2004's geometry types derive from `McdGeometry` by PREFIXING it,
+#                     so a sphere's radius lives past the base struct and Ghidra — which has only
+#                     `McdGeometry *` — addresses it as `g[1].<field-of-the-base>`. The byte offset
+#                     is right; the TYPE is whatever field of a second `McdGeometry` happens to sit
+#                     there. Three of those four fields are POINTERS and one, `mRefCtAndID`, is a
+#                     `MeU32`. The pointer-typed ones were already repaired (KD_FBITS). The integer
+#                     one was not, and C obligingly CONVERTS instead of reinterpreting:
+#
+#                       McdSphereGetRadius   return (MeReal)g[1].mRefCtAndID;   shipped: flds 0x10(%edx)
+#                       McdSphereGetBSphere  *radius = (MeReal)g[1].…;          shipped: mov  0x10(%ecx),%edx
+#                       McdGjkFatness        MVar1 = (MeReal)pMVar3[1].…;       shipped: flds 0x10(%eax)
+#                       McdTriangleListSetBoundingBox
+#                                            g[1].mRefCtAndID = (MeU32)(*max + *min);
+#                                                                              shipped: fstps 0x10(%edx)
+#
+#                     A 0.91 radius comes back as 1.06e9. A bounding-box centre of 512.0 is stored
+#                     as the INTEGER 512 and read back as a denormal. The world triangle list — the
+#                     geometry every body in every map collides with — had its X centre and Y
+#                     half-extent destroyed at construction.
+#
+#                     ⚠ EVERY EXISTING GATE IS BLIND TO IT, AND THE difftest IS BLIND FOR A REASON
+#                     WORTH KNOWING. `difftest_pair.sh McdSphereTriangleListIntersect` reads
+#                     IDENTICALLY before and after the repair — 4,837 bit-identical, 13 dims, worst
+#                     2.645e-05, twice — because the driver substitutes the Ix* INTERACTION object
+#                     and links the geometry objects from the shipped library. The broken accessor
+#                     was never in the loop. Nothing that substitutes one object at a time can see a
+#                     defect in the object it did not substitute, and "145 objects pass" is a
+#                     statement about 145 separate links, not about the program.
+#
+#                     HOW IT WAS FOUND, and the instrument is new: test/ktrace_run.sh records one
+#                     CSV row per simulated body per frame from inside KTickLevelKarma, and
+#                     test/ktrace_subst.sh rebuilds the engine with a chosen SET of objects taken
+#                     from the shipped library and scores the result against a `legacy-karma`
+#                     reference (test/ktrace_score.py). Both controls first: ALL 145 from shipped
+#                     scored MATCH, none scored 12 mismatches. Then the COMPLEMENT — keep one family
+#                     of ours, take the rest from theirs:
+#
+#                       keep Mdt   MATCH        keep Ix   MATCH
+#                       keep kea   MATCH        keep Me   MATCH
+#                       keep Mcd   12 MISMATCH  <- and the same 12, to four significant figures
+#
+#                     Four bisection steps inside Mcd reached two objects, and the FORWARD direction
+#                     confirmed them independently: recovered + shipped McdTriangleList = 8
+#                     mismatches, + shipped McdSphere = 12, + BOTH = MATCH.
+#
+#                     ⚠ THIS OVERTURNED THE RANKED SUSPECTS, WHICH WERE REASONED AND WRONG. The
+#                     handover's list led with MdtContactParams (23 friction references, not in this
+#                     file), then McdGjkPenetrationDepth. Both are innocent: `keep Mdt` MATCHES.
+#                     The reasoning was sound — friction lives in Mdt, and 25 of 27 Mdt objects have
+#                     never been measured — and the answer was still in the other family. The
+#                     symptom named a subsystem and the subsystem was not where the defect was.
+#
+#                     TWO GENERATOR BUGS, both of which had a rule that should have caught this:
+#
+#                     1. FLOAT_CAST matched `(float)` and Ghidra emits `(MeReal)`. `fix_float_load_
+#                        of_int` was written for exactly these sites — its docstring's example is
+#                        `(float)g[1].mRefCtAndID` — and `MeReal` is the spelling the geometry
+#                        objects actually carry. This is the identical mistake INT_STORE records
+#                        against ITSELF eight lines away ("Ghidra spells the destination with
+#                        whatever integer type the SLOT has, not with `int`"): the store side was
+#                        widened, the load side was not.
+#                     2. `_expr_float_type` resolves ONE lvalue, and the constructors store a
+#                        COMPUTED value — `(MeU32)(*max + *min)`. The rule fired on the right lines
+#                        and declined because it could not type the operand. It now splits a
+#                        top-level arithmetic expression and requires EVERY part to resolve, which
+#                        keeps a comparison from being typed as a sum — the failure that silently
+#                        changed IxCylinderCylinder once.
+#
+#                     ⚠ AND A THIRD, WHICH IS THE SIXTH INSTANCE IN ghidra_clean.py OF ONE PATTERN.
+#                     Widening FLOAT_CAST changed NOTHING, because the rule's early-out still read
+#                     `if '(float)' not in region`. A cheap guard that disagrees with the rule it
+#                     guards is a rule that silently declines. It was caught only because the blast
+#                     radius came back as ONE object where six were intended — the count disagreed
+#                     with the intent, and that disagreement is the whole reason to check it.
+#
+#                     BLAST RADIUS, checked before correctness: 9 source files move, 7 change the
+#                     compiled object. Six are the intended repairs. McdBox and MeFAsset change
+#                     SPELLING only (`(*(MeReal *)&x)` -> `*(float *)&(x)`) and compile
+#                     BYTE-IDENTICAL. The seventh is a bonus and was verified separately —
+#                     McdGjkPenetrationDepth's `MVar2 = (MeReal)s->next_bit`, which feeds
+#                     `_McdGjkFace.slant`, an INT field the shipped code writes with
+#                     `mov %eax,0x28(%esi)`. That is a previously-unrepaired instance of
+#                     ONS-CRASH-GJKPD's own class, in the DRIVER rather than in FaceQueueInit — the
+#                     function that entry's complement bisect accused and then exonerated.
+#
+#                     NOT MEASURED INDIVIDUALLY, and the difference matters: McdSphyl, McdCylinder,
+#                     McdConvexMesh and McdGjkMaximumPoint carry the same defect and are REPAIRED on
+#                     the same machine-code evidence (flds / mov at the field, and no conversion
+#                     instruction anywhere in the function), but test-karma-1 did not isolate them —
+#                     they are not released above. Repaired is not the same as validated.
+
 # WASM-INDIRECT-SIGS  2026-08-27 (tenth session): THE INDIRECT HALF OF WASM-SIGMISMATCH,
 #                     WHICH THAT ENTRY CLOSES BY PREDICTING. It was right. Found by RUNNING
 #                     the engine on wasm for the first time — nothing recovered had ever

@@ -377,6 +377,89 @@ REFUSES a zero rather than printing one.
 almost nothing while the HUD — which ticks on the render path, outside that guard — keeps logging
 every frame.
 
+⚠ **RE-BUILD THE INSTRUMENTED BINARY BEFORE EVERY CENSUS.** A census trace is a list of RUNTIME
+ADDRESSES; it means nothing except against the binary that produced it, and `nm` will happily
+resolve it against a different one and give you a plausible, wrong table. The build tree survives
+between sessions and `cmake` will not rebuild what it thinks is current, so the failure mode is
+silent. Measured here: a census tree whose objects were four commits old resolved cleanly and
+reported `MdtLimit` entering 8 of 34 functions, which is a statement about a build that no longer
+exists. Check `ls -lat build-native-census/**/*.c.o | head -1` against `git log -1` first.
+
+### `cold_triage.py` — separate DEAD Karma from UNTESTED Karma
+
+`census_report.py` says 36% of the recovery has ever run and leaves 64% looking untested. It is
+not: a large part of the cold set is code UT2004 cannot reach on any input. This intersects the
+census with `reachable.py`'s symbol closure and reports the number that is actually worth quoting.
+
+```bash
+python3 tools/cold_triage.py /tmp/cy-*.txt \
+        ../build-native-census/Source/SDLLaunch/ut2004-pixo.bin \
+        --build ../build-native-karma --members /tmp/kd_members
+```
+
+Four verdicts, and the two weak ones are marked weak rather than folded in: **DEAD-OBJECT** (its
+member is in `reachable.py`'s unreachable set), **DEAD-SYMBOL** (reachable object, but no
+relocation anywhere in the closure names this symbol), **FILE-LOCAL** (a static — symbol
+reachability has *nothing* to say, and calling it dead would be an artefact), and **UNVALIDATED**
+— reachable, referenced, never executed. That last one is the number.
+
+⚠ **DEAD-SYMBOL IS EVIDENCE, NOT PROOF.** It inherits `reachable.py`'s own blind spot: a table the
+ENGINE fills in, and anything entered only through a function pointer the engine computed, has no
+relocation to find. And the census side is a lower bound — a function absent from every recorded
+run was not reached *by those runs*.
+
+> **It also found that the denominator is wrong.** 148 of the 2,025 symbols `nm` reports are
+> `__x86.get_pc_thunk.*` — three instructions gcc emits per object to load the PC — so every count
+> in this project, including `proven.txt`'s, is 7.3% larger than the recovery is. This tool
+> excludes them and prints the figure both ways so the two can be reconciled.
+
+### `amd64_oracle.py` — read the LP64 layouts off a 64-bit build of the same source
+
+Everything else here reads the **i386** build, which is why the recovery encodes 32-bit struct
+layouts and why `layout_check.py` can only bound the arm64 job. UT2004 v3369 ships
+`metoolkit/lib.rel/win_amd64_single/*.lib`: a 64-bit build of the same MathEngine source, real
+x86-64 COFF, **not stripped**, 1,089 symbols over 189 members in 15 archives. Its field offsets and
+its allocation constants ARE the 64-bit layouts.
+
+```bash
+python3 tools/amd64_oracle.py --selftest          # five facts, asked of the binary
+python3 tools/amd64_oracle.py --consts McdInit    # what sizes does this function pass?
+python3 tools/amd64_oracle.py --function McdSphereGetRadius
+python3 tools/amd64_oracle.py --list
+```
+
+```
+McdSphereGetRadius   i386   flds  0x10(%edx)
+                     amd64  movss 0x20(%rcx),%xmm0
+```
+
+★ **IT IS LLP64, NOT LP64, AND THAT CHANGES HOW YOU MAY USE IT.** The shipped 64-bit build is MSVC
+for Windows, where `long` is four bytes; Android is eight. `sizeof(MdtBody)` is 576 at i386, **696
+at win64 and 704 on Android**. So its constants are the right oracle for *which type a site means*
+and the wrong number to paste into the source — the repair is always `sizeof(T)`, and this library's
+job is to say what `T` is. `x86_64-w64-mingw32-gcc` reproduces the win64 column exactly (verified
+against the immediates in `MdtWorldCreate`: 856 and 696), which is what makes the check mechanical.
+
+⚠ **Use the `.lib` MEMBERS, not the loose `.obj` beside them** — those are MSVC LTCG and
+disassemble to nothing. The first pass over that directory declared the whole thing unusable on
+their evidence.
+
+⚠ **There is no type information in there, and the section EXISTS.** Every member carries a
+`.debug$T`, which is where CodeView puts struct layouts and would have made this tool unnecessary.
+All of them are 0x40–0x44 bytes: a `/Zi` build whose types live in a PDB nobody shipped. A section
+being present is not a section being populated.
+
+⚠ **`objdump --disassemble=NAME` prints nothing here.** `/Gy` puts every function in its own COMDAT
+and every one of those sections is called `.text` at VMA 0, so selecting by name or by section both
+fail; the whole object has to be disassembled and split on the `<name>:` labels.
+
+The constant reader **propagates `mov $imm` forward**, because MSVC parks one constant in a register
+and reaches the others by arithmetic on it — `McdCacheHello` passes `sizeof(McdCache)` as
+`lea -0x1c(%rdx)` with `%rdx == 100`, and the number 72 appears nowhere in the instruction stream. A
+`lea` with a 32-BIT destination is an integer; one with a 64-bit destination is an address, and
+counting the second made `0x68` (`&framework->modelPool`) read as a size and turned a clean answer
+into a two-way ambiguity.
+
 ### `layout_check.py` — the arm64 defect the truncation gate cannot see
 
 `ptrwidth_check.sh` counts pointer **truncation**. This counts the defect truncation is a symptom
@@ -443,11 +526,15 @@ XML-output and unused-constraint objects §3b retires.
 ## The arm64 post-passes — NOT part of the 95-second pipeline
 
 They need the NDK, they **edit in place**, and §4's output is not arm64-correct source until they
-have run. **Run them on a copy**, in this order.
+have run. **Run them on a copy**, in this order — or just use `test/lp64_pipeline.sh`, which does
+the copy, both passes, the acceptance test and the harness in the right order.
 
 ```bash
+./test/lp64_pipeline.sh                      # all of the below, gated
+
+# or by hand:
 cp -a /tmp/kd_out /tmp/kd_lp64
-python3 tools/fix_baked_sizeof.py /tmp/kd_lp64/allobj /tmp/kd_build          # 98 sites
+python3 tools/fix_baked_sizeof.py /tmp/kd_lp64/allobj /tmp/kd_build   # 102 allocs + 7 pool strides
 python3 tools/fix_ptrwidth.py    /tmp/kd_lp64/allobj /tmp/kd_build $MT
 #   -> 3864 narrow pointer cast(s) widened in 94 object(s)
 KD_OUT=/tmp/kd_lp64 ./test/lp64_run.sh
@@ -471,9 +558,23 @@ done
 #   last run: 145 objects, 0 compile failures, 0 byte differences
 ```
 
+⚠ **THE FILE HAS TO KEEP ITS NAME.** gcc records the source basename in an `STT_FILE` symbol, so
+compiling identical text out of `/tmp/t.c` yields a different object. That reads exactly like a
+codegen change and cost a bisection round here: the disassembly was identical and `cmp` still
+disagreed. The loop above is right because it compiles `$b.c`; a scratch file is not.
+
 That test earns its keep: it caught `fix_baked_sizeof` changing `CxSmallSort` by 64 bytes, because
 `count * sizeof(T)` is unsigned where `count * 0x98` was `int`. The fix is `(int)sizeof(...)`; the
 lesson is that "no-op by construction" still gets measured.
+
+> ★ **AND THE SEQUEL IS WHY `fix_baked_sizeof.py` NOW COMPILES EVERY SITE ITSELF.** The very next
+> site to need this wanted the OPPOSITE spelling. `pMVar1->bucketCount << 2` in
+> `McdModelPairManagerHashCreate` is byte-identical as `(int)(count * sizeof(T))` and DIFFERS as the
+> prescribed `count * (int)sizeof(T)`. Both compute the same value on every target; which one gcc
+> schedules the same way is a property of the surrounding function, not a rule anyone can write
+> down. So the tool now tries each candidate, keeps whichever reproduces the baseline object byte
+> for byte, and declines the site if neither does. The corpus-wide test above stops being the thing
+> that catches this tool's mistakes and becomes a confirmation of something already established.
 
 ### `fix_ptrwidth.py` — widen the punned casts
 
@@ -485,8 +586,36 @@ executes arm64 code and a heuristic wrong 1% of the time would be undetectable.
 
 `(MeMemoryAPI.create)(0x234)` where `0x234` is 564 is `sizeof(MdtWorld)` **on i386**; at LP64 the
 struct is 880, so the first allocation is 316 bytes short and the next statement writes past it.
-Nothing is truncated, no cast is narrowed, and neither static gate counts this shape at all. 105
-literal-sized allocations across 41 objects.
+Nothing is truncated, no cast is narrowed, and neither static gate counts this shape at all.
+
+It now covers three spellings of one defect:
+
+| shape | example | why the first version missed it |
+|---|---|---|
+| `create(LITERAL)` | `create(0x234)` | — |
+| `create(COUNT * K)` | `create(count * count * 0x1c)` | the count had to be ONE identifier |
+| `MePoolAPI.init(pool, n, K, align)` | `init(&w->bodyPool, n, 0x240, 0x10)` | not an assignment, and the size is argument **three** |
+
+**The pool form is the one that matters most and it is the hardest to type.** `0x240` is
+`sizeof(MdtBody)` at i386, so at LP64 every body in the pool overlaps the one before it — and the
+crash surfaces two files away in `MeDictInsert`, with nothing in the backtrace pointing at the pool.
+There is no assignment target to take a type from, so the element type is pinned by three facts:
+
+1. **what `getStruct` hands back**, corpus-wide (the pool is initialised in one object and drawn
+   from in another), following a local through the member it was just stored into;
+2. **the i386 literal** must equal `sizeof` of that type;
+3. **the shipped amd64 build** must pass that type's win64 `sizeof` in the same function
+   (`amd64_oracle.py`).
+
+⚠ **FACT 1 IS WRONG FOR ONE OF THE SEVEN AND THE TOOL HAS TO SURVIVE THAT.** `constraintPool`'s
+`getStruct` is typed as the base `MdtConstraint` (352 bytes) and the pool is sized for the largest
+variant, `MdtContact` (492 → 624). A tool that trusted its primary fact would have sized the
+constraint pool for the base class. Facts 2 and 3 catch it, and the fallback — the only type whose
+i386 size is the stride AND whose 64-bit size the shipped build is seen to pass — names `MdtContact`
+uniquely. **Fact 2 alone would not:** fourteen metoolkit types are 20 bytes at i386.
+
+Current output: **102 allocations + 7 pool strides rewritten, 0 pool sites declined**, every one
+compiled and compared against its baseline object.
 
 ---
 

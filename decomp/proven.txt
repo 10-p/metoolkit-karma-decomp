@@ -1066,6 +1066,293 @@ McdTriangleList       real: same run, same evidence. These two objects account f
 #                     load bias and nothing resolved. -no-pie must go on the EXECUTABLE; putting it
 #                     on the Engine static library changes nothing and the build still succeeds.
 #                     census_report.py now REFUSES a zero rather than printing one.
+#
+#                     ⚠ TWO CORRECTIONS TO THIS ENTRY, both from COLD-TRIAGE below.
+#                     (a) 148 of the "2,025 functions" are `__x86.get_pc_thunk.*`, three
+#                         instructions gcc emits per object. The recovery has 1,877.
+#                     (b) "MdtLimit has never executed on ANY native run" WAS AN ARTEFACT OF THE
+#                         RUN SET, not a property of the code. With `SpectatorOnly=1` and bots
+#                         that actually die, MdtLimit enters 8 or 9 of its 34 functions on four
+#                         maps out of five. The lead it was offered as is withdrawn; the joint
+#                         limits were separately root-caused (a `.ka` bool parsed as a float) and
+#                         that fix stands on its own evidence.
+
+# COLD-TRIAGE        2026-08-28 (twelfth session): THE COLD TWO THIRDS IS MOSTLY CODE UT2004
+#                     CANNOT REACH. 301 functions — 16.0%, not 64.1% — are reachable, referenced
+#                     and never measured. tools/cold_triage.py, five census runs against the
+#                     build at karma/decompile HEAD.
+#
+#                     COVERAGE-CENSUS gave the numerator and left the denominator looking awful.
+#                     reachable.py answers the other half at object level and retires 31 members.
+#                     Neither number is the one to reason about; their intersection is:
+#
+#                       symbols nm reports                        2025
+#                       …of which __x86.get_pc_thunk.*             148   <- NOT recovered code
+#                       functions the recovery actually has       1877
+#                       ENTERED on some recorded run               673   35.9%
+#                       cold                                      1204   64.1%
+#                         DEAD-OBJECT   member is unreachable        71
+#                         DEAD-SYMBOL   no relocation names it      682
+#                         FILE-LOCAL    static; no symbol to name   150
+#                         UNVALIDATED   reachable and never run     301   16.0%
+#
+#                     ⚠ FIRST, A CORRECTION TO THE DENOMINATOR EVERY ENTRY HERE HAS USED. 148 of
+#                     the "2,025 recovered functions" are `__x86.get_pc_thunk.bx` and siblings —
+#                     three instructions gcc emits per object to load the PC. They are in every
+#                     `nm`-based count this project has ever printed, including COVERAGE-CENSUS's.
+#                     The recovery has 1,877 functions.
+#
+#                     ⚠ SECOND, COVERAGE-CENSUS'S RAGDOLL LEAD IS WITHDRAWN. It recorded "MdtLimit
+#                     34 functions NEVER ENTERED … MdtLimit has never executed on ANY native run"
+#                     and offered it as the explanation for limbs with no joint limits. Measured
+#                     again with `SpectatorOnly=1` and bots that actually die:
+#
+#                       test-karma-1 (2 bots)   MdtLimit 8/34    MdtSkeletal 13/25
+#                       test-karma-1 (1 bot)    MdtLimit 8/34    MdtSkeletal 13/25
+#                       ONS-Torlan              MdtLimit 8/34    MdtSkeletal 13/25
+#                       DM-Rankin               MdtLimit 8/34    MdtSkeletal 13/25
+#                       ONS-Adara               MdtLimit 0/34    MdtSkeletal  1/25
+#
+#                     The joint-limit machinery runs. The earlier zero was a property of the RUN
+#                     SET, not of the code, and the ragdoll defect was separately root-caused
+#                     (a `.ka` bool parsed as a float, MCD-GEOM-FLOAT-FIELDS' session). ONS-Adara
+#                     is the outlier for the reason test/README.md already records about
+#                     bot-dependent maps headless: it enters 528 functions against 648-665 for the
+#                     others and reaches almost no ragdoll code.
+#
+#                     ⚠ AND ADDING MAPS BUYS ALMOST NOTHING. test-karma-1 alone enters 658 of the
+#                     union's 673 — 97.8%. Four maps and two gametypes is not four times the
+#                     coverage of one; the ceiling is set by what the GAME does, not by which map
+#                     it does it on. Do not read a bigger map list as a bigger measurement.
+#
+#                     WHAT THE TWO WEAK VERDICTS ARE WORTH. DEAD-SYMBOL inherits reachable.py's
+#                     own blind spot: a table the ENGINE fills in, and anything entered only
+#                     through a function pointer the engine computed, has no relocation to find.
+#                     It is a strong prior, not a licence to delete. FILE-LOCAL is not a verdict
+#                     at all — a static has no external symbol, so symbol reachability has nothing
+#                     to say, and folding those 150 into "dead" would be an artefact of the
+#                     instrument. They are counted apart for that reason.
+#
+#                     AND THE CENSUS SIDE IS A LOWER BOUND. A function absent from every recorded
+#                     run was not reached BY THOSE RUNS. That asymmetry is why the verdict is
+#                     UNVALIDATED and not "unreachable": the claim is about our measurements.
+#
+#                     WHERE THE 301 ARE, worst first: CxSmallSort 18, MeFAsset 16, McdSpace 15,
+#                     MeFAssetPart 14, keaPrintBasicTypes 14, MdtCarWheel 12, MdtLimit 11,
+#                     MeFGeometry 10, MeFPrimitive 10, McdModelPairManager 9. Two readings worth
+#                     having: the MeF* asset-construction family is large and cold because a
+#                     match READS assets rather than building them, and `McdSpace`/`CxSmallSort`
+#                     is 33 unvalidated functions in the broadphase — the same object LP64-REBUILT-
+#                     DATA shows is the next thing to fail at 64-bit.
+#
+#                     ⚠ RE-BUILD THE INSTRUMENTED BINARY FIRST. A census trace is a list of
+#                     RUNTIME ADDRESSES and means nothing except against the binary that produced
+#                     it. This entry's first run used a census tree whose objects were four
+#                     commits old; it resolved cleanly, reported plausible numbers, and described
+#                     a build that no longer existed. `cmake` will not rebuild what it thinks is
+#                     current, so the failure is silent. Check the newest `.c.o` against `git log`.
+
+# LP64-BAKED-SIZES   2026-08-28 (twelfth session): AN ALLOCATION SIZE FROZEN AT THE i386 VALUE IS
+#                     THREE DEFECTS, NOT ONE, AND THE THIRD IS AN ELEMENT STRIDE. The class
+#                     fix_baked_sizeof.py was written for is closed; 102 allocations and 7 pool
+#                     strides are now `sizeof(T)`, every one compiled and compared.
+#
+#                     WHERE IT STARTED. `lp64_run.sh` FAILED ON THE FIRST STATEMENT OF THE FIRST
+#                     SCENE (MdtWorld.c:98) and, once that was repaired, on `MeDictInsert` —
+#                     two files and one call from anything that looked wrong. The cause was
+#
+#                       (MePoolAPI.init)(&w->bodyPool, w->maxBodies, 0x240, 0x10);
+#
+#                     0x240 is 576 is `sizeof(MdtBody)` at i386. It is an ELEMENT STRIDE, so at
+#                     LP64 every body in the pool overlaps the one before it, `constraintDict`
+#                     comes back as garbage, and the crash surfaces in a red-black tree walk with
+#                     nothing in the backtrace pointing at the pool. `ALLOC` could not see it
+#                     twice over: the call is not an assignment, so there is no target to take a
+#                     type from, and the size is the THIRD argument. The same regex also required
+#                     the count to be ONE identifier, which missed
+#                     `create(count * count * 0x1c)` — the interaction table, 58% of the size it
+#                     needs, whose ASan report lands in `McdFrameworkSetInteractions`, correct
+#                     code indexing a short array two hundred lines away.
+#
+#                     ★ THE NEW ORACLE IS WHAT MAKES THE POOL FORM TRACTABLE, AND IT IS LLP64.
+#                     UT2004 v3369's `metoolkit/lib.rel/win_amd64_single/*.lib` is a 64-bit build
+#                     of this same source: real x86-64 COFF, not stripped, 1,089 symbols.
+#                     `MdtWorldCreate` passes 0x2b8 and 0x270 where ours passes 0x240 and 0x1ec.
+#                     tools/amd64_oracle.py reads it. BUT IT IS MSVC FOR WINDOWS, WHERE `long` IS
+#                     FOUR BYTES:
+#
+#                       sizeof(MdtBody)    i386 576   win64 696   android 704
+#                       sizeof(MdtWorld)   i386 564   win64 856   android 880
+#
+#                     so its constants are the right oracle for WHICH TYPE a site means and the
+#                     WRONG NUMBER TO PASTE. The repair is always `sizeof(T)`. x86_64-w64-mingw32
+#                     reproduces the win64 column exactly, which is what makes the check
+#                     mechanical rather than a matter of opinion.
+#
+#                     THREE FACTS PIN THE ELEMENT TYPE, AND THE PRIMARY ONE IS WRONG FOR ONE OF
+#                     THE SEVEN — which is the whole reason there are three:
+#
+#                       1  what getStruct hands back, corpus-wide (the pool is initialised in one
+#                          object and drawn from in another), following a local through the member
+#                          it was just stored into
+#                       2  the i386 literal must equal that type's sizeof
+#                       3  the shipped amd64 build must pass its win64 sizeof in that function
+#
+#                     `constraintPool`'s getStruct is typed as the base `MdtConstraint` (352) and
+#                     the pool is sized for the largest variant, `MdtContact` (492 -> 624). A tool
+#                     that trusted its primary fact would have sized the constraint pool for the
+#                     base class and corrupted every contact in the game. Facts 2 and 3 catch it
+#                     and the fallback names MdtContact uniquely. ⚠ FACT 2 ALONE WOULD NOT:
+#                     fourteen metoolkit types are 20 bytes at i386, and four of those are 40 at
+#                     64-bit, so `linkPool`'s stride could have been rewritten as McdSphere.
+#
+#                     ★ AND THE ACCEPTANCE TEST TURNED OUT TO BE A PER-SITE QUESTION, WHICH IS THE
+#                     PART WORTH KEEPING. This file's own tool said the rewrite is "no-op on i386
+#                     by construction" and prescribed ONE spelling, `count * (int)sizeof(T)`,
+#                     because CxSmallSort grew 64 bytes under the unsigned form. That is true and
+#                     it is not general. The very next site wanted the opposite:
+#
+#                       pMVar1->bucketCount * (int)sizeof(*(T **)0)      DIFFERS
+#                       (int)(pMVar1->bucketCount * sizeof(*(T **)0))    identical
+#
+#                     Both compute the same value on every target; which one gcc schedules the
+#                     same way is a property of the surrounding function. So the tool now COMPILES
+#                     each candidate and keeps whichever reproduces the baseline object byte for
+#                     byte, and declines the site if neither does. "No-op by construction" is a
+#                     claim, and the compiler is the only thing that can check it.
+#
+#                     ⚠ A HARNESS ARTEFACT THAT COSTS A BISECTION ROUND: gcc records the source
+#                     BASENAME in an STT_FILE symbol, so compiling identical text out of /tmp/t.c
+#                     produces a different object. The disassembly was byte-identical and `cmp`
+#                     still disagreed, which reads exactly like a codegen change.
+#
+#                     WHERE lp64_run.sh STANDS NOW — still FAIL, and the movement is the result:
+#
+#                       before          MdtWorld.c:98, the first statement of the first scene
+#                       now             scene_chain -> MdtPartition / MdtMainLoop
+#                                       boxes + ragdoll -> one site, McdFrame.c:84
+#
+#                     WHAT IS LEFT, COUNTED RATHER THAN ESTIMATED. None of these is started and
+#                     all three are invisible to `ptrwidth_check.sh`:
+#
+#                       281 sites / 12 objects   DERIVED GEOMETRY FIELDS. `*(float *)&g[1].
+#                                                mRefCtAndID` is `((McdSphere *)g)->mRadius`:
+#                                                Ghidra has only `McdGeometry *`, so it addresses
+#                                                a derived field as an index past the base struct.
+#                                                At LP64 BOTH halves move — sizeof(McdGeometry)
+#                                                goes 16 -> 32 AND the field inside it moves.
+#
+#                                                THE MAPPING IS ALREADY WRITTEN DOWN AND ALREADY
+#                                                CONFIRMED, which is what makes this mechanical.
+#                                                McdGeometryTypes.h defines every concrete type;
+#                                                the i386 byte a site addresses is
+#                                                `k*16 + offsetof(McdGeometry, FIELD)`, and the
+#                                                field of the concrete struct covering that byte
+#                                                is the answer. For McdTriangleList:
+#
+#                                                  g[1].mRefCtAndID  16  center[0]     lp64 32
+#                                                  g[1].frame        28  radius[0]     lp64 44
+#                                                  g[2].next         40  triangleMax   lp64 56
+#                                                  g[2].frame        44  userData      lp64 64
+#                                                  g[3].mRefCtAndID  48  generator     lp64 72
+#
+#                                                and the shipped amd64 build AGREES FIELD FOR
+#                                                FIELD: McdTriangleListSetMaxTriangles reads
+#                                                0x38, SetGenerator 0x48, SetBoundingBox 0x20 and
+#                                                0x2c. Same for the primitives —
+#                                                McdSphereGetRadius reads 0x20 there against 0x10
+#                                                here, McdBoxGetRadii 0x20. So the public headers
+#                                                ARE the original's 64-bit layout, measured, not
+#                                                assumed.
+#
+#                                                Distribution: McdTriangleList 70, McdAggregate
+#                                                45, McdBox 34, McdConvexMesh 33, McdCylinder 32,
+#                                                McdPlaneIntersect 16, McdSphere 12, McdSphyl 11,
+#                                                IxSphylPrimitives 11, IxSphereTriList 7,
+#                                                IxBoxTriList 6, McdGjkMaximumPoint 4. The first
+#                                                eight resolve from the object's own name; the
+#                                                44 sites in the last four are per-site work
+#                                                because an Ix* function handles two geometries.
+#                                                Byte-identical at i386 by construction: it is a
+#                                                re-spelling of the same offset, not new
+#                                                arithmetic.
+#                       128 sites / 10 objects   literal byte offsets `*(T *)(x + K)`
+#                                                (layout_check.py's OFFSET column). One is live and
+#                                                already identified: McdGeometryInstance.c:135
+#                                                does `(int)frame + 0x60` for
+#                                                &frame->instancePool, where the amd64 build uses
+#                                                0x90.
+#                        19 sites /  8 objects   WORD-WALKING LOOPS, `p = (T *)&p->field` with a
+#                                                trip count of bytes/4. McdFrame.c:82 is the one
+#                                                still firing. ⚠ THIS CLASS MAY NOT BE CLOSABLE
+#                                                UNDER THE BYTE-IDENTITY GATE: the i386 code is
+#                                                correct only because every field is 4 bytes
+#                                                there, so the repair changes the arithmetic
+#                                                rather than re-spelling it. Decide the acceptance
+#                                                test before writing the pass.
+#
+#                     ⚠ layout_check.py's NUMBERS DID NOT MOVE, AND THAT IS NOT A FAILURE. It
+#                     counts offset and index SITES; it has never counted a baked allocation size
+#                     at all. The static bound and the class closed here are disjoint, and
+#                     `lp64_run.sh` is the only instrument that sees this one.
+
+# LP64-REBUILT-DATA  2026-08-28 (twelfth session): A REBUILT DATA SYMBOL IS A `void *[]`, AND
+#                     HALF OF ONE STRUCT READS AS ZERO AT 64-BIT. Root-caused, not fixed; this is
+#                     what `lp64_run.sh` hits next on scene_boxes_on_plane and scene_ragdoll once
+#                     the baked-size class is closed, and it is small.
+#
+#                     gen_prelude.py rebuilds an exported `.data`/`.rodata` symbol from the
+#                     object's relocations and emits it with POINTER-SIZED SLOTS:
+#
+#                       /* MstUniverseDefaultSizes — EXPORTED .rodata symbol, 36 bytes */
+#                       void *kd_MstUniverseDefaultSizes[9] = {
+#                           (void *)0x64u, (void *)0x1f4u, (void *)0x0u, ... };
+#
+#                     MstTypes.h declares it `extern const MstUniverseSizes` — seven ints and two
+#                     floats, THIRTY-SIX BYTES ON EVERY TARGET, no pointer in it. As `void *[9]`
+#                     that is 36 bytes at i386 and **72 at LP64**, so a consumer reading it as the
+#                     struct gets field 0 from the low half of slot 0, field 1 from the HIGH half
+#                     — which is zero — field 2 from slot 1, and so on. Every other field is 0.
+#
+#                     MEASURED, and this is the whole chain from symptom to cause:
+#
+#                       ASan   SEGV writing to address 0xc8 in McdSpaceAxisSortCreate
+#                              <- MstUniverseCreate <- scene_ragdoll:65
+#                       i.e.   CxSmallSort::New returned NULL and the caller wrote at +200
+#                       probe  KDPROBE CxSmallSort::New axes=7 nobj=0 npairs=0
+#                              <- collisionModelsMaxCount and collisionPairsMaxCount are
+#                                 fields 3 and 4, both on high halves
+#
+#                     THE DISCRIMINATOR IS THE RELOCATION, AND IT IS AUTHORITATIVE. A slot that
+#                     holds a real pointer HAS a relocation in the shipped object and is correctly
+#                     pointer-sized at LP64 by construction; a slot holding an integer has none.
+#                     `readelf -r` on the shipped member settles it per symbol:
+#
+#                       McdGjkBinarySubset       2 relocations  -> genuinely 16 pointers, fine
+#                       MstUniverseDefaultSizes  0 relocations  -> pure data, wrongly typed
+#
+#                     THE WHOLE CLASS IS FIVE SYMBOLS IN TWO OBJECTS — every rebuilt data symbol
+#                     in the corpus whose slots are all literals:
+#
+#                       McdSpace       McdXAxis, McdYAxis, McdZAxis, McdAllAxes   void *[1]
+#                                      (McdSpace.h declares each `extern int`)
+#                       MstUniverse    MstUniverseDefaultSizes                    void *[9]
+#
+#                     The four axis constants still READ correctly on a little-endian LP64 target
+#                     — the value is in the low half — so only their SIZE is wrong. The struct is
+#                     actively broken. Fix: emit a 4-byte slot type when no slot carries a
+#                     relocation. i386 stays byte-identical by construction (4 * N either way),
+#                     which is the acceptance test.
+#
+#                     ⚠ NO EXISTING GATE CAN SEE THIS. check_symbol_bindings.py compares each
+#                     recovered symbol's size against the SHIPPED i386 object, where `void *[9]`
+#                     is 36 bytes and matches exactly. The defect only exists on a target nothing
+#                     in the gate set builds for.
+#
+#                     ⚠ IT IS IN THE 95-SECOND PIPELINE, NOT A POST-PASS. Repairing it changes
+#                     `generated/allobj`, so it needs the full nine gates and a re-check that all
+#                     145 objects still recompile byte-identical — which is why it is recorded
+#                     here rather than done in the same session that found it.
 
 # WASM-INDIRECT-SIGS  2026-08-27 (tenth session): THE INDIRECT HALF OF WASM-SIGMISMATCH,
 #                     WHICH THAT ENTRY CLOSES BY PREDICTING. It was right. Found by RUNNING

@@ -332,6 +332,33 @@ MdtWorld.c:98  heap-buffer-overflow, WRITE of size 4, 48 bytes past a
 with **zero** errors on the same sources and sanitizer, which is what makes those pointer width
 rather than the recovery.
 
+### `lp64_pipeline.sh` — the post-passes, the acceptance test and the harness, in order
+
+`lp64_run.sh` runs whatever is in `$KD_OUT`, and `tools/`'s two post-passes are what make that
+LP64-correct — on a COPY, because they edit in place. Doing it by hand is four commands with two
+ways to get the order wrong and one easy way to forget the copy and overwrite `/tmp/kd_out`.
+
+```bash
+./test/lp64_pipeline.sh                      # all three scenes
+./test/lp64_pipeline.sh test/scene_chain.c
+```
+
+It **stops before the harness** if the i386 acceptance test is not clean, because a post-pass that
+changed the shipped target is a bug in the post-pass, and every LP64 row after it would be measuring
+that instead of pointer width.
+
+Where it stands as of 2026-08-28, with the baked-size class closed:
+
+| | first thing it hits |
+|---|---|
+| before any post-pass | `MdtWorld.c:98` — the FIRST STATEMENT of the first scene |
+| post-passes as they were | `MeDictInsert`, two files from the `MdtBody` pool stride that caused it |
+| after the pool + product forms | `scene_chain` → `MdtPartition`/`MdtMainLoop`; `boxes`/`ragdoll` → one site, `McdFrame.c:84` |
+
+**Still FAIL, and that is the honest reading** — three classes remain, counted in `../proven.txt`
+`LP64-BAKED-SIZES`. What moved is that the harness now gets through world creation, framework
+creation, every pool and the interaction table before it finds anything.
+
 ---
 
 ## Bisecting — when an object is known to be wrong

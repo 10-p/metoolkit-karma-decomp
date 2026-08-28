@@ -34,15 +34,34 @@ the constant it replaces, by the check above. It is written `(int)sizeof(...)`
 and the cast is load-bearing — `sizeof` is `size_t`, so `count * sizeof(T)` is
 UNSIGNED where `count * 0x98` was `int`, with different overflow rules, and gcc
 emits a different loop for it. The i386 acceptance test caught exactly that:
-CxSmallSort's object grew by 64 bytes. No metoolkit struct is near 2 GB, so the
-cast costs nothing. So the acceptance test is the one
-this project always uses — every object recompiled from the rewritten sources is
-BYTE-IDENTICAL — and it passes by construction. Verify it anyway.
+CxSmallSort's object grew by 64 bytes.
+
+★ AND THAT PRESCRIPTION IS NOT GENERAL, WHICH IS WHY THIS TOOL NOW COMPILES
+EVERY SITE ITSELF. The next site to need it wanted the opposite spelling:
+`pMVar1->bucketCount << 2` is byte-identical as `(int)(count * sizeof(T))` and
+DIFFERS as `count * (int)sizeof(T)`. Both compute the same value on every
+target; which one gcc schedules the same way is a property of the surrounding
+function, not a rule anyone can write down in advance. So each candidate is
+compiled and compared against the baseline object, whichever reproduces it
+byte for byte is kept, and a site where neither does is declined and reported.
+"No-op by construction" is a claim, and the compiler is the only thing that can
+check it — the corpus-wide acceptance test now confirms rather than discovers.
+
+THREE SPELLINGS OF THE ONE DEFECT are covered: `create(LITERAL)`,
+`create(COUNT * K)`, and `MePoolAPI.init(pool, n, K, align)` — where the size is
+argument THREE and there is no assignment target to take a type from. The pool
+form is the worst of the three: `K` is an ELEMENT STRIDE, so at LP64 every
+element overlaps the one before it and the crash surfaces in a red-black tree
+walk two files away. Its element type is pinned by three facts (getStruct's
+declared type, the i386 literal, and the constant the shipped amd64 build passes
+in the same function — `amd64_oracle.py`), because the FIRST of those is wrong
+for one of the seven: `constraintPool`'s getStruct is typed as the base
+`MdtConstraint` and the pool is sized for `MdtContact`.
 
 It is a POST-PASS, like `fix_ptrwidth.py`, because it needs a compiler to
 measure `sizeof`. §4's 95-second output is not the LP64-correct source; this and
 `fix_ptrwidth.py` together are what make it so. Run it on a COPY: it edits in
-place.
+place. `test/lp64_pipeline.sh` does the copy, both passes and the gate in order.
 """
 import os
 import re
@@ -52,13 +71,16 @@ import sys
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WORK = '/tmp/kd_sizeof'
 
-# `X = [(cast)] (MeMemoryAPI.create)(LITERAL[, ...])`
+# `X = [(cast)] (MeMemoryAPI.create)(SIZE[, ...])`. SIZE runs to the matching
+# `,` or `)` and may span lines and one level of parentheses — Ghidra wraps the
+# interaction-table allocation across two — so it is matched permissively here
+# and VALIDATED below. Anything that is neither a literal nor a `count * size`
+# product is declined and reported, never guessed at.
 ALLOC = re.compile(
     r'(?m)^(?P<ind>[ \t]*)(?P<var>[A-Za-z_]\w*)[ \t]*=[ \t]*'
     r'(?P<pre>\(?[ \t]*(?:\([A-Za-z_][\w ]*\**\)[ \t]*)?\(?)'
-    r'(?P<fn>MeMemoryAPI\.\w+|MePoolAPI\.\w+)\)?[ \t]*\([ \t]*'
-    r'(?P<size>(?:[A-Za-z_]\w*|\([^()]*\))[ \t]*(?:<<|\*)[ \t]*(?:0x[0-9a-f]+|\d+)'
-    r'|0x[0-9a-f]+|\d+)(?P<rest>[,)])')
+    r'(?P<fn>MeMemoryAPI\.\w+|MePoolAPI\.\w+)\)?[ \t]*\([ \t\r\n]*'
+    r'(?P<size>(?:[^,;()]|\([^()]*\))+?)(?P<rest>[,)])')
 
 # `poolSize << 2` — a COUNT times the i386 size of the element, which for a
 # `void **` is the pointer size. Same defect as a baked `sizeof`, different
@@ -66,8 +88,73 @@ ALLOC = re.compile(
 #     ppvVar2 = (MeMemoryAPI.create)(poolSize << 2);   /* void ** */
 # 4 is sizeof(void *) HERE and 8 at LP64, so the free-list is half the size it
 # needs to be and the loop below it writes off the end.
-SCALED = re.compile(r'^(?P<expr>[A-Za-z_]\w*|\([^()]*\))[ \t]*(?P<op><<|\*)[ \t]*'
-                    r'(?P<k>0x[0-9a-f]+|\d+)$')
+#
+# ★ THE COUNT IS NOT ALWAYS ONE IDENTIFIER, and restricting it to one missed the
+# defect that stopped `lp64_run.sh` after the pools were repaired:
+#
+#     pMVar4 = (MeMemoryAPI.create)(frame->geometryRegisteredCountMax *
+#                                   frame->geometryRegisteredCountMax * 0x1c);
+#
+# 0x1c is 28 is `sizeof(McdInteractions)` at i386 and 48 at LP64, so the
+# interaction table comes back at 58% of the size it needs — and the ASan report
+# lands in `McdFrameworkSetInteractions`, which is CORRECT CODE indexing a short
+# array, two hundred lines from the allocation that shortened it.
+#
+# ⚠ PRECEDENCE IS LOAD-BEARING IN THIS PATTERN. `A * B * K` may be rewritten as
+# `(A * B) * sizeof(T)`; `A + B * K` may NOT, because the `* K` binds to B alone
+# and parenthesising the sum changes the arithmetic. So the left operand is
+# allowed products, members, indexes and calls — and no top-level `+ - / % ? :`.
+SCALED = re.compile(r'^(?P<expr>[A-Za-z0-9_ \t()\[\]>.*+/%,-]*?[A-Za-z0-9_\])])'
+                    r'[ \t]*(?P<op><<|\*)[ \t]*(?P<k>0x[0-9a-f]+|\d+)$')
+_BADOP = re.compile(r'[+/%?:,]|(?<![-\w])-(?!>)')
+_GROUP = re.compile(r'\([^()]*\)')
+
+
+def scale_unsafe(expr):
+    """Is there an operator at TOP LEVEL that `* K` would not have applied to?
+
+    ⚠ ASKING WITHOUT STRIPPING THE PARENTHESES FIRST IS WRONG IN BOTH
+    DIRECTIONS, and the blunt version silently dropped a real repair:
+    `(geoTypeMaxCount + 9) * 0x28` is the geometry vtable table, the `+` is
+    inside its own group, and `* K` does apply to the whole thing. It read as
+    unsafe and the site went unrewritten — a decline that looks like a decision
+    and was a bug."""
+    prev = None
+    while prev != expr:
+        prev, expr = expr, _GROUP.sub(' ', expr)
+    return bool(_BADOP.search(expr))
+
+# ---------------------------------------------------------------------------
+# THE SAME DEFECT WITH THE SIZE IN ARGUMENT THREE, WHICH `ALLOC` CANNOT SEE.
+#
+#     (MePoolAPI.init)(&w->bodyPool, w->maxBodies, 0x240, 0x10);   MdtWorld.c:108
+#
+# 0x240 is 576 is `sizeof(MdtBody)` ON i386. `ALLOC` misses it twice over: the
+# call is not an assignment, so there is no target to take a type from, and the
+# size is the THIRD argument rather than the first. The consequence is worse
+# than a short allocation — it is an ELEMENT STRIDE, so at LP64 every body after
+# the first overlaps the one before it, `constraintDict` comes back as garbage,
+# and the crash surfaces two files away in `MeDictInsert` with nothing in the
+# backtrace pointing at the pool. That is where `lp64_run.sh` stopped once the
+# first-argument allocations were repaired.
+#
+# `MePool.h`: init(MePool *pool, int poolSize, int structSize, int alignment).
+POOL_INIT = re.compile(
+    r'\(\s*(?P<api>MePool\w*API)\s*\.\s*init\s*\)\s*\(\s*'
+    r'(?P<pool>[^,]+?)\s*,\s*(?P<count>[^,]+?)\s*,\s*'
+    r'(?P<size>0x[0-9a-f]+|\d+)\s*,')
+
+# `pMVar5 = (MePoolAPI.getStruct)(manager->linkPool);` — the pool's ELEMENT type,
+# named by the thing the caller assigns it to. This is the primary fact for a
+# pool site, exactly as the assignment target is for an allocation: the literal
+# and the shipped 64-bit build then CONFIRM it. It has to be corpus-wide,
+# because the pool is initialised in one object and drawn from in another —
+# `bodyPool` is set up in MdtWorld.c and used in MdtBody.c.
+GETSTRUCT = re.compile(
+    r'(?P<var>[A-Za-z_]\w*)\s*=\s*\(\s*MePool\w*API\s*\.\s*getStruct\s*\)\s*'
+    r'\(\s*(?P<pool>[^;]+?)\s*\)\s*;')
+
+BANNER = re.compile(r'(?m)^/\* ---- (\S+)')
 
 
 def includes(inc):
@@ -103,6 +190,285 @@ def elem_size(ty, inc, cache):
     return cache[ty]
 
 
+# ---------------------------------------------------------------------------
+# THE SECOND OPINION, AND IT COMES FROM A BUILD WE DID NOT MAKE.
+#
+# A pool's i386 element size does NOT pin the type: fourteen metoolkit types are
+# 20 bytes at i386 and four of them are 40 at 64-bit, so `0x14` alone would let
+# `linkPool` be rewritten as an array of `McdSphere`. The owner's UT2004 v3369
+# tree carries a 64-bit build of this same MathEngine source, so the constant it
+# passes in the same argument slot is a measurement of the answer:
+#
+#     MdtWorldCreate   i386  0x240 / 0x1ec        amd64  0x2b8 / 0x270
+#     sizeof at win64  MdtBody 696 = 0x2b8        MdtContact 624 = 0x270
+#
+# ★ AND IT IS LLP64, NOT LP64. That build is MSVC for Windows, where `long` is
+# four bytes; Android is eight. `sizeof(MdtBody)` is 696 there and 704 on
+# Android. So this is a check on WHICH TYPE, never a number to paste — the
+# rewrite stays `sizeof(T)` and lets each target's compiler answer for itself.
+# `x86_64-w64-mingw32-gcc` reproduces the win64 column exactly, which is what
+# makes the check mechanical; the self-check below asserts two of them against
+# the immediates actually present in the shipped `MdtWorldCreate`.
+#
+# The size is read out of the compiler's own type printer — `char (*)[696]` in
+# the diagnostic for `int x = &probe;`. That is a scrape, and this file's project
+# has been burned by scraping a build system for an answer the compiler should
+# have been asked directly (`proven.txt` UNICODE-GUARD-REGRESSION). The
+# difference that matters: this probe is a real translation unit compiled with
+# the real include path, so the number is the compiler's, not a reconstruction
+# of what the compiler would have said.
+WINCC = os.environ.get('KD_WINCC', 'x86_64-w64-mingw32-gcc')
+_WINSZ = re.compile(r'char \(\*\)\[(\d+)\]')
+
+
+def win_elem_size(ty, inc, cache):
+    """sizeof(*(ty)0) at Windows x86-64 (LLP64). None if unavailable."""
+    key = 'win:' + ty
+    if key in cache:
+        return cache[key]
+    os.makedirs(WORK, exist_ok=True)
+    src = os.path.join(WORK, 'w.c')
+    open(src, 'w').write(HEAD + 'char kd_probe[sizeof(*(' + ty + ')0)];\n'
+                         'int kd_force = &kd_probe;\n')
+    r = subprocess.run([WINCC, '-DWIN32', '-D_WIN32', '-c', '-o', os.devnull, src]
+                       + includes(inc), capture_output=True, text=True)
+    m = _WINSZ.search(r.stderr)
+    cache[key] = int(m.group(1)) if m else None
+    return cache[key]
+
+
+def enclosing(text, pos):
+    """The name in the nearest `/* ---- NAME ... */` banner above `pos`."""
+    last = None
+    for m in BANNER.finditer(text, 0, pos):
+        last = m.group(1)
+    return last
+
+
+def region_of(text, pos):
+    """The banner-delimited function body containing `pos` — a local's
+    declaration must be looked for in ITS function and nowhere else."""
+    start, end = 0, len(text)
+    for m in BANNER.finditer(text):
+        if m.start() <= pos:
+            start = m.start()
+        elif m.start() > pos:
+            end = m.start()
+            break
+    return text[start:end]
+
+
+def declared_type(region, var):
+    """`T *x;` -> 'T *'. Ghidra declares every local at the top of its body."""
+    m = re.search(r'(?m)^[ \t]*((?:const |struct )*[A-Za-z_]\w*[ \t]*\**)'
+                  r'[ \t]*' + re.escape(var) + r'[ \t]*;', region)
+    return re.sub(r'\s+', ' ', m.group(1)).strip() if m else None
+
+
+def pool_key(expr):
+    """`&w->bodyPool` -> 'bodyPool'; a bare local -> itself. The trailing name
+    is what identifies the pool across objects; the leading `&frame->` is not."""
+    ids = re.findall(r'[A-Za-z_]\w*', expr)
+    return ids[-1] if ids else None
+
+
+# ---------------------------------------------------------------------------
+# ★ PROVE THE NO-OP PER SITE INSTEAD OF ASSERTING IT.
+#
+# This file's own docstring said the rewrite is "no-op on i386 by construction"
+# and prescribed ONE spelling — `count * (int)sizeof(T)` — because `sizeof` is
+# `size_t` and an unsigned `count * sizeof(T)` made `CxSmallSort`'s object grow
+# by 64 bytes. That is true, and it is not general. The very next site to need
+# it wanted the OPPOSITE:
+#
+#     ppMVar3 = (MeMemoryAPI.create)(pMVar1->bucketCount << 2);
+#
+#     pMVar1->bucketCount * (int)sizeof(*(T **)0)     DIFFERS  (the prescribed one)
+#     (int)(pMVar1->bucketCount * sizeof(*(T **)0))   identical
+#
+# Both spellings compute the same value on every target; gcc simply schedules
+# them differently, and WHICH ONE survives is a property of the surrounding
+# function, not of the rule. So the tool now compiles each candidate and keeps
+# whichever reproduces the baseline object BYTE FOR BYTE — and if neither does,
+# the site is declined and reported rather than rewritten on a promise. The
+# whole-corpus acceptance test stops being the thing that catches this tool's
+# mistakes and becomes a confirmation of something already established.
+CFLAGS = ['-m32', '-O2', '-fno-pic', '-fno-strict-aliasing', '-std=gnu99',
+          '-w', '-Wno-int-conversion', '-Wno-incompatible-pointer-types',
+          '-DLINUX']
+
+
+def compiles_identically(fn, text, build, inc):
+    """Does this source still produce the baseline .o, byte for byte?
+
+    ⚠ THE FILE HAS TO KEEP ITS NAME. gcc records the source basename in an
+    `STT_FILE` symbol, so compiling the same text from `/tmp/t.c` produces a
+    different object and reads exactly like a codegen change. That cost a
+    bisection round: the disassembly was identical and `cmp` still said no."""
+    base = fn[:-2]
+    ref = os.path.join(build, base + '.o')
+    if not os.path.exists(ref):
+        return False
+    d = os.path.join(WORK, 'ident')
+    os.makedirs(d, exist_ok=True)
+    src = os.path.join(d, fn)
+    open(src, 'w').write(text)
+    obj = os.path.join(d, base + '.probe.o')
+    r = subprocess.run(['gcc'] + CFLAGS + ['-I' + os.path.join(HERE, 'include')]
+                       + includes(inc) + ['-c', '-o', obj, src],
+                       capture_output=True)
+    if r.returncode:
+        return False
+    try:
+        return open(ref, 'rb').read() == open(obj, 'rb').read()
+    except OSError:
+        return False
+
+
+def spellings(count, ty):
+    """The candidate ways to say `count elements of T`, most-constrained first.
+    Both are correct C on every target; only their i386 codegen differs."""
+    return ['(%s) * (int)sizeof(*(%s)0)' % (count, ty),
+            '(int)((%s) * sizeof(*(%s)0))' % (count, ty)]
+
+
+
+# `pMVar1->linkPool = pMVar2;` two lines above `(MePoolAPI.init)(pMVar2, ...)`.
+# The init spells the pool as a LOCAL and every getStruct spells it as a MEMBER,
+# so without this the two never meet and both of McdModelPairManager's pools
+# decline. NEAREST PRECEDING wins: that function reuses `pMVar2` for both pools,
+# so any-match would resolve the pair pool to the link pool's type.
+ALIAS = (r'(?:\w+\s*->\s*(?P<a>\w+)\s*=\s*%s\s*;'
+         r'|%s\s*=\s*&\s*\w+\s*->\s*(?P<b>\w+)\s*;)')
+
+
+def alias_member(region, pos, local):
+    """The struct member this local was last made to refer to, before `pos`."""
+    pat = re.compile(ALIAS % (re.escape(local), re.escape(local)))
+    last = None
+    for m in pat.finditer(region, 0, pos):
+        last = m.group('a') or m.group('b')
+    return last
+
+
+def same_type(a, b, inc, cache):
+    """Are these two spellings the SAME type? `McdGeometryInstance` and
+    `struct _McdGeometryInstance` are, and a candidate list that cannot say so
+    reports an ambiguity that does not exist. Asked of the compiler rather than
+    inferred from the names."""
+    key = ('compat', a, b)
+    if key in cache:
+        return cache[key]
+    os.makedirs(WORK, exist_ok=True)
+    src = os.path.join(WORK, 'c.c')
+    open(src, 'w').write(HEAD + 'int kd_c[__builtin_types_compatible_p(%s, %s) '
+                         '? 1 : -1];\n' % (a, b))
+    cache[key] = subprocess.run(
+        ['gcc', '-m32', '-DLINUX', '-w', '-c', '-o', os.devnull, src]
+        + includes(inc), capture_output=True).returncode == 0
+    return cache[key]
+
+
+_TYPES = []
+
+
+def all_types(inc):
+    """Every tag and typedef the headers give a body to. The universe a
+    two-build pin is drawn from."""
+    if _TYPES:
+        return _TYPES
+    names = set()
+    for root in (inc, os.path.join(HERE, 'include')):
+        for dirpath, _d, files in os.walk(root):
+            for fn in files:
+                if not fn.endswith('.h'):
+                    continue
+                txt = open(os.path.join(dirpath, fn), errors='ignore').read()
+                for m in re.finditer(r'\bstruct\s+(_?\w+)\s*\{', txt):
+                    names.add('struct ' + m.group(1))
+                for m in re.finditer(r'\}\s*(\w+)\s*;', txt):
+                    names.add(m.group(1))
+    _TYPES.extend(sorted(names))
+    return _TYPES
+
+
+def pin_by_size(lit, seen, inc, cache):
+    """Types whose i386 size is the baked stride AND whose 64-bit size the
+    shipped amd64 build actually passes in this function. Two builds we did not
+    make, agreeing. Returns the distinct types that survive."""
+    out = []
+    for ty in all_types(inc):
+        p = ty + ' *'
+        if elem_size(p, inc, cache) != lit:
+            continue
+        w = win_elem_size(p, inc, cache)
+        if w is None or w not in seen:
+            continue
+        if not any(same_type(ty, o, inc, cache) for o in out):
+            out.append(ty)
+    return out
+
+
+# The bridge to `amd64_oracle.py`. Imported lazily and by path, because that
+# tool needs a shipped SDK this repo does not carry: without it the pool half
+# declines and says so, and the allocation half — which never needed it — is
+# unaffected.
+_AMD64 = {}
+
+
+def amd64_constants(function):
+    """Every integer constant the SHIPPED 64-bit build materialises in this
+    function, or None if it cannot be read. `None` and `set()` are different
+    answers and the caller must not conflate them: "not in that build" is not
+    "that build passes no such constant"."""
+    if function in _AMD64:
+        return _AMD64[function]
+    if 'mod' not in _AMD64:
+        try:
+            import importlib.util
+            p = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                             'amd64_oracle.py')
+            spec = importlib.util.spec_from_file_location('kd_amd64_oracle', p)
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            mod.extract()
+            _AMD64['mod'] = mod
+        except SystemExit:
+            _AMD64['mod'] = None
+        except Exception:
+            _AMD64['mod'] = None
+    mod = _AMD64['mod']
+    if mod is None:
+        _AMD64[function] = None
+        return None
+    _path, lines = mod.find(function)
+    _AMD64[function] = mod.constants(lines) if lines else None
+    return _AMD64[function]
+
+
+def pool_elem_types(corpus):
+    """{pool-name: {declared type of what getStruct hands back}}.
+
+    A pool reached through a MEMBER (`manager->linkPool`) is matched by that
+    member's name across every object, because the init and the getStruct are
+    usually in different ones. A pool held in a LOCAL is matched only inside its
+    own function — `pMVar1` and `pMVar2` are Ghidra's names for a hundred
+    unrelated variables and a corpus-wide match on one would be meaningless."""
+    member, local = {}, {}
+    for path, text in corpus.items():
+        for m in GETSTRUCT.finditer(text):
+            key = pool_key(m.group('pool'))
+            ty = declared_type(region_of(text, m.start()), m.group('var'))
+            if not key or not ty:
+                continue
+            if re.search(r'->|\.', m.group('pool')):
+                member.setdefault(key, set()).add(ty)
+            else:
+                local.setdefault((path, enclosing(text, m.start()), key),
+                                 set()).add(ty)
+    return member, local
+
+
 def main():
     srcdir, build = sys.argv[1], sys.argv[2]
     root = sys.argv[3] if len(sys.argv) > 3 else os.path.join(HERE, '..', 'Thirdparty',
@@ -120,7 +486,29 @@ def main():
                  'measured %r, want 564. The size probe is not measuring '
                  'anything.' % probe)
 
+    # ---- THE SECOND SELF-CHECK, for the pool half. These two numbers are the
+    # immediates the SHIPPED 64-bit build passes in `MdtWorldCreate` (0x2b8 and
+    # 0x358). If MinGW does not reproduce them then either the probe is broken
+    # or these headers do not describe the original's 64-bit layout, and in
+    # either case no pool site below should be rewritten on its evidence.
+    win = {t: win_elem_size(t, inc, cache) for t in ('MdtBodyID', 'MdtWorldID')}
+    pool_ok = win == {'MdtBodyID': 696, 'MdtWorldID': 856}
+    if not pool_ok:
+        print('  WIN64 CONFIRMATION UNAVAILABLE — measured %r, want '
+              "{'MdtBodyID': 696, 'MdtWorldID': 856} (the immediates in the "
+              'shipped amd64 MdtWorldCreate).' % win)
+        print('     Pool element sizes will be left ALONE rather than rewritten '
+              'on one fact.')
+
+    corpus = {}
+    for fn in sorted(os.listdir(srcdir)):
+        if fn.endswith('.c') and os.path.exists(os.path.join(build, fn[:-2] + '.o')):
+            corpus[fn] = open(os.path.join(srcdir, fn), errors='ignore').read()
+    member_pools, local_pools = pool_elem_types(corpus)
+
     fixed = declined = 0
+    pooled = pool_declined = 0
+    pool_notes = []
     reasons = {}
     for fn in sorted(os.listdir(srcdir)):
         if not fn.endswith('.c') or not os.path.exists(
@@ -128,15 +516,21 @@ def main():
             continue
         path = os.path.join(srcdir, fn)
         text = open(path, errors='ignore').read()
-        out, last, n = [], 0, 0
+        edits = []
         for m in ALLOC.finditer(text):
-            raw = m.group('size').strip()
+            raw = re.sub(r'\s+', ' ', m.group('size')).strip()
             scaled = SCALED.match(raw)
-            lit = 0 if scaled else int(raw, 0)
+            if scaled and scale_unsafe(scaled.group('expr')):
+                scaled = None          # `A + B * K`: the K binds to B alone
+            lit = 0 if scaled else (int(raw, 0) if re.fullmatch(
+                r'0x[0-9a-f]+|\d+', raw) else None)
             d = re.search(r'(?m)^[ \t]*((?:const |struct )*[A-Za-z_]\w*[ \t]*\**)'
                           r'[ \t]*' + re.escape(m.group('var')) + r'[ \t]*;', text)
             why = None
-            if not scaled and lit < 8:
+            reps = []
+            if lit is None:
+                why = 'size is neither a literal nor count * size'
+            elif not scaled and lit < 8:
                 why = 'size below 8 bytes'
             elif not d:
                 why = 'target has no local declaration'
@@ -152,11 +546,11 @@ def main():
                         why = ('%s elements are %d bytes, the scale is %d'
                                % (ty, sz, k))
                     else:
-                        rep = '(%s) * (int)sizeof(*(%s)0)' % (scaled.group('expr'), ty)
+                        reps = spellings(scaled.group('expr'), ty)
                 elif lit == sz:
-                    rep = '(int)sizeof(*(%s)0)' % ty
+                    reps = ['(int)sizeof(*(%s)0)' % ty]
                 elif lit % sz == 0:
-                    rep = '%d * (int)sizeof(*(%s)0)' % (lit // sz, ty)
+                    reps = spellings(str(lit // sz), ty)
                 else:
                     why = ('%s is %d bytes and does not divide %d'
                            % (ty, sz, lit))
@@ -165,20 +559,124 @@ def main():
                 reasons[why.split(' is ')[0][:40]] = reasons.get(
                     why.split(' is ')[0][:40], 0) + 1
                 continue
-            out.append(text[last:m.start('size')])
-            out.append(rep)
-            last = m.end('size')
-            n += 1
-        if n:
-            out.append(text[last:])
-            open(path, 'w').write(''.join(out))
-            fixed += n
+            edits.append((m.start('size'), m.end('size'), reps, 'alloc', None))
+
+        # ---- the pool element strides. Both patterns are matched against the
+        # ORIGINAL text and applied together below, back to front, so neither
+        # invalidates the other's offsets. They cannot overlap in any case:
+        # `ALLOC` requires an assignment target and matches the first argument.
+        for m in POOL_INIT.finditer(text):
+            lit = int(m.group('size'), 0)
+            raw_pool = m.group('pool')
+            fname = enclosing(text, m.start())
+            region = region_of(text, m.start())
+            key = pool_key(raw_pool)
+            if re.search(r'->|\.', raw_pool):
+                cands = member_pools.get(key, set())
+                how = 'member %s' % key
+            else:
+                cands = set(local_pools.get((fn, fname, key), set()))
+                how = 'local %s' % key
+                # …and the same pool spelled as the member it was just stored
+                # into, which is how every getStruct in another object sees it.
+                alias = alias_member(region, m.start() - text.index(region), key)
+                if alias:
+                    cands |= member_pools.get(alias, set())
+                    how = 'local %s (= ->%s)' % (key, alias)
+            why = note = None
+            reps = []
+            seen = amd64_constants(fname)
+            # ---- FACT 1, the primary: what does getStruct hand back? Kept only
+            # if its i386 size IS the stride. `constraintPool` fails that on
+            # purpose — getStruct is typed as the base `MdtConstraint` (352) and
+            # the pool is sized for the largest variant (492) — and a tool that
+            # trusted the primary blindly would have sized the pool for the base
+            # class and corrupted every contact.
+            typed = [t for t in sorted(cands) if elem_size(t, inc, cache) == lit]
+            ty = typed[0] if len(typed) == 1 else None
+            src_of = 'getStruct'
+            if ty is None and pool_ok and seen:
+                # ---- FACT 2, the fallback: the only type whose i386 size is the
+                # stride AND whose 64-bit size this function is SEEN to pass in
+                # the shipped amd64 build. Two builds nobody here made, agreeing.
+                pin = pin_by_size(lit, seen, inc, cache)
+                if len(pin) == 1:
+                    ty, src_of = pin[0] + ' *', 'i386+win64 pin'
+                elif pin:
+                    why = ('pool %s: %d bytes is ambiguous — %s all fit both '
+                           'builds' % (how, lit, ', '.join(pin)))
+                else:
+                    why = ('pool %s: no type is %d bytes at i386 with a 64-bit '
+                           'size %s passes' % (how, lit, fname))
+            if ty is None and why is None:
+                why = ('pool %s: getStruct names %s and none is %d bytes'
+                       % (how, sorted(cands) or '(nothing)', lit))
+            if why:
+                pass
+            elif not pool_ok:
+                why = 'no win64 confirmation available'
+            else:
+                wsz = win_elem_size(ty, inc, cache)
+                if wsz is None:
+                    why = 'pool %s: %s has no win64 size' % (how, ty)
+                elif seen is None:
+                    why = ('pool %s: %s is not in the shipped amd64 build'
+                           % (how, fname))
+                elif wsz not in seen:
+                    why = ('pool %s: %s is %d at win64, which %s does not '
+                           'pass' % (how, ty, wsz, fname))
+                else:
+                    reps = ['(int)sizeof(*(%s)0)' % ty]
+                    note = ('%-26s %-26s %4d -> sizeof(%s) via %s '
+                            '[win64 %d, and %s passes it]'
+                            % (fn, fname, lit, ty, src_of, wsz, fname))
+            if why:
+                pool_declined += 1
+                pool_notes.append('%s %s  DECLINED: %s' % (fn, fname, why))
+                continue
+            edits.append((m.start('size'), m.end('size'), reps, 'pool', note))
+
+        # ---- APPLY, back to front, VERIFYING EACH. Every accepted edit must
+        # leave the object byte-identical at i386; the candidates differ only in
+        # how gcc schedules them and which one survives is a property of the
+        # surrounding function (see `spellings`). Back to front so that an
+        # earlier splice never moves a later match's offsets.
+        dirty = 0
+        for start, end, reps, kind, note in sorted(edits, key=lambda e: -e[0]):
+            for rep in reps:
+                cand = text[:start] + rep + text[end:]
+                if compiles_identically(fn, cand, build, inc):
+                    text = cand
+                    dirty = 1
+                    if kind == 'alloc':
+                        fixed += 1
+                    else:
+                        pooled += 1
+                        pool_notes.append(note)
+                    break
+            else:
+                if kind == 'alloc':
+                    declined += 1
+                    reasons['no spelling reproduces the i386 object'] = reasons.get(
+                        'no spelling reproduces the i386 object', 0) + 1
+                else:
+                    pool_declined += 1
+                    pool_notes.append('%s  DECLINED: no spelling of it reproduces '
+                                      'the i386 object' % fn)
+
+        if dirty:
+            open(path, 'w').write(text)
     print('  allocation sizes rewritten from a literal to sizeof : %d' % fixed)
     print('  declined (reported, not guessed)                    : %d' % declined)
     for r, c in sorted(reasons.items(), key=lambda kv: -kv[1])[:6]:
         print('     %4d  %s' % (c, r))
-    print('  -> no-op on i386/wasm32/armv7 by construction: the constant IS')
-    print('     sizeof there. Acceptance test is every .o byte-identical.')
+    print('  POOL element strides rewritten (arg 3 of MePool init): %d' % pooled)
+    print('  pool sites declined                                 : %d' % pool_declined)
+    for note in pool_notes:
+        print('     %s' % note)
+    print('  -> every rewrite above was COMPILED and compared: each one')
+    print('     reproduces its baseline i386 object byte for byte. The')
+    print('     corpus-wide acceptance test confirms; it no longer discovers.')
     return 0
 
 

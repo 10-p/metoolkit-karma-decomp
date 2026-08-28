@@ -1152,6 +1152,81 @@ McdTriangleList       real: same run, same evidence. These two objects account f
 #                     a build that no longer existed. `cmake` will not rebuild what it thinks is
 #                     current, so the failure is silent. Check the newest `.c.o` against `git log`.
 
+# LP64-FIELD-OFFSETS 2026-08-28 (twelfth session, later): A STRUCT FIELD ADDRESSED BY A BAKED BYTE
+#                     OFFSET. 22 sites repaired, and the class turned out to be a quarter the size
+#                     layout_check.py reports because that column is two classes added together.
+#
+#                       *(code **)((char *)pMVar1 + 200) = McdModelUpdatePathCompatible;
+#                       McdModelPairManagerSetPoolFullHandler(*(void **)((char *)pMVar1 + 0x2c), ...);
+#
+#                     200 and 0x2c are CxSmallSort's `mAABBUpdateFn` and `mManager` ON i386; at
+#                     LP64 they are 392 and 80. The repair is a PURE ADDRESS RE-SPELLING —
+#                     `*(T *)((char *)p + K)` becomes `*(T *)&p->FIELD`, so the cast and therefore
+#                     the expression's type are untouched and only the address computation moves
+#                     from a number to something the compiler recomputes per target.
+#                     tools/fix_literal_offsets.py.
+#
+#                     ⚠ layout_check.py's "OFFSET 128 across 10 objects" IS TWO CLASSES. Only 27
+#                     are struct-field offsets (21 in McdSpace.c, 6 in ReadWriteKeaInputToFile.c).
+#                     The other ~100 are Ghidra's INVENTED STACK FRAMES — `(int)&local + K`, MdtBcl
+#                     70 and MdtMainLoop 25 — which are a decompilation defect, not a layout one,
+#                     and do not belong in that bucket at all. Quoting 128 as LP64 exposure
+#                     overstates it by 4.7x.
+#
+#                     THE DECLARED TYPE IS THE WRONG ONE, FOR THE FOURTH TIME. `pMVar1` is declared
+#                     `McdSpaceID` = `McdSpace *`, and McdSpace is an OPAQUE handle — the object is
+#                     really a CxSmallSort. So the concrete type is inferred from the offsets: the
+#                     struct on which EVERY offset used against that declared type in the file
+#                     lands on a real field. For McdSpace.c that set is {4, 0xc, 0x18, 0x1c, 0x24,
+#                     0x2c, 0xc8, 0xcc} and CxSmallSort is the only complete type covering it.
+#                     Requiring ALL of them is what makes it a measurement — one offset alone fits
+#                     dozens of structs, as the tool's own decline lines show.
+#
+#                     CONFIRMED AGAINST THE SHIPPED 64-BIT BUILD: amd64 McdSpaceAxisSortCreate
+#                     touches displacements 0x50 and 0x188, which are exactly mManager (80) and
+#                     mAABBUpdateFn (392) measured from kd_types.h's own declaration. Two
+#                     independent 64-bit sources agreeing on a layout the i386 build cannot express.
+#
+#                     ⚠ PARAMETERS ARE NOT DECLARATIONS, and missing that repaired 2 of 21 sites.
+#                     Ghidra writes locals as `T x;` at the top of a body and parameters in the
+#                     signature; a locals-only lookup found `pMVar1` and missed `s` and `space` in
+#                     every other function of the same file. The other 19 sites were reported as
+#                     "declined" for want of a type written down three lines above them.
+#
+#                     ⚠ AND 1,545 SITES ARE OUT OF SCOPE, NOT DECLINED. Most `*(T *)(x + K)` bases
+#                     are `void *` or `undefined4 *` — a type that carries no structure tells you
+#                     nothing, and reporting them as refusals buries the ones that can be repaired.
+#                     They are counted on their own line.
+
+# LP64-DERIVED-FIELDS 2026-08-28 (twelfth session, later): ★ THE 281-SITE COUNT IN
+#                     LP64-BAKED-SIZES IS AN UNDERCOUNT, and the class is not about geometry.
+#                     That figure came from grepping for the FIELD NAMES of `_McdGeometry`
+#                     (mRefCtAndID / prev / next / frame), which finds the geometry instances and
+#                     nothing else. The shape is general: wherever Ghidra holds a BASE-CLASS
+#                     pointer and the object is a DERIVED struct, it addresses the derived fields
+#                     as an index past the base.
+#
+#                     The instance that now blocks scene_ragdoll and scene_boxes_on_plane — the
+#                     LAST error in either, down from a first-statement abort — is not geometry at
+#                     all. CxSmallSort::MoveStartMarkerDown holds a `Link *` and the object is a
+#                     `CxSmallSortMarker`:
+#
+#                       *(float *)&(pLVar11[1].mNext)     i386 byte 8   -> mOrdinate
+#                       *(char  *)&pLVar11[2].mNext       i386 byte 16  -> mType
+#
+#                     ⚠ AND BOTH OF THOSE HAPPEN TO BE RIGHT AT LP64 BY COINCIDENCE — Link doubles
+#                     to 16 bytes and CxSmallSortMarker's fields move to 16 and 32, so the same
+#                     indices still land. That is worth knowing before "fixing" them: the SEGV is
+#                     at line 1020 reading `inMarker->mRep`, i.e. the marker handed in is already
+#                     wrong, so the defect is upstream in how the marker table is built. Bisect
+#                     before believing, as MCD-GEOM-FLOAT-FIELDS records.
+#
+#                     So the next session's search should be for the SHAPE — `base[k].field` where
+#                     the pointer's declared type is a base class — not for the geometry names. The
+#                     repair is the same one fix_literal_offsets.py already performs, and its
+#                     concrete-type inference (the struct on which every offset lands) is the
+#                     mechanism that names the derived type.
+
 # LP64-WRONG-TYPE     2026-08-28 (twelfth session, later): ★ A CORRECTION TO LP64-BAKED-SIZES, AND
 #                     THE COMMIT THAT ENTRY DESCRIBES SHIPPED SEVEN WRONG REWRITES. Every one of
 #                     them passed the i386 byte-identity gate. The gate cannot see this class and

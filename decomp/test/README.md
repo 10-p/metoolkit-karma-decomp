@@ -353,12 +353,14 @@ Where it stands as of 2026-08-28, with the baked-size class closed:
 |---|---|
 | before any post-pass | `MdtWorld.c:98` — the FIRST STATEMENT of the first scene |
 | post-passes as they were | `MeDictInsert`, two files from the `MdtBody` pool stride that caused it |
-| + pool strides, product counts, rebuilt data, word loops | `scene_chain` → `MdtPartition`/`MdtMainLoop`; **boxes + ragdoll → ONE site**, `McdSpace.c:160` |
+| + pool strides, product counts, rebuilt data, word loops, field offsets | `scene_chain` → `MdtPartition`/`MdtMainLoop` (25); **boxes + ragdoll → ONE error each** |
 
-**Still FAIL, and that is the honest reading** — but boxes and ragdoll are down to a single
-literal byte offset (`*(void **)((char *)pMVar1 + 0x2c)`, which is `CxSmallSort::mManager`), and
-`scene_chain` is a separate front in `MdtPartition`/`MdtMainLoop`. Counted in `../proven.txt`
-`LP64-BAKED-SIZES`, `LP64-WRONG-TYPE`, `LP64-WORD-LOOPS` and `LP64-REBUILT-DATA`.
+**Still FAIL, and that is the honest reading.** But `scene_boxes_on_plane` and `scene_ragdoll` are
+down from aborting on the first statement of the first scene to a single SEGV in
+`CxSmallSort::MoveStartMarkerDown`, which `../proven.txt` `LP64-DERIVED-FIELDS` characterises —
+and warns is upstream of the two indices it looks like. `scene_chain` is a separate front in
+`MdtPartition`/`MdtMainLoop`. See `LP64-BAKED-SIZES`, `LP64-WRONG-TYPE`, `LP64-WORD-LOOPS`,
+`LP64-REBUILT-DATA` and `LP64-FIELD-OFFSETS`.
 
 ---
 

@@ -43,7 +43,7 @@ is the same number on i386 and the right number everywhere else. `n` is
 recovered from the i386 arithmetic and must come out whole, or the site is
 declined and reported.
 
-SCOPE: two loops in the corpus have this exact shape. It is a post-pass rather
+SCOPE: three loops in the corpus have this shape. It is a post-pass rather
 than a `ghidra_clean` rule because it needs a compiler to measure `offsetof`.
 Run it on a COPY: it edits in place.
 """
@@ -55,11 +55,22 @@ import sys
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WORK = '/tmp/kd_wordloop'
 
-# for (V = COUNT; V != 0; V = V - 1) { P->F1 = ...; P = (T *)&P->F2; }
-LOOP = re.compile(
-    r'for \((?P<v>\w+) = (?P<count>[^;]+?); (?P=v) != 0; (?P=v) = (?P=v) (?:- 1|\+ -1)\) \{\s*'
-    r'(?P<p>\w+)->(?P<f1>\w+) = [^;]+;\s*'
-    r'(?P=p) = \((?P<ty>[\w ]+) \*\)&(?P=p)->(?P<f2>\w+);\s*\}', re.S)
+# for (V = COUNT; V != 0; V = V - 1) { P->F1... = ...; P = (T *)&P->F2...; }
+#
+# ⚠ THE STEP IS NOT ALWAYS A DIRECT MEMBER. CxSmallSort::New walks a base-class
+# subobject —
+#
+#     pCVar4 = (CxSmallSortRep *)&(pCVar4->super_Link).mPrev;
+#
+# — so the parenthesised, dotted path has to be part of the pattern. Matching
+# only `&p->field` found McdFrame's loop and silently missed this one, which is
+# the loop that actually overruns the CxSmallSortRep table by 800 bytes.
+PATH = r'\(?(?P=p)->\w+\)?(?:\s*\.\s*\w+)*'
+LOOP_SRC = (r'for \((?P<v>\w+) = (?P<count>[^;]+?); (?P=v) != 0; '
+            r'(?P=v) = (?P=v) (?:- 1|\+ -1)\) \{\s*'
+            r'\(?(?P<p>\w+)->\w+\)?(?:\s*\.\s*\w+)*\s*=\s*[^;]+;\s*'
+            r'(?P=p) = \((?P<ty>[\w ]+) \*\)&\(?(?P=p)->(?P<f2>\w+(?:\)?\s*\.\s*\w+)*)\)?;\s*\}')
+LOOP = re.compile(LOOP_SRC, re.S)
 
 # `(uint)(EXPR * K) >> k` — Ghidra's rendering of `bytes / 4`.
 SHIFTED = re.compile(r'^\(uint\)\((?P<expr>.*?)\s*\*\s*(?P<sz>0x[0-9a-f]+|\d+)\s*\)'
@@ -149,9 +160,11 @@ def main():
         edits = []
         for m in LOOP.finditer(text):
             ty = m.group('ty').strip()
+            # `(p->super_Link).mPrev` captures as `super_Link).mPrev`
+            f2 = re.sub(r'\s*\)\s*\.\s*', '.', m.group('f2')).strip()
             raw = re.sub(r'\s+', ' ', m.group('count')).strip()
             step = measure('((char *)&((%s *)0)->%s - (char *)0)'
-                           % (ty, m.group('f2')), inc, cache)
+                           % (ty, f2), inc, cache)
             size = measure('sizeof(*(%s *)0)' % ty, inc, cache)
             why = None
             if not step or not size:
@@ -181,10 +194,10 @@ def main():
                 continue
             rep = ('(uint)(%s * (int)sizeof(*(%s *)0)) / '
                    '(uint)((char *)&((%s *)0)->%s - (char *)0)'
-                   % (count_expr, ty, ty, m.group('f2')))
+                   % (count_expr, ty, ty, f2))
             edits.append((m.start('count'), m.end('count'), rep,
                           '%-26s %s trip count: %d-byte words -> / offsetof(%s, %s)'
-                          % (fn, ty, step, ty, m.group('f2'))))
+                          % (fn, ty, step, ty, f2)))
         for start, end, rep, note in sorted(edits, key=lambda e: -e[0]):
             cand = text[:start] + rep + text[end:]
             if compiles_identically(fn, cand, build, inc):

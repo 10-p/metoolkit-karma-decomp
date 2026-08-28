@@ -662,6 +662,41 @@ Only **two** of the nineteen `p = (T *)&p->field` sites are this defect; in the 
 whole struct, which is ordinary array iteration and scales on its own. The tool checks that and
 skips them.
 
+> ⚠ **The step is not always a direct member.** `CxSmallSort::New` walks a base-class subobject —
+> `pCVar4 = (CxSmallSortRep *)&(pCVar4->super_Link).mPrev;` — so the parenthesised, dotted path has
+> to be part of the pattern. Matching only `&p->field` found McdFrame's loop and silently missed
+> the one that actually overruns the `CxSmallSortRep` table by 800 bytes. Three sites total.
+
+### `fix_literal_offsets.py` — a struct field addressed by a baked byte offset
+
+```bash
+python3 tools/fix_literal_offsets.py /tmp/kd_lp64/allobj /tmp/kd_build
+#   -> 22 rewritten, 0 declined, 1545 out of scope
+```
+
+`*(code **)((char *)p + 200)` is `CxSmallSort::mAABBUpdateFn` **on i386**; at LP64 it is 392. The
+repair is a pure address re-spelling — `*(T *)&p->FIELD` — so the cast and the expression's type are
+untouched and only the address computation moves from a number to something the compiler recomputes.
+
+⚠ **`layout_check.py`'s "OFFSET 128" is two classes added together.** Only **27** are struct-field
+offsets (21 in `McdSpace.c`, 6 in `ReadWriteKeaInputToFile.c`); the other ~100 are Ghidra's invented
+stack frames (`(int)&local + K`, MdtBcl 70 and MdtMainLoop 25), which are a decompilation defect
+rather than a layout one. Quoting 128 as LP64 exposure overstates it 4.7×.
+
+⚠ **The declared type is the wrong one, for the fourth time.** `pMVar1` is `McdSpaceID` =
+`McdSpace *`, and `McdSpace` is opaque — the object is really a `CxSmallSort`. The concrete type is
+inferred from the offsets: the struct on which **every** offset used against that declared type in
+the file lands on a real field. Requiring all of them is what makes it a measurement; one offset
+alone fits dozens of structs, as the tool's own decline lines show. Confirmed against the shipped
+build — amd64 `McdSpaceAxisSortCreate` touches `0x50` and `0x188`, exactly `mManager` and
+`mAABBUpdateFn` at 64-bit.
+
+⚠ **Parameters are not declarations**, and missing that repaired 2 of 21 sites. Ghidra writes locals
+as `T x;` at the top of a body and parameters in the signature; the other 19 were reported as
+"declined" for want of a type written down three lines above them. And **1,545 sites are out of
+scope, not declined** — a `void *` base carries no structure, and reporting those as refusals buries
+the ones that can be repaired.
+
 ---
 
 ## The investigative tools — reach for these when something is wrong

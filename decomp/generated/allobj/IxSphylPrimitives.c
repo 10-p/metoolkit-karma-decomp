@@ -1511,9 +1511,9 @@ int kd_McdSphylTriangleListIntersect(McdModelPair *p,McdIntersectResult *result)
   tmp[0] = *(float *)((int)pvVar6 + 0x30) - pfVar7[0xc];
   tmp[1] = *(float *)((int)pvVar6 + 0x34) - pfVar7[0xd];
   tmp[2] = *(float *)((int)pvVar6 + 0x38) - pfVar7[0xe];
-  relPos[0] = tmp[2] * pfVar7[2] + tmp[0] * *pfVar7 + tmp[1] * pfVar7[1];
-  relPos[1] = tmp[2] * pfVar7[6] + tmp[0] * pfVar7[4] + tmp[1] * pfVar7[5];
-  relPos[2] = tmp[0] * pfVar7[8] + tmp[1] * pfVar7[9] + tmp[2] * pfVar7[10];
+  relPos[0] = tmp[2] * pfVar7[2] + tmp[1] * pfVar7[1] + tmp[0] * *pfVar7;
+  relPos[1] = tmp[2] * pfVar7[6] + tmp[1] * pfVar7[5] + tmp[0] * pfVar7[4];
+  relPos[2] = tmp[2] * pfVar7[10] + tmp[1] * pfVar7[9] + tmp[0] * pfVar7[8];
   pMVar1 = pMVar9[2].next;
   iVar3 = -((int)pMVar1 * 0x18 + 0xfU & 0xfffffff0);
   pMVar9[3].prev = (McdGeometryID)(kd_alloca_iVar3 = (char *)alloca((size_t)(pMVar1) * 0x18 + 0));

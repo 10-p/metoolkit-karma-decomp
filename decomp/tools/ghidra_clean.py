@@ -6078,6 +6078,67 @@ def _names_of_incomplete(tag, include_dir):
 # Sign convention: both use -sin, the TRANSPOSE of the textbook Rodrigues form.
 # With +sin the same code is 100% wrong. No amount of reading the decompiled C
 # would have settled that; the oracle did, in one run.
+# ASSOC_ORDER — the ADDITION ORDER of a float chain, settled against the x86-64 build.
+#
+# THE DEFECT CLASS. Ghidra prints a right-leaning float `+` chain flat, C re-parses it
+# left-leaning, and float addition is not associative. `tools/assoc_scan.py` finds 575 candidate
+# sites and its own docstring says "it decides nothing" — because on i386 the two orders are
+# EXACTLY equal (x87 carries 64 mantissa bits, measured 0 differences in 2,000,000 samples) and
+# every behavioural gate in this project runs on i386. There has never been an oracle.
+#
+# ★ THERE IS ONE NOW, AND THE OWNER FOUND IT. UT2004 v3369 shipped a 64-bit Windows build, and
+# `metoolkit/lib.rel/win_amd64_single/*.lib` holds the x86-64 Karma it links — real COFF, NOT
+# stripped, 1,089 symbols, named functions. MSVC x64 has no x87, so every float op is an explicit
+# `mulss`/`addss` and the association order is READ DIRECTLY off the instruction stream:
+#
+#     MeVector3Dot                 (a2*b2 + a1*b1) + a0*b0     -> 2,1,0
+#     MeMatrix4TMInverseTransform  all three rows              -> 2,1,0
+#
+# ⚠ AND THERE IS NO CANONICAL ORDER, WHICH IS WHY EVERY SITE IS CHECKED SEPARATELY. Having
+# confirmed 2,1,0 at two functions I was one commit away from a blanket "reorder to 2,1,0" rule.
+# Reading a THIRD function falsified it:
+#
+#     MeMatrix4TMInverseRotate     row 0 -> 2,1,0     rows 1 and 2 -> 2,0,1
+#
+# The order is the compiler's instruction scheduling, and it differs per ROW of the same function.
+# Our IxSphylLineSegment lOrig[1]/lOrig[2] are already 2,0,1 and already CORRECT; the blanket rule
+# would have introduced two new defects in the ragdoll path to fix one. Per-site, or not at all.
+#
+# ⚠ WHAT THIS ORDER IS AND IS NOT. It is MSVC's schedule for a storage-precision target, not "the
+# source order" — gcc 3.2 chose its own, and on x87 that choice was unobservable. The claim being
+# made is narrow and is the one that matters: this order is one a SHIPPED Karma uses on a
+# storage-precision machine, and that build plays the map correctly. Matching it is matching a
+# working reference, not reconstructing an original.
+#
+# ⚠ NO i386 GATE CAN VALIDATE THIS, BY CONSTRUCTION. The repaired objects must come back
+# byte-identical or near it at -O2/x87 — that is the blast-radius check, not the correctness one.
+# The acceptance test is the wasm-vs-native trace A/B (karma-decomp/test/ktrace_run.sh +
+# packages/e2e/tools/ktrace-probe.cjs), because wasm is where storage precision makes the
+# difference observable at all.
+ASSOC_ORDER = {
+    # McdSphylTriangleListIntersect — ragdoll capsule against world triangles. This is an inlined
+    # MeMatrix4TMInverseTransform, and the amd64 build of THAT function is 2,1,0 on all three rows
+    # while all three of ours differ (2,0,1 / 2,0,1 / 0,1,2).
+    ('IxSphylPrimitives', 'McdSphylTriangleListIntersect'): [
+        dict(n=1,
+             old="  relPos[0] = tmp[2] * pfVar7[2] + tmp[0] * *pfVar7 + tmp[1] * pfVar7[1];",
+             new="  relPos[0] = tmp[2] * pfVar7[2] + tmp[1] * pfVar7[1] + tmp[0] * *pfVar7;"),
+        dict(n=1,
+             old="  relPos[1] = tmp[2] * pfVar7[6] + tmp[0] * pfVar7[4] + tmp[1] * pfVar7[5];",
+             new="  relPos[1] = tmp[2] * pfVar7[6] + tmp[1] * pfVar7[5] + tmp[0] * pfVar7[4];"),
+        dict(n=1,
+             old="  relPos[2] = tmp[0] * pfVar7[8] + tmp[1] * pfVar7[9] + tmp[2] * pfVar7[10];",
+             new="  relPos[2] = tmp[2] * pfVar7[10] + tmp[1] * pfVar7[9] + tmp[0] * pfVar7[8];"),
+    ],
+}
+
+
+def apply_assoc_order(text, obj):
+    """Apply ASSOC_ORDER for this object. Raises on any drift."""
+    return _apply_anchored_repairs(text, obj, ASSOC_ORDER, 'apply_assoc_order',
+                                   'the x86-64 disassembly for that function, then a wasm A/B')
+
+
 X87_RECONSTRUCTIONS = {
     ('IxBoxTriList', 'McdVanillaBoxTriIntersect'): [
         dict(old="""  lsVec3 vCross;
@@ -8466,6 +8527,7 @@ def main():
     body_text, n_x87 = reconstruct_discarded_x87(body_text, args.object)
     body_text, n_intf = retype_float_typed_int_fields(body_text, args.object)
     body_text, n_pconst = apply_portability_constants(body_text, args.object)
+    body_text, n_assoc = apply_assoc_order(body_text, args.object)
     body_text, n_pfmt = fix_printf_extra_args(body_text)
     body_text, n_cmac = fix_compat_macro_extra_args(body_text)
     body_text, n_uscore = fix_undeclared_underscore_local(body_text)

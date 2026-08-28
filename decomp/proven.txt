@@ -1152,6 +1152,64 @@ McdTriangleList       real: same run, same evidence. These two objects account f
 #                     a build that no longer existed. `cmake` will not rebuild what it thinks is
 #                     current, so the failure is silent. Check the newest `.c.o` against `git log`.
 
+# LP64-STRIDE-AS-ADDR 2026-08-28 (twelfth session, later): A POINTER STRIDE SPELLED AS AN ADDRESS
+#                     INSIDE THE STRUCT — one line, and it was the last thing between the collision
+#                     side and a clean LP64 run.
+#
+#                       pCVar5 = (CxSmallSortRep *)&pCVar5->mAABBMarkers[0].mOrdinate;
+#
+#                     `_Update` walks three axes reading `mAABBMarkers[0]` and `[1]` off an
+#                     advancing pointer, so each iteration must step TWO markers. Ghidra spells
+#                     that step as whatever address happens to be two markers along, and at i386
+#                     the two coincide — offsetof(mAABBMarkers)=32 plus offsetof(mOrdinate)=8 is
+#                     40, and 2*sizeof(CxSmallSortMarker) is also 40. At LP64 they diverge: 56+16
+#                     is 72 against 2*40 = 80. From the second axis on every marker is 8 bytes
+#                     adrift, and the SEGV lands in MoveStartMarkerDown reading `inMarker->mRep`,
+#                     three hundred lines and two calls away.
+#
+#                     CONFIRMED, NOT INFERRED: the shipped amd64 `_Update` does `add $0x50,%rbx`.
+#                     0x50 is 80.
+#
+#                     ⚠ AND A CONFIDENT HYPOTHESIS WAS WRONG FIRST, AGAIN. The obvious suspect was
+#                     the unrolled init loop in `CxSmallSort::New`, which walks the rep array with
+#                     a baked `iVar9 + 0x98` (0x98 = sizeof(CxSmallSortRep) at i386) and a baked
+#                     `-0x18`. It looks exactly like the defect and it is one. Patching all ten of
+#                     its substitutions changed NOTHING — same SEGV, same address. The single line
+#                     above, alone, cleared it. Bisect before believing: that is three for three
+#                     this session.
+#
+#                     ★ THE SPELLING THAT KEEPS BYTE-IDENTITY, AND IT IS THE REUSABLE PART.
+#                     `(char *)p + 2 * sizeof(marker)` is the obvious repair and it is NOT
+#                     byte-identical — gcc re-allocates registers across the whole of `_Update`,
+#                     508 differing instructions, for what is the same address. Four such spellings
+#                     were tried and all four differed. What works is to KEEP THE EXPRESSION GHIDRA
+#                     WROTE and add a correction term that is provably zero on the shipped target:
+#
+#                       (char *)&p->mAABBMarkers[0].mOrdinate
+#                           + (2 * (int)sizeof(*(CxSmallSortMarker *)0)
+#                              - (int)((char *)&((CxSmallSortRep *)0)
+#                                        ->mAABBMarkers[0].mOrdinate - (char *)0))
+#
+#                     At i386 the delta is 40 - 40 = 0 and gcc folds it away entirely, so the
+#                     object is unchanged; at LP64 it is 80 - 72 = +8 and the stride is right.
+#                     ANCHOR ON THE ORIGINAL AND CORRECT BY A ZERO-AT-i386 DELTA is a general
+#                     technique for this whole family, and it is what makes the byte-identity gate
+#                     survivable where a rewritten expression would not be.
+#
+#                     ⚠ A TOOL THAT REPORTED A REPAIR IT DID NOT MAKE. `path` was the output file
+#                     and the new rule shadowed it with the FIELD path it was building, so the
+#                     repaired text went to a file named `mAABBMarkers[0].mOrdinate` in the working
+#                     directory. The tool printed "4 repaired", CxSmallSort.c was untouched on
+#                     disk, and the harness kept reporting the same SEGV against a fix that the
+#                     report said had landed. Diff the SOURCE; do not read the summary.
+#
+#                     WHERE THIS LEAVES THE SCENES. All three now converge on the SAME remaining
+#                     work, having run through world creation, the framework, every pool, the
+#                     interaction table and the whole broadphase: MdtPartition 7, MdtMainLoop 5,
+#                     McdBox 5, MstUtils 4, McdBatch 2, McdSphyl 1. The McdBox and McdSphyl sites
+#                     are the derived-field accessors of LP64-DERIVED-FIELDS, so that class is now
+#                     ON the critical path rather than merely counted.
+
 # LP64-FIELD-OFFSETS 2026-08-28 (twelfth session, later): A STRUCT FIELD ADDRESSED BY A BAKED BYTE
 #                     OFFSET. 22 sites repaired, and the class turned out to be a quarter the size
 #                     layout_check.py reports because that column is two classes added together.
@@ -1326,7 +1384,7 @@ McdTriangleList       real: same run, same evidence. These two objects account f
 #                     The repair is derived rather than pattern-matched: the step is
 #                     `offsetof(T, F2)` — the second field the loop actually names — and the total
 #                     is `n * sizeof(T)`, both compile-time constants on every target.
-#                     tools/fix_word_loops.py. The other site is MeAssetDBXMLInput_1_0's
+#                     tools/fix_strides.py. The other site is MeAssetDBXMLInput_1_0's
 #                     MeXMLHandler table, whose count is a bare literal 0x30.
 
 # LP64-BAKED-SIZES   2026-08-28 (twelfth session): AN ALLOCATION SIZE FROZEN AT THE i386 VALUE IS

@@ -639,7 +639,7 @@ because MSVC strength-reduces a runtime multiply — `n * 48` comes out as `lea 
 > and `McdCylinder` (whose `McdCylinderID` is 16 and does not even divide 28). The two-build pin
 > names the concrete type and all seven geometry types now allocate their own `sizeof`.
 
-### `fix_word_loops.py` — a table-zeroing loop counting in 4-byte words
+### `fix_strides.py` — a table-zeroing loop counting in 4-byte words
 
 Ghidra renders `memset(table, 0, n)` over a struct table as a loop that walks ONE FIELD at a time
 and counts in words. That is correct on i386 for one reason — every field of `McdInteractions` is
@@ -647,8 +647,8 @@ four bytes there — and at LP64 the step `&p->goodbyeFn` becomes eight while `>
 four, so the loop walks twice the length of the table.
 
 ```bash
-python3 tools/fix_word_loops.py /tmp/kd_lp64/allobj /tmp/kd_build
-#   -> 2 repaired, 0 declined
+python3 tools/fix_strides.py /tmp/kd_lp64/allobj /tmp/kd_build
+#   -> 4 repaired, 0 declined
 ```
 
 ★ **This was recorded as possibly unfixable under the byte-identity gate, and that was never
@@ -661,6 +661,25 @@ both fold to `A * A * 7`. Ask the compiler.
 Only **two** of the nineteen `p = (T *)&p->field` sites are this defect; in the rest the step IS the
 whole struct, which is ordinary array iteration and scales on its own. The tool checks that and
 skips them.
+
+**The second shape is a self-advancing pointer**, and it was the last thing between the collision
+side and a clean LP64 run: `pCVar5 = (CxSmallSortRep *)&pCVar5->mAABBMarkers[0].mOrdinate;` must
+step two markers per axis. At i386 `offsetof(mAABBMarkers) + offsetof(mOrdinate)` is 40 and
+`2 * sizeof(marker)` is also 40; at LP64 they are 72 and 80. The shipped amd64 `_Update` does
+`add $0x50,%rbx` — 80 — which is the confirmation.
+
+★ **The spelling that keeps byte-identity is the reusable part.** `(char *)p + 2 * sizeof(marker)`
+is the obvious repair and it is **not** byte-identical: gcc re-allocates registers across the whole
+function, 508 differing instructions, for the same address. Four spellings were tried and all four
+differed. What works is to **keep the expression Ghidra wrote and add a correction term that is
+provably zero on the shipped target** — the delta folds away at i386 and corrects the stride
+everywhere else. Anchor-and-correct is general for this family.
+
+⚠ **This tool reported a repair it did not make.** `path` is the output file and the new rule
+shadowed it with the field path it was building, so the repaired text went to a file called
+`mAABBMarkers[0].mOrdinate` in the working directory. It printed "4 repaired", `CxSmallSort.c` was
+untouched on disk, and the harness kept reporting the same SEGV against a fix the report said had
+landed. **Diff the source; do not read the summary.**
 
 > ⚠ **The step is not always a direct member.** `CxSmallSort::New` walks a base-class subobject —
 > `pCVar4 = (CxSmallSortRep *)&(pCVar4->super_Link).mPrev;` — so the parenthesised, dotted path has

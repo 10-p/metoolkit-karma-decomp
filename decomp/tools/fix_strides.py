@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
-"""fix_word_loops.py — a table-zeroing loop whose trip count is in 4-BYTE WORDS.
+"""fix_strides.py — a POINTER STRIDE spelled as an offset inside the struct.
 
-    fix_word_loops.py <kd_out/allobj> <kd_build> [metoolkit-root]
+Two shapes, one defect: a step that is correct on i386 only because of a
+coincidence of field widths. Both are repaired and each repair is COMPILED and
+compared against the baseline object before it is kept.
+
+    fix_strides.py <kd_out/allobj> <kd_build> [metoolkit-root]
 
 THE DEFECT. Ghidra renders `memset(table, 0, n)` over a struct table as a loop
 that walks ONE FIELD AT A TIME and counts in words:
@@ -43,9 +47,17 @@ is the same number on i386 and the right number everywhere else. `n` is
 recovered from the i386 arithmetic and must come out whole, or the site is
 declined and reported.
 
-SCOPE: three loops in the corpus have this shape. It is a post-pass rather
-than a `ghidra_clean` rule because it needs a compiler to measure `offsetof`.
-Run it on a COPY: it edits in place.
+SCOPE: three word-counted loops and one self-advancing pointer. It is a
+post-pass rather than a `ghidra_clean` rule because it needs a compiler to
+measure `offsetof`. Run it on a COPY: it edits in place.
+
+⚠ A TOOL THAT REPORTS A REPAIR IT DID NOT MAKE. `path` is the output file, and
+the second rule shadowed it with the FIELD path it was building. The repaired
+text went to a file called `mAABBMarkers[0].mOrdinate` in the working directory,
+this printed "4 repaired", and `CxSmallSort.c` was untouched on disk — so the
+LP64 harness kept reporting the same SEGV against a repair that had, as far as
+the report was concerned, already landed. Verify a pass by diffing the SOURCE,
+not by reading its summary.
 """
 import os
 import re
@@ -75,6 +87,29 @@ LOOP = re.compile(LOOP_SRC, re.S)
 # `(uint)(EXPR * K) >> k` — Ghidra's rendering of `bytes / 4`.
 SHIFTED = re.compile(r'^\(uint\)\((?P<expr>.*?)\s*\*\s*(?P<sz>0x[0-9a-f]+|\d+)\s*\)'
                      r'\s*>>\s*(?P<k>\d+)$', re.S)
+
+# ---------------------------------------------------------------------------
+# THE SECOND SHAPE: A STRIDE SPELLED AS AN ADDRESS INSIDE THE STRUCT.
+#
+#     pCVar5 = (CxSmallSortRep *)&pCVar5->mAABBMarkers[0].mOrdinate;
+#
+# `_Update` walks the three axes, reading `mAABBMarkers[0]` and `[1]` off an
+# advancing pointer, so each iteration must step TWO markers. Ghidra spells that
+# step as whatever address happens to be two markers along, and on i386 those
+# coincide: offsetof(mAABBMarkers)=32 plus offsetof(mOrdinate)=8 is 40, and
+# 2*sizeof(CxSmallSortMarker) is also 40. At LP64 they diverge — 56+16=72 against
+# 2*40=80 — so from the second axis on, every "marker" is 8 bytes adrift and
+# `inMarker->mRep` is garbage. The SEGV lands in MoveStartMarkerDown, ~300 lines
+# and two calls away from this line.
+#
+# THE STRIDE IS DERIVED, NOT GUESSED: the path goes through an ARRAY member, the
+# i386 step must be a whole multiple of that array's element size, and the
+# multiple is the answer. Both quantities are asked of the compiler. The shipped
+# amd64 build then has to pass the 64-bit value — `_Update` there does
+# `add $0x50,%rbx`, which is 80.
+ADVANCE = re.compile(
+    r'(?m)^(?P<ind>[ \t]*)(?P<p>\w+) = \((?P<ty>[\w ]+) \*\)'
+    r'&(?P=p)->(?P<arr>\w+)\[(?P<idx>\d+)\](?P<tail>(?:\s*\.\s*\w+)*)\s*;')
 
 CFLAGS = ['-m32', '-O2', '-fno-pic', '-fno-strict-aliasing', '-std=gnu99',
           '-w', '-Wno-int-conversion', '-Wno-incompatible-pointer-types',
@@ -145,7 +180,7 @@ def main():
     # like "there were none to repair".
     probe = measure('sizeof(*(McdInteractions *)0)', inc, cache)
     if probe != 28:
-        sys.exit('fix_word_loops: SELF-CHECK FAILED — sizeof(McdInteractions) '
+        sys.exit('fix_strides: SELF-CHECK FAILED — sizeof(McdInteractions) '
                  'measured %r, want 28. Nothing below is measuring anything.'
                  % probe)
 
@@ -195,19 +230,61 @@ def main():
             rep = ('(uint)(%s * (int)sizeof(*(%s *)0)) / '
                    '(uint)((char *)&((%s *)0)->%s - (char *)0)'
                    % (count_expr, ty, ty, f2))
-            edits.append((m.start('count'), m.end('count'), rep,
+            edits.append((m.start('count'), m.end('count'), [rep],
                           '%-26s %s trip count: %d-byte words -> / offsetof(%s, %s)'
                           % (fn, ty, step, ty, f2)))
-        for start, end, rep, note in sorted(edits, key=lambda e: -e[0]):
-            cand = text[:start] + rep + text[end:]
-            if compiles_identically(fn, cand, build, inc):
-                text = cand
-                fixed += 1
-                notes.append(note)
+        # ---- the self-advancing pointer whose stride is an in-struct address
+        for m in ADVANCE.finditer(text):
+            ty, arr = m.group('ty').strip(), m.group('arr')
+            # NOT `path` — that is the output file, and shadowing it here wrote
+            # the repaired source to a file called `mAABBMarkers[0].mOrdinate`
+            # in the CWD while reporting the repair as done. The tool said
+            # "4 repaired" and CxSmallSort.c was untouched on disk.
+            fpath = '%s[%s]%s' % (arr, m.group('idx'),
+                                  re.sub(r'\s*', '', m.group('tail')))
+            step = measure('((char *)&((%s *)0)->%s - (char *)0)' % (ty, fpath),
+                           inc, cache)
+            elem = measure('sizeof(((%s *)0)->%s[0])' % (ty, arr), inc, cache)
+            if not step or not elem:
+                continue
+            if step % elem:
+                declined += 1
+                notes.append('%-26s %s stride %d is not a whole number of %s[] '
+                             'elements (%d)' % (fn, ty, step, arr, elem))
+                continue
+            n = step // elem
+            # ★ KEEP THE ORIGINAL ADDRESS AND ADD A CORRECTION THAT IS ZERO HERE.
+            # `(char *)p + N * sizeof(elem)` is the obvious spelling and it is
+            # NOT byte-identical — gcc re-allocates registers across the whole
+            # of `_Update`, 508 differing instructions, for what is the same
+            # address. Anchoring on the expression Ghidra already wrote and
+            # adding `(want64 - offsetof(path))` keeps the i386 object EXACTLY,
+            # because that delta folds to 0 there, while correcting the stride
+            # everywhere the two disagree. The obvious spelling is kept as a
+            # fallback so the compiler, not this comment, decides.
+            off = '((char *)&((%s *)0)->%s - (char *)0)' % (ty, fpath)
+            esz = '(int)sizeof(((%s *)0)->%s[0])' % (ty, arr)
+            reps = ['(%s *)((char *)&%s->%s + (%d * %s - (int)%s))'
+                    % (ty, m.group('p'), fpath, n, esz, off),
+                    '(%s *)((char *)%s + %d * %s)' % (ty, m.group('p'), n, esz)]
+            edits.append((m.start(), m.end(),
+                          ['%s%s = %s;' % (m.group('ind'), m.group('p'), r)
+                           for r in reps],
+                          '%-26s %-16s stride %d bytes -> %d * sizeof(%s[0])'
+                          % (fn, ty, step, n, arr)))
+
+        for start, end, reps, note in sorted(edits, key=lambda e: -e[0]):
+            for rep in reps:
+                cand = text[:start] + rep + text[end:]
+                if compiles_identically(fn, cand, build, inc):
+                    text = cand
+                    fixed += 1
+                    notes.append(note)
+                    break
             else:
                 declined += 1
-                notes.append('%-26s DECLINED: the repair is not byte-identical '
-                             'at i386' % fn)
+                notes.append('%-26s DECLINED: no spelling of it is '
+                             'byte-identical at i386' % fn)
         if fixed and edits:
             open(path, 'w').write(text)
     print('  word-counted table loops repaired  : %d' % fixed)

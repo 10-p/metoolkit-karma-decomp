@@ -719,6 +719,19 @@ alone fits dozens of structs, as the tool's own decline lines show. Confirmed ag
 build — amd64 `McdSpaceAxisSortCreate` touches `0x50` and `0x188`, exactly `mManager` and
 `mAABBUpdateFn` at 64-bit.
 
+★ **The base is not always a variable, and the one that is not was the whole partitioner failure.**
+`if ((*(byte *)((int)pMVar9->data + 0x1ec) & 2) == 0)` — `0x1ec` is `offsetof(MdtBody, flags)` at
+i386 and **556** at LP64, so `MdtUpdatePartitions`'s VISITED test reads a byte 64 short of the flag,
+no body is ever seen as visited, and the root loop re-seeds one already placed. `scene_chain` went
+from 25 errors to **one** when this was fixed. `pMVar9->data` is a `void *` and carries no type; what
+names it is the same FIELD read into a typed local elsewhere in the function
+(`pMVar3 = rootNode->data;`). The field is the key, not the variable.
+
+⚠ **The cast may not be elided for that shape.** The tool drops the cast when the base's type already
+*is* the concrete type — right for a bare variable, wrong here, because the inferred type belongs to
+what the member points at. Eliding it emits `(pMVar9->data)->flags`, which does not compile, and the
+site then declines in a way that reads like the repair being wrong rather than the spelling.
+
 ⚠ **Parameters are not declarations**, and missing that repaired 2 of 21 sites. Ghidra writes locals
 as `T x;` at the top of a body and parameters in the signature; the other 19 were reported as
 "declined" for want of a type written down three lines above them. And **1,545 sites are out of

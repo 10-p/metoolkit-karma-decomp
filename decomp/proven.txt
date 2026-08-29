@@ -1256,6 +1256,61 @@ McdTriangleList       real: same run, same evidence. These two objects account f
 #                     nothing, and reporting them as refusals buries the ones that can be repaired.
 #                     They are counted on their own line.
 
+# LP64-VISITED-FLAG  2026-08-29 (twelfth session): ★ ONE LITERAL BYTE OFFSET WAS THE WHOLE
+#                     PARTITIONER FAILURE. scene_chain went from 25 AddressSanitizer errors to ONE.
+#
+#                       if ((*(byte *)((int)pMVar9->data + 0x1ec) & 2) == 0) goto ...
+#
+#                     0x1ec is 492 is `offsetof(MdtBody, flags)` at i386. At LP64 it is 556. So
+#                     `MdtUpdatePartitions`'s VISITED test reads a byte 64 short of the flag, no
+#                     body is ever seen as visited, the root loop re-seeds one already placed in
+#                     partition 0, and the failure surfaces as `addedBodies[12]` overflowing a
+#                     12-element buffer.
+#
+#                     ⚠ AND THAT SYMPTOM LOOKS NOTHING LIKE A LAYOUT DEFECT. This entry's own
+#                     predecessor recorded the remaining errors as "a COUNT overrunning ... the
+#                     traversal is visiting some of them more than once, so the next defect is in
+#                     the partitioner's BOOKKEEPING — arrayIdPartition, the `flags & 2` visited
+#                     test, or the MeDict walk — and NOT in any allocation." The mechanism named
+#                     was right and the CATEGORY was wrong: it is the visited test, and the reason
+#                     it fails is a baked byte offset, which is a layout defect after all. Measuring
+#                     `offsetof(MdtBody, flags)` at both widths settled it in one command; two
+#                     rounds of reading the traversal logic had not.
+#
+#                     ⚠ TWO PROBES THAT MISLED BEFORE THAT ONE, both worth knowing:
+#                       * `local_3c = (MdtBody *)((kd_iptr)&(local_3c->keaBody).tag + 1);` is an
+#                         integer increment spelled as an in-struct address and looks exactly like
+#                         LP64-STRIDE-AS-ADDR. It is NOT a defect: offsetof(MdtBody, keaBody.tag)
+#                         is 0 on BOTH targets, so it really is `+ 1` everywhere. Measured, not
+#                         assumed.
+#                       * adding an fprintf moved the failure, which reads like stack corruption
+#                         and sent me looking at Ghidra's invented frames. MdtPartition has none of
+#                         the raw `aiStack_N + K` form — recover.py had already converted all 44 of
+#                         its slots to named `kd_frameslot_` arrays, which are in bounds at both
+#                         widths. The probe was simply perturbing WHICH out-of-bounds byte got hit.
+#
+#                     THE REPAIR is fix_literal_offsets.py extended to a MEMBER-EXPRESSION base.
+#                     `pMVar9->data` is a `void *` and carries no type of its own; what names it is
+#                     the SAME FIELD read into a typed local elsewhere in the function —
+#                     `pMVar3 = rootNode->data;` with `pMVar3` declared `MdtBody *`. The FIELD is
+#                     the key, not the variable: `rootNode`, `node` and `pMVar9` are three names for
+#                     the same kind of node.
+#
+#                     ⚠ AND THE CAST MAY NOT BE ELIDED FOR THAT SHAPE. The tool drops the cast when
+#                     the base's type already IS the concrete type, which is right for a bare
+#                     variable and wrong here — the inferred type belongs to what the member POINTS
+#                     AT, so eliding it emits `(pMVar9->data)->flags`, which does not compile. The
+#                     site then declines, and a decline reads like the repair being wrong rather
+#                     than the spelling. All three candidate spellings were byte-identical once the
+#                     cast was kept.
+#
+#                     WHERE THE SCENES STAND: scene_chain ONE error (MdtBcl.c:519),
+#                     scene_boxes_on_plane three, scene_ragdoll three — and ragdoll's three are all
+#                     the invented-stack-frame class in MstUtils, which is a DECOMPILATION defect
+#                     and belongs upstream in the dump. Every MdtPartition and MdtMainLoop site is
+#                     gone. One sibling site remains at MdtPartition.c:334, in a function that has
+#                     no typed read of `->data` to infer from.
+
 # LP64-ALLOCA-STRIDE 2026-08-29 (twelfth session): THE BAKED ELEMENT SIZE ON THE STACK. `alloca` is
 #                     not `MeMemoryAPI.create`, so none of fix_baked_sizeof's patterns saw it:
 #

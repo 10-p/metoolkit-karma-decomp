@@ -360,7 +360,13 @@ Where it stands as of 2026-08-28, with the baked-size class closed:
 (`*(T **)((kd_iptr)aiStack_9cb0 + 0x14)`) — a decompilation defect, not a layout one, and it belongs
 upstream in the dump rather than in any post-pass.
 
-★ **`scene_chain`'s last three are NOT another baked size.** The arena is now sized exactly right —
+★ **`scene_chain` is down to ONE error.** Every `MdtPartition`/`MdtMainLoop` site went away with a
+single literal byte offset: the VISITED test read `MdtBody::flags` at its i386 offset (`0x1ec`, 556
+at LP64), so no body was ever seen as visited and the root loop re-seeded bodies already placed.
+`../proven.txt` `LP64-VISITED-FLAG` records why the symptom — a count overrunning a buffer — looks
+nothing like a layout defect, and the two probes that misled before it.
+
+★ **(superseded) `scene_chain`'s last three are NOT another baked size.** The arena is now sized exactly right —
 624 bytes for 12 bodies and 12 constraints, which is `96 + 12*36 + 12*8` to the byte — and every
 array lands where it should. The errors are a **count** overrunning: `numAddedBodies` passing
 `maxBodies`, and `po->info + po->nPartitions` reaching the end of the block. With twelve bodies the

@@ -57,8 +57,28 @@ WORK = '/tmp/kd_offsets'
 # `*(T *)((char *)BASE + K)` — and the `(int)`/`(kd_iptr)` spellings of the same.
 SITE = re.compile(
     r'\*\((?P<ty>[A-Za-z_]\w*(?:\s+\w+)*\s*\**)\s*\*\)'
-    r'\(\((?:char|int|kd_iptr)\s*\*?\)(?P<base>[A-Za-z_]\w*)'
+    r'\(\((?:char|int|kd_iptr)\s*\*?\)(?P<base>[A-Za-z_]\w*(?:->[A-Za-z_]\w*)?)'
     r'\s*\+\s*(?P<off>0x[0-9a-f]+|\d+)\)')
+
+# ★ THE BASE IS NOT ALWAYS A VARIABLE, and the one that is not was the defect
+# that kept scene_chain failing after everything else was repaired:
+#
+#     if ((*(byte *)((int)pMVar9->data + 0x1ec) & 2) == 0) goto ...
+#
+# 0x1ec is 492 is `offsetof(MdtBody, flags)` at i386 and 556 at LP64, so the
+# partitioner's VISITED test reads a byte 64 short of the flag. No body is ever
+# seen as visited, the root loop re-seeds one already placed, and the failure
+# shows up as `addedBodies[12]` overflowing a 12-element buffer — a count
+# overrun that looks nothing like a layout defect and had me diagnose it as a
+# bookkeeping bug twice.
+#
+# `pMVar9->data` is a `void *` member, so it carries no type of its own. What
+# names it is the SAME FIELD read into a typed local elsewhere in the function:
+# `pMVar3 = rootNode->data;` with `pMVar3` declared `MdtBody *`. The field is
+# the key, not the variable — `rootNode`, `node` and `pMVar9` are three names
+# for the same kind of node.
+FIELD_READ = re.compile(r'(?m)^[ \t]*(?P<var>[A-Za-z_]\w*)\s*=\s*'
+                        r'[A-Za-z_]\w*->(?P<f>[A-Za-z_]\w*)\s*;')
 
 BANNER = re.compile(r'(?m)^/\* ---- (\S+)')
 CFLAGS = ['-m32', '-O2', '-fno-pic', '-fno-strict-aliasing', '-std=gnu99',
@@ -245,9 +265,24 @@ def main():
         # used with are the evidence: the tag on which every one of them lands
         # on a real field. Requiring ALL of them is what makes it a measurement
         # rather than a guess — a single offset would fit dozens of structs.
+        # For a `X->F` base the type of the POINTER tells us nothing (`data` is
+        # a `void *`); what names it is the same field read into a typed local.
+        def base_type(m):
+            b = m.group('base')
+            region = region_of(text, m.start())
+            if '->' not in b:
+                return declared_type(region, b)
+            fld = b.split('->')[1]
+            for r in FIELD_READ.finditer(region):
+                if r.group('f') == fld:
+                    t = declared_type(region, r.group('var'))
+                    if t and not OPAQUE.match(t):
+                        return t
+            return None
+
         used = {}
         for m in sites:
-            ty = declared_type(region_of(text, m.start()), m.group('base'))
+            ty = base_type(m)
             if ty and not OPAQUE.match(ty):
                 used.setdefault(ty, set()).add(int(m.group('off'), 0))
         concrete = {}
@@ -266,7 +301,7 @@ def main():
 
         edits = []
         for m in sites:
-            ty = declared_type(region_of(text, m.start()), m.group('base'))
+            ty = base_type(m)
             tag = concrete.get(ty)
             off = int(m.group('off'), 0)
             if not ty or OPAQUE.match(ty):
@@ -281,8 +316,15 @@ def main():
                 notes.append('%-26s %s+0x%x is not a field start of %s'
                              % (fn, ty, off, tag))
                 continue
-            cast = '' if ty.replace('struct ', '').replace('*', '').strip() == tag \
-                else '(struct %s *)' % tag
+            # ⚠ THE CAST MAY ONLY BE ELIDED FOR A BARE VARIABLE. For a `X->F`
+            # base the type was INFERRED — the member itself is a `void *` — so
+            # dropping the cast emits `(pMVar9->data)->flags`, which does not
+            # compile, and the site declines for a reason that looks like the
+            # repair being wrong rather than the spelling.
+            cast = '(struct %s *)' % tag
+            if '->' not in m.group('base') and \
+                    ty.replace('struct ', '').replace('*', '').strip() == tag:
+                cast = ''
             rep = '*(%s*)&(%s%s)->%s' % (m.group('ty'), cast, m.group('base'), field)
             edits.append((m.start(), m.end(), rep,
                           '%-26s %-14s +0x%-4x -> %s->%s'

@@ -715,7 +715,7 @@ landed. **Diff the source; do not read the summary.**
 
 ```bash
 python3 tools/fix_literal_offsets.py /tmp/kd_lp64/allobj /tmp/kd_build
-#   -> 765 rewritten, 13 declined, 924 out of scope
+#   -> 834 rewritten, 13 declined, 855 out of scope   (the second run adds 33 more)
 ```
 
 `*(code **)((char *)p + 200)` is `CxSmallSort::mAABBUpdateFn` **on i386**; at LP64 it is 392.

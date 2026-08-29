@@ -95,6 +95,17 @@ DIAG_TOPTR = re.compile(r'^(?P<file>[^:]+):(?P<line>\d+):(?P<col>\d+): warning: 
                         r"'(?P<ty>[^']*)'")
 CAST_THEN_VAR = re.compile(r'\(\s*[A-Za-z_][\w ]*\**\s*\)\s*(?P<var>[A-Za-z_]\w*)'
                            r'\s*(?=[;,)\]]|$)')
+# ⚠ AND THE OPERAND IS OFTEN AN EXPRESSION WITH THE VARIABLE AT ITS HEAD:
+#
+#     iVar1 = *(int *)(iVar1 + 0x1dc)
+#
+# `iVar1` is an `int` holding an `MdtContact *`, so every use is plain integer
+# arithmetic and there is no cast on the BASE to widen — clang names the cast to
+# `int *` and the thing that is narrow is the variable it is applied to. This is
+# the site both contact scenes segfault on WITHOUT the sanitizer while running
+# clean WITH it, because ASan's allocator happens to map the truncated address.
+CAST_THEN_EXPR = re.compile(r'\(\s*[A-Za-z_][\w ]*\**\s*\)\s*\(\s*'
+                            r'(?P<var>[A-Za-z_]\w*)\s*[-+]')
 # A member declaration inside a struct body, with its type.
 MEMBER = re.compile(r'(?m)^[ \t]+(?P<ty>(?:const\s+|struct\s+|unsigned\s+)*[A-Za-z_]\w*'
                     r'[ \t]*\**)[ \t]*(?P<name>[A-Za-z_]\w*)[ \t]*(?:\[[^\]]*\])?[ \t]*;')
@@ -303,7 +314,8 @@ def narrow_locals(path, cf):
         # The cast starts at the column clang names; what follows it has to be
         # a BARE variable, because that is the only operand whose declaration
         # this can widen. `(T *)(a + b)` is a different defect.
-        v = CAST_THEN_VAR.match(lines[ln - 1], col - 1)
+        v = (CAST_THEN_VAR.match(lines[ln - 1], col - 1)
+             or CAST_THEN_EXPR.match(lines[ln - 1], col - 1))
         if not v:
             unnamed += 1
             continue
@@ -339,6 +351,39 @@ ELEM = re.compile(r'\*\(\s*(?P<acc>[A-Za-z_][\w ]*\**)\s*\*\s*\)\s*\(')
 BASE_READ = re.compile(r'^\s*\*\(\s*kd_[iu]ptr\s*\*\s*\)\s*&\s*'
                        r'(?P<lv>[A-Za-z_]\w*(?:(?:->|\.)[A-Za-z_]\w*)*)')
 I386_PTR = 4
+# I: A NEGATIVE OFFSET COMPUTED IN 32-BIT UNSIGNED ARITHMETIC.
+#
+#     C = (int *)((kd_iptr)auStack_3c + uVar6 * -2);
+#
+# `uVar6` is a `uint`, so `uVar6 * -2` is UNSIGNED and comes out as a large
+# positive number. At i386 adding it to a 32-bit pointer wraps and the answer is
+# right; at LP64 the 32-bit product is ZERO-EXTENDED and the pointer moves FOUR
+# GIGABYTES the wrong way. `C` arrives at `getClampIndices` as 0x8000ffffd3a8
+# where `I`, one line earlier and written as a plain subtraction, is correct.
+#
+# The repair does the multiply at pointer width and KEEPS IT UNSIGNED —
+# `(kd_uptr)uVar6 * -2`. At i386 `kd_uptr` IS `unsigned int`, so the expression
+# is unchanged and byte-identity holds by construction; at LP64 the product
+# wraps in 64 bits and the addition lands where it should.
+# ⚠ `(kd_iptr)` is the WRONG cast here and it was the first one tried: it turns
+# an unsigned multiply into a signed one, gcc schedules it differently, and all
+# eight sites decline. Signedness is preserved everywhere else in this tool for
+# the same reason.
+# ⚠ Only where the variable is a 32-bit UNSIGNED: a signed `int` sign-extends
+# and is already right, which is why the neighbouring subtraction never failed.
+NEG_MUL = re.compile(r'\(kd_[iu]ptr\)[^;()]*?\+\s*(?P<v>[A-Za-z_]\w*)\s*\*\s*(?P<k>-\d+)')
+UNSIGNED32 = ('uint', 'unsigned int', 'undefined4', 'MeU32')
+
+# H: the ACCESS type again, but with a computed address rather than `&lvalue`:
+#
+#     iVar1 = *(int *)(pvVar2 + KD_OFFSET(MdtContactGroup, first));
+#
+# `first` is an `MdtContact *`, so this loads FOUR of its EIGHT bytes. The
+# lvalue form (B) cannot see it — there is no `&` — but `fix_literal_offsets`
+# has already written the field down in the offset expression, so the target
+# type is right there to be read. The two passes hand off through the text.
+OFFSETOF = (r'&\(\(struct (?P<tag>\w+) \*\)0\)->(?P<path>[A-Za-z_][\w.\[\]]*)')
+ACCESS_AT = re.compile(r'\*\(\s*(?P<ty>' + NARROW + r')\s*\*\s*\)\s*\(')
 # G: the ARRAY OF POINTERS is ALLOCATED at four bytes an element.
 #
 #     uVar2 = keaPoolAlloc((m_blocks * m_blocks + 0xf & 0xfffffff0) << 2, "NAZ");
@@ -552,6 +597,40 @@ def main():
                 want(base + d.start('ty'), base + d.end('ty'), fix_ptrwidth.WIDEN[ty],
                      '%-26s read   %-14s %-12s -> %s'
                      % (fn, var, ty, fix_ptrwidth.WIDEN[ty]), 'C')
+            # ---- I: a negative offset computed in 32-bit unsigned arithmetic
+            for m in NEG_MUL.finditer(text0):
+                region = region_of(text0, m.start())
+                if (declared_type(region, m.group('v')) or '') not in UNSIGNED32:
+                    continue
+                want(m.start('v'), m.end('v'), '(kd_uptr)%s' % m.group('v'),
+                     '%-26s negoff %-14s * %s at pointer width'
+                     % (fn, m.group('v'), m.group('k')), 'B')
+            # ---- H: a narrow read of a pointer FIELD at a computed address
+            for m in ACCESS_AT.finditer(text0):
+                i, d = m.end() - 1, 0
+                while i < len(text0):
+                    if text0[i] == '(':
+                        d += 1
+                    elif text0[i] == ')':
+                        d -= 1
+                        if d == 0:
+                            break
+                    i += 1
+                f = re.search(OFFSETOF, text0[m.end():i])
+                if not f:
+                    continue
+                bodies, _td = headers(inc)
+                mt = re.search(r'(?m)^[ \t]+(?P<ty>(?:const\s+|struct\s+|unsigned\s+)*'
+                               r'[A-Za-z_]\w*[ \t]*\**)[ \t]*'
+                               + re.escape(f.group('path').split('.')[-1].split('[')[0])
+                               + r'[ \t]*(?:\[[^\]]*\])?[ \t]*;',
+                               bodies.get(f.group('tag'), ''))
+                if not mt or not is_pointer(mt.group('ty'), inc):
+                    continue
+                want(m.start('ty'), m.end('ty'), fix_ptrwidth.WIDEN[m.group('ty')],
+                     '%-26s field  %-14s %-12s -> %s'
+                     % (fn, '%s::%s' % (f.group('tag'), f.group('path')),
+                        m.group('ty'), fix_ptrwidth.WIDEN[m.group('ty')]), 'B')
             # ---- F: an array of pointers walked four bytes at a time
             for s, e, rep, label in pointer_array_sites(text0, inc):
                 want(s, e, rep, '%-26s %s' % (fn, label), 'F')

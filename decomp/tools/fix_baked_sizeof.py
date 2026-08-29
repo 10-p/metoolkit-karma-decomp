@@ -172,8 +172,22 @@ BANNER = re.compile(r'(?m)^/\* ---- (\S+)')
 ALLOCA = re.compile(
     r'(?m)^[ \t]*(?:(?P<var>[A-Za-z_]\w*)\s*=\s*)?'
     r'(?:\((?P<cast>[A-Za-z_][\w ]*\**)\)\s*)?'
-    r'\(?\s*kd_\w+\s*=\s*\(char \*\)alloca\(\(size_t\)\(.*?\)'
-    r'\s*\*\s*(?P<size>0x[0-9a-f]+|\d+)\s*\+')
+    r'\(?\s*(?P<blk>kd_\w+)\s*=\s*\(char \*\)alloca\(\(size_t\)\(.*?\)'
+    r'\s*\*\s*(?P<size>0x[0-9a-f]+|\d+)\s*\+[ \t]*(?P<add>0x[0-9a-f]+|\d+)?')
+
+# ★ AND THE TYPE IS NOT ALWAYS ON THE SAME STATEMENT. The block lands in a
+# `char *` and is cast into place on a LATER line:
+#
+#     kd_alloca_iVar30 = (char *)alloca((size_t)(inMaxContactPointCount) * 0x10 + 0x10);
+#     iVar24 = 0;
+#     list.link = (McdContactLink *)(kd_alloca_iVar30);
+#
+# `0x10` is `sizeof(McdContactLink)` at i386 and 32 at LP64, so the link array
+# comes back HALF SIZE — and this site was one of the five the tool reported as
+# "alloca: no type for the block" while `McdContactSimplify` overran it in
+# seventeen places. The cast that CONSUMES the block names the element type just
+# as well as one on the allocation itself; it is only further away.
+CONSUMER = r'=\s*\(\s*(?P<cast>[A-Za-z_][\w ]*\*)\s*\)\s*\(?\s*%s\b'
 
 
 def includes(inc):
@@ -695,6 +709,11 @@ def main():
                 ty = re.sub(r'\s+', ' ', ty).strip()
             elif m.group('var'):
                 ty = declared_type(region_of(text, m.start()), m.group('var'))
+            if not ty and m.group('blk'):
+                c = re.search(CONSUMER % re.escape(m.group('blk')),
+                              region_of(text, m.start()))
+                if c:
+                    ty = re.sub(r'\s+', ' ', c.group('cast')).strip()
             if not ty:
                 declined += 1
                 reasons['alloca: no type for the block'] = reasons.get(
@@ -722,6 +741,14 @@ def main():
                 unconfirmed += 1
             edits.append((m.start('size'), m.end('size'),
                           ['(int)sizeof(*(%s)0)' % ty], 'alloc', None))
+            # ⚠ THE ADDEND IS AN ELEMENT TOO, when it equals the stride:
+            # `n * 0x10 + 0x10` is "n links, plus one". Scaling the multiplier
+            # and leaving the addend gives a block one element short at LP64,
+            # which is the same defect with a smaller overrun. Anything else —
+            # `+ 0` or a real slack constant — is left alone.
+            if m.group('add') is not None and int(m.group('add'), 0) == lit:
+                edits.append((m.start('add'), m.end('add'),
+                              ['(int)sizeof(*(%s)0)' % ty], 'alloc', None))
 
         # ---- the pool element strides. Both patterns are matched against the
         # ORIGINAL text and applied together below, back to front, so neither

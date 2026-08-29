@@ -122,9 +122,16 @@ def locals_of(body):
 # and the materialised form ghidra_clean emits for the same area,
 # `pMVar6 = (McdContact *)(kd_argarea_pMVar6 + 0x24);`
 PTR_TO_LOCAL = re.compile(r'^\s*(\w+)\s*=\s*(?:\([\w ]*\*+\)\s*)?(&)?(\w+)\s*;\s*$')
+# ⚠ THE SCALED SPELLING BELONGS HERE TOO. This is the "one past the end is a
+# legal pointer value" allowance — the materialised area is addressed DOWNWARDS
+# from its top, so its base legitimately IS `buf + size`. Teaching REF the
+# scaled offset without teaching this one turns that legal base into a reported
+# violation, which is a FALSE POSITIVE introduced by the fix for a false
+# negative. Both spellings or neither.
 PTR_TO_LOCAL_OFF = re.compile(
-    r'^\s*(\w+)\s*=\s*(?:\([\w ]*\*+\)\s*)?\(\s*(\w+)\s*\+\s*'
-    r'(-?(?:0x[0-9a-fA-F]+|\d+))\s*\)\s*;\s*$')
+    r'^\s*(\w+)\s*=\s*(?:\([\w ]*\*+\)\s*)?\(\s*(\w+)\s*\+\s*(?:'
+    r'(-?(?:0x[0-9a-fA-F]+|\d+))|\(\s*(-?\d+)\s*\*\s*\(int\)sizeof\(void \*\)\s*\)'
+    r')\s*\)\s*;\s*$')
 # `kd_alloca_iVar5 = (char *)alloca((size_t)(count) * 4)` — a STACK block, so a
 # negative offset from it is below the block and inside the frame. Unlike a heap
 # pointer, that is this checker's business: `alloca(n)` yields n bytes and
@@ -174,7 +181,8 @@ def pointer_aliases(body, sizes):
             if not m:
                 continue
             ptr, target = m.group(1), m.group(2)
-            base = int(m.group(3), 0)
+            base = (int(m.group(4), 10) * 4 if m.group(4) is not None
+                    else int(m.group(3), 0))
             amp = None
         else:
             ptr, amp, target = m.group(1), m.group(2), m.group(3)

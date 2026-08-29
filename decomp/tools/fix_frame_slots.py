@@ -86,6 +86,97 @@ I386_PTR = 4
 CFLAGS = ['-m32', '-O2', '-fno-pic', '-fno-strict-aliasing', '-std=gnu99',
           '-w', '-Wno-int-conversion', '-Wno-incompatible-pointer-types', '-DLINUX']
 
+# ★ THE SECOND SPELLING, and it is `ghidra_clean.py`'s own. Where Ghidra could
+# not name the base of an outgoing area, the cleaner MATERIALISES one:
+#
+#     undefined1 kd_argarea_aiStack_b0 [0x14];
+#     *(MeReal **)((kd_iptr)kd_argarea_aiStack_b0 + 0xc) = normal;
+#     kd_UpdateHull(*(McdContactList **)((kd_iptr)kd_argarea_aiStack_b0 + 0x4), ...);
+#
+# A BYTE array addressed at 4-byte words. At LP64 the eight-byte writes at +0,
+# +4, +8, +0xc overlap and `UpdateHull` is called with `contact=0x7fff` and
+# `normal=0x7fff00000000` — the two halves of one stack address, in two
+# different parameters. That is what `scene_boxes_on_plane` crashes on at step
+# 34, and there are exactly TWO of these areas in the corpus.
+#
+# ⚠ ONE OF THE TWO IS ADDRESSED DOWNWARDS FROM ITS TOP.
+#
+#     pMVar6 = (McdContact *)(kd_argarea_pMVar6 + 0x24);
+#     *(void **)((kd_iptr)pMVar6 + -4) = pvVar5;
+#
+# so the base offset and every negative offset off the DERIVED variable have to
+# scale together with the array. The area is named after the variable it feeds,
+# which is what ties the two together without any dataflow.
+ARGAREA = re.compile(r'(?m)^(?P<ind>[ \t]+)(?P<ty>[A-Za-z_]\w*)[ \t]+'
+                     r'(?P<name>kd_argarea_(?P<var>\w+))[ \t]*'
+                     r'\[\s*(?P<n>0x[0-9a-fA-F]+|\d+)\s*\][ \t]*;')
+DERIVED = re.compile(r'(?P<var>[A-Za-z_]\w*)\s*=\s*\([^()]*\)\s*\(\s*'
+                     r'(?P<area>kd_argarea_\w+)\s*\+\s*(?P<off>0x[0-9a-fA-F]+|\d+)\s*\)')
+
+# ★ A THIRD SPELLING: THE WHOLE FRAME MATERIALISED. Where Ghidra's locals are an
+# alloca-shifted frame, `ghidra_clean.py` allocates one and lays everything out
+# in it by hand:
+#
+#     char *kd_frame = (char *)alloca(uVar6 * 6 + 48);
+#     uint *auStack_3c = (uint *)(kd_frame + uVar6 * 6 + 36);  /* KD_MATERIALISED_BASE */
+#     *(int **)((kd_frame + 28)) = C;
+#     keaLCPSolver__getClampIndices(*(void **)((kd_frame + 20)), ...);
+#
+# The `uVar6 * 6` part is four `int` arrays and is width-independent; the
+# TRAILING constants — 48 in the size, 36 in the base — are the outgoing
+# argument area, nine four-byte words, and every `kd_frame + K` indexes it. At
+# LP64 the words overlap and `getClampIndices` is called with
+# `I=0x7fff00007fff, C=0x800000007fff`: two stack addresses interleaved half and
+# half. One site in the corpus, and it is what both contact scenes segfault on
+# once everything before it is repaired.
+KDFRAME = re.compile(r'(?m)^[ \t]*char \*(?P<name>kd_frame\w*)\s*=\s*\(char \*\)'
+                     r'alloca\((?P<expr>[^;]*?)\+\s*(?P<n>\d+)\s*\)\s*;')
+MATBASE = re.compile(r'(?m)^[ \t]*[A-Za-z_][\w ]*\**\s*\w+\s*=\s*\([^()]*\)\s*\('
+                     r'(?P<name>kd_frame\w*)\s*\+[^;]*?\+\s*(?P<n>\d+)\s*\)\s*;'
+                     r'[ \t]*/\* KD_MATERIALISED_BASE')
+FRAME_OFF = re.compile(r'\bkd_frame\w*\s*\+\s*(?P<n>\d+)\b')
+FRAME_OFF2 = re.compile(r'\(int\)\(\s*kd_frame\w*\s*\+\s*\d+\s*\)\s*\+\s*(?P<n>\d+)\b')
+
+
+def kdframe_edits(text, notes, fn, quiet=False):
+    """The materialised whole frame, as an all-or-nothing group. See KDFRAME."""
+    groups = []
+    for func, s, e in regions(text):
+        body = text[s:e]
+        d = KDFRAME.search(body)
+        if not d or 'sizeof(void *)' in d.group(0):
+            continue
+        edits, bad = [], []
+        for rx, g in ((KDFRAME, 'n'), (MATBASE, 'n')):
+            for m in rx.finditer(body):
+                edits.append((s + m.start(g), s + m.end(g),
+                              '%s * (int)(sizeof(void *) / 4)' % m.group(g)))
+        for rx in (FRAME_OFF, FRAME_OFF2):
+            for m in rx.finditer(body):
+                k = int(m.group('n'))
+                if k % I386_PTR:
+                    bad.append(k)
+                    continue
+                edits.append((s + m.start('n'), s + m.end('n'),
+                              '(%d * (int)sizeof(void *))' % (k // I386_PTR)))
+        if bad:
+            if not quiet:
+                notes.append('%-26s %s::%s has offsets that are not argument words '
+                             '(%s) — declined'
+                             % (fn, func, d.group('name'),
+                                ' '.join(str(x) for x in sorted(set(bad)))))
+            continue
+        # ⚠ The alloca's own trailing constant is matched by FRAME_OFF too when
+        # the frame name appears in the expression; dedupe by span or the same
+        # text is rewritten twice and the object stops matching.
+        edits = list({(a, b): (a, b, r) for a, b, r in edits}.values())
+        groups.append(((func, d.group('name')),
+                       '%s::%s (materialised frame, %d edit%s)'
+                       % (func, d.group('name'), len(edits),
+                          '' if len(edits) == 1 else 's'),
+                       edits))
+    return groups
+
 
 def includes(inc):
     out = ['-I' + inc]
@@ -120,7 +211,75 @@ def regions(text):
 
 def site_re(var):
     return re.compile(r'\(kd_iptr\)\s*(?P<amp>&?)\s*' + re.escape(var)
-                      + r'\s*(?:\+\s*(?P<off>0x[0-9a-fA-F]+|\d+))?')
+                      + r'\s*(?:\+\s*(?P<off>-?(?:0x[0-9a-fA-F]+|\d+)))?')
+
+
+def argarea_edits(text, notes, fn, quiet=False):
+    """The materialised argument areas, as all-or-nothing groups. See ARGAREA."""
+    groups = []
+    for func, s, e in regions(text):
+        body = text[s:e]
+        for d in ARGAREA.finditer(body):
+            area, n = d.group('name'), int(d.group('n'), 0)
+            if 'sizeof(void *)' in d.group(0):
+                continue                                  # already scaled
+            edits, offs, bad = [], [], []
+            # ---- the area addressed directly
+            for m in site_re(area).finditer(body):
+                if m.group('off') is None:
+                    continue
+                k = int(m.group('off'), 0)
+                offs.append(k)
+                if k % I386_PTR:
+                    bad.append(k)
+                    continue
+                edits.append((s + m.start('off'), s + m.end('off'),
+                              '(%d * (int)sizeof(void *))' % (k // I386_PTR)))
+            # ---- and through the pointer derived from its top
+            for dm in DERIVED.finditer(body):
+                if dm.group('area') != area:
+                    continue
+                k = int(dm.group('off'), 0)
+                offs.append(k)
+                if k % I386_PTR:
+                    bad.append(k)
+                    continue
+                edits.append((s + dm.start('off'), s + dm.end('off'),
+                              '(%d * (int)sizeof(void *))' % (k // I386_PTR)))
+                for m in site_re(dm.group('var')).finditer(body):
+                    if m.group('off') is None:
+                        continue
+                    k2 = int(m.group('off'), 0)
+                    offs.append(k2)
+                    if k2 % I386_PTR:
+                        bad.append(k2)
+                        continue
+                    edits.append((s + m.start('off'), s + m.end('off'),
+                                  '(%d * (int)sizeof(void *))' % (k2 // I386_PTR)))
+            if bad:
+                if not quiet:
+                    notes.append('%-26s %s::%s has offsets that are not argument '
+                                 'words (%s) — declined'
+                                 % (fn, func, area,
+                                    ' '.join(hex(x) for x in sorted(set(bad)))))
+                continue
+            if not edits:
+                continue
+            edits.append((s + d.start('n'), s + d.end('n'),
+                          '%d * (int)(sizeof(void *) / 4)' % n))
+            # ⚠ DEDUPE BY SPAN. The area is derived into its pointer TWICE —
+            # `pMVar6 = (McdContact *)(kd_argarea_pMVar6 + 0x24);` appears on
+            # both sides of a branch — so the walk over that pointer's sites
+            # runs once per assignment and adds every edit twice. Applying a
+            # span twice mangles the text, the object stops matching, and it
+            # reads as "this area cannot be repaired byte-identically".
+            edits = list({(a, b): (a, b, r) for a, b, r in edits}.values())
+            groups.append(((func, area),
+                           '%s::%s (%s[%d] argarea, %d slot%s)'
+                           % (func, area, d.group('ty'), n, len(set(offs)),
+                              '' if len(set(offs)) == 1 else 's'),
+                           edits))
+    return groups
 
 
 def slot_edits(text, notes, fn, quiet=False):
@@ -183,7 +342,9 @@ def main():
             continue
         path = os.path.join(srcdir, fn)
         text0 = open(path, errors='ignore').read()
-        if not slot_edits(text0, [], fn, quiet=True):
+        if not slot_edits(text0, [], fn, quiet=True) \
+                and not argarea_edits(text0, [], fn, quiet=True) \
+                and not kdframe_edits(text0, [], fn, quiet=True):
             continue
         text, tried, first = text0, set(), True
         # ⚠ RECOMPUTE AFTER EVERY ACCEPTED GROUP. The areas INTERLEAVE — MstUtils
@@ -194,7 +355,9 @@ def main():
         # on a repair that was never actually tried: `aiStack_9cb0` declined that
         # way while the same three areas, edited together by hand, were identical.
         while True:
-            groups = slot_edits(text, notes if first else [], fn, quiet=not first)
+            groups = (slot_edits(text, notes if first else [], fn, quiet=not first)
+                      + argarea_edits(text, notes if first else [], fn, quiet=not first)
+                      + kdframe_edits(text, notes if first else [], fn, quiet=not first))
             first = False
             todo = [g for g in groups if g[0] not in tried]
             if not todo:

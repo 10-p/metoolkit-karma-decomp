@@ -1152,6 +1152,78 @@ McdTriangleList       real: same run, same evidence. These two objects account f
 #                     a build that no longer existed. `cmake` will not rebuild what it thinks is
 #                     current, so the failure is silent. Check the newest `.c.o` against `git log`.
 
+# LP64-COLLISION-CHAIN 2026-08-29 (thirteenth session, third leg): ★ THE COLLISION HALF WAS
+#                     DEAD AT LP64 — `McdIntersect` dispatched through a NULL — and unpicking
+#                     it turned into a CHAIN of nine defects, each hidden behind the last.
+#                     Where it stands: memory-safe under ASan on all three scenes, `scene_chain`
+#                     matching the i386 control over all 900 rows, and the two CONTACT scenes
+#                     still failing in `keaLCPSolver::solveLCP`.
+#
+#                     ★★ THE INSTRUMENT THAT MADE IT TRACTABLE, and it is the reusable part.
+#                     `lp64_run.sh` counted AddressSanitizer errors and nothing else. It now
+#                     also (a) builds the i386 control for EVERY scene and diffs the
+#                     TRAJECTORY, and (b) runs the same scenes WITHOUT the sanitizer.
+#
+#                     ⚠ (b) IS NOT BELT-AND-BRACES — ASan HIDES THIS ENTIRE CLASS. A pointer
+#                     that lost its top 32 bits addresses somewhere in the low 4 GB, and under
+#                     ASan that region is MAPPED (its shadow and allocator live there), so the
+#                     load succeeds and the run reads CLEAN. Measured: with ASan reporting "no
+#                     sanitizer error" on all three scenes, the plain build segfaulted on two —
+#                     `UpdateHull`, `MdtConstraintGetRowCount`, `getClampIndices`, each a live
+#                     pointer arriving as two interleaved halves. Three real defects the
+#                     sanitized run could not see. The plain build is also 20x faster.
+#
+#                     ⚠ AND A SHORTER RUN IS NOT A MATCHING RUN. The first trajectory check
+#                     zipped the two traces, so a scene that timed out at row 20 reported
+#                     "matches" on 20 rows out of 900. It reports the length now.
+#
+#                     THE CHAIN, in the order it had to be unpicked — every one of these was
+#                     invisible until the one before it was repaired:
+#
+#                     1  `*(code **)(pvVar4 + 8)` in `McdIntersect` — the interaction table's
+#                        `intersectFn`, at 8 here and SIXTEEN there, so every dispatch went
+#                        through `goodbyeFn`, which is NULL for most interactions. NOTHING
+#                        collided at LP64. ⚠ The cause was one `\s` in a regex: `MEPUBLIC` sits
+#                        on its own line above the declaration, `\s` crosses newlines, and the
+#                        return type came out as `MEPUBLIC McdInteractions*`, which resolves to
+#                        no struct. A line-local pattern fixed the whole collision half.
+#                     2  `MdtContactGroupID MEAPI MdtConstraintDCastContactGroup(...)` — the
+#                        star is NOT WRITTEN when the SDK returns a handle typedef, so the
+#                        return-type scan never saw it. `MdtUpdatePartitions` kept reading
+#                        `contactCount` at `+0x160` and reported ZERO contacts on every step
+#                        while the packer packed them; the row budget it sized the kea arena
+#                        from was 24 where the run needed 74.
+#                     3  the kea arena itself: `iVar2 = maxPartitions * 0xc + 0x5c`, and `0x5c`
+#                        is `sizeof(MdtKeaConstraints)` — 92 here, 152 there. ⚠ proven.txt said
+#                        this carve-up needed "a static analysis, not a pattern match"; MEASURED,
+#                        every other term is width-independent and it is ONE literal.
+#                     4  `alloca(n * 0x10 + 0x10)` in `McdContactSimplify` — `0x10` is
+#                        `sizeof(McdContactLink)`, 32 at LP64, so the link array came back half
+#                        size. The type is in the cast that consumes the block on a LATER line,
+#                        which is why it was one of the five "alloca: no type for the block".
+#                        ⚠ The trailing ADDEND is an element too when it equals the stride.
+#                     5, 6, 7  three more spellings of the invented argument area:
+#                        `kd_argarea_X[N]` addressed forwards, the same addressed DOWNWARDS
+#                        from a derived pointer, and `char *kd_frame = alloca(...)` — a whole
+#                        materialised frame whose TRAILING constants are the argument words.
+#                     8  `iVar1 = *(int *)(pvVar2 + KD_OFFSET(MdtContactGroup, first))` — a
+#                        four-byte read of an eight-byte pointer field, then `iVar1 + 0x1dc`
+#                        with no cast on the base for any pattern to key on. Both halves needed
+#                        the OTHER pass's output to be recognisable, which is why
+#                        `fix_literal_offsets` is now run TWICE.
+#                     9  `C = (int *)((kd_iptr)auStack_3c + uVar6 * -2)` — `uVar6` is a `uint`,
+#                        so the product is UNSIGNED and comes out large-positive. At i386 the
+#                        addition wraps in 32 bits and is right; at LP64 the product is
+#                        ZERO-EXTENDED and the pointer moves four gigabytes the wrong way.
+#                        ⚠ `(kd_iptr)uVar6` is the WRONG repair and was the first tried — it
+#                        makes the multiply SIGNED, gcc schedules it differently and all eight
+#                        sites decline. `(kd_uptr)` IS `unsigned int` at i386, so it is
+#                        byte-identical by construction. Preserve signedness.
+#
+#                     WHAT IS LEFT: `keaLCP_new.c:270`, `*puVar9 = 0` inside `solveLCP`, on the
+#                     plain build only. Same neighbourhood as 9 — the LCP solver's hand-laid
+#                     frame — and it is the next thing to read.
+
 # LP64-COLLISION-SIDE 2026-08-29 (thirteenth session, later): ★ MEMORY SAFETY IS CLEAN ON ALL
 #                     THREE SCENES AT 64-BIT POINTER WIDTH. What is left is a TRAJECTORY
 #                     divergence, on the collision side, and the control that says so is

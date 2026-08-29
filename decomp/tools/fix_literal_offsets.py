@@ -84,10 +84,34 @@ FIELD_READ = re.compile(r'(?m)^[ \t]*(?P<var>[A-Za-z_]\w*)\s*=\s*'
 
 BANNER = re.compile(r'(?m)^/\* ---- (\S+)')
 
+# ⚠ AND WHEN THE BASE IS ALREADY AN INTEGER THERE IS NO CAST TO KEY ON.
+#
+#     for (iVar1 = *(int *)(pvVar2 + KD_OFFSET(MdtContactGroup, first));
+#          iVar1 != 0; iVar1 = *(int *)(iVar1 + 0x1dc))
+#
+# `iVar1` is an `int` holding an `MdtContact *`, so Ghidra writes plain integer
+# arithmetic and the pattern above — which requires `((int)base + K)` — sees
+# nothing at all. Matching a bare `(x + 4)` everywhere would be far too broad,
+# so these are admitted ONLY for a base this tool has already TYPED by some
+# other evidence. That keeps it a measurement: the type comes first, the sites
+# follow.
+NOCAST = re.compile(r'\((?P<base>[A-Za-z_]\w*)\s*\+\s*(?P<off>0x[0-9a-f]+|\d+)\)')
 
-def all_sites(text):
-    """Every baked-offset site, in source order."""
-    return list(SITE.finditer(text))
+
+def all_sites(text, typed=()):
+    """Every baked-offset site, in source order. `typed` admits the cast-less
+    form for bases whose concrete type is already established."""
+    out = list(SITE.finditer(text))
+    if typed:
+        taken = [(m.start(), m.end()) for m in out]
+        for m in NOCAST.finditer(text):
+            if m.group('base') not in typed:
+                continue
+            if any(s <= m.start() and m.end() <= e for s, e in taken):
+                continue
+            out.append(m)
+        out.sort(key=lambda m: m.start())
+    return out
 
 CFLAGS = ['-m32', '-O2', '-fno-pic', '-fno-strict-aliasing', '-std=gnu99',
           '-w', '-Wno-int-conversion', '-Wno-incompatible-pointer-types', '-DLINUX']
@@ -414,9 +438,15 @@ def tag_of(ty, inc):
     """A declared type spelling -> the struct TAG it ultimately names.
 
     The offsets live on the tag, and what Ghidra writes is the handle:
-    `MdtBSJointID` is `MdtBSJoint *` is `struct MdtBSJoint`."""
+    `MdtBSJointID` is `MdtBSJoint *` is `struct MdtBSJoint`.
+
+    ⚠ A LEADING ALL-CAPS WORD IS A MACRO, NOT A TYPE. `MEPUBLIC McdInteractions`
+    resolves to nothing, and the site then declines for a reason that looks like
+    "no such struct" rather than "there is a decoration in front of it"."""
     t = re.sub(r'\s+', ' ', ty or '').replace('*', '').replace('const ', '')
     t = t.replace('struct ', '').strip()
+    while ' ' in t and re.match(r'^[A-Z][A-Z0-9_]*$', t.split()[0]):
+        t = t.split(' ', 1)[1].strip()
     for _ in range(8):
         if t in struct_bodies(inc):
             return t
@@ -523,9 +553,58 @@ CALL = re.compile(r'\b(?P<fn>[A-Za-z_]\w*)\s*\(')
 # nothing, so the KNOWN assignments still agree — and a function where two of
 # them name different structs is declined and reported rather than resolved by
 # picking the nearer one.
-RETURNS = re.compile(r'(?m)^\s*(?:extern\s+)?(?P<ty>[A-Za-z_]\w*(?:\s+\w+)*\s*\*+)\s*'
-                     r'(?:MEAPI\s+)?(?P<fn>\w+)\s*\(')
+# ⚠ LINE-LOCAL, AND THAT IS NOT A DETAIL. `\s` crosses newlines, and the SDK
+# puts its visibility macro on its own line:
+#
+#     MEPUBLIC
+#     McdInteractions*  MEAPI McdFrameworkGetInteractions(McdFramework *frame, ...
+#
+# so a `\s`-based type group captures `MEPUBLIC McdInteractions*`, which resolves
+# to no struct at all. The symptom is not an error — the site simply declines,
+# and `McdIntersect` keeps reading `intersectFn` at the i386 offset 8, which at
+# LP64 is `goodbyeFn` and is NULL for most interactions. EVERY collision in the
+# library was dispatching through a null pointer because of one `\s`.
+RETURNS = re.compile(r'(?m)^[ \t]*(?:extern[ \t]+)?(?P<ty>[A-Za-z_]\w*(?:[ \t]+\w+)*'
+                     r'[ \t]*\*+)[ \t]*(?:MEAPI[ \t]+)?(?P<fn>\w+)[ \t]*\(')
+# ⚠ AND THE STAR IS NOT ALWAYS WRITTEN. This SDK returns its handles by typedef:
+#
+#     MdtContactGroupID MEAPI MdtConstraintDCastContactGroup(const MdtConstraintID c);
+#
+# `MdtContactGroupID` IS `MdtContactGroup *`, but a pattern that requires a
+# literal `*` never sees it — so `MdtUpdatePartitions` kept reading its
+# `contactCount` at `+0x160`, which is `count` at i386 and 112 bytes short of it
+# at LP64. The partitioner then reported contactCount = 0 on EVERY step while
+# the packer went on packing contacts, and the row budget it sized the kea arena
+# from was 24 where the run needed 74. The symptom is four writes past the end
+# of a heap block in `MdtBclEndConstraint`, three files away, and it survived
+# repairing that arena twice.
+#
+# A starless return type is accepted and `tag_of` decides: `int`, `void` and
+# `MeBool` resolve to no struct and drop out on their own. What makes the rest a
+# measurement rather than a guess is the same all-offsets-land test.
+RETURNS_TD = re.compile(r'(?m)^[ \t]*(?:extern[ \t]+)?(?P<ty>[A-Za-z_]\w*)[ \t]+'
+                        r'(?:MEAPI[ \t]+)?(?P<fn>\w+)[ \t]*\(')
 CALL_ASSIGN = re.compile(r'(?m)(?P<var>[A-Za-z_]\w*)\s*=\s*(?P<fn>[A-Za-z_]\w*)\s*\(')
+
+# ★ A FOURTH SOURCE, AND IT IS THIS TOOL'S OWN OUTPUT READ BACK. Once a site is
+# repaired the field it names is written down in the source:
+#
+#     iVar1 = *(int *)(pvVar2 + ((int)((char *)&((struct MdtContactGroup *)0)
+#                                        ->first - (char *)0)));
+#
+# `MdtContactGroup::first` is an `MdtContact *`, so `iVar1` holds one — and the
+# `+ 0x1dc` and `+ 0x194` it is then used with are `nextContact` and
+# `params.friction1`, at 476 and 404 here and 632 and 528 there. The chain is
+# `pvVar2` typed from a call, which names `first`, which types `iVar1`; each
+# link needs the previous one already rewritten, which is why the pass is run
+# TWICE. It is idempotent — a repaired site no longer has a literal to match —
+# so the second run only ever sees what the first could not resolve.
+FIELD_OF = re.compile(r'\(\(int\)\(\(char \*\)&\(\(struct (?P<tag>\w+) \*\)0\)'
+                      r'->(?P<path>[A-Za-z_][\w.\[\]]*) - \(char \*\)0\)\)')
+# ⚠ NOT ANCHORED TO THE LINE START. The assignment that names the type is very
+# often the INITIALISER OF A `for`, on the same line as the condition and the
+# increment — which is exactly the loop this rule was written for.
+ASSIGN_DEREF = re.compile(r'(?P<var>[A-Za-z_]\w*)\s*=\s*\*\([^)]*\)\s*\(')
 
 _RET = {}
 
@@ -540,9 +619,10 @@ def header_returns(inc):
                 if not fn.endswith('.h'):
                     continue
                 txt = open(os.path.join(dirpath, fn), errors='ignore').read()
-                for m in RETURNS.finditer(txt):
-                    _RET.setdefault(m.group('fn'),
-                                    re.sub(r'\s+', ' ', m.group('ty')).strip())
+                for rx in (RETURNS, RETURNS_TD):
+                    for m in rx.finditer(txt):
+                        _RET.setdefault(m.group('fn'),
+                                        re.sub(r'\s+', ' ', m.group('ty')).strip())
     return _RET
 
 
@@ -702,6 +782,57 @@ def main():
 
     tags = [t for t in struct_bodies(inc) if t not in ('_IO_FILE',)]
 
+    # ---- WHAT THE FIELD SAID IT HOLDS. See FIELD_OF: this reads back the form
+    # this tool itself emits, so it resolves one link further along a chain on
+    # each run. Gated by the same all-offsets-land test.
+    bodies = struct_bodies(inc)
+    for fn, text in texts.items():
+        for b in BANNER.finditer(text):
+            func, region = b.group(1), region_of(text, b.start())
+            by_var = {}
+            for m in all_sites(region):
+                v = m.group('base')
+                if '->' in v or (fn, func, v) in opaque_var:
+                    continue
+                if not OPAQUE.match(declared_type(region, v) or 'void *'):
+                    continue
+                by_var.setdefault(v, set()).add(int(m.group('off'), 0))
+            # ⚠ A CANDIDATE MAY HAVE NO CAST-BEARING SITE AT ALL — `iVar1` is an
+            # `int`, so every use of it is plain arithmetic. Its offsets are
+            # gathered from the cast-less form here, and the all-offsets-land
+            # test below is still what decides.
+            for a in ASSIGN_DEREF.finditer(region):
+                v = a.group('var')
+                if (fn, func, v) in opaque_var:
+                    continue
+                if v not in by_var:
+                    offs = {int(m.group('off'), 0)
+                            for m in NOCAST.finditer(region) if m.group('base') == v}
+                    if not offs:
+                        continue
+                    by_var[v] = offs
+                stmt = region[a.start():region.find(';', a.start())]
+                f = FIELD_OF.search(stmt)
+                if not f:
+                    continue
+                mt = re.search(r'(?m)^[ \t]+(?P<ty>(?:const\s+|struct\s+|unsigned\s+)*'
+                               r'[A-Za-z_]\w*[ \t]*\**)[ \t]*'
+                               + re.escape(f.group('path').split('.')[-1]
+                                           .split('[')[0]) + r'[ \t]*(?:\[[^\]]*\])?[ \t]*;',
+                               bodies.get(f.group('tag'), ''))
+                tag = tag_of(mt.group('ty'), inc) if mt else None
+                if not tag:
+                    continue
+                paths = offsets_of(tag, inc, cache)
+                if all(o in paths for o in by_var[v]):
+                    opaque_var[(fn, func, v)] = tag
+                else:
+                    notes_early.append(
+                        '%-26s %s: %s reads %s::%s (%s) but %d of its %d offsets do '
+                        'not land — declined'
+                        % (fn, func, v, f.group('tag'), f.group('path'), tag,
+                           sum(1 for o in by_var[v] if o not in paths), len(by_var[v])))
+
     # ---- WHAT THE FUNCTION SAID IT RETURNS. See RETURNS above: no inference,
     # just the vendor's declaration, gated by the same all-offsets-land test.
     for fn, text in texts.items():
@@ -741,7 +872,8 @@ def main():
     notes = list(notes_early)
     for fn, text0 in texts.items():
         text = text0
-        sites = all_sites(text)
+        typed = {v for (f, _fn, v) in opaque_var if f == fn}
+        sites = all_sites(text, typed)
         if not sites:
             continue
         path = os.path.join(srcdir, fn)

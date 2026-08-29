@@ -22,6 +22,12 @@ rm -rf "$DST" && cp -a "$SRC" "$DST" || exit 2
 echo "== post-passes on a COPY ($DST) =="
 python3 "$HERE/tools/fix_baked_sizeof.py" "$DST/allobj" "$BUILD" "$MT" || exit 2
 python3 "$HERE/tools/fix_strides.py"   "$DST/allobj" "$BUILD" "$MT" || exit 2
+# ⚠ TWICE, AND THE SECOND RUN IS NOT BELT-AND-BRACES. Each run resolves one
+# more link of a type chain: a call names `pvVar2`, `pvVar2` names the field
+# `first`, and only then can the local that READS `first` be typed. The pass is
+# idempotent — a repaired site has no literal left to match — so the second run
+# sees only what the first could not resolve.
+python3 "$HERE/tools/fix_literal_offsets.py" "$DST/allobj" "$BUILD" "$MT" | tail -3 || exit 2
 python3 "$HERE/tools/fix_literal_offsets.py" "$DST/allobj" "$BUILD" "$MT" | tail -3 || exit 2
 python3 "$HERE/tools/fix_derived_fields.py" "$DST/allobj" "$BUILD" "$MT" | head -2 || exit 2
 python3 "$HERE/tools/fix_arena_carve.py" "$DST/allobj" "$BUILD" "$MT" | head -3 || exit 2

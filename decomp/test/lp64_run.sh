@@ -161,6 +161,13 @@ for s in "${SCENES[@]}"; do
 import sys
 a=[l.split(',') for l in open(sys.argv[1]) if l.strip()]
 b=[l.split(',') for l in open(sys.argv[2]) if l.strip()]
+# ⚠ A SHORTER RUN IS NOT A MATCHING RUN. Zipping two traces of different
+# lengths compares only the shorter one, so a scene that died or timed out at
+# step 20 reports "matches" on the strength of 20 rows out of 900. HANDOVER
+# records the same trap for ktrace's `restZ`.
+if len(a)!=len(b):
+    print('      TRAJECTORY INCOMPLETE: %d row(s) against the control\'s %d'%(len(b),len(a)))
+    sys.exit(0)
 worst=0.0
 for x,y in zip(a,b):
     for p,q in zip(x[1:],y[1:]):
@@ -170,10 +177,54 @@ for x,y in zip(a,b):
             print('      TRAJECTORY diverges >1%% from the i386 control at step %s'%x[0])
             sys.exit(0)
         worst=max(worst,abs(fp-fq))
-print('      trajectory matches the i386 control (worst |delta| %.2e)'%worst)
+print('      trajectory matches the i386 control over all %d rows (worst |delta| %.2e)'
+      %(len(a),worst))
 PY
     fi
 done
+# ---- AND THE SAME SCENES WITHOUT THE SANITIZER ------------------------------
+# ★ ASan HIDES THIS CLASS OF DEFECT, WHICH IS THE OPPOSITE OF WHAT IT IS FOR.
+# A pointer that lost its top 32 bits addresses somewhere in the low 4 GB — and
+# under ASan that region is mapped (its shadow and its allocator live there), so
+# the load succeeds and the run reads CLEAN. Without the sanitizer the same
+# address is unmapped and it is an immediate SIGSEGV.
+#
+# Measured: with the ASan build reporting "no sanitizer error" on all three
+# scenes, the plain build segfaulted on two of them — in `UpdateHull`, in
+# `MdtConstraintGetRowCount` and in `getClampIndices`, each a live pointer
+# arriving as two interleaved halves. Three real defects the sanitized run could
+# not see. This build is also 20x faster, so it costs a minute and pays for
+# itself the first time it fires.
+if [ "${KD_SKIP_PLAIN:-}" != 1 ]; then
+    echo "== LP64, no sanitizer (ASan MAPS a truncated pointer; bare metal does not) =="
+    PF="-O1 -g -fno-pic -fno-strict-aliasing -std=gnu99 -w -Wno-int-conversion"
+    PF="$PF -Wno-incompatible-pointer-types -DLINUX -I$HERE/include $IF"
+    mkdir -p "$W/plain"
+    for c in "$SRCDIR"/*.c; do
+        b=$(basename "$c" .c); [ -f "$BUILD/$b.o" ] || continue
+        gcc -m64 $PF $FPMATH -c -o "$W/plain/$b.o" "$c" 2>/dev/null \
+            || { echo "  plain: did not compile at m64: $b"; exit 2; }
+    done
+    gcc -m64 $PF $FPMATH -c -o "$W/plain/hull.o" \
+        "$HERE/src/McdConvexCreateHull/kd_convexhull.c" 2>/dev/null || exit 2
+    for s in "${SCENES[@]}"; do
+        name=$(basename "$s" .c)
+        gcc -m64 $PF $FPMATH -no-pie -o "$W/plain_$name" "$s" "$W/plain"/*.o \
+            -lstdc++ -lm 2>/dev/null || { echo "  plain: $name did not link"; status=1; continue; }
+        ( timeout 600 "$W/plain_$name" > "$W/plain_$name.csv" 2> "$W/plain_$name.err" ) 2>/dev/null
+        rc=$?
+        if [ "$rc" = 0 ]; then
+            printf '  %-24s exit 0    clean, %s row(s)\n' "$name" \
+                   "$(wc -l < "$W/plain_$name.csv")"
+        else
+            status=1
+            printf '  %-24s exit %-3d  %s\n' "$name" "$rc" \
+                   "$( [ "$rc" -ge 128 ] && echo "SIGNAL $((rc-128)) after $(wc -l < "$W/plain_$name.csv") row(s)" || echo "verdict failed" )"
+            sed -n 's/^/      /p' "$W/plain_$name.err" | tail -3
+        fi
+    done
+fi
+
 [ "$status" = 0 ] && echo "  -> PASS (necessary, NOT sufficient: arm64 also faults on unaligned access)" \
                   || echo "  -> FAIL — 64-bit pointer width breaks this. See the header of this file."
 [ "${KD_KEEP:-0}" = 1 ] && echo "  (KD_KEEP: reports and binaries kept in $W)"

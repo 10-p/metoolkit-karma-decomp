@@ -101,6 +101,26 @@ EDITS = {
          "       (MdtBaseConstraint **)((MdtPartitionInfo *)((char *)(pppMVar2 + maxBodies) + "
          + D + ") + maxBodies);"),
     ],
+    # ---- THE SECOND CARVE-UP, and it is one literal. `MdtKeaConstraintsCreateFromChunk`
+    # accumulates a dozen sizes across thirty lines with alignment rounding and
+    # branches, which is why `proven.txt` recorded it as needing "a static
+    # analysis, not a pattern match". Measured, every one of those terms is
+    # WIDTH-INDEPENDENT except the header:
+    #
+    #     jbody 8/constraint, jofs 4, jsize 4, force 0x40, JBlockPair 0xc0 —
+    #     all int and MeReal, identical at both widths
+    #     maxPartitions * 0xc — three `int[maxPartitions]`, likewise
+    #     0x5c — sizeof(MdtKeaConstraints), 92 here and 152 there
+    #
+    # and the carve-up itself starts at `&pMVar3[1].num_partitions`, which the
+    # compiler recomputes, so the arrays LAND correctly and only the total is
+    # short. `Jstore` is the last of them, which is why the report is four
+    # writes into `clist->Jstore` in `MdtBclAddContact`, a file away and with
+    # nothing pointing at the allocation.
+    'MdtMainLoop.c': [
+        ("  iVar2 = maxPartitions * 0xc + 0x5c;",
+         "  iVar2 = maxPartitions * 0xc + (int)sizeof(MdtKeaConstraints);"),
+    ],
 }
 
 
@@ -171,8 +191,9 @@ def main():
     print('  declined (reported, not guessed)   : %d' % declined)
     for n in notes:
         print('     %s' % n)
-    print('  -> NOT DONE: MdtKeaConstraintsCreateFromChunk (MdtMainLoop.c) and')
-    print('     four carve-ups in MdtWorld.c. Different shape; see this file.')
+    print('  -> NOT DONE: four carve-ups in MdtWorld.c. Different shape; see')
+    print('     this file. (MdtKeaConstraintsCreateFromChunk WAS this shape after')
+    print('     all: every term but the header is width-independent.)')
     return 0
 
 

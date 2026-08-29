@@ -673,7 +673,7 @@ four, so the loop walks twice the length of the table.
 
 ```bash
 python3 tools/fix_strides.py /tmp/kd_lp64/allobj /tmp/kd_build
-#   -> 4 repaired, 0 declined
+#   -> 10 repaired, 0 declined   (4 loops + 6 byte cursors)
 ```
 
 ★ **This was recorded as possibly unfixable under the byte-identity gate, and that was never
@@ -705,6 +705,38 @@ shadowed it with the field path it was building, so the repaired text went to a 
 `mAABBMarkers[0].mOrdinate` in the working directory. It printed "4 repaired", `CxSmallSort.c` was
 untouched on disk, and the harness kept reporting the same SEGV against a fix the report said had
 landed. **Diff the source; do not read the summary.**
+
+★ **A THIRD SHAPE: A TABLE WALKED BY A BYTE CURSOR.** gcc unrolled
+`for (i = 0; i < 16; i++) pools[i].contactCount = 0;` four ways and Ghidra rendered the induction
+variable as a byte cursor:
+
+```c
+iVar10 = 0xc;
+do {
+  *(undefined4 *)((int)&context->pools->contactCount    + iVar10) = 0;
+  *(undefined4 *)((int)&context->pools[1].contactCount  + iVar10) = 0;
+  ...
+  iVar10 = iVar10 + 0x30;
+} while (-1 < iVar11);
+```
+
+`0xc` is one `McdBatchContactPool` and `0x30` is four — 12 bytes each at i386 and **16** at LP64,
+because the struct carries a `contacts` pointer. ⚠ **The element type is the struct that OWNS the
+named field**, not the field's own type: `contactCount` is an `int`; what the cursor strides over
+is the pool containing it.
+
+⚠ **A Ghidra temporary is reused across the whole function.** `iVar10` is the pool cursor inside
+one loop and an entry index three statements later, so a function-wide scan for its literal
+assignments finds `iVar10 = iVar10 + 1` and declines the site as "not all multiples". The
+cursor's arithmetic is a property of its **loop**, so that is the span that gets read.
+
+⚠ **And the cast is not part of the pattern.** This pass runs *before* `fix_ptrwidth`, so the
+sites say `(int)&…` here and `(kd_iptr)&…` afterwards; writing the later spelling into the
+matcher made it find nothing at all — the same silent miss `fix_frame_slots`' trailing addend had.
+
+⚠ **It is LATENT, and that is why it is written down.** Repairing it alone changed not one number
+in any of the three scenes. Real by measurement — 12 against 16, and the cursor provably misses —
+and **not** the cause of the divergence it was found while chasing.
 
 > ⚠ **The step is not always a direct member.** `CxSmallSort::New` walks a base-class subobject —
 > `pCVar4 = (CxSmallSortRep *)&(pCVar4->super_Link).mPrev;` — so the parenthesised, dotted path has
@@ -817,6 +849,29 @@ rule reads `_McdGeometry`, finds that none of `+0x10/0x14/0x18` land on it, and 
 correctly, on the type it was given. ⚠ **One registration per file or nothing:** the `Ix*`
 interaction objects register none and handle **two** geometries (`IxSphylPrimitives` has 227 such
 sites), so a per-file answer there would be a guess and they are reported instead.
+
+★★ **AND A STRUCT ADDRESSED AS AN ARRAY OF 4-BYTE WORDS — the site that closed the last
+trajectory divergence.**
+
+```c
+undefined4 *puVar4;
+puVar4 = McdFrameworkGetInteractions(frame, type1, type2);
+if (puVar4[4] != 0) { /* swap p->model1 and p->model2 */ }
+```
+
+`_McdInteractions` opens with four function pointers, so `swap` is the fifth WORD at i386 and
+`[4]` is exactly it. At LP64 those pointers occupy 32 bytes, `swap` moves to `[8]`, and `[4]`
+reads the upper half of `intersectFn` — non-zero, so **`McdHello` swapped every pair it was
+given**, and `scene_boxes_on_plane` saw the same box pair arrive at `McdBoxBoxIntersect` with an
+exactly negated normal.
+
+It is `fix_vtable_offsets`' family — a table walked in the shipped target's pointer size — but on
+an *ordinary* struct, and invisible to every rule above because **an array subscript is the whole
+expression**: no cast and no `+ K` to key on. What types it is the callee's own declared return
+type, the one source here that is not an inference. ⚠ The index must land on a real field, which
+is what keeps it off an honest `int *` walk. ⚠ And the call's `(` is often on the *next* line —
+requiring it on the same one made the first version of this scan report zero with the site in
+front of it.
 
 ⚠ **AND A DECLINE IS ONLY A DECLINE IF NOTHING LATER TYPES THE VARIABLE.** The rules run in order
 and a later one routinely answers what an earlier one could not — `pvVar7` is declined by the

@@ -52,6 +52,7 @@ import subprocess
 import sys
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+I386_WORD = 4      # what a pointer weighed on the shipped target
 WORK = '/tmp/kd_offsets'
 
 # THE SITE, in every spelling: an address computed as `BASE + K` with K frozen
@@ -525,8 +526,77 @@ def corpus_callbacks(texts, inc):
     return {k: v for k, v in out.items() if v}
 
 
+# ★ A STRUCT ADDRESSED AS AN ARRAY OF 4-BYTE WORDS.
+#
+#     undefined4 *puVar4;
+#     puVar4 = McdFrameworkGetInteractions(frame, type1, type2);
+#     if (puVar4[4] != 0) { /* swap p->model1 and p->model2 */ }
+#
+# `_McdInteractions` opens with four function pointers, so `swap` is the fifth
+# WORD at i386 and `puVar4[4]` is exactly it. At LP64 those pointers occupy 32
+# bytes, `swap` moves to `[8]`, and `[4]` reads the upper half of `intersectFn`
+# — non-zero, so `McdHello` swaps every pair it is given. That is the whole of
+# `scene_boxes_on_plane`'s remaining trajectory divergence: the same box pair
+# arrives at `McdBoxBoxIntersect` as (box1, box0) with an exactly NEGATED normal
+# and the same penetration to seven digits.
+#
+# It is LP64-VTABLE-WORDS' family — a table walked in the shipped target's
+# pointer size — but on an ORDINARY struct, and it is invisible to every rule
+# above because there is no cast and no `+ K` to key on: an array subscript is
+# the whole expression. What types it is the callee's own declared return type,
+# the one source in this tool that is not an inference.
+#
+# ⚠ THE INDEX MUST LAND ON A REAL FIELD, which is what keeps this from matching
+# an honest `int *` walk. `[4]` on `_McdInteractions` is `swap` and `[4]` on a
+# genuine array of words is not a field of anything.
+NARROW_PTR_DECL = re.compile(
+    r'(?m)^[ \t]*(?P<ty>undefined4|undefined|uint|int|unsigned int|MeU32|MeI32)'
+    r'[ \t]*\*[ \t]*(?P<v>[A-Za-z_]\w*)[ \t]*;')
+# ⚠ THE CALL'S `(` IS OFTEN ON THE NEXT LINE, and requiring it on the same one
+# is why the first version of this scan reported zero with the site in front of
+# it. Ghidra breaks a long call after the callee name.
+CALL_ASSIGN_NL = re.compile(
+    r'(?m)^[ \t]*(?P<v>[A-Za-z_]\w*)\s*=\s*(?:\([^()]*\)\s*)?'
+    r'(?:kd_)?(?P<fn>[A-Za-z_]\w*)\s*\n?\s*\(')
+
+
+def word_subscript_sites(text, inc, cache):
+    """Every `v[N]` on a narrow pointer that really addresses a struct field."""
+    out = []
+    rets = header_returns(inc)
+    for b in BANNER.finditer(text):
+        region = region_of(text, b.start())
+        base = text.index(region)
+        narrow = {m.group('v'): m.group('ty')
+                  for m in NARROW_PTR_DECL.finditer(region)}
+        if not narrow:
+            continue
+        for a in CALL_ASSIGN_NL.finditer(region):
+            v = a.group('v')
+            if v not in narrow:
+                continue
+            tag = tag_of(rets.get(re.sub(r'^kd_', '', a.group('fn')), ''), inc)
+            if not tag:
+                continue
+            paths = offsets_of(tag, inc, cache)
+            if not paths:
+                continue
+            for s in re.finditer(r'\b%s\s*\[\s*(?P<i>\d+)\s*\]' % re.escape(v),
+                                 region):
+                off = int(s.group('i')) * I386_WORD
+                field = paths.get(off)
+                if field is None:
+                    continue
+                out.append((base + s.start(), base + s.end(),
+                            '*(%s *)((kd_iptr)%s + ((int)((char *)&((%s%s *)0)->%s'
+                            ' - (char *)0)))'
+                            % (narrow[v], v, kw_of(tag), tag, field),
+                            '%-14s %s[%s] -> %s->%s'
+                            % (tag, v, s.group('i'), v, field)))
+    return out
+
+
 def signature_params(region):
-    """The parameter NAMES of the function this region holds, in order."""
     sig = re.search(r'(?s)^/\* ---- .*?\*/\s*\n(.*?)\{', region)
     if not sig:
         return []
@@ -1050,6 +1120,9 @@ def main():
                              % (fn, ty, len(offs), len(fits), ', '.join(fits[:4])))
 
         edits = []
+        # ---- A STRUCT ADDRESSED AS AN ARRAY OF 4-BYTE WORDS. See WORD_SUB.
+        for s, e, rep, note in word_subscript_sites(text, inc, cache):
+            edits.append((s, e, rep, '%-26s %s' % (fn, note)))
         for m in sites:
             tag, ty = site_tag(m)
             off = int(m.group('off'), 0)

@@ -64,6 +64,9 @@ import re
 import subprocess
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import fix_narrow_pointers as FNP
+
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WORK = '/tmp/kd_wordloop'
 
@@ -107,6 +110,42 @@ SHIFTED = re.compile(r'^\(uint\)\((?P<expr>.*?)\s*\*\s*(?P<sz>0x[0-9a-f]+|\d+)\s
 # multiple is the answer. Both quantities are asked of the compiler. The shipped
 # amd64 build then has to pass the 64-bit value — `_Update` there does
 # `add $0x50,%rbx`, which is 80.
+# ★ A THIRD SHAPE: A TABLE WALKED BY A BYTE CURSOR WITH A BAKED STRIDE.
+#
+#     iVar10 = 0xc;
+#     do {
+#       *(undefined4 *)((kd_iptr)&context->pools->contactCount + iVar10) = 0;
+#       *(undefined4 *)((kd_iptr)&context->pools[1].contactCount + iVar10) = 0;
+#       ...
+#       iVar10 = iVar10 + 0x30;
+#     } while (-1 < iVar11);
+#
+# gcc unrolled `for (i = 0; i < 16; i++) pools[i].contactCount = 0;` four ways
+# and Ghidra rendered the induction variable as a BYTE cursor. `0xc` is one
+# `McdBatchContactPool` and `0x30` is four of them — 12 bytes each at i386 and
+# SIXTEEN at LP64, because the struct carries a `contacts` pointer. At 64-bit the
+# cursor lands four bytes short of every element from the first step on, so the
+# loop zeroes the middle of `contacts` instead of `contactCount` and leaves the
+# pool counts holding whatever was there.
+#
+# ⚠ THE ELEMENT TYPE IS THE STRUCT THAT OWNS THE NAMED FIELD, not the field's
+# own type. `&context->pools->contactCount` names `contactCount`, an `int`; what
+# the cursor strides over is the `McdBatchContactPool` that CONTAINS it.
+#
+# ⚠ AND IT IS LATENT, WHICH IS WHY IT IS WRITTEN DOWN. Measured: repairing it
+# alone changed not one number in any of the three scenes. It is a real defect
+# by measurement — 12 against 16, and the cursor provably misses — and it was
+# NOT the cause of the divergence it was found while chasing. Bisect before
+# believing; that is four for four in this project.
+# ⚠ THE CAST IS NOT PART OF THE PATTERN. This pass runs BEFORE `fix_ptrwidth`,
+# so the sites still say `(int)&...` here and `(kd_iptr)&...` afterwards —
+# writing the later spelling into the matcher made it find nothing at all, which
+# is the same silent miss `fix_frame_slots`' trailing addend had.
+CURSOR_SITE = re.compile(
+    r'\((?:int|kd_iptr|kd_uptr)\)&(?P<expr>[A-Za-z_]\w*(?:(?:->|\.)[A-Za-z_]\w*|\[[^\]]*\])*)'
+    r'\s*\+\s*(?P<cur>[A-Za-z_]\w*)\s*\)')
+CURSOR_SET = r'(?m)^(?P<ind>[ \t]*)%s\s*=\s*(?:%s\s*\+\s*)?(?P<k>0x[0-9a-fA-F]+|\d+)\s*;'
+
 ADVANCE = re.compile(
     r'(?m)^(?P<ind>[ \t]*)(?P<p>\w+) = \((?P<ty>[\w ]+) \*\)'
     r'&(?P=p)->(?P<arr>\w+)\[(?P<idx>\d+)\](?P<tail>(?:\s*\.\s*\w+)*)\s*;')
@@ -168,6 +207,37 @@ def compiles_identically(fn, text, build, inc):
     return open(ref, 'rb').read() == open(obj, 'rb').read()
 
 
+def enclosing_block(text, pos):
+    """The innermost `{ ... }` containing `pos`, as a (start, end) span.
+
+    ⚠ A GHIDRA TEMPORARY IS REUSED ACROSS THE WHOLE FUNCTION. `iVar10` is the
+    pool cursor inside one loop and an entry index three statements later, so a
+    function-wide scan for its literal assignments finds `iVar10 = iVar10 + 1`
+    and declines the site as "not all multiples". The cursor's arithmetic is a
+    property of its LOOP, so that is what gets read."""
+    depth, i = 0, pos
+    while i > 0:
+        i -= 1
+        if text[i] == '}':
+            depth += 1
+        elif text[i] == '{':
+            if depth == 0:
+                break
+            depth -= 1
+    else:
+        return 0, len(text)
+    start, depth, j = i, 0, i
+    while j < len(text):
+        if text[j] == '{':
+            depth += 1
+        elif text[j] == '}':
+            depth -= 1
+            if depth == 0:
+                break
+        j += 1
+    return start, j + 1
+
+
 def main():
     srcdir, build = sys.argv[1], sys.argv[2]
     root = sys.argv[3] if len(sys.argv) > 3 else os.path.join(
@@ -192,6 +262,7 @@ def main():
             continue
         path = os.path.join(srcdir, fn)
         text = open(path, errors='ignore').read()
+        text0 = text
         edits = []
         for m in LOOP.finditer(text):
             ty = m.group('ty').strip()
@@ -273,6 +344,73 @@ def main():
                           '%-26s %-16s stride %d bytes -> %d * sizeof(%s[0])'
                           % (fn, ty, step, n, arr)))
 
+        # ---- THE BYTE CURSOR. See CURSOR_SITE. Per cursor, all or nothing:
+        # a half-scaled walk lands somewhere else entirely rather than nowhere.
+        cursors = {}
+        for m in CURSOR_SITE.finditer(text):
+            expr, cur = m.group('expr'), m.group('cur')
+            if not re.search(r'(->|\.)[A-Za-z_]\w*$', expr):
+                continue                    # no named field, so no owner to size
+            owner_expr = re.sub(r'(->|\.)[A-Za-z_]\w*$', '', expr)
+            # ⚠ `pools[1].contactCount` and `pools->contactCount` are the same
+            # table. Dropping the subscript is what makes one cursor read as one
+            # type instead of "this type at some sites and nothing at others".
+            owner_expr = re.sub(r'\[[^\]]*\]', '', owner_expr)
+            oty = FNP.lvalue_type(text, m.start(), owner_expr, inc)
+            otag = FNP.tag_of(oty or '', inc)
+            if not otag:
+                cursors.setdefault(cur, []).append(None)
+                continue
+            cursors.setdefault(cur, []).append(otag)
+        for cur, tags in sorted(cursors.items()):
+            named = {x for x in tags if x}
+            if len(named) != 1 or None in tags:
+                why = ('nothing this can type' if not named
+                       else 'more than one type (%s)' % ', '.join(sorted(named))
+                       if len(named) > 1
+                       else '%s at some sites and nothing at others'
+                            % ', '.join(sorted(named)))
+                notes.append('%-26s cursor %s walks %s — declined' % (fn, cur, why))
+                declined += 1
+                continue
+            otag = named.pop()
+            sz = measure('sizeof(*(%s *)0)' % otag, inc, cache)
+            if not sz:
+                notes.append('%-26s cursor %s: cannot measure sizeof(%s) — declined'
+                             % (fn, cur, otag))
+                declined += 1
+                continue
+            # The loop the cursor lives in, plus the initialiser just above it.
+            first = min(m.start() for m in CURSOR_SITE.finditer(text)
+                        if m.group('cur') == cur)
+            bs, be = enclosing_block(text, first)
+            rx = CURSOR_SET % (re.escape(cur), re.escape(cur))
+            sets = list(re.finditer(rx, text, ))
+            sets = [s for s in sets if bs <= s.start() < be]
+            init = [s for s in re.finditer(rx, text) if s.end() <= bs]
+            if init:
+                sets.append(init[-1])
+            if not sets or any(int(s.group('k'), 0) % sz for s in sets):
+                notes.append('%-26s cursor %s: %d literal(s), not all multiples of '
+                             'sizeof(%s)=%d — declined'
+                             % (fn, cur, len(sets), otag, sz))
+                declined += 1
+                continue
+            cand = text
+            for s in sorted(sets, key=lambda x: -x.start('k')):
+                n = int(s.group('k'), 0) // sz
+                cand = (cand[:s.start('k')] + '%d * (int)sizeof(%s)' % (n, otag)
+                        + cand[s.end('k'):])
+            if compiles_identically(fn, cand, build, inc):
+                text = cand
+                fixed += 1
+                notes.append('%-26s cursor %-8s %d literal(s) -> n * sizeof(%s) (%d bytes)'
+                             % (fn, cur, len(sets), otag, sz))
+            else:
+                declined += 1
+                notes.append('%-26s cursor %s: not byte-identical at i386 — declined'
+                             % (fn, cur))
+
         for start, end, reps, note in sorted(edits, key=lambda e: -e[0]):
             for rep in reps:
                 cand = text[:start] + rep + text[end:]
@@ -285,7 +423,7 @@ def main():
                 declined += 1
                 notes.append('%-26s DECLINED: no spelling of it is '
                              'byte-identical at i386' % fn)
-        if fixed and edits:
+        if text != text0:
             open(path, 'w').write(text)
     print('  word-counted table loops repaired  : %d' % fixed)
     print('  declined (reported, not guessed)   : %d' % declined)

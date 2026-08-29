@@ -123,7 +123,15 @@ def includes(inc):
 
 
 def headers(inc):
-    """Every struct body and every typedef, over kd_types.h and the SDK."""
+    """Every struct body and every typedef, over kd_types.h and the SDK.
+
+    ★ ANONYMOUS TYPEDEFS COUNT. The SDK writes whole families as
+    `typedef struct { ... } McdBatchContactPool;` with no tag before the brace,
+    and a scan for `struct NAME {` finds none of them — so `tag_of` returns None
+    for every one and every rule that needs their layout silently declines. That
+    blindness hid the geometry family from `fix_literal_offsets`' offset map for
+    the whole project, and here it is what made `fix_strides`' byte-cursor rule
+    read "walks nothing this can type" on the one site it was written for."""
     if _BODIES:
         return _BODIES, _TD
     for root in (os.path.join(HERE, 'include'), inc):
@@ -132,17 +140,27 @@ def headers(inc):
                 if not fn.endswith('.h'):
                     continue
                 txt = open(os.path.join(dirpath, fn), errors='ignore').read()
-                for m in re.finditer(r'\bstruct\s+(\w+)\s*\{', txt):
-                    depth, i = 0, m.end() - 1
+
+                def body_end(brace):
+                    depth, i = 0, brace
                     while i < len(txt):
                         if txt[i] == '{':
                             depth += 1
                         elif txt[i] == '}':
                             depth -= 1
                             if depth == 0:
-                                break
+                                return i
                         i += 1
+                    return len(txt)
+
+                for m in re.finditer(r'\bstruct\s+(\w+)\s*\{', txt):
+                    i = body_end(m.end() - 1)
                     _BODIES.setdefault(m.group(1), txt[m.end():i])
+                for m in re.finditer(r'\btypedef\s+struct\s*\{', txt):
+                    i = body_end(m.end() - 1)
+                    nm = re.match(r'\s*(\w+)\s*;', txt[i + 1:])
+                    if nm:
+                        _BODIES.setdefault(nm.group(1), txt[m.end():i])
                 for m in re.finditer(r'(?m)^\s*typedef\s+([A-Za-z_][\w \t*]*?)'
                                      r'\s*(?P<stars>\**)\s*(\w+)\s*;', txt):
                     _TD.setdefault(m.group(3), (re.sub(r'\s+', ' ', m.group(1)).strip(),

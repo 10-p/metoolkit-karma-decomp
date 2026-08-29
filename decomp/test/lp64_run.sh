@@ -107,8 +107,17 @@ if [ "${KD_SKIP_CONTROL:-}" != 1 ]; then
         cn=$(basename "$s" .c)
         if gcc -m32 $CF $FPMATH -no-pie -o "$W/ctl_$cn" \
                "$s" "$W"/c32_*.o -lstdc++ -lm 2>/dev/null; then
-            ASAN_OPTIONS=detect_leaks=0:halt_on_error=0 timeout 600 "$W/ctl_$cn" \
+            ASAN_OPTIONS=detect_leaks=0:halt_on_error=0 \
+                timeout "${KD_ASAN_TIMEOUT:-120}" "$W/ctl_$cn" \
                 > "$W/ctl_$cn.csv" 2> "$W/ctl_$cn.err"
+            # ⚠ KEEP THE CONTROL'S OWN EXIT CODE. A scene whose verdict fails at
+            # i386 TOO is not failing because of pointer width, and the control
+            # is the only thing that can say so. `scene_ragdoll` reads BLOWN UP
+            # 5 runs out of 5 under ASan at i386 against 3 of 5 at LP64, with
+            # zero sanitizer errors either way — it sits on its `escaped > 1e3`
+            # threshold and ASan's layout tips it. Without this the gate's
+            # verdict flipped run to run on a coin toss.
+            echo $? > "$W/ctl_$cn.rc"
             ce=$(grep -c "ERROR: AddressSanitizer" "$W/ctl_$cn.err")
             [ "$ce" -eq 0 ] || { echo "  CONTROL $cn: $ce error(s) at i386 <- THE CONTROL IS DIRTY; nothing below is attributable to pointer width"; exit 2; }
         else
@@ -136,18 +145,20 @@ for s in "${SCENES[@]}"; do
     errs=$(grep -c "ERROR: AddressSanitizer" "$W/$name.err")
     printf '  %-24s exit %-3d  %s\n' "$name" "$rc" \
         "$( [ "$errs" -eq 0 ] && echo 'no sanitizer error' || echo "$errs AddressSanitizer error(s)")"
-    # ⚠ A TIMEOUT HERE IS A RESULT AND IT IS NOT A POINTER-WIDTH ONE. These
-    # scenes finish in about a tenth of a second; the sanitized contact scenes
-    # intermittently spin instead — measured state R with utime climbing and RSS
-    # flat, so a loop in user code and not a stall. It is data-dependent: the
-    # same binary finished in 0.1 s on some runs and spun past 30 s on 3 of 20
-    # on one build, while on the next both contact scenes hit the cap every time.
-    # ASan's poison is 0xbe rather than whatever the plain heap held, so an
-    # UNINITIALISED read comes back as garbage, the trace fills with NaN, and a
-    # convergence loop never converges. The i386 ASan control reproduces it
-    # identically — 8,100 non-finite samples, LP64 and i386 agreeing to
-    # 0.00e+00 — which is what says the defect is an uninitialised read present
-    # at BOTH widths, not something 64-bit pointers did.
+    # ⚠ A TIMEOUT HERE IS A RESULT, AND WHAT IT MEANS HAS BEEN MEASURED WRONG
+    # ONCE. These scenes finish in about a tenth of a second. While the McdHello
+    # swap defect was live the sanitized contact scenes SPUN instead — state R,
+    # utime climbing, RSS flat, so a loop in user code and not a stall — and that
+    # was written up as an uninitialised read present at both widths, on the
+    # strength of a comparator that read NaN as a match. Repairing the swap
+    # removed the spinning and the NaNs together. If it comes back, it is a live
+    # defect and not a property of the sanitizer.
+    #
+    # ⚠ AND `scene_ragdoll`'s OWN VERDICT UNDER ASan IS UNSTABLE AT BOTH WIDTHS.
+    # Measured five runs each, zero sanitizer errors throughout: i386 reads
+    # BLOWN UP 5/5, LP64 3/5. The scene sits on its `escaped > 1e3` threshold and
+    # ASan's layout is enough to tip it, so that row is not a pointer-width
+    # signal in either direction. The plain rows below are.
     if [ "$rc" = 124 ]; then
         echo "      TIMED OUT after ${KD_ASAN_TIMEOUT:-120}s having written $(wc -l < "$W/$name.csv") row(s)."
         echo "      The plain rows below are the pointer-width verdict; see this file's header."
@@ -164,7 +175,13 @@ for s in "${SCENES[@]}"; do
         # past 1e3 — and that is a pointer-width defect the sanitizer cannot
         # see, because the wrong pointer was still in bounds. Counting only
         # ASan errors reported exactly that case as PASS.
-        status=1
+        crc=$(cat "$W/ctl_$name.rc" 2>/dev/null || echo '')
+        if [ -n "$crc" ] && [ "$crc" != 0 ]; then
+            echo "      its own verdict failed, and SO DID THE i386 CONTROL'S (exit $crc) —"
+            echo "      not attributable to pointer width. See this file's header."
+        else
+            status=1
+        fi
         sed -n 's/^/      /p' "$W/$name.err" | tail -4
     fi
     # ---- THE TRAJECTORY, against the i386 control's own. This is the half the
@@ -306,10 +323,22 @@ for x,y in zip(a,b):
             nonfinite+=1; continue
         d=abs(fp-fq); worst=max(worst,d)
         if fp!=fq and first is None: first,mag=x[0],d
-print('      vs PLAIN i386: first difference at step %s (%.1e), worst %.2e%s'
+# ★ AND THIS IS THE GATE, not a note. The FIRST differing step is what separates
+# a defect from float noise — measured, the corpus first differs at 9e-10
+# (chain), 1.9e-09 (boxes) and 2.2e-07 (ragdoll), while the two defects this
+# harness was built to catch first differed at 1.5e-03 and 1.5e-01. A floor of
+# 1e-05 sits two orders above the noise and two below the smallest real defect
+# seen. `substitute_test.sh` records the same rule from the other end: released
+# objects first differ at 1e-06 to 1e-08, keaLCPSolver at 3.772e+00.
+FLOOR = 1e-5
+bad = bool(nonfinite) or (mag > FLOOR)
+print('      vs PLAIN i386: first difference at step %s (%.1e), worst %.2e%s%s'
       %(first if first else 'never',mag,worst,
-        '' if not nonfinite else ', %d NON-FINITE'%nonfinite))
+        '' if not nonfinite else ', %d NON-FINITE'%nonfinite,
+        '   <- ABOVE THE FLOOR (%.0e): a defect, not noise'%FLOOR if bad else ''))
+sys.exit(1 if bad else 0)
 PY
+        [ $? = 0 ] || status=1
     done
 fi
 

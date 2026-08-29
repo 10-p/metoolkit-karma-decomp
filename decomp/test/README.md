@@ -359,51 +359,57 @@ It **stops before the harness** if the i386 acceptance test is not clean, becaus
 changed the shipped target is a bug in the post-pass, and every LP64 row after it would be measuring
 that instead of pointer width.
 
-Where it stands as of 2026-08-29, with both i386 controls clean:
+Where it stands as of 2026-08-29 — **`lp64_pipeline.sh` PASSES**:
 
 | | first thing it hits |
 |---|---|
 | start of the LP64 work | `MdtWorld.c:98` — the FIRST STATEMENT of the first scene |
 | start of this session | `MdtBcl.c:519` (chain, ragdoll) and `MstUtils` (boxes) |
 | after the collision chain | no memory error on any scene; the PLAIN build still SIGSEGV on two |
-| now | **all three plain scenes clean, 901 rows, 5 runs of 5; one trajectory defect left** |
+| now | **all three plain scenes clean, and every trajectory first differs at the float floor** |
 
 ```
 == LP64, no sanitizer ==
   scene_chain            exit 0  901 rows   vs PLAIN i386: first difference step 4  (9.0e-10)
-  scene_boxes_on_plane   exit 0  901 rows   vs PLAIN i386: first difference step 52 (1.5e-03)
+  scene_boxes_on_plane   exit 0  901 rows   vs PLAIN i386: first difference step 52 (1.9e-09)
   scene_ragdoll          exit 0  901 rows   vs PLAIN i386: first difference step 0  (2.2e-07)
 ```
 
 ★ **READ THE FIRST DIFFERING STEP, NOT THE MAXIMUM** — on a contact scene a last-bit difference
-amplifies without bound and all three reach metres by step 900. chain and ragdoll first differ at
-1e-9 and 1e-7, which is float noise amplifying; boxes was **bit-identical for 44 steps** and then
-jumped to 1.5e-01 in one step, which is not. Repairing that (the geometry AABB family) took it to
-step 52 at 1.5e-03 — 100× smaller, seven steps later, and still five orders above the floor.
-**Still FAIL, and that is the honest reading.**
+amplifies without bound and all three reach metres by step 900. `scene_boxes_on_plane` went
+1.5e-01 at step 45 (the geometry AABB family) → 1.5e-03 at step 52 (the `McdHello` swap) →
+1.9e-09, level with the collision-free scene. Nothing first differs above the float floor now.
+
+★ **AND THE FIRST-DIFFERENCE FLOOR IS THE GATE, not a note.** The plain trajectory comparison
+used to print and never fail, so a trajectory regression could not fail the run — which is exactly
+what this harness exists to catch. It fails above **1e-05** on the first differing step: two orders
+above the measured noise (9e-10 / 1.9e-09 / 2.2e-07) and two below the smallest real defect seen
+(1.5e-03). Confirmed both ways — reverting the `McdHello` swap repair takes boxes to 1.5e-03 and
+ragdoll to 4.9e+00 and the run to FAIL, and restoring it returns PASS.
+
+⚠ **AND THE GATE USED TO FLIP ON A COIN TOSS.** `scene_ragdoll`'s own verdict under ASan is
+unstable — measured five runs each with zero sanitizer errors, i386 reads BLOWN UP **5/5** and
+LP64 **3/5** — because the scene sits on its `escaped > 1e3` threshold and ASan's layout tips it.
+The harness kept the ASan control's own exit code now and does not blame pointer width for a
+verdict the control fails too; it says so on the line instead.
 
 ★★ **THE REFERENCE HAD BEEN THE WRONG BUILD.** The control was built WITH AddressSanitizer and
-the plain scenes were run against no reference at all. ASan's poison is `0xbe` rather than
-whatever the plain heap held, so an **uninitialised read** comes back as garbage under it: the
-sanitized ragdoll fills with 8,100 non-finite samples and reads BLOWN UP at *both* widths — its
-LP64 and i386 traces agreeing to `0.00e+00` — while the plain LP64 run of the same sources is
-clean. Diffing plain against sanitized attributes an ASan artefact to pointer width. There is a
-**plain i386 control** now, and the plain rows are the pointer-width verdict.
+the plain scenes were run against no reference at all. ASan changes the numbers, so the plain
+rows need a **plain i386 control** — which the harness now builds, and which is what makes the
+first-differing-step reading mean anything.
 
-⚠ **`0.00e+00 over 901 rows` WAS PART OF THAT ARTEFACT.** `nan > x` is False, so every non-finite
-sample failed the divergence test *and* left the worst delta at zero: it read "matches the control
-over all 901 rows" on a trace that was 8,100 NaNs. Non-finite samples are counted and reported.
+⚠ **`0.00e+00 over 901 rows` was an artefact of the comparator**: `nan > x` is False, so every
+non-finite sample failed the divergence test *and* left the worst delta at zero. It read
+"matches the control over all 901 rows" on a trace that was 8,100 NaNs. They are counted now.
 
-⚠ **The sanitized contact scenes also SPIN** — state `R` with utime climbing and RSS flat, so a
-loop in user code and not a stall, and data-dependent: 3 runs in 20 past 30 s on one build, both
-contact scenes every time on the next. Same cause: NaN into a convergence
-loop. The ASan timeout is `KD_ASAN_TIMEOUT` (120 s) and the harness says out loud that a timeout
-there is not the pointer-width verdict.
-
-⚠ **THE ERROR COUNT WAS ONLY HALF OF WHAT THIS COULD SAY.** A pointer that is wrong but still IN
-BOUNDS is invisible to the sanitizer and perfectly visible in the numbers. The control is now
-built for EVERY scene, its trajectory kept, and diffed — and a non-zero exit fails the run,
-because `scene_ragdoll`'s own "BLOWN UP" verdict was being reported as PASS.
+⚠⚠ **AND A CONCLUSION WAS DRAWN THROUGH THAT BROKEN INSTRUMENT.** On the strength of that
+`0.00e+00` this file recorded that the sanitized ragdoll blew up "at both widths" from an
+uninitialised read. Repairing the `McdHello` swap removed the NaNs *and* the spinning entirely —
+the NaN storm was downstream of a real LP64 defect. What is true, measured over five runs: the
+ragdoll's own verdict under ASan is **unstable at i386 too** (BLOWN UP 5/5 there against 3/5 at
+LP64, zero sanitizer errors either way). The scene sits on its `escaped > 1e3` threshold and
+ASan's layout tips it, so an ASan ragdoll verdict is not a pointer-width signal in either
+direction. **The plain rows are.**
 
 ⚠ **AND THE CONTROL FOUND A DEFECT IN THE SCENES THEMSELVES ON ITS FIRST RUN.** `scene_ragdoll`
 handed `MstFixedModelCreate` a loop-iteration `MeMatrix4`, and that call keeps the POINTER — so

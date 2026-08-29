@@ -358,34 +358,41 @@ It **stops before the harness** if the i386 acceptance test is not clean, becaus
 changed the shipped target is a bug in the post-pass, and every LP64 row after it would be measuring
 that instead of pointer width.
 
-Where it stands as of 2026-08-29, over **five consecutive runs of all three scenes**:
+Where it stands as of 2026-08-29, with the i386 control clean on all three scenes:
 
 | | first thing it hits |
 |---|---|
 | start of the LP64 work | `MdtWorld.c:98` — the FIRST STATEMENT of the first scene |
 | start of this session | `MdtBcl.c:519` (chain, ragdoll) and `MstUtils` (boxes) |
-| now | **chain is CLEAN; the other two fail in ONE class between them** |
+| now | **no memory error on any scene; a TRAJECTORY divergence on two** |
 
 ```
-scene_chain            exit 0   no sanitizer error                      5 of 5
-scene_boxes_on_plane   exit 1   MstUtils 91,97 + McdBatch 829           5 of 5
-scene_ragdoll          exit 1   the same three (3 of 5), or BLOWN UP
-                                with no sanitizer error at all (2 of 5)
+scene_chain            0 ASan errors   trajectory MATCHES the i386 control (worst 4.9e-04)
+scene_boxes_on_plane   0 ASan errors   diverges >1% at step 33
+scene_ragdoll          0 ASan errors   diverges >1% at step 1, own verdict BLOWN UP
 ```
 
-**Still FAIL, and that is the honest reading** — but `scene_chain` is the first scene ever to run
-clean at 64-bit pointer width, and what remains is a single class seen from four call sites
-(`MstUtils.c:91,97,105`, `McdBatch.c:829`, `MstBridge.c:168`): **Ghidra's invented stack frames**.
-That is a *decompilation* defect, not a layout one. `recover.py` already converts the shape to
-named `kd_frameslot_` arrays that are in bounds at both widths — all 44 of `MdtPartition`'s — so
-the question is why the conversion declined here, not how to patch the output. It is 124 sites
-across 8 objects, five of those objects are RELEASED, and byte-identity cannot gate it because
-giving the scratch its own storage is a different stack layout by construction.
+**Still FAIL, and that is the honest reading** — but the whole memory-safety front is closed and
+what remains is *localised*: both divergences begin at the scene's FIRST CONTACT, and
+`scene_chain` is COLLISION-FREE and matches over all 900 steps. **The remaining defect is on the
+collision side**, not in the dynamics, the solver or the arithmetic.
+
+⚠ **THE ERROR COUNT WAS ONLY HALF OF WHAT THIS COULD SAY.** A pointer that is wrong but still IN
+BOUNDS is invisible to the sanitizer and perfectly visible in the numbers. The control is now
+built for EVERY scene, its trajectory kept, and diffed — and a non-zero exit fails the run,
+because `scene_ragdoll`'s own "BLOWN UP" verdict was being reported as PASS.
+
+⚠ **AND THE CONTROL FOUND A DEFECT IN THE SCENES THEMSELVES ON ITS FIRST RUN.** `scene_ragdoll`
+handed `MstFixedModelCreate` a loop-iteration `MeMatrix4`, and that call keeps the POINTER — so
+every obstacle transform was dead stack for the whole run, at every pointer width, for as long as
+the scene has existed. 24 sanitizer reports, all in `McdSphylBoxIntersect`. It was missed because
+the control was built for the FIRST SCENE ONLY, and the first scene creates no collision models.
+See `../proven.txt` `SCENE-RAGDOLL-DANGLING`.
 
 ⚠ **FIVE RUNS IS THE MEASUREMENT, NOT ONE.** Three separate times this session a single run read
 "clean" and the next read three errors, on sources that had not changed: ASLR moves what an
 out-of-bounds write lands on, and `-fsanitize-recover` means how far a scene gets changes what it
-reports. A clean run is a sample. **Take five, and read the site list.**
+reports. **Take five, and read the site list.**
 
 See `../proven.txt` `LP64-ONE-REMAIN` for the full accounting, and the `LP64-*` entries for each
 class closed.

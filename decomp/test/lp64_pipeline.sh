@@ -32,6 +32,14 @@ python3 "$HERE/tools/fix_ptrwidth.py"    "$DST/allobj" "$BUILD" "$MT" || exit 2
 # to recognise, and a mask on a widened local has no cast in it to match.
 python3 "$HERE/tools/fix_narrow_pointers.py" "$DST/allobj" "$BUILD" "$MT" | head -4 || exit 2
 python3 "$HERE/tools/fix_align_masks.py" "$DST/allobj" "$BUILD" "$MT" | head -2 || exit 2
+python3 "$HERE/tools/fix_frame_slots.py" "$DST/allobj" "$BUILD" "$MT" | head -2 || exit 2
+
+# ---- THE DETECTOR THIS PASS COULD BLIND. check_frame_bounds reads CONSTANT
+# offsets and constant array bounds, and fix_frame_slots replaces both with
+# constant EXPRESSIONS. It has been taught the new spelling; running it here
+# says so out loud rather than leaving a zero to be trusted.
+echo "== frame bounds after the post-passes =="
+python3 "$HERE/tools/check_frame_bounds.py" "$DST/allobj" "$BUILD" | tail -1 || exit 1
 
 # ---- THE ACCEPTANCE TEST. `intptr_t` IS `int` at 32-bit pointer width and the
 # rewritten sizes ARE the constants they replaced, so both passes are no-ops

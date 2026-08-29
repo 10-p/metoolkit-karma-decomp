@@ -61,6 +61,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <string.h>
 #include <MePrecision.h>
 #include <MdtTypes.h>
 #include <MdtWorld.h>
@@ -123,13 +124,18 @@ int main(void)
         (McdGeometryID)McdPlaneCreate(fw), ident);
     (void)ground;
 
-    /* obstacles, so the limbs hit something other than a flat floor */
+    /* obstacles, so the limbs hit something other than a flat floor.
+       ⚠ THE TRANSFORM MUST OUTLIVE THE LOOP — `MstFixedModelCreate` keeps the
+       POINTER. See scene_ragdoll.c for the 24 sanitizer reports this caused. */
+    static MeMatrix4 boxtm[NBOX];
     for (int i = 0; i < NBOX; i++) {
-        MeMatrix4 tm = { {1,0,0,0}, {0,1,0,0}, {0,0,1,0}, {0,0,0,1} };
-        tm[3][0] = -1.5f + 1.5f * i;
-        tm[3][1] =  0.3f * i;
-        tm[3][2] =  0.2f;
-        MstFixedModelCreate(u, (McdGeometryID)McdBoxCreate(fw, 1.2f, 1.2f, 0.4f), tm);
+        static const MeMatrix4 id = { {1,0,0,0}, {0,1,0,0}, {0,0,1,0}, {0,0,0,1} };
+        memcpy(boxtm[i], id, sizeof(MeMatrix4));
+        boxtm[i][3][0] = -1.5f + 1.5f * i;
+        boxtm[i][3][1] =  0.3f * i;
+        boxtm[i][3][2] =  0.2f;
+        MstFixedModelCreate(u, (McdGeometryID)McdBoxCreate(fw, 1.2f, 1.2f, 0.4f),
+                            boxtm[i]);
     }
 
     /* the ragdoll: capsules on ball-socket joints, dropped at an angle */

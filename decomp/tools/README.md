@@ -527,7 +527,7 @@ XML-output and unused-constraint objects §3b retires.
 
 They need the NDK, they **edit in place**, and §4's output is not arm64-correct source until they
 have run. **Run them on a copy**, in this order — or just use `test/lp64_pipeline.sh`, which does
-the copy, all nine passes, the acceptance test and the harness in the right order.
+the copy, all ten passes, the acceptance test and the harness in the right order.
 
 ```bash
 ./test/lp64_pipeline.sh                      # all of the below, gated
@@ -543,6 +543,8 @@ python3 tools/fix_vtable_offsets.py  /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/fix_ptrwidth.py        /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/fix_narrow_pointers.py /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/fix_align_masks.py     /tmp/kd_lp64/allobj /tmp/kd_build $MT
+python3 tools/fix_frame_slots.py     /tmp/kd_lp64/allobj /tmp/kd_build $MT
+python3 tools/check_frame_bounds.py  /tmp/kd_lp64/allobj /tmp/kd_build   # must read 0
 KD_OUT=/tmp/kd_lp64 ./test/lp64_run.sh
 ```
 
@@ -972,6 +974,59 @@ everywhere) **and** the `&`'s own operand must be pointer-derived.
 `(void *)((kd_iptr)p + (uVar8 & 0xfffffffc))` has a pointer in the statement, a mask of the
 right shape and a pointer cast around the result, and is CORRECT — the mask is on a count. The
 scan walks back from the `&` to its own enclosing parenthesis and asks about that span alone.
+---
+
+### `fix_frame_slots.py` — Ghidra's invented argument area, addressed in 4-byte words
+
+```bash
+python3 tools/fix_frame_slots.py /tmp/kd_lp64/allobj /tmp/kd_build
+#   -> 22 areas scaled, 0 declined on byte-identity (7 declined as ambiguous)
+```
+
+The i386 code pushes its arguments, so Ghidra fabricates a local to hold the outgoing area and
+writes each word into it at a constant byte offset — then reads the same offsets back as the
+call's arguments. Every offset is an argument WORD and every word is four bytes because that is
+what a pointer weighed on the shipped target. At LP64 slots 4 and 5 overlap and the write to
+slot 5 runs four bytes off the end of a 24-byte array. That is `MstUtils.c:91`; `McdBatch.c:829`
+is its consequence one call deeper.
+
+★ **`proven.txt` called this class unfixable under the byte-identity gate, and that was a
+prediction.** LP64-TWO-REMAIN reasoned: "It is a PIPELINE change, so `generated/allobj` moves and
+byte-identity CANNOT be the gate." True of the repair it had in mind — converting the shape
+upstream in `recover.py` — and not true of scaling the offsets **and the object** together in a
+post-pass:
+
+```
++ 0x14                ->  + (5 * (int)sizeof(void *))
+int aiStack_9cb0[6];  ->  int aiStack_9cb0[6 * (int)(sizeof(void *) / 4)];
+```
+
+Both fold to the original text at 32-bit pointer width. Measured on `MstUtils`, the object whose
+upstream attempt "knocked it out of the build entirely": 123 offsets scaled, all three areas
+widened, object byte-identical. **Never decline a repair on a prediction.**
+
+⚠ **Two refusals are the whole safety.** Only Ghidra's own `<type><Stack|StackY>_<hex>` names;
+every offset must be a multiple of four; and the name must appear nowhere except inside one of
+these casts, because if the recovery uses `fStack_9c98` as the float it is declared to be then
+widening it changes that read. Seven areas decline there and are reported.
+
+⚠ **All or nothing per area, and RECOMPUTE between areas.** A half-scaled area overlaps
+*differently* rather than not at all. And the areas interleave — `MstUtils` writes
+`aiStack_9cb0` and `aMStack_9c94` in alternate statements — so offsets taken against the original
+text are stale the moment one area lands, and the next area's declaration edit falls in the
+middle of an expression. It reads as "not byte-identical", which is **a decline on a repair that
+was never tried**.
+
+⚠ **A greedy regex ate the first letter of every name.** `aiStack_9cb0` was captured as
+`iStack_9cb0`, a name that appears nowhere — so the area had no sites and was skipped SILENTLY.
+The tool reported nine clean repairs while the object it was written for was untouched.
+
+★★ **AND IT BLINDS `check_frame_bounds.py` IF YOU LET IT — measured, not argued.** That detector
+exists for exactly this defect and reads *constant* offsets and *constant* array bounds; after
+this pass both are constant expressions. A deliberate `+ 0x400` into `aiStack_9cb0` is caught
+before the post-pass and **missed** after it. The gate has been taught both spellings, re-checked
+against the same deliberate violation, and `lp64_pipeline.sh` now runs it after the post-passes
+so the zero is stated rather than assumed.
 ---
 
 ## The investigative tools — reach for these when something is wrong

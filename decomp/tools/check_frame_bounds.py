@@ -25,21 +25,45 @@ import re
 import sys
 
 # `  MeReal aMStack_144 [2];` / `  int local_38;` / `  undefined1 auStack_12c [12];`
-DECL = re.compile(r'^\s{2,4}(\w[\w ]*?)\s*(\**)\s*(\w+)\s*(?:\[\s*(\d+)\s*\]'
-                  r'\s*(?:\[\s*(\d+)\s*\])?)?\s*;\s*$')
+#
+# ⚠ AND THE SCALED FORM `fix_frame_slots.py` WRITES, which is a constant
+# expression rather than a literal: `int aiStack_9cb0 [6 * (int)(sizeof(void *)
+# / 4)];`. It folds to `[6]` on the shipped target, which is the target this
+# gate measures — but a regex that wants `\d+` sees no bound at all, the local
+# drops out of the size table, and every reference to it stops being checked.
+# Measured, not assumed: a deliberate `+ 0x400` into that array is caught before
+# the post-pass and MISSED after it, on the same detector.
+PTRW = r'\(int\)\(sizeof\(void \*\) / 4\)'
+BOUND = r'(?:(\d+)(?:\s*\*\s*' + PTRW + r')?|' + PTRW + r')'
+DECL = re.compile(r'^\s{2,4}(\w[\w ]*?)\s*(\**)\s*(\w+)\s*(?:\[\s*' + BOUND + r'\s*\]'
+                  r'\s*(?:\[\s*' + BOUND + r'\s*\])?)?\s*;\s*$')
 # `(int)&name + 0x10`, `&name + 4`, `name + -0x1c`. The `&` is captured because
 # it decides whether this is a stack object at all: a plain `p + 0x14` on a
 # pointer local is ordinary pointer arithmetic into someone else's memory and
 # has nothing to say about the frame.
-REF = re.compile(r'(?:\(int\)\s*)?(&)?\b(\w+)\s*\+\s*'
-                 r'(-?(?:0x[0-9a-fA-F]+|\d+))\b')
+#
+# ⚠ The scaled offset is here too — `+ (5 * (int)sizeof(void *))` is `+ 20` on
+# the shipped target — and it goes dark the same way if it is not matched.
+OFFSET = r'(-?(?:0x[0-9a-fA-F]+|\d+))\b|\(\s*(-?\d+)\s*\*\s*\(int\)sizeof\(void \*\)\s*\)'
+REF = re.compile(r'(?:\((?:int|kd_iptr)\)\s*)?(&)?\b(\w+)\s*\+\s*(?:' + OFFSET + r')')
 # `(int)(kd_alloca_iVar5) + -4` — the same thing with the name parenthesised,
 # which REF cannot see because it expects the `+` right after the name. Kept as
 # a separate pattern rather than loosening REF: allowing a bare `(x) + 4` there
 # would read `foo(arr) + 4` as a reference to `arr`. The `(int)` prefix is
 # required, so this only ever matches a byte-offset frame reference.
-REF_PAREN = re.compile(r'\(int\)\s*\(\s*(&)?\s*(\w+)\s*\)\s*\+\s*'
-                       r'(-?(?:0x[0-9a-fA-F]+|\d+))\b')
+REF_PAREN = re.compile(r'\((?:int|kd_iptr)\)\s*\(\s*(&)?\s*(\w+)\s*\)\s*\+\s*(?:'
+                       + OFFSET + r')')
+
+
+CASTED = re.compile(r'\((?:int|kd_iptr)\)')
+
+
+def ref_offset(m):
+    """The byte offset a REF/REF_PAREN match names, in either spelling."""
+    lit, words = m.group(3), m.group(4)
+    if words is not None:
+        return int(words, 10) * 4                # sizeof(void *) on the target
+    return int(lit, 16) if lit.lower().lstrip('-').startswith('0x') else int(lit, 10)
 
 WIDTH = {
     'char': 1, 'undefined1': 1, 'byte': 1, 'bool': 1, 'MeI8': 1, 'MeU8': 1,
@@ -204,13 +228,12 @@ def violations(text):
         seen = set()
         for line in body.splitlines():
             for m in list(REF.finditer(line)) + list(REF_PAREN.finditer(line)):
-                amp, var, off = m.group(1), m.group(2), m.group(3)
-                off = int(off, 16) if off.lower().lstrip('-').startswith('0x') \
-                    else int(off, 10)
+                amp, var = m.group(1), m.group(2)
+                off = ref_offset(m)
                 ent = sizes.get(var)
                 if ent is None:
                     if var in allocas and off < 0 and \
-                            m.group(0).lstrip().startswith('(int)'):
+                            CASTED.match(m.group(0).lstrip()):
                         if (var, off) not in seen:
                             seen.add((var, off))
                             out.append((name, var, off, 0))
@@ -219,7 +242,7 @@ def violations(text):
                     # frame reference, but only under BYTE arithmetic — the
                     # `(int)` cast. See pointer_aliases.
                     alias = aliases.get(var)
-                    if alias is None or not m.group(0).lstrip().startswith('(int)'):
+                    if alias is None or not CASTED.match(m.group(0).lstrip()):
                         continue
                     var, size, is_array, amp = alias[0], alias[1], True, None
                     off += alias[2]

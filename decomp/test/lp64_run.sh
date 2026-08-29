@@ -91,20 +91,31 @@ echo "  $n recovered object(s) built for x86-64 (LP64), $FPMATH"
 if [ "${KD_SKIP_CONTROL:-}" != 1 ]; then
     for c in "$SRCDIR"/*.c; do
         b=$(basename "$c" .c); [ -f "$BUILD/$b.o" ] || continue
-        gcc -m32 $CF -c -o "$W/c32_$b.o" "$c" 2>/dev/null || { echo "  control: -m32 ASan build failed on $b"; exit 2; }
+        gcc -m32 $CF $FPMATH -c -o "$W/c32_$b.o" "$c" 2>/dev/null \
+            || { echo "  control: -m32 ASan build failed on $b"; exit 2; }
     done
-    gcc -m32 $CF -c -o "$W/c32_hull.o" "$HERE/src/McdConvexCreateHull/kd_convexhull.c" 2>/dev/null
-    if gcc -m32 -O1 -g -fsanitize=address -fsanitize-recover=address \
-           -fno-omit-frame-pointer -DLINUX -no-pie $IF -o "$W/control" \
-           "${SCENES[0]}" "$W"/c32_*.o -lstdc++ -lm 2>/dev/null; then
-        ASAN_OPTIONS=detect_leaks=0:halt_on_error=0 timeout 600 "$W/control" \
-            > /dev/null 2> "$W/control.err"
-        ce=$(grep -c "ERROR: AddressSanitizer" "$W/control.err")
-        echo "  CONTROL  same sources at i386 + ASan: $ce error(s) $( [ "$ce" -eq 0 ] && echo '(good)' || echo '<- THE CONTROL IS DIRTY; nothing below is attributable to pointer width')"
-        [ "$ce" -eq 0 ] || exit 2
-    else
-        echo "  CONTROL  could not be built — treat the rows below as unattributed"
-    fi
+    gcc -m32 $CF $FPMATH -c -o "$W/c32_hull.o" "$HERE/src/McdConvexCreateHull/kd_convexhull.c" 2>/dev/null
+    # ⚠ EVERY SCENE, NOT JUST THE FIRST, AND KEEP THE TRAJECTORY. The error count
+    # is only half of what the control can say: the same sources at i386 also
+    # produce the trajectory the LP64 build is supposed to reproduce, and a
+    # pointer that is wrong but IN BOUNDS shows up there and nowhere else.
+    # ⚠ THE FLAGS MUST MATCH DOWN TO -mfpmath AND -O. Comparing an -O2 i386
+    # build against the -O1 LP64 one measures x87 excess-precision rounding, not
+    # pointer width — it read "boxes diverges at step 45" either way and only one
+    # of those readings meant anything.
+    for s in "${SCENES[@]}"; do
+        cn=$(basename "$s" .c)
+        if gcc -m32 $CF $FPMATH -no-pie -o "$W/ctl_$cn" \
+               "$s" "$W"/c32_*.o -lstdc++ -lm 2>/dev/null; then
+            ASAN_OPTIONS=detect_leaks=0:halt_on_error=0 timeout 600 "$W/ctl_$cn" \
+                > "$W/ctl_$cn.csv" 2> "$W/ctl_$cn.err"
+            ce=$(grep -c "ERROR: AddressSanitizer" "$W/ctl_$cn.err")
+            [ "$ce" -eq 0 ] || { echo "  CONTROL $cn: $ce error(s) at i386 <- THE CONTROL IS DIRTY; nothing below is attributable to pointer width"; exit 2; }
+        else
+            echo "  CONTROL  $cn could not be built — treat its row as unattributed"
+        fi
+    done
+    echo "  CONTROL  same sources at i386 + ASan: 0 error(s) on ${#SCENES[@]} scene(s) (good)"
     rm -f "$W"/c32_*.o
 fi
 
@@ -139,6 +150,28 @@ for s in "${SCENES[@]}"; do
         # ASan errors reported exactly that case as PASS.
         status=1
         sed -n 's/^/      /p' "$W/$name.err" | tail -4
+    fi
+    # ---- THE TRAJECTORY, against the i386 control's own. This is the half the
+    # error count cannot reach: an in-bounds wrong pointer changes the numbers
+    # and nothing else. `scene_chain` is COLLISION-FREE and matches over all 900
+    # steps, which is what makes a divergence in the other two attributable to
+    # the collision side rather than to arithmetic.
+    if [ -s "$W/ctl_$name.csv" ]; then
+        python3 - "$W/ctl_$name.csv" "$W/$name.csv" <<'PY'
+import sys
+a=[l.split(',') for l in open(sys.argv[1]) if l.strip()]
+b=[l.split(',') for l in open(sys.argv[2]) if l.strip()]
+worst=0.0
+for x,y in zip(a,b):
+    for p,q in zip(x[1:],y[1:]):
+        try: fp,fq=float(p),float(q)
+        except ValueError: continue
+        if abs(fp-fq) > 1e-2*max(1.0,abs(fp)):
+            print('      TRAJECTORY diverges >1%% from the i386 control at step %s'%x[0])
+            sys.exit(0)
+        worst=max(worst,abs(fp-fq))
+print('      trajectory matches the i386 control (worst |delta| %.2e)'%worst)
+PY
     fi
 done
 [ "$status" = 0 ] && echo "  -> PASS (necessary, NOT sufficient: arm64 also faults on unaligned access)" \

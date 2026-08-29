@@ -1152,6 +1152,127 @@ McdTriangleList       real: same run, same evidence. These two objects account f
 #                     a build that no longer existed. `cmake` will not rebuild what it thinks is
 #                     current, so the failure is silent. Check the newest `.c.o` against `git log`.
 
+# LP64-COLLISION-SIDE 2026-08-29 (thirteenth session, later): ★ MEMORY SAFETY IS CLEAN ON ALL
+#                     THREE SCENES AT 64-BIT POINTER WIDTH. What is left is a TRAJECTORY
+#                     divergence, on the collision side, and the control that says so is
+#                     scene_chain — which is COLLISION-FREE and matches the i386 build over all
+#                     900 steps.
+#
+#                       scene_chain            0 ASan errors   trajectory MATCHES (worst 4.9e-04)
+#                       scene_boxes_on_plane   0 ASan errors   diverges >1% at step 33
+#                       scene_ragdoll          0 ASan errors   diverges >1% at step 1, BLOWN UP
+#
+#                     Both divergences begin at the scene's FIRST CONTACT and chain never has
+#                     one, so the remaining defect is in the collision half — not in the
+#                     dynamics, not in the solver, and not in arithmetic.
+#
+#                     ⚠ THE ERROR COUNT WAS ONLY HALF OF WHAT THE HARNESS COULD SAY. A pointer
+#                     that is wrong but still IN BOUNDS is invisible to AddressSanitizer and
+#                     perfectly visible in the numbers. `lp64_run.sh` now builds the i386
+#                     control for EVERY scene, keeps its trajectory, and diffs — and it fails on
+#                     a non-zero exit as well as on an error count, because ragdoll's own
+#                     "BLOWN UP" verdict was being reported as PASS.
+#
+#                     ⚠ AND THE FLAGS MUST MATCH DOWN TO -O AND -mfpmath, WHICH I GOT WRONG
+#                     FIRST. Comparing an -O2 i386 build against the -O1 LP64 one measures x87
+#                     excess-precision rounding: it read "boxes diverges at step 45" either way,
+#                     and only the matched-flag reading meant anything. The control builds with
+#                     the identical CF now.
+
+# LP64-FRAME-SLOTS   2026-08-29 (thirteenth session, later): GHIDRA'S INVENTED ARGUMENT AREA,
+#                     ADDRESSED IN 4-BYTE WORDS — 22 areas, tools/fix_frame_slots.py. ★ AND THIS
+#                     ENTRY CORRECTS LP64-TWO-REMAIN, WHICH CALLED THE CLASS UNFIXABLE UNDER THE
+#                     BYTE-IDENTITY GATE.
+#
+#                       int aiStack_9cb0 [6];
+#                       *(McdBatchContext **)((kd_iptr)aiStack_9cb0 + 0x14) = b->context;
+#                       ... = McdBatchIntersectEach(*(void **)((kd_iptr)aiStack_9cb0 + 4), ...);
+#
+#                     Every offset is an argument WORD and every word is four bytes because that
+#                     is what a pointer weighed on the shipped target. At LP64 slots 4 and 5
+#                     overlap and the write to slot 5 runs four bytes off the end of a 24-byte
+#                     array. That is `MstUtils.c:91`; `McdBatch.c:829` is its consequence one
+#                     call deeper, `*resultCount = 0` through a pointer from a clobbered slot.
+#
+#                     ★ WHY THE PREDICTION WAS WRONG, AND IT IS THE FOURTH TIME THIS SESSION.
+#                     LP64-TWO-REMAIN reasoned: "It is a PIPELINE change, so generated/allobj
+#                     moves and byte-identity CANNOT be the gate — the repair gives the scratch
+#                     its own storage, which is a different stack layout by construction." True
+#                     of the repair it had in mind — converting the shape upstream in
+#                     recover.py — and not true of scaling the offsets AND the object TOGETHER
+#                     in a post-pass:
+#
+#                       + 0x14                ->  + (5 * (int)sizeof(void *))
+#                       int aiStack_9cb0[6];  ->  int aiStack_9cb0[6 * (int)(sizeof(void *) / 4)];
+#
+#                     Both fold to the original text at 32-bit pointer width, so `generated`
+#                     never moves and the i386 object cannot change. Measured on MstUtils — the
+#                     object the upstream attempt "knocked out of the build entirely" — 123
+#                     offsets scaled, all three areas widened, byte-identical. NEVER DECLINE A
+#                     REPAIR ON A PREDICTION.
+#
+#                     WHICH LOCALS, and the two refusals are the whole safety: only Ghidra's own
+#                     `<type><Stack|StackY>_<hex>` names; every offset must be a multiple of
+#                     four; and the name must appear NOWHERE except inside one of these casts,
+#                     because if the recovery ever uses `fStack_9c98` as the float it is
+#                     declared to be then widening it changes what that read means. Seven areas
+#                     decline on that test and are reported.
+#
+#                     ⚠ ALL OR NOTHING PER AREA, AND RECOMPUTE BETWEEN AREAS. A half-scaled area
+#                     overlaps DIFFERENTLY rather than not at all. And the areas INTERLEAVE —
+#                     MstUtils writes `aiStack_9cb0` and `aMStack_9c94` in alternate statements
+#                     — so offsets taken against the original text are stale the moment one area
+#                     lands, and the next area's declaration edit falls in the middle of an
+#                     expression. It reads as "not byte-identical", which is a DECLINE ON A
+#                     REPAIR THAT WAS NEVER TRIED: `aiStack_9cb0` declined exactly that way
+#                     while the same three areas, edited together by hand, were identical.
+#
+#                     ⚠ AND A GREEDY REGEX ATE THE FIRST LETTER OF EVERY NAME. `aiStack_9cb0`
+#                     was captured as `iStack_9cb0`, a name that appears nowhere — so the area
+#                     had no sites, so it was skipped SILENTLY. The tool reported nine clean
+#                     repairs while the object it was written for was untouched. A `\b` before
+#                     the name group fixes it; the lesson is that a skip with no note is
+#                     indistinguishable from nothing to do.
+#
+#                     ★★ AND IT BLINDS A GATE IF YOU LET IT — MEASURED, NOT ASSUMED.
+#                     `check_frame_bounds.py` exists for exactly this defect and reads CONSTANT
+#                     offsets and CONSTANT array bounds; after this pass both are constant
+#                     EXPRESSIONS. A deliberate `+ 0x400` into `aiStack_9cb0` is caught before
+#                     the post-pass and MISSED after it, on the same detector, which is how the
+#                     blinding was confirmed rather than argued. The gate has been taught both
+#                     spellings and re-checked against the same deliberate violation, and
+#                     `lp64_pipeline.sh` now runs it after the post-passes so the zero is stated
+#                     out loud rather than assumed.
+
+# SCENE-RAGDOLL-DANGLING 2026-08-29 (thirteenth session, later): ★ THE RAGDOLL SCENE HAS BEEN
+#                     READING DEAD STACK FOR AS LONG AS IT HAS EXISTED, at every pointer width,
+#                     and no gate in this project had ever run the corpus under AddressSanitizer
+#                     at i386 to hear it.
+#
+#                       for (int i = 0; i < NBOX; i++) {
+#                           MeMatrix4 tm = { ... };
+#                           MstFixedModelCreate(u, (McdGeometryID)McdBoxCreate(fw, ...), tm);
+#                       }
+#
+#                     `MstFixedModelCreate` keeps the POINTER — `McdModelSetTransformPtr` — so
+#                     every obstacle's transform is a loop-iteration local that dies at the
+#                     closing brace, and the collision code reads it for the whole 900 steps.
+#                     ASan names it 24 times, all in `McdSphylBoxIntersect`, which is the ragdoll
+#                     path exactly. Fixed in `scene_ragdoll.c` and `scene_ragdoll_lod.c` by
+#                     giving the transforms storage that outlives the loop.
+#
+#                     ⚠ HOW IT WAS MISSED, AND IT IS A GATE-DESIGN LESSON. `lp64_run.sh` built
+#                     its i386 control for the FIRST SCENE ONLY — "it is a control, not a
+#                     survey" — and the first scene is `scene_chain`, which creates no collision
+#                     models at all. Extending the control to every scene found this on its
+#                     first run.
+#
+#                     ⚠ AND I NEARLY REPORTED THE OPPOSITE. The control binary exits 0 and its
+#                     own verdict reads "plausible", so a first pass read it as clean and used
+#                     it as the reference for a trajectory comparison. It had 24 sanitizer
+#                     errors in a file nobody had looked at. CHECK THE STDERR, not the exit code
+#                     — the scene's verdict and the sanitizer's are different questions.
+
 # LP64-ONE-REMAIN    2026-08-29 (thirteenth session): ★ scene_chain RUNS CLEAN AT 64-BIT
 #                     POINTER WIDTH, and the other two scenes fail in ONE class between them —
 #                     the invented stack frames, which is a DECOMPILATION defect and not a

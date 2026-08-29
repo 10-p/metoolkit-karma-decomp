@@ -613,7 +613,16 @@ constraint pool for the base class. Facts 2 and 3 catch it, and the fallback —
 i386 size is the stride AND whose 64-bit size the shipped build is seen to pass — names `MdtContact`
 uniquely. **Fact 2 alone would not:** fourteen metoolkit types are 20 bytes at i386.
 
-Current output: **120 allocations + 7 pool strides rewritten, 0 pool sites declined**, every one
+**A fourth spelling: `alloca`.** `addedBodies = (MdtBody **)(... alloca((size_t)(n) * 4 + 0))` — the
+`4` is `sizeof(MdtBody *)` at i386, so these pointer arrays come back **half size** at LP64 and every
+write past the midpoint runs off the end. That is what `MdtUpdatePartitions` was still failing on
+after its arena was repaired, at four lines none of them near the allocation. The element type is in
+the cast that consumes the block, or in the variable it lands in. 24 sites carry a baked multiplier;
+the declines are honest (`float * is 4, the stride is 12` is a `MeVector3` buffer whose variable is
+typed `float *`). ⚠ Confirm-only, never veto — the count is a runtime value and MSVC strength-reduces
+the multiply.
+
+Current output: **125 allocations + 7 pool strides rewritten, 0 pool sites declined**, every one
 compiled and compared against its baseline object.
 
 ★ **AND THE BYTE-IDENTITY GATE CANNOT VALIDATE THE TYPE — it never could.** The rewrite is only

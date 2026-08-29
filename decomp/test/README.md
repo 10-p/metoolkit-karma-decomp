@@ -358,8 +358,15 @@ Where it stands as of 2026-08-28, with the baked-size class closed:
 **Still FAIL, and that is the honest reading.** `scene_chain` went 25 → 3 and `scene_ragdoll`
 19 → 3; ragdoll's three are `MstUtils` + `McdBatch`, which is Ghidra's INVENTED STACK FRAMES
 (`*(T **)((kd_iptr)aiStack_9cb0 + 0x14)`) — a decompilation defect, not a layout one, and it belongs
-upstream in the dump rather than in any post-pass. `scene_chain` and `scene_boxes_on_plane` still
-have `MdtUpdatePartitions` sites beyond the arena, plus one `McdBox` read.
+upstream in the dump rather than in any post-pass.
+
+★ **`scene_chain`'s last three are NOT another baked size.** The arena is now sized exactly right —
+624 bytes for 12 bodies and 12 constraints, which is `96 + 12*36 + 12*8` to the byte — and every
+array lands where it should. The errors are a **count** overrunning: `numAddedBodies` passing
+`maxBodies`, and `po->info + po->nPartitions` reaching the end of the block. With twelve bodies the
+traversal is visiting some more than once, so the next defect is in the partitioner's *bookkeeping*.
+Diagnose it fresh. `scene_boxes_on_plane` is on the second arena
+(`MdtKeaConstraintsCreateFromChunk`) plus one `McdBox` read.
 
 ⚠ **The error COUNTS move between runs** (ASan `-fsanitize-recover` keeps going, so how far a scene
 gets changes what it reports). Read the SITE LIST, not the number.

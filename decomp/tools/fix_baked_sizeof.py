@@ -156,6 +156,25 @@ GETSTRUCT = re.compile(
 
 BANNER = re.compile(r'(?m)^/\* ---- (\S+)')
 
+# ---------------------------------------------------------------------------
+# THE SAME DEFECT ON THE STACK. `alloca` is not `MeMemoryAPI.create`, so none of
+# the patterns above see it:
+#
+#     addedBodies = (MdtBody **)(kd_alloca_x = (char *)alloca((size_t)(n) * 4 + 0));
+#
+# `4` is `sizeof(MdtBody *)` at i386. These are arrays of POINTERS, so at LP64
+# they come back HALF SIZE and every write past the midpoint runs off the end —
+# which is what `MdtUpdatePartitions` was still failing on after its arena was
+# repaired, at four different lines, none of them near the allocation.
+#
+# The element type is written down in the CAST that consumes the block, or in
+# the declaration of the variable it lands in; 24 sites carry a baked multiplier.
+ALLOCA = re.compile(
+    r'(?m)^[ \t]*(?:(?P<var>[A-Za-z_]\w*)\s*=\s*)?'
+    r'(?:\((?P<cast>[A-Za-z_][\w ]*\**)\)\s*)?'
+    r'\(?\s*kd_\w+\s*=\s*\(char \*\)alloca\(\(size_t\)\(.*?\)'
+    r'\s*\*\s*(?P<size>0x[0-9a-f]+|\d+)\s*\+')
+
 
 def includes(inc):
     out = ['-I' + inc]
@@ -667,6 +686,42 @@ def main():
                     why.split(' is ')[0][:40], 0) + 1
                 continue
             edits.append((m.start('size'), m.end('size'), reps, 'alloc', None))
+
+        # ---- the stack allocations
+        for m in ALLOCA.finditer(text):
+            lit = int(m.group('size'), 0)
+            ty = m.group('cast')
+            if ty:
+                ty = re.sub(r'\s+', ' ', ty).strip()
+            elif m.group('var'):
+                ty = declared_type(region_of(text, m.start()), m.group('var'))
+            if not ty:
+                declined += 1
+                reasons['alloca: no type for the block'] = reasons.get(
+                    'alloca: no type for the block', 0) + 1
+                continue
+            sz = elem_size(ty, inc, cache)
+            if sz is None or sz < 2:
+                declined += 1
+                reasons['alloca: %s elements are not a usable size' % ty] = \
+                    reasons.get('alloca: %s elements are not a usable size' % ty, 0) + 1
+                continue
+            if sz != lit:
+                declined += 1
+                reasons['alloca: %s is %d, the stride is %d' % (ty, sz, lit)] = \
+                    reasons.get('alloca: %s is %d, the stride is %d' % (ty, sz, lit), 0) + 1
+                continue
+            # The count is a RUNTIME value, so MSVC may strength-reduce the
+            # multiply and the shipped amd64 build proves nothing by absence —
+            # confirm only, never veto. See the note on `may_veto` above.
+            w = win_elem_size(ty, inc, cache)
+            seen = amd64_constants(enclosing(text, m.start()))
+            if pool_ok and w and seen and w in seen:
+                confirmed += 1
+            else:
+                unconfirmed += 1
+            edits.append((m.start('size'), m.end('size'),
+                          ['(int)sizeof(*(%s)0)' % ty], 'alloc', None))
 
         # ---- the pool element strides. Both patterns are matched against the
         # ORIGINAL text and applied together below, back to front, so neither

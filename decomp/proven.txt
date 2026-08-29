@@ -1256,6 +1256,39 @@ McdTriangleList       real: same run, same evidence. These two objects account f
 #                     nothing, and reporting them as refusals buries the ones that can be repaired.
 #                     They are counted on their own line.
 
+# LP64-ALLOCA-STRIDE 2026-08-29 (twelfth session): THE BAKED ELEMENT SIZE ON THE STACK. `alloca` is
+#                     not `MeMemoryAPI.create`, so none of fix_baked_sizeof's patterns saw it:
+#
+#                       addedBodies = (MdtBody **)(kd_alloca_x =
+#                           (char *)alloca((size_t)(po->maxBodies) * 4 + 0));
+#
+#                     `4` is `sizeof(MdtBody *)` at i386. These are arrays of POINTERS, so at LP64
+#                     they come back HALF SIZE and every write past the midpoint runs off the end.
+#                     That is what `MdtUpdatePartitions` was still failing on after its arena was
+#                     repaired — at four different lines, none of them near the allocation.
+#
+#                     The element type is written down in the CAST that consumes the block
+#                     (`(MdtBody **)`) or in the declaration of the variable it lands in, so nothing
+#                     is guessed. 24 sites carry a baked multiplier; 5 are repaired, and the
+#                     declines are honest: `float * is 4, the stride is 12` is a MeVector3 buffer
+#                     whose variable is typed `float *`, and five have no type to take at all.
+#
+#                     ⚠ CONFIRM-ONLY, NEVER VETO, because the count is a RUNTIME value and MSVC
+#                     strength-reduces the multiply — the same rule LP64-WRONG-TYPE records.
+#
+#                     EFFECT: scene_chain 11 -> 3 errors and scene_ragdoll's collision sites are
+#                     gone entirely.
+#
+#                     ★ AND WHAT IS LEFT IN MdtUpdatePartitions IS NOT THIS CLASS. The arena is now
+#                     sized EXACTLY right — 624 bytes for 12 bodies and 12 constraints, which is
+#                     96 + 12*36 + 12*8 to the byte, and every array lands where it should. The
+#                     three remaining errors are a COUNT overrunning: `numAddedBodies` passing
+#                     `maxBodies` and `po->info + po->nPartitions` reaching the end of the block.
+#                     With twelve bodies the traversal is visiting some of them more than once, so
+#                     the next defect is in the partitioner's BOOKKEEPING — `arrayIdPartition`,
+#                     the `flags & 2` visited test, or the MeDict walk — and not in any allocation.
+#                     Diagnose it fresh; do not assume it is another baked size.
+
 # LP64-ARENA-CARVE   2026-08-29 (twelfth session): ONE ALLOCATION CARVED INTO ARRAYS WITH BAKED
 #                     STRIDES — and ★ A CORRECTION: this file and STATE.md both predicted the class
 #                     would "almost certainly not" survive the byte-identity gate. IT DOES. That is

@@ -250,6 +250,7 @@ def main():
                  % (box.get(16), box.get(20), box.get(28)))
 
     tags = sorted(struct_bodies(inc))
+    paths_size = {}
     base_tag, (base_name, base_fields) = 'McdGeometry', BASES['_McdGeometry']
     bsz = measure('sizeof(*(McdGeometryID)0)', inc, cache)
     boff = {f: measure('((char *)&((McdGeometryID)0)->%s - (char *)0)' % f, inc, cache)
@@ -295,6 +296,8 @@ def main():
             continue
 
         paths = field_paths(concrete, inc, cache)
+        if concrete not in paths_size:
+            paths_size[concrete] = measure('sizeof(%s)' % concrete, inc, cache)
         edits = []
         # ---- AN ASSIGNMENT HAS TO BE REWRITTEN WHOLE, because the value
         # carries the BASE field's type. `pMVar1[1].prev = (McdGeometryID)
@@ -351,9 +354,23 @@ def main():
                 continue
             rhs = '((%s *)%s)->%s' % (concrete, sm.group('base'), fp)
             var = m.group('var')
-            edits.append((m.start(), m.end(),
-                          ['%s = %s;' % (var, rhs),
-                           '%s = (__typeof__(%s))KD_FBITS(%s);' % (var, var, rhs)],
+            # A third spelling, and it needs a BOUNDS GUARD to be honest.
+            # `VAR = *(__typeof__(VAR) *)&field;` is byte-identical at i386 and
+            # gives the right VALUE at LP64 — the variable is 8 bytes there, the
+            # field is 4, and every use reads the low half through
+            # `*(float *)&VAR`, which on little-endian is exactly the field. But
+            # it READS 8 bytes from a 4-byte member, so it is only admissible
+            # when the struct actually has 8 bytes left at that offset. For
+            # McdBox's mR[1] and mR[2] it does; for a trailing field it would
+            # not, and the guard is what keeps this from becoming a real
+            # over-read somewhere else.
+            room = paths_size.get(concrete)
+            off_ok = room is not None and off + 8 <= room
+            reps = ['%s = %s;' % (var, rhs),
+                    '%s = (__typeof__(%s))KD_FBITS(%s);' % (var, var, rhs)]
+            if off_ok:
+                reps.append('%s = *(__typeof__(%s) *)&%s;' % (var, var, rhs))
+            edits.append((m.start(), m.end(), reps,
                           '%-26s %-16s [%s].%-13s +%-3d -> = %s'
                           % (fn, concrete, sm.group('k'), sm.group('f'), off, fp)))
             done.add(sm.start())

@@ -351,34 +351,34 @@ Where it stands as of 2026-08-28, with the baked-size class closed:
 
 | | first thing it hits |
 |---|---|
-| before any post-pass | `MdtWorld.c:98` — the FIRST STATEMENT of the first scene |
-| post-passes as they were | `MeDictInsert`, two files from the `MdtBody` pool stride that caused it |
-| + sizes, strides, offsets, derived fields, the partition arena | **`scene_ragdoll` is down to THREE errors, and all three are a decompilation defect** |
+| start of the session | `MdtWorld.c:98` — the FIRST STATEMENT of the first scene |
+| now | **two distinct defects across all three scenes** |
 
-**Still FAIL, and that is the honest reading.** `scene_chain` went 25 → 3 and `scene_ragdoll`
-19 → 3; ragdoll's three are `MstUtils` + `McdBatch`, which is Ghidra's INVENTED STACK FRAMES
-(`*(T **)((kd_iptr)aiStack_9cb0 + 0x14)`) — a decompilation defect, not a layout one, and it belongs
-upstream in the dump rather than in any post-pass.
+```
+scene_chain            1   MdtBcl.c:519
+scene_boxes_on_plane   3   MstUtils.c:91,97 + McdBatch.c:829
+scene_ragdoll          1   MdtBcl.c:519
+```
 
-★ **`scene_chain` is down to ONE error.** Every `MdtPartition`/`MdtMainLoop` site went away with a
-single literal byte offset: the VISITED test read `MdtBody::flags` at its i386 offset (`0x1ec`, 556
-at LP64), so no body was ever seen as visited and the root loop re-seeded bodies already placed.
-`../proven.txt` `LP64-VISITED-FLAG` records why the symptom — a count overrunning a buffer — looks
-nothing like a layout defect, and the two probes that misled before it.
+**Still FAIL, and that is the honest reading** — but what remains is two things, not a list.
+`McdBatch.c:829` is a *consequence* (`*resultCount = 0`, where `resultCount` arrived through one of
+MstUtils' frame slots), and ragdoll's MstUtils pair vanished when `McdBox`'s derived-field reads were
+repaired. Most of what looks like breadth is one defect seen from several call sites.
 
-★ **(superseded) `scene_chain`'s last three are NOT another baked size.** The arena is now sized exactly right —
-624 bytes for 12 bodies and 12 constraints, which is `96 + 12*36 + 12*8` to the byte — and every
-array lands where it should. The errors are a **count** overrunning: `numAddedBodies` passing
-`maxBodies`, and `po->info + po->nPartitions` reaching the end of the block. With twelve bodies the
-traversal is visiting some more than once, so the next defect is in the partitioner's *bookkeeping*.
-Diagnose it fresh. `scene_boxes_on_plane` is on the second arena
-(`MdtKeaConstraintsCreateFromChunk`) plus one `McdBox` read.
+1. **`MdtBcl`** — a genuinely `void *` API (`MdtBcl.h` declares `void *const constraint`), so no
+   header struct can type its offsets; measured per file *and* per function, with arrays and nested
+   members expanded, nothing fits. The amd64 build **does** have the LP64 displacements, but using
+   them means aligning two compilers' instruction streams — a different technique.
+2. **`MstUtils`** — Ghidra's invented stack frames. A *decompilation* defect: `recover.py` already
+   converts this shape to named `kd_frameslot_` arrays that are in bounds at both widths (all 44 of
+   `MdtPartition`'s were). The question is why the conversion declined here, not how to patch output.
 
-⚠ **The error COUNTS move between runs** (ASan `-fsanitize-recover` keeps going, so how far a scene
-gets changes what it reports). Read the SITE LIST, not the number.
+⚠ **The error COUNTS move between runs** — ASan uses `-fsanitize-recover`, so how far a scene gets
+changes what it reports; ragdoll has shown 1 and 3 on consecutive runs of the same binary. **Read
+the site list.**
 
-See `../proven.txt` `LP64-ARENA-CARVE`, `LP64-DERIVED-FIELDS`, `LP64-STRIDE-AS-ADDR`,
-`LP64-FIELD-OFFSETS`, `LP64-WRONG-TYPE`, `LP64-WORD-LOOPS`, `LP64-REBUILT-DATA`, `LP64-BAKED-SIZES`.
+See `../proven.txt` `LP64-TWO-REMAIN` for the full accounting, and the `LP64-*` entries for each
+class closed.
 
 ---
 

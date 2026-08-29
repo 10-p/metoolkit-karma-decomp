@@ -1256,6 +1256,57 @@ McdTriangleList       real: same run, same evidence. These two objects account f
 #                     nothing, and reporting them as refusals buries the ones that can be repaired.
 #                     They are counted on their own line.
 
+# LP64-TWO-REMAIN    2026-08-29 (twelfth session): WHERE THE LP64 WORK ACTUALLY STANDS. All three
+#                     scenes are down to TWO distinct defects between them, from a harness that
+#                     started the session failing on the FIRST STATEMENT of the first scene.
+#
+#                       scene_chain              1   MdtBcl.c:519
+#                       scene_boxes_on_plane     3   MstUtils.c:91,97 + McdBatch.c:829
+#                       scene_ragdoll            1   MdtBcl.c:519
+#
+#                     ⚠ McdBatch.c:829 is a CONSEQUENCE, not a defect: `*resultCount = 0` where
+#                     resultCount was handed in through one of MstUtils' frame slots. Repairing
+#                     MstUtils removes it. The same was true of ragdoll's MstUtils pair, which
+#                     vanished when McdBox's derived-field reads were repaired — most of what looks
+#                     like breadth here is one defect seen from several call sites.
+#
+#                     1. MdtBcl — A `void *` API, AND THE HEADERS CANNOT TYPE IT.
+#
+#                          if (... *(int *)((int)constraint + 0xb4) ...)
+#
+#                     `MdtBcl.h` declares `void *const constraint` — MathEngine passes an opaque
+#                     pointer and the Bcl layer knows the layout by offset, so this is not Ghidra
+#                     losing a type, it is the ORIGINAL API. Measured: no struct with a complete
+#                     body covers the offsets, per file (54 of them) OR per function (18 for
+#                     MdtBclAddBSJoint), even with array elements and nested members expanded. The
+#                     per-file pooling is wrong here anyway — each MdtBclAdd* function takes a
+#                     DIFFERENT constraint type — so the inference has to be per function, and per
+#                     function it still finds nothing.
+#
+#                     ★ THE ORACLE CAN SEE IT AND THAT IS THE LEAD: `MdtBclAddBSJoint` is a plain C
+#                     name in MdtBcl/MdtBcl.obj and its LP64 displacements are right there
+#                     (0x134, 0x178, and a 60-entry displacement set). Mapping i386 offset -> LP64
+#                     offset means ALIGNING TWO COMPILERS' INSTRUCTION STREAMS, which is a
+#                     different technique from anything used so far and deserves its own design
+#                     rather than being bolted onto fix_literal_offsets.
+#
+#                     2. MstUtils — GHIDRA'S INVENTED STACK FRAMES.
+#
+#                          *(McdBatchContext **)((kd_iptr)aiStack_9cb0 + 0x14) = b->context;
+#
+#                     Arguments routed through a fabricated local array at computed offsets — the
+#                     class `check_frame_bounds.py` exists for. At LP64 the slot offsets are wrong
+#                     because the pointers doubled. ⚠ THIS IS A DECOMPILATION DEFECT, NOT A LAYOUT
+#                     ONE, and the fix belongs upstream in the dump: recover.py already converts
+#                     this shape to named `kd_frameslot_` arrays, which are in bounds at both
+#                     widths — it converted all 44 of MdtPartition's. MstUtils' were not converted,
+#                     so the question is why that conversion declined here, not how to patch the
+#                     output.
+#
+#                     ⚠ AND THE ERROR COUNTS MOVE BETWEEN RUNS. ASan runs with -fsanitize-recover,
+#                     so how far a scene gets changes how many errors it reports; ragdoll has shown
+#                     1 and 3 on consecutive runs of the same binary. READ THE SITE LIST.
+
 # LP64-VISITED-FLAG  2026-08-29 (twelfth session): ★ ONE LITERAL BYTE OFFSET WAS THE WHOLE
 #                     PARTITIONER FAILURE. scene_chain went from 25 AddressSanitizer errors to ONE.
 #

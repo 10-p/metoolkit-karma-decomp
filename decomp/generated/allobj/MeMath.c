@@ -72,13 +72,13 @@ void kd_MeQuaternionFromTM(MeReal *q,MeReal (*tm) [4])
   fVar3 = (float)kd_tr;
   if (kd_tr <= 0.0) {
     i = (int)((*tm)[0] < tm[1][1]);
-    if (*(float *)((int)tm + i * 0x14) < tm[2][2]) {
+    if (*(float *)((kd_iptr)tm + i * 0x14) < tm[2][2]) {
       i = 2;
     }
     iVar1 = MeQuaternionFromTM__nxt[i];
     iVar2 = MeQuaternionFromTM__nxt[iVar1];
-    fVar3 = SQRT(((*(float *)((int)tm + i * 0x14) - *(float *)((int)tm + iVar1 * 0x14)) -
-                 *(float *)((int)tm + iVar2 * 0x14)) + 1.0);
+    fVar3 = SQRT(((*(float *)((kd_iptr)tm + i * 0x14) - *(float *)((kd_iptr)tm + iVar1 * 0x14)) -
+                 *(float *)((kd_iptr)tm + iVar2 * 0x14)) + 1.0);
     qt[i] = fVar3 * 0.5;
     if (fVar3 != 0.0) {
       fVar3 = (1.0 / fVar3) * 0.5;
@@ -827,14 +827,14 @@ void kd_MeMatrixFPrint(FILE *file,MeReal *A,int n,int m,char *format)
   int iVar5;
   char *pcVar6;
   double dVar7;
-  int width;
+  kd_iptr width;
   int i;
   char s [100];
 
   sprintf(s,format,0);
   pcVar6 = s;
   do {
-    width = (int)pcVar6;
+    width = (kd_iptr)pcVar6;
     uVar1 = *(uint *)width + 0xfefefeff & (*(uint *)width ^ 0xffffffff);
     uVar2 = uVar1 & 0x80808080;
     pcVar6 = (char *)(width + 4);
@@ -845,7 +845,7 @@ void kd_MeMatrixFPrint(FILE *file,MeReal *A,int n,int m,char *format)
     iVar5 = width + 6;
   }
   width = iVar5;
-  uVar1 = ((width + -3) - (uint)CARRY1((byte)uVar2,(byte)uVar2)) - (int)s;
+  uVar1 = ((width + -3) - (uint)CARRY1((byte)uVar2,(byte)uVar2)) - (kd_iptr)s;
   i = 0;
   if (0 < n) {
     do {
@@ -920,7 +920,7 @@ void kd_MeMatrixPrint(MeReal *A,int n,int m,char *format)
   int iVar5;
   char *pcVar6;
   double dVar7;
-  int width;
+  kd_iptr width;
   int i;
   char s [100];
   
@@ -929,7 +929,7 @@ void kd_MeMatrixPrint(MeReal *A,int n,int m,char *format)
   sprintf(s,format,0);
   pcVar6 = s;
   do {
-    width = (int)pcVar6;
+    width = (kd_iptr)pcVar6;
     uVar1 = *(uint *)width + 0xfefefeff & (*(uint *)width ^ 0xffffffff);
     uVar2 = uVar1 & 0x80808080;
     pcVar6 = (char *)(width + 4);
@@ -940,7 +940,7 @@ void kd_MeMatrixPrint(MeReal *A,int n,int m,char *format)
     iVar5 = width + 6;
   }
   width = iVar5;
-  uVar1 = ((width + -3) - (uint)CARRY1((byte)uVar2,(byte)uVar2)) - (int)s;
+  uVar1 = ((width + -3) - (uint)CARRY1((byte)uVar2,(byte)uVar2)) - (kd_iptr)s;
   i = 0;
   if (0 < n) {
     do {

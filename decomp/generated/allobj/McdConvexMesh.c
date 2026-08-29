@@ -247,20 +247,20 @@ McdGeometry * kd_McdConvexMeshCreate(McdFramework *frame,McdConvexHull *poly,MeR
 {
   McdGeometry *pMVar1;
 
-  pMVar1 = (MeMemoryAPI.createAligned)(0x40,0x10);
+  pMVar1 = (MeMemoryAPI.createAligned)((int)sizeof(*(McdConvexMesh *)0),0x10);
   McdGeometryInit(pMVar1,frame,7);
-  pMVar1[1].mRefCtAndID = (MeU32)poly->vertex;
-  pMVar1[1].prev = (McdGeometryID)poly->face;
-  pMVar1[1].next = (McdGeometryID)poly->edge;
-  pMVar1[1].frame = (McdFrameworkID)poly->edgeIndex;
-  pMVar1[2].mRefCtAndID = poly->numVertex;
-  pMVar1[2].prev = (McdGeometryID)poly->numFace;
-  pMVar1[2].next = (McdGeometryID)poly->numEdge;
-  pMVar1[2].frame = (McdFrameworkID)KD_FBITS(fatness);
+  pMVar1[1].mRefCtAndID = (kd_uptr)poly->vertex;
+  ((McdConvexMesh *)pMVar1)->mHull.face = (McdGeometryID)poly->face;
+  ((McdConvexMesh *)pMVar1)->mHull.edge = (McdGeometryID)poly->edge;
+  ((McdConvexMesh *)pMVar1)->mHull.edgeIndex = (McdFrameworkID)poly->edgeIndex;
+  ((McdConvexMesh *)pMVar1)->mHull.numVertex = poly->numVertex;
+  ((McdConvexMesh *)pMVar1)->mHull.numFace = (McdGeometryID)poly->numFace;
+  ((McdConvexMesh *)pMVar1)->mHull.numEdge = (McdGeometryID)poly->numEdge;
+  ((McdConvexMesh *)pMVar1)->mFatness = fatness;
   kd_MeBoundingSphereCalc2
-            ((McdCnvVertex *)pMVar1[1].mRefCtAndID,pMVar1[2].mRefCtAndID,(MeReal *)&pMVar1[3].prev,
+            ((McdCnvVertex *)pMVar1[1].mRefCtAndID,((McdConvexMesh *)pMVar1)->mHull.numVertex,(MeReal *)&((McdConvexMesh *)pMVar1)->mBoundingSphereCenter[0],
              (MeReal *)(pMVar1 + 3));
-  *(MeReal *)&pMVar1[3].mRefCtAndID = (fatness + *(float *)&(pMVar1[3].mRefCtAndID));
+  *(MeReal *)&pMVar1[3].mRefCtAndID = (fatness + *(float *)&(((McdConvexMesh *)pMVar1)->mBoundingSphereRadius));
   return pMVar1;
 }
 
@@ -278,20 +278,20 @@ kd_McdConvexMeshCreateHull
   pMVar2 = (McdConvexMeshID)0x0;
   if (iVar1 != 0) {
                     
-    pMVar2 = (MeMemoryAPI.createAligned)(0x40,0x10);
+    pMVar2 = (MeMemoryAPI.createAligned)((int)sizeof(*(McdConvexMesh *)0),0x10);
     McdGeometryInit(pMVar2,frame,7);
-    pMVar2[1].mRefCtAndID = (MeU32)poly.vertex;
-    pMVar2[1].prev = (McdGeometryID)poly.face;
-    pMVar2[1].next = (McdGeometryID)poly.edge;
-    pMVar2[1].frame = (McdFrameworkID)poly.edgeIndex;
-    pMVar2[2].mRefCtAndID = poly.numVertex;
-    pMVar2[2].prev = (McdGeometryID)poly.numFace;
-    pMVar2[2].next = (McdGeometryID)poly.numEdge;
-    pMVar2[2].frame = (McdFrameworkID)KD_FBITS(fatnessRadius);
+    pMVar2[1].mRefCtAndID = (kd_uptr)poly.vertex;
+    ((McdConvexMesh *)pMVar2)->mHull.face = (McdGeometryID)poly.face;
+    ((McdConvexMesh *)pMVar2)->mHull.edge = (McdGeometryID)poly.edge;
+    ((McdConvexMesh *)pMVar2)->mHull.edgeIndex = (McdFrameworkID)poly.edgeIndex;
+    ((McdConvexMesh *)pMVar2)->mHull.numVertex = poly.numVertex;
+    ((McdConvexMesh *)pMVar2)->mHull.numFace = (McdGeometryID)poly.numFace;
+    ((McdConvexMesh *)pMVar2)->mHull.numEdge = (McdGeometryID)poly.numEdge;
+    ((McdConvexMesh *)pMVar2)->mFatness = fatnessRadius;
     kd_MeBoundingSphereCalc2
-              ((McdCnvVertex *)pMVar2[1].mRefCtAndID,pMVar2[2].mRefCtAndID,(MeReal *)&pMVar2[3].prev
+              ((McdCnvVertex *)pMVar2[1].mRefCtAndID,((McdConvexMesh *)pMVar2)->mHull.numVertex,(MeReal *)&((McdConvexMesh *)pMVar2)->mBoundingSphereCenter[0]
                ,(MeReal *)(pMVar2 + 3));
-    *(MeReal *)&pMVar2[3].mRefCtAndID = (fatnessRadius + *(float *)&(pMVar2[3].mRefCtAndID));
+    *(MeReal *)&pMVar2[3].mRefCtAndID = (fatnessRadius + *(float *)&(((McdConvexMesh *)pMVar2)->mBoundingSphereRadius));
   }
   return pMVar2;
 }
@@ -378,12 +378,12 @@ void kd_McdConvexMeshUpdateAABB(McdGeometryInstanceID ins,MeMatrix4Ptr finalTM,M
     pMVar9[iVar11] = fVar13;
     iVar10 = iVar12;
   } while (iVar12 < 3);
-  *pMVar9 = (pMVar7[0xc] - *pMVar9) - *(float *)((int)pvVar6 + 0x2c);
-  ins->min[1] = (pMVar7[0xd] - ins->min[1]) - *(float *)((int)pvVar6 + 0x2c);
-  ins->min[2] = (pMVar7[0xe] - ins->min[2]) - *(float *)((int)pvVar6 + 0x2c);
-  *pMVar8 = *(float *)((int)pvVar6 + 0x2c) + pMVar7[0xc] + *pMVar8;
-  ins->max[1] = *(float *)((int)pvVar6 + 0x2c) + pMVar7[0xd] + ins->max[1];
-  ins->max[2] = *(float *)((int)pvVar6 + 0x2c) + pMVar7[0xe] + ins->max[2];
+  *pMVar9 = (pMVar7[0xc] - *pMVar9) - *(float *)((kd_iptr)pvVar6 + ((int)((char *)&((McdConvexMesh *)0)->mFatness - (char *)0)));
+  ins->min[1] = (pMVar7[0xd] - ins->min[1]) - *(float *)((kd_iptr)pvVar6 + ((int)((char *)&((McdConvexMesh *)0)->mFatness - (char *)0)));
+  ins->min[2] = (pMVar7[0xe] - ins->min[2]) - *(float *)((kd_iptr)pvVar6 + ((int)((char *)&((McdConvexMesh *)0)->mFatness - (char *)0)));
+  *pMVar8 = *(float *)((kd_iptr)pvVar6 + ((int)((char *)&((McdConvexMesh *)0)->mFatness - (char *)0))) + pMVar7[0xc] + *pMVar8;
+  ins->max[1] = *(float *)((kd_iptr)pvVar6 + ((int)((char *)&((McdConvexMesh *)0)->mFatness - (char *)0))) + pMVar7[0xd] + ins->max[1];
+  ins->max[2] = *(float *)((kd_iptr)pvVar6 + ((int)((char *)&((McdConvexMesh *)0)->mFatness - (char *)0))) + pMVar7[0xe] + ins->max[2];
   if (finalTM != (MeMatrix4Ptr)0x0) {
                     
     localDir_1[2] = finalTM[2][0];
@@ -419,12 +419,12 @@ void kd_McdConvexMeshUpdateAABB(McdGeometryInstanceID ins,MeMatrix4Ptr finalTM,M
       localDir[iVar10 + 1] = fVar13;
       iVar10 = iVar11;
     } while (iVar11 < 3);
-    fVar1 = (finalTM[3][0] - localDir[0]) - *(float *)((int)pvVar6 + 0x2c);
-    fVar3 = (finalTM[3][1] - localDir[1]) - *(float *)((int)pvVar6 + 0x2c);
-    fVar5 = (finalTM[3][2] - localDir[2]) - *(float *)((int)pvVar6 + 0x2c);
-    fVar13 = finalTM[3][0] + *(float *)((int)pvVar6 + 0x2c) + max[0];
-    fVar2 = finalTM[3][1] + *(float *)((int)pvVar6 + 0x2c) + max[1];
-    fVar4 = finalTM[3][2] + *(float *)((int)pvVar6 + 0x2c) + max[2];
+    fVar1 = (finalTM[3][0] - localDir[0]) - *(float *)((kd_iptr)pvVar6 + ((int)((char *)&((McdConvexMesh *)0)->mFatness - (char *)0)));
+    fVar3 = (finalTM[3][1] - localDir[1]) - *(float *)((kd_iptr)pvVar6 + ((int)((char *)&((McdConvexMesh *)0)->mFatness - (char *)0)));
+    fVar5 = (finalTM[3][2] - localDir[2]) - *(float *)((kd_iptr)pvVar6 + ((int)((char *)&((McdConvexMesh *)0)->mFatness - (char *)0)));
+    fVar13 = finalTM[3][0] + *(float *)((kd_iptr)pvVar6 + ((int)((char *)&((McdConvexMesh *)0)->mFatness - (char *)0))) + max[0];
+    fVar2 = finalTM[3][1] + *(float *)((kd_iptr)pvVar6 + ((int)((char *)&((McdConvexMesh *)0)->mFatness - (char *)0))) + max[1];
+    fVar4 = finalTM[3][2] + *(float *)((kd_iptr)pvVar6 + ((int)((char *)&((McdConvexMesh *)0)->mFatness - (char *)0))) + max[2];
     if (ins->min[0] < fVar1) {
       fVar1 = ins->min[0];
     }
@@ -458,10 +458,10 @@ void kd_McdConvexMeshGetBSphere(McdGeometryID g,MeReal *center,MeReal *radius)
 
 {
                     
-  *center = *(float *)&(g[3].prev);
-  center[1] = *(float *)&(g[3].next);
-  center[2] = *(float *)&(g[3].frame);
-  *radius = *(float *)&(g[3].mRefCtAndID);
+  *center = *(float *)&(((McdConvexMesh *)g)->mBoundingSphereCenter[0]);
+  center[1] = *(float *)&(((McdConvexMesh *)g)->mBoundingSphereCenter[1]);
+  center[2] = *(float *)&(((McdConvexMesh *)g)->mBoundingSphereCenter[2]);
+  *radius = *(float *)&(((McdConvexMesh *)g)->mBoundingSphereRadius);
   return;
 }
 
@@ -532,7 +532,7 @@ MeReal kd_McdConvexMeshGetFatness(McdConvexMeshID g)
 
 {
                     
-  return *(float *)&(g[2].frame);
+  return *(float *)&(((McdConvexMesh *)g)->mFatness);
 }
 
 /* ---- McdConvexMeshGetPolygonNormal (exported as kd_McdConvexMeshGetPolygonNormal, asm label "McdConvexMeshGetPolygonNormal") ---- */
@@ -541,7 +541,7 @@ void kd_McdConvexMeshGetPolygonNormal(McdConvexMeshID m,int polyID,MeReal *coord
 {
   McdGeometryID pMVar1;
 
-  pMVar1 = m[1].prev + polyID;
+  pMVar1 = ((McdConvexMesh *)m)->mHull.face + polyID;
   *coords = *(float *)&(pMVar1->mRefCtAndID);
   coords[1] = *(float *)&(pMVar1->prev);
   coords[2] = *(float *)&(pMVar1->next);
@@ -553,7 +553,7 @@ int kd_McdConvexMeshGetPolygonCount(McdConvexMeshID m)
 
 {
                     
-  return (int)m[2].prev;
+  return (int)((McdConvexMesh *)m)->mHull.numFace;
 }
 
 /* ---- McdConvexMeshDebugDraw (exported as kd_McdConvexMeshDebugDraw, asm label "McdConvexMeshDebugDraw") ---- */

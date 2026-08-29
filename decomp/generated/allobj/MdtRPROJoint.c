@@ -165,7 +165,7 @@ MdtConstraintID kd_MdtRPROJointQuaConstraint(MdtRPROJointID j)
 MdtRPROJointID kd_MdtConstraintDCastRPROJoint(MdtConstraintID c)
 
 {
-  return (MdtRPROJointID)(((c->head).tag != 7) - 1 & (uint)c);
+  return (MdtRPROJointID)(((c->head).tag != 7) - 1 & (kd_uptr)c);
 }
 
 /* ---- MdtRPROJointGetAttachmentPosition (exported as kd_MdtRPROJointGetAttachmentPosition, asm label "MdtRPROJointGetAttachmentPosition") ---- */

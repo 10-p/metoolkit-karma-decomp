@@ -146,7 +146,7 @@ MdtConstraintID kd_MdtCarWheelQuaConstraint(MdtCarWheelID j)
 MdtCarWheelID kd_MdtConstraintDCastCarWheel(MdtConstraintID c)
 
 {
-  return (MdtCarWheelID)(((c->head).tag != 3) - 1 & (uint)c);
+  return (MdtCarWheelID)(((c->head).tag != 3) - 1 & (kd_uptr)c);
 }
 
 /* ---- MdtCarWheelGetSteeringAngle (exported as kd_MdtCarWheelGetSteeringAngle, asm label "MdtCarWheelGetSteeringAngle") ---- */

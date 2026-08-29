@@ -325,7 +325,7 @@ void kd_MdtBodyDestroy(MdtBodyID b)
   pvVar3 = MeDictFirst(pMVar5);
   while (pvVar3 != (void *)0x0) {
                     
-    pvVar1 = *(void **)((int)pvVar3 + 0x14);
+    pvVar1 = *(void **)((kd_iptr)pvVar3 + ((int)((char *)&((struct MeDictNode *)0)->data - (char *)0)));
     MeDictNext(pMVar5,pvVar3);
     pvVar3 = MeDictNext(pMVar5,pvVar3);
     MdtConstraintDisable(pvVar1);
@@ -650,7 +650,7 @@ MdtBodyID kd_MdtBodyGetFirst(MdtWorldID w)
   pvVar1 = MeDictFirst(w);
   pMVar2 = (MdtBodyID)0x0;
   if (pvVar1 != (void *)0x0) {
-    pMVar2 = *(MdtBodyID *)((int)pvVar1 + 0x14);
+    pMVar2 = *(MdtBodyID *)((kd_iptr)pvVar1 + ((int)((char *)&((struct MeDictNode *)0)->data - (char *)0)));
   }
   return pMVar2;
 }
@@ -665,7 +665,7 @@ MdtBodyID kd_MdtBodyGetNext(MdtBodyID b)
   pvVar1 = MeDictNext(b->world,&b->worldNode);
   pMVar2 = (MdtBodyID)0x0;
   if (pvVar1 != (void *)0x0) {
-    pMVar2 = *(MdtBodyID *)((int)pvVar1 + 0x14);
+    pMVar2 = *(MdtBodyID *)((kd_iptr)pvVar1 + ((int)((char *)&((struct MeDictNode *)0)->data - (char *)0)));
   }
   return pMVar2;
 }
@@ -767,7 +767,7 @@ void kd_MdtBodySetTransform(MdtBodyID b,MeReal (*tm) [4])
   paMVar2 = b->bodyTM;
   for (iVar1 = 0x10; iVar1 != 0; iVar1 = iVar1 + -1) {
     (*paMVar2)[0] = (*tm)[0];
-    tm = (MeReal (*) [4])((int)tm + 4);
+    tm = (MeReal (*) [4])((kd_iptr)tm + 4);
     paMVar2 = (MeReal (*) [4])(*paMVar2 + 1);
   }
   UpdateCOMTransform(b);
@@ -1192,7 +1192,7 @@ void kd_MdtBodyForAllConstraints(MdtBodyID b,MdtConstraintIteratorCBPtr cb,void 
   pvVar2 = MeDictFirst(&b->constraintDict);
   while (pvVar2 != (void *)0x0) {
                     
-    pMVar1 = *(MdtConstraintID *)((int)pvVar2 + 0x14);
+    pMVar1 = *(MdtConstraintID *)((kd_iptr)pvVar2 + ((int)((char *)&((struct MeDictNode *)0)->data - (char *)0)));
     pvVar2 = MeDictNext(&b->constraintDict,pvVar2);
     (*cb)(pMVar1,ccbdata);
   }
@@ -1207,7 +1207,7 @@ void kd_MdtBodyDisableConstraints(MdtBodyID b)
 
   for (pvVar1 = MeDictFirst(&b->constraintDict); pvVar1 != (void *)0x0;
       pvVar1 = MeDictNext(&b->constraintDict,pvVar1)) {
-    MdtConstraintDisable(*(void **)((int)pvVar1 + 0x14));
+    MdtConstraintDisable(*(void **)((kd_iptr)pvVar1 + ((int)((char *)&((struct MeDictNode *)0)->data - (char *)0))));
   }
   return;
 }
@@ -1222,7 +1222,7 @@ void kd_MdtBodyDestroyConstraints(MdtBodyID b)
   pvVar2 = MeDictFirst(&b->constraintDict);
   while (pvVar2 != (void *)0x0) {
                     
-    pvVar1 = *(void **)((int)pvVar2 + 0x14);
+    pvVar1 = *(void **)((kd_iptr)pvVar2 + ((int)((char *)&((struct MeDictNode *)0)->data - (char *)0)));
     pvVar2 = MeDictNext(&b->constraintDict,pvVar2);
     MdtConstraintDisable(pvVar1);
     MdtConstraintDestroy(pvVar1);
@@ -1239,8 +1239,8 @@ void kd_MdtBodyDisableContacts(MdtBodyID b)
   for (pvVar1 = MeDictFirst(&b->constraintDict); pvVar1 != (void *)0x0;
       pvVar1 = MeDictNext(&b->constraintDict,pvVar1)) {
                     
-    if (*(int *)((int)*(void **)((int)pvVar1 + 0x14) + 0xb0) - 4U < 2) {
-      MdtConstraintDisable(*(void **)((int)pvVar1 + 0x14));
+    if (*(kd_iptr *)((kd_iptr)*(void **)((kd_iptr)pvVar1 + ((int)((char *)&((struct MeDictNode *)0)->data - (char *)0))) + 0xb0) - 4U < 2) {
+      MdtConstraintDisable(*(void **)((kd_iptr)pvVar1 + ((int)((char *)&((struct MeDictNode *)0)->data - (char *)0))));
     }
   }
   return;
@@ -1256,9 +1256,9 @@ void kd_MdtBodyDestroyContacts(MdtBodyID b)
   pvVar2 = MeDictFirst(&b->constraintDict);
   while (pvVar2 != (void *)0x0) {
                     
-    pvVar1 = *(void **)((int)pvVar2 + 0x14);
+    pvVar1 = *(void **)((kd_iptr)pvVar2 + ((int)((char *)&((struct MeDictNode *)0)->data - (char *)0)));
     pvVar2 = MeDictNext(&b->constraintDict,pvVar2);
-    if (*(int *)((int)pvVar1 + 0xb0) - 4U < 2) {
+    if (*(int *)((kd_iptr)pvVar1 + 0xb0) - 4U < 2) {
       MdtConstraintDisable(pvVar1);
       MdtConstraintDestroy(pvVar1);
     }

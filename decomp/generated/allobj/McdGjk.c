@@ -110,7 +110,7 @@ MeBool kd_McdCacheHello(McdModelPair *p)
   pMVar2 = p->model1->frame;
   pMVar1 = &pMVar2->cachePool;
   if ((pMVar2->cachePool).t == MePoolNULL) {
-    (MePoolFixedAPI.init)(pMVar1,100,0x3c,0x10);
+    (MePoolFixedAPI.init)(pMVar1,100,(int)sizeof(*(McdCache *)0),0x10);
   }
   puVar3 = (MePoolFixedAPI.getStruct)(pMVar1);
   p->m_cachedData = puVar3;
@@ -298,7 +298,7 @@ int kd_McdGjkComputeVector(MeReal *v,int bits,int sup,McdGjkSimplex *s)
         if (fVar2 < fVar1) {
           fVar2 = fVar1;
         }
-        pfVar5 = (float *)((int)s->point[0].w + iVar8);
+        pfVar5 = (float *)((kd_iptr)s->point[0].w + iVar8);
         fVar3 = fVar3 + fVar1;
         if (sup != 0) {
           pfVar5 = pfVar5 + 3;
@@ -684,7 +684,7 @@ void kd_McdGjkUpdateDeltaCache(McdGjkSimplex *s)
       if ((bj & uVar5) != 0) {
         uVar3 = uVar2 | bj;
         s->delta[uVar3][iVar1] = (*local_64)[0] - (*paMVar4)[local_60 + iVar1];
-        s->delta[uVar3][j] = *(float *)((int)paMVar4 + iVar1 * 0x14) - paMVar4[iVar1][j];
+        s->delta[uVar3][j] = *(float *)((kd_iptr)paMVar4 + iVar1 * 0x14) - paMVar4[iVar1][j];
         uVar6 = 1;
         k = 0;
         uVar5 = s->bits;
@@ -695,16 +695,16 @@ void kd_McdGjkUpdateDeltaCache(McdGjkSimplex *s)
               if (bj <= (int)uVar6) break;
               uVar5 = uVar3 | uVar6;
               s->delta[uVar5][iVar1] =
-                   (*(float *)((int)*paMVar4 + local_58) - paMVar4[k][iVar1]) *
+                   (*(float *)((kd_iptr)*paMVar4 + local_58) - paMVar4[k][iVar1]) *
                    s->delta[bj | uVar6][k] +
                    ((*paMVar4)[local_60 + k] - (*paMVar4)[local_60 + iVar1]) *
                    s->delta[bj | uVar6][j];
               s->delta[uVar5][j] =
                    (paMVar4[iVar1][k] - paMVar4[iVar1][j]) * s->delta[uVar2 | uVar6][iVar1] +
-                   (*(float *)((int)*paMVar4 + local_58) - paMVar4[k][j]) *
+                   (*(float *)((kd_iptr)*paMVar4 + local_58) - paMVar4[k][j]) *
                    s->delta[uVar2 | uVar6][k];
               s->delta[uVar5][k] =
-                   (*(float *)((int)*paMVar4 + local_5c) - (*paMVar4)[local_60 + k]) *
+                   (*(float *)((kd_iptr)*paMVar4 + local_5c) - (*paMVar4)[local_60 + k]) *
                    s->delta[uVar3][j] +
                    (paMVar4[iVar1][j] - paMVar4[iVar1][k]) * s->delta[uVar3][iVar1];
               uVar5 = s->bits;
@@ -1104,16 +1104,16 @@ LAB_00011b45:
     iVar13 = 0;
     do {
       pMVar7 = result->contacts;
-      *(MeReal *)((int)pMVar7->normal + iVar13) = c->normal[0];
-      *(MeReal *)((int)pMVar7->normal + iVar13 + 4) = c->normal[1];
-      *(MeReal *)((int)pMVar7->normal + iVar13 + 8) = c->normal[2];
-      pMVar11 = (MeReal *)((int)result->contacts->position + iVar13);
+      *(MeReal *)((kd_iptr)pMVar7->normal + iVar13) = c->normal[0];
+      *(MeReal *)((kd_iptr)pMVar7->normal + iVar13 + 4) = c->normal[1];
+      *(MeReal *)((kd_iptr)pMVar7->normal + iVar13 + 8) = c->normal[2];
+      pMVar11 = (MeReal *)((kd_iptr)result->contacts->position + iVar13);
       *pMVar11 = (*unaff_ESI)[0];
       pMVar11[1] = (*unaff_ESI)[1];
       pMVar10 = *unaff_ESI;
       unaff_ESI = unaff_ESI + 1;
       pMVar11[2] = pMVar10[2];
-      *(MeReal *)((int)result->contacts->normal + iVar13 + 0xc) = c->separation;
+      *(MeReal *)((kd_iptr)result->contacts->normal + iVar13 + 0xc) = c->separation;
       iVar13 = iVar13 + 0x28;
       i = i + 1;
       if (numIntersect <= i) break;

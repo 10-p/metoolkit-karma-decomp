@@ -68,12 +68,12 @@ MeFPrimitive * kd_MeFPrimitiveCreate(char *name,MeFPrimitiveType type)
   MeFPrimitive *pMVar1;
   MeVector3 *paMVar2;
 
-  pMVar1 = (MeMemoryAPI.createZeroed)(100);
+  pMVar1 = (MeMemoryAPI.createZeroed)((int)sizeof(*(MeFPrimitive *)0));
   pMVar1->id = (char *)0x0;
   pMVar1->geometry = (MeFGeometry *)0x0;
   pMVar1->nVertices = 0;
   pMVar1->maxVertices = 1;
-  paMVar2 = (MeMemoryAPI.create)(0xc);
+  paMVar2 = (MeMemoryAPI.create)((int)sizeof(*(MeVector3 *)0));
   pMVar1->vertices = paMVar2;
   pMVar1->dims[2] = 1.0;
   pMVar1->dims[1] = 1.0;
@@ -110,7 +110,7 @@ MeFPrimitive * kd_MeFPrimitiveCreateCopy(MeFPrimitive *p,MeBool recurse)
   uint uVar4;
   MeReal *pMVar5;
 
-  pMVar2 = (MeMemoryAPI.createZeroed)(100);
+  pMVar2 = (MeMemoryAPI.createZeroed)((int)sizeof(*(MeFPrimitive *)0));
   _FSetStringProperty(pMVar2,p->id);
   pMVar2->type = p->type;
   pMVar2->dims[0] = p->dims[0];
@@ -305,7 +305,7 @@ void kd_MeFPrimitiveSetVertexArray(MeFPrimitive *p,MeVector3 *vertices,int nVert
   p->vertices = (MeVector3 *)pMVar1;
   for (uVar2 = (uint)(nVertices * 0xc) >> 2; uVar2 != 0; uVar2 = uVar2 - 1) {
     *pMVar1 = (MeReal)(*vertices)[0];
-    vertices = (MeVector3 *)((int)vertices + 4);
+    vertices = (MeVector3 *)((kd_iptr)vertices + 4);
     pMVar1 = pMVar1 + 1;
   }
   p->nVertices = nVertices;

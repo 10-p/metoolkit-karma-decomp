@@ -104,7 +104,7 @@ MdtConstraintID kd_MdtConeLimitQuaConstraint(MdtConeLimitID j)
 MdtConeLimitID kd_MdtConstraintDCastConeLimit(MdtConstraintID c)
 
 {
-  return (MdtConeLimitID)(((c->head).tag != 0xf) - 1 & (uint)c);
+  return (MdtConeLimitID)(((c->head).tag != 0xf) - 1 & (kd_uptr)c);
 }
 
 /* ---- MdtConeLimitSetConeHalfAngle (exported as kd_MdtConeLimitSetConeHalfAngle, asm label "MdtConeLimitSetConeHalfAngle") ---- */

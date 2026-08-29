@@ -81,7 +81,7 @@ MeFModel * kd_MeFModelCreate(char *name,MeFModelType type)
 {
   MeFModel *pMVar1;
 
-  pMVar1 = (MeMemoryAPI.createZeroed)(0x54);
+  pMVar1 = (MeMemoryAPI.createZeroed)((int)sizeof(*(MeFModel *)0));
   pMVar1->id = (char *)0x0;
   pMVar1->mass_offset[2] = 0.0;
   pMVar1->asset = (MeFAsset *)0x0;
@@ -116,7 +116,7 @@ MeFModel * kd_MeFModelCreateCopy(MeFModel *model,MeBool recurse)
   MeReal MVar3;
   MeFModel *pMVar4;
 
-  pMVar4 = (MeMemoryAPI.createZeroed)(0x54);
+  pMVar4 = (MeMemoryAPI.createZeroed)((int)sizeof(*(MeFModel *)0));
   _FSetStringProperty(pMVar4,model->id);
   pMVar4->type = model->type;
   _FSetStringProperty(&pMVar4->geometry,model->geometry);

@@ -50,13 +50,13 @@ MstBridgeID kd_MstBridgeCreate(McdFrameworkID frame,uint maxMaterials)
   MstBridgeID b;
   uint i;
 
-  pMVar1 = (MeMemoryAPI.create)(0x1c);
+  pMVar1 = (MeMemoryAPI.create)((int)sizeof(*(MstBridgeID)0));
   if (pMVar1 == (MstBridgeID)0x0) {
     return (MstBridgeID)0x0;
   }
   uVar7 = (int)((maxMaterials + 1) * maxMaterials) >> 1;
   pMVar1->maxMaterials = maxMaterials;
-  pMVar2 = (MeMemoryAPI.create)(uVar7 * 0x54);
+  pMVar2 = (MeMemoryAPI.create)((uVar7) * (int)sizeof(*(MstMaterialPair *)0));
   pMVar1->materialPairArray = pMVar2;
   i = 0;
   if (uVar7 == 0) goto LAB_00010143;
@@ -117,7 +117,7 @@ LAB_00010143:
   pMVar5 = McdBatchContextCreate(frame);
   pMVar1->context = pMVar5;
   pMVar1->contactsMaxCount = 0x32;
-  pMVar6 = (MeMemoryAPI.create)(2000);
+  pMVar6 = (MeMemoryAPI.create)((50) * (int)sizeof(*(McdContact *)0));
   pMVar1->contacts = pMVar6;
   return pMVar1;
 }
@@ -358,7 +358,7 @@ void kd_MstBridgeSetContactBufferSize(MstBridgeID b,uint s)
   
   (MeMemoryAPI.destroy)(b->contacts);
   b->contactsMaxCount = s;
-  pMVar1 = (MeMemoryAPI.create)(s * 0x28);
+  pMVar1 = (MeMemoryAPI.create)((s) * (int)sizeof(*(McdContact *)0));
   b->contacts = pMVar1;
   return;
 }

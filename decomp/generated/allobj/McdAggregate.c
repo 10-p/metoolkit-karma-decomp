@@ -71,14 +71,14 @@ McdAggregateID kd_McdAggregateCreate(McdFramework *frame,int maxChildren)
   McdAggregateID pMVar4;
   int iVar5;
 
-  pMVar1 = (MeMemoryAPI.createAligned)(0x1c,0x10);
+  pMVar1 = (MeMemoryAPI.createAligned)((int)sizeof(*(McdAggregate *)0),0x10);
   pMVar4 = (McdAggregateID)0x0;
   if (pMVar1 != (McdAggregateID)0x0) {
     McdGeometryInit(pMVar1,frame,8);
     pvVar2 = (MeMemoryAPI.create)(maxChildren * 0x44);
-    pMVar1[1].mRefCtAndID = (MeU32)pvVar2;
-    pMVar1[1].next = (McdGeometryID)maxChildren;
-    pMVar1[1].prev = (McdGeometryID)0x0;
+    pMVar1[1].mRefCtAndID = (kd_uptr)pvVar2;
+    ((McdAggregate *)pMVar1)->elementCountMax = (McdGeometryID)maxChildren;
+    ((McdAggregate *)pMVar1)->elementCount = (McdGeometryID)0x0;
     pMVar4 = pMVar1;
     if (0 < maxChildren) {
       iVar5 = 0;
@@ -86,7 +86,7 @@ McdAggregateID kd_McdAggregateCreate(McdFramework *frame,int maxChildren)
       if (uVar3 != 0) {
         if (uVar3 < 3) {
           if (uVar3 < 2) {
-            *(undefined4 *)((int)pvVar2 + 0x40) = 0;
+            *(undefined4 *)((kd_iptr)pvVar2 + 0x40) = 0;
             iVar5 = 0x44;
             maxChildren = maxChildren + -1;
           }
@@ -124,19 +124,19 @@ int kd_McdAggregateAddElement(McdAggregateID g,McdGeometryID element,MeMatrix4Pt
   int iVar4;
 
   iVar4 = 0;
-  pMVar3 = g[1].next;
-  if ((int)pMVar3 < 1) {
-    pMVar3 = g[1].next;
+  pMVar3 = ((McdAggregate *)g)->elementCountMax;
+  if ((kd_iptr)pMVar3 < 1) {
+    pMVar3 = ((McdAggregate *)g)->elementCountMax;
   }
   else if (*(int *)(g[1].mRefCtAndID + 0x40) != 0) {
     piVar1 = (int *)(g[1].mRefCtAndID + 0x40);
     do {
       iVar4 = iVar4 + 1;
       piVar1 = piVar1 + 0x11;
-      if ((int)pMVar3 <= iVar4) goto LAB_00010182;
+      if ((kd_iptr)pMVar3 <= iVar4) goto LAB_00010182;
     } while (*piVar1 != 0);
   }
-  if (iVar4 < (int)pMVar3) {
+  if (iVar4 < (kd_iptr)pMVar3) {
     pMVar2 = (MeReal *)(g[1].mRefCtAndID + iVar4 * 0x44);
     *pMVar2 = (*relTM)[0];
     pMVar2[1] = (*relTM)[1];
@@ -155,7 +155,7 @@ int kd_McdAggregateAddElement(McdAggregateID g,McdGeometryID element,MeMatrix4Pt
     pMVar2[0xe] = relTM[3][2];
     pMVar2[0xf] = relTM[3][3];
     *(McdGeometryID *)(g[1].mRefCtAndID + 0x40 + iVar4 * 0x44) = element;
-    g[1].prev = (McdGeometryID)((int)&(g[1].prev)->mRefCtAndID + 1);
+    ((McdAggregate *)g)->elementCount = (McdGeometryID)((kd_iptr)&(g[1].prev)->mRefCtAndID + 1);
     McdGeometryIncrementReferenceCount(element);
   }
   else {
@@ -172,7 +172,7 @@ void kd_McdAggregateRemoveElement(McdAggregateID g,int element)
                     
   McdGeometryDecrementReferenceCount(*(void **)(g[1].mRefCtAndID + 0x40 + element * 0x44));
   *(undefined4 *)(g[1].mRefCtAndID + 0x40 + element * 0x44) = 0;
-  g[1].prev = (McdGeometryID)((int)&g[1].prev[-1].frame + 3);
+  ((McdAggregate *)g)->elementCount = (McdGeometryID)((kd_iptr)&g[1].prev[-1].frame + 3);
   return;
 }
 
@@ -181,7 +181,7 @@ int kd_McdAggregateGetElementCount(McdAggregateID g)
 
 {
                     
-  return (int)g[1].prev;
+  return (int)((McdAggregate *)g)->elementCount;
 }
 
 /* ---- McdAggregateGetElementCountMax (exported as kd_McdAggregateGetElementCountMax, asm label "McdAggregateGetElementCountMax") ---- */
@@ -189,7 +189,7 @@ int kd_McdAggregateGetElementCountMax(McdAggregateID g)
 
 {
                     
-  return (int)g[1].next;
+  return (int)((McdAggregate *)g)->elementCountMax;
 }
 
 /* ---- McdAggregateGetElementGeometry (exported as kd_McdAggregateGetElementGeometry, asm label "McdAggregateGetElementGeometry") ---- */
@@ -198,7 +198,7 @@ McdGeometryID kd_McdAggregateGetElementGeometry(McdAggregateID g,int i)
 {
   McdGeometryID pMVar1;
 
-  if (i < (int)g[1].next) {
+  if (i < (int)((McdAggregate *)g)->elementCountMax) {
     pMVar1 = *(McdGeometryID *)(g[1].mRefCtAndID + 0x40 + i * 0x44);
   }
   else {
@@ -213,7 +213,7 @@ MeMatrix4Ptr kd_McdAggregateGetElementTransformPtr(McdAggregateID g,int i)
 {
   MeMatrix4Ptr paMVar1;
 
-  if (i < (int)g[1].next) {
+  if (i < (int)((McdAggregate *)g)->elementCountMax) {
     paMVar1 = (MeMatrix4Ptr)(g[1].mRefCtAndID + i * 0x44);
   }
   else {
@@ -227,7 +227,7 @@ void kd_McdAggregateDestroy(McdGeometry *g)
 
 {
   void *pvVar1;
-  MeU32 MVar2;
+  kd_uptr MVar2;
   McdGeometryID pMVar3;
   int iVar4;
   int iVar5;
@@ -236,8 +236,8 @@ void kd_McdAggregateDestroy(McdGeometry *g)
   if (g != (McdGeometry *)0x0) {
                     
     i = 0;
-    pMVar3 = g[1].next;
-    if ((0 < (int)pMVar3) && (MVar2 = g[1].mRefCtAndID, *(int *)(MVar2 + 0x40) != 0)) {
+    pMVar3 = ((McdAggregate *)g)->elementCountMax;
+    if ((0 < (kd_iptr)pMVar3) && (MVar2 = g[1].mRefCtAndID, *(int *)(MVar2 + 0x40) != 0)) {
       iVar5 = 0;
       iVar4 = 0;
       do {
@@ -249,7 +249,7 @@ void kd_McdAggregateDestroy(McdGeometry *g)
         iVar5 = iVar5 + 0x44;
         i = i + 1;
         iVar4 = iVar4 + 0x44;
-      } while ((i < (int)pMVar3) && (MVar2 = g[1].mRefCtAndID, *(int *)(MVar2 + 0x40 + iVar5) != 0))
+      } while ((i < (kd_iptr)pMVar3) && (MVar2 = g[1].mRefCtAndID, *(int *)(MVar2 + 0x40 + iVar5) != 0))
       ;
     }
     (MeMemoryAPI.destroy)((void *)g[1].mRefCtAndID);
@@ -270,11 +270,11 @@ void kd_McdAggregateUpdateAABB(McdGeometryInstanceID ins,MeMatrix4Ptr finalTM,Me
   MeMatrix4Ptr paMVar5;
   void *pvVar6;
   MeReal (*paMVar7) [4];
-  int iVar8;
+  kd_iptr iVar8;
   float *pfVar9;
   int iVar10;
   _McdGeometryInstance *p_Var11;
-  int local_b4;
+  kd_iptr local_b4;
   int i;
   MeMatrix4Ptr elementFinalTMPtr;
   McdAggregate *a;
@@ -291,17 +291,17 @@ void kd_McdAggregateUpdateAABB(McdGeometryInstanceID ins,MeMatrix4Ptr finalTM,Me
   ins->max[2] = -3.4028235e+38;
   p_Var11 = ins->child;
   i = 0;
-  iVar10 = *(int *)((int)pvVar6 + 0x18);
+  iVar10 = *(int *)((kd_iptr)pvVar6 + ((int)((char *)&((McdAggregate *)0)->elementCountMax - (char *)0)));
   if (0 < iVar10) {
     local_b4 = 0;
     do {
-      iVar8 = *(int *)((int)pvVar6 + 0x10);
+      iVar8 = *(int *)((kd_iptr)pvVar6 + ((int)((char *)&((McdAggregate *)0)->elementTable - (char *)0)));
       if (*(int *)(iVar8 + 0x40 + local_b4) != 0) {
         paMVar7 = p_Var11->mTM;
         if (paMVar7 == (MeReal (*) [4])0x0) {
           paMVar7 = elementTM;
           p_Var11->mTM = paMVar7;
-          iVar8 = *(int *)((int)pvVar6 + 0x10);
+          iVar8 = *(int *)((kd_iptr)pvVar6 + ((int)((char *)&((McdAggregate *)0)->elementTable - (char *)0)));
         }
                     
         paMVar5 = ins->mTM;
@@ -332,7 +332,7 @@ void kd_McdAggregateUpdateAABB(McdGeometryInstanceID ins,MeMatrix4Ptr finalTM,Me
                     
           elementFinalTMPtr = elementFinalTM;
           iVar10 = 3;
-          pfVar9 = (float *)(local_b4 + *(int *)((int)pvVar6 + 0x10));
+          pfVar9 = (float *)(local_b4 + *(int *)((kd_iptr)pvVar6 + ((int)((char *)&((McdAggregate *)0)->elementTable - (char *)0))));
           paMVar7 = elementFinalTMPtr;
           do {
             (*paMVar7)[0] =
@@ -389,10 +389,10 @@ void kd_McdAggregateUpdateAABB(McdGeometryInstanceID ins,MeMatrix4Ptr finalTM,Me
         ins->max[2] = fVar4;
         if (p_Var11->mTM == elementTM) {
           p_Var11->mTM = (MeMatrix4Ptr)0x0;
-          iVar10 = *(int *)((int)pvVar6 + 0x18);
+          iVar10 = *(int *)((kd_iptr)pvVar6 + ((int)((char *)&((McdAggregate *)0)->elementCountMax - (char *)0)));
         }
         else {
-          iVar10 = *(int *)((int)pvVar6 + 0x18);
+          iVar10 = *(int *)((kd_iptr)pvVar6 + ((int)((char *)&((McdAggregate *)0)->elementCountMax - (char *)0)));
         }
       }
       i = i + 1;
@@ -474,8 +474,8 @@ MeI16 kd_McdAggregateGetMassProperties(McdGeometry *g,MeVector4 *relTM,MeVector3
   m[1][1] = 0.0;
   m[2][2] = 0.0;
   i = 0;
-  if ((int)g[1].prev < 1) {
-    pMVar9 = g[1].prev;
+  if ((kd_iptr)g[1].prev < 1) {
+    pMVar9 = ((McdAggregate *)g)->elementCount;
   }
   else {
     iVar13 = 0;
@@ -486,13 +486,13 @@ MeI16 kd_McdAggregateGetMassProperties(McdGeometry *g,MeVector4 *relTM,MeVector3
       McdGeometryGetMassProperties((void *)*puVar1,subTM,subI,&subVol);
       *volume = subVol + *volume;
       i = i + 1;
-      pMVar9 = g[1].prev;
-    } while (i < (int)pMVar9);
+      pMVar9 = ((McdAggregate *)g)->elementCount;
+    } while (i < (kd_iptr)pMVar9);
   }
   fVar2 = *volume;
   i = 0;
   massSoFar = 0.0;
-  if (0 < (int)pMVar9) {
+  if (0 < (kd_iptr)pMVar9) {
     local_164 = 0;
     do {
                     
@@ -571,7 +571,7 @@ MeI16 kd_McdAggregateGetMassProperties(McdGeometry *g,MeVector4 *relTM,MeVector3
       m[2][2] = subI[1][1];
       i = i + 1;
       local_164 = local_164 + 0x44;
-    } while (i < (int)g[1].prev);
+    } while (i < (int)((McdAggregate *)g)->elementCount);
   }
   MVar3 = m[1][2];
   MVar4 = m[2][0];
@@ -604,7 +604,7 @@ int kd_McdAggregateGenericIntersect(McdModelPairID p,McdIntersectResult *result)
   undefined4 *puVar17;
   McdModel *pMVar18;
   McdGeometryInstance *pMVar19;
-  int local_3fd4;
+  kd_iptr local_3fd4;
   int contactCount;
   McdAggregate *g;
   McdGeometryInstanceID ins;
@@ -638,15 +638,15 @@ int kd_McdAggregateGenericIntersect(McdModelPairID p,McdIntersectResult *result)
   avgNormal[0] = 0.0;
   avgNormal[1] = 0.0;
   avgNormal[2] = 0.0;
-  puVar15 = *(undefined4 **)((int)pvVar8 + 0x30);
-  iVar12 = *(int *)((int)pvVar9 + 0x18);
+  puVar15 = *(undefined4 **)((kd_iptr)pvVar8 + 0x30);
+  iVar12 = *(int *)((kd_iptr)pvVar9 + ((int)((char *)&((McdAggregate *)0)->elementCountMax - (char *)0)));
   if (0 < iVar12) {
     local_3fd4 = 0;
     do {
-      if (*(int *)(*(int *)((int)pvVar9 + 0x10) + 0x40 + local_3fd4) != 0) {
+      if (*(int *)(*(int *)((kd_iptr)pvVar9 + ((int)((char *)&((McdAggregate *)0)->elementTable - (char *)0))) + 0x40 + local_3fd4) != 0) {
         iVar12 = McdGeometryInstanceOverlap(pvVar10,puVar15);
         if (iVar12 == 0) {
-          iVar12 = *(int *)((int)pvVar9 + 0x18);
+          iVar12 = *(int *)((kd_iptr)pvVar9 + ((int)((char *)&((McdAggregate *)0)->elementCountMax - (char *)0)));
         }
         else {
           puVar17 = puVar15;
@@ -659,8 +659,8 @@ int kd_McdAggregateGenericIntersect(McdModelPairID p,McdIntersectResult *result)
           if (dummyModel.mInstance.mTM == (MeMatrix4Ptr)0x0) {
                     
             paMVar11 = elementTM;
-            pfVar5 = *(float **)((int)pvVar8 + 4);
-            pfVar14 = (float *)(local_3fd4 + *(int *)((int)pvVar9 + 0x10));
+            pfVar5 = *(float **)((kd_iptr)pvVar8 + 4);
+            pfVar14 = (float *)(local_3fd4 + *(int *)((kd_iptr)pvVar9 + ((int)((char *)&((McdAggregate *)0)->elementTable - (char *)0))));
             iVar12 = 3;
             dummyModel.mInstance.mTM = paMVar11;
             do {
@@ -692,7 +692,7 @@ int kd_McdAggregateGenericIntersect(McdModelPairID p,McdIntersectResult *result)
           McdIntersect(&dummyPair,&dummyResult);
           McdGoodbye(&dummyPair);
           if (dummyResult.touch == 0) {
-            iVar12 = *(int *)((int)pvVar9 + 0x18);
+            iVar12 = *(int *)((kd_iptr)pvVar9 + ((int)((char *)&((McdAggregate *)0)->elementCountMax - (char *)0)));
           }
           else {
                     
@@ -707,7 +707,7 @@ int kd_McdAggregateGenericIntersect(McdModelPairID p,McdIntersectResult *result)
                 iVar13 = 0;
                 do {
                   iVar12 = iVar12 + 1;
-                  *(undefined4 **)((int)(dummyResult.contacts)->normal + iVar13 + 0x14) = puVar15;
+                  *(undefined4 **)((kd_iptr)(dummyResult.contacts)->normal + iVar13 + 0x14) = puVar15;
                   iVar13 = iVar13 + 0x28;
                 } while (iVar12 < dummyResult.contactCount);
               }
@@ -720,16 +720,16 @@ int kd_McdAggregateGenericIntersect(McdModelPairID p,McdIntersectResult *result)
               if (0 < dummyResult.contactCount) {
                 iVar13 = 0;
                 do {
-                  *(float *)((int)(dummyResult.contacts)->normal + iVar13) =
-                       *(float *)((int)(dummyResult.contacts)->normal + iVar13) * -1.0;
-                  *(float *)((int)(dummyResult.contacts)->normal + iVar13 + 4) =
-                       *(float *)((int)(dummyResult.contacts)->normal + iVar13 + 4) * -1.0;
-                  *(float *)((int)(dummyResult.contacts)->normal + iVar13 + 8) =
-                       *(float *)((int)(dummyResult.contacts)->normal + iVar13 + 8) * -1.0;
-                  *(undefined4 *)((int)(dummyResult.contacts)->normal + iVar13 + 0x18) =
-                       *(undefined4 *)((int)(dummyResult.contacts)->normal + iVar13 + 0x14);
+                  *(float *)((kd_iptr)(dummyResult.contacts)->normal + iVar13) =
+                       *(float *)((kd_iptr)(dummyResult.contacts)->normal + iVar13) * -1.0;
+                  *(float *)((kd_iptr)(dummyResult.contacts)->normal + iVar13 + 4) =
+                       *(float *)((kd_iptr)(dummyResult.contacts)->normal + iVar13 + 4) * -1.0;
+                  *(float *)((kd_iptr)(dummyResult.contacts)->normal + iVar13 + 8) =
+                       *(float *)((kd_iptr)(dummyResult.contacts)->normal + iVar13 + 8) * -1.0;
+                  *(undefined4 *)((kd_iptr)(dummyResult.contacts)->normal + iVar13 + 0x18) =
+                       *(undefined4 *)((kd_iptr)(dummyResult.contacts)->normal + iVar13 + 0x14);
                   if (bVar6) {
-                    *(undefined4 **)((int)(dummyResult.contacts)->normal + iVar13 + 0x14) = puVar15;
+                    *(undefined4 **)((kd_iptr)(dummyResult.contacts)->normal + iVar13 + 0x14) = puVar15;
                   }
                   iVar12 = iVar12 + 1;
                   iVar13 = iVar13 + 0x28;
@@ -741,7 +741,7 @@ int kd_McdAggregateGenericIntersect(McdModelPairID p,McdIntersectResult *result)
             avgNormal[0] = fVar4 * dummyResult.normal[0] + avgNormal[0];
             avgNormal[2] = fVar4 * dummyResult.normal[2] + avgNormal[2];
             avgNormal[1] = fVar4 * dummyResult.normal[1] + avgNormal[1];
-            iVar12 = *(int *)((int)pvVar9 + 0x18);
+            iVar12 = *(int *)((kd_iptr)pvVar9 + ((int)((char *)&((McdAggregate *)0)->elementCountMax - (char *)0)));
           }
         }
       }
@@ -776,7 +776,7 @@ int kd_IxAggregateLineSegment
   undefined4 *puVar14;
   McdModel *pMVar15;
   McdGeometryInstance *pMVar16;
-  int local_10c;
+  kd_iptr local_10c;
   int i;
   McdGeometryInstanceID ins;
   McdAggregate *a;
@@ -796,12 +796,12 @@ int kd_IxAggregateLineSegment
     pMVar15 = (McdModel *)&pMVar15->prev;
   }
   i = 0;
-  puVar12 = *(undefined4 **)((int)pvVar7 + 0x30);
-  iVar10 = *(int *)((int)pvVar6 + 0x18);
+  puVar12 = *(undefined4 **)((kd_iptr)pvVar7 + 0x30);
+  iVar10 = *(int *)((kd_iptr)pvVar6 + ((int)((char *)&((McdAggregate *)0)->elementCountMax - (char *)0)));
   if (0 < iVar10) {
     local_10c = 0;
     do {
-      if (*(int *)(*(int *)((int)pvVar6 + 0x10) + 0x40 + local_10c) != 0) {
+      if (*(int *)(*(int *)((kd_iptr)pvVar6 + ((int)((char *)&((McdAggregate *)0)->elementTable - (char *)0))) + 0x40 + local_10c) != 0) {
         puVar14 = puVar12;
         pMVar16 = &dummyModel.mInstance;
         for (iVar10 = 0xd; iVar10 != 0; iVar10 = iVar10 + -1) {
@@ -811,9 +811,9 @@ int kd_IxAggregateLineSegment
         }
         if (dummyModel.mInstance.mTM == (MeMatrix4Ptr)0x0) {
           dummyModel.mInstance.mTM = elementTM;
-          pfVar5 = *(float **)((int)pvVar7 + 4);
+          pfVar5 = *(float **)((kd_iptr)pvVar7 + 4);
           iVar10 = 3;
-          pfVar11 = (float *)(local_10c + *(int *)((int)pvVar6 + 0x10));
+          pfVar11 = (float *)(local_10c + *(int *)((kd_iptr)pvVar6 + ((int)((char *)&((McdAggregate *)0)->elementTable - (char *)0))));
           paMVar8 = dummyModel.mInstance.mTM;
           do {
             (*paMVar8)[0] =
@@ -847,10 +847,10 @@ int kd_IxAggregateLineSegment
         dummyOverlap.distance = 0.0;
         uVar9 = McdLineSegIntersect(&dummyModel,inOrig,inDest,&dummyOverlap);
         if (uVar9 == 0) {
-          iVar10 = *(int *)((int)pvVar6 + 0x18);
+          iVar10 = *(int *)((kd_iptr)pvVar6 + ((int)((char *)&((McdAggregate *)0)->elementCountMax - (char *)0)));
         }
         else if (overlap->distance <= dummyOverlap.distance) {
-          iVar10 = *(int *)((int)pvVar6 + 0x18);
+          iVar10 = *(int *)((kd_iptr)pvVar6 + ((int)((char *)&((McdAggregate *)0)->elementCountMax - (char *)0)));
         }
         else {
           overlap->normal[0] = dummyOverlap.normal[0];
@@ -861,7 +861,7 @@ int kd_IxAggregateLineSegment
           overlap->position[2] = dummyOverlap.position[2];
           overlap->model = model;
           overlap->distance = dummyOverlap.distance;
-          iVar10 = *(int *)((int)pvVar6 + 0x18);
+          iVar10 = *(int *)((kd_iptr)pvVar6 + ((int)((char *)&((McdAggregate *)0)->elementCountMax - (char *)0)));
         }
       }
       local_10c = local_10c + 0x44;
@@ -913,18 +913,18 @@ void kd_McdAggregateDebugDraw(McdGeometryID geom,MeReal (*tm) [4],MeReal *colour
   void *local_60;
   MeReal totaltm [4] [4];
 
-  if (((char)geom->mRefCtAndID == '\b') && (iVar8 = 0, 0 < (int)geom[1].prev)) {
+  if (((char)geom->mRefCtAndID == '\b') && (iVar8 = 0, 0 < (int)((McdAggregate *)geom)->elementCount)) {
     local_64 = 0;
     local_68 = 0;
     do {
                     
       local_60 = (void *)0x0;
-      if (iVar8 < (int)geom[1].next) {
+      if (iVar8 < (int)((McdAggregate *)geom)->elementCountMax) {
         local_60 = *(void **)(geom[1].mRefCtAndID + 0x40 + local_68);
       }
                     
       pfVar6 = (float *)0x0;
-      if (iVar8 < (int)geom[1].next) {
+      if (iVar8 < (int)((McdAggregate *)geom)->elementCountMax) {
         pfVar6 = (float *)(local_64 + geom[1].mRefCtAndID);
       }
                     
@@ -954,7 +954,7 @@ void kd_McdAggregateDebugDraw(McdGeometryID geom,MeReal (*tm) [4],MeReal *colour
       McdGeometryDebugDraw(local_60,totaltm,colour);
       local_64 = local_64 + 0x44;
       local_68 = local_68 + 0x44;
-    } while (iVar8 < (int)geom[1].prev);
+    } while (iVar8 < (kd_iptr)geom[1].prev);
   }
   return;
 }

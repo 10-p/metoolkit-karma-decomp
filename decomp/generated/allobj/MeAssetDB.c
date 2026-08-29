@@ -81,7 +81,7 @@ void kd_MeAssetDBInsertAsset(MeAssetDB *db,MeFAsset *asset)
     }
   }
   asset->db = db;
-  pMVar3 = (MeMemoryAPI.create)(0xc);
+  pMVar3 = (MeMemoryAPI.create)((int)sizeof(*(MeFAssetNode *)0));
   pMVar3->current = asset;
                     
   pMVar2 = db->nilAsset;
@@ -135,8 +135,8 @@ MeAssetDB * kd_MeAssetDBCreate(void)
   MeAssetDB *pMVar1;
   MeFAssetNode *pMVar2;
 
-  pMVar1 = (MeMemoryAPI.createZeroed)(8);
-  pMVar2 = (MeMemoryAPI.create)(0xc);
+  pMVar1 = (MeMemoryAPI.createZeroed)((int)sizeof(*(MeAssetDB *)0));
+  pMVar2 = (MeMemoryAPI.create)((int)sizeof(*(MeFAssetNode *)0));
   pMVar1->nilAsset = pMVar2;
   pMVar2->prev = pMVar2;
   pMVar2->next = pMVar2;
@@ -188,8 +188,8 @@ MeAssetDB * kd_MeAssetDBCreateCopy(MeAssetDB *db)
   MeFAsset *pMVar4;
 
                     
-  db_00 = (MeMemoryAPI.createZeroed)(8);
-  pMVar3 = (MeMemoryAPI.create)(0xc);
+  db_00 = (MeMemoryAPI.createZeroed)((int)sizeof(*(MeAssetDB *)0));
+  pMVar3 = (MeMemoryAPI.create)((int)sizeof(*(MeFAssetNode *)0));
   db_00->nilAsset = pMVar3;
   pMVar3->prev = pMVar3;
   pMVar3->next = pMVar3;

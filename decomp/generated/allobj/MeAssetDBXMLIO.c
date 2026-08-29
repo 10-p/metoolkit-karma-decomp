@@ -149,7 +149,7 @@ MeBool kd_MeAssetDBXMLInputRead(MeAssetDBXMLInput *i,MeStream stream)
     if (iVar6 == 0) {
       MeXMLInputDestroy(pvVar4);
                     
-      for (puVar1 = *(undefined4 **)((int)pvVar2 + 4); puVar1 != (undefined4 *)0x0;
+      for (puVar1 = *(undefined4 **)((kd_iptr)pvVar2 + ((int)((char *)&((struct PElement *)0)->childHead - (char *)0))); puVar1 != (undefined4 *)0x0;
           puVar1 = (undefined4 *)puVar1[1]) {
                     
         pMVar5 = (*MeFAssetCreateFunc[0])(i->db,i->IDPool,(PElement *)*puVar1);
@@ -201,10 +201,10 @@ MeFAsset * kd_MeAssetDBXMLInputReadFirst(MeAssetDBXMLInput *i,MeStream stream)
     if (iVar4 == 0) {
       MeXMLInputDestroy(pvVar2);
                     
-      if (*(undefined4 **)((int)pvVar1 + 4) != (undefined4 *)0x0) {
+      if (*(undefined4 **)((kd_iptr)pvVar1 + ((int)((char *)&((struct PElement *)0)->childHead - (char *)0))) != (undefined4 *)0x0) {
                     
         asset = (*MeFAssetCreateFunc[0])
-                          (i->db,i->IDPool,(PElement *)**(undefined4 **)((int)pvVar1 + 4));
+                          (i->db,i->IDPool,(PElement *)**(undefined4 **)((kd_iptr)pvVar1 + ((int)((char *)&((struct PElement *)0)->childHead - (char *)0))));
         MeAssetDBInsertAsset(i->db,asset);
       }
       PElementTraverseAll(pvVar1,PElementDestroyChildren,0,(void *)0x0);
@@ -249,10 +249,10 @@ void kd_MeAssetDBXMLOutputSetFileHeader(MeAssetDBXMLOutput *output,char *header,
   } while (uVar4 == 0);
   if ((uVar3 & 0x8080) == 0) {
     uVar4 = uVar4 >> 0x10;
-    puVar2 = (uint *)((int)puVar1 + 6);
+    puVar2 = (uint *)((kd_iptr)puVar1 + 6);
   }
-  __dest = (MeMemoryAPI.create)((uint)((int)puVar2 +
-                                 (-(int)buf - (uint)CARRY1((byte)uVar4,(byte)uVar4)) + -2));
+  __dest = (MeMemoryAPI.create)((uint)((kd_iptr)puVar2 +
+                                 (-(kd_iptr)buf - (uint)CARRY1((byte)uVar4,(byte)uVar4)) + -2));
   output->fileHeader = __dest;
   strcpy(__dest,buf);
   return;
@@ -271,7 +271,7 @@ MeAssetDBXMLInput * kd_MeAssetDBXMLInputCreate(MeAssetDB *db,MeIDPool *IDPool)
 {
   MeAssetDBXMLInput *pMVar1;
 
-  pMVar1 = (MeMemoryAPI.create)(8);
+  pMVar1 = (MeMemoryAPI.create)((int)sizeof(*(MeAssetDBXMLInput *)0));
   pMVar1->db = db;
   pMVar1->IDPool = IDPool;
   return pMVar1;
@@ -291,7 +291,7 @@ MeAssetDBXMLOutput * kd_MeAssetDBXMLOutputCreate(MeAssetDB *db)
 {
   MeAssetDBXMLOutput *pMVar1;
 
-  pMVar1 = (MeMemoryAPI.create)(8);
+  pMVar1 = (MeMemoryAPI.create)((int)sizeof(*(MeAssetDBXMLOutput *)0));
   pMVar1->db = db;
   pMVar1->fileHeader = (char *)0x0;
   return pMVar1;
@@ -336,10 +336,10 @@ void kd_MeAssetDBXMLOutputWrite(MeAssetDBXMLOutput *output,MeStream stream)
   } while (uVar9 == 0);
   if ((uVar8 & 0x8080) == 0) {
     uVar9 = uVar9 >> 0x10;
-    puVar7 = (uint *)((int)puVar6 + 6);
+    puVar7 = (uint *)((kd_iptr)puVar6 + 6);
   }
-  MeStreamWrite(buffer,(uint)((int)puVar7 +
-                             ((-3 - (uint)CARRY1((byte)uVar9,(byte)uVar9)) - (int)buffer)),1,stream)
+  MeStreamWrite(buffer,(uint)((kd_iptr)puVar7 +
+                             ((-3 - (uint)CARRY1((byte)uVar9,(byte)uVar9)) - (kd_iptr)buffer)),1,stream)
   ;
   uVar2 = 0;
   if (output->fileHeader != (char *)0x0) {

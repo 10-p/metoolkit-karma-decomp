@@ -90,5 +90,5 @@ MdtConstraintID kd_MdtBSJointQuaConstraint(MdtBSJointID j)
 MdtBSJointID kd_MdtConstraintDCastBSJoint(MdtConstraintID c)
 
 {
-  return (MdtBSJointID)(((c->head).tag != 0) - 1 & (uint)c);
+  return (MdtBSJointID)(((c->head).tag != 0) - 1 & (kd_uptr)c);
 }

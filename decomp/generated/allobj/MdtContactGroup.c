@@ -188,7 +188,7 @@ MdtConstraintID kd_MdtContactGroupQuaConstraint(MdtContactGroupID c)
 MdtContactGroupID kd_MdtConstraintDCastContactGroup(MdtConstraintID c)
 
 {
-  return (MdtContactGroupID)(((c->head).tag != 5) - 1 & (uint)c);
+  return (MdtContactGroupID)(((c->head).tag != 5) - 1 & (kd_uptr)c);
 }
 
 /* ---- MdtContactGroupGetFirstContact (exported as kd_MdtContactGroupGetFirstContact, asm label "MdtContactGroupGetFirstContact") ---- */

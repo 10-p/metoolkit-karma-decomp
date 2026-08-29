@@ -50,7 +50,7 @@ void kd_MdtUpdatePartitions(MeDict *enabledBodyDict,MdtPartitionOutput *po,MdtPa
   int iVar7;
   int iVar8;
   MeDictNode *pMVar9;
-  int iVar10;
+  kd_iptr iVar10;
   MeDictNode *pMVar11;
   void *pvVar12;
   int iVar13;
@@ -63,7 +63,7 @@ void kd_MdtUpdatePartitions(MeDict *enabledBodyDict,MdtPartitionOutput *po,MdtPa
   MeDictNode *node;
   MeDict *dict;
   int addNext;
-  int exploreNext;
+  kd_iptr exploreNext;
   int numAddedConstraints;
   MdtBaseConstraint **addedConstraints;
   int numAddedBodies;
@@ -72,19 +72,19 @@ void kd_MdtUpdatePartitions(MeDict *enabledBodyDict,MdtPartitionOutput *po,MdtPa
 
   numAddedBodies = 0;
   iVar16 = -(po->maxBodies * 4 + 0xfU & 0xfffffff0);
-  addedBodies = (MdtBody **)(kd_alloca_iVar16 = (char *)alloca((size_t)(po->maxBodies) * 4 + 0));
+  addedBodies = (MdtBody **)(kd_alloca_iVar16 = (char *)alloca((size_t)(po->maxBodies) * (int)sizeof(*(MdtBody **)0) + 0));
   numAddedConstraints = 0;
   iVar8 = -(po->maxConstraints * 4 + 0xfU & 0xfffffff0);
-  addedConstraints = (MdtBaseConstraint **)(kd_alloca_iVar8 = (char *)alloca((size_t)(po->maxConstraints) * 4 + 0));
+  addedConstraints = (MdtBaseConstraint **)(kd_alloca_iVar8 = (char *)alloca((size_t)(po->maxConstraints) * (int)sizeof(*(MdtBaseConstraint **)0) + 0));
   po->nPartitions = 0;
   po->totalBodies = 0;
   po->totalConstraints = 0;
   (po->overallInfo).contactCount = 0;
   (po->overallInfo).jointCount = 0;
   (po->overallInfo).rowCount = 0;
-  *(MeDict **)((int)(kd_frameslot_aiStack_50_iVar8_iVar16_p4)) = enabledBodyDict;
-  *(undefined4 *)((int)(kd_frameslot_aiStack_50_iVar8_iVar16_p0)) = 0x10074;
-  pMVar9 = MeDictFirst(*(void **)((int)(kd_frameslot_aiStack_50_iVar8_iVar16_p4)));
+  *(MeDict **)((kd_iptr)(kd_frameslot_aiStack_50_iVar8_iVar16_p4)) = enabledBodyDict;
+  *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_50_iVar8_iVar16_p0)) = 0x10074;
+  pMVar9 = MeDictFirst(*(void **)((kd_iptr)(kd_frameslot_aiStack_50_iVar8_iVar16_p4)));
   rootNode = pMVar9;
   while (pMVar9 != (MeDictNode *)0x0) {
     pMVar3 = rootNode->data;
@@ -114,13 +114,13 @@ void kd_MdtUpdatePartitions(MeDict *enabledBodyDict,MdtPartitionOutput *po,MdtPa
     if (iVar10 < po->bodiesSize[iVar13] + po->bodiesStart[iVar13]) {
       while( true ) {
         ppMVar1 = po->bodies + exploreNext;
-        exploreNext = (int)local_3c;
+        exploreNext = (kd_iptr)local_3c;
         currentBody = *ppMVar1;
         pMVar15 = &(*ppMVar1)->constraintDict;
-        *(MeDict **)((int)(kd_frameslot_aiStack_50_iVar8_iVar16_p4)) = pMVar15;
+        *(MeDict **)((kd_iptr)(kd_frameslot_aiStack_50_iVar8_iVar16_p4)) = pMVar15;
         dict = pMVar15;
-        *(undefined4 *)((int)(kd_frameslot_aiStack_50_iVar8_iVar16_p0)) = 0x1019f;
-        pMVar9 = MeDictFirst(*(void **)((int)(kd_frameslot_aiStack_50_iVar8_iVar16_p4)));
+        *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_50_iVar8_iVar16_p0)) = 0x1019f;
+        pMVar9 = MeDictFirst(*(void **)((kd_iptr)(kd_frameslot_aiStack_50_iVar8_iVar16_p4)));
         node = pMVar9;
         while (node = pMVar9, pMVar9 != (MeDictNode *)0x0) {
           pMVar4 = pMVar9->data;
@@ -133,22 +133,22 @@ void kd_MdtUpdatePartitions(MeDict *enabledBodyDict,MdtPartitionOutput *po,MdtPa
             po->constraintsSize[po->nPartitions] = po->constraintsSize[po->nPartitions] + 1;
             iVar10 = po->nPartitions;
             pMVar5 = po->info;
-            *(MdtBaseConstraint **)((int)(kd_frameslot_aiStack_50_iVar8_iVar16_p4)) = pMVar4;
+            *(MdtBaseConstraint **)((kd_iptr)(kd_frameslot_aiStack_50_iVar8_iVar16_p4)) = pMVar4;
             pMVar5 = pMVar5 + iVar10;
-            *(undefined4 *)((int)(kd_frameslot_aiStack_50_iVar8_iVar16_p0)) = 0x104c9;
+            *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_50_iVar8_iVar16_p0)) = 0x104c9;
             pvVar12 = MdtConstraintDCastContactGroup
-                                (*(void **)((int)(kd_frameslot_aiStack_50_iVar8_iVar16_p4)));
-            *(MdtBaseConstraint **)((int)(kd_frameslot_aiStack_50_iVar8_iVar16_p4)) = pMVar4;
-            *(undefined4 *)((int)(kd_frameslot_aiStack_50_iVar8_iVar16_p0)) = 0x104d3;
+                                (*(void **)((kd_iptr)(kd_frameslot_aiStack_50_iVar8_iVar16_p4)));
+            *(MdtBaseConstraint **)((kd_iptr)(kd_frameslot_aiStack_50_iVar8_iVar16_p4)) = pMVar4;
+            *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_50_iVar8_iVar16_p0)) = 0x104d3;
             pMVar9 = (MeDictNode *)
-                     MdtConstraintGetRowCount(*(void **)((int)(kd_frameslot_aiStack_50_iVar8_iVar16_p4)));
-            pMVar5->rowCount = (int)&pMVar9->left + pMVar5->rowCount;
+                     MdtConstraintGetRowCount(*(void **)((kd_iptr)(kd_frameslot_aiStack_50_iVar8_iVar16_p4)));
+            pMVar5->rowCount = (kd_iptr)&pMVar9->left + pMVar5->rowCount;
             if (pvVar12 == (void *)0x0) {
               pMVar9 = (MeDictNode *)(pMVar5->jointCount + 1);
-              pMVar5->jointCount = (int)pMVar9;
+              pMVar5->jointCount = (kd_iptr)pMVar9;
             }
             else {
-              pMVar5->contactCount = pMVar5->contactCount + *(int *)((int)pvVar12 + 0x160);
+              pMVar5->contactCount = pMVar5->contactCount + *(int *)((kd_iptr)pvVar12 + ((int)((char *)&((struct MdtContactGroup *)0)->count - (char *)0)));
             }
             pMVar3 = (pMVar4->head).mdtbody[0];
             (pMVar4->head).flags = (pMVar4->head).flags | 2;
@@ -166,7 +166,7 @@ void kd_MdtUpdatePartitions(MeDict *enabledBodyDict,MdtPartitionOutput *po,MdtPa
               pMVar3->partitionIndex = iVar10;
               pMVar9 = (MeDictNode *)po->nPartitions;
               po->totalBodies = po->totalBodies + 1;
-              po->bodiesSize[(int)pMVar9] = po->bodiesSize[(int)pMVar9] + 1;
+              po->bodiesSize[(kd_iptr)pMVar9] = po->bodiesSize[(kd_iptr)pMVar9] + 1;
             }
             pMVar3 = (pMVar4->head).mdtbody[1];
             if (((pMVar3 != (MdtBody *)0x0) && (pMVar3 != currentBody)) &&
@@ -178,7 +178,7 @@ void kd_MdtUpdatePartitions(MeDict *enabledBodyDict,MdtPartitionOutput *po,MdtPa
               pMVar3->arrayIdPartition = po->bodiesSize[po->nPartitions];
               pMVar9 = (MeDictNode *)
                        (po->bodiesSize[po->nPartitions] + po->bodiesStart[po->nPartitions]);
-              pMVar3->arrayIdWorld = (int)pMVar9;
+              pMVar3->arrayIdWorld = (kd_iptr)pMVar9;
               iVar10 = po->nPartitions;
               pMVar3->flags = pMVar3->flags | 2;
               pMVar3->partitionIndex = iVar10;
@@ -186,30 +186,30 @@ void kd_MdtUpdatePartitions(MeDict *enabledBodyDict,MdtPartitionOutput *po,MdtPa
               po->bodiesSize[po->nPartitions] = po->bodiesSize[po->nPartitions] + 1;
             }
           }
-          *(MeDictNode **)((int)(kd_frameslot_aiStack_50_iVar8_iVar16_p10)) = pMVar9;
-          *(MeDictNode **)((int)(kd_frameslot_aiStack_50_iVar8_iVar16_pc)) = pMVar9;
-          *(MeDictNode **)((int)(kd_frameslot_aiStack_50_iVar8_iVar16_p8)) = node;
-          *(MeDict **)((int)(kd_frameslot_aiStack_50_iVar8_iVar16_p4)) = dict;
-          *(undefined4 *)((int)(kd_frameslot_aiStack_50_iVar8_iVar16_p0)) = 65999;
-          pMVar9 = MeDictNext(*(void **)((int)(kd_frameslot_aiStack_50_iVar8_iVar16_p4)),
-                              *(void **)((int)(kd_frameslot_aiStack_50_iVar8_iVar16_p8)));
+          *(MeDictNode **)((kd_iptr)(kd_frameslot_aiStack_50_iVar8_iVar16_p10)) = pMVar9;
+          *(MeDictNode **)((kd_iptr)(kd_frameslot_aiStack_50_iVar8_iVar16_pc)) = pMVar9;
+          *(MeDictNode **)((kd_iptr)(kd_frameslot_aiStack_50_iVar8_iVar16_p8)) = node;
+          *(MeDict **)((kd_iptr)(kd_frameslot_aiStack_50_iVar8_iVar16_p4)) = dict;
+          *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_50_iVar8_iVar16_p0)) = 65999;
+          pMVar9 = MeDictNext(*(void **)((kd_iptr)(kd_frameslot_aiStack_50_iVar8_iVar16_p4)),
+                              *(void **)((kd_iptr)(kd_frameslot_aiStack_50_iVar8_iVar16_p8)));
           node = pMVar9;
         }
-        *(MdtBody **)((int)(kd_frameslot_aiStack_50_iVar8_iVar16_p4)) = currentBody;
-        *(undefined4 *)((int)(kd_frameslot_aiStack_50_iVar8_iVar16_p0)) = 0x101e5;
-        iVar10 = MdtBodyIsEnabled(*(void **)((int)(kd_frameslot_aiStack_50_iVar8_iVar16_p4)));
+        *(MdtBody **)((kd_iptr)(kd_frameslot_aiStack_50_iVar8_iVar16_p4)) = currentBody;
+        *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_50_iVar8_iVar16_p0)) = 0x101e5;
+        iVar10 = MdtBodyIsEnabled(*(void **)((kd_iptr)(kd_frameslot_aiStack_50_iVar8_iVar16_p4)));
         if (iVar10 == 0) {
-          *(MdtBody **)((int)(kd_frameslot_aiStack_50_iVar8_iVar16_p4)) = currentBody;
-          *(undefined4 *)((int)(kd_frameslot_aiStack_50_iVar8_iVar16_p0)) = 0x1046e;
-          MdtBodyEnable(*(void **)((int)(kd_frameslot_aiStack_50_iVar8_iVar16_p4)));
+          *(MdtBody **)((kd_iptr)(kd_frameslot_aiStack_50_iVar8_iVar16_p4)) = currentBody;
+          *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_50_iVar8_iVar16_p0)) = 0x1046e;
+          MdtBodyEnable(*(void **)((kd_iptr)(kd_frameslot_aiStack_50_iVar8_iVar16_p4)));
           currentBody->flags = currentBody->flags | 4;
         }
         else {
           currentBody->flags = currentBody->flags & 0xfffffffb;
         }
         iVar13 = po->nPartitions;
-        if (po->bodiesSize[iVar13] + po->bodiesStart[iVar13] <= (int)local_3c) break;
-        local_3c = (MdtBody *)((int)&(local_3c->keaBody).tag + 1);
+        if (po->bodiesSize[iVar13] + po->bodiesStart[iVar13] <= (kd_iptr)local_3c) break;
+        local_3c = (MdtBody *)((kd_iptr)&(local_3c->keaBody).tag + 1);
       }
     }
     uVar14 = po->info[iVar13].rowCount;
@@ -233,27 +233,27 @@ void kd_MdtUpdatePartitions(MeDict *enabledBodyDict,MdtPartitionOutput *po,MdtPa
     pMVar9 = rootNode;
     while (pMVar9 != (MeDictNode *)0x0) {
                     
-      if ((*(byte *)((int)pMVar9->data + 0x1ec) & 2) == 0) goto LAB_000102b7;
-      *(MeDictNode **)((int)(kd_frameslot_aiStack_50_iVar8_iVar16_p10)) = pMVar11;
-      *(MeDictNode **)((int)(kd_frameslot_aiStack_50_iVar8_iVar16_pc)) = pMVar11;
-      *(MeDictNode **)((int)(kd_frameslot_aiStack_50_iVar8_iVar16_p8)) = pMVar9;
-      *(MeDict **)((int)(kd_frameslot_aiStack_50_iVar8_iVar16_p4)) = enabledBodyDict;
-      *(undefined4 *)((int)(kd_frameslot_aiStack_50_iVar8_iVar16_p0)) = 0x102ac;
-      pMVar11 = MeDictNext(*(void **)((int)(kd_frameslot_aiStack_50_iVar8_iVar16_p4)),
-                           *(void **)((int)(kd_frameslot_aiStack_50_iVar8_iVar16_p8)));
+      if ((*(byte *)((kd_iptr)pMVar9->data + ((int)((char *)&((struct MdtBody *)0)->flags - (char *)0))) & 2) == 0) goto LAB_000102b7;
+      *(MeDictNode **)((kd_iptr)(kd_frameslot_aiStack_50_iVar8_iVar16_p10)) = pMVar11;
+      *(MeDictNode **)((kd_iptr)(kd_frameslot_aiStack_50_iVar8_iVar16_pc)) = pMVar11;
+      *(MeDictNode **)((kd_iptr)(kd_frameslot_aiStack_50_iVar8_iVar16_p8)) = pMVar9;
+      *(MeDict **)((kd_iptr)(kd_frameslot_aiStack_50_iVar8_iVar16_p4)) = enabledBodyDict;
+      *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_50_iVar8_iVar16_p0)) = 0x102ac;
+      pMVar11 = MeDictNext(*(void **)((kd_iptr)(kd_frameslot_aiStack_50_iVar8_iVar16_p4)),
+                           *(void **)((kd_iptr)(kd_frameslot_aiStack_50_iVar8_iVar16_p8)));
       pMVar9 = pMVar11;
     }
     pMVar9 = (MeDictNode *)0x0;
 LAB_000102b7:
     rootNode = pMVar9;
     if (pcb != (MdtPartitionEndCB)0x0) {
-      *(MeDictNode **)((int)(kd_frameslot_aiStack_50_iVar8_iVar16_p10)) = pMVar11;
-      *(MeDictNode **)((int)(kd_frameslot_aiStack_50_iVar8_iVar16_pc)) = pMVar11;
-      *(void **)((int)(kd_frameslot_aiStack_50_iVar8_iVar16_p8)) = pcbdata;
-      *(MdtPartitionOutput **)((int)(kd_frameslot_aiStack_50_iVar8_iVar16_p4)) = po;
-      *(undefined4 *)((int)(kd_frameslot_aiStack_50_iVar8_iVar16_p0)) = 0x102ce;
-      (*pcb)(*(MdtPartitionOutput **)((int)(kd_frameslot_aiStack_50_iVar8_iVar16_p4)),
-             *(void **)((int)(kd_frameslot_aiStack_50_iVar8_iVar16_p8)));
+      *(MeDictNode **)((kd_iptr)(kd_frameslot_aiStack_50_iVar8_iVar16_p10)) = pMVar11;
+      *(MeDictNode **)((kd_iptr)(kd_frameslot_aiStack_50_iVar8_iVar16_pc)) = pMVar11;
+      *(void **)((kd_iptr)(kd_frameslot_aiStack_50_iVar8_iVar16_p8)) = pcbdata;
+      *(MdtPartitionOutput **)((kd_iptr)(kd_frameslot_aiStack_50_iVar8_iVar16_p4)) = po;
+      *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_50_iVar8_iVar16_p0)) = 0x102ce;
+      (*pcb)(*(MdtPartitionOutput **)((kd_iptr)(kd_frameslot_aiStack_50_iVar8_iVar16_p4)),
+             *(void **)((kd_iptr)(kd_frameslot_aiStack_50_iVar8_iVar16_p8)));
     }
   }
   iVar16 = 0;
@@ -261,7 +261,7 @@ LAB_000102b7:
     uVar14 = numAddedConstraints & 3;
     if (numAddedConstraints < 2) {
 LAB_000102f0:
-      ppMVar2 = (kd_alloca_iVar16 = (char *)alloca((size_t)(po->maxBodies) * 4 + 0));
+      ppMVar2 = (kd_alloca_iVar16 = (char *)alloca((size_t)(po->maxBodies) * (int)sizeof(*(MdtBaseConstraint **)0) + 0));
       iVar16 = iVar16 + 1;
       ((*ppMVar2)->head).flags = ((*ppMVar2)->head).flags & 0xfffffffd;
       if (numAddedConstraints <= iVar16) goto LAB_00010343;
@@ -331,7 +331,7 @@ MeDictNode * kd_FindNextUnadded(MeDict *dict,MeDictNode *node)
       return (MeDictNode *)0x0;
     }
                     
-    if ((*(byte *)((int)node->data + 0x1ec) & 2) == 0) break;
+    if ((*(byte *)((kd_iptr)node->data + ((int)((char *)&((struct MdtBody *)0)->flags - (char *)0))) & 2) == 0) break;
     node = MeDictNext(dict,node);
   }
   return node;
@@ -344,20 +344,20 @@ MdtPartitionOutput * kd_MdtPartOutCreateFromChunk(MeChunk *chunk,int maxBodies,i
   MdtPartitionOutput *pMVar1;
   MdtBaseConstraint ***pppMVar2;
 
-  pMVar1 = MeChunkGetMem(chunk,maxBodies * 0x20 + 0x40 + maxConstraints * 4);
+  pMVar1 = MeChunkGetMem(chunk,maxBodies * (int)(4 * sizeof(int) + sizeof(MdtBody *) + sizeof(MdtPartitionInfo)) + (int)sizeof(MdtPartitionOutput) + maxConstraints * (int)sizeof(MdtBaseConstraint *));
   pMVar1->maxPartitions = maxBodies;
   pMVar1->bodiesStart = (int *)(pMVar1 + 1);
-  pppMVar2 = &pMVar1[1].constraints + maxBodies;
+  pppMVar2 = (MdtBaseConstraint ***)((char *)(&pMVar1[1].constraints + maxBodies) + maxBodies * (int)(sizeof(int) - sizeof(MdtBaseConstraint **)));
   pMVar1->bodiesSize = (int *)pppMVar2;
-  pppMVar2 = pppMVar2 + maxBodies;
+  pppMVar2 = (MdtBaseConstraint ***)((char *)(pppMVar2 + maxBodies) + maxBodies * (int)(sizeof(int) - sizeof(MdtBaseConstraint **)));
   pMVar1->bodies = (MdtBody **)pppMVar2;
   pppMVar2 = pppMVar2 + maxBodies;
   pMVar1->constraintsStart = (int *)pppMVar2;
-  pppMVar2 = pppMVar2 + maxBodies;
+  pppMVar2 = (MdtBaseConstraint ***)((char *)(pppMVar2 + maxBodies) + maxBodies * (int)(sizeof(int) - sizeof(MdtBaseConstraint **)));
   pMVar1->constraintsSize = (int *)pppMVar2;
-  pMVar1->info = (MdtPartitionInfo *)(pppMVar2 + maxBodies);
+  pMVar1->info = (MdtPartitionInfo *)((char *)(pppMVar2 + maxBodies) + maxBodies * (int)(sizeof(int) - sizeof(MdtBaseConstraint **)));
   pMVar1->constraints =
-       (MdtBaseConstraint **)((MdtPartitionInfo *)(pppMVar2 + maxBodies) + maxBodies);
+       (MdtBaseConstraint **)((MdtPartitionInfo *)((char *)(pppMVar2 + maxBodies) + maxBodies * (int)(sizeof(int) - sizeof(MdtBaseConstraint **))) + maxBodies);
   pMVar1->maxBodies = maxBodies;
   pMVar1->maxConstraints = maxConstraints;
   pMVar1->nPartitions = 0;
@@ -390,7 +390,7 @@ void kd_MdtPartInfoAddConstraint(MdtPartitionInfo *info,MdtBaseConstraint *c)
     info->jointCount = info->jointCount + 1;
   }
   else {
-    info->contactCount = info->contactCount + *(int *)((int)pvVar1 + 0x160);
+    info->contactCount = info->contactCount + *(int *)((kd_iptr)pvVar1 + ((int)((char *)&((struct MdtContactGroup *)0)->count - (char *)0)));
   }
   return;
 }

@@ -82,15 +82,15 @@ static void * MallocCreateAligned(size_t bytes,uint alignment)
   pvVar1 = malloc(bytes + alignment + 4);
   pvVar2 = (void *)0x0;
   if (pvVar1 != (void *)0x0) {
-    uVar3 = alignment - (uint)pvVar1 % alignment;
+    uVar3 = alignment - (kd_uptr)pvVar1 % alignment;
     uVar3 = uVar3 & (uVar3 == alignment) - 1;
     if ((alignment & 3) != 0) {
       MeFatalError(0,"MallocCreateAligned: Alignment must be a multiple of sizeof(unsigned int).");
     }
     for (; uVar3 < 4; uVar3 = uVar3 + alignment) {
     }
-    pvVar2 = (void *)((int)pvVar1 + uVar3);
-    *(uint *)((int)pvVar2 + -4) = uVar3;
+    pvVar2 = (void *)((kd_iptr)pvVar1 + uVar3);
+    *(uint *)((kd_iptr)pvVar2 + -4) = uVar3;
   }
   return pvVar2;
 }
@@ -100,6 +100,6 @@ static void MallocDestroyAligned(void *block)
 
 {
                     
-  free((void *)((int)block - *(int *)((int)block + -4)));
+  free((void *)((kd_iptr)block - *(int *)((kd_iptr)block + -4)));
   return;
 }

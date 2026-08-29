@@ -268,7 +268,7 @@ int kd_McdContactSimplify(MeReal *normal,McdContact *inContacts,int inNumContact
 
 {
     char *kd_alloca_iVar30;
-    undefined1 kd_argarea_aiStack_b0 [0x14];
+    undefined1 kd_argarea_aiStack_b0 [20 * (int)(sizeof(void *) / 4)];
 
   _McdContactLink **pp_Var1;
   MeReal MVar2;
@@ -440,7 +440,7 @@ LAB_000106f7:
     return 1;
   }
   iVar30 = -(inMaxContactPointCount * 0x10 + 0x10);
-  kd_alloca_iVar30 = (char *)alloca((size_t)(inMaxContactPointCount) * 0x10 + 0x10);
+  kd_alloca_iVar30 = (char *)alloca((size_t)(inMaxContactPointCount) * (int)sizeof(*(McdContactLink *)0) + (int)sizeof(*(McdContactLink *)0));
   iVar24 = 0;
   list.link = (McdContactLink *)(kd_alloca_iVar30);
   if (inMaxContactPointCount < 1) goto LAB_0001084f;
@@ -582,7 +582,7 @@ LAB_0001084f:
               pMVar27->area = fVar21;
               break;
             }
-            MStack_9c.next = (_McdContactLink *)((int)MStack_9c.next + 0x28);
+            MStack_9c.next = (_McdContactLink *)((kd_iptr)MStack_9c.next + 0x28);
             cNum = cNum + 1;
           } while (cNum < inNumContacts);
         }
@@ -592,15 +592,15 @@ LAB_0001084f:
           cNum = inNumContacts - cNum;
           do {
             pMVar23 = local_80;
-            *(MeReal **)((int)kd_argarea_aiStack_b0 + 0xc) = normal;
-            *(McdContact **)((int)kd_argarea_aiStack_b0 + 0x8) = pMVar23;
-            *(McdContactList **)((int)kd_argarea_aiStack_b0 + 0x4) = &list;
+            *(MeReal **)((kd_iptr)kd_argarea_aiStack_b0 + (3 * (int)sizeof(void *))) = normal;
+            *(McdContact **)((kd_iptr)kd_argarea_aiStack_b0 + (2 * (int)sizeof(void *))) = pMVar23;
+            *(McdContactList **)((kd_iptr)kd_argarea_aiStack_b0 + (1 * (int)sizeof(void *))) = &list;
             local_80 = local_80 + 1;
             cNum = cNum + -1;
-            *(undefined4 *)((int)kd_argarea_aiStack_b0) = 0x10ae8;
-            kd_UpdateHull(*(McdContactList **)((int)kd_argarea_aiStack_b0 + 0x4),
-                       *(McdContact **)((int)kd_argarea_aiStack_b0 + 0x8),
-                       *(MeReal **)((int)kd_argarea_aiStack_b0 + 0xc));
+            *(undefined4 *)((kd_iptr)kd_argarea_aiStack_b0) = 0x10ae8;
+            kd_UpdateHull(*(McdContactList **)((kd_iptr)kd_argarea_aiStack_b0 + (1 * (int)sizeof(void *))),
+                       *(McdContact **)((kd_iptr)kd_argarea_aiStack_b0 + (2 * (int)sizeof(void *))),
+                       *(MeReal **)((kd_iptr)kd_argarea_aiStack_b0 + (3 * (int)sizeof(void *))));
             pMVar23 = extraout_EAX;
             if (inMaxContactPointCount < list.ct) {
                     

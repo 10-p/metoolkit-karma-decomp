@@ -89,7 +89,7 @@ void kd_McdHello(McdModelPair *p)
   puVar4 = McdFrameworkGetInteractions
                      (pMVar1->frame,(uint)(byte)((pMVar1->mInstance).mGeometry)->mRefCtAndID,
                       (uint)(byte)((p->model2->mInstance).mGeometry)->mRefCtAndID);
-  if (puVar4[4] != 0) {
+  if (*(undefined4 *)((kd_iptr)puVar4 + ((int)((char *)&((struct _McdInteractions *)0)->swap - (char *)0))) != 0) {
                     
     pMVar1 = p->model1;
     p->model1 = p->model2;
@@ -119,8 +119,8 @@ void kd_McdGoodbye(McdModelPair *p)
   iVar2 = (int)sVar1;
   sVar1 = McdModelGetGeometryType(p->model1);
   pvVar3 = McdFrameworkGetInteractions(p->model1->frame,(int)sVar1,iVar2);
-  if (*(code **)((int)pvVar3 + 4) != (code *)0x0) {
-    (**(void (**)(McdModelPair *))((int)pvVar3 + 4))(p);
+  if (*(code **)((kd_iptr)pvVar3 + ((int)((char *)&((struct _McdInteractions *)0)->goodbyeFn - (char *)0))) != (code *)0x0) {
+    (**(void (**)(McdModelPair *))((kd_iptr)pvVar3 + ((int)((char *)&((struct _McdInteractions *)0)->goodbyeFn - (char *)0))))(p);
   }
   return;
 }
@@ -135,7 +135,7 @@ MeBool kd_McdIntersect(McdModelPair *p,McdIntersectResult *result)
   void *pvVar4;
   void *pvVar5;
   McdContact *pMVar6;
-  undefined1 kd_argarea_pMVar6 [36];
+  undefined1 kd_argarea_pMVar6 [36 * (int)(sizeof(void *) / 4)];
   int iVar7;
   McdContact aMStackY_501c [511];
   undefined4 uStackY_40;
@@ -151,7 +151,7 @@ MeBool kd_McdIntersect(McdModelPair *p,McdIntersectResult *result)
   iVar7 = (int)sVar3;
   pvVar4 = McdFrameworkGetInteractions(frame,type1,iVar7);
   pvVar5 = pvVar4;
-  if ((*(int *)((int)pvVar4 + 8) == 0) &&
+  if ((*(int *)((kd_iptr)pvVar4 + ((int)((char *)&((struct _McdInteractions *)0)->intersectFn - (char *)0))) == 0) &&
      (pvVar5 = (void *)McdFrameworkGetInteractionsWarned(frame,type1,iVar7), pvVar5 == (void *)0x0))
   {
     McdFrameworkGetTypeName(frame,iVar7);
@@ -163,36 +163,36 @@ MeBool kd_McdIntersect(McdModelPair *p,McdIntersectResult *result)
     result->contactCount = 0;
     return 0;
   }
-  pMVar6 = (McdContact *)(kd_argarea_pMVar6 + 0x24);
-  if (*(int *)((int)pvVar4 + 0x14) != 0) {
+  pMVar6 = (McdContact *)(kd_argarea_pMVar6 + (9 * (int)sizeof(void *)));
+  if (*(int *)((kd_iptr)pvVar4 + ((int)((char *)&((struct _McdInteractions *)0)->cull - (char *)0))) != 0) {
     outContacts = result->contacts;
-    pMVar6 = (McdContact *)(kd_argarea_pMVar6 + 0x24);
+    pMVar6 = (McdContact *)(kd_argarea_pMVar6 + (9 * (int)sizeof(void *)));
     result->contacts = aMStackY_501c;
   }
-  *(void **)((int)pMVar6 + -4) = pvVar5;
-  *(void **)((int)pMVar6 + -8) = pvVar5;
-  *(McdIntersectResult **)((int)pMVar6 + -0xc) = result;
-  *(McdModelPair **)((int)pMVar6 + -0x10) = p;
-  pcVar1 = *(code **)((int)pvVar4 + 8);
-  *(undefined4 *)((int)pMVar6 + -0x14) = 0x10232;
-  iVar7 = (*(McdIntersectFn)pcVar1)(*(McdModelPair **)((int)pMVar6 + -0x10),
-                 *(McdIntersectResult **)((int)pMVar6 + -0xc));
+  *(void **)((kd_iptr)pMVar6 + (-1 * (int)sizeof(void *))) = pvVar5;
+  *(void **)((kd_iptr)pMVar6 + (-2 * (int)sizeof(void *))) = pvVar5;
+  *(McdIntersectResult **)((kd_iptr)pMVar6 + (-3 * (int)sizeof(void *))) = result;
+  *(McdModelPair **)((kd_iptr)pMVar6 + (-4 * (int)sizeof(void *))) = p;
+  pcVar1 = *(code **)((kd_iptr)pvVar4 + ((int)((char *)&((struct _McdInteractions *)0)->intersectFn - (char *)0)));
+  *(undefined4 *)((kd_iptr)pMVar6 + (-5 * (int)sizeof(void *))) = 0x10232;
+  iVar7 = (*(McdIntersectFn)pcVar1)(*(McdModelPair **)((kd_iptr)pMVar6 + (-4 * (int)sizeof(void *))),
+                 *(McdIntersectResult **)((kd_iptr)pMVar6 + (-3 * (int)sizeof(void *))));
   result->touch = iVar7;
-  if (*(int *)((int)pvVar4 + 0x14) != 0) {
-    *(McdModelPair **)((int)pMVar6 + -4) = p;
-    *(MeReal *)((int)pMVar6 + -8) = frame->mScale;
+  if (*(int *)((kd_iptr)pvVar4 + ((int)((char *)&((struct _McdInteractions *)0)->cull - (char *)0))) != 0) {
+    *(McdModelPair **)((kd_iptr)pMVar6 + (-1 * (int)sizeof(void *))) = p;
+    *(MeReal *)((kd_iptr)pMVar6 + (-2 * (int)sizeof(void *))) = frame->mScale;
     pMVar2 = p->request;
-    *(int *)((int)pMVar6 + -0xc) = pMVar2->faceNormalsFirst;
-    *(int *)((int)pMVar6 + -0x10) = pMVar2->contactMaxCount;
-    *(McdContact **)((int)pMVar6 + -0x14) = outContacts;
-    *(int *)((int)pMVar6 + -0x18) = result->contactCount;
-    *(McdContact **)((int)pMVar6 + -0x1c) = result->contacts;
-    *(MeReal **)((int)pMVar6 + -0x20) = result->normal;
-    *(undefined4 *)((int)pMVar6 + -0x24) = 0x1027d;
-    iVar7 = McdContactSimplify(*(void **)((int)pMVar6 + -0x20),*(void **)((int)pMVar6 + -0x1c),
-                               *(int *)((int)pMVar6 + -0x18),*(void **)((int)pMVar6 + -0x14),
-                               *(int *)((int)pMVar6 + -0x10),*(int *)((int)pMVar6 + -0xc),
-                               *(float *)((int)pMVar6 + -8));
+    *(int *)((kd_iptr)pMVar6 + (-3 * (int)sizeof(void *))) = pMVar2->faceNormalsFirst;
+    *(int *)((kd_iptr)pMVar6 + (-4 * (int)sizeof(void *))) = pMVar2->contactMaxCount;
+    *(McdContact **)((kd_iptr)pMVar6 + (-5 * (int)sizeof(void *))) = outContacts;
+    *(int *)((kd_iptr)pMVar6 + (-6 * (int)sizeof(void *))) = result->contactCount;
+    *(McdContact **)((kd_iptr)pMVar6 + (-7 * (int)sizeof(void *))) = result->contacts;
+    *(MeReal **)((kd_iptr)pMVar6 + (-8 * (int)sizeof(void *))) = result->normal;
+    *(undefined4 *)((kd_iptr)pMVar6 + (-9 * (int)sizeof(void *))) = 0x1027d;
+    iVar7 = McdContactSimplify(*(void **)((kd_iptr)pMVar6 + (-8 * (int)sizeof(void *))),*(void **)((kd_iptr)pMVar6 + (-7 * (int)sizeof(void *))),
+                               *(int *)((kd_iptr)pMVar6 + (-6 * (int)sizeof(void *))),*(void **)((kd_iptr)pMVar6 + (-5 * (int)sizeof(void *))),
+                               *(int *)((kd_iptr)pMVar6 + (-4 * (int)sizeof(void *))),*(int *)((kd_iptr)pMVar6 + (-3 * (int)sizeof(void *))),
+                               *(float *)((kd_iptr)pMVar6 + (-2 * (int)sizeof(void *))));
     result->contactCount = iVar7;
     result->contacts = outContacts;
   }
@@ -239,16 +239,16 @@ MeBool kd_McdSafeTime(McdModelPair *p,MeReal maxTime,McdSafeTimeResult *result)
   pvVar2 = McdFrameworkGetInteractions
                      (p->model1->frame,(uint)(byte)((p->model1->mInstance).mGeometry)->mRefCtAndID,
                       (uint)(byte)((p->model2->mInstance).mGeometry)->mRefCtAndID);
-  if ((((*(code **)((int)pvVar2 + 0xc) == (code *)0x0) ||
+  if ((((*(code **)((kd_iptr)pvVar2 + ((int)((char *)&((struct _McdInteractions *)0)->safetimeFn - (char *)0))) == (code *)0x0) ||
        (p->model1->linearVelocity == (MeReal *)0x0)) || (p->model2->linearVelocity == (MeReal *)0x0)
       ) || ((p->model1->angularVelocity == (MeReal *)0x0 ||
             (pMVar1 = p->model2->angularVelocity, pMVar1 == (MeReal *)0x0)))) {
     result->time = maxTime;
   }
   else {
-    (**(int (**)(McdModelPair *, MeReal, McdSafeTimeResult *))((int)pvVar2 + 0xc))(p,maxTime,result);
+    (**(int (**)(McdModelPair *, MeReal, McdSafeTimeResult *))((kd_iptr)pvVar2 + ((int)((char *)&((struct _McdInteractions *)0)->safetimeFn - (char *)0))))(p,maxTime,result);
   }
-  return (uint)(*(int *)((int)pvVar2 + 0xc) != 0);
+  return (uint)(*(int *)((kd_iptr)pvVar2 + ((int)((char *)&((struct _McdInteractions *)0)->safetimeFn - (char *)0))) != 0);
 }
 
 /* ---- McdLineSegIntersect (exported as kd_McdLineSegIntersect, asm label "McdLineSegIntersect") ---- */
@@ -326,8 +326,8 @@ void kd_McdGoodbyeEach(McdModelPairContainer *pairs)
       iVar3 = (int)sVar2;
       sVar2 = McdModelGetGeometryType(pMVar1->model1);
       pvVar4 = McdFrameworkGetInteractions(pMVar1->model1->frame,(int)sVar2,iVar3);
-      if (*(code **)((int)pvVar4 + 4) != (code *)0x0) {
-        (**(void (**)(McdModelPair *))((int)pvVar4 + 4))(pMVar1);
+      if (*(code **)((kd_iptr)pvVar4 + ((int)((char *)&((struct _McdInteractions *)0)->goodbyeFn - (char *)0))) != (code *)0x0) {
+        (**(void (**)(McdModelPair *))((kd_iptr)pvVar4 + ((int)((char *)&((struct _McdInteractions *)0)->goodbyeFn - (char *)0))))(pMVar1);
       }
       iVar5 = iVar5 + 1;
     } while (iVar5 < pairs->goodbyeEnd);

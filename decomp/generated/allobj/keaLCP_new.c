@@ -228,7 +228,7 @@ kd_keaLCPSolver__solveLCP
   this->A = A;
   this->cpuType = cpuType;
   iStackY_50 = 0x1024c;
-  (**(void (**)(keaMatrix *, MeReal *, const MeReal *))(*(int *)A + 0x10))(A,this->x,b);
+  (**(void (**)(keaMatrix *, MeReal *, const MeReal *))(*(kd_iptr *)A + (4 * (int)sizeof(void *))))(A,this->x,b);
   iStackY_50 = 0x1025b;
   keaLCPSolver__setUpper(this,upper);
   iStackY_50 = 0x1026a;
@@ -238,23 +238,23 @@ kd_keaLCPSolver__solveLCP
   if (iVar2 != this->n) {
                     
     uVar6 = this->n * 4 + 0xfU & 0xfffffff0;
-  char *kd_frame = (char *)alloca(uVar6 * 6 + 48);
-  uint *auStack_3c = (uint *)(kd_frame + uVar6 * 6 + 36);  /* KD_MATERIALISED_BASE(auStack_3c) */
-    I = (int *)((int)auStack_3c - uVar6);
-    C = (int *)((int)auStack_3c + uVar6 * -2);
-    clamped = (int *)((int)auStack_3c + uVar6 * -5);
-    unclamped = (int *)((int)auStack_3c + uVar6 * -6);
-    *(keaLCPSolver **)((kd_frame + 20)) = this;
-    *(undefined4 *)((int)(kd_frame + 16)) = 0x102b4;
-    keaLCPSolver__copyXtoInitialSolve(*(void **)((kd_frame + 20)));
+  char *kd_frame = (char *)alloca(uVar6 * 6 + 48 * (int)(sizeof(void *) / 4));
+  uint *auStack_3c = (uint *)(kd_frame + uVar6 * 6 + 36 * (int)(sizeof(void *) / 4));  /* KD_MATERIALISED_BASE(auStack_3c) */
+    I = (int *)((kd_iptr)auStack_3c - uVar6);
+    C = (int *)((kd_iptr)auStack_3c + (kd_uptr)uVar6 * -2);
+    clamped = (int *)((kd_iptr)auStack_3c + (kd_uptr)uVar6 * -5);
+    unclamped = (int *)((kd_iptr)auStack_3c + (kd_uptr)uVar6 * -6);
+    *(keaLCPSolver **)((kd_frame + (5 * (int)sizeof(void *)))) = this;
+    *(undefined4 *)((kd_iptr)(kd_frame + (4 * (int)sizeof(void *)))) = 0x102b4;
+    keaLCPSolver__copyXtoInitialSolve(*(void **)((kd_frame + (5 * (int)sizeof(void *)))));
     piVar7 = I;
-    *(int **)((kd_frame + 28)) = C;
-    *(int **)((kd_frame + 24)) = piVar7;
-    *(keaLCPSolver **)((kd_frame + 20)) = this;
-    *(undefined4 *)((int)(kd_frame + 16)) = 0x102c8;
+    *(int **)((kd_frame + (7 * (int)sizeof(void *)))) = C;
+    *(int **)((kd_frame + (6 * (int)sizeof(void *)))) = piVar7;
+    *(keaLCPSolver **)((kd_frame + (5 * (int)sizeof(void *)))) = this;
+    *(undefined4 *)((kd_iptr)(kd_frame + (4 * (int)sizeof(void *)))) = 0x102c8;
     keaLCPSolver__getClampIndices
-              (*(void **)((kd_frame + 20)),*(void **)((kd_frame + 24)),
-               *(void **)((kd_frame + 28)));
+              (*(void **)((kd_frame + (5 * (int)sizeof(void *)))),*(void **)((kd_frame + (6 * (int)sizeof(void *)))),
+               *(void **)((kd_frame + (7 * (int)sizeof(void *)))));
     piVar7 = this->cached;
     for (uVar5 = this->n & 0x3fffffff; uVar5 != 0; uVar5 = uVar5 - 1) {
       *piVar7 = 0;
@@ -265,12 +265,12 @@ kd_keaLCPSolver__solveLCP
       *pMVar8 = 0.0;
       pMVar8 = pMVar8 + 1;
     }
-    puVar9 = auStack_3c + -uVar6;
+    puVar9 = auStack_3c + -(kd_uptr)uVar6;
     for (uVar5 = this->n & 0x3fffffff; uVar5 != 0; uVar5 = uVar5 - 1) {
       *puVar9 = 0;
       puVar9 = puVar9 + 1;
     }
-    puVar10 = (undefined4 *)((int)auStack_3c + uVar6 * -3);
+    puVar10 = (undefined4 *)((kd_iptr)auStack_3c + (kd_uptr)uVar6 * -3);
     for (uVar5 = this->n & 0x3fffffff; uVar5 != 0; uVar5 = uVar5 - 1) {
       *puVar10 = 0;
       puVar10 = puVar10 + 1;
@@ -280,7 +280,7 @@ kd_keaLCPSolver__solveLCP
     while (iVar2 != 0) {
       inCycle = 0;
       iVar2 = 0;
-      *(undefined4 *)((int)(kd_frame + 32)) = 0x1032a;
+      *(undefined4 *)((kd_iptr)(kd_frame + (8 * (int)sizeof(void *)))) = 0x1032a;
       keaPushPoolFrame();
       uVar5 = this->n;
       auStack_3c[2] = uVar5;
@@ -288,149 +288,149 @@ kd_keaLCPSolver__solveLCP
         uVar3 = uVar5 & 3;
         if ((int)uVar5 < 2) {
 LAB_00010348:
-          *(uint *)((int)auStack_3c + iVar2 * 4 + uVar6 * -3) =
-               (I[iVar2] & 1U) + *(int *)((int)auStack_3c + iVar2 * 4 + uVar6 * -3) * 2;
-          uVar5 = auStack_3c[iVar2 - uVar6];
-          auStack_3c[iVar2 - uVar6] = (C[iVar2] & 1U) + uVar5 * 2;
+          *(uint *)((kd_iptr)auStack_3c + iVar2 * 4 + (kd_uptr)uVar6 * -3) =
+               (I[iVar2] & 1U) + *(int *)((kd_iptr)auStack_3c + iVar2 * 4 + (kd_uptr)uVar6 * -3) * 2;
+          uVar5 = auStack_3c[(kd_uptr)iVar2 - uVar6];
+          auStack_3c[(kd_uptr)iVar2 - uVar6] = (C[iVar2] & 1U) + uVar5 * 2;
           iVar2 = iVar2 + 1;
           if ((int)auStack_3c[2] <= iVar2) goto LAB_0001041b;
         }
         else if (uVar3 != 0) {
           if (1 < uVar3) {
             if (2 < uVar3) {
-              *(uint *)((int)auStack_3c + uVar6 * -3) =
-                   (*I & 1U) + *(int *)((int)auStack_3c + uVar6 * -3) * 2;
-              auStack_3c[-uVar6] = (*C & 1U) + auStack_3c[-uVar6] * 2;
+              *(uint *)((kd_iptr)auStack_3c + (kd_uptr)uVar6 * -3) =
+                   (*I & 1U) + *(int *)((kd_iptr)auStack_3c + (kd_uptr)uVar6 * -3) * 2;
+              auStack_3c[-(kd_uptr)uVar6] = (*C & 1U) + auStack_3c[-(kd_uptr)uVar6] * 2;
             }
             uVar5 = (uint)(2 < uVar3);
-            *(uint *)((int)auStack_3c + uVar5 * 4 + uVar6 * -3) =
-                 (I[uVar5] & 1U) + *(int *)((int)auStack_3c + uVar5 * 4 + uVar6 * -3) * 2;
-            auStack_3c[uVar5 - uVar6] = (C[uVar5] & 1U) + auStack_3c[uVar5 - uVar6] * 2;
+            *(uint *)((kd_iptr)auStack_3c + uVar5 * 4 + (kd_uptr)uVar6 * -3) =
+                 (I[uVar5] & 1U) + *(int *)((kd_iptr)auStack_3c + uVar5 * 4 + (kd_uptr)uVar6 * -3) * 2;
+            auStack_3c[(kd_uptr)uVar5 - uVar6] = (C[uVar5] & 1U) + auStack_3c[(kd_uptr)uVar5 - uVar6] * 2;
             iVar2 = uVar5 + 1;
           }
           goto LAB_00010348;
         }
         do {
-          *(uint *)((int)auStack_3c + iVar2 * 4 + uVar6 * -3) =
-               (I[iVar2] & 1U) + *(int *)((int)auStack_3c + iVar2 * 4 + uVar6 * -3) * 2;
-          auStack_3c[iVar2 - uVar6] = (C[iVar2] & 1U) + auStack_3c[iVar2 - uVar6] * 2;
+          *(uint *)((kd_iptr)auStack_3c + iVar2 * 4 + (kd_uptr)uVar6 * -3) =
+               (I[iVar2] & 1U) + *(int *)((kd_iptr)auStack_3c + iVar2 * 4 + (kd_uptr)uVar6 * -3) * 2;
+          auStack_3c[(kd_uptr)iVar2 - uVar6] = (C[iVar2] & 1U) + auStack_3c[(kd_uptr)iVar2 - uVar6] * 2;
           iVar4 = iVar2 + 1;
-          *(uint *)((int)auStack_3c + iVar4 * 4 + uVar6 * -3) =
-               (I[iVar4] & 1U) + *(int *)((int)auStack_3c + iVar4 * 4 + uVar6 * -3) * 2;
-          auStack_3c[iVar4 - uVar6] = (C[iVar4] & 1U) + auStack_3c[iVar4 - uVar6] * 2;
+          *(uint *)((kd_iptr)auStack_3c + iVar4 * 4 + (kd_uptr)uVar6 * -3) =
+               (I[iVar4] & 1U) + *(int *)((kd_iptr)auStack_3c + iVar4 * 4 + (kd_uptr)uVar6 * -3) * 2;
+          auStack_3c[(kd_uptr)iVar4 - uVar6] = (C[iVar4] & 1U) + auStack_3c[(kd_uptr)iVar4 - uVar6] * 2;
           iVar4 = iVar2 + 2;
-          *(uint *)((int)auStack_3c + iVar4 * 4 + uVar6 * -3) =
-               (I[iVar4] & 1U) + *(int *)((int)auStack_3c + iVar4 * 4 + uVar6 * -3) * 2;
-          auStack_3c[iVar4 - uVar6] = (C[iVar4] & 1U) + auStack_3c[iVar4 - uVar6] * 2;
+          *(uint *)((kd_iptr)auStack_3c + iVar4 * 4 + (kd_uptr)uVar6 * -3) =
+               (I[iVar4] & 1U) + *(int *)((kd_iptr)auStack_3c + iVar4 * 4 + (kd_uptr)uVar6 * -3) * 2;
+          auStack_3c[(kd_uptr)iVar4 - uVar6] = (C[iVar4] & 1U) + auStack_3c[(kd_uptr)iVar4 - uVar6] * 2;
           iVar4 = iVar2 + 3;
           iVar2 = iVar2 + 4;
-          *(uint *)((int)auStack_3c + iVar4 * 4 + uVar6 * -3) =
-               (I[iVar4] & 1U) + *(int *)((int)auStack_3c + iVar4 * 4 + uVar6 * -3) * 2;
-          uVar5 = auStack_3c[iVar4 - uVar6];
-          auStack_3c[iVar4 - uVar6] = (C[iVar4] & 1U) + uVar5 * 2;
+          *(uint *)((kd_iptr)auStack_3c + iVar4 * 4 + (kd_uptr)uVar6 * -3) =
+               (I[iVar4] & 1U) + *(int *)((kd_iptr)auStack_3c + iVar4 * 4 + (kd_uptr)uVar6 * -3) * 2;
+          uVar5 = auStack_3c[(kd_uptr)iVar4 - uVar6];
+          auStack_3c[(kd_uptr)iVar4 - uVar6] = (C[iVar4] & 1U) + uVar5 * 2;
         } while (iVar2 < (int)auStack_3c[2]);
       }
 LAB_0001041b:
       piVar7 = C;
-      *(uint *)((int)(kd_frame + 32)) = uVar5;
+      *(uint *)((kd_iptr)(kd_frame + (8 * (int)sizeof(void *)))) = uVar5;
       piVar1 = I;
-      *(int **)((kd_frame + 28)) = piVar7;
-      *(int **)((kd_frame + 24)) = piVar1;
-      *(int **)((kd_frame + 20)) = &numUnclamped;
+      *(int **)((kd_frame + (7 * (int)sizeof(void *)))) = piVar7;
+      *(int **)((kd_frame + (6 * (int)sizeof(void *)))) = piVar1;
+      *(int **)((kd_frame + (5 * (int)sizeof(void *)))) = &numUnclamped;
       piVar7 = unclamped;
-      *(int **)((int)(kd_frame + 16)) = &numClamped;
+      *(int **)((kd_iptr)(kd_frame + (4 * (int)sizeof(void *)))) = &numClamped;
       piVar1 = clamped;
-      *(int **)((int)(kd_frame + 12)) = piVar7;
-      *(int **)((int)(kd_frame + 0) + 8) = piVar1;
-      *(keaLCPSolver **)((int)(kd_frame + 0) + 4) = this;
+      *(int **)((kd_iptr)(kd_frame + (3 * (int)sizeof(void *)))) = piVar7;
+      *(int **)((kd_iptr)(kd_frame + (0 * (int)sizeof(void *))) + (2 * (int)sizeof(void *))) = piVar1;
+      *(keaLCPSolver **)((kd_iptr)(kd_frame + (0 * (int)sizeof(void *))) + (1 * (int)sizeof(void *))) = this;
       numClamped = 0;
       numUnclamped = 0;
-      *(undefined4 *)((int)(kd_frame + 0)) = 0x1044b;
+      *(undefined4 *)((kd_iptr)(kd_frame + (0 * (int)sizeof(void *)))) = 0x1044b;
       keaLCPSolver__setClampedValues
-                (*(void **)((int)(kd_frame + 0) + 4),
-                 *(void **)((int)(kd_frame + 0) + 8),
-                 *(void **)((int)(kd_frame + 12)),*(void **)((int)(kd_frame + 16))
-                 ,*(void **)((kd_frame + 20)),
-                 *(void **)((kd_frame + 24)),*(void **)((kd_frame + 28))
+                (*(void **)((kd_iptr)(kd_frame + (0 * (int)sizeof(void *))) + (1 * (int)sizeof(void *))),
+                 *(void **)((kd_iptr)(kd_frame + (0 * (int)sizeof(void *))) + (2 * (int)sizeof(void *))),
+                 *(void **)((kd_iptr)(kd_frame + (3 * (int)sizeof(void *)))),*(void **)((kd_iptr)(kd_frame + (4 * (int)sizeof(void *))))
+                 ,*(void **)((kd_frame + (5 * (int)sizeof(void *)))),
+                 *(void **)((kd_frame + (6 * (int)sizeof(void *)))),*(void **)((kd_frame + (7 * (int)sizeof(void *))))
                 );
       piVar7 = clamped;
-      *(int *)((kd_frame + 24)) = numClamped;
+      *(int *)((kd_frame + (6 * (int)sizeof(void *)))) = numClamped;
       iVar2 = numUnclamped;
-      *(int **)((kd_frame + 20)) = piVar7;
+      *(int **)((kd_frame + (5 * (int)sizeof(void *)))) = piVar7;
       piVar7 = unclamped;
-      *(int *)((int)(kd_frame + 16)) = iVar2;
-      *(int **)((int)(kd_frame + 12)) = piVar7;
-      *(MeReal **)((int)(kd_frame + 0) + 8) = b;
-      *(keaLCPSolver **)((int)(kd_frame + 0) + 4) = this;
-      *(undefined4 *)((int)(kd_frame + 0)) = 0x1046b;
+      *(int *)((kd_iptr)(kd_frame + (4 * (int)sizeof(void *)))) = iVar2;
+      *(int **)((kd_iptr)(kd_frame + (3 * (int)sizeof(void *)))) = piVar7;
+      *(MeReal **)((kd_iptr)(kd_frame + (0 * (int)sizeof(void *))) + (2 * (int)sizeof(void *))) = b;
+      *(keaLCPSolver **)((kd_iptr)(kd_frame + (0 * (int)sizeof(void *))) + (1 * (int)sizeof(void *))) = this;
+      *(undefined4 *)((kd_iptr)(kd_frame + (0 * (int)sizeof(void *)))) = 0x1046b;
       keaLCPSolver__makeXandW
-                (*(void **)((int)(kd_frame + 0) + 4),
-                 *(void **)((int)(kd_frame + 0) + 8),
-                 *(void **)((int)(kd_frame + 12)),*(int *)((int)(kd_frame + 16)),
-                 *(void **)((kd_frame + 20)),*(int *)((kd_frame + 24)));
+                (*(void **)((kd_iptr)(kd_frame + (0 * (int)sizeof(void *))) + (1 * (int)sizeof(void *))),
+                 *(void **)((kd_iptr)(kd_frame + (0 * (int)sizeof(void *))) + (2 * (int)sizeof(void *))),
+                 *(void **)((kd_iptr)(kd_frame + (3 * (int)sizeof(void *)))),*(int *)((kd_iptr)(kd_frame + (4 * (int)sizeof(void *)))),
+                 *(void **)((kd_frame + (5 * (int)sizeof(void *)))),*(int *)((kd_frame + (6 * (int)sizeof(void *)))));
       iVar2 = numClamped;
-      *(int *)((kd_frame + 28)) = numUnclamped;
+      *(int *)((kd_frame + (7 * (int)sizeof(void *)))) = numUnclamped;
       piVar7 = unclamped;
-      *(int *)((kd_frame + 24)) = iVar2;
+      *(int *)((kd_frame + (6 * (int)sizeof(void *)))) = iVar2;
       piVar1 = clamped;
-      *(int **)((kd_frame + 20)) = piVar7;
+      *(int **)((kd_frame + (5 * (int)sizeof(void *)))) = piVar7;
       piVar7 = C;
-      *(int **)((int)(kd_frame + 16)) = piVar1;
+      *(int **)((kd_iptr)(kd_frame + (4 * (int)sizeof(void *)))) = piVar1;
       piVar1 = I;
-      *(int **)((int)(kd_frame + 12)) = piVar7;
-      *(int **)((int)(kd_frame + 0) + 8) = piVar1;
-      *(keaLCPSolver **)((int)(kd_frame + 0) + 4) = this;
-      *(undefined4 *)((int)(kd_frame + 0)) = 0x1048f;
+      *(int **)((kd_iptr)(kd_frame + (3 * (int)sizeof(void *)))) = piVar7;
+      *(int **)((kd_iptr)(kd_frame + (0 * (int)sizeof(void *))) + (2 * (int)sizeof(void *))) = piVar1;
+      *(keaLCPSolver **)((kd_iptr)(kd_frame + (0 * (int)sizeof(void *))) + (1 * (int)sizeof(void *))) = this;
+      *(undefined4 *)((kd_iptr)(kd_frame + (0 * (int)sizeof(void *)))) = 0x1048f;
       iVar2 = keaLCPSolver__blockMurtyChooseNewIndices
-                        (*(void **)((int)(kd_frame + 0) + 4),
-                         *(void **)((int)(kd_frame + 0) + 8),
-                         *(void **)((int)(kd_frame + 12)),
-                         *(void **)((int)(kd_frame + 16)),
-                         *(void **)((kd_frame + 20)),
-                         *(int *)((kd_frame + 24)),
-                         *(int *)((kd_frame + 28)));
+                        (*(void **)((kd_iptr)(kd_frame + (0 * (int)sizeof(void *))) + (1 * (int)sizeof(void *))),
+                         *(void **)((kd_iptr)(kd_frame + (0 * (int)sizeof(void *))) + (2 * (int)sizeof(void *))),
+                         *(void **)((kd_iptr)(kd_frame + (3 * (int)sizeof(void *)))),
+                         *(void **)((kd_iptr)(kd_frame + (4 * (int)sizeof(void *)))),
+                         *(void **)((kd_frame + (5 * (int)sizeof(void *)))),
+                         *(int *)((kd_frame + (6 * (int)sizeof(void *)))),
+                         *(int *)((kd_frame + (7 * (int)sizeof(void *)))));
       if (iVar2 != 0) {
-        *(int *)((int)(kd_frame + 32)) = iVar2;
-        *(int *)((kd_frame + 28)) = iVar2;
+        *(int *)((kd_iptr)(kd_frame + (8 * (int)sizeof(void *)))) = iVar2;
+        *(int *)((kd_frame + (7 * (int)sizeof(void *)))) = iVar2;
         iVar4 = iteration;
         piVar1 = I;
-        *(int *)((kd_frame + 24)) = this->n;
+        *(int *)((kd_frame + (6 * (int)sizeof(void *)))) = this->n;
         piVar7 = C;
-        *(int *)((kd_frame + 20)) = iVar4;
-        *(uint *)((int)(kd_frame + 16)) = (int)auStack_3c + uVar6 * -3;
-        *(uint **)((int)(kd_frame + 12)) = auStack_3c + -uVar6;
-        *(int **)((int)(kd_frame + 0) + 8) = piVar7;
-        *(int **)((int)(kd_frame + 0) + 4) = piVar1;
-        *(undefined4 *)((int)(kd_frame + 0)) = 0x104e2;
-        iVar4 = kd_checkForCycles(*(int **)((int)(kd_frame + 0) + 4),
-                               *(int **)((int)(kd_frame + 0) + 8),
-                               *(int **)((int)(kd_frame + 12)),
-                               *(int **)((int)(kd_frame + 16)),
-                               *(int *)((kd_frame + 20)),
-                               *(int *)((kd_frame + 24)));
+        *(int *)((kd_frame + (5 * (int)sizeof(void *)))) = iVar4;
+        *(uint *)((kd_iptr)(kd_frame + (4 * (int)sizeof(void *)))) = (kd_iptr)auStack_3c + (kd_uptr)uVar6 * -3;
+        *(uint **)((kd_iptr)(kd_frame + (3 * (int)sizeof(void *)))) = auStack_3c + -(kd_uptr)uVar6;
+        *(int **)((kd_iptr)(kd_frame + (0 * (int)sizeof(void *))) + (2 * (int)sizeof(void *))) = piVar7;
+        *(int **)((kd_iptr)(kd_frame + (0 * (int)sizeof(void *))) + (1 * (int)sizeof(void *))) = piVar1;
+        *(undefined4 *)((kd_iptr)(kd_frame + (0 * (int)sizeof(void *)))) = 0x104e2;
+        iVar4 = kd_checkForCycles(*(int **)((kd_iptr)(kd_frame + (0 * (int)sizeof(void *))) + (1 * (int)sizeof(void *))),
+                               *(int **)((kd_iptr)(kd_frame + (0 * (int)sizeof(void *))) + (2 * (int)sizeof(void *))),
+                               *(int **)((kd_iptr)(kd_frame + (3 * (int)sizeof(void *)))),
+                               *(int **)((kd_iptr)(kd_frame + (4 * (int)sizeof(void *)))),
+                               *(int *)((kd_frame + (5 * (int)sizeof(void *)))),
+                               *(int *)((kd_frame + (6 * (int)sizeof(void *)))));
         inCycle = iVar4;
         if (iVar4 != 0) {
-          *(undefined4 *)((int)(kd_frame + 32)) = extraout_EDX;
-          *(undefined4 *)((kd_frame + 28)) = extraout_EDX;
+          *(undefined4 *)((kd_iptr)(kd_frame + (8 * (int)sizeof(void *)))) = extraout_EDX;
+          *(undefined4 *)((kd_frame + (7 * (int)sizeof(void *)))) = extraout_EDX;
           piVar7 = C;
-          *(uint **)((kd_frame + 24)) = auStack_3c + -uVar6;
+          *(uint **)((kd_frame + (6 * (int)sizeof(void *)))) = auStack_3c + -(kd_uptr)uVar6;
           piVar1 = I;
-          *(uint *)((kd_frame + 20)) = (int)auStack_3c + uVar6 * -3;
-          *(int **)((int)(kd_frame + 16)) = piVar7;
-          *(int **)((int)(kd_frame + 12)) = piVar1;
-          *(int *)((int)(kd_frame + 0) + 8) = iVar4;
-          *(keaLCPSolver **)((int)(kd_frame + 0) + 4) = this;
-          *(undefined4 *)((int)(kd_frame + 0)) = 0x10502;
+          *(uint *)((kd_frame + (5 * (int)sizeof(void *)))) = (kd_iptr)auStack_3c + (kd_uptr)uVar6 * -3;
+          *(int **)((kd_iptr)(kd_frame + (4 * (int)sizeof(void *)))) = piVar7;
+          *(int **)((kd_iptr)(kd_frame + (3 * (int)sizeof(void *)))) = piVar1;
+          *(int *)((kd_iptr)(kd_frame + (0 * (int)sizeof(void *))) + (2 * (int)sizeof(void *))) = iVar4;
+          *(keaLCPSolver **)((kd_iptr)(kd_frame + (0 * (int)sizeof(void *))) + (1 * (int)sizeof(void *))) = this;
+          *(undefined4 *)((kd_iptr)(kd_frame + (0 * (int)sizeof(void *)))) = 0x10502;
           inCycle = keaLCPSolver__commonPivot
-                              (*(void **)((int)(kd_frame + 0) + 4),
-                               *(int *)((int)(kd_frame + 0) + 8),
-                               *(void **)((int)(kd_frame + 12)),
-                               *(void **)((int)(kd_frame + 16)),
-                               *(void **)((kd_frame + 20)),
-                               *(void **)((kd_frame + 24)));
+                              (*(void **)((kd_iptr)(kd_frame + (0 * (int)sizeof(void *))) + (1 * (int)sizeof(void *))),
+                               *(int *)((kd_iptr)(kd_frame + (0 * (int)sizeof(void *))) + (2 * (int)sizeof(void *))),
+                               *(void **)((kd_iptr)(kd_frame + (3 * (int)sizeof(void *)))),
+                               *(void **)((kd_iptr)(kd_frame + (4 * (int)sizeof(void *)))),
+                               *(void **)((kd_frame + (5 * (int)sizeof(void *)))),
+                               *(void **)((kd_frame + (6 * (int)sizeof(void *)))));
         }
       }
-      *(undefined4 *)((int)(kd_frame + 32)) = 0x1049d;
+      *(undefined4 *)((kd_iptr)(kd_frame + (8 * (int)sizeof(void *)))) = 0x1049d;
       keaPopPoolFrame();
       iteration = iteration + 1;
       if (iteration == max_iterations) {

@@ -40,8 +40,8 @@ int kd_MdtDictCompare(void *v1,void *v2)
   uint uVar1;
 
   uVar1 = 0xffffffff;
-  if ((int)v2 <= (int)v1) {
-    uVar1 = (uint)((int)v2 < (int)v1);
+  if ((kd_iptr)v2 <= (kd_iptr)v1) {
+    uVar1 = (uint)((kd_iptr)v2 < (kd_iptr)v1);
   }
   return uVar1;
 }
@@ -331,7 +331,7 @@ void kd_GetCOMTransform(MdtBodyID b,MeVector4 *keaTM)
   for (iVar1 = 0x10; iVar1 != 0; iVar1 = iVar1 + -1) {
     (*keaTM)[0] = (*paMVar2)[0];
     paMVar2 = (MeReal (*) [4])(*paMVar2 + 1);
-    keaTM = (MeVector4 *)((int)keaTM + 4);
+    keaTM = (MeVector4 *)((kd_iptr)keaTM + 4);
   }
   return;
 }

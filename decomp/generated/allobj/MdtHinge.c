@@ -94,7 +94,7 @@ MdtConstraintID kd_MdtHingeQuaConstraint(MdtHingeID j)
 MdtHingeID kd_MdtConstraintDCastHinge(MdtConstraintID c)
 
 {
-  return (MdtHingeID)(((c->head).tag != 1) - 1 & (uint)c);
+  return (MdtHingeID)(((c->head).tag != 1) - 1 & (kd_uptr)c);
 }
 
 /* ---- MdtHingeGetLimit (exported as kd_MdtHingeGetLimit, asm label "MdtHingeGetLimit") ---- */

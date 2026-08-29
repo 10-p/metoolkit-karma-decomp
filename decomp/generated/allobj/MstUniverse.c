@@ -45,7 +45,7 @@ MstUniverseID kd_MstUniverseCreate(MstUniverseSizes *sizes)
   MstBridgeID pMVar5;
   MstUniverseID pMVar6;
 
-  pMVar1 = (MeMemoryAPI.create)(0x34);
+  pMVar1 = (MeMemoryAPI.create)((int)sizeof(*(MstUniverseID)0));
   pMVar6 = (MstUniverseID)0x0;
   if (pMVar1 != (MstUniverseID)0x0) {
     (pMVar1->sizes).dynamicBodiesMaxCount = sizes->dynamicBodiesMaxCount;

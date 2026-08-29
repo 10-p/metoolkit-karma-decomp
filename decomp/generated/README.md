@@ -14,6 +14,12 @@ notice.
 
 ## Regenerating them
 
+★ **THESE ARE `recover.py` PLUS THE LP64 POST-PASSES, and that changed on 2026-08-29.** They used
+to be the raw `recover.py` output, which encodes i386 struct LAYOUTS — fine for wasm32, i686 and
+armeabi-v7a, and somebody else's memory on arm64 and x86_64. The post-passes in `../tools/fix_*.py`
+are what make the same text correct at both widths, and they are no-ops at 32-bit pointer width
+**by measurement**: all 145 objects compile byte-identical at `-m32` before and after.
+
 ```bash
 cd karma-decomp
 rm -rf /tmp/kd_out /tmp/kd_build
@@ -24,10 +30,24 @@ python3 tools/recover.py \
   --metoolkit ../Thirdparty/metoolkit \
   --protos   /home/ion/tools/karma-lab/kd_protos11.h        # ~95 s
 
-# then refresh this directory with exactly the objects that PASSED
+# the post-passes, the i386 acceptance test and the LP64 harness, in order
+./test/lp64_pipeline.sh                                     # must end `-> PASS`
+
+# then refresh this directory from the POST-PASSED tree
 rm -f generated/allobj/*.c
-for o in /tmp/kd_build/*.o; do cp "/tmp/kd_out/allobj/$(basename "$o" .o).c" generated/allobj/; done
+for o in /tmp/kd_build/*.o; do cp "/tmp/kd_lp64/allobj/$(basename "$o" .o).c" generated/allobj/; done
 ```
+
+⚠ **`/tmp/kd_lp64`, not `/tmp/kd_out`.** Copying the raw tree here is not a visible mistake: it
+builds, every 32-bit target is byte-identical, every gate that runs at i386 passes, and only the
+64-bit ABIs are wrong. `lp64_pipeline.sh`'s own acceptance test catches the reverse mistake — a
+post-pass that is NOT a no-op at i386.
+
+⚠ **AND THIS DIRECTORY IS WHAT THE WEB BUILDS.** The `wasm-karmadecomp-*` presets compile these
+files, so a change here is a change to the browser build even when the i386 objects are identical.
+`sizeof(void *)` is 4 on wasm32, so every rewritten expression folds back to the constant it
+replaced — but that is an argument, not a measurement, and the owner's standing rule is that a
+shared/web-code change needs the verify + re-stamp gate before it is called safe.
 
 `out14` and `kd_protos11.h` **go together** — mixing either with the older pair gets `McdSpace`
 wrong in opposite directions (`../proven.txt`).

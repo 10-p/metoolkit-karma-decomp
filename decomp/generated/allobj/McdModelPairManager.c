@@ -44,7 +44,7 @@ McdModelPairManagerHash * kd_McdModelPairManagerHashCreate(int size,int buckets)
   int iVar2;
   McdModelPairManagerLink **ppMVar3;
 
-  pMVar1 = (MeMemoryAPI.create)(0xc);
+  pMVar1 = (MeMemoryAPI.create)((int)sizeof(*(McdModelPairManagerHash *)0));
   pMVar1->size = size;
   pMVar1->bucketCount = 1;
   if (1 < buckets) {
@@ -55,7 +55,7 @@ McdModelPairManagerHash * kd_McdModelPairManagerHashCreate(int size,int buckets)
     } while (1 < buckets);
     pMVar1->bucketCount = iVar2;
   }
-  ppMVar3 = (MeMemoryAPI.create)(pMVar1->bucketCount << 2);
+  ppMVar3 = (MeMemoryAPI.create)((int)((pMVar1->bucketCount) * sizeof(*(McdModelPairManagerLink **)0)));
   iVar2 = 0;
   pMVar1->bucket = ppMVar3;
   if (0 < pMVar1->bucketCount) {
@@ -84,13 +84,13 @@ McdModelPairManagerID kd_McdModelPairManagerCreate(int count)
   MePool *pMVar2;
   McdModelPairManagerHash *pMVar3;
 
-  pMVar1 = (MeMemoryAPI.create)(0x38);
-  pMVar2 = (MeMemoryAPI.create)(0x1c);
+  pMVar1 = (MeMemoryAPI.create)((int)sizeof(*(McdModelPairManagerID)0));
+  pMVar2 = (MeMemoryAPI.create)((int)sizeof(*(MePool *)0));
   pMVar1->linkPool = pMVar2;
-  (MePoolAPI.init)(pMVar2,count,0x14,0);
-  pMVar2 = (MeMemoryAPI.create)(0x1c);
+  (MePoolAPI.init)(pMVar2,count,(int)sizeof(*(McdModelPairManagerLink *)0),0);
+  pMVar2 = (MeMemoryAPI.create)((int)sizeof(*(MePool *)0));
   pMVar1->pairPool = pMVar2;
-  (MePoolAPI.init)(pMVar2,count,0x1c,0);
+  (MePoolAPI.init)(pMVar2,count,(int)sizeof(*(McdModelPairID)0),0);
   pMVar3 = kd_McdModelPairManagerHashCreate(count,count / 10);
   (pMVar1->goodbyeList).phasePrev = &pMVar1->goodbyeList;
   (pMVar1->goodbyeList).phaseNext = &pMVar1->goodbyeList;

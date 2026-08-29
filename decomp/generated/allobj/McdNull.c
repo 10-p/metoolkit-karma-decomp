@@ -66,7 +66,7 @@ McdNullID kd_McdNullCreate(McdFramework *frame)
   McdNullID pMVar1;
   McdNullID pMVar2;
 
-  pMVar1 = (MeMemoryAPI.createAligned)(0x20,0x10);
+  pMVar1 = (MeMemoryAPI.createAligned)((int)sizeof(*(McdNull *)0),0x10);
   pMVar2 = (McdNullID)0x0;
   if (pMVar1 != (McdNullID)0x0) {
     McdGeometryInit(pMVar1,frame,0);

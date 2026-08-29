@@ -470,7 +470,7 @@ MeCommandLineOptions * kd_MeCommandLineOptionsCreate(int argc,char **argv)
   uint uVar4;
   int iVar5;
 
-  pMVar2 = (MeMemoryAPI.create)(8);
+  pMVar2 = (MeMemoryAPI.create)((int)sizeof(*(MeCommandLineOptions *)0));
   if (pMVar2 == (MeCommandLineOptions *)0x0) {
     MeFatalError(0,"Unable to allocate memory for command line options");
   }

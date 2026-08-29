@@ -92,7 +92,7 @@ MdtWorldID kd_MdtWorldCreate(uint maxBodies,uint maxConstraints,MeReal lengthSca
 
   pMVar1 = (MdtWorldID)0x0;
   if (maxBodies != 0) {
-    w = (MeMemoryAPI.create)(0x234);
+    w = (MeMemoryAPI.create)((int)sizeof(*(MdtWorldID)0));
     pMVar1 = (MdtWorldID)0x0;
     if (w != (MdtWorldID)0x0) {
       (w->params).lengthScale = lengthScale;
@@ -105,10 +105,10 @@ MdtWorldID kd_MdtWorldCreate(uint maxBodies,uint maxConstraints,MeReal lengthSca
       w->nBodies = 0;
       w->nEnabledBodies = 0;
       MeChunkInit(&w->keaTMChunk,0x10);
-      (MePoolAPI.init)(&w->bodyPool,w->maxBodies,0x240,0x10);
+      (MePoolAPI.init)(&w->bodyPool,w->maxBodies,(int)sizeof(*(MdtBodyID)0),0x10);
       w->maxConstraints = maxConstraints;
       w->nEnabledConstraints = 0;
-      (MePoolAPI.init)(&w->constraintPool,w->maxConstraints,0x1ec,0);
+      (MePoolAPI.init)(&w->constraintPool,w->maxConstraints,(int)sizeof(*(struct MdtContact *)0),0);
       MeDictInit(w,1000000,MdtDictCompare);
       MeDictAllowDupes(w);
       MeDictInit(&w->enabledBodyDict,1000000,MdtDictCompare);
@@ -235,9 +235,9 @@ void kd_MdtWorldStep(MdtWorldID w,MeReal stepSize)
                         (keaCon_00->num_rows_exc_padding_partition,keaCon_00->num_partitions,uVar6,
                          po_00->totalBodies);
     ppMVar24 = ppMVar7;
-    pvVar8 = MeChunkGetMem(&w->keaPool,(int)ppMVar7);
+    pvVar8 = MeChunkGetMem(&w->keaPool,(kd_iptr)ppMVar7);
     (w->keaParams).memory_pool = pvVar8;
-    (w->keaParams).memory_pool_size = (uint)ppMVar7;
+    (w->keaParams).memory_pool_size = (kd_uptr)ppMVar7;
     pMVar23 = (MdtWorldID)0x0;
     uVar22 = 0x10470;
     MdtFlushCache(0);
@@ -259,7 +259,7 @@ void kd_MdtWorldStep(MdtWorldID w,MeReal stepSize)
     if (0 < po_00->nPartitions) {
       do {
         uVar9 = uVar6 + 1;
-        MdtUnpackBodies((void *)(po_00->bodiesStart[uVar6] * 0x40 + (int)pvVar5),uVar6,po_00);
+        MdtUnpackBodies((void *)(po_00->bodiesStart[uVar6] * 0x40 + (kd_iptr)pvVar5),uVar6,po_00);
         uVar6 = uVar9;
       } while ((int)uVar9 < po_00->nPartitions);
     }
@@ -282,7 +282,7 @@ void kd_MdtWorldStep(MdtWorldID w,MeReal stepSize)
   }
   MeChunkPutMem(&w->partOutChunk,po_00);
   for (pvVar5 = MeDictFirst(pMVar4); pvVar5 != (void *)0x0; pvVar5 = MeDictNext(pMVar4,pvVar5)) {
-    MdtBodyResetForces(*(void **)((int)pvVar5 + 0x14));
+    MdtBodyResetForces(*(void **)((kd_iptr)pvVar5 + ((int)((char *)&((struct MeDictNode *)0)->data - (char *)0))));
   }
   return;
 }
@@ -328,13 +328,13 @@ void kd_MdtWorldStepSafeTime(MdtWorldID w,MeReal stepSize)
   pMVar4 = &w->enabledBodyDict;
   MdtUpdatePartitions(pMVar4,pvVar3,MdtAutoDisableLastPartition,&w->partitionParams);
   partitionindex = 0;
-  if (0 < *(int *)((int)pvVar3 + 0x2c)) {
+  if (0 < *(int *)((kd_iptr)pvVar3 + 0x2c)) {
     pMVar11 = &w->keaParams;
     local_48 = 0;
     do {
                     
       pvVar5 = MeChunkGetMem(&w->keaTMChunk,
-                             *(int *)(*(int *)((int)pvVar3 + 0x1c) + partitionindex * 4) << 6);
+                             *(int *)(*(int *)((kd_iptr)pvVar3 + 0x1c) + partitionindex * 4) << 6);
       fVar16 = MdtPartitionGetSafeTime(pvVar3,partitionindex);
       if (fVar16 < w->minSafeTime) {
         fVar16 = w->minSafeTime;
@@ -345,9 +345,9 @@ void kd_MdtWorldStepSafeTime(MdtWorldID w,MeReal stepSize)
       }
       keaCon_00 = MdtKeaConstraintsCreateFromChunk
                             (&w->keaConstraintsChunk,1,
-                             *(int *)(*(int *)((int)pvVar3 + 0x28) + 8 + local_48) +
-                             *(int *)(*(int *)((int)pvVar3 + 0x28) + 4 + local_48),
-                             *(int *)(*(int *)((int)pvVar3 + 0x28) + local_48));
+                             *(int *)(*(int *)((kd_iptr)pvVar3 + 0x28) + 8 + local_48) +
+                             *(int *)(*(int *)((kd_iptr)pvVar3 + 0x28) + 4 + local_48),
+                             *(int *)(*(int *)((kd_iptr)pvVar3 + 0x28) + local_48));
       uVar17 = 0x10761;
       pvVar18 = pvVar3;
       iVar19 = partitionindex;
@@ -355,23 +355,23 @@ void kd_MdtWorldStepSafeTime(MdtWorldID w,MeReal stepSize)
       uVar6 = MdtPackPartition(pvVar3,partitionindex,timeStep,&w->params,pMVar11,pvVar5,keaCon_00);
       keabodyArray_00 =
            (MdtKeaBody **)
-           (*(int *)((int)pvVar3 + 0x14) +
-           *(int *)(*(int *)((int)pvVar3 + 0x18) + partitionindex * 4) * 4);
+           (*(int *)((kd_iptr)pvVar3 + 0x14) +
+           *(int *)(*(int *)((kd_iptr)pvVar3 + 0x18) + partitionindex * 4) * 4);
       (w->keaParams).gamma = (w->constantGamma / stepSize) * timeStep;
       (w->keaParams).stepsize = timeStep;
       ppMVar7 = (MdtKeaBody **)
                 MdtKeaMemoryRequired
                           (keaCon_00->num_rows_exc_padding_partition,keaCon_00->num_partitions,uVar6
-                           ,*(int *)(*(int *)((int)pvVar3 + 0x1c) + partitionindex * 4));
+                           ,*(int *)(*(int *)((kd_iptr)pvVar3 + 0x1c) + partitionindex * 4));
       ppMVar23 = ppMVar7;
-      pvVar8 = MeChunkGetMem(&w->keaPool,(int)ppMVar7);
+      pvVar8 = MeChunkGetMem(&w->keaPool,(kd_iptr)ppMVar7);
       (w->keaParams).memory_pool = pvVar8;
-      (w->keaParams).memory_pool_size = (uint)ppMVar7;
+      (w->keaParams).memory_pool_size = (kd_uptr)ppMVar7;
       pMVar22 = (MdtWorldID)0x0;
       uVar21 = 0x107df;
       MdtFlushCache(0);
       pMVar13 = pMVar11;
-      iVar9 = *(int *)(*(int *)((int)pvVar3 + 0x1c) + partitionindex * 4);
+      iVar9 = *(int *)(*(int *)((kd_iptr)pvVar3 + 0x1c) + partitionindex * 4);
       pMVar12 = keaCon_00;
       ppMVar7 = keabodyArray_00;
       pvVar8 = pvVar5;
@@ -380,11 +380,11 @@ void kd_MdtWorldStepSafeTime(MdtWorldID w,MeReal stepSize)
         uVar21 = 0x10941;
         pMVar22 = w;
         ppMVar23 = keabodyArray_00;
-        CheckSim(w,keabodyArray_00,*(int *)(*(int *)((int)pvVar3 + 0x1c) + partitionindex * 4),
+        CheckSim(w,keabodyArray_00,*(int *)(*(int *)((kd_iptr)pvVar3 + 0x1c) + partitionindex * 4),
                  keaCon_00);
       }
       pMVar13 = pMVar11;
-      in_stack_ffffff5c = *(MeReal *)(*(int *)((int)pvVar3 + 0x1c) + partitionindex * 4);
+      in_stack_ffffff5c = *(MeReal *)(*(int *)((kd_iptr)pvVar3 + 0x1c) + partitionindex * 4);
       MdtKeaIntegrateSystem(keabodyArray_00,pvVar5,(int)in_stack_ffffff5c,(w->keaParams));
       MeChunkPutMem(&w->keaPool,(w->keaParams).memory_pool);
       MdtUnpackBodies(pvVar5,partitionindex,pvVar3);
@@ -393,13 +393,13 @@ void kd_MdtWorldStepSafeTime(MdtWorldID w,MeReal stepSize)
       MeChunkPutMem(&w->keaTMChunk,pvVar5);
       partitionindex = partitionindex + 1;
       local_48 = local_48 + 0xc;
-    } while (partitionindex < *(int *)((int)pvVar3 + 0x2c));
+    } while (partitionindex < *(int *)((kd_iptr)pvVar3 + 0x2c));
   }
   MeChunkPutMem(&w->partOutChunk,pvVar3);
   for (pvVar3 = MeDictFirst(pMVar4); pvVar3 != (void *)0x0; pvVar3 = MeDictNext(pMVar4,pvVar3)) {
-    pvVar5 = *(void **)((int)pvVar3 + 0x14);
+    pvVar5 = *(void **)((kd_iptr)pvVar3 + 0x14);
     MdtBodyResetForces(pvVar5);
-    *(undefined4 *)((int)pvVar5 + 0x238) = 0x7f7fffff;
+    *(undefined4 *)((kd_iptr)pvVar5 + 0x238) = 0x7f7fffff;
   }
   return;
 }
@@ -787,7 +787,7 @@ void kd_MdtWorldResetForces(MdtWorldID w)
   void *pvVar1;
 
   for (pvVar1 = MeDictFirst(w); pvVar1 != (void *)0x0; pvVar1 = MeDictNext(w,pvVar1)) {
-    MdtBodyResetForces(*(void **)((int)pvVar1 + 0x14));
+    MdtBodyResetForces(*(void **)((kd_iptr)pvVar1 + ((int)((char *)&((struct MeDictNode *)0)->data - (char *)0))));
   }
   return;
 }
@@ -857,7 +857,7 @@ void kd_MdtWorldForAllConstraints(MdtWorldID w,MdtConstraintIteratorCBPtr cb,voi
 
   for (pvVar1 = MeDictFirst(&w->constraintDict); pvVar1 != (void *)0x0;
       pvVar1 = MeDictNext(&w->constraintDict,pvVar1)) {
-    (*cb)(*(MdtConstraintID *)((int)pvVar1 + 0x14),ccbdata);
+    (*cb)(*(MdtConstraintID *)((kd_iptr)pvVar1 + ((int)((char *)&((struct MeDictNode *)0)->data - (char *)0))),ccbdata);
   }
   return;
 }
@@ -883,7 +883,7 @@ static void DrawPartitionContacts(MdtPartitionOutput *po,int pid,MdtDebugDrawOpt
       pvVar1 = MdtConstraintDCastContactGroup(po->constraints[iVar3]);
                     
       if ((pvVar1 != (void *)0x0) &&
-         (pvVar1 = *(void **)((int)pvVar1 + 0x164), pvVar1 != (void *)0x0)) {
+         (pvVar1 = *(void **)((kd_iptr)pvVar1 + 0x164), pvVar1 != (void *)0x0)) {
         do {
           MdtContactGetPosition(pvVar1,start);
           if ((o & MdtDebugDrawContacts) != 0) {
@@ -905,7 +905,7 @@ static void DrawPartitionContacts(MdtPartitionOutput *po,int pid,MdtDebugDrawOpt
             end[2] = end[2] + start[2];
             (MeDebugDrawAPI.line)(start,end,0.0,1.0,0.0);
           }
-          pvVar1 = *(void **)((int)pvVar1 + 0x1dc);
+          pvVar1 = *(void **)((kd_iptr)pvVar1 + 0x1dc);
         } while (pvVar1 != (void *)0x0);
       }
       iVar3 = iVar3 + 1;

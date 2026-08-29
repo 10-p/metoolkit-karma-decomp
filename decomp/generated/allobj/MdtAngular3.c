@@ -107,7 +107,7 @@ MdtConstraintID kd_MdtAngular3QuaConstraint(MdtAngular3ID j)
 MdtAngular3ID kd_MdtConstraintDCastAngular3(MdtConstraintID c)
 
 {
-  return (MdtAngular3ID)(((c->head).tag != 0xc) - 1 & (uint)c);
+  return (MdtAngular3ID)(((c->head).tag != 0xc) - 1 & (kd_uptr)c);
 }
 
 /* ---- MdtAngular3GetStiffness (exported as kd_MdtAngular3GetStiffness, asm label "MdtAngular3GetStiffness") ---- */
@@ -142,7 +142,7 @@ void kd_Angular3SetBodies(MdtConstraintID c,MdtBodyID b1,MdtBodyID b2)
   iVar1 = (c->head).tag;
   BaseConstraintSetBodies(c,b1,b2);
   MdtBodyGetTransform(b1,tm);
-  MdtConstraintSetAxis((void *)((iVar1 != 0xc) - 1 & (uint)c),tm[0][0],tm[0][1],tm[0][2]);
+  MdtConstraintSetAxis((void *)((iVar1 != 0xc) - 1 & (kd_uptr)c),tm[0][0],tm[0][1],tm[0][2]);
   return;
 }
 

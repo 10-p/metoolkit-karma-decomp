@@ -735,7 +735,7 @@ bool kd_OverlapOBBCyl(MeReal *outSep,lsVec3 *outN,MeReal *outPN,lsVec3 **outPos,
     uVar16 = 1 << ((byte)i & 0x1f) & 3;
     uVar14 = 1 << (sbyte)uVar16 & 3;
                     
-    *(undefined4 *)((int)nPara.v + iVar18) = 0;
+    *(undefined4 *)((kd_iptr)nPara.v + iVar18) = 0;
     nPara.v[uVar16] = (cylAxis->v).v[uVar14];
     nPara.v[uVar14] = -(cylAxis->v).v[uVar16];
     plVar15->v[0] = nPara.v[0];
@@ -774,18 +774,18 @@ bool kd_OverlapOBBCyl(MeReal *outSep,lsVec3 *outN,MeReal *outPN,lsVec3 **outPos,
       plVar17->v[2] = 0.0;
       local_1b4->v[uVar16] = 1.0;
     }
-    local_188 = ABS(*(float *)((int)local_1b4->v + iVar18));
-    fVar1 = *(float *)((int)inT12->row[3].v.v + iVar18);
+    local_188 = ABS(*(float *)((kd_iptr)local_1b4->v + iVar18));
+    fVar1 = *(float *)((kd_iptr)inT12->row[3].v.v + iVar18);
     fVar2 = ABS(fVar1) -
-            (ABS(*(float *)((int)(cylAxis->v).v + iVar18)) * inHHCyl + local_188 * inRCyl +
-            *(float *)((int)inROBB->v + iVar18));
+            (ABS(*(float *)((kd_iptr)(cylAxis->v).v + iVar18)) * inHHCyl + local_188 * inRCyl +
+            *(float *)((kd_iptr)inROBB->v + iVar18));
     if (maxSeparation < fVar2) {
       normalSign = 1.0;
       if (0.0 < fVar1) {
         normalSign = -1.0;
       }
       normInfo = (byte)i | 0xc;
-      PN = -*(float *)((int)inROBB->v + iVar18);
+      PN = -*(float *)((kd_iptr)inROBB->v + iVar18);
       bVar20 = inEps < fVar2;
       PN = PN - fVar2;
       maxSeparation = fVar2;

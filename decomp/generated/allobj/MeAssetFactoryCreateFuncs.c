@@ -58,7 +58,7 @@ kd_McdModelCreateFromMeFAssetPart
   pMVar9 = McdModelCreate(g);
   body = (MdtBodyID)0x0;
   if (uVar8 == 2) {
-    pfVar10 = (MeMemoryAPI.createAligned)(0x40,0x10);
+    pfVar10 = (MeMemoryAPI.createAligned)((16) * (int)sizeof(*(float *)0),0x10);
     McdModelSetTransformPtr(pMVar9,pfVar10);
   }
   else {

@@ -437,7 +437,7 @@ void kd_printInvMassMatrixArray(MdtKeaInverseMassMatrix *invM,int numElts,char *
     pMVar3 = invM;
     pMVar4 = invM;
     do {
-      pfVar2 = (float *)((int)invM->invI0 + local_1c);
+      pfVar2 = (float *)((kd_iptr)invM->invI0 + local_1c);
       printf("% 09.6f ",(double)*pfVar2);
       printf("% 09.6f ",(double)pfVar2[1]);
       printf("% 09.6f ",(double)pfVar2[2]);

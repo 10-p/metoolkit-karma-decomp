@@ -156,8 +156,8 @@ McdSpaceID kd_McdSpaceAxisSortCreate(McdFramework *fwk,int axes,int objectCount,
   McdSpaceID pMVar1;
 
   pMVar1 = CxSmallSort__New(fwk,(char)axes,objectCount,pairCount);
-  *(code **)((char *)pMVar1 + 200) = McdModelUpdatePathCompatible;
-  McdModelPairManagerSetPoolFullHandler(*(void **)((char *)pMVar1 + 0x2c),defaultPoolFullHandler);
+  *(code **)((char *)pMVar1 + ((int)((char *)&((struct CxSmallSort *)0)->mAABBUpdateFn - (char *)0))) = McdModelUpdatePathCompatible;
+  McdModelPairManagerSetPoolFullHandler(*(void **)((char *)pMVar1 + ((int)((char *)&((struct CxSmallSort *)0)->mManager - (char *)0))),defaultPoolFullHandler);
   CxSmallSort__UpdateBegin(pMVar1);
   return pMVar1;
 }
@@ -181,7 +181,7 @@ void kd_McdSpaceBuild(McdSpaceID s)
 MeBool kd_McdSpaceIsChanging(McdSpaceID s)
 
 {
-  return (uint)(*(int *)((char *)s + 0xcc) != 0);
+  return (uint)(*(int *)((char *)s + ((int)((char *)&((struct CxSmallSort *)0)->mChanging - (char *)0))) != 0);
 }
 
 /* ---- McdSpaceInsertModel (exported as kd_McdSpaceInsertModel, asm label "McdSpaceInsertModel") ---- */
@@ -299,9 +299,9 @@ void kd_McdSpacePathUpdateAll(McdSpaceID s,MeReal duration)
 
 {
   MeProfileStartSectionFn("McdSpacePathUpdate",'\0');
-  *(code **)((char *)s + 200) = McdModelUpdatePath;
+  *(code **)((char *)s + ((int)((char *)&((struct CxSmallSort *)0)->mAABBUpdateFn - (char *)0))) = McdModelUpdatePath;
   CxSmallSort__UpdateAll(s,duration);
-  *(code **)((char *)s + 200) = McdModelUpdatePathCompatible;
+  *(code **)((char *)s + ((int)((char *)&((struct CxSmallSort *)0)->mAABBUpdateFn - (char *)0))) = McdModelUpdatePathCompatible;
   MeProfileEndSectionFn("McdSpacePathUpdate");
   return;
 }
@@ -310,7 +310,7 @@ void kd_McdSpacePathUpdateAll(McdSpaceID s,MeReal duration)
 void kd_McdSpaceSetAABBFn(McdSpaceID s,McdSpaceUpdateAABBFnPtr updateAABBFn)
 
 {
-  *(McdSpaceUpdateAABBFnPtr *)((char *)s + 200) = updateAABBFn;
+  *(McdSpaceUpdateAABBFnPtr *)((char *)s + ((int)((char *)&((struct CxSmallSort *)0)->mAABBUpdateFn - (char *)0))) = updateAABBFn;
   return;
 }
 
@@ -384,8 +384,8 @@ int kd_McdSpaceGetLineSegIntersections
 
   iVar8 = 0;
   iHit = 0;
-  iVar1 = *(int *)((char *)space + 0x18);
-  iVar2 = *(int *)((char *)space + 0x1c);
+  iVar1 = *(int *)((char *)space + ((int)((char *)&((struct CxSmallSort *)0)->mModelMax - (char *)0)));
+  iVar2 = *(int *)((char *)space + ((int)((char *)&((struct CxSmallSort *)0)->mFreeIDCount - (char *)0)));
   iValidModelCount = 0;
   if (((0 < inMaxListSize) && (0 < iVar1)) && (0 < iVar1 - iVar2)) {
     local_20 = outList;
@@ -393,7 +393,7 @@ int kd_McdSpaceGetLineSegIntersections
     do {
       cVar4 = CxSmallSort__ValidID(space,iVar8);
       if (cVar4 != '\0') {
-        pMVar3 = *(McdModelID *)(*(int *)((char *)space + 0xc) + 0xc + local_24);
+        pMVar3 = *(McdModelID *)(*(kd_iptr *)((char *)space + ((int)((char *)&((struct CxSmallSort *)0)->mRepList - (char *)0))) + 0xc + local_24);
         if (((pMVar3 != (McdModelID)0x0) && (pMVar3->mSpaceID != -1)) &&
            (pMVar3->mSpace == space)) {
           iValidModelCount = iValidModelCount + 1;
@@ -435,8 +435,8 @@ int kd_McdSpaceGetLineSegFirstIntersection
   McdLineSegIntersectResult tmp;
 
                     
-  iVar1 = *(int *)((char *)space + 0x18);
-  iVar2 = *(int *)((char *)space + 0x1c);
+  iVar1 = *(int *)((char *)space + ((int)((char *)&((struct CxSmallSort *)0)->mModelMax - (char *)0)));
+  iVar2 = *(int *)((char *)space + ((int)((char *)&((struct CxSmallSort *)0)->mFreeIDCount - (char *)0)));
   iValidModelCount = 0;
   outResult->distance = 1e+25;
   if ((0 < iVar1) && (0 < iVar1 - iVar2)) {
@@ -445,7 +445,7 @@ int kd_McdSpaceGetLineSegFirstIntersection
     do {
       cVar4 = CxSmallSort__ValidID(space,iVar8);
       if ((((cVar4 != '\0') &&
-           (pMVar3 = *(McdModelID *)(*(int *)((char *)space + 0xc) + 0xc + local_48),
+           (pMVar3 = *(McdModelID *)(*(kd_iptr *)((char *)space + ((int)((char *)&((struct CxSmallSort *)0)->mRepList - (char *)0))) + 0xc + local_48),
            pMVar3 != (McdModelID)0x0)) && (pMVar3->mSpaceID != -1)) &&
          (pMVar3->mSpace == space)) {
         iValidModelCount = iValidModelCount + 1;
@@ -491,8 +491,8 @@ int kd_McdSpaceGetLineSegFirstEnabledIntersection
   McdLineSegIntersectResult tmp;
 
                     
-  iVar1 = *(int *)((char *)space + 0x18);
-  iVar2 = *(int *)((char *)space + 0x1c);
+  iVar1 = *(int *)((char *)space + ((int)((char *)&((struct CxSmallSort *)0)->mModelMax - (char *)0)));
+  iVar2 = *(int *)((char *)space + ((int)((char *)&((struct CxSmallSort *)0)->mFreeIDCount - (char *)0)));
   iValidModelCount = 0;
   outResult->distance = 1e+25;
   if ((0 < iVar1) && (0 < iVar1 - iVar2)) {
@@ -501,7 +501,7 @@ int kd_McdSpaceGetLineSegFirstEnabledIntersection
     do {
       cVar4 = CxSmallSort__ValidID(space,iVar8);
       if ((((cVar4 != '\0') &&
-           (pMVar3 = *(McdModel **)(*(int *)((char *)space + 0xc) + 0xc + local_48),
+           (pMVar3 = *(McdModel **)(*(kd_iptr *)((char *)space + ((int)((char *)&((struct CxSmallSort *)0)->mRepList - (char *)0))) + 0xc + local_48),
            pMVar3 != (McdModel *)0x0)) && (pMVar3->mSpaceID != -1)) &&
          (pMVar3->mSpace == space)) {
         iValidModelCount = iValidModelCount + 1;
@@ -613,8 +613,8 @@ MeBool kd_McdSpaceGetModel(McdSpaceID space,McdSpaceModelIterator *it,McdModelID
   char cVar2;
 
   *model = (McdModelID)0x0;
-  iVar1 = *(int *)((char *)space + 0x18);
-  if (it->count < iVar1 - *(int *)((char *)space + 0x1c)) {
+  iVar1 = *(int *)((char *)space + ((int)((char *)&((struct CxSmallSort *)0)->mModelMax - (char *)0)));
+  if (it->count < iVar1 - *(int *)((char *)space + ((int)((char *)&((struct CxSmallSort *)0)->mFreeIDCount - (char *)0)))) {
     while (cVar2 = CxSmallSort__ValidID(space,it->it), cVar2 == '\0') {
       if (iVar1 <= it->it) {
         return 0;
@@ -622,7 +622,7 @@ MeBool kd_McdSpaceGetModel(McdSpaceID space,McdSpaceModelIterator *it,McdModelID
       it->it = it->it + 1;
     }
     if (it->it < iVar1) {
-      *model = *(McdModelID *)(*(int *)((char *)space + 0xc) + 0xc + it->it * 0x98);
+      *model = *(McdModelID *)(*(kd_iptr *)((char *)space + ((int)((char *)&((struct CxSmallSort *)0)->mRepList - (char *)0))) + 0xc + it->it * 0x98);
       it->count = it->count + 1;
       it->it = it->it + 1;
       return 1;
@@ -635,7 +635,7 @@ MeBool kd_McdSpaceGetModel(McdSpaceID space,McdSpaceModelIterator *it,McdModelID
 int kd_McdSpaceGetModelCount(McdSpaceID space)
 
 {
-  return *(int *)((char *)space + 0x18) - *(int *)((char *)space + 0x1c);
+  return *(int *)((char *)space + ((int)((char *)&((struct CxSmallSort *)0)->mModelMax - (char *)0))) - *(int *)((char *)space + ((int)((char *)&((struct CxSmallSort *)0)->mFreeIDCount - (char *)0)));
 }
 
 /* ---- McdSpaceSetPoolFullHandler (exported as kd_McdSpaceSetPoolFullHandler, asm label "McdSpaceSetPoolFullHandler") ---- */
@@ -645,7 +645,7 @@ void kd_McdSpaceSetPoolFullHandler(McdSpaceID space,McdSpacePoolErrorFnPtr handl
   if (handler == (McdSpacePoolErrorFnPtr)0x0) {
     handler = defaultPoolFullHandler;
   }
-  McdModelPairManagerSetPoolFullHandler(*(void **)((char *)space + 0x2c),handler);
+  McdModelPairManagerSetPoolFullHandler(*(void **)((char *)space + ((int)((char *)&((struct CxSmallSort *)0)->mManager - (char *)0))),handler);
   return;
 }
 
@@ -655,7 +655,7 @@ McdSpacePoolErrorFnPtr kd_McdSpaceGetPoolFullHandler(McdSpaceID space)
 {
   McdSpacePoolErrorFnPtr p_Var1;
   
-  p_Var1 = McdModelPairManagerGetPoolFullHandler(*(void **)((char *)space + 0x2c));
+  p_Var1 = McdModelPairManagerGetPoolFullHandler(*(void **)((char *)space + ((int)((char *)&((struct CxSmallSort *)0)->mManager - (char *)0))));
   return p_Var1;
 }
 

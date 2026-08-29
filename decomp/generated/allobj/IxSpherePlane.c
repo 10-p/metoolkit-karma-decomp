@@ -56,12 +56,12 @@ int kd_McdSpherePlaneIntersect(McdModelPair *p,McdIntersectResult *result)
   result->touch = 0;
   fVar12 = McdSphereGetRadius(pvVar8);
   iVar9 = 0;
-  fVar1 = *(float *)((int)pvVar7 + 0x20);
-  fVar2 = *(float *)((int)pvVar7 + 0x24);
-  fVar3 = *(float *)((int)pvVar7 + 0x28);
-  fVar4 = ((*(float *)((int)pvVar6 + 0x38) - *(float *)((int)pvVar7 + 0x38)) * fVar3 +
-          (*(float *)((int)pvVar6 + 0x30) - *(float *)((int)pvVar7 + 0x30)) * fVar1 +
-          (*(float *)((int)pvVar6 + 0x34) - *(float *)((int)pvVar7 + 0x34)) * fVar2) - fVar12;
+  fVar1 = *(float *)((kd_iptr)pvVar7 + 0x20);
+  fVar2 = *(float *)((kd_iptr)pvVar7 + 0x24);
+  fVar3 = *(float *)((kd_iptr)pvVar7 + 0x28);
+  fVar4 = ((*(float *)((kd_iptr)pvVar6 + 0x38) - *(float *)((kd_iptr)pvVar7 + 0x38)) * fVar3 +
+          (*(float *)((kd_iptr)pvVar6 + 0x30) - *(float *)((kd_iptr)pvVar7 + 0x30)) * fVar1 +
+          (*(float *)((kd_iptr)pvVar6 + 0x34) - *(float *)((kd_iptr)pvVar7 + 0x34)) * fVar2) - fVar12;
   if (fVar4 <= fVar11 + fVar10) {
     if (0 < result->contactMaxCount) {
       result->contacts->dims = 0x203;
@@ -71,9 +71,9 @@ int kd_McdSpherePlaneIntersect(McdModelPair *p,McdIntersectResult *result)
       pMVar5->normal[2] = fVar3;
       result->contacts->separation = fVar4;
       pMVar5 = result->contacts;
-      fVar4 = *(float *)((int)pvVar6 + 0x34);
-      fVar10 = *(float *)((int)pvVar6 + 0x38);
-      pMVar5->position[0] = *(float *)((int)pvVar6 + 0x30) - fVar12 * fVar1;
+      fVar4 = *(float *)((kd_iptr)pvVar6 + 0x34);
+      fVar10 = *(float *)((kd_iptr)pvVar6 + 0x38);
+      pMVar5->position[0] = *(float *)((kd_iptr)pvVar6 + 0x30) - fVar12 * fVar1;
       pMVar5->position[1] = fVar4 - fVar12 * fVar2;
       pMVar5->position[2] = fVar10 - fVar12 * fVar3;
       result->normal[0] = fVar1;
@@ -121,7 +121,7 @@ int kd_McdSpherePlaneSafeTime(McdModelPair *p,MeReal maxTime,McdSafeTimeResult *
   fVar1 = p->model1->frame->mScale;
   pfVar9 = McdModelGetLinearVelocityPtr(p->model1);
   pvVar10 = McdModelGetTransformPtr(p->model1);
-  pvVar10 = (void *)((int)pvVar10 + 0x30);
+  pvVar10 = (void *)((kd_iptr)pvVar10 + 0x30);
   pfVar11 = McdModelGetLinearVelocityPtr(p->model2);
   McdModelGetTransformPtr(p->model2);
   pvVar12 = McdModelGetGeometry(p->model1);

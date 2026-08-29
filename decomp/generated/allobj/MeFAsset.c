@@ -123,7 +123,7 @@ MeFAsset * kd_MeFAssetCreateCopy(MeFAsset *asset,MeBool recurse)
   MeU32 *pMVar11;
   MeIDPool *pMVar12;
   MeFJoint *pMVar13;
-  int iVar14;
+  kd_iptr iVar14;
   uint uVar15;
   MeFAssetPart *pMVar16;
   MeFAssetPart **ppMVar17;
@@ -147,12 +147,12 @@ MeFAsset * kd_MeFAssetCreateCopy(MeFAsset *asset,MeBool recurse)
   MeFAsset *pMVar25;
   MeFAsset *pMStackY_50;
   MeFAsset *pMStack_44;
-  int iStack_40;
-  MeFAssetPart *apMStack_3c [3];
+  kd_iptr iStack_40;
+  MeFAssetPart *apMStack_3c [3 * (int)(sizeof(void *) / 4)];
   MeFAssetPart **local_30;
   MeFAssetPart **copyArray;
-  int count;
-  int i;
+  kd_iptr count;
+  kd_iptr i;
   MeFAsset *asset_1;
   MeFGeometryIt it_2;
   MeFModelIt it_1;
@@ -163,16 +163,16 @@ MeFAsset * kd_MeFAssetCreateCopy(MeFAsset *asset,MeBool recurse)
   pMStackY_50 = (MeFAsset *)0x10019;
   asset_1 = (MeMemoryAPI.createZeroed)(0x5c);
   pMStackY_50 = (MeFAsset *)0x10029;
-  pMVar6 = (MeMemoryAPI.create)(0xc);
+  pMVar6 = (MeMemoryAPI.create)((int)sizeof(*(MeFGeometryNode *)0));
   asset_1->nilGeometry = pMVar6;
   pMStackY_50 = (MeFAsset *)0x1003c;
-  pMVar7 = (MeMemoryAPI.create)(0xc);
+  pMVar7 = (MeMemoryAPI.create)((int)sizeof(*(MeFModelNode *)0));
   asset_1->nilModel = pMVar7;
   pMStackY_50 = (MeFAsset *)0x1004f;
-  pMVar8 = (MeMemoryAPI.create)(0xc);
+  pMVar8 = (MeMemoryAPI.create)((int)sizeof(*(MeFAssetPartNode *)0));
   asset_1->nilPart = pMVar8;
   pMStackY_50 = (MeFAsset *)0x10062;
-  pMVar9 = (MeMemoryAPI.create)(0xc);
+  pMVar9 = (MeMemoryAPI.create)((int)sizeof(*(MeFJointNode *)0));
   asset_1->nilJoint = pMVar9;
   pMStackY_50 = (MeFAsset *)0x10074;
   pMVar10 = MeHashCreate(0x11);
@@ -211,7 +211,7 @@ MeFAsset * kd_MeFAssetCreateCopy(MeFAsset *asset,MeBool recurse)
     return asset_1;
   }
                     
-  iStack_40 = (int)asset;
+  iStack_40 = (kd_iptr)asset;
   pMStack_44 = asset;
   pMStackY_50 = (MeFAsset *)0x10165;
   kd_MeFAssetInitJointIterator(asset,&it);
@@ -222,7 +222,7 @@ MeFAsset * kd_MeFAssetCreateCopy(MeFAsset *asset,MeBool recurse)
                     
     pMStackY_50 = (MeFAsset *)0x10180;
     pMStack_44 = pMVar25;
-    iStack_40 = (int)pMVar25;
+    iStack_40 = (kd_iptr)pMVar25;
     pMVar13 = MeFJointCreateCopy(pMVar13,recurse);
     pMVar25 = asset_1;
     pMStackY_50 = (MeFAsset *)0x1018c;
@@ -232,13 +232,13 @@ MeFAsset * kd_MeFAssetCreateCopy(MeFAsset *asset,MeBool recurse)
   pMStackY_50 = (MeFAsset *)0x1019a;
   iVar14 = kd_MeFAssetGetPartCount(asset);
   count = iVar14;
-  uVar24 = iVar14 * 4 + 0xfU & 0xfffffff0;
+  uVar24 = iVar14 * 4 + 0xfU & (0xfffffff0 | ~(kd_uptr)0xffffffffU);
   kd_blk2_apMStack_3c = (char *)alloca((size_t)(iVar14) * 4 + 0);
   iVar2 = -uVar24;
-  copyArray = (MeFAssetPart **)((int)(kd_blk2_apMStack_3c));
+  copyArray = (MeFAssetPart **)((kd_iptr)(kd_blk2_apMStack_3c));
   *(int *)(&(*kd_argslot_ffffffb8)) = (kd_alloca_iVar2 = (char *)alloca((size_t)(iVar14) * 4 + 0));
   *(MeFAsset **)(&(*kd_argslot_ffffffb4)) = asset;
-  *(undefined4 *)((int)kd_scratch2_pMStackY_50) = 0x101bf;
+  *(undefined4 *)((kd_iptr)kd_scratch2_pMStackY_50) = 0x101bf;
   kd_MeFAssetGetPartsSortedByName
             (*(MeFAsset **)(&(*kd_argslot_ffffffb4)),
              *(MeFAssetPart ***)(&(*kd_argslot_ffffffb8)));
@@ -249,27 +249,27 @@ MeFAsset * kd_MeFAssetCreateCopy(MeFAsset *asset,MeBool recurse)
   pMVar25 = asset;
   if (count < 2) {
 LAB_000101e2:
-    *(MeFAsset **)((int)kd_below2_apMStack_3c + 0x0) = pMVar25;
-    *(MeFAsset **)((int)&(*kd_argslot_ffffffbc)) = pMVar25;
+    *(MeFAsset **)((kd_iptr)kd_below2_apMStack_3c + 0x0) = pMVar25;
+    *(MeFAsset **)((kd_iptr)&(*kd_argslot_ffffffbc)) = pMVar25;
     iVar14 = i;
     *(MeBool *)(&(*kd_argslot_ffffffb8)) = recurse;
     *(undefined4 *)(&(*kd_argslot_ffffffb4)) =
-         *(undefined4 *)((int)(kd_alloca_iVar2) + iVar14 * 4);
-    *(undefined4 *)((int)kd_scratch2_pMStackY_50) = 0x101f4;
+         *(undefined4 *)((kd_iptr)(kd_alloca_iVar2) + iVar14 * 4);
+    *(undefined4 *)((kd_iptr)kd_scratch2_pMStackY_50) = 0x101f4;
     pMVar16 = MeFAssetPartCreateCopy
                         (*(void **)(&(*kd_argslot_ffffffb4)),
                          *(int *)(&(*kd_argslot_ffffffb8)));
     pMVar25 = asset_1;
     *(MeFAssetPart **)(&(*kd_argslot_ffffffb8)) = pMVar16;
     *(MeFAsset **)(&(*kd_argslot_ffffffb4)) = pMVar25;
-    *(undefined4 *)((int)kd_scratch2_pMStackY_50) = 0x10202;
+    *(undefined4 *)((kd_iptr)kd_scratch2_pMStackY_50) = 0x10202;
     kd_MeFAssetInsertPart(*(MeFAsset **)(&(*kd_argslot_ffffffb4)),
                        *(MeFAssetPart **)(&(*kd_argslot_ffffffb8)));
     copyArray[i] = pMVar16;
     pMVar25 = (MeFAsset *)(i + 1);
-    i = (int)pMVar25;
+    i = (kd_iptr)pMVar25;
     ppMVar17 = copyArray;
-    if ((int)pMVar25 < count) goto LAB_00010220;
+    if ((kd_iptr)pMVar25 < count) goto LAB_00010220;
   }
   else {
     if (uVar15 != 0) {
@@ -277,114 +277,114 @@ LAB_000101e2:
         pMVar16 = (MeFAssetPart *)asset;
         if (2 < uVar15) {
                     
-          *(MeFAsset **)((int)kd_below2_apMStack_3c + 0x0) = asset;
-          *(MeFAsset **)((int)&(*kd_argslot_ffffffbc)) = asset;
+          *(MeFAsset **)((kd_iptr)kd_below2_apMStack_3c + 0x0) = asset;
+          *(MeFAsset **)((kd_iptr)&(*kd_argslot_ffffffbc)) = asset;
           *(MeBool *)(&(*kd_argslot_ffffffb8)) = recurse;
           *(undefined4 *)(&(*kd_argslot_ffffffb4)) =
-               *(undefined4 *)((int)(kd_alloca_iVar2));
-          *(undefined4 *)((int)kd_scratch2_pMStackY_50) = 0x105cf;
+               *(undefined4 *)((kd_iptr)(kd_alloca_iVar2));
+          *(undefined4 *)((kd_iptr)kd_scratch2_pMStackY_50) = 0x105cf;
           pMVar16 = MeFAssetPartCreateCopy
                               (*(void **)(&(*kd_argslot_ffffffb4)),
                                *(int *)(&(*kd_argslot_ffffffb8)));
           pMVar25 = asset_1;
           *(MeFAssetPart **)(&(*kd_argslot_ffffffb8)) = pMVar16;
           *(MeFAsset **)(&(*kd_argslot_ffffffb4)) = pMVar25;
-          *(undefined4 *)((int)kd_scratch2_pMStackY_50) = 0x105dd;
+          *(undefined4 *)((kd_iptr)kd_scratch2_pMStackY_50) = 0x105dd;
           kd_MeFAssetInsertPart(*(MeFAsset **)(&(*kd_argslot_ffffffb4)),
                              *(MeFAssetPart **)(&(*kd_argslot_ffffffb8)));
           *copyArray = pMVar16;
           i = 1;
         }
         i = (int)(2 < uVar15);
-        *(MeFAssetPart **)((int)kd_below2_apMStack_3c + 0x0) = pMVar16;
-        *(MeFAssetPart **)((int)&(*kd_argslot_ffffffbc)) = pMVar16;
+        *(MeFAssetPart **)((kd_iptr)kd_below2_apMStack_3c + 0x0) = pMVar16;
+        *(MeFAssetPart **)((kd_iptr)&(*kd_argslot_ffffffbc)) = pMVar16;
         iVar14 = i;
         *(MeBool *)(&(*kd_argslot_ffffffb8)) = recurse;
         *(undefined4 *)(&(*kd_argslot_ffffffb4)) =
-             *(undefined4 *)((int)(kd_alloca_iVar2) + iVar14 * 4);
-        *(undefined4 *)((int)kd_scratch2_pMStackY_50) = 0x1059e;
+             *(undefined4 *)((kd_iptr)(kd_alloca_iVar2) + iVar14 * 4);
+        *(undefined4 *)((kd_iptr)kd_scratch2_pMStackY_50) = 0x1059e;
         pMVar16 = MeFAssetPartCreateCopy
                             (*(void **)(&(*kd_argslot_ffffffb4)),
                              *(int *)(&(*kd_argslot_ffffffb8)));
         pMVar25 = asset_1;
         *(MeFAssetPart **)(&(*kd_argslot_ffffffb8)) = pMVar16;
         *(MeFAsset **)(&(*kd_argslot_ffffffb4)) = pMVar25;
-        *(undefined4 *)((int)kd_scratch2_pMStackY_50) = 0x105ac;
+        *(undefined4 *)((kd_iptr)kd_scratch2_pMStackY_50) = 0x105ac;
         kd_MeFAssetInsertPart(*(MeFAsset **)(&(*kd_argslot_ffffffb4)),
                            *(MeFAssetPart **)(&(*kd_argslot_ffffffb8)));
         copyArray[i] = pMVar16;
         pMVar25 = (MeFAsset *)(i + 1);
-        i = (int)pMVar25;
+        i = (kd_iptr)pMVar25;
       }
       goto LAB_000101e2;
     }
 LAB_00010220:
     do {
-      *(MeFAsset **)((int)kd_below2_apMStack_3c + 0x0) = pMVar25;
-      *(MeFAsset **)((int)&(*kd_argslot_ffffffbc)) = pMVar25;
+      *(MeFAsset **)((kd_iptr)kd_below2_apMStack_3c + 0x0) = pMVar25;
+      *(MeFAsset **)((kd_iptr)&(*kd_argslot_ffffffbc)) = pMVar25;
       iVar14 = i;
       *(MeBool *)(&(*kd_argslot_ffffffb8)) = recurse;
       *(undefined4 *)(&(*kd_argslot_ffffffb4)) =
-           *(undefined4 *)((int)(kd_alloca_iVar2) + iVar14 * 4);
-      *(undefined4 *)((int)kd_scratch2_pMStackY_50) = 0x10232;
+           *(undefined4 *)((kd_iptr)(kd_alloca_iVar2) + iVar14 * 4);
+      *(undefined4 *)((kd_iptr)kd_scratch2_pMStackY_50) = 0x10232;
       pMVar16 = MeFAssetPartCreateCopy
                           (*(void **)(&(*kd_argslot_ffffffb4)),
                            *(int *)(&(*kd_argslot_ffffffb8)));
       pMVar25 = asset_1;
       *(MeFAssetPart **)(&(*kd_argslot_ffffffb8)) = pMVar16;
       *(MeFAsset **)(&(*kd_argslot_ffffffb4)) = pMVar25;
-      *(undefined4 *)((int)kd_scratch2_pMStackY_50) = 0x10240;
+      *(undefined4 *)((kd_iptr)kd_scratch2_pMStackY_50) = 0x10240;
       kd_MeFAssetInsertPart(*(MeFAsset **)(&(*kd_argslot_ffffffb4)),
                          *(MeFAssetPart **)(&(*kd_argslot_ffffffb8)));
       copyArray[i] = pMVar16;
       iVar14 = i + 1;
       *(MeBool *)(&(*kd_argslot_ffffffb8)) = recurse;
       *(undefined4 *)(&(*kd_argslot_ffffffb4)) =
-           *(undefined4 *)((int)(kd_alloca_iVar2) + iVar14 * 4);
-      *(undefined4 *)((int)kd_scratch2_pMStackY_50) = 0x1025b;
+           *(undefined4 *)((kd_iptr)(kd_alloca_iVar2) + iVar14 * 4);
+      *(undefined4 *)((kd_iptr)kd_scratch2_pMStackY_50) = 0x1025b;
       pMVar16 = MeFAssetPartCreateCopy
                           (*(void **)(&(*kd_argslot_ffffffb4)),
                            *(int *)(&(*kd_argslot_ffffffb8)));
       pMVar25 = asset_1;
       *(MeFAssetPart **)(&(*kd_argslot_ffffffb8)) = pMVar16;
       *(MeFAsset **)(&(*kd_argslot_ffffffb4)) = pMVar25;
-      *(undefined4 *)((int)kd_scratch2_pMStackY_50) = 0x10269;
+      *(undefined4 *)((kd_iptr)kd_scratch2_pMStackY_50) = 0x10269;
       kd_MeFAssetInsertPart(*(MeFAsset **)(&(*kd_argslot_ffffffb4)),
                          *(MeFAssetPart **)(&(*kd_argslot_ffffffb8)));
       copyArray[iVar14] = pMVar16;
       iVar14 = i + 2;
       *(MeBool *)(&(*kd_argslot_ffffffb8)) = recurse;
       *(undefined4 *)(&(*kd_argslot_ffffffb4)) =
-           *(undefined4 *)((int)(kd_alloca_iVar2) + iVar14 * 4);
-      *(undefined4 *)((int)kd_scratch2_pMStackY_50) = 0x10284;
+           *(undefined4 *)((kd_iptr)(kd_alloca_iVar2) + iVar14 * 4);
+      *(undefined4 *)((kd_iptr)kd_scratch2_pMStackY_50) = 0x10284;
       pMVar16 = MeFAssetPartCreateCopy
                           (*(void **)(&(*kd_argslot_ffffffb4)),
                            *(int *)(&(*kd_argslot_ffffffb8)));
       pMVar25 = asset_1;
       *(MeFAssetPart **)(&(*kd_argslot_ffffffb8)) = pMVar16;
       *(MeFAsset **)(&(*kd_argslot_ffffffb4)) = pMVar25;
-      *(undefined4 *)((int)kd_scratch2_pMStackY_50) = 0x10292;
+      *(undefined4 *)((kd_iptr)kd_scratch2_pMStackY_50) = 0x10292;
       kd_MeFAssetInsertPart(*(MeFAsset **)(&(*kd_argslot_ffffffb4)),
                          *(MeFAssetPart **)(&(*kd_argslot_ffffffb8)));
       copyArray[iVar14] = pMVar16;
       pMVar25 = (MeFAsset *)(i + 3);
       *(MeBool *)(&(*kd_argslot_ffffffb8)) = recurse;
       *(undefined4 *)(&(*kd_argslot_ffffffb4)) =
-           *(undefined4 *)((int)apMStack_3c + (int)pMVar25 * 4);
-      *(undefined4 *)((int)kd_scratch2_pMStackY_50) = 0x102ad;
+           *(undefined4 *)((kd_iptr)apMStack_3c + (kd_iptr)pMVar25 * 4);
+      *(undefined4 *)((kd_iptr)kd_scratch2_pMStackY_50) = 0x102ad;
       pMVar16 = MeFAssetPartCreateCopy
                           (*(void **)(&(*kd_argslot_ffffffb4)),
                            *(int *)(&(*kd_argslot_ffffffb8)));
       pMVar5 = asset_1;
       *(MeFAssetPart **)(&(*kd_argslot_ffffffb8)) = pMVar16;
       *(MeFAsset **)(&(*kd_argslot_ffffffb4)) = pMVar5;
-      *(undefined4 *)((int)kd_scratch2_pMStackY_50) = 0x102bb;
+      *(undefined4 *)((kd_iptr)kd_scratch2_pMStackY_50) = 0x102bb;
       kd_MeFAssetInsertPart(*(MeFAsset **)(&(*kd_argslot_ffffffb4)),
                          *(MeFAssetPart **)(&(*kd_argslot_ffffffb8)));
-      copyArray[(int)pMVar25] = pMVar16;
+      copyArray[(kd_iptr)pMVar25] = pMVar16;
       ppMVar17 = (MeFAssetPart **)(i + 4);
-      i = (int)ppMVar17;
-    } while ((int)ppMVar17 < count);
+      i = (kd_iptr)ppMVar17;
+    } while ((kd_iptr)ppMVar17 < count);
   }
   i = 0;
   if (0 < count) {
@@ -393,9 +393,9 @@ LAB_00010220:
       iVar14 = i;
       ppMVar17 = (MeFAssetPart **)(i + 1);
       local_30 = ppMVar17;
-      if ((int)ppMVar17 < count) {
+      if ((kd_iptr)ppMVar17 < count) {
         iVar22 = i + 2;
-        uVar15 = count - (int)ppMVar17 & 3;
+        uVar15 = count - (kd_iptr)ppMVar17 & 3;
         if (iVar22 < count) {
           iVar18 = count;
           if (uVar15 != 0) {
@@ -403,36 +403,36 @@ LAB_00010220:
               if (2 < uVar15) {
                 iVar22 = i;
                 *(undefined4 *)(&(*kd_argslot_ffffffb8)) =
-                     *(undefined4 *)((int)apMStack_3c + (int)ppMVar17 * 4);
+                     *(undefined4 *)((kd_iptr)apMStack_3c + (kd_iptr)ppMVar17 * 4);
                 *(undefined4 *)(&(*kd_argslot_ffffffb4)) =
-                     *(undefined4 *)((int)(kd_alloca_iVar2) + iVar22 * 4);
-                *(undefined4 *)((int)kd_scratch2_pMStackY_50) = 0x1054e;
+                     *(undefined4 *)((kd_iptr)(kd_alloca_iVar2) + iVar22 * 4);
+                *(undefined4 *)((kd_iptr)kd_scratch2_pMStackY_50) = 0x1054e;
                 iVar18 = MeFAssetPartIsCollisionEnabled
                                    (*(void **)(&(*kd_argslot_ffffffb4)),
                                     *(void **)(&(*kd_argslot_ffffffb8)));
                 ppMVar4 = copyArray;
                 ppMVar17 = local_30;
                 if (iVar18 == 0) {
-                  *(undefined4 *)((int)kd_below2_apMStack_3c + 0x0) = 0;
-                  *(undefined4 *)((int)&(*kd_argslot_ffffffbc)) = 0;
+                  *(undefined4 *)((kd_iptr)kd_below2_apMStack_3c + 0x0) = 0;
+                  *(undefined4 *)((kd_iptr)&(*kd_argslot_ffffffbc)) = 0;
                   iVar22 = i;
-                  *(MeFAssetPart **)(&(*kd_argslot_ffffffb8)) = ppMVar4[(int)ppMVar17];
+                  *(MeFAssetPart **)(&(*kd_argslot_ffffffb8)) = ppMVar4[(kd_iptr)ppMVar17];
                   *(MeFAssetPart **)(&(*kd_argslot_ffffffb4)) = ppMVar4[iVar22];
-                  *(undefined4 *)((int)kd_scratch2_pMStackY_50) = 0x10571;
+                  *(undefined4 *)((kd_iptr)kd_scratch2_pMStackY_50) = 0x10571;
                   MeFAssetPartEnableCollision
                             (*(void **)(&(*kd_argslot_ffffffb4)),
                              *(void **)(&(*kd_argslot_ffffffb8)),
-                             *(int *)((int)&(*kd_argslot_ffffffbc)));
+                             *(int *)((kd_iptr)&(*kd_argslot_ffffffbc)));
                   iVar18 = extraout_EAX_03;
                 }
                 ppMVar17 = (MeFAssetPart **)(iVar14 + 2);
               }
               iVar14 = i;
               *(undefined4 *)(&(*kd_argslot_ffffffb8)) =
-                   *(undefined4 *)((int)apMStack_3c + (int)ppMVar17 * 4);
+                   *(undefined4 *)((kd_iptr)apMStack_3c + (kd_iptr)ppMVar17 * 4);
               *(undefined4 *)(&(*kd_argslot_ffffffb4)) =
-                   *(undefined4 *)((int)(kd_alloca_iVar2) + iVar14 * 4);
-              *(undefined4 *)((int)kd_scratch2_pMStackY_50) = 0x10514;
+                   *(undefined4 *)((kd_iptr)(kd_alloca_iVar2) + iVar14 * 4);
+              *(undefined4 *)((kd_iptr)kd_scratch2_pMStackY_50) = 0x10514;
               iVar14 = MeFAssetPartIsCollisionEnabled
                                  (*(void **)(&(*kd_argslot_ffffffb4)),
                                   *(void **)(&(*kd_argslot_ffffffb8)));
@@ -440,17 +440,17 @@ LAB_00010220:
               iVar22 = extraout_ECX_02;
               if (iVar14 == 0) {
                 iVar14 = i;
-                *(undefined4 *)((int)&(*kd_argslot_ffffffbc)) = 0;
-                *(MeFAssetPart **)(&(*kd_argslot_ffffffb8)) = ppMVar4[(int)ppMVar17];
+                *(undefined4 *)((kd_iptr)&(*kd_argslot_ffffffbc)) = 0;
+                *(MeFAssetPart **)(&(*kd_argslot_ffffffb8)) = ppMVar4[(kd_iptr)ppMVar17];
                 *(MeFAssetPart **)(&(*kd_argslot_ffffffb4)) = ppMVar4[iVar14];
-                *(undefined4 *)((int)kd_scratch2_pMStackY_50) = 0x10537;
+                *(undefined4 *)((kd_iptr)kd_scratch2_pMStackY_50) = 0x10537;
                 MeFAssetPartEnableCollision
                           (*(void **)(&(*kd_argslot_ffffffb4)),
                            *(void **)(&(*kd_argslot_ffffffb8)),
-                           *(int *)((int)&(*kd_argslot_ffffffbc)));
+                           *(int *)((kd_iptr)&(*kd_argslot_ffffffbc)));
                 iVar22 = extraout_ECX_03;
               }
-              ppMVar17 = (MeFAssetPart **)((int)ppMVar17 + 1);
+              ppMVar17 = (MeFAssetPart **)((kd_iptr)ppMVar17 + 1);
             }
             goto LAB_00010318;
           }
@@ -459,183 +459,183 @@ LAB_00010220:
 LAB_00010318:
           iVar14 = i;
           *(undefined4 *)(&(*kd_argslot_ffffffb8)) =
-               *(undefined4 *)((int)apMStack_3c + (int)ppMVar17 * 4);
+               *(undefined4 *)((kd_iptr)apMStack_3c + (kd_iptr)ppMVar17 * 4);
           *(undefined4 *)(&(*kd_argslot_ffffffb4)) =
-               *(undefined4 *)((int)(kd_alloca_iVar2) + iVar14 * 4);
-          *(undefined4 *)((int)kd_scratch2_pMStackY_50) = 0x1032a;
+               *(undefined4 *)((kd_iptr)(kd_alloca_iVar2) + iVar14 * 4);
+          *(undefined4 *)((kd_iptr)kd_scratch2_pMStackY_50) = 0x1032a;
           iVar18 = MeFAssetPartIsCollisionEnabled
                              (*(void **)(&(*kd_argslot_ffffffb4)),
                               *(void **)(&(*kd_argslot_ffffffb8)));
           ppMVar4 = copyArray;
           if (iVar18 == 0) {
-            *(undefined4 *)((int)kd_below2_apMStack_3c + 0x0) = 0;
+            *(undefined4 *)((kd_iptr)kd_below2_apMStack_3c + 0x0) = 0;
             iVar14 = i;
-            *(undefined4 *)((int)&(*kd_argslot_ffffffbc)) = 0;
-            *(MeFAssetPart **)(&(*kd_argslot_ffffffb8)) = ppMVar4[(int)ppMVar17];
+            *(undefined4 *)((kd_iptr)&(*kd_argslot_ffffffbc)) = 0;
+            *(MeFAssetPart **)(&(*kd_argslot_ffffffb8)) = ppMVar4[(kd_iptr)ppMVar17];
             *(MeFAssetPart **)(&(*kd_argslot_ffffffb4)) = ppMVar4[iVar14];
-            *(undefined4 *)((int)kd_scratch2_pMStackY_50) = 0x104e4;
+            *(undefined4 *)((kd_iptr)kd_scratch2_pMStackY_50) = 0x104e4;
             MeFAssetPartEnableCollision
                       (*(void **)(&(*kd_argslot_ffffffb4)),
                        *(void **)(&(*kd_argslot_ffffffb8)),
-                       *(int *)((int)&(*kd_argslot_ffffffbc)));
+                       *(int *)((kd_iptr)&(*kd_argslot_ffffffbc)));
             iVar18 = extraout_EAX_02;
           }
-          ppMVar17 = (MeFAssetPart **)((int)ppMVar17 + 1);
-          if (count <= (int)ppMVar17) goto LAB_000103c9;
+          ppMVar17 = (MeFAssetPart **)((kd_iptr)ppMVar17 + 1);
+          if (count <= (kd_iptr)ppMVar17) goto LAB_000103c9;
         }
         do {
           iVar14 = i;
           *(undefined4 *)(&(*kd_argslot_ffffffb8)) =
-               *(undefined4 *)((int)apMStack_3c + (int)ppMVar17 * 4);
+               *(undefined4 *)((kd_iptr)apMStack_3c + (kd_iptr)ppMVar17 * 4);
           *(undefined4 *)(&(*kd_argslot_ffffffb4)) =
-               *(undefined4 *)((int)(kd_alloca_iVar2) + iVar14 * 4);
-          *(undefined4 *)((int)kd_scratch2_pMStackY_50) = 0x10352;
+               *(undefined4 *)((kd_iptr)(kd_alloca_iVar2) + iVar14 * 4);
+          *(undefined4 *)((kd_iptr)kd_scratch2_pMStackY_50) = 0x10352;
           iVar14 = MeFAssetPartIsCollisionEnabled
                              (*(void **)(&(*kd_argslot_ffffffb4)),
                               *(void **)(&(*kd_argslot_ffffffb8)));
           ppMVar4 = copyArray;
           if (iVar14 == 0) {
             iVar14 = i;
-            *(undefined4 *)((int)&(*kd_argslot_ffffffbc)) = 0;
-            *(MeFAssetPart **)(&(*kd_argslot_ffffffb8)) = ppMVar4[(int)ppMVar17];
+            *(undefined4 *)((kd_iptr)&(*kd_argslot_ffffffbc)) = 0;
+            *(MeFAssetPart **)(&(*kd_argslot_ffffffb8)) = ppMVar4[(kd_iptr)ppMVar17];
             *(MeFAssetPart **)(&(*kd_argslot_ffffffb4)) = ppMVar4[iVar14];
-            *(undefined4 *)((int)kd_scratch2_pMStackY_50) = 0x104c6;
+            *(undefined4 *)((kd_iptr)kd_scratch2_pMStackY_50) = 0x104c6;
             MeFAssetPartEnableCollision
                       (*(void **)(&(*kd_argslot_ffffffb4)),
                        *(void **)(&(*kd_argslot_ffffffb8)),
-                       *(int *)((int)&(*kd_argslot_ffffffbc)));
+                       *(int *)((kd_iptr)&(*kd_argslot_ffffffbc)));
             iVar14 = extraout_EAX_01;
           }
           iVar22 = i;
           *(undefined4 *)(&(*kd_argslot_ffffffb8)) =
-               *(undefined4 *)((int)apMStack_3c + ((int)ppMVar17 + 1) * 4);
+               *(undefined4 *)((kd_iptr)apMStack_3c + ((kd_iptr)ppMVar17 + 1) * 4);
           *(undefined4 *)(&(*kd_argslot_ffffffb4)) =
-               *(undefined4 *)((int)(kd_alloca_iVar2) + iVar22 * 4);
-          *(undefined4 *)((int)kd_scratch2_pMStackY_50) = 0x10372;
+               *(undefined4 *)((kd_iptr)(kd_alloca_iVar2) + iVar22 * 4);
+          *(undefined4 *)((kd_iptr)kd_scratch2_pMStackY_50) = 0x10372;
           iVar14 = MeFAssetPartIsCollisionEnabled
                              (*(void **)(&(*kd_argslot_ffffffb4)),
                               *(void **)(&(*kd_argslot_ffffffb8)));
           ppMVar4 = copyArray;
           if (iVar14 == 0) {
-            *(undefined4 *)((int)kd_below2_apMStack_3c + 0x0) = 0;
-            *(undefined4 *)((int)&(*kd_argslot_ffffffbc)) = 0;
-            *(MeFAssetPart **)(&(*kd_argslot_ffffffb8)) = ppMVar4[(int)ppMVar17 + 1];
+            *(undefined4 *)((kd_iptr)kd_below2_apMStack_3c + 0x0) = 0;
+            *(undefined4 *)((kd_iptr)&(*kd_argslot_ffffffbc)) = 0;
+            *(MeFAssetPart **)(&(*kd_argslot_ffffffb8)) = ppMVar4[(kd_iptr)ppMVar17 + 1];
             *(MeFAssetPart **)(&(*kd_argslot_ffffffb4)) = ppMVar4[i];
-            *(undefined4 *)((int)kd_scratch2_pMStackY_50) = 0x104a7;
+            *(undefined4 *)((kd_iptr)kd_scratch2_pMStackY_50) = 0x104a7;
             MeFAssetPartEnableCollision
                       (*(void **)(&(*kd_argslot_ffffffb4)),
                        *(void **)(&(*kd_argslot_ffffffb8)),
-                       *(int *)((int)&(*kd_argslot_ffffffbc)));
+                       *(int *)((kd_iptr)&(*kd_argslot_ffffffbc)));
             iVar14 = extraout_EAX_00;
           }
           iVar14 = i;
           *(undefined4 *)(&(*kd_argslot_ffffffb8)) =
-               *(undefined4 *)((int)apMStack_3c + ((int)ppMVar17 + 2) * 4);
+               *(undefined4 *)((kd_iptr)apMStack_3c + ((kd_iptr)ppMVar17 + 2) * 4);
           *(undefined4 *)(&(*kd_argslot_ffffffb4)) =
-               *(undefined4 *)((int)(kd_alloca_iVar2) + iVar14 * 4);
-          *(undefined4 *)((int)kd_scratch2_pMStackY_50) = 0x10392;
+               *(undefined4 *)((kd_iptr)(kd_alloca_iVar2) + iVar14 * 4);
+          *(undefined4 *)((kd_iptr)kd_scratch2_pMStackY_50) = 0x10392;
           iVar14 = MeFAssetPartIsCollisionEnabled
                              (*(void **)(&(*kd_argslot_ffffffb4)),
                               *(void **)(&(*kd_argslot_ffffffb8)));
           ppMVar4 = copyArray;
           if (iVar14 == 0) {
-            *(undefined4 *)((int)&(*kd_argslot_ffffffbc)) = 0;
+            *(undefined4 *)((kd_iptr)&(*kd_argslot_ffffffbc)) = 0;
             iVar14 = i;
-            *(MeFAssetPart **)(&(*kd_argslot_ffffffb8)) = ppMVar4[(int)ppMVar17 + 2];
+            *(MeFAssetPart **)(&(*kd_argslot_ffffffb8)) = ppMVar4[(kd_iptr)ppMVar17 + 2];
             *(MeFAssetPart **)(&(*kd_argslot_ffffffb4)) = ppMVar4[iVar14];
-            *(undefined4 *)((int)kd_scratch2_pMStackY_50) = 0x10489;
+            *(undefined4 *)((kd_iptr)kd_scratch2_pMStackY_50) = 0x10489;
             MeFAssetPartEnableCollision
                       (*(void **)(&(*kd_argslot_ffffffb4)),
                        *(void **)(&(*kd_argslot_ffffffb8)),
-                       *(int *)((int)&(*kd_argslot_ffffffbc)));
+                       *(int *)((kd_iptr)&(*kd_argslot_ffffffbc)));
           }
           iVar14 = i;
           *(undefined4 *)(&(*kd_argslot_ffffffb8)) =
-               *(undefined4 *)((int)apMStack_3c + ((int)ppMVar17 + 3) * 4);
+               *(undefined4 *)((kd_iptr)apMStack_3c + ((kd_iptr)ppMVar17 + 3) * 4);
           *(undefined4 *)(&(*kd_argslot_ffffffb4)) =
-               *(undefined4 *)((int)(kd_alloca_iVar2) + iVar14 * 4);
-          *(undefined4 *)((int)kd_scratch2_pMStackY_50) = 0x103b2;
+               *(undefined4 *)((kd_iptr)(kd_alloca_iVar2) + iVar14 * 4);
+          *(undefined4 *)((kd_iptr)kd_scratch2_pMStackY_50) = 0x103b2;
           iVar18 = MeFAssetPartIsCollisionEnabled
                              (*(void **)(&(*kd_argslot_ffffffb4)),
                               *(void **)(&(*kd_argslot_ffffffb8)));
           ppMVar4 = copyArray;
           if (iVar18 == 0) {
-            *(undefined4 *)((int)kd_below2_apMStack_3c + 0x0) = 0;
-            *(undefined4 *)((int)&(*kd_argslot_ffffffbc)) = 0;
-            *(MeFAssetPart **)(&(*kd_argslot_ffffffb8)) = ppMVar4[(int)ppMVar17 + 3];
+            *(undefined4 *)((kd_iptr)kd_below2_apMStack_3c + 0x0) = 0;
+            *(undefined4 *)((kd_iptr)&(*kd_argslot_ffffffbc)) = 0;
+            *(MeFAssetPart **)(&(*kd_argslot_ffffffb8)) = ppMVar4[(kd_iptr)ppMVar17 + 3];
             *(MeFAssetPart **)(&(*kd_argslot_ffffffb4)) = ppMVar4[i];
-            *(undefined4 *)((int)kd_scratch2_pMStackY_50) = 0x1046b;
+            *(undefined4 *)((kd_iptr)kd_scratch2_pMStackY_50) = 0x1046b;
             MeFAssetPartEnableCollision
                       (*(void **)(&(*kd_argslot_ffffffb4)),
                        *(void **)(&(*kd_argslot_ffffffb8)),
-                       *(int *)((int)&(*kd_argslot_ffffffbc)));
+                       *(int *)((kd_iptr)&(*kd_argslot_ffffffbc)));
             iVar18 = extraout_EAX;
           }
           ppMVar17 = ppMVar17 + 1;
-        } while ((int)ppMVar17 < count);
+        } while ((kd_iptr)ppMVar17 < count);
       }
 LAB_000103c9:
-      i = (int)local_30;
+      i = (kd_iptr)local_30;
       ppMVar17 = local_30;
-    } while ((int)local_30 < count);
+    } while ((kd_iptr)local_30 < count);
   }
 LAB_000103da:
                     
-  *(MeFAssetPart ***)((int)kd_below2_apMStack_3c + 0x0) = ppMVar17;
-  *(MeFAssetPart ***)((int)&(*kd_argslot_ffffffbc)) = ppMVar17;
+  *(MeFAssetPart ***)((kd_iptr)kd_below2_apMStack_3c + 0x0) = ppMVar17;
+  *(MeFAssetPart ***)((kd_iptr)&(*kd_argslot_ffffffbc)) = ppMVar17;
   *(MeFModelIt **)(&(*kd_argslot_ffffffb8)) = &it_1;
   *(MeFAsset **)(&(*kd_argslot_ffffffb4)) = asset;
-  *(undefined4 *)((int)kd_scratch2_pMStackY_50) = 0x103e9;
+  *(undefined4 *)((kd_iptr)kd_scratch2_pMStackY_50) = 0x103e9;
   kd_MeFAssetInitModelIterator
             (*(MeFAsset **)(&(*kd_argslot_ffffffb4)),
              *(MeFModelIt **)(&(*kd_argslot_ffffffb8)));
   while( true ) {
     *(MeFModelIt **)(&(*kd_argslot_ffffffb4)) = &it_1;
-    *(undefined4 *)((int)kd_scratch2_pMStackY_50) = 0x103f8;
+    *(undefined4 *)((kd_iptr)kd_scratch2_pMStackY_50) = 0x103f8;
     pMVar19 = kd_MeFAssetGetModel(*(MeFModelIt **)(&(*kd_argslot_ffffffb4)));
     if (pMVar19 == (MeFModel *)0x0) break;
                     
-    *(MeFAsset **)((int)kd_below2_apMStack_3c + 0x0) = asset;
-    *(MeFAsset **)((int)&(*kd_argslot_ffffffbc)) = asset;
+    *(MeFAsset **)((kd_iptr)kd_below2_apMStack_3c + 0x0) = asset;
+    *(MeFAsset **)((kd_iptr)&(*kd_argslot_ffffffbc)) = asset;
     *(MeBool *)(&(*kd_argslot_ffffffb8)) = recurse;
     *(MeFModel **)(&(*kd_argslot_ffffffb4)) = pMVar19;
-    *(undefined4 *)((int)kd_scratch2_pMStackY_50) = 0x1040b;
+    *(undefined4 *)((kd_iptr)kd_scratch2_pMStackY_50) = 0x1040b;
     pvVar20 = MeFModelCreateCopy(*(void **)(&(*kd_argslot_ffffffb4)),
                                  *(int *)(&(*kd_argslot_ffffffb8)));
     pMVar25 = asset_1;
     *(void **)(&(*kd_argslot_ffffffb8)) = pvVar20;
     *(MeFAsset **)(&(*kd_argslot_ffffffb4)) = pMVar25;
-    *(undefined4 *)((int)kd_scratch2_pMStackY_50) = 0x10417;
+    *(undefined4 *)((kd_iptr)kd_scratch2_pMStackY_50) = 0x10417;
     kd_MeFAssetInsertModel(*(MeFAsset **)(&(*kd_argslot_ffffffb4)),
                         *(MeFModel **)(&(*kd_argslot_ffffffb8)));
   }
                     
-  *(undefined4 *)((int)kd_below2_apMStack_3c + 0x0) = 0;
-  *(undefined4 *)((int)&(*kd_argslot_ffffffbc)) = 0;
+  *(undefined4 *)((kd_iptr)kd_below2_apMStack_3c + 0x0) = 0;
+  *(undefined4 *)((kd_iptr)&(*kd_argslot_ffffffbc)) = 0;
   *(MeFGeometryIt **)(&(*kd_argslot_ffffffb8)) = &it_2;
   *(MeFAsset **)(&(*kd_argslot_ffffffb4)) = asset;
-  *(undefined4 *)((int)kd_scratch2_pMStackY_50) = 0x10428;
+  *(undefined4 *)((kd_iptr)kd_scratch2_pMStackY_50) = 0x10428;
   kd_MeFAssetInitGeometryIterator
             (*(MeFAsset **)(&(*kd_argslot_ffffffb4)),
              *(MeFGeometryIt **)(&(*kd_argslot_ffffffb8)));
   while( true ) {
     *(MeFGeometryIt **)(&(*kd_argslot_ffffffb4)) = &it_2;
-    *(undefined4 *)((int)kd_scratch2_pMStackY_50) = 0x10430;
+    *(undefined4 *)((kd_iptr)kd_scratch2_pMStackY_50) = 0x10430;
     pMVar21 = kd_MeFAssetGetGeometry(*(MeFGeometryIt **)(&(*kd_argslot_ffffffb4)));
     if (pMVar21 == (MeFGeometry *)0x0) break;
                     
-    *(MeFAsset **)((int)kd_below2_apMStack_3c + 0x0) = asset;
-    *(MeFAsset **)((int)&(*kd_argslot_ffffffbc)) = asset;
+    *(MeFAsset **)((kd_iptr)kd_below2_apMStack_3c + 0x0) = asset;
+    *(MeFAsset **)((kd_iptr)&(*kd_argslot_ffffffbc)) = asset;
     *(MeBool *)(&(*kd_argslot_ffffffb8)) = recurse;
     *(MeFGeometry **)(&(*kd_argslot_ffffffb4)) = pMVar21;
-    *(undefined4 *)((int)kd_scratch2_pMStackY_50) = 0x10447;
+    *(undefined4 *)((kd_iptr)kd_scratch2_pMStackY_50) = 0x10447;
     pvVar20 = MeFGeometryCreateCopy
                         (*(void **)(&(*kd_argslot_ffffffb4)),
                          *(int *)(&(*kd_argslot_ffffffb8)));
     asset = asset_1;
     *(void **)(&(*kd_argslot_ffffffb8)) = pvVar20;
     *(MeFAsset **)(&(*kd_argslot_ffffffb4)) = asset;
-    *(undefined4 *)((int)kd_scratch2_pMStackY_50) = 0x10453;
+    *(undefined4 *)((kd_iptr)kd_scratch2_pMStackY_50) = 0x10453;
     kd_MeFAssetInsertGeometry
               (*(MeFAsset **)(&(*kd_argslot_ffffffb4)),
                *(MeFGeometry **)(&(*kd_argslot_ffffffb8)));
@@ -1157,7 +1157,7 @@ void kd_MeFAssetInsertGeometry(MeFAsset *asset,MeFGeometry *geometry)
       kd_MeFAssetRemoveGeometry(geometry);
     }
   }
-  pMVar2 = (MeMemoryAPI.create)(0xc);
+  pMVar2 = (MeMemoryAPI.create)((int)sizeof(*(MeFGeometryNode *)0));
   pMVar2->current = geometry;
   pMVar2->next = asset->nilGeometry->next;
   asset->nilGeometry->next->prev = pMVar2;
@@ -1213,7 +1213,7 @@ void kd_MeFAssetInsertModel(MeFAsset *asset,MeFModel *model)
       kd_MeFAssetRemoveModel(model);
     }
   }
-  pMVar2 = (MeMemoryAPI.create)(0xc);
+  pMVar2 = (MeMemoryAPI.create)((int)sizeof(*(MeFModelNode *)0));
   pMVar2->current = model;
   pMVar2->next = asset->nilModel->next;
   asset->nilModel->next->prev = pMVar2;
@@ -1269,7 +1269,7 @@ void kd_MeFAssetInsertJoint(MeFAsset *asset,MeFJoint *joint)
       kd_MeFAssetRemoveJoint(joint);
     }
   }
-  pMVar2 = (MeMemoryAPI.create)(0xc);
+  pMVar2 = (MeMemoryAPI.create)((int)sizeof(*(MeFJointNode *)0));
   pMVar2->current = joint;
   pMVar2->next = asset->nilJoint->next;
   asset->nilJoint->next->prev = pMVar2;
@@ -1329,7 +1329,7 @@ void kd_MeFAssetInsertPart(MeFAsset *asset,MeFAssetPart *part)
       kd_MeFAssetRemovePart(part);
     }
   }
-  pMVar2 = (MeMemoryAPI.create)(0xc);
+  pMVar2 = (MeMemoryAPI.create)((int)sizeof(*(MeFAssetPartNode *)0));
   pMVar2->current = part;
   pMVar2->next = asset->nilPart->next;
   asset->nilPart->next->prev = pMVar2;
@@ -1456,14 +1456,14 @@ MeFAsset * kd_MeFAssetCreate(char *name,int id)
   MeU32 *pMVar6;
   MeIDPool *pMVar7;
 
-  asset = (MeMemoryAPI.createZeroed)(0x5c);
-  pMVar1 = (MeMemoryAPI.create)(0xc);
+  asset = (MeMemoryAPI.createZeroed)((int)sizeof(*(MeFAsset *)0));
+  pMVar1 = (MeMemoryAPI.create)((int)sizeof(*(MeFGeometryNode *)0));
   asset->nilGeometry = pMVar1;
-  pMVar2 = (MeMemoryAPI.create)(0xc);
+  pMVar2 = (MeMemoryAPI.create)((int)sizeof(*(MeFModelNode *)0));
   asset->nilModel = pMVar2;
-  pMVar3 = (MeMemoryAPI.create)(0xc);
+  pMVar3 = (MeMemoryAPI.create)((int)sizeof(*(MeFAssetPartNode *)0));
   asset->nilPart = pMVar3;
-  pMVar4 = (MeMemoryAPI.create)(0xc);
+  pMVar4 = (MeMemoryAPI.create)((int)sizeof(*(MeFJointNode *)0));
   asset->nilJoint = pMVar4;
   pMVar5 = MeHashCreate(0x11);
   asset->nameToGeometry = pMVar5;
@@ -1474,7 +1474,7 @@ MeFAsset * kd_MeFAssetCreate(char *name,int id)
   pMVar5 = MeHashCreate(0x11);
   asset->maxParts = 0x100;
   asset->nameToJoint = pMVar5;
-  pMVar6 = (MeMemoryAPI.createZeroed)(0x2000);
+  pMVar6 = (MeMemoryAPI.createZeroed)((2048) * (int)sizeof(*(MeU32 *)0));
   asset->disabledColArray = pMVar6;
   pMVar7 = MeIDPoolCreate();
   asset->disabledColIndexPool = pMVar7;

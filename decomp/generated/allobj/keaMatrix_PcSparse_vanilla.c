@@ -72,7 +72,7 @@ KD_WEAK_DATA const char kd_ZTS26keaMatrix_pcSparse_vanilla[]
 
 KD_WEAK_DATA const void *kd_ZTI26keaMatrix_pcSparse_vanilla[3]
     KD_MANGLED("_ZTI26keaMatrix_pcSparse_vanilla") = {
-        (const void *)((const char *)&kd_ext__ZTVN10__cxxabiv120__si_class_type_infoE[0] + 8),
+        (const void *)((const char *)&kd_ext__ZTVN10__cxxabiv120__si_class_type_infoE[0] + (2 * (int)sizeof(void *))),
         (const void *)kd_ZTS26keaMatrix_pcSparse_vanilla,
         (const void *)kd_ZTI18keaMatrix_pcSparse
     };
@@ -100,33 +100,33 @@ KD_WEAK_DATA const void *kd_ZTV26keaMatrix_pcSparse_vanilla[11]
 void __thiscall kd_keaMatrix_pcSparse_vanilla__allocate(keaMatrix_pcSparse_vanilla *this,int size)
 
 {
-  uint uVar1;
-  undefined4 uVar2;
-  int iVar3;
+  kd_uptr uVar1;
+  kd_uptr uVar2;
+  kd_iptr iVar3;
   
   *(int *)&this->m_numRows = size;
   iVar3 = size + 3 >> 2;
   *(int *)&this->m_blocks = iVar3;
   *(int *)&this->m_padded = iVar3 << 2;
   iVar3 = keaPoolAlloc(*(int *)&this->m_padded * 4 + 0x10,"rsD");
-  *(uint *)&this->rsD = iVar3 + 0xfU & 0xfffffff0;
+  *(kd_uptr *)&this->rsD = iVar3 + 0xfU & (0xfffffff0 | ~(kd_uptr)0xffffffffU);
   iVar3 = keaPoolAlloc(*(int *)&this->m_padded * *(int *)&this->m_padded * 4 + 0x10,"A");
-  *(uint *)&this->matrix = iVar3 + 0xfU & 0xfffffff0;
+  *(kd_uptr *)&this->matrix = iVar3 + 0xfU & (0xfffffff0 | ~(kd_uptr)0xffffffffU);
   iVar3 = keaPoolAlloc(*(int *)&this->m_padded * *(int *)&this->m_padded * 4 + 0x10,"Achol");
-  *(undefined4 *)&this->mLP = *(undefined4 *)&this->matrix;
-  uVar1 = iVar3 + 0xfU & 0xfffffff0;
-  *(uint *)&this->matrixChol = uVar1;
-  *(uint *)&this->mcLP = uVar1;
+  *(kd_uptr *)&this->mLP = *(kd_uptr *)&this->matrix;
+  uVar1 = iVar3 + 0xfU & (0xfffffff0 | ~(kd_uptr)0xffffffffU);
+  *(kd_uptr *)&this->matrixChol = uVar1;
+  *(kd_uptr *)&this->mcLP = uVar1;
   uVar2 = keaPoolAlloc((*(int *)&this->m_blocks * *(int *)&this->m_blocks + 0xfU & 0xfffffff0)
-                       << 2,"NAZ");
-  *(undefined4 *)&this->NAZ = uVar2;
+                       * (int)sizeof(void *),"NAZ");
+  *(kd_uptr *)&this->NAZ = uVar2;
   uVar2 = keaPoolAlloc((*(int *)&this->m_blocks * *(int *)&this->m_blocks + 0xfU & 0xfffffff0)
-                       << 2,"NCZ");
-  *(undefined4 *)&this->NCZ = uVar2;
+                       * (int)sizeof(void *),"NCZ");
+  *(kd_uptr *)&this->NCZ = uVar2;
   uVar2 = keaPoolAlloc((*(int *)&this->m_blocks + 0xfU & 0xfffffff0) << 2,"NR");
-  *(undefined4 *)&this->NR = uVar2;
+  *(kd_uptr *)&this->NR = uVar2;
   uVar2 = keaPoolAlloc((*(int *)&this->m_blocks + 0xfU & 0xfffffff0) << 2,"NC");
-  *(undefined4 *)&this->NC = uVar2;
+  *(kd_uptr *)&this->NC = uVar2;
   return;
 }
 
@@ -138,7 +138,7 @@ kd_keaMatrix_pcSparse_vanilla__makeFromJMJT
 
 {
   int *piVar1;
-  int iVar2;
+  kd_iptr iVar2;
   uint uVar3;
   int iVar4;
   int iVar5;
@@ -250,13 +250,13 @@ LAB_00010240:
             } while (block != 0);
           }
           if (iVar5 == 0) {
-            *(undefined4 *)(*(int *)&this->NAZ + z * 4) = 0;
-            *(undefined4 *)(*(int *)&this->NCZ + z * 4) = 0;
+            *(kd_uptr*)(*(kd_iptr *)&this->NAZ + z * (int)sizeof(void *)) = 0;
+            *(kd_uptr*)(*(kd_iptr *)&this->NCZ + z * (int)sizeof(void *)) = 0;
           }
           else {
                     
-            *(MeReal **)(*(int *)&this->NAZ + z * 4) = AMatrix;
-            *(MeReal **)(*(int *)&this->NCZ + z * 4) = AcholMatrix;
+            *(MeReal **)(*(kd_iptr *)&this->NAZ + z * (int)sizeof(void *)) = AMatrix;
+            *(MeReal **)(*(kd_iptr *)&this->NCZ + z * (int)sizeof(void *)) = AcholMatrix;
             iVar5 = 0;
             do {
               AMatrix[iVar5] = AcholMatrix[iVar5];
@@ -282,7 +282,7 @@ LAB_00010240:
           jmptr = jmptr + *piVar1 * 0x18;
         } while (jm <= strip);
       }
-      *(int *)(*(int *)&this->NC + strip * 4) = k;
+      *(int *)(*(kd_iptr *)&this->NC + strip * 4) = k;
       piVar1 = num_in_strip + strip;
       Jb = Jb + 8;
       z = z + step;
@@ -298,8 +298,8 @@ LAB_00010240:
   if (0 < iVar5) {
     do {
       iVar5 = iVar5 * i + i;
-      AMatrix = *(MeReal **)(*(int *)&this->NAZ + iVar5 * 4);
-      AcholMatrix = *(MeReal **)(*(int *)&this->NCZ + iVar5 * 4);
+      AMatrix = *(MeReal **)(*(kd_iptr *)&this->NAZ + iVar5 * (int)sizeof(void *));
+      AcholMatrix = *(MeReal **)(*(kd_iptr *)&this->NCZ + iVar5 * (int)sizeof(void *));
       *AMatrix = hinv * slipfactor[k] + epsilon + *AMatrix;
       *AcholMatrix = hinv * slipfactor[k] + epsilon + *AcholMatrix;
       iVar5 = k + 2;
@@ -365,7 +365,7 @@ LAB_0001058a:
   if (0 < iVar5) {
     do {
       if (i < iVar5) {
-        iVar2 = *(int *)&this->NAZ;
+        iVar2 = *(kd_iptr *)&this->NAZ;
         uVar7 = iVar5 - i & 3;
         iVar8 = i;
         if (i + 1 < iVar5) {
@@ -373,12 +373,12 @@ LAB_0001058a:
           if (uVar7 != 0) {
             if (1 < uVar7) {
               if (2 < uVar7) {
-                if ((*(int *)(iVar2 + (i * iVar5 + i) * 4) != 0) && (c < i)) {
+                if ((*(kd_iptr*)(iVar2 + (i * iVar5 + i) * (int)sizeof(void *)) != 0) && (c < i)) {
                   c = i;
                 }
                 iVar8 = i + 1;
               }
-              if ((*(int *)(iVar2 + (iVar8 * iVar5 + i) * 4) != 0) && (c < iVar8)) {
+              if ((*(kd_iptr*)(iVar2 + (iVar8 * iVar5 + i) * (int)sizeof(void *)) != 0) && (c < iVar8)) {
                 c = iVar8;
               }
               iVar8 = iVar8 + 1;
@@ -388,33 +388,33 @@ LAB_0001058a:
         }
         else {
 LAB_000105cb:
-          if ((*(int *)(iVar2 + (iVar8 * iVar5 + i) * 4) != 0) && (c < iVar8)) {
+          if ((*(kd_iptr*)(iVar2 + (iVar8 * iVar5 + i) * (int)sizeof(void *)) != 0) && (c < iVar8)) {
             c = iVar8;
           }
           iVar4 = iVar8 + 1;
           if (iVar5 <= iVar8 + 1) goto LAB_00010661;
         }
         do {
-          if ((*(int *)(iVar2 + (iVar4 * iVar5 + i) * 4) != 0) && (c < iVar4)) {
+          if ((*(kd_iptr*)(iVar2 + (iVar4 * iVar5 + i) * (int)sizeof(void *)) != 0) && (c < iVar4)) {
             c = iVar4;
           }
           iVar8 = iVar4 + 1;
-          if ((*(int *)(iVar2 + (iVar8 * iVar5 + i) * 4) != 0) && (c < iVar8)) {
+          if ((*(kd_iptr*)(iVar2 + (iVar8 * iVar5 + i) * (int)sizeof(void *)) != 0) && (c < iVar8)) {
             c = iVar8;
           }
           iVar8 = iVar4 + 2;
-          if ((*(int *)(iVar2 + (iVar8 * iVar5 + i) * 4) != 0) && (c < iVar8)) {
+          if ((*(kd_iptr*)(iVar2 + (iVar8 * iVar5 + i) * (int)sizeof(void *)) != 0) && (c < iVar8)) {
             c = iVar8;
           }
           iVar8 = iVar4 + 3;
-          if ((*(int *)(iVar2 + (iVar8 * iVar5 + i) * 4) != 0) && (c < iVar8)) {
+          if ((*(kd_iptr*)(iVar2 + (iVar8 * iVar5 + i) * (int)sizeof(void *)) != 0) && (c < iVar8)) {
             c = iVar8;
           }
           iVar4 = iVar4 + 4;
         } while (iVar4 < iVar5);
       }
 LAB_00010661:
-      *(int *)(*(int *)&this->NR + i * 4) = c;
+      *(int *)(*(kd_iptr *)&this->NR + i * 4) = c;
       i = i + 1;
       iVar5 = *(int *)&this->m_blocks;
     } while (i < iVar5);
@@ -454,7 +454,7 @@ kd_keaMatrix_pcSparse_vanilla__multiply(keaMatrix_pcSparse_vanilla *this,MeReal 
       k = 0;
       if (0 < iVar9) {
         do {
-          pfVar6 = *(float **)(*(int *)&this->NAZ + (iVar9 * iVar8 + k) * 4);
+          pfVar6 = *(float **)(*(kd_iptr *)&this->NAZ + (iVar9 * iVar8 + k) * (int)sizeof(void *));
           if (pfVar6 != (float *)0x0) {
             pfVar5 = X + h;
             iVar7 = 3;
@@ -478,7 +478,7 @@ kd_keaMatrix_pcSparse_vanilla__multiply(keaMatrix_pcSparse_vanilla *this,MeReal 
         pfVar6 = X + h;
         iVar7 = iVar9;
         do {
-          pfVar5 = *(float **)(*(int *)&this->NAZ + (iVar8 * iVar7 + iVar9) * 4);
+          pfVar5 = *(float **)(*(kd_iptr *)&this->NAZ + (iVar8 * iVar7 + iVar9) * (int)sizeof(void *));
           if (pfVar5 != (float *)0x0) {
             fVar1 = *pfVar6;
             fVar2 = pfVar6[1];
@@ -524,7 +524,7 @@ kd_keaMatrix_pcSparse_vanilla__multiply(keaMatrix_pcSparse_vanilla *this,MeReal 
 void __thiscall kd_keaMatrix_pcSparse_vanilla__factorize(keaMatrix_pcSparse_vanilla *this)
 
 {
-  int iVar1;
+  kd_iptr iVar1;
   int iVar2;
   int w;
   int d;
@@ -543,19 +543,19 @@ void __thiscall kd_keaMatrix_pcSparse_vanilla__factorize(keaMatrix_pcSparse_vani
     do {
       iVar2 = d + 1;
       vc_dstrip_Cholesky(ablock,*(MeReal **)&this->rsD,z,d,
-                         *(int *)(*(int *)&this->NC + d * 4),*(MeReal ***)&this->NCZ)
+                         *(int *)(*(kd_iptr *)&this->NC + d * 4),*(MeReal ***)&this->NCZ)
       ;
       w = z + stride;
-      iVar1 = *(int *)&this->NR;
+      iVar1 = *(kd_iptr *)&this->NR;
       local_24 = iVar2;
       local_20 = w;
       if (iVar2 <= *(int *)(iVar1 + d * 4)) {
         do {
-          if (*(int *)(*(int *)&this->NC + iVar2 * 4) <= d) {
+          if (*(int *)(*(kd_iptr *)&this->NC + iVar2 * 4) <= d) {
             vc_strip_Cholesky(ablock,*(MeReal **)&this->rsD,z,w,d,
-                              *(int *)(*(int *)&this->NC + iVar2 * 4),
+                              *(int *)(*(kd_iptr *)&this->NC + iVar2 * 4),
                               *(MeReal ***)&this->NCZ,(MeReal **)&this->mcLP);
-            iVar1 = *(int *)&this->NR;
+            iVar1 = *(kd_iptr *)&this->NR;
           }
           iVar2 = iVar2 + 1;
           w = w + stride;
@@ -583,11 +583,11 @@ kd_keaMatrix_pcSparse_vanilla__solve(keaMatrix_pcSparse_vanilla *this,MeReal *x,
   float *pfVar8;
   int iVar9;
   int iVar10;
-  int iVar11;
+  kd_iptr iVar11;
   int iVar12;
   uint uVar13;
   int iVar14;
-  int local_48;
+  kd_iptr local_48;
   int t;
   int h;
   int g;
@@ -614,12 +614,12 @@ kd_keaMatrix_pcSparse_vanilla__solve(keaMatrix_pcSparse_vanilla *this,MeReal *x,
       tmp[0] = KD_F32(0.0);
       h = 0;
       if (i < 1) {
-        local_48 = *(int *)&this->NCZ;
+        local_48 = *(kd_iptr *)&this->NCZ;
       }
       else {
-        local_48 = *(int *)&this->NCZ;
+        local_48 = *(kd_iptr *)&this->NCZ;
         do {
-          pfVar7 = *(float **)(local_48 + iVar11 * 4);
+          pfVar7 = *(float **)(local_48 + iVar11 * (int)sizeof(void *));
           if (pfVar7 != (float *)0x0) {
             iVar14 = 3;
             pfVar8 = x + h;
@@ -640,11 +640,11 @@ kd_keaMatrix_pcSparse_vanilla__solve(keaMatrix_pcSparse_vanilla *this,MeReal *x,
           iVar11 = iVar11 + 1;
         } while (j < i);
       }
-      iVar11 = *(int *)(local_48 + iVar11 * 4);
+      iVar11 = *(kd_iptr*)(local_48 + iVar11 * (int)sizeof(void *));
       iVar14 = 0;
       do {
         iVar12 = h + iVar14;
-        fVar3 = (x[iVar12] - tmp[iVar14]) * *(float *)(*(int *)&this->rsD + iVar12 * 4);
+        fVar3 = (x[iVar12] - tmp[iVar14]) * *(float *)(*(kd_iptr *)&this->rsD + iVar12 * 4);
         x[iVar12] = fVar3;
         iVar12 = iVar14 + 1;
         if (iVar12 < 4) {
@@ -717,10 +717,10 @@ LAB_00010f7b:
     tmp[0] = KD_F32(0.0);
     g = h;
     if (i < j) {
-      local_48 = *(int *)&this->NCZ;
+      local_48 = *(kd_iptr *)&this->NCZ;
       pfVar7 = x + h;
       do {
-        pfVar8 = *(float **)(local_48 + iVar12 * 4);
+        pfVar8 = *(float **)(local_48 + iVar12 * (int)sizeof(void *));
         if (pfVar8 != (float *)0x0) {
           fVar3 = *pfVar7;
           fVar4 = pfVar7[1];
@@ -742,9 +742,9 @@ LAB_00010f7b:
       } while (i < j);
     }
     else {
-      local_48 = *(int *)&this->NCZ;
+      local_48 = *(kd_iptr *)&this->NCZ;
     }
-    iVar11 = *(int *)(local_48 + iVar12 * 4);
+    iVar11 = *(kd_iptr*)(local_48 + iVar12 * (int)sizeof(void *));
     iVar12 = 3;
     do {
       iVar10 = iVar12 + 1;
@@ -802,7 +802,7 @@ LAB_00010f44:
       iVar10 = g + iVar12;
       pfVar7 = tmp + iVar12;
       iVar12 = iVar12 + -1;
-      x[iVar10] = (x[iVar10] - *pfVar7) * *(float *)(*(int *)&this->rsD + iVar10 * 4);
+      x[iVar10] = (x[iVar10] - *pfVar7) * *(float *)(*(kd_iptr *)&this->rsD + iVar10 * 4);
     } while (-1 < iVar12);
     i = i + -1;
     if (i < 0) goto LAB_00010f7b;
@@ -825,7 +825,7 @@ kd_keaMatrix_pcSparse_vanilla__solveUnits
   float fVar4;
   float fVar5;
   int iVar6;
-  int iVar7;
+  kd_iptr iVar7;
   int iVar8;
   uint uVar9;
   float *pfVar10;
@@ -834,7 +834,7 @@ kd_keaMatrix_pcSparse_vanilla__solveUnits
   int iVar13;
   float *pfVar14;
   MeReal *pMVar15;
-  int iVar16;
+  kd_iptr iVar16;
   int iVar17;
   int aiStack_4c [4];
   int *rp;
@@ -862,9 +862,9 @@ kd_keaMatrix_pcSparse_vanilla__solveUnits
           *pMVar15 = 0.0;
           pMVar15 = pMVar15 + 1;
         }
-        *(MeReal *)((AinvStride * 4 + 4) * iVar7 + (int)Ainv) = 1.0;
+        *(MeReal *)((AinvStride * 4 + 4) * iVar7 + (kd_iptr)Ainv) = 1.0;
         cached[iVar7] = 1;
-        *(int *)((int)(kd_alloca_iVar3)) = iVar7;
+        *(int *)((kd_iptr)(kd_alloca_iVar3)) = iVar7;
         t = 1;
       }
       c = 1;
@@ -878,9 +878,9 @@ kd_keaMatrix_pcSparse_vanilla__solveUnits
           *pMVar15 = 0.0;
           pMVar15 = pMVar15 + 1;
         }
-        *(MeReal *)((AinvStride * 4 + 4) * iVar7 + (int)Ainv) = 1.0;
+        *(MeReal *)((AinvStride * 4 + 4) * iVar7 + (kd_iptr)Ainv) = 1.0;
         cached[iVar7] = 1;
-        *(int *)((int)(kd_alloca_iVar3) + t * 4) = iVar7;
+        *(int *)((kd_iptr)(kd_alloca_iVar3) + t * 4) = iVar7;
         t = t + 1;
       }
       iVar7 = clamped[c + 1];
@@ -890,9 +890,9 @@ kd_keaMatrix_pcSparse_vanilla__solveUnits
           *pMVar15 = 0.0;
           pMVar15 = pMVar15 + 1;
         }
-        *(MeReal *)((AinvStride * 4 + 4) * iVar7 + (int)Ainv) = 1.0;
+        *(MeReal *)((AinvStride * 4 + 4) * iVar7 + (kd_iptr)Ainv) = 1.0;
         cached[iVar7] = 1;
-        *(int *)((int)(kd_alloca_iVar3) + t * 4) = iVar7;
+        *(int *)((kd_iptr)(kd_alloca_iVar3) + t * 4) = iVar7;
         t = t + 1;
       }
       c = c + 2;
@@ -908,15 +908,15 @@ LAB_000111d1:
       j = 0;
       h = 0;
       if (i < 1) {
-        iVar7 = *(int *)&this->NCZ;
+        iVar7 = *(kd_iptr *)&this->NCZ;
       }
       else {
-        iVar7 = *(int *)&this->NCZ;
+        iVar7 = *(kd_iptr *)&this->NCZ;
         do {
-          pfVar10 = *(float **)(iVar7 + k * 4);
+          pfVar10 = *(float **)(iVar7 + k * (int)sizeof(void *));
           if ((pfVar10 != (float *)0x0) && (t = 0, 0 < iVar6)) {
             do {
-              iVar7 = *(int *)((int)(kd_alloca_iVar3) + t * 4);
+              iVar7 = *(int *)((kd_iptr)(kd_alloca_iVar3) + t * 4);
               if (iVar7 >> 2 <= j) {
                 iVar7 = AinvStride * iVar7;
                 iVar8 = iVar7 + h;
@@ -944,24 +944,24 @@ LAB_000111d1:
               }
               t = t + 1;
             } while (t < iVar6);
-            iVar7 = *(int *)&this->NCZ;
+            iVar7 = *(kd_iptr *)&this->NCZ;
           }
           j = j + 1;
           k = k + 1;
           h = h + 4;
         } while (j < i);
       }
-      iVar7 = *(int *)(iVar7 + k * 4);
+      iVar7 = *(kd_iptr*)(iVar7 + k * (int)sizeof(void *));
       t = 0;
       if (0 < iVar6) {
         do {
-          iVar8 = *(int *)((int)(kd_alloca_iVar3) + t * 4);
+          iVar8 = *(int *)((kd_iptr)(kd_alloca_iVar3) + t * 4);
           if (iVar8 >> 2 <= i) {
             iVar8 = AinvStride * iVar8 + i * 4;
             iVar16 = 0;
             do {
               iVar17 = iVar16 + 1;
-              fVar1 = *(float *)(*(int *)&this->rsD + (h + iVar16) * 4) *
+              fVar1 = *(float *)(*(kd_iptr *)&this->rsD + (h + iVar16) * 4) *
                       Ainv[iVar8 + iVar16];
               Ainv[iVar8 + iVar16] = fVar1;
               if (iVar17 < 4) {
@@ -1029,12 +1029,12 @@ LAB_00011403:
     k = iVar8 + i;
     g = h;
     if (i < j) {
-      iVar16 = *(int *)&this->NCZ;
+      iVar16 = *(kd_iptr *)&this->NCZ;
       do {
-        pfVar10 = *(float **)(iVar16 + k * 4);
+        pfVar10 = *(float **)(iVar16 + k * (int)sizeof(void *));
         if ((pfVar10 != (float *)0x0) && (t = 0, 0 < iVar6)) {
           do {
-            iVar7 = AinvStride * *(int *)((int)(kd_alloca_iVar3) + t * 4);
+            iVar7 = AinvStride * *(int *)((kd_iptr)(kd_alloca_iVar3) + t * 4);
             pfVar11 = Ainv + iVar7 + g;
             pfVar14 = Ainv + iVar7 + i * 4;
             *pfVar14 = *pfVar14 -
@@ -1054,7 +1054,7 @@ LAB_00011403:
             t = t + 1;
           } while (t < iVar6);
           iVar7 = *(int *)&this->m_blocks;
-          iVar16 = *(int *)&this->NCZ;
+          iVar16 = *(kd_iptr *)&this->NCZ;
         }
         j = j + -1;
         g = g + -4;
@@ -1062,14 +1062,14 @@ LAB_00011403:
       } while (i < j);
     }
     else {
-      iVar16 = *(int *)&this->NCZ;
+      iVar16 = *(kd_iptr *)&this->NCZ;
     }
-    iVar7 = *(int *)(iVar16 + k * 4);
+    iVar7 = *(kd_iptr*)(iVar16 + k * (int)sizeof(void *));
     t = 0;
     if (0 < iVar6) {
       do {
         iVar17 = 3;
-        iVar16 = AinvStride * *(int *)((int)(kd_alloca_iVar3) + t * 4) + i * 4;
+        iVar16 = AinvStride * *(int *)((kd_iptr)(kd_alloca_iVar3) + t * 4) + i * 4;
         pfVar10 = Ainv + iVar16 + 3;
         do {
           iVar12 = iVar17 + 1;
@@ -1118,7 +1118,7 @@ LAB_00011616:
             } while (iVar12 < 4);
           }
 LAB_0001165d:
-          *pfVar10 = *(float *)(*(int *)&this->rsD + (g + iVar17) * 4) * *pfVar10;
+          *pfVar10 = *(float *)(*(kd_iptr *)&this->rsD + (g + iVar17) * 4) * *pfVar10;
           pfVar10 = pfVar10 + -1;
           iVar17 = iVar17 + -1;
         } while (-1 < iVar17);

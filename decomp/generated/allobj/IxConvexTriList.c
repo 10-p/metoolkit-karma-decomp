@@ -73,7 +73,7 @@ void kd_McdConvexHullPlaneCut
   int v;
   MeReal dv;
   McdCnvVertex *vert;
-  int start;
+  kd_iptr start;
   MeDictNode nodemem [200];
   MeSet set;
   MeReal temp [3];
@@ -86,7 +86,7 @@ void kd_McdConvexHullPlaneCut
     MeSetAdd(&set,(void *)start);
     while (set.next != (MeDictNode *)0x0) {
       pvVar11 = MeSetIteratorNext(&set);
-      pMVar16 = pMVar6 + (int)pvVar11;
+      pMVar16 = pMVar6 + (kd_iptr)pvVar11;
       fVar8 = pMVar16->position[2] * norm[2] +
               pMVar16->position[1] * norm[1] + *norm * pMVar16->position[0];
       if ((flags & 2U) != 0) {
@@ -100,12 +100,12 @@ void kd_McdConvexHullPlaneCut
           return;
         }
       }
-      iVar12 = McdCnvVertexGetCount(hull,(int)pvVar11);
+      iVar12 = McdCnvVertexGetCount(hull,(kd_iptr)pvVar11);
       if (0 < iVar12) {
         iVar17 = 0;
         do {
-          pvVar13 = (void *)McdCnvVertexGetNeighbor(hull,(int)pvVar11,iVar17);
-          pMVar14 = pMVar6 + (int)pvVar13;
+          pvVar13 = (void *)McdCnvVertexGetNeighbor(hull,(kd_iptr)pvVar11,iVar17);
+          pMVar14 = pMVar6 + (kd_iptr)pvVar13;
           fVar4 = pMVar14->position[2] * norm[2] +
                   pMVar14->position[1] * norm[1] + pMVar14->position[0] * *norm;
           if (dp <= fVar4) {
@@ -113,7 +113,7 @@ void kd_McdConvexHullPlaneCut
           }
           else if ((flags & 1U) != 0) {
             fVar9 = 1.0 / (fVar8 - fVar4);
-            pMVar14 = pMVar6 + (int)pvVar13;
+            pMVar14 = pMVar6 + (kd_iptr)pvVar13;
             fVar10 = (fVar8 - dp) * fVar9;
             fVar2 = pMVar14->position[1];
             fVar3 = pMVar14->position[2];
@@ -207,9 +207,9 @@ MeBool kd_McdConvexMeshTriangleListIntersect(McdModelPair *p,McdIntersectResult 
   MeBool MVar24;
   int iVar25;
   float fVar26;
-  int aiStackY_150 [3];
+  int aiStackY_150 [3 * (int)(sizeof(void *) / 4)];
   MeReal aMStackY_144 [2];
-  undefined4 uStack_130;
+  undefined4 uStack_130 [(int)(sizeof(void *) / 4)];
   undefined1 auStack_12c [12];
   float local_120;
   float local_11c;
@@ -276,18 +276,18 @@ MeBool kd_McdConvexMeshTriangleListIntersect(McdModelPair *p,McdIntersectResult 
   convexCenterRelative[0] = fVar15 * fVar4 + fVar14 * fVar26 + fVar16 * fVar3;
   convexCenterRelative[1] = fVar14 * fVar5 + fVar16 * fVar6 + fVar15 * fVar7;
   convexCenterRelative[2] = fVar14 * fVar8 + fVar16 * fVar9 + fVar15 * fVar10;
-  iVar17 = -(*(int *)((int)pvVar22 + 0x28) * 0x18 + 0xfU & 0xfffffff0);
-  *(undefined1 **)((int)pvVar22 + 0x34) = (kd_alloca_iVar17 = (char *)alloca((size_t)(*(int *)((int)pvVar22 + 0x28)) * 0x18 + 0));
-  *(int *)(&(*kd_argslot_fffffec4)) = *(int *)((int)pvVar22 + 0x28);
-  *(MeReal *)((int)aMStackY_144 + 4) = convexRadius;
-  *(MeReal **)((int)aMStackY_144) = convexCenterRelative;
-  *(undefined4 *)((int)aiStackY_150 + 8) = *(undefined4 *)((int)pvVar22 + 0x34);
-  *(McdModelPair **)((int)aiStackY_150 + 4) = p;
-  pcVar1 = *(code **)((int)pvVar22 + 0x30);
-  *(undefined4 *)((int)aiStackY_150) = 0x106a1;
-  i = (*(int (*)(void *, void *, void *, float, int))pcVar1)(*(void **)((int)aiStackY_150 + 4),
-                *(void **)((int)aiStackY_150 + 8),*(void **)((int)aMStackY_144),
-                *(float *)((int)aMStackY_144 + 4),*(int *)(&(*kd_argslot_fffffec4)));
+  iVar17 = -(*(int *)((kd_iptr)pvVar22 + 0x28) * 0x18 + 0xfU & (0xfffffff0 | ~(kd_uptr)0xffffffffU));
+  *(undefined1 **)((kd_iptr)pvVar22 + 0x34) = (kd_alloca_iVar17 = (char *)alloca((size_t)(*(int *)((kd_iptr)pvVar22 + 0x28)) * 0x18 + 0));
+  *(int *)(&(*kd_argslot_fffffec4)) = *(int *)((kd_iptr)pvVar22 + 0x28);
+  *(MeReal *)((kd_iptr)aMStackY_144 + 4) = convexRadius;
+  *(MeReal **)((kd_iptr)aMStackY_144) = convexCenterRelative;
+  *(undefined4 *)((kd_iptr)aiStackY_150 + (2 * (int)sizeof(void *))) = *(undefined4 *)((kd_iptr)pvVar22 + 0x34);
+  *(McdModelPair **)((kd_iptr)aiStackY_150 + (1 * (int)sizeof(void *))) = p;
+  pcVar1 = *(code **)((kd_iptr)pvVar22 + 0x30);
+  *(undefined4 *)((kd_iptr)aiStackY_150) = 0x106a1;
+  i = (*(int (*)(void *, void *, void *, float, int))pcVar1)(*(void **)((kd_iptr)aiStackY_150 + (1 * (int)sizeof(void *))),
+                *(void **)((kd_iptr)aiStackY_150 + (2 * (int)sizeof(void *))),*(void **)((kd_iptr)aMStackY_144),
+                *(float *)((kd_iptr)aMStackY_144 + 4),*(int *)(&(*kd_argslot_fffffec4)));
   MVar24 = 0;
   if (i != 0) {
     local_f0 = result->normal;
@@ -298,14 +298,14 @@ MeBool kd_McdConvexMeshTriangleListIntersect(McdModelPair *p,McdIntersectResult 
       iVar25 = 0;
       do {
                     
-        MVar23 = *(McdTriangleFlags *)(*(int *)((int)pvVar22 + 0x34) + 0x14 + iVar25);
+        MVar23 = *(McdTriangleFlags *)(*(int *)((kd_iptr)pvVar22 + 0x34) + 0x14 + iVar25);
         tri.triangleData = *(__typeof__(tri.triangleData) *)
-              (*(int *)((int)pvVar22 + 0x34) + 0x10 + iVar25);
+              (*(int *)((kd_iptr)pvVar22 + 0x34) + 0x10 + iVar25);
         tri.vertices[0] = vectors + 1;
         tri.normal = vectors;
         tri.vertices[2] = vectors + 3;
         tri.vertices[1] = vectors + 2;
-        pfVar21 = *(float **)(*(int *)((int)pvVar22 + 0x34) + 0xc + iVar25);
+        pfVar21 = *(float **)(*(int *)((kd_iptr)pvVar22 + 0x34) + 0xc + iVar25);
         local_f8 = fVar5;
         local_fc = fVar8;
         local_100 = fVar8 * pfVar21[2] + fVar5 * pfVar21[1] + *pfVar21 * fVar26;
@@ -317,7 +317,7 @@ MeBool kd_McdConvexMeshTriangleListIntersect(McdModelPair *p,McdIntersectResult 
         local_110 = fVar7;
         local_114 = fVar10;
         vectors[0][2] = fVar10 * pfVar21[2] + *pfVar21 * fVar4 + fVar7 * pfVar21[1];
-        pfVar21 = *(float **)(*(int *)((int)pvVar22 + 0x34) + iVar25);
+        pfVar21 = *(float **)(*(int *)((kd_iptr)pvVar22 + 0x34) + iVar25);
         vectors[1][0] = fVar8 * pfVar21[2] + *pfVar21 * fVar26 + fVar5 * pfVar21[1] + fVar11;
         local_118 = fVar11;
         local_11c = fVar13;
@@ -328,50 +328,50 @@ MeBool kd_McdConvexMeshTriangleListIntersect(McdModelPair *p,McdIntersectResult 
            (0.0 <= (convexCenter[0] - vectors[1][0]) * local_100 +
                    (convexCenter[1] - vectors[1][1]) * local_10c +
                    (convexCenter[2] - vectors[1][2]) * vectors[0][2])) {
-          pfVar21 = *(float **)(*(int *)((int)pvVar22 + 0x34) + 4 + iVar25);
+          pfVar21 = *(float **)(*(int *)((kd_iptr)pvVar22 + 0x34) + 4 + iVar25);
           vectors[3][0] = fVar8 * pfVar21[2] + *pfVar21 * fVar26 + fVar5 * pfVar21[1] + fVar11;
           vectors[3][1] = fVar9 * pfVar21[2] + *pfVar21 * fVar3 + fVar6 * pfVar21[1] + fVar13;
           vectors[3][2] = fVar10 * pfVar21[2] + *pfVar21 * fVar4 + fVar7 * pfVar21[1] + fVar12;
-          pfVar21 = *(float **)(*(int *)((int)pvVar22 + 0x34) + 8 + iVar25);
+          pfVar21 = *(float **)(*(int *)((kd_iptr)pvVar22 + 0x34) + 8 + iVar25);
           vectors[2][0] = fVar26 * *pfVar21 + fVar5 * pfVar21[1] + fVar8 * pfVar21[2] + fVar11;
           vectors[2][1] = fVar3 * *pfVar21 + fVar6 * pfVar21[1] + fVar9 * pfVar21[2] + fVar13;
           vectors[0][2] = vectors[0][2] * -1.0;
           vectors[0][0] = local_100 * -1.0;
           vectors[2][2] = fVar4 * *pfVar21 + fVar7 * pfVar21[1] + fVar10 * pfVar21[2] + fVar12;
           vectors[0][1] = local_10c * -1.0;
-          uVar2 = *(uint *)(*(int *)((int)pvVar22 + 0x34) + 0x14 + iVar25);
+          uVar2 = *(uint *)(*(int *)((kd_iptr)pvVar22 + 0x34) + 0x14 + iVar25);
           pfVar21 = (float *)((int)(uVar2 & 0x10) >> 2);
           MVar23 = MVar23 & ~(kMcdTriangleUseEdge2|kMcdTriangleUseEdge0) | (uVar2 & 4) << 2 |
-                   (uint)pfVar21;
+                   (kd_uptr)pfVar21;
         }
         else {
-          pfVar21 = *(float **)(*(int *)((int)pvVar22 + 0x34) + 4 + iVar25);
+          pfVar21 = *(float **)(*(int *)((kd_iptr)pvVar22 + 0x34) + 4 + iVar25);
           vectors[2][0] = fVar8 * pfVar21[2] + *pfVar21 * fVar26 + fVar5 * pfVar21[1] + fVar11;
           vectors[2][1] = fVar9 * pfVar21[2] + *pfVar21 * fVar3 + fVar6 * pfVar21[1] + fVar13;
           vectors[2][2] = fVar10 * pfVar21[2] + *pfVar21 * fVar4 + fVar7 * pfVar21[1] + fVar12;
-          pfVar21 = *(float **)(*(int *)((int)pvVar22 + 0x34) + 8 + iVar25);
+          pfVar21 = *(float **)(*(int *)((kd_iptr)pvVar22 + 0x34) + 8 + iVar25);
           vectors[3][0] = fVar26 * *pfVar21 + fVar5 * pfVar21[1] + fVar8 * pfVar21[2] + fVar11;
           vectors[3][1] = fVar3 * *pfVar21 + fVar6 * pfVar21[1] + fVar9 * pfVar21[2] + fVar13;
           vectors[3][2] = fVar10 * pfVar21[2] + fVar4 * *pfVar21 + fVar7 * pfVar21[1] + fVar12;
         }
-        *(float **)((int)&uStack_130) = pfVar21;
+        *(float **)((kd_iptr)&uStack_130) = pfVar21;
         *(float **)(&(*kd_argslot_fffffecc)) = pfVar21;
         *(McdIntersectResult **)(&(*kd_argslot_fffffec8)) = result;
         pMVar19 = convexMesh;
         tri.flags = MVar23;
         *(MeReal *)(&(*kd_argslot_fffffec4)) = eps;
         iVar25 = iVar25 + 0x18;
-        *(float **)((int)aMStackY_144 + 4) = pfVar20;
+        *(float **)((kd_iptr)aMStackY_144 + 4) = pfVar20;
         pMVar18 = convex;
-        *(MeReal *)((int)aMStackY_144) = pMVar19->mFatness;
-        *(McdConvexHull **)((int)aiStackY_150 + 8) = pMVar18;
-        *(McdUserTriangle **)((int)aiStackY_150 + 4) = &tri;
-        *(undefined4 *)((int)aiStackY_150) = 0x10a91;
+        *(MeReal *)((kd_iptr)aMStackY_144) = pMVar19->mFatness;
+        *(McdConvexHull **)((kd_iptr)aiStackY_150 + (2 * (int)sizeof(void *))) = pMVar18;
+        *(McdUserTriangle **)((kd_iptr)aiStackY_150 + (1 * (int)sizeof(void *))) = &tri;
+        *(undefined4 *)((kd_iptr)aiStackY_150) = 0x10a91;
         GenerateTriangleContact
-                  (*(McdUserTriangle **)((int)aiStackY_150 + 4),
-                   *(McdConvexHull **)((int)aiStackY_150 + 8),
-                   *(MeReal *)((int)aMStackY_144),
-                   *(MeVector4 **)((int)aMStackY_144 + 4),
+                  (*(McdUserTriangle **)((kd_iptr)aiStackY_150 + (1 * (int)sizeof(void *))),
+                   *(McdConvexHull **)((kd_iptr)aiStackY_150 + (2 * (int)sizeof(void *))),
+                   *(MeReal *)((kd_iptr)aMStackY_144),
+                   *(MeVector4 **)((kd_iptr)aMStackY_144 + 4),
                    *(MeReal *)(&(*kd_argslot_fffffec4)),
                    *(McdIntersectResult **)(&(*kd_argslot_fffffec8)));
         i = i + -1;
@@ -534,8 +534,8 @@ static void GenerateTriangleContact
   longdouble lVar20;
   longdouble lVar21;
   MeReal MVar22;
-  int aiStackY_150 [3];
-  float fStackY_144;
+  int aiStackY_150 [3 * (int)(sizeof(void *) / 4)];
+  float fStackY_144 [(int)(sizeof(void *) / 4)];
   float fStackY_140;
   float afStack_11c [2];
   int local_114;
@@ -678,17 +678,17 @@ static void GenerateTriangleContact
     iVar16 = -(iVar14 * 0xc + 0xfU & 0xfffffff0);
     pfVar15 = (kd_alloca_iVar16 = (char *)alloca((size_t)(iVar14) * 0xc + 0));
     *(VoronoiRegionType *)(&(*kd_argslot_fffffee0)) = featureType;
-    *(int *)(&(*kd_argslot_fffffedc)) = (int)(kd_alloca_iVar16);
+    *(int *)(&(*kd_argslot_fffffedc)) = (kd_iptr)(kd_alloca_iVar16);
     *(int **)(&(*kd_argslot_fffffed8)) = &cnvVCount;
     *(int *)(&(*kd_argslot_fffffed4)) = iVar14;
     *(undefined4 *)(&(*kd_argslot_fffffed0)) = 1;
     *(MeReal *)(&(*kd_argslot_fffffecc)) = MVar22;
-    *(MeVector3 **)((int)(kd_frameslot_afStack_11c_iVar16_m1c)) = tri->normal;
-    *(McdConvexHull **)((int)(kd_frameslot_afStack_11c_iVar16_m20)) = hull;
-    *(undefined4 *)((int)&fStackY_140) = 0x111c5;
+    *(MeVector3 **)((kd_iptr)(kd_frameslot_afStack_11c_iVar16_m1c)) = tri->normal;
+    *(McdConvexHull **)((kd_iptr)(kd_frameslot_afStack_11c_iVar16_m20)) = hull;
+    *(undefined4 *)((kd_iptr)&fStackY_140) = 0x111c5;
     kd_McdConvexHullPlaneCut
-              (*(McdConvexHull **)((int)(kd_frameslot_afStack_11c_iVar16_m20)),
-               *(MeReal **)((int)(kd_frameslot_afStack_11c_iVar16_m1c)),
+              (*(McdConvexHull **)((kd_iptr)(kd_frameslot_afStack_11c_iVar16_m20)),
+               *(MeReal **)((kd_iptr)(kd_frameslot_afStack_11c_iVar16_m1c)),
                *(MeReal *)(&(*kd_argslot_fffffecc)),*(int *)(&(*kd_argslot_fffffed0)),
                *(int *)(&(*kd_argslot_fffffed4)),*(int **)(&(*kd_argslot_fffffed8)),
                *(MeVector3 **)(&(*kd_argslot_fffffedc)));
@@ -731,19 +731,19 @@ static void GenerateTriangleContact
             MVar22 = sep;
             *(MeVector4 **)(&(*kd_argslot_fffffed0)) = tm;
             *(undefined4 *)(&(*kd_argslot_fffffecc)) = 0;
-            *(undefined4 *)((int)(kd_frameslot_afStack_11c_iVar16_m1c)) = 0;
-            *(int *)((int)(kd_frameslot_afStack_11c_iVar16_m20)) = (int)(short)(undefined2)featureType;
-            *(undefined4 *)((int)&fStackY_140) = 2;
-            *(MeReal *)((int)&fStackY_144) = MVar22;
-            *(MeReal **)((int)aiStackY_150 + 8) = n;
-            *(float **)((int)aiStackY_150 + 4) = pfVar15;
-            *(undefined4 *)((int)aiStackY_150) = 0x116cb;
+            *(undefined4 *)((kd_iptr)(kd_frameslot_afStack_11c_iVar16_m1c)) = 0;
+            *(int *)((kd_iptr)(kd_frameslot_afStack_11c_iVar16_m20)) = (int)(short)(undefined2)featureType;
+            *(undefined4 *)((kd_iptr)&fStackY_140) = 2;
+            *(MeReal *)((kd_iptr)&fStackY_144) = MVar22;
+            *(MeReal **)((kd_iptr)aiStackY_150 + (2 * (int)sizeof(void *))) = n;
+            *(float **)((kd_iptr)aiStackY_150 + (1 * (int)sizeof(void *))) = pfVar15;
+            *(undefined4 *)((kd_iptr)aiStackY_150) = 0x116cb;
             AccumulateSphylContacts
-                      (*(float **)((int)aiStackY_150 + 4),
-                       *(float **)((int)aiStackY_150 + 8),
-                       *(float *)((int)&fStackY_144),*(short *)((int)&fStackY_140)
-                       ,*(short *)((int)(kd_frameslot_afStack_11c_iVar16_m20)),
-                       *(float **)((int)(kd_frameslot_afStack_11c_iVar16_m1c)),
+                      (*(float **)((kd_iptr)aiStackY_150 + (1 * (int)sizeof(void *))),
+                       *(float **)((kd_iptr)aiStackY_150 + (2 * (int)sizeof(void *))),
+                       *(float *)((kd_iptr)&fStackY_144),*(short *)((kd_iptr)&fStackY_140)
+                       ,*(short *)((kd_iptr)(kd_frameslot_afStack_11c_iVar16_m20)),
+                       *(float **)((kd_iptr)(kd_frameslot_afStack_11c_iVar16_m1c)),
                        *(float *)(&(*kd_argslot_fffffecc)),*(float **)(&(*kd_argslot_fffffed0)),
                        *(_McdIntersectResult **)(&(*kd_argslot_fffffed4)));
             local_114 = cnvVCount;
@@ -769,21 +769,21 @@ static void GenerateTriangleContact
         *(VoronoiRegionType **)(&(*kd_argslot_fffffed0)) = &regionType_1;
         local_110 = MVar22;
         *(MeReal **)(&(*kd_argslot_fffffecc)) = &es;
-        *(MeReal **)((int)(kd_frameslot_afStack_11c_iVar16_m1c)) = c;
+        *(MeReal **)((kd_iptr)(kd_frameslot_afStack_11c_iVar16_m1c)) = c;
         MVar22 = local_110;
-        *(MeReal *)((int)(kd_frameslot_afStack_11c_iVar16_m20)) = local_110;
-        *(undefined4 *)((int)&fStackY_140) = 0;
-        *(MeReal **)((int)&fStackY_144) = ni;
-        *(MeVector3 **)((int)aiStackY_150 + 8) = tri->vertices[iVar14];
-        *(McdConvexHull **)((int)aiStackY_150 + 4) = hull;
-        *(undefined4 *)((int)aiStackY_150) = 0x113dd;
+        *(MeReal *)((kd_iptr)(kd_frameslot_afStack_11c_iVar16_m20)) = local_110;
+        *(undefined4 *)((kd_iptr)&fStackY_140) = 0;
+        *(MeReal **)((kd_iptr)&fStackY_144) = ni;
+        *(MeVector3 **)((kd_iptr)aiStackY_150 + (2 * (int)sizeof(void *))) = tri->vertices[iVar14];
+        *(McdConvexHull **)((kd_iptr)aiStackY_150 + (1 * (int)sizeof(void *))) = hull;
+        *(undefined4 *)((kd_iptr)aiStackY_150) = 0x113dd;
         lVar18 = (longdouble)
-                 ConvexHullNSegment(*(McdConvexHull **)((int)aiStackY_150 + 4),
-                                    *(float **)((int)aiStackY_150 + 8),
-                                    *(float **)((int)&fStackY_144),
-                                    *(float *)((int)&fStackY_140),
-                                    *(float *)((int)(kd_frameslot_afStack_11c_iVar16_m20)),
-                                    *(float **)((int)(kd_frameslot_afStack_11c_iVar16_m1c)),
+                 ConvexHullNSegment(*(McdConvexHull **)((kd_iptr)aiStackY_150 + (1 * (int)sizeof(void *))),
+                                    *(float **)((kd_iptr)aiStackY_150 + (2 * (int)sizeof(void *))),
+                                    *(float **)((kd_iptr)&fStackY_144),
+                                    *(float *)((kd_iptr)&fStackY_140),
+                                    *(float *)((kd_iptr)(kd_frameslot_afStack_11c_iVar16_m20)),
+                                    *(float **)((kd_iptr)(kd_frameslot_afStack_11c_iVar16_m1c)),
                                     *(float **)(&(*kd_argslot_fffffecc)),
                                     *(VoronoiRegionType **)(&(*kd_argslot_fffffed0)));
         fVar2 = (float)lVar18;
@@ -814,20 +814,20 @@ static void GenerateTriangleContact
             *(McdIntersectResult **)(&(*kd_argslot_fffffed4)) = result;
             *(MeVector4 **)(&(*kd_argslot_fffffed0)) = tm;
             *(undefined4 *)(&(*kd_argslot_fffffecc)) = 0;
-            *(undefined4 *)((int)(kd_frameslot_afStack_11c_iVar16_m1c)) = 0;
-            *(int *)((int)(kd_frameslot_afStack_11c_iVar16_m20)) = (int)(short)(undefined2)regionType_1;
-            *(int *)((int)&fStackY_140) = (int)segDim;
+            *(undefined4 *)((kd_iptr)(kd_frameslot_afStack_11c_iVar16_m1c)) = 0;
+            *(int *)((kd_iptr)(kd_frameslot_afStack_11c_iVar16_m20)) = (int)(short)(undefined2)regionType_1;
+            *(int *)((kd_iptr)&fStackY_140) = (int)segDim;
             local_10c = fVar2;
-            *(float *)((int)&fStackY_144) = fVar2;
-            *(MeReal **)((int)aiStackY_150 + 8) = n;
-            *(MeReal **)((int)aiStackY_150 + 4) = sp;
-            *(undefined4 *)((int)aiStackY_150) = 0x1165e;
+            *(float *)((kd_iptr)&fStackY_144) = fVar2;
+            *(MeReal **)((kd_iptr)aiStackY_150 + (2 * (int)sizeof(void *))) = n;
+            *(MeReal **)((kd_iptr)aiStackY_150 + (1 * (int)sizeof(void *))) = sp;
+            *(undefined4 *)((kd_iptr)aiStackY_150) = 0x1165e;
             AccumulateSphylContacts
-                      (*(float **)((int)aiStackY_150 + 4),
-                       *(float **)((int)aiStackY_150 + 8),
-                       *(float *)((int)&fStackY_144),*(short *)((int)&fStackY_140)
-                       ,*(short *)((int)(kd_frameslot_afStack_11c_iVar16_m20)),
-                       *(float **)((int)(kd_frameslot_afStack_11c_iVar16_m1c)),
+                      (*(float **)((kd_iptr)aiStackY_150 + (1 * (int)sizeof(void *))),
+                       *(float **)((kd_iptr)aiStackY_150 + (2 * (int)sizeof(void *))),
+                       *(float *)((kd_iptr)&fStackY_144),*(short *)((kd_iptr)&fStackY_140)
+                       ,*(short *)((kd_iptr)(kd_frameslot_afStack_11c_iVar16_m20)),
+                       *(float **)((kd_iptr)(kd_frameslot_afStack_11c_iVar16_m1c)),
                        *(float *)(&(*kd_argslot_fffffecc)),*(float **)(&(*kd_argslot_fffffed0)),
                        *(_McdIntersectResult **)(&(*kd_argslot_fffffed4)));
             fVar2 = local_10c;
@@ -841,24 +841,24 @@ static void GenerateTriangleContact
             *(MeVector4 **)(&(*kd_argslot_fffffed0)) = tm;
             fVar8 = MVar10 * ds;
             *(undefined4 *)(&(*kd_argslot_fffffecc)) = 0;
-            *(undefined4 *)((int)(kd_frameslot_afStack_11c_iVar16_m1c)) = 0;
+            *(undefined4 *)((kd_iptr)(kd_frameslot_afStack_11c_iVar16_m1c)) = 0;
             fVar6 = MVar22 * ds;
-            *(int *)((int)(kd_frameslot_afStack_11c_iVar16_m20)) = (int)(short)(undefined2)regionType_1;
+            *(int *)((kd_iptr)(kd_frameslot_afStack_11c_iVar16_m20)) = (int)(short)(undefined2)regionType_1;
             fVar7 = MVar9 * ds;
-            *(int *)((int)&fStackY_140) = (int)segDim;
-            *(float *)((int)&fStackY_144) = fVar2;
-            *(MeReal **)((int)aiStackY_150 + 8) = n;
-            *(MeReal **)((int)aiStackY_150 + 4) = sp;
+            *(int *)((kd_iptr)&fStackY_140) = (int)segDim;
+            *(float *)((kd_iptr)&fStackY_144) = fVar2;
+            *(MeReal **)((kd_iptr)aiStackY_150 + (2 * (int)sizeof(void *))) = n;
+            *(MeReal **)((kd_iptr)aiStackY_150 + (1 * (int)sizeof(void *))) = sp;
             sp[0] = fVar6 + sp[0];
             sp[1] = fVar7 + sp[1];
             sp[2] = fVar8 + sp[2];
-            *(undefined4 *)((int)aiStackY_150) = 0x1161a;
+            *(undefined4 *)((kd_iptr)aiStackY_150) = 0x1161a;
             AccumulateSphylContacts
-                      (*(float **)((int)aiStackY_150 + 4),
-                       *(float **)((int)aiStackY_150 + 8),
-                       *(float *)((int)&fStackY_144),*(short *)((int)&fStackY_140)
-                       ,*(short *)((int)(kd_frameslot_afStack_11c_iVar16_m20)),
-                       *(float **)((int)(kd_frameslot_afStack_11c_iVar16_m1c)),
+                      (*(float **)((kd_iptr)aiStackY_150 + (1 * (int)sizeof(void *))),
+                       *(float **)((kd_iptr)aiStackY_150 + (2 * (int)sizeof(void *))),
+                       *(float *)((kd_iptr)&fStackY_144),*(short *)((kd_iptr)&fStackY_140)
+                       ,*(short *)((kd_iptr)(kd_frameslot_afStack_11c_iVar16_m20)),
+                       *(float **)((kd_iptr)(kd_frameslot_afStack_11c_iVar16_m1c)),
                        *(float *)(&(*kd_argslot_fffffecc)),*(float **)(&(*kd_argslot_fffffed0)),
                        *(_McdIntersectResult **)(&(*kd_argslot_fffffed4)));
           }
@@ -872,7 +872,7 @@ static void GenerateTriangleContact
       iVar14 = count * 0x28;
       do {
         count = count + 1;
-        *(__typeof__(tri->triangleData) *)((int)result->contacts->normal + iVar14 + 0x18) = tri->triangleData;
+        *(__typeof__(tri->triangleData) *)((kd_iptr)result->contacts->normal + iVar14 + 0x18) = tri->triangleData;
         iVar14 = iVar14 + 0x28;
       } while (count < result->contactCount);
     }

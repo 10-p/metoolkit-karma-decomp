@@ -71,20 +71,18 @@ McdBoxID kd_McdBoxCreate(McdFramework *frame,MeReal dx,MeReal dy,MeReal dz)
   McdBoxID pMVar4;
   McdBoxID pMVar5;
 
-  pMVar4 = (MeMemoryAPI.createAligned)(0x20,0x10);
+  pMVar4 = (MeMemoryAPI.createAligned)((int)sizeof(*(McdBox *)0),0x10);
   pMVar5 = (McdBoxID)0x0;
   if (pMVar4 != (McdBoxID)0x0) {
     McdGeometryInit(pMVar4,frame,2);
                     
     fVar1 = dx * 0.5;
-    *(float *)&pMVar4[1].mRefCtAndID = fVar1;
+    *(float *)&((McdBox *)pMVar4)->mR[0] = fVar1;
     pMVar3 = (McdGeometryID)KD_FBITS((dy * 0.5));
-    pMVar4[1].prev = pMVar3;
+    ((McdBox *)pMVar4)->mR[1] = *(__typeof__(((McdBox *)pMVar4)->mR[1]) *)&pMVar3;
     pMVar2 = (McdGeometryID)KD_FBITS((dz * 0.5));
-    pMVar4[1].next = pMVar2;
-    pMVar4[1].frame =
-         (McdFrameworkID)KD_FBITS(
-         SQRT((*(float *)&(pMVar2)) * (*(float *)&(pMVar2)) + fVar1 * fVar1 + (*(float *)&(pMVar3)) * (*(float *)&(pMVar3))));
+    ((McdBox *)pMVar4)->mR[2] = *(__typeof__(((McdBox *)pMVar4)->mR[2]) *)&pMVar2;
+    ((McdBox *)pMVar4)->mRadius = SQRT((*(float *)&(pMVar2)) * (*(float *)&(pMVar2)) + fVar1 * fVar1 + (*(float *)&(pMVar3)) * (*(float *)&(pMVar3)));
     pMVar5 = pMVar4;
   }
   return pMVar5;
@@ -101,11 +99,10 @@ void kd_McdBoxSetDimensions(McdGeometryID g,MeReal dx,MeReal dy,MeReal dz)
   pMVar1 = (McdGeometryID)KD_FBITS((dy * 0.5));
   fVar2 = dx * 0.5;
   pMVar3 = (McdGeometryID)KD_FBITS((dz * 0.5));
-  g[1].prev = pMVar1;
-  *(float *)&g[1].mRefCtAndID = fVar2;
-  g[1].next = pMVar3;
-  g[1].frame = (McdFrameworkID)KD_FBITS(
-               SQRT((*(float *)&(pMVar3)) * (*(float *)&(pMVar3)) + fVar2 * fVar2 + (*(float *)&(pMVar1)) * (*(float *)&(pMVar1))));
+  ((McdBox *)g)->mR[1] = *(__typeof__(((McdBox *)g)->mR[1]) *)&pMVar1;
+  *(float *)&((McdBox *)g)->mR[0] = fVar2;
+  ((McdBox *)g)->mR[2] = *(__typeof__(((McdBox *)g)->mR[2]) *)&pMVar3;
+  ((McdBox *)g)->mRadius = SQRT((*(float *)&(pMVar3)) * (*(float *)&(pMVar3)) + fVar2 * fVar2 + (*(float *)&(pMVar1)) * (*(float *)&(pMVar1)));
   return;
 }
 
@@ -114,9 +111,9 @@ void kd_McdBoxGetDimensions(McdGeometryID g,MeReal *dx,MeReal *dy,MeReal *dz)
 
 {
                     
-  *dx = *(float *)&(g[1].mRefCtAndID) + *(float *)&(g[1].mRefCtAndID);
-  *dy = *(float *)&(g[1].prev) + *(float *)&(g[1].prev);
-  *dz = *(float *)&(g[1].next) + *(float *)&(g[1].next);
+  *dx = *(float *)&(((McdBox *)g)->mR[0]) + *(float *)&(((McdBox *)g)->mR[0]);
+  *dy = *(float *)&(((McdBox *)g)->mR[1]) + *(float *)&(((McdBox *)g)->mR[1]);
+  *dz = *(float *)&(((McdBox *)g)->mR[2]) + *(float *)&(((McdBox *)g)->mR[2]);
   return;
 }
 
@@ -124,7 +121,7 @@ void kd_McdBoxGetDimensions(McdGeometryID g,MeReal *dx,MeReal *dy,MeReal *dz)
 MeReal kd_McdBoxGetBSphereRadius(McdGeometryID g)
 
 {
-  return *(float *)&(g[1].frame);
+  return *(float *)&(((McdBox *)g)->mRadius);
 }
 
 /* ---- McdBoxGetRadii (exported as kd_McdBoxGetRadii, asm label "McdBoxGetRadii") ---- */
@@ -161,15 +158,15 @@ void kd_McdBoxUpdateAABB(McdGeometryInstanceID ins,MeVector4 *finalTM,MeBool tig
 
   pvVar7 = McdGeometryInstanceGetGeometry(ins);
   pfVar8 = McdGeometryInstanceGetTransformPtr(ins);
-  fVar1 = ABS(pfVar8[8]) * *(float *)((int)pvVar7 + 0x18) +
-          ABS(pfVar8[4]) * *(float *)((int)pvVar7 + 0x14) +
-          ABS(*pfVar8) * *(float *)((int)pvVar7 + 0x10);
-  fVar2 = ABS(pfVar8[9]) * *(float *)((int)pvVar7 + 0x18) +
-          ABS(pfVar8[1]) * *(float *)((int)pvVar7 + 0x10) +
-          ABS(pfVar8[5]) * *(float *)((int)pvVar7 + 0x14);
-  fVar3 = ABS(pfVar8[10]) * *(float *)((int)pvVar7 + 0x18) +
-          ABS(pfVar8[6]) * *(float *)((int)pvVar7 + 0x14) +
-          ABS(pfVar8[2]) * *(float *)((int)pvVar7 + 0x10);
+  fVar1 = ABS(pfVar8[8]) * *(float *)((kd_iptr)pvVar7 + ((int)((char *)&((McdBox *)0)->mR[2] - (char *)0))) +
+          ABS(pfVar8[4]) * *(float *)((kd_iptr)pvVar7 + ((int)((char *)&((McdBox *)0)->mR[1] - (char *)0))) +
+          ABS(*pfVar8) * *(float *)((kd_iptr)pvVar7 + ((int)((char *)&((McdBox *)0)->mR[0] - (char *)0)));
+  fVar2 = ABS(pfVar8[9]) * *(float *)((kd_iptr)pvVar7 + ((int)((char *)&((McdBox *)0)->mR[2] - (char *)0))) +
+          ABS(pfVar8[1]) * *(float *)((kd_iptr)pvVar7 + ((int)((char *)&((McdBox *)0)->mR[0] - (char *)0))) +
+          ABS(pfVar8[5]) * *(float *)((kd_iptr)pvVar7 + ((int)((char *)&((McdBox *)0)->mR[1] - (char *)0)));
+  fVar3 = ABS(pfVar8[10]) * *(float *)((kd_iptr)pvVar7 + ((int)((char *)&((McdBox *)0)->mR[2] - (char *)0))) +
+          ABS(pfVar8[6]) * *(float *)((kd_iptr)pvVar7 + ((int)((char *)&((McdBox *)0)->mR[1] - (char *)0))) +
+          ABS(pfVar8[2]) * *(float *)((kd_iptr)pvVar7 + ((int)((char *)&((McdBox *)0)->mR[0] - (char *)0)));
   ins->min[0] = pfVar8[0xc] - fVar1;
   ins->min[1] = pfVar8[0xd] - fVar2;
   ins->min[2] = pfVar8[0xe] - fVar3;
@@ -177,15 +174,15 @@ void kd_McdBoxUpdateAABB(McdGeometryInstanceID ins,MeVector4 *finalTM,MeBool tig
   ins->max[1] = fVar2 + pfVar8[0xd];
   ins->max[2] = fVar3 + pfVar8[0xe];
   if (finalTM != (MeVector4 *)0x0) {
-    fVar1 = ABS(finalTM[2][0]) * *(float *)((int)pvVar7 + 0x18) +
-            ABS(finalTM[1][0]) * *(float *)((int)pvVar7 + 0x14) +
-            ABS((*finalTM)[0]) * *(float *)((int)pvVar7 + 0x10);
-    fVar3 = ABS(finalTM[2][1]) * *(float *)((int)pvVar7 + 0x18) +
-            ABS(finalTM[1][1]) * *(float *)((int)pvVar7 + 0x14) +
-            ABS((*finalTM)[1]) * *(float *)((int)pvVar7 + 0x10);
-    fVar5 = ABS(finalTM[2][2]) * *(float *)((int)pvVar7 + 0x18) +
-            ABS(finalTM[1][2]) * *(float *)((int)pvVar7 + 0x14) +
-            ABS((*finalTM)[2]) * *(float *)((int)pvVar7 + 0x10);
+    fVar1 = ABS(finalTM[2][0]) * *(float *)((kd_iptr)pvVar7 + ((int)((char *)&((McdBox *)0)->mR[2] - (char *)0))) +
+            ABS(finalTM[1][0]) * *(float *)((kd_iptr)pvVar7 + ((int)((char *)&((McdBox *)0)->mR[1] - (char *)0))) +
+            ABS((*finalTM)[0]) * *(float *)((kd_iptr)pvVar7 + ((int)((char *)&((McdBox *)0)->mR[0] - (char *)0)));
+    fVar3 = ABS(finalTM[2][1]) * *(float *)((kd_iptr)pvVar7 + ((int)((char *)&((McdBox *)0)->mR[2] - (char *)0))) +
+            ABS(finalTM[1][1]) * *(float *)((kd_iptr)pvVar7 + ((int)((char *)&((McdBox *)0)->mR[1] - (char *)0))) +
+            ABS((*finalTM)[1]) * *(float *)((kd_iptr)pvVar7 + ((int)((char *)&((McdBox *)0)->mR[0] - (char *)0)));
+    fVar5 = ABS(finalTM[2][2]) * *(float *)((kd_iptr)pvVar7 + ((int)((char *)&((McdBox *)0)->mR[2] - (char *)0))) +
+            ABS(finalTM[1][2]) * *(float *)((kd_iptr)pvVar7 + ((int)((char *)&((McdBox *)0)->mR[1] - (char *)0))) +
+            ABS((*finalTM)[2]) * *(float *)((kd_iptr)pvVar7 + ((int)((char *)&((McdBox *)0)->mR[0] - (char *)0)));
     fVar2 = finalTM[3][0] + fVar1;
     fVar1 = finalTM[3][0] - fVar1;
     fVar4 = finalTM[3][1] + fVar3;
@@ -227,11 +224,11 @@ void kd_McdBoxGetXYAABB(McdGeometry *g,lsTransform *tm,MeReal *bounds)
   float fVar1;
   float fVar2;
 
-  fVar1 = ABS(tm->row[2].v.v[0]) * *(float *)&(g[1].next) +
-          ABS(tm->row[1].v.v[0]) * *(float *)&(g[1].prev) +
-          ABS(tm->row[0].v.v[0]) * *(float *)&(g[1].mRefCtAndID);
-  fVar2 = ABS(tm->row[0].v.v[1]) * *(float *)&(g[1].mRefCtAndID) +
-          ABS(tm->row[1].v.v[1]) * *(float *)&(g[1].prev) + *(float *)&(g[1].next) * ABS(tm->row[2].v.v[1]);
+  fVar1 = ABS(tm->row[2].v.v[0]) * *(float *)&(((McdBox *)g)->mR[2]) +
+          ABS(tm->row[1].v.v[0]) * *(float *)&(((McdBox *)g)->mR[1]) +
+          ABS(tm->row[0].v.v[0]) * *(float *)&(((McdBox *)g)->mR[0]);
+  fVar2 = ABS(tm->row[0].v.v[1]) * *(float *)&(((McdBox *)g)->mR[0]) +
+          ABS(tm->row[1].v.v[1]) * *(float *)&(((McdBox *)g)->mR[1]) + *(float *)&(((McdBox *)g)->mR[2]) * ABS(tm->row[2].v.v[1]);
   *bounds = tm->row[3].v.v[0] - fVar1;
   bounds[1] = fVar1 + tm->row[3].v.v[0];
   bounds[2] = tm->row[3].v.v[1] - fVar2;
@@ -247,7 +244,7 @@ void kd_McdBoxGetBSphere(McdGeometry *g,MeReal *center,MeReal *radius)
   *center = 0.0;
   center[2] = 0.0;
   center[1] = 0.0;
-  *radius = *(float *)&(g[1].frame);
+  *radius = *(float *)&(((McdBox *)g)->mRadius);
   return;
 }
 
@@ -288,16 +285,16 @@ void kd_McdBoxMaximumPoint(McdGeometryInstanceID ins,MeReal *inDir,MeReal *outPo
     fVar3 = -1.0;
   }
   fVar1 = 0.0;
-  fVar3 = fVar3 * *(float *)((int)pvVar6 + 0x10);
+  fVar3 = fVar3 * *(float *)((kd_iptr)pvVar6 + ((int)((char *)&((McdBox *)0)->mR[0] - (char *)0)));
   fVar2 = fVar1;
   if ((fVar4 != 0.0) && (fVar2 = 1.0, fVar4 < 0.0)) {
     fVar2 = -1.0;
   }
-  fVar2 = fVar2 * *(float *)((int)pvVar6 + 0x14);
+  fVar2 = fVar2 * *(float *)((kd_iptr)pvVar6 + ((int)((char *)&((McdBox *)0)->mR[1] - (char *)0)));
   if ((fVar5 != 0.0) && (fVar1 = 1.0, fVar5 < 0.0)) {
     fVar1 = -1.0;
   }
-  fVar1 = fVar1 * *(float *)((int)pvVar6 + 0x18);
+  fVar1 = fVar1 * *(float *)((kd_iptr)pvVar6 + ((int)((char *)&((McdBox *)0)->mR[2] - (char *)0)));
   *outPoint = pfVar7[8] * fVar1 + pfVar7[4] * fVar2 + *pfVar7 * fVar3 + pfVar7[0xc];
   outPoint[1] = pfVar7[9] * fVar1 + pfVar7[5] * fVar2 + pfVar7[1] * fVar3 + pfVar7[0xd];
   outPoint[2] = pfVar7[10] * fVar1 + pfVar7[6] * fVar2 + pfVar7[2] * fVar3 + pfVar7[0xe];
@@ -312,9 +309,9 @@ MeI16 kd_McdBoxGetMassProperties(McdGeometry *g,MeVector4 *relTM,MeVector3 *m,Me
   McdGeometryID pMVar2;
   float fVar3;
 
-  pMVar1 = g[1].prev;
-  pMVar2 = g[1].next;
-  fVar3 = *(float *)&(g[1].mRefCtAndID);
+  pMVar1 = *(__typeof__(pMVar1) *)&((McdBox *)g)->mR[1];
+  pMVar2 = *(__typeof__(pMVar2) *)&((McdBox *)g)->mR[2];
+  fVar3 = *(float *)&(((McdBox *)g)->mR[0]);
                     
   (*m)[1] = 0.0;
   (*m)[2] = 0.0;
@@ -357,16 +354,16 @@ void kd_McdBoxMaximumPointLocal(McdBoxID g,MeReal *inDir,MeReal *outPoint)
     fVar2 = -1.0;
   }
   fVar1 = 0.0;
-  *outPoint = fVar2 * *(float *)&(g[1].mRefCtAndID);
+  *outPoint = fVar2 * *(float *)&(((McdBox *)g)->mR[0]);
   fVar2 = fVar1;
   if ((inDir[1] != 0.0) && (fVar2 = 1.0, inDir[1] < 0.0)) {
     fVar2 = -1.0;
   }
-  outPoint[1] = fVar2 * *(float *)&(g[1].prev);
+  outPoint[1] = fVar2 * *(float *)&(((McdBox *)g)->mR[1]);
   if ((inDir[2] != 0.0) && (fVar1 = 1.0, inDir[2] < 0.0)) {
     fVar1 = -1.0;
   }
-  outPoint[2] = fVar1 * *(float *)&(g[1].next);
+  outPoint[2] = fVar1 * *(float *)&(((McdBox *)g)->mR[2]);
   return;
 }
 
@@ -393,19 +390,19 @@ void kd_McdBoxDebugDraw(McdGeometryID geom,MeReal (*tm) [4],MeReal *colour)
                     
     iVar9 = 0;
     iVar10 = 0xb;
-    fVar1 = (*(float *)&(geom[1].mRefCtAndID) + *(float *)&(geom[1].mRefCtAndID)) * 0.5;
-    fVar2 = (*(float *)&(geom[1].prev) + *(float *)&(geom[1].prev)) * 0.5;
-    fVar3 = (*(float *)&(geom[1].next) + *(float *)&(geom[1].next)) * 0.5;
+    fVar1 = (*(float *)&(((McdBox *)geom)->mR[0]) + *(float *)&(((McdBox *)geom)->mR[0])) * 0.5;
+    fVar2 = (*(float *)&(((McdBox *)geom)->mR[1]) + *(float *)&(((McdBox *)geom)->mR[1])) * 0.5;
+    fVar3 = (*(float *)&(((McdBox *)geom)->mR[2]) + *(float *)&(((McdBox *)geom)->mR[2])) * 0.5;
     do {
-      fVar4 = fVar2 * *(float *)((int)McdBoxDebugDraw__boxDraw[0][0] + iVar9 + 4);
-      fVar5 = fVar1 * *(float *)((int)McdBoxDebugDraw__boxDraw[0][0] + iVar9);
-      fVar7 = fVar3 * *(float *)((int)McdBoxDebugDraw__boxDraw[0][0] + iVar9 + 8);
+      fVar4 = fVar2 * *(float *)((kd_iptr)McdBoxDebugDraw__boxDraw[0][0] + iVar9 + 4);
+      fVar5 = fVar1 * *(float *)((kd_iptr)McdBoxDebugDraw__boxDraw[0][0] + iVar9);
+      fVar7 = fVar3 * *(float *)((kd_iptr)McdBoxDebugDraw__boxDraw[0][0] + iVar9 + 8);
       wv1[0] = tm[2][0] * fVar7 + fVar5 * (*tm)[0] + fVar4 * tm[1][0] + tm[3][0];
       wv1[1] = fVar7 * tm[2][1] + fVar4 * tm[1][1] + fVar5 * (*tm)[1] + tm[3][1];
-      fVar8 = fVar2 * *(float *)((int)McdBoxDebugDraw__boxDraw[0][1] + iVar9 + 4);
-      fVar6 = fVar1 * *(float *)((int)McdBoxDebugDraw__boxDraw[0][1] + iVar9);
+      fVar8 = fVar2 * *(float *)((kd_iptr)McdBoxDebugDraw__boxDraw[0][1] + iVar9 + 4);
+      fVar6 = fVar1 * *(float *)((kd_iptr)McdBoxDebugDraw__boxDraw[0][1] + iVar9);
       wv1[2] = fVar5 * (*tm)[2] + fVar4 * tm[1][2] + fVar7 * tm[2][2] + tm[3][2];
-      fVar4 = fVar3 * *(float *)((int)McdBoxDebugDraw__boxDraw[0][1] + iVar9 + 8);
+      fVar4 = fVar3 * *(float *)((kd_iptr)McdBoxDebugDraw__boxDraw[0][1] + iVar9 + 8);
       iVar9 = iVar9 + 0x18;
       wv2[0] = (*tm)[0] * fVar6 + tm[1][0] * fVar8 + tm[2][0] * fVar4 + tm[3][0];
       wv2[1] = (*tm)[1] * fVar6 + tm[1][1] * fVar8 + tm[2][1] * fVar4 + tm[3][1];

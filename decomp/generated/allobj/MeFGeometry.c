@@ -109,7 +109,7 @@ void kd_MeFGeometryInsertPrimitive(MeFGeometry *geometry,MeFPrimitive *p)
       kd_MeFGeometryRemovePrimitive(p);
     }
   }
-  pMVar3 = (MeMemoryAPI.create)(0xc);
+  pMVar3 = (MeMemoryAPI.create)((int)sizeof(*(MeFPrimitiveNode *)0));
   pMVar3->current = p;
                     
   pMVar2 = geometry->nilPrimitive;
@@ -164,8 +164,8 @@ MeFGeometry * kd_MeFGeometryCreate(char *name)
   MeFGeometry *pMVar1;
   MeFPrimitiveNode *pMVar2;
 
-  pMVar1 = (MeMemoryAPI.create)(0x24);
-  pMVar2 = (MeMemoryAPI.create)(0xc);
+  pMVar1 = (MeMemoryAPI.create)((int)sizeof(*(MeFGeometry *)0));
+  pMVar2 = (MeMemoryAPI.create)((int)sizeof(*(MeFPrimitiveNode *)0));
   pMVar1->nilPrimitive = pMVar2;
   pMVar1->id = (char *)0x0;
   pMVar1->asset = (MeFAsset *)0x0;
@@ -194,8 +194,8 @@ MeFGeometry * kd_MeFGeometryCreateCopy(MeFGeometry *geometry,MeBool recurse)
   MeFPrimitiveNode *pMVar5;
   MeFPrimitive *pMVar6;
 
-  geometry_00 = (MeMemoryAPI.createZeroed)(0x24);
-  pMVar5 = (MeMemoryAPI.create)(0xc);
+  geometry_00 = (MeMemoryAPI.createZeroed)((int)sizeof(*(MeFGeometry *)0));
+  pMVar5 = (MeMemoryAPI.create)((int)sizeof(*(MeFPrimitiveNode *)0));
   geometry_00->nilPrimitive = pMVar5;
   pMVar5->prev = pMVar5;
   pMVar5->next = pMVar5;

@@ -241,7 +241,7 @@ McdGeomMan * kd_McdGMCreate(McdFrameworkID fwk)
   MeHash *pMVar2;
   McdNullID pMVar3;
 
-  pMVar1 = (MeMemoryAPI.create)(0x10);
+  pMVar1 = (MeMemoryAPI.create)((int)sizeof(*(McdGeomMan *)0));
   pMVar1->fwk = fwk;
   pMVar2 = MeHashCreate(0x61);
   pMVar1->name2geom = pMVar2;

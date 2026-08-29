@@ -1008,14 +1008,14 @@ MeFPrimitive * kd_MeFPrimitiveCreateFromFile_1_0(MeFGeometry *parent,PElement *e
                     
               iVar4 = 0;
               p = MeFPrimitiveCreate(pvVar2,6);
-              if (0 < *(int *)&pfVar1[3]) {
+              if (0 < *(kd_iptr *)&pfVar1[3]) {
                 iVar5 = 0;
                 do {
                   iVar4 = iVar4 + 1;
-                  pvVar2 = (void *)(*(int *)&pfVar1[4] + iVar5);
+                  pvVar2 = (void *)(*(kd_iptr *)&pfVar1[4] + iVar5);
                   iVar5 = iVar5 + 0xc;
                   MeFPrimitiveAddVertex(p,pvVar2);
-                } while (iVar4 < *(int *)&pfVar1[3]);
+                } while (iVar4 < *(kd_iptr *)&pfVar1[3]);
               }
             }
           }
@@ -1122,24 +1122,24 @@ MeFModel * kd_MeFModelCreateFromFile_1_0(MeFAsset *parent,PElement *e)
                     
     pvVar2 = pPVar1->current->cdata;
     MeFModelSetMassOffset(pMVar5,pvVar2);
-    MeFModelSetMass(pMVar5,*(float *)((int)pvVar2 + 0xc));
-    MeFModelSetDensity(pMVar5,*(float *)((int)pvVar2 + 0x10));
-    I[0][0] = *(MeReal *)((int)pvVar2 + 0x14);
-    I[1][1] = *(MeReal *)((int)pvVar2 + 0x20);
-    I[2][2] = *(MeReal *)((int)pvVar2 + 0x28);
-    I[0][1] = *(MeReal *)((int)pvVar2 + 0x18);
-    I[0][2] = *(MeReal *)((int)pvVar2 + 0x1c);
-    I[1][2] = *(MeReal *)((int)pvVar2 + 0x24);
+    MeFModelSetMass(pMVar5,*(float *)((kd_iptr)pvVar2 + 0xc));
+    MeFModelSetDensity(pMVar5,*(float *)((kd_iptr)pvVar2 + 0x10));
+    I[0][0] = *(MeReal *)((kd_iptr)pvVar2 + 0x14);
+    I[1][1] = *(MeReal *)((kd_iptr)pvVar2 + 0x20);
+    I[2][2] = *(MeReal *)((kd_iptr)pvVar2 + 0x28);
+    I[0][1] = *(MeReal *)((kd_iptr)pvVar2 + 0x18);
+    I[0][2] = *(MeReal *)((kd_iptr)pvVar2 + 0x1c);
+    I[1][2] = *(MeReal *)((kd_iptr)pvVar2 + 0x24);
     I[1][0] = I[0][1];
     I[2][0] = I[0][2];
     I[2][1] = I[1][2];
     MeFModelSetInertiaTensor(pMVar5,I);
-    MeFModelSetLinearVelocityDamping(pMVar5,*(float *)((int)pvVar2 + 0x2c));
-    MeFModelSetAngularVelocityDamping(pMVar5,*(float *)((int)pvVar2 + 0x30));
+    MeFModelSetLinearVelocityDamping(pMVar5,*(float *)((kd_iptr)pvVar2 + 0x2c));
+    MeFModelSetAngularVelocityDamping(pMVar5,*(float *)((kd_iptr)pvVar2 + 0x30));
     MeFModelSetFastSpinAxis
-              (pMVar5,*(float *)((int)pvVar2 + 0x34),*(float *)((int)pvVar2 + 0x38),
-               *(float *)((int)pvVar2 + 0x3c));
-    MeFModelEnableFastSpinAxis(pMVar5,*(int *)((int)pvVar2 + 0x40));
+              (pMVar5,*(float *)((kd_iptr)pvVar2 + 0x34),*(float *)((kd_iptr)pvVar2 + 0x38),
+               *(float *)((kd_iptr)pvVar2 + 0x3c));
+    MeFModelEnableFastSpinAxis(pMVar5,*(int *)((kd_iptr)pvVar2 + 0x40));
   }
   if (fg != (MeFGeometry *)0x0) {
     MeFModelSetGeometry(pMVar5,fg);
@@ -1286,8 +1286,8 @@ LAB_00010ec5:
       MeFJointSetProperty1f(fj,1,pfVar1[0x13]);
       MeFJointSetProperty1f(fj,3,pfVar1[0x15]);
       MeFJointSetProperty1f(fj,4,pfVar1[0x16]);
-      MeFJointSetProperty1b(fj,0xf,*(int *)&pfVar1[0x21]);
-      MeFJointSetProperty1b(fj,0x10,*(int *)&pfVar1[0x22]);
+      MeFJointSetProperty1b(fj,0xf,*(kd_iptr *)&pfVar1[0x21]);
+      MeFJointSetProperty1b(fj,0x10,*(kd_iptr *)&pfVar1[0x22]);
       MeFJointSetProperty1f(fj,0x17,pfVar1[0x29]);
       fVar9 = pfVar1[0x23];
       iVar5 = 0x11;
@@ -1311,7 +1311,7 @@ LAB_00010ec5:
         MeFJointSetProperty1f(fj,0x11,pfVar1[0x23]);
         MeFJointSetProperty1f(fj,0x18,pfVar1[0x2a]);
         MeFJointSetProperty1f(fj,0x12,pfVar1[0x24]);
-        MeFJointSetProperty1b(fj,0x1c,*(int *)&pfVar1[0x2e]);
+        MeFJointSetProperty1b(fj,0x1c,*(kd_iptr *)&pfVar1[0x2e]);
         MeFJointSetProperty1f(fj,9,pfVar1[0x1b]);
         MeFJointSetProperty1f(fj,0,pfVar1[0x12]);
         MeFJointSetProperty1f(fj,1,pfVar1[0x13]);
@@ -1409,16 +1409,16 @@ LAB_00010ec5:
             } while (bVar8);
             if (bVar8) {
               fj = MeFJointCreate(pvVar2,8);
-              MeFJointSetProperty1i(fj,0x1a,*(int *)&pfVar1[0x2c]);
+              MeFJointSetProperty1i(fj,0x1a,*(kd_iptr *)&pfVar1[0x2c]);
               MeFJointSetProperty1f(fj,0,pfVar1[0x12]);
               MeFJointSetProperty1f(fj,1,pfVar1[0x13]);
               MeFJointSetProperty1f(fj,3,pfVar1[0x15]);
               MeFJointSetProperty1f(fj,9,pfVar1[0x1b]);
-              MeFJointSetProperty1i(fj,0x1b,*(int *)&pfVar1[0x2d]);
+              MeFJointSetProperty1i(fj,0x1b,*(kd_iptr *)&pfVar1[0x2d]);
               MeFJointSetProperty1f(fj,2,pfVar1[0x14]);
               MeFJointSetProperty1f(fj,4,pfVar1[0x16]);
               MeFJointSetProperty1f(fj,10,pfVar1[0x1c]);
-              MeFJointSetProperty1b(fj,0x1c,*(int *)&pfVar1[0x2e]);
+              MeFJointSetProperty1b(fj,0x1c,*(kd_iptr *)&pfVar1[0x2e]);
               goto LAB_00010b70;
             }
                     
@@ -1435,7 +1435,7 @@ LAB_00010ec5:
             } while (bVar8);
             if (bVar8) {
               fj = MeFJointCreate(pvVar2,9);
-              MeFJointSetProperty1b(fj,0x1c,*(int *)&pfVar1[0x2e]);
+              MeFJointSetProperty1b(fj,0x1c,*(kd_iptr *)&pfVar1[0x2e]);
               MeFJointSetProperty1f(fj,3,pfVar1[0x15]);
               fVar9 = pfVar1[0x1b];
               iVar5 = 9;
@@ -1503,7 +1503,7 @@ MeXMLError kd_Handle_Asset_1_0(MeXMLElement *elem,PElement *parent)
   
   pMVar4 = handlers;
                     
-  for (iVar3 = 0x30; iVar3 != 0; iVar3 = iVar3 + -1) {
+  for (iVar3 = (uint)(6 * (int)sizeof(*(MeXMLHandler *)0)) / (uint)((char *)&((MeXMLHandler *)0)->type - (char *)0); iVar3 != 0; iVar3 = iVar3 + -1) {
     pMVar4->name = (char *)0x0;
     pMVar4 = (MeXMLHandler *)&pMVar4->type;
   }
@@ -1556,17 +1556,17 @@ static MeXMLError AddVertex_1_0(MeXMLElement *elem,void *prim,void *parent)
   void *pvVar3;
   int iVar4;
 
-  puVar1 = (undefined4 *)(*(int *)((int)prim + 0x10) + *(int *)((int)prim + 0xc) * 0xc);
-  *puVar1 = *(undefined4 *)((int)prim + 0x18);
-  puVar1[1] = *(undefined4 *)((int)prim + 0x1c);
-  puVar1[2] = *(undefined4 *)((int)prim + 0x20);
-  iVar2 = *(int *)((int)prim + 0x14);
-  iVar4 = *(int *)((int)prim + 0xc) + 1;
-  *(int *)((int)prim + 0xc) = iVar4;
+  puVar1 = (undefined4 *)(*(int *)((kd_iptr)prim + 0x10) + *(int *)((kd_iptr)prim + 0xc) * 0xc);
+  *puVar1 = *(undefined4 *)((kd_iptr)prim + 0x18);
+  puVar1[1] = *(undefined4 *)((kd_iptr)prim + 0x1c);
+  puVar1[2] = *(undefined4 *)((kd_iptr)prim + 0x20);
+  iVar2 = *(int *)((kd_iptr)prim + 0x14);
+  iVar4 = *(int *)((kd_iptr)prim + 0xc) + 1;
+  *(int *)((kd_iptr)prim + 0xc) = iVar4;
   if (iVar2 <= iVar4) {
-    *(int *)((int)prim + 0x14) = iVar2 * 2;
-    pvVar3 = (MeMemoryAPI.resize)(*(void **)((int)prim + 0x10),iVar2 * 0x18);
-    *(void **)((int)prim + 0x10) = pvVar3;
+    *(int *)((kd_iptr)prim + 0x14) = iVar2 * 2;
+    pvVar3 = (MeMemoryAPI.resize)(*(void **)((kd_iptr)prim + 0x10),iVar2 * 0x18);
+    *(void **)((kd_iptr)prim + 0x10) = pvVar3;
   }
   return MeXMLErrorNone;
 }
@@ -1592,10 +1592,10 @@ static MeXMLError Handle_GeometryPrimitive_1_0(MeXMLElement *elem,PElement *pare
     pMVar6 = (MeXMLHandler *)&pMVar6->type;
   }
   pvVar1 = (MeMemoryAPI.createZeroed)(100);
-  *(undefined4 *)((int)pvVar1 + 0xc) = 0;
-  *(undefined4 *)((int)pvVar1 + 0x14) = 1;
+  *(undefined4 *)((kd_iptr)pvVar1 + 0xc) = 0;
+  *(undefined4 *)((kd_iptr)pvVar1 + 0x14) = 1;
   pvVar2 = (MeMemoryAPI.create)(0xc);
-  *(void **)((int)pvVar1 + 0x10) = pvVar2;
+  *(void **)((kd_iptr)pvVar1 + 0x10) = pvVar2;
   pvVar2 = PElementCreate(2,elem,pvVar1,FreePrimitive,elem->attr);
   PElementInsert(pvVar2,parent);
   MVar3 = MeXMLElementProcess(elem,handlers,pvVar1,pvVar2);
@@ -1650,17 +1650,17 @@ static MeXMLError Handle_Dynamics_1_0(MeXMLElement *elem,PElement *parent)
   pvVar1 = (MeMemoryAPI.createZeroed)(0x44);
   pvVar2 = PElementCreate(4,elem,pvVar1,MeMemoryAPI.destroy,elem->attr);
   PElementInsert(pvVar2,parent);
-  *(undefined4 *)((int)pvVar1 + 0x10) = 0x3f800000;
-  *(undefined4 *)((int)pvVar1 + 0xc) = 0x3f800000;
-  *(undefined4 *)((int)pvVar1 + 0x30) = 0;
-  *(undefined4 *)((int)pvVar1 + 0x2c) = 0;
-  *(undefined4 *)((int)pvVar1 + 0x34) = 0;
-  *(undefined4 *)((int)pvVar1 + 0x38) = 0x3f800000;
-  *(undefined4 *)((int)pvVar1 + 0x3c) = 0;
-  *(undefined4 *)((int)pvVar1 + 0x40) = 0;
-  *(undefined4 *)((int)pvVar1 + 0x14) = 0x3ecccccd;
-  *(undefined4 *)((int)pvVar1 + 0x20) = 0x3ecccccd;
-  *(undefined4 *)((int)pvVar1 + 0x28) = 0x3ecccccd;
+  *(undefined4 *)((kd_iptr)pvVar1 + 0x10) = 0x3f800000;
+  *(undefined4 *)((kd_iptr)pvVar1 + 0xc) = 0x3f800000;
+  *(undefined4 *)((kd_iptr)pvVar1 + 0x30) = 0;
+  *(undefined4 *)((kd_iptr)pvVar1 + 0x2c) = 0;
+  *(undefined4 *)((kd_iptr)pvVar1 + 0x34) = 0;
+  *(undefined4 *)((kd_iptr)pvVar1 + 0x38) = 0x3f800000;
+  *(undefined4 *)((kd_iptr)pvVar1 + 0x3c) = 0;
+  *(undefined4 *)((kd_iptr)pvVar1 + 0x40) = 0;
+  *(undefined4 *)((kd_iptr)pvVar1 + 0x14) = 0x3ecccccd;
+  *(undefined4 *)((kd_iptr)pvVar1 + 0x20) = 0x3ecccccd;
+  *(undefined4 *)((kd_iptr)pvVar1 + 0x28) = 0x3ecccccd;
   MVar3 = MeXMLElementProcess(elem,handlers,pvVar1,pvVar2);
   return MVar3;
 }
@@ -1771,7 +1771,7 @@ static void FreePrimitive(void *m)
 
 {
                     
-  (MeMemoryAPI.destroy)(*(void **)((int)m + 0x10));
+  (MeMemoryAPI.destroy)(*(void **)((kd_iptr)m + 0x10));
   (MeMemoryAPI.destroy)(m);
   return;
 }

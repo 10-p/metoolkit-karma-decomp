@@ -73,13 +73,13 @@ KD_WEAK_DATA const char kd_ZTS20keaFunctions_Vanilla[]
 
 KD_WEAK_DATA const void *kd_ZTI12keaFunctions[2]
     KD_MANGLED("_ZTI12keaFunctions") = {
-        (const void *)((const char *)&kd_ext__ZTVN10__cxxabiv117__class_type_infoE[0] + 8),
+        (const void *)((const char *)&kd_ext__ZTVN10__cxxabiv117__class_type_infoE[0] + (2 * (int)sizeof(void *))),
         (const void *)kd_ZTS12keaFunctions
     };
 
 KD_WEAK_DATA const void *kd_ZTI20keaFunctions_Vanilla[3]
     KD_MANGLED("_ZTI20keaFunctions_Vanilla") = {
-        (const void *)((const char *)&kd_ext__ZTVN10__cxxabiv120__si_class_type_infoE[0] + 8),
+        (const void *)((const char *)&kd_ext__ZTVN10__cxxabiv120__si_class_type_infoE[0] + (2 * (int)sizeof(void *))),
         (const void *)kd_ZTS20keaFunctions_Vanilla,
         (const void *)kd_ZTI12keaFunctions
     };
@@ -229,12 +229,12 @@ static void Multiply46BlockByMBlock
     fVar10 = jblock->col[5][1];
     fVar11 = jblock->col[5][2];
     fVar12 = jblock->col[5][3];
-    (*(MeReal (*) [4])((int)jmblock + 0x30))[0] =
+    (*(MeReal (*) [4])((kd_iptr)jmblock + 0x30))[0] =
          jblock->col[4][0] * fVar5 + jblock->col[3][0] * fVar1 + jblock->col[5][0] * fVar9;
-    (*(MeReal (*) [4])((int)jmblock + 0x30))[1] = fVar10 * fVar9 + fVar6 * fVar5 + fVar2 * fVar1;
-    (*(MeReal (*) [4])((int)jmblock + 0x30))[2] = fVar3 * fVar1 + fVar7 * fVar5 + fVar11 * fVar9;
-    (*(MeReal (*) [4])((int)jmblock + 0x30))[3] = fVar4 * fVar1 + fVar5 * fVar8 + fVar9 * fVar12;
-    jmblock = (MdtKeaJBlock *)((int)jmblock + 0x10);
+    (*(MeReal (*) [4])((kd_iptr)jmblock + 0x30))[1] = fVar10 * fVar9 + fVar6 * fVar5 + fVar2 * fVar1;
+    (*(MeReal (*) [4])((kd_iptr)jmblock + 0x30))[2] = fVar3 * fVar1 + fVar7 * fVar5 + fVar11 * fVar9;
+    (*(MeReal (*) [4])((kd_iptr)jmblock + 0x30))[3] = fVar4 * fVar1 + fVar5 * fVar8 + fVar9 * fVar12;
+    jmblock = (MdtKeaJBlock *)((kd_iptr)jmblock + 0x10);
     iVar13 = iVar13 + -1;
   } while (-1 < iVar13);
   return;

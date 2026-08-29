@@ -673,13 +673,13 @@ void kd_printCalcJinvMJTInput
       do {
         iVar17 = iVar18 * 0x20 + local_34;
         iVar18 = iVar18 + 1;
-        printf("%2d",*(undefined4 *)((int)jminfo->blocktobody + iVar17));
-        printf("%2d",*(undefined4 *)((int)jminfo->blocktobody + iVar17 + 4));
-        printf("%2d",*(undefined4 *)((int)jminfo->blocktobody + iVar17 + 8));
-        printf("%2d",*(undefined4 *)((int)jminfo->blocktobody + iVar17 + 0xc));
-        printf("%2d",*(undefined4 *)((int)jminfo->blocktobody + iVar17 + 0x10));
-        printf("%2d",*(undefined4 *)((int)jminfo->blocktobody + iVar17 + 0x14));
-        printf("%2d",*(undefined4 *)((int)jminfo->blocktobody + iVar17 + 0x18));
+        printf("%2d",*(undefined4 *)((kd_iptr)jminfo->blocktobody + iVar17));
+        printf("%2d",*(undefined4 *)((kd_iptr)jminfo->blocktobody + iVar17 + 4));
+        printf("%2d",*(undefined4 *)((kd_iptr)jminfo->blocktobody + iVar17 + 8));
+        printf("%2d",*(undefined4 *)((kd_iptr)jminfo->blocktobody + iVar17 + 0xc));
+        printf("%2d",*(undefined4 *)((kd_iptr)jminfo->blocktobody + iVar17 + 0x10));
+        printf("%2d",*(undefined4 *)((kd_iptr)jminfo->blocktobody + iVar17 + 0x14));
+        printf("%2d",*(undefined4 *)((kd_iptr)jminfo->blocktobody + iVar17 + 0x18));
         printf("%2d");
         piVar15 = (int *)kd_putchar(10);
       } while (iVar18 != 3);
@@ -706,13 +706,13 @@ void kd_printCalcJinvMJTInput
       do {
         iVar14 = iVar17 * 0x20 + local_28;
         iVar17 = iVar17 + 1;
-        printf("%2d",*(undefined4 *)((int)jinfo->blocktobody + iVar14));
-        printf("%2d",*(undefined4 *)((int)jinfo->blocktobody + iVar14 + 4));
-        printf("%2d",*(undefined4 *)((int)jinfo->blocktobody + iVar14 + 8));
-        printf("%2d",*(undefined4 *)((int)jinfo->blocktobody + iVar14 + 0xc));
-        printf("%2d",*(undefined4 *)((int)jinfo->blocktobody + iVar14 + 0x10));
-        printf("%2d",*(undefined4 *)((int)jinfo->blocktobody + iVar14 + 0x14));
-        printf("%2d",*(undefined4 *)((int)jinfo->blocktobody + iVar14 + 0x18));
+        printf("%2d",*(undefined4 *)((kd_iptr)jinfo->blocktobody + iVar14));
+        printf("%2d",*(undefined4 *)((kd_iptr)jinfo->blocktobody + iVar14 + 4));
+        printf("%2d",*(undefined4 *)((kd_iptr)jinfo->blocktobody + iVar14 + 8));
+        printf("%2d",*(undefined4 *)((kd_iptr)jinfo->blocktobody + iVar14 + 0xc));
+        printf("%2d",*(undefined4 *)((kd_iptr)jinfo->blocktobody + iVar14 + 0x10));
+        printf("%2d",*(undefined4 *)((kd_iptr)jinfo->blocktobody + iVar14 + 0x14));
+        printf("%2d",*(undefined4 *)((kd_iptr)jinfo->blocktobody + iVar14 + 0x18));
         printf("%2d");
         iVar18 = kd_putchar(10);
       } while (iVar17 != 3);

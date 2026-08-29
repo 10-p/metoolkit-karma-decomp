@@ -108,7 +108,7 @@ kd_MeAssetInstanceCreate
   MeFGeometryIt it;
 
   auStackY_70[4] = 0x10011;
-  ins = (MeMemoryAPI.create)(0x28);
+  ins = (MeMemoryAPI.create)((int)sizeof(*(MeAssetInstance *)0));
   auStackY_70[4] = 0x1001e;
   assetName = MeFAssetGetName(asset);
   ins->af = af;
@@ -166,11 +166,11 @@ kd_MeAssetInstanceCreate
   count = MeFAssetGetPartCount(asset);
   uVar19 = count * 4 + 0xfU & 0xfffffff0;
   iVar5 = -uVar19;
-  *(uint *)((int)(kd_argslot_kd_alloca_iVar5) + 0x0) = uVar19;
+  *(uint *)((kd_iptr)(kd_argslot_kd_alloca_iVar5) + 0x0) = uVar19;
   *(uint *)(&(*kd_argslot_ffffffac)) = uVar19;
   *(int *)(&(*kd_argslot_ffffffa8)) = (kd_alloca_iVar5 = (char *)alloca((size_t)(count) * 4 + 0));
   *(MeFAsset **)(&(*kd_argslot_ffffffa4)) = asset;
-  *(undefined4 *)((int)auStackY_70 + 0x10) = 0x10178;
+  *(undefined4 *)((kd_iptr)auStackY_70 + 0x10) = 0x10178;
   MeFAssetGetPartsSortedByName
             (*(void **)(&(*kd_argslot_ffffffa4)),*(void **)(&(*kd_argslot_ffffffa8)));
   i = 0;
@@ -179,95 +179,95 @@ kd_MeAssetInstanceCreate
     do {
                     
       model = (McdModelID)0x0;
-      *(undefined4 *)(&(*kd_argslot_ffffffa4)) = *(undefined4 *)((int)(kd_alloca_iVar5) + i * 4);
-      *(undefined4 *)((int)auStackY_70 + 0x10) = 0x1031c;
+      *(undefined4 *)(&(*kd_argslot_ffffffa4)) = *(undefined4 *)((kd_iptr)(kd_alloca_iVar5) + i * 4);
+      *(undefined4 *)((kd_iptr)auStackY_70 + 0x10) = 0x1031c;
       pvVar13 = MeFAssetPartGetModel(*(void **)(&(*kd_argslot_ffffffa4)));
       *(void **)(&(*kd_argslot_ffffffa4)) = pvVar13;
-      *(undefined4 *)((int)auStackY_70 + 0x10) = 0x10326;
+      *(undefined4 *)((kd_iptr)auStackY_70 + 0x10) = 0x10326;
       pvVar14 = MeFModelGetGeometry(*(void **)(&(*kd_argslot_ffffffa4)));
       *(void **)(&(*kd_argslot_ffffffa4)) = pvVar13;
-      *(undefined4 *)((int)auStackY_70 + 0x10) = 0x10330;
+      *(undefined4 *)((kd_iptr)auStackY_70 + 0x10) = 0x10330;
       iVar17 = MeFModelGetType(*(void **)(&(*kd_argslot_ffffffa4)));
       pMVar8 = ins;
       iVar17 = iVar17 + -1;
       if ((iVar17 == 0) || (pvVar14 == (void *)0x0)) {
         *(McdGeomMan **)(&(*kd_argslot_ffffffa4)) = af->gm;
-        *(undefined4 *)((int)auStackY_70 + 0x10) = 0x104fd;
+        *(undefined4 *)((kd_iptr)auStackY_70 + 0x10) = 0x104fd;
         geom = McdGMGetNullGeometry(*(void **)(&(*kd_argslot_ffffffa4)));
       }
       else {
-        *(int *)((int)(kd_argslot_kd_alloca_iVar5) + 0x0) = iVar17;
+        *(int *)((kd_iptr)(kd_argslot_kd_alloca_iVar5) + 0x0) = iVar17;
         *(int *)(&(*kd_argslot_ffffffac)) = iVar17;
         *(MeHash **)(&(*kd_argslot_ffffffa8)) = pMVar8->nameToGeometry;
         *(void **)(&(*kd_argslot_ffffffa4)) = pvVar14;
-        *(undefined4 *)((int)auStackY_70 + 0x10) = 0x10351;
+        *(undefined4 *)((kd_iptr)auStackY_70 + 0x10) = 0x10351;
         pvVar13 = MeFGeometryGetName(*(void **)(&(*kd_argslot_ffffffa4)));
         *(void **)(&(*kd_argslot_ffffffa4)) = pvVar13;
-        *(undefined4 *)((int)auStackY_70 + 0x10) = 0x10359;
+        *(undefined4 *)((kd_iptr)auStackY_70 + 0x10) = 0x10359;
         geom = MeHashLookup(*(void **)(&(*kd_argslot_ffffffa4)),
                             *(void **)(&(*kd_argslot_ffffffa8)));
       }
-      *(undefined4 *)(&(*kd_argslot_ffffffa4)) = *(undefined4 *)((int)(kd_alloca_iVar5) + i * 4);
-      *(undefined4 *)((int)auStackY_70 + 0x10) = 0x10369;
+      *(undefined4 *)(&(*kd_argslot_ffffffa4)) = *(undefined4 *)((kd_iptr)(kd_alloca_iVar5) + i * 4);
+      *(undefined4 *)((kd_iptr)auStackY_70 + 0x10) = 0x10369;
       pvVar13 = MeFAssetPartGetName(*(void **)(&(*kd_argslot_ffffffa4)));
       *(void **)(&(*kd_argslot_ffffffa4)) = pvVar13;
-      *(undefined4 *)((int)auStackY_70 + 0x10) = 0x10373;
+      *(undefined4 *)((kd_iptr)auStackY_70 + 0x10) = 0x10373;
       sVar12 = strlen(*(char **)(&(*kd_argslot_ffffffa4)));
       *(size_t *)(&(*kd_argslot_ffffffa4)) = sVar12 + 1;
-      *(undefined4 *)((int)auStackY_70 + 0x10) = 0x1037d;
+      *(undefined4 *)((kd_iptr)auStackY_70 + 0x10) = 0x1037d;
       pvVar14 = (MeMemoryAPI.create)(*(uint *)(&(*kd_argslot_ffffffa4)));
       *(void **)(&(*kd_argslot_ffffffa8)) = pvVar13;
       *(void **)(&(*kd_argslot_ffffffa4)) = pvVar14;
-      *(undefined4 *)((int)auStackY_70 + 0x10) = 0x1038a;
+      *(undefined4 *)((kd_iptr)auStackY_70 + 0x10) = 0x1038a;
       strcpy(*(char **)(&(*kd_argslot_ffffffa4)),*(char **)(&(*kd_argslot_ffffffa8)));
       p_Var3 = af->modelCreateFunc;
       pMVar16 = (McdModelID)0x0;
       pMVar21 = af;
       if (p_Var3 != (ModelCreateFunc)0x0) {
-        *(MeMatrix4Ptr *)((int)(kd_argslot_kd_alloca_iVar5) + 0x0) = tm;
+        *(MeMatrix4Ptr *)((kd_iptr)(kd_argslot_kd_alloca_iVar5) + 0x0) = tm;
         pMVar11 = geom;
         *(MdtWorldID *)(&(*kd_argslot_ffffffac)) = world;
         iVar17 = i;
         *(McdGeometryID *)(&(*kd_argslot_ffffffa8)) = pMVar11;
-        pMVar21 = *(MeAssetFactory **)((int)(kd_alloca_iVar5) + iVar17 * 4);
+        pMVar21 = *(MeAssetFactory **)((kd_iptr)(kd_alloca_iVar5) + iVar17 * (int)sizeof(void *));
         *(MeAssetFactory **)(&(*kd_argslot_ffffffa4)) = pMVar21;
-        *(undefined4 *)((int)auStackY_70 + 0x10) = 0x104e4;
+        *(undefined4 *)((kd_iptr)auStackY_70 + 0x10) = 0x104e4;
         pMVar16 = (*p_Var3)(*(MeFAssetPart **)(&(*kd_argslot_ffffffa4)),
                             *(McdGeometryID *)(&(*kd_argslot_ffffffa8)),
                             *(MdtWorldID *)(&(*kd_argslot_ffffffac)),
-                            *(MeMatrix4Ptr *)((int)(kd_argslot_kd_alloca_iVar5) + 0x0));
+                            *(MeMatrix4Ptr *)((kd_iptr)(kd_argslot_kd_alloca_iVar5) + 0x0));
         model = pMVar16;
       }
-      *(McdModelID *)((int)(kd_argslot_kd_alloca_iVar5) + 0x0) = pMVar16;
+      *(McdModelID *)((kd_iptr)(kd_argslot_kd_alloca_iVar5) + 0x0) = pMVar16;
       *(McdModelID *)(&(*kd_argslot_ffffffac)) = pMVar16;
       *(McdModelID *)(&(*kd_argslot_ffffffa8)) = model;
       *(McdSpaceID *)(&(*kd_argslot_ffffffa4)) = space;
-      *(undefined4 *)((int)auStackY_70 + 0x10) = 0x103aa;
+      *(undefined4 *)((kd_iptr)auStackY_70 + 0x10) = 0x103aa;
       McdSpaceInsertModel(*(void **)(&(*kd_argslot_ffffffa4)),*(void **)(&(*kd_argslot_ffffffa8)))
       ;
       p_Var4 = af->modelPostCreateCB;
       uVar20 = extraout_ECX_05;
       if (p_Var4 != (ModelPostCreateCB)0x0) {
-        *(MeAssetFactory **)((int)(kd_argslot_kd_alloca_iVar5) + 0x0) = pMVar21;
+        *(MeAssetFactory **)((kd_iptr)(kd_argslot_kd_alloca_iVar5) + 0x0) = pMVar21;
         iVar17 = i;
         *(void **)(&(*kd_argslot_ffffffac)) = af->modelPostCreateCBUserdata;
         pMVar16 = model;
         *(undefined4 *)(&(*kd_argslot_ffffffa8)) =
-             *(undefined4 *)((int)(kd_alloca_iVar5) + iVar17 * 4);
+             *(undefined4 *)((kd_iptr)(kd_alloca_iVar5) + iVar17 * 4);
         *(McdModelID *)(&(*kd_argslot_ffffffa4)) = pMVar16;
-        *(undefined4 *)((int)auStackY_70 + 0x10) = 0x104c7;
+        *(undefined4 *)((kd_iptr)auStackY_70 + 0x10) = 0x104c7;
         (*p_Var4)(*(McdModelID *)(&(*kd_argslot_ffffffa4)),
                   *(MeFAssetPart **)(&(*kd_argslot_ffffffa8)),*(void **)(&(*kd_argslot_ffffffac)))
         ;
         uVar20 = extraout_ECX_06;
       }
       pMVar8 = ins;
-      *(undefined4 *)((int)(kd_argslot_kd_alloca_iVar5) + 0x0) = uVar20;
+      *(undefined4 *)((kd_iptr)(kd_argslot_kd_alloca_iVar5) + 0x0) = uVar20;
       pMVar16 = model;
       *(MeHash **)(&(*kd_argslot_ffffffac)) = pMVar8->nameToModel;
       *(McdModelID *)(&(*kd_argslot_ffffffa8)) = pMVar16;
       *(void **)(&(*kd_argslot_ffffffa4)) = pvVar14;
-      *(undefined4 *)((int)auStackY_70 + 0x10) = 0x103cd;
+      *(undefined4 *)((kd_iptr)auStackY_70 + 0x10) = 0x103cd;
       pvVar13 = MeHashInsert(*(void **)(&(*kd_argslot_ffffffa4)),
                              *(void **)(&(*kd_argslot_ffffffa8)),
                              *(void **)(&(*kd_argslot_ffffffac)));
@@ -281,58 +281,58 @@ kd_MeAssetInstanceCreate
         aiStack_4c[2] = iVar17;
         if (iVar17 < count) {
           do {
-            *(void **)((int)(kd_argslot_kd_alloca_iVar5) + 0x0) = pvVar13;
+            *(void **)((kd_iptr)(kd_argslot_kd_alloca_iVar5) + 0x0) = pvVar13;
             iVar7 = i;
             *(undefined4 *)(&(*kd_argslot_ffffffa8)) =
-                 *(undefined4 *)((int)(kd_alloca_iVar5) + iVar17 * 4);
+                 *(undefined4 *)((kd_iptr)(kd_alloca_iVar5) + iVar17 * 4);
             *(undefined4 *)(&(*kd_argslot_ffffffa4)) =
-                 *(undefined4 *)((int)(kd_alloca_iVar5) + iVar7 * 4);
-            *(undefined4 *)((int)auStackY_70 + 0x10) = 0x10425;
+                 *(undefined4 *)((kd_iptr)(kd_alloca_iVar5) + iVar7 * 4);
+            *(undefined4 *)((kd_iptr)auStackY_70 + 0x10) = 0x10425;
             pvVar13 = (void *)MeFAssetPartIsCollisionEnabled
                                         (*(void **)(&(*kd_argslot_ffffffa4)),
                                          *(void **)(&(*kd_argslot_ffffffa8)));
             pMVar8 = ins;
             if (pvVar13 == (void *)0x0) {
                     
-              *(undefined4 *)((int)(kd_argslot_kd_alloca_iVar5) + 0x0) = 0;
+              *(undefined4 *)((kd_iptr)(kd_argslot_kd_alloca_iVar5) + 0x0) = 0;
               iVar7 = i;
               *(undefined4 *)(&(*kd_argslot_ffffffac)) = 0;
               *(MeHash **)(&(*kd_argslot_ffffffa8)) = pMVar8->nameToModel;
               *(undefined4 *)(&(*kd_argslot_ffffffa4)) =
-                   *(undefined4 *)((int)(kd_alloca_iVar5) + iVar7 * 4);
-              *(undefined4 *)((int)auStackY_70 + 0x10) = 0x10449;
+                   *(undefined4 *)((kd_iptr)(kd_alloca_iVar5) + iVar7 * 4);
+              *(undefined4 *)((kd_iptr)auStackY_70 + 0x10) = 0x10449;
               pvVar13 = MeFAssetPartGetName(*(void **)(&(*kd_argslot_ffffffa4)));
               *(void **)(&(*kd_argslot_ffffffa4)) = pvVar13;
-              *(undefined4 *)((int)auStackY_70 + 0x10) = 0x10451;
+              *(undefined4 *)((kd_iptr)auStackY_70 + 0x10) = 0x10451;
               model1_1 = MeHashLookup(*(void **)(&(*kd_argslot_ffffffa4)),
                                       *(void **)(&(*kd_argslot_ffffffa8)));
               *(MeHash **)(&(*kd_argslot_ffffffa8)) = ins->nameToModel;
               *(undefined4 *)(&(*kd_argslot_ffffffa4)) =
-                   *(undefined4 *)((int)(kd_alloca_iVar5) + iVar17 * 4);
-              *(undefined4 *)((int)auStackY_70 + 0x10) = 0x10466;
+                   *(undefined4 *)((kd_iptr)(kd_alloca_iVar5) + iVar17 * 4);
+              *(undefined4 *)((kd_iptr)auStackY_70 + 0x10) = 0x10466;
               pvVar13 = MeFAssetPartGetName(*(void **)(&(*kd_argslot_ffffffa4)));
               *(void **)(&(*kd_argslot_ffffffa4)) = pvVar13;
-              *(undefined4 *)((int)auStackY_70 + 0x10) = 0x1046e;
+              *(undefined4 *)((kd_iptr)auStackY_70 + 0x10) = 0x1046e;
               pvVar14 = MeHashLookup(*(void **)(&(*kd_argslot_ffffffa4)),
                                      *(void **)(&(*kd_argslot_ffffffa8)));
               pvVar13 = pvVar14;
               if ((model1_1 != (McdModelID)0x0) && (pvVar14 != (void *)0x0)) {
                 *(McdModelID *)(&(*kd_argslot_ffffffa4)) = model1_1;
-                *(undefined4 *)((int)auStackY_70 + 0x10) = 0x1048a;
+                *(undefined4 *)((kd_iptr)auStackY_70 + 0x10) = 0x1048a;
                 pvVar18 = McdModelGetSpace(*(void **)(&(*kd_argslot_ffffffa4)));
                 pvVar13 = (void *)0x0;
                 if (pvVar18 != (void *)0x0) {
                   *(void **)(&(*kd_argslot_ffffffa4)) = pvVar14;
-                  *(undefined4 *)((int)auStackY_70 + 0x10) = 0x1049a;
+                  *(undefined4 *)((kd_iptr)auStackY_70 + 0x10) = 0x1049a;
                   pvVar18 = McdModelGetSpace(*(void **)(&(*kd_argslot_ffffffa4)));
                   pvVar13 = (void *)0x0;
                   if (pvVar18 != (void *)0x0) {
-                    *(void **)((int)(kd_argslot_kd_alloca_iVar5) + 0x0) = pvVar18;
+                    *(void **)((kd_iptr)(kd_argslot_kd_alloca_iVar5) + 0x0) = pvVar18;
                     *(void **)(&(*kd_argslot_ffffffac)) = pvVar18;
                     pMVar16 = model1_1;
                     *(void **)(&(*kd_argslot_ffffffa8)) = pvVar14;
                     *(McdModelID *)(&(*kd_argslot_ffffffa4)) = pMVar16;
-                    *(undefined4 *)((int)auStackY_70 + 0x10) = 0x104ad;
+                    *(undefined4 *)((kd_iptr)auStackY_70 + 0x10) = 0x104ad;
                     pvVar13 = (void *)McdSpaceDisablePair(*(void **)(&(*kd_argslot_ffffffa4)),
                                                           *(void **)(&(*kd_argslot_ffffffa8)));
                   }
@@ -347,61 +347,61 @@ kd_MeAssetInstanceCreate
     }
   }
                     
-  *(void **)((int)(kd_argslot_kd_alloca_iVar5) + 0x0) = pvVar13;
+  *(void **)((kd_iptr)(kd_argslot_kd_alloca_iVar5) + 0x0) = pvVar13;
   *(MeFJointIt **)(&(*kd_argslot_ffffffa8)) = &it_1;
   *(MeFAsset **)(&(*kd_argslot_ffffffa4)) = asset;
-  *(undefined4 *)((int)auStackY_70 + 0x10) = 0x1019d;
+  *(undefined4 *)((kd_iptr)auStackY_70 + 0x10) = 0x1019d;
   MeFAssetInitJointIterator
             (*(void **)(&(*kd_argslot_ffffffa4)),*(void **)(&(*kd_argslot_ffffffa8)));
 LAB_000101a0:
   *(MeFJointIt **)(&(*kd_argslot_ffffffa4)) = &it_1;
-  *(undefined4 *)((int)auStackY_70 + 0x10) = 0x101ac;
+  *(undefined4 *)((kd_iptr)auStackY_70 + 0x10) = 0x101ac;
   pvVar13 = MeFAssetGetJoint(*(void **)(&(*kd_argslot_ffffffa4)));
   if (pvVar13 == (void *)0x0) {
     return ins;
   }
-  *(void **)((int)(kd_argslot_kd_alloca_iVar5) + 0x0) = pvVar13;
+  *(void **)((kd_iptr)(kd_argslot_kd_alloca_iVar5) + 0x0) = pvVar13;
   *(undefined4 *)(&(*kd_argslot_ffffffa8)) = 0;
   *(void **)(&(*kd_argslot_ffffffa4)) = pvVar13;
   model1 = (McdModelID)0x0;
   model2 = (McdModelID)0x0;
-  *(undefined4 *)((int)auStackY_70 + 0x10) = 0x101d1;
+  *(undefined4 *)((kd_iptr)auStackY_70 + 0x10) = 0x101d1;
   pvVar14 = MeFJointGetPart(*(void **)(&(*kd_argslot_ffffffa4)),*(int *)(&(*kd_argslot_ffffffa8)))
   ;
   *(undefined4 *)(&(*kd_argslot_ffffffa8)) = 1;
   *(void **)(&(*kd_argslot_ffffffa4)) = pvVar13;
-  *(undefined4 *)((int)auStackY_70 + 0x10) = 0x101dd;
+  *(undefined4 *)((kd_iptr)auStackY_70 + 0x10) = 0x101dd;
   pMVar15 = MeFJointGetPart(*(void **)(&(*kd_argslot_ffffffa4)),*(int *)(&(*kd_argslot_ffffffa8)))
   ;
   pMVar8 = ins;
   pMVar16 = pMVar15;
   if (pvVar14 != (void *)0x0) {
-    *(undefined4 *)((int)(kd_argslot_kd_alloca_iVar5) + 0x0) = extraout_ECX_00;
+    *(undefined4 *)((kd_iptr)(kd_argslot_kd_alloca_iVar5) + 0x0) = extraout_ECX_00;
     *(MeHash **)(&(*kd_argslot_ffffffa8)) = pMVar8->nameToModel;
     *(void **)(&(*kd_argslot_ffffffa4)) = pvVar14;
-    *(undefined4 *)((int)auStackY_70 + 0x10) = 0x101f5;
+    *(undefined4 *)((kd_iptr)auStackY_70 + 0x10) = 0x101f5;
     pvVar14 = MeFAssetPartGetName(*(void **)(&(*kd_argslot_ffffffa4)));
     *(void **)(&(*kd_argslot_ffffffa4)) = pvVar14;
-    *(undefined4 *)((int)auStackY_70 + 0x10) = 0x101fd;
+    *(undefined4 *)((kd_iptr)auStackY_70 + 0x10) = 0x101fd;
     pMVar16 = MeHashLookup(*(void **)(&(*kd_argslot_ffffffa4)),*(void **)(&(*kd_argslot_ffffffa8))
                           );
     model1 = pMVar16;
   }
   if (pMVar15 != (McdModelID)0x0) {
-    *(McdModelID *)((int)(kd_argslot_kd_alloca_iVar5) + 0x0) = pMVar16;
+    *(McdModelID *)((kd_iptr)(kd_argslot_kd_alloca_iVar5) + 0x0) = pMVar16;
     *(McdModelID *)(&(*kd_argslot_ffffffac)) = pMVar16;
     *(MeHash **)(&(*kd_argslot_ffffffa8)) = ins->nameToModel;
     *(McdModelID *)(&(*kd_argslot_ffffffa4)) = pMVar15;
-    *(undefined4 *)((int)auStackY_70 + 0x10) = 0x10216;
+    *(undefined4 *)((kd_iptr)auStackY_70 + 0x10) = 0x10216;
     pvVar14 = MeFAssetPartGetName(*(void **)(&(*kd_argslot_ffffffa4)));
     *(void **)(&(*kd_argslot_ffffffa4)) = pvVar14;
-    *(undefined4 *)((int)auStackY_70 + 0x10) = 0x1021e;
+    *(undefined4 *)((kd_iptr)auStackY_70 + 0x10) = 0x1021e;
     model2 = MeHashLookup(*(void **)(&(*kd_argslot_ffffffa4)),*(void **)(&(*kd_argslot_ffffffa8)))
     ;
   }
   if (model1 == (McdModelID)0x0) goto LAB_0001023e;
   *(McdModelID *)(&(*kd_argslot_ffffffa4)) = model1;
-  *(undefined4 *)((int)auStackY_70 + 0x10) = 0x10237;
+  *(undefined4 *)((kd_iptr)auStackY_70 + 0x10) = 0x10237;
   pvVar14 = McdModelGetBody(*(void **)(&(*kd_argslot_ffffffa4)));
   uVar20 = extraout_ECX_01;
   if (pvVar14 == (void *)0x0) goto LAB_0001023e;
@@ -409,7 +409,7 @@ LAB_000101a0:
 LAB_0001023e:
   if (model2 != (McdModelID)0x0) {
     *(McdModelID *)(&(*kd_argslot_ffffffa4)) = model2;
-    *(undefined4 *)((int)auStackY_70 + 0x10) = 0x10255;
+    *(undefined4 *)((kd_iptr)auStackY_70 + 0x10) = 0x10255;
     pvVar14 = McdModelGetBody(*(void **)(&(*kd_argslot_ffffffa4)));
     uVar20 = extraout_ECX_02;
     if (pvVar14 != (void *)0x0) {
@@ -419,55 +419,55 @@ LAB_00010260:
       p_Var1 = af->jointCreateFunc;
       if (p_Var1 != (JointCreateFunc)0x0) {
         *(MeMatrix4Ptr *)(&(*kd_argslot_ffffffa4)) = tm;
-        *(McdModelID *)((int)auStackY_70 + 0x10) = pMVar16;
-        *(McdModelID *)((int)auStackY_70 + 0xc) = pMVar15;
-        *(MdtWorldID *)((int)auStackY_70 + 8) = world;
-        *(void **)((int)auStackY_70 + 4) = pvVar13;
-        *(undefined4 *)((int)auStackY_70) = 0x102f0;
-        constraint = (*p_Var1)(*(MeFJoint **)((int)auStackY_70 + 4),
-                               *(MdtWorldID *)((int)auStackY_70 + 8),
-                               *(McdModelID *)((int)auStackY_70 + 0xc),
-                               *(McdModelID *)((int)auStackY_70 + 0x10),
+        *(McdModelID *)((kd_iptr)auStackY_70 + 0x10) = pMVar16;
+        *(McdModelID *)((kd_iptr)auStackY_70 + 0xc) = pMVar15;
+        *(MdtWorldID *)((kd_iptr)auStackY_70 + 8) = world;
+        *(void **)((kd_iptr)auStackY_70 + 4) = pvVar13;
+        *(undefined4 *)((kd_iptr)auStackY_70) = 0x102f0;
+        constraint = (*p_Var1)(*(MeFJoint **)((kd_iptr)auStackY_70 + 4),
+                               *(MdtWorldID *)((kd_iptr)auStackY_70 + 8),
+                               *(McdModelID *)((kd_iptr)auStackY_70 + 0xc),
+                               *(McdModelID *)((kd_iptr)auStackY_70 + 0x10),
                                *(MeMatrix4Ptr *)(&(*kd_argslot_ffffffa4)));
         uVar20 = extraout_ECX_04;
       }
       if (constraint != (MdtConstraintID)0x0) {
         *(MdtConstraintID *)(&(*kd_argslot_ffffffa4)) = constraint;
-        *(undefined4 *)((int)auStackY_70 + 0x10) = 0x1027d;
+        *(undefined4 *)((kd_iptr)auStackY_70 + 0x10) = 0x1027d;
         MdtConstraintEnable(*(void **)(&(*kd_argslot_ffffffa4)));
         uVar20 = extraout_ECX_03;
       }
       pvVar14 = af->jointPostCreateCBUserdata;
       if (pvVar14 != (void *)0x0) {
-        *(undefined4 *)((int)(kd_argslot_kd_alloca_iVar5) + 0x0) = uVar20;
+        *(undefined4 *)((kd_iptr)(kd_argslot_kd_alloca_iVar5) + 0x0) = uVar20;
         *(void **)(&(*kd_argslot_ffffffac)) = pvVar14;
         pMVar6 = constraint;
         *(void **)(&(*kd_argslot_ffffffa8)) = pvVar13;
         *(MdtConstraintID *)(&(*kd_argslot_ffffffa4)) = pMVar6;
         p_Var2 = af->jointPostCreateCB;
-        *(undefined4 *)((int)auStackY_70 + 0x10) = 0x102d5;
+        *(undefined4 *)((kd_iptr)auStackY_70 + 0x10) = 0x102d5;
         (*p_Var2)(*(MdtConstraintID *)(&(*kd_argslot_ffffffa4)),
                   *(MeFJoint **)(&(*kd_argslot_ffffffa8)),*(void **)(&(*kd_argslot_ffffffac)));
       }
                     
       *(void **)(&(*kd_argslot_ffffffa4)) = pvVar13;
-      *(undefined4 *)((int)auStackY_70 + 0x10) = 0x10293;
+      *(undefined4 *)((kd_iptr)auStackY_70 + 0x10) = 0x10293;
       pvVar13 = MeFJointGetName(*(void **)(&(*kd_argslot_ffffffa4)));
       *(void **)(&(*kd_argslot_ffffffa4)) = pvVar13;
-      *(undefined4 *)((int)auStackY_70 + 0x10) = 0x1029d;
+      *(undefined4 *)((kd_iptr)auStackY_70 + 0x10) = 0x1029d;
       sVar12 = strlen(*(char **)(&(*kd_argslot_ffffffa4)));
       *(size_t *)(&(*kd_argslot_ffffffa4)) = sVar12 + 1;
-      *(undefined4 *)((int)auStackY_70 + 0x10) = 0x102a7;
+      *(undefined4 *)((kd_iptr)auStackY_70 + 0x10) = 0x102a7;
       pvVar14 = (MeMemoryAPI.create)(*(uint *)(&(*kd_argslot_ffffffa4)));
       *(void **)(&(*kd_argslot_ffffffa8)) = pvVar13;
       *(void **)(&(*kd_argslot_ffffffa4)) = pvVar14;
-      *(undefined4 *)((int)auStackY_70 + 0x10) = 0x102b2;
+      *(undefined4 *)((kd_iptr)auStackY_70 + 0x10) = 0x102b2;
       strcpy(*(char **)(&(*kd_argslot_ffffffa4)),*(char **)(&(*kd_argslot_ffffffa8)));
       pMVar6 = constraint;
       *(MeHash **)(&(*kd_argslot_ffffffac)) = ins->nameToJoint;
       *(MdtConstraintID *)(&(*kd_argslot_ffffffa8)) = pMVar6;
       *(void **)(&(*kd_argslot_ffffffa4)) = pvVar14;
-      *(undefined4 *)((int)auStackY_70 + 0x10) = 0x102c6;
+      *(undefined4 *)((kd_iptr)auStackY_70 + 0x10) = 0x102c6;
       MeHashInsert(*(void **)(&(*kd_argslot_ffffffa4)),*(void **)(&(*kd_argslot_ffffffa8)),
                    *(void **)(&(*kd_argslot_ffffffac)));
     }
@@ -538,7 +538,7 @@ MeAssetFactory * kd_MeAssetFactoryCreate(McdFrameworkID fwk)
   MeAssetFactory *pMVar1;
   McdGeomMan *pMVar2;
 
-  pMVar1 = (MeMemoryAPI.create)(0x24);
+  pMVar1 = (MeMemoryAPI.create)((int)sizeof(*(MeAssetFactory *)0));
   pMVar2 = McdGMCreate(fwk);
   pMVar1->geometryPostCreateCB = (GeometryPostCreateCB)0x0;
   pMVar1->gm = pMVar2;

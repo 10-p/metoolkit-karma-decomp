@@ -67,7 +67,7 @@ MeStream kd_MeStreamOpenAsMemBuffer(uint initialSize)
   char *pcVar2;
   MeStream p_Var3;
 
-  p_Var1 = (MeMemoryAPI.create)(0x20);
+  p_Var1 = (MeMemoryAPI.create)((int)sizeof(*(MeStream)0));
   p_Var3 = (MeStream)0x0;
   if (p_Var1 != (MeStream)0x0) {
     p_Var1->filename = (char *)0x0;
@@ -91,7 +91,7 @@ MeStream kd_MeStreamCreateFromMemBuffer(char *buffer,uint bufLength,uint bufSize
   MeStream p_Var1;
   MeStream p_Var2;
 
-  p_Var1 = (MeMemoryAPI.create)(0x20);
+  p_Var1 = (MeMemoryAPI.create)((int)sizeof(*(MeStream)0));
   p_Var2 = (MeStream)0x0;
   if (p_Var1 != (MeStream)0x0) {
     p_Var1->filename = (char *)0x0;
@@ -298,12 +298,12 @@ static MeStream MeStreamOpenPrefixed(char *filename,MeOpenMode_enum mode,uint al
   uint uVar8;
   uint uVar9;
   int iVar10;
-  uint prefixlen;
+  kd_uptr prefixlen;
   char *m;
   MeStream s;
   char fullname [4096];
 
-  p_Var2 = (MeMemoryAPI.create)(0x20);
+  p_Var2 = (MeMemoryAPI.create)((int)sizeof(*(MeStream)0));
   p_Var2->bUseMemblock = 0;
   if (mode == kMeOpenModeWRONLY) {
     m = "w";
@@ -326,7 +326,7 @@ static MeStream MeStreamOpenPrefixed(char *filename,MeOpenMode_enum mode,uint al
     fullname[0xfff] = '\0';
     pcVar3 = fullname;
     do {
-      prefixlen = (uint)pcVar3;
+      prefixlen = (kd_uptr)pcVar3;
       uVar8 = *(uint *)prefixlen + 0xfefefeff & (*(uint *)prefixlen ^ 0xffffffff);
       uVar9 = uVar8 & 0x80808080;
       pcVar3 = (char *)(prefixlen + 4);
@@ -337,7 +337,7 @@ static MeStream MeStreamOpenPrefixed(char *filename,MeOpenMode_enum mode,uint al
       uVar1 = prefixlen + 6;
     }
     prefixlen = uVar1;
-    prefixlen = ((prefixlen - 3) - (uint)CARRY1((byte)uVar9,(byte)uVar9)) - (int)fullname;
+    prefixlen = ((prefixlen - 3) - (uint)CARRY1((byte)uVar9,(byte)uVar9)) - (kd_iptr)fullname;
   }
   iVar10 = 0;
   while (pcVar3 = MeGetDefaultFileLocation(iVar10), pcVar3 != (char *)0x0) {
@@ -354,11 +354,11 @@ static MeStream MeStreamOpenPrefixed(char *filename,MeOpenMode_enum mode,uint al
       } while (uVar9 == 0);
       if ((uVar8 & 0x8080) == 0) {
         uVar9 = uVar9 >> 0x10;
-        puVar6 = (uint *)((int)puVar7 + 6);
+        puVar6 = (uint *)((kd_iptr)puVar7 + 6);
       }
       strncat(fullname,pcVar3,
-              0x1000 - (int)((int)puVar6 +
-                            ((-3 - (uint)CARRY1((byte)uVar9,(byte)uVar9)) - (int)fullname)));
+              0x1000 - (int)((kd_iptr)puVar6 +
+                            ((-3 - (uint)CARRY1((byte)uVar9,(byte)uVar9)) - (kd_iptr)fullname)));
     }
     puVar6 = (uint *)fullname;
     do {
@@ -369,10 +369,10 @@ static MeStream MeStreamOpenPrefixed(char *filename,MeOpenMode_enum mode,uint al
     } while (uVar9 == 0);
     if ((uVar8 & 0x8080) == 0) {
       uVar9 = uVar9 >> 0x10;
-      puVar6 = (uint *)((int)puVar7 + 6);
+      puVar6 = (uint *)((kd_iptr)puVar7 + 6);
     }
     strncat(fullname,filename,
-            0x1000 - ((int)puVar6 + ((-3 - (uint)CARRY1((byte)uVar9,(byte)uVar9)) - (int)fullname)))
+            0x1000 - ((kd_iptr)puVar6 + ((-3 - (uint)CARRY1((byte)uVar9,(byte)uVar9)) - (kd_iptr)fullname)))
     ;
     fullname[0xfff] = '\0';
     pFVar5 = fopen(fullname,m);

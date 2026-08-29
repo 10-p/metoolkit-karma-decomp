@@ -45,11 +45,11 @@ void kd_MeProfileGetTimerValue(MeProfileTimerResult *result)
 
   uVar1 = rdtsc();
   *(int *)&result->cpuCycles = (int)uVar1;
-  *(int *)((int)&result->cpuCycles + 4) = (int)((ulonglong)uVar1 >> 0x20);
+  *(int *)((kd_iptr)&result->cpuCycles + 4) = (int)((ulonglong)uVar1 >> 0x20);
   *(undefined4 *)&result->count0 = 0;
-  *(undefined4 *)((int)&result->count0 + 4) = 0;
+  *(undefined4 *)((kd_iptr)&result->count0 + 4) = 0;
   *(undefined4 *)&result->count1 = 0;
-  *(undefined4 *)((int)&result->count1 + 4) = 0;
+  *(undefined4 *)((kd_iptr)&result->count1 + 4) = 0;
   return;
 }
 

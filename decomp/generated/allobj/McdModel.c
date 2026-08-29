@@ -126,7 +126,7 @@ void kd_McdModelDestroy(McdModelID cm)
   pMVar1 = cm->frame;
   pMVar4 = pMVar1;
   if (pMVar1->firstModel == cm) {
-    pMVar1->firstModel = (McdModelID)((uint)cm->next & (cm->next == cm) - 1);
+    pMVar1->firstModel = (McdModelID)((kd_uptr)cm->next & (cm->next == cm) - 1);
     pMVar4 = cm->frame;
   }
   pMVar2 = cm->next;
@@ -424,8 +424,8 @@ void kd_McdModelSetRelativeTransform(McdModelID cm,MeMatrix4Ptr relTM,MeMatrix4P
   }
   else {
                     
-    compoundTM = (MeMemoryAPI.createAligned)(0x40,0x10);
-    relativeTM = (MeMemoryAPI.createAligned)(0x40,0x10);
+    compoundTM = (MeMemoryAPI.createAligned)((4) * (int)sizeof(*(MeVector4 *)0),0x10);
+    relativeTM = (MeMemoryAPI.createAligned)((4) * (int)sizeof(*(MeVector4 *)0),0x10);
     (*relativeTM)[0] = (*relTM)[0];
     (*relativeTM)[1] = (*relTM)[1];
     (*relativeTM)[2] = (*relTM)[2];

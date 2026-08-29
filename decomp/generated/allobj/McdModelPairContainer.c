@@ -44,8 +44,8 @@ McdModelPairContainer * kd_McdModelPairContainerCreate(int size)
   McdModelPairContainer *pMVar1;
   McdModelPair **ppMVar2;
 
-  pMVar1 = (MeMemoryAPI.create)(0x1c);
-  ppMVar2 = (MeMemoryAPI.create)(size * 4);
+  pMVar1 = (MeMemoryAPI.create)((int)sizeof(*(McdModelPairContainer *)0));
+  ppMVar2 = (MeMemoryAPI.create)((size) * (int)sizeof(*(McdModelPair **)0));
   pMVar1->size = size;
   pMVar1->helloFirst = size;
   pMVar1->array = ppMVar2;
@@ -173,10 +173,10 @@ void kd_McdModelPairContainerRemovePair(McdModelPairContainer *m,McdModelPairID 
 {
   McdModelPair **ppMVar1;
   int iVar2;
-  int iVar3;
+  kd_iptr iVar3;
 
   ppMVar1 = m->array;
-  iVar3 = (int)p - (int)ppMVar1 >> 2;
+  iVar3 = (kd_iptr)p - (kd_iptr)ppMVar1 >> 2;
   if ((-1 < iVar3) || (iVar3 < m->size)) {
     if (iVar3 < m->goodbyeEnd) {
       iVar2 = m->goodbyeEnd + -1;

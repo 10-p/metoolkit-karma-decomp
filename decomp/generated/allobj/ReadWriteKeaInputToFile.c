@@ -578,37 +578,37 @@ void kd_writeKeaInputToFile(MdtKeaConstraints constraints,MdtKeaParameters param
   printf("-- writing kea input to file %s\n",*(undefined4 *)((char *)gDebug + 4));
   iVar7 = sprintf(buf_1,"%s\n","gamma");
                     
-  MeWrite((int)pcVar6,buf_1,iVar7);
+  MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
   iVar7 = sprintf(buf_1,"%08x\n",parameters.gamma);
-  MeWrite((int)pcVar6,buf_1,iVar7);
+  MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
   iVar7 = sprintf(buf_1,"%s\n","epsilon");
                     
-  MeWrite((int)pcVar6,buf_1,iVar7);
+  MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
   iVar7 = sprintf(buf_1,"%08x\n",parameters.epsilon);
-  MeWrite((int)pcVar6,buf_1,iVar7);
+  MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
   iVar7 = sprintf(buf_1,"%s\n","stepsize");
                     
-  MeWrite((int)pcVar6,buf_1,iVar7);
+  MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
   iVar7 = sprintf(buf_1,"%08x\n",parameters.stepsize);
-  MeWrite((int)pcVar6,buf_1,iVar7);
+  MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
   iVar7 = sprintf(buf_1,"%s\n","max_iterations");
                     
-  MeWrite((int)pcVar6,buf_1,iVar7);
+  MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
   iVar7 = sprintf(buf_1,"%d\n",parameters.max_iterations);
-  MeWrite((int)pcVar6,buf_1,iVar7);
+  MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
   iVar7 = sprintf(buf_1,"%s\n","num_partitions");
-  MeWrite((int)pcVar6,buf_1,iVar7);
+  MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
   iVar7 = sprintf(buf_1,"%d\n",constraints.num_partitions);
                     
-  MeWrite((int)pcVar6,buf_1,iVar7);
+  MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
   iVar7 = sprintf(buf_1,"%s\n","max_partitions");
-  MeWrite((int)pcVar6,buf_1,iVar7);
+  MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
   iVar7 = sprintf(buf_1,"%d\n",constraints.max_partitions);
                     
   iVar12 = 0;
-  MeWrite((int)pcVar6,buf_1,iVar7);
+  MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
   iVar7 = sprintf(buf_1,"%s\n","num_rows_exc_padding_partition");
-  iVar7 = MeWrite((int)pcVar6,buf_1,iVar7);
+  iVar7 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
   if (constraints.num_partitions != 0) {
     uVar8 = constraints.num_partitions & 3;
     iVar7 = 0;
@@ -617,38 +617,38 @@ void kd_writeKeaInputToFile(MdtKeaConstraints constraints,MdtKeaParameters param
         uVar11 = extraout_ECX;
         if (2 < uVar8) {
           iVar7 = sprintf(buf_1,"%d\n",*constraints.num_rows_exc_padding_partition);
-          MeWrite((int)pcVar6,buf_1,iVar7);
+          MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
           uVar11 = extraout_ECX_13;
         }
         uVar8 = (uint)(2 < uVar8);
         iVar12 = uVar8 + 1;
         iVar7 = sprintf(buf_1,"%d\n",constraints.num_rows_exc_padding_partition[uVar8]);
-        uVar8 = MeWrite((int)pcVar6,buf_1,iVar7);
+        uVar8 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       }
       piVar1 = constraints.num_rows_exc_padding_partition + iVar12;
       iVar12 = iVar12 + 1;
       iVar7 = sprintf(buf_1,"%d\n",*piVar1);
-      iVar7 = MeWrite((int)pcVar6,buf_1,iVar7);
+      iVar7 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       if (iVar12 == constraints.num_partitions) goto LAB_00011080;
     }
     do {
       iVar7 = sprintf(buf_1,"%d\n",constraints.num_rows_exc_padding_partition[iVar12]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%d\n",constraints.num_rows_exc_padding_partition[iVar12 + 1]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%d\n",constraints.num_rows_exc_padding_partition[iVar12 + 2]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = iVar12 + 3;
       iVar12 = iVar12 + 4;
       iVar7 = sprintf(buf_1,"%d\n",constraints.num_rows_exc_padding_partition[iVar7]);
-      iVar7 = MeWrite((int)pcVar6,buf_1,iVar7);
+      iVar7 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
     } while (iVar12 != constraints.num_partitions);
   }
 LAB_00011080:
                     
   iVar7 = sprintf(buf_1,"%s\n","num_rows_inc_padding_partition");
   iVar12 = 0;
-  iVar7 = MeWrite((int)pcVar6,buf_1,iVar7);
+  iVar7 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
   if (constraints.num_partitions != 0) {
     uVar8 = constraints.num_partitions & 3;
     uVar11 = extraout_EDX;
@@ -657,31 +657,31 @@ LAB_00011080:
         bVar5 = 2 < uVar8;
         if (bVar5) {
           iVar7 = sprintf(buf_1,"%d\n",*constraints.num_rows_inc_padding_partition);
-          uVar8 = MeWrite((int)pcVar6,buf_1,iVar7);
+          uVar8 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
         }
         uVar13 = (uint)bVar5;
         iVar12 = uVar13 + 1;
         iVar7 = sprintf(buf_1,"%d\n",constraints.num_rows_inc_padding_partition[uVar13]);
-        uVar8 = MeWrite((int)pcVar6,buf_1,iVar7);
+        uVar8 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       }
       piVar1 = constraints.num_rows_inc_padding_partition + iVar12;
       iVar12 = iVar12 + 1;
       iVar7 = sprintf(buf_1,"%d\n",*piVar1);
-      iVar7 = MeWrite((int)pcVar6,buf_1,iVar7);
+      iVar7 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       uVar11 = extraout_EDX_00;
       if (iVar12 == constraints.num_partitions) goto LAB_0001120b;
     }
     do {
       iVar7 = sprintf(buf_1,"%d\n",constraints.num_rows_inc_padding_partition[iVar12]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%d\n",constraints.num_rows_inc_padding_partition[iVar12 + 1]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%d\n",constraints.num_rows_inc_padding_partition[iVar12 + 2]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = iVar12 + 3;
       iVar12 = iVar12 + 4;
       iVar7 = sprintf(buf_1,"%d\n",constraints.num_rows_inc_padding_partition[iVar7]);
-      iVar7 = MeWrite((int)pcVar6,buf_1,iVar7);
+      iVar7 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       uVar11 = extraout_EDX_01;
     } while (iVar12 != constraints.num_partitions);
   }
@@ -689,7 +689,7 @@ LAB_0001120b:
                     
   iVar7 = sprintf(buf_1,"%s\n","num_constraints_partition");
   iVar12 = 0;
-  iVar7 = MeWrite((int)pcVar6,buf_1,iVar7);
+  iVar7 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
   if (constraints.num_partitions != 0) {
     uVar8 = constraints.num_partitions & 3;
     iVar7 = 0;
@@ -698,60 +698,60 @@ LAB_0001120b:
         bVar5 = 2 < uVar8;
         if (bVar5) {
           iVar7 = sprintf(buf_1,"%d\n",*constraints.num_constraints_partition);
-          uVar8 = MeWrite((int)pcVar6,buf_1,iVar7);
+          uVar8 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
         }
         uVar13 = (uint)bVar5;
         iVar12 = uVar13 + 1;
         iVar7 = sprintf(buf_1,"%d\n",constraints.num_constraints_partition[uVar13]);
-        uVar8 = MeWrite((int)pcVar6,buf_1,iVar7);
+        uVar8 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       }
       piVar1 = constraints.num_constraints_partition + iVar12;
       iVar12 = iVar12 + 1;
       iVar7 = sprintf(buf_1,"%d\n",*piVar1);
-      iVar7 = MeWrite((int)pcVar6,buf_1,iVar7);
+      iVar7 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       if (iVar12 == constraints.num_partitions) goto LAB_00011396;
     }
     do {
       iVar7 = sprintf(buf_1,"%d\n",constraints.num_constraints_partition[iVar12]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%d\n",constraints.num_constraints_partition[iVar12 + 1]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%d\n",constraints.num_constraints_partition[iVar12 + 2]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = iVar12 + 3;
       iVar12 = iVar12 + 4;
       iVar7 = sprintf(buf_1,"%d\n",constraints.num_constraints_partition[iVar7]);
-      iVar7 = MeWrite((int)pcVar6,buf_1,iVar7);
+      iVar7 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
     } while (iVar12 != constraints.num_partitions);
   }
 LAB_00011396:
                     
   iVar7 = sprintf(buf_1,"%s\n","num_rows_inc_padding");
-  MeWrite((int)pcVar6,buf_1,iVar7);
+  MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
   iVar7 = sprintf(buf_1,"%d\n",constraints.num_rows_inc_padding);
                     
-  MeWrite((int)pcVar6,buf_1,iVar7);
+  MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
   iVar7 = sprintf(buf_1,"%s\n","num_rows_exc_padding");
-  MeWrite((int)pcVar6,buf_1,iVar7);
+  MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
                     
   iVar7 = sprintf(buf_1,"%d\n",constraints.num_rows_exc_padding);
-  MeWrite((int)pcVar6,buf_1,iVar7);
+  MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
   iVar7 = sprintf(buf_1,"%s\n","max_rows_inc_padding");
-  MeWrite((int)pcVar6,buf_1,iVar7);
+  MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
   iVar7 = sprintf(buf_1,"%d\n",constraints.max_rows_inc_padding);
                     
-  MeWrite((int)pcVar6,buf_1,iVar7);
+  MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
   iVar7 = sprintf(buf_1,"%s\n","num_constraints");
                     
-  MeWrite((int)pcVar6,buf_1,iVar7);
+  MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
   iVar7 = sprintf(buf_1,"%d\n",constraints.num_constraints);
-  MeWrite((int)pcVar6,buf_1,iVar7);
+  MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
   iVar7 = sprintf(buf_1,"%s\n","max_constraints");
-  MeWrite((int)pcVar6,buf_1,iVar7);
+  MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
   iVar7 = sprintf(buf_1,"%d\n",constraints.max_constraints);
-  MeWrite((int)pcVar6,buf_1,iVar7);
+  MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
   iVar7 = sprintf(buf,"Jstore\n");
-  MeWrite((int)pcVar6,buf,iVar7);
+  MeWrite((kd_iptr)pcVar6,buf,iVar7);
   i = 0;
   local_238 = 0;
   local_23c = 0;
@@ -769,36 +769,36 @@ LAB_00011396:
       do {
         iVar12 = iVar12 + 3;
         iVar7 = sprintf(buf,"%08x; ",(*constraints.Jstore)[0].col[0][iVar16]);
-        MeWrite((int)pcVar6,buf,iVar7);
+        MeWrite((kd_iptr)pcVar6,buf,iVar7);
         iVar7 = sprintf(buf,"%08x; ",(*constraints.Jstore)[0].col[1][iVar16]);
-        MeWrite((int)pcVar6,buf,iVar7);
+        MeWrite((kd_iptr)pcVar6,buf,iVar7);
         pMVar2 = (*constraints.Jstore)[0].col[2] + iVar16;
         iVar16 = iVar16 + 0xc;
         iVar7 = sprintf(buf,"%08x; ",*pMVar2);
-        iVar7 = MeWrite((int)pcVar6,buf,iVar7);
+        iVar7 = MeWrite((kd_iptr)pcVar6,buf,iVar7);
       } while (iVar12 != 6);
       iVar16 = 0;
       iVar12 = local_238;
       do {
         iVar17 = j * 4;
         iVar16 = iVar16 + 3;
-        iVar7 = sprintf(buf,"%08x; ",*(undefined4 *)((int)(*constraints.Jstore)[1].col[0] + iVar12 + iVar17));
-        MeWrite((int)pcVar6,buf,iVar7);
+        iVar7 = sprintf(buf,"%08x; ",*(undefined4 *)((kd_iptr)(*constraints.Jstore)[1].col[0] + iVar12 + iVar17));
+        MeWrite((kd_iptr)pcVar6,buf,iVar7);
         iVar7 = sprintf(buf,"%08x; ",
-                        *(undefined4 *)((int)(*constraints.Jstore)[1].col[1] + iVar17 + iVar12));
-        MeWrite((int)pcVar6,buf,iVar7);
+                        *(undefined4 *)((kd_iptr)(*constraints.Jstore)[1].col[1] + iVar17 + iVar12));
+        MeWrite((kd_iptr)pcVar6,buf,iVar7);
         iVar17 = iVar17 + iVar12;
         iVar12 = iVar12 + 0x30;
-        iVar7 = sprintf(buf,"%08x; ",*(undefined4 *)((int)(*constraints.Jstore)[1].col[2] + iVar17))
+        iVar7 = sprintf(buf,"%08x; ",*(undefined4 *)((kd_iptr)(*constraints.Jstore)[1].col[2] + iVar17))
         ;
-        iVar7 = MeWrite((int)pcVar6,buf,iVar7);
+        iVar7 = MeWrite((kd_iptr)pcVar6,buf,iVar7);
       } while (iVar16 != 6);
       iVar7 = sprintf(buf,"\n");
-      iVar7 = MeWrite((int)pcVar6,buf,iVar7);
+      iVar7 = MeWrite((kd_iptr)pcVar6,buf,iVar7);
       j = j + 1;
     } while (j != 4);
     iVar7 = sprintf(buf,"\n");
-    MeWrite((int)pcVar6,buf,iVar7);
+    MeWrite((kd_iptr)pcVar6,buf,iVar7);
     local_238 = local_238 + 0xc0;
     local_23c = local_23c + 0x30;
     i = i + 1;
@@ -806,7 +806,7 @@ LAB_00011396:
                     
   iVar7 = sprintf(buf_1,"%s\n",&DAT_000164e6);
   iVar12 = 0;
-  iVar7 = MeWrite((int)pcVar6,buf_1,iVar7);
+  iVar7 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
   if (constraints.num_rows_exc_padding != 0) {
     uVar8 = constraints.num_rows_exc_padding & 3;
     uVar11 = extraout_EDX_02;
@@ -815,31 +815,31 @@ LAB_00011396:
         bVar5 = 2 < uVar8;
         if (bVar5) {
           iVar7 = sprintf(buf_1,"%08x\n",*constraints.xi);
-          uVar8 = MeWrite((int)pcVar6,buf_1,iVar7);
+          uVar8 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
         }
         uVar13 = (uint)bVar5;
         iVar12 = uVar13 + 1;
         iVar7 = sprintf(buf_1,"%08x\n",constraints.xi[uVar13]);
-        uVar8 = MeWrite((int)pcVar6,buf_1,iVar7);
+        uVar8 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       }
       pMVar2 = constraints.xi + iVar12;
       iVar12 = iVar12 + 1;
       iVar7 = sprintf(buf_1,"%08x\n",*pMVar2);
-      iVar7 = MeWrite((int)pcVar6,buf_1,iVar7);
+      iVar7 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       uVar11 = extraout_EDX_03;
       if (iVar12 == constraints.num_rows_exc_padding) goto LAB_0001199b;
     }
     do {
       iVar7 = sprintf(buf_1,"%08x\n",constraints.xi[iVar12]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",constraints.xi[iVar12 + 1]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",constraints.xi[iVar12 + 2]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = iVar12 + 3;
       iVar12 = iVar12 + 4;
       iVar7 = sprintf(buf_1,"%08x\n",constraints.xi[iVar7]);
-      iVar7 = MeWrite((int)pcVar6,buf_1,iVar7);
+      iVar7 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       uVar11 = extraout_EDX_04;
     } while (iVar12 != constraints.num_rows_exc_padding);
   }
@@ -847,7 +847,7 @@ LAB_0001199b:
                     
   iVar7 = sprintf(buf_1,"%s\n",&DAT_000164e9);
   iVar12 = 0;
-  iVar7 = MeWrite((int)pcVar6,buf_1,iVar7);
+  iVar7 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
   if (constraints.num_rows_exc_padding != 0) {
     uVar8 = constraints.num_rows_exc_padding & 3;
     iVar7 = 0;
@@ -856,37 +856,37 @@ LAB_0001199b:
         bVar5 = 2 < uVar8;
         if (bVar5) {
           iVar7 = sprintf(buf_1,"%08x\n",*constraints.c);
-          uVar8 = MeWrite((int)pcVar6,buf_1,iVar7);
+          uVar8 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
         }
         uVar13 = (uint)bVar5;
         iVar12 = uVar13 + 1;
         iVar7 = sprintf(buf_1,"%08x\n",constraints.c[uVar13]);
-        uVar8 = MeWrite((int)pcVar6,buf_1,iVar7);
+        uVar8 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       }
       pMVar2 = constraints.c + iVar12;
       iVar12 = iVar12 + 1;
       iVar7 = sprintf(buf_1,"%08x\n",*pMVar2);
-      iVar7 = MeWrite((int)pcVar6,buf_1,iVar7);
+      iVar7 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       if (iVar12 == constraints.num_rows_exc_padding) goto LAB_00011b26;
     }
     do {
       iVar7 = sprintf(buf_1,"%08x\n",constraints.c[iVar12]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",constraints.c[iVar12 + 1]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",constraints.c[iVar12 + 2]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = iVar12 + 3;
       iVar12 = iVar12 + 4;
       iVar7 = sprintf(buf_1,"%08x\n",constraints.c[iVar7]);
-      iVar7 = MeWrite((int)pcVar6,buf_1,iVar7);
+      iVar7 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
     } while (iVar12 != constraints.num_rows_exc_padding);
   }
 LAB_00011b26:
                     
   iVar7 = sprintf(buf_1,"%s\n",&DAT_000164eb);
   iVar12 = 0;
-  MeWrite((int)pcVar6,buf_1,iVar7);
+  MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
   uVar11 = extraout_EDX_05;
   if (constraints.num_rows_exc_padding != 0) {
     uVar8 = constraints.num_rows_exc_padding & 3;
@@ -896,32 +896,32 @@ LAB_00011b26:
         bVar5 = 2 < uVar8;
         if (bVar5) {
           iVar7 = sprintf(buf_1,"%08x\n",*constraints.lo);
-          uVar8 = MeWrite((int)pcVar6,buf_1,iVar7);
+          uVar8 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
         }
         uVar13 = (uint)bVar5;
         iVar12 = uVar13 + 1;
         iVar7 = sprintf(buf_1,"%08x\n",constraints.lo[uVar13]);
-        uVar8 = MeWrite((int)pcVar6,buf_1,iVar7);
+        uVar8 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       }
       pMVar2 = constraints.lo + iVar12;
       iVar12 = iVar12 + 1;
       iVar7 = sprintf(buf_1,"%08x\n",*pMVar2);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       uVar10 = extraout_ECX_03;
       uVar11 = extraout_EDX_06;
       if (iVar12 == constraints.num_rows_exc_padding) goto LAB_00011cb1;
     }
     do {
       iVar7 = sprintf(buf_1,"%08x\n",constraints.lo[iVar12]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",constraints.lo[iVar12 + 1]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",constraints.lo[iVar12 + 2]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = iVar12 + 3;
       iVar12 = iVar12 + 4;
       iVar7 = sprintf(buf_1,"%08x\n",constraints.lo[iVar7]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       uVar10 = extraout_ECX_04;
       uVar11 = extraout_EDX_07;
     } while (iVar12 != constraints.num_rows_exc_padding);
@@ -930,7 +930,7 @@ LAB_00011cb1:
                     
   iVar7 = sprintf(buf_1,"%s\n",&DAT_000164ee);
   iVar12 = 0;
-  iVar7 = MeWrite((int)pcVar6,buf_1,iVar7);
+  iVar7 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
   if (constraints.num_rows_exc_padding != 0) {
     uVar8 = constraints.num_rows_exc_padding & 3;
     iVar7 = 0;
@@ -940,38 +940,38 @@ LAB_00011cb1:
         bVar5 = 2 < uVar8;
         if (bVar5) {
           iVar7 = sprintf(buf_1,"%08x\n",*constraints.hi);
-          uVar8 = MeWrite((int)pcVar6,buf_1,iVar7);
+          uVar8 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
         }
         uVar13 = (uint)bVar5;
         iVar12 = uVar13 + 1;
         iVar7 = sprintf(buf_1,"%08x\n",constraints.hi[uVar13]);
-        MeWrite((int)pcVar6,buf_1,iVar7);
+        MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
         uVar11 = extraout_EDX_09;
       }
       pMVar2 = constraints.hi + iVar12;
       iVar12 = iVar12 + 1;
       iVar7 = sprintf(buf_1,"%08x\n",*pMVar2);
-      iVar7 = MeWrite((int)pcVar6,buf_1,iVar7);
+      iVar7 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       if (iVar12 == constraints.num_rows_exc_padding) goto LAB_00011e3c;
     }
     do {
       iVar7 = sprintf(buf_1,"%08x\n",constraints.hi[iVar12]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",constraints.hi[iVar12 + 1]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",constraints.hi[iVar12 + 2]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = iVar12 + 3;
       iVar12 = iVar12 + 4;
       iVar7 = sprintf(buf_1,"%08x\n",constraints.hi[iVar7]);
-      iVar7 = MeWrite((int)pcVar6,buf_1,iVar7);
+      iVar7 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
     } while (iVar12 != constraints.num_rows_exc_padding);
   }
 LAB_00011e3c:
                     
   iVar7 = sprintf(buf_1,"%s\n","slipfactor");
   iVar12 = 0;
-  MeWrite((int)pcVar6,buf_1,iVar7);
+  MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
   uVar11 = extraout_ECX_05;
   if (constraints.num_rows_exc_padding != 0) {
     uVar8 = constraints.num_rows_exc_padding & 3;
@@ -981,32 +981,32 @@ LAB_00011e3c:
         uVar11 = extraout_EDX_10;
         if (2 < uVar8) {
           iVar7 = sprintf(buf_1,"%08x\n",*constraints.slipfactor);
-          MeWrite((int)pcVar6,buf_1,iVar7);
+          MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
           uVar11 = extraout_EDX_14;
         }
         uVar8 = (uint)(2 < uVar8);
         iVar12 = uVar8 + 1;
         iVar7 = sprintf(buf_1,"%08x\n",constraints.slipfactor[uVar8]);
-        uVar8 = MeWrite((int)pcVar6,buf_1,iVar7);
+        uVar8 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       }
       pMVar2 = constraints.slipfactor + iVar12;
       iVar12 = iVar12 + 1;
       iVar7 = sprintf(buf_1,"%08x\n",*pMVar2);
-      iVar7 = MeWrite((int)pcVar6,buf_1,iVar7);
+      iVar7 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       uVar11 = extraout_ECX_06;
       if (iVar12 == constraints.num_rows_exc_padding) goto LAB_00011fc7;
     }
     do {
       iVar7 = sprintf(buf_1,"%08x\n",constraints.slipfactor[iVar12]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",constraints.slipfactor[iVar12 + 1]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",constraints.slipfactor[iVar12 + 2]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = iVar12 + 3;
       iVar12 = iVar12 + 4;
       iVar7 = sprintf(buf_1,"%08x\n",constraints.slipfactor[iVar7]);
-      iVar7 = MeWrite((int)pcVar6,buf_1,iVar7);
+      iVar7 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       uVar11 = extraout_ECX_07;
     } while (iVar12 != constraints.num_rows_exc_padding);
   }
@@ -1014,7 +1014,7 @@ LAB_00011fc7:
                     
   iVar7 = sprintf(buf_1,"%s\n","xgamma");
   iVar12 = 0;
-  iVar7 = MeWrite((int)pcVar6,buf_1,iVar7);
+  iVar7 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
   if (constraints.num_rows_exc_padding != 0) {
     uVar8 = constraints.num_rows_exc_padding & 3;
     iVar7 = 0;
@@ -1024,38 +1024,38 @@ LAB_00011fc7:
         bVar5 = 2 < uVar8;
         if (bVar5) {
           iVar7 = sprintf(buf_1,"%08x\n",*constraints.xgamma);
-          uVar8 = MeWrite((int)pcVar6,buf_1,iVar7);
+          uVar8 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
         }
         uVar13 = (uint)bVar5;
         iVar12 = uVar13 + 1;
         iVar7 = sprintf(buf_1,"%08x\n",constraints.xgamma[uVar13]);
-        MeWrite((int)pcVar6,buf_1,iVar7);
+        MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
         uVar11 = extraout_ECX_09;
       }
       pMVar2 = constraints.xgamma + iVar12;
       iVar12 = iVar12 + 1;
       iVar7 = sprintf(buf_1,"%08x\n",*pMVar2);
-      iVar7 = MeWrite((int)pcVar6,buf_1,iVar7);
+      iVar7 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       if (iVar12 == constraints.num_rows_exc_padding) goto LAB_00012152;
     }
     do {
       iVar7 = sprintf(buf_1,"%08x\n",constraints.xgamma[iVar12]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",constraints.xgamma[iVar12 + 1]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",constraints.xgamma[iVar12 + 2]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = iVar12 + 3;
       iVar12 = iVar12 + 4;
       iVar7 = sprintf(buf_1,"%08x\n",constraints.xgamma[iVar7]);
-      iVar7 = MeWrite((int)pcVar6,buf_1,iVar7);
+      iVar7 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
     } while (iVar12 != constraints.num_rows_exc_padding);
   }
 LAB_00012152:
                     
   iVar7 = sprintf(buf_1,"%s\n","Jsize");
   iVar12 = 0;
-  iVar7 = MeWrite((int)pcVar6,buf_1,iVar7);
+  iVar7 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
   if (constraints.num_constraints != 0) {
     uVar8 = constraints.num_constraints & 3;
     iVar7 = 0;
@@ -1064,38 +1064,38 @@ LAB_00012152:
         uVar11 = extraout_ECX_10;
         if (2 < uVar8) {
           iVar7 = sprintf(buf_1,"%d\n",*constraints.Jsize);
-          MeWrite((int)pcVar6,buf_1,iVar7);
+          MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
           uVar11 = extraout_ECX_12;
         }
         uVar8 = (uint)(2 < uVar8);
         iVar12 = uVar8 + 1;
         iVar7 = sprintf(buf_1,"%d\n",constraints.Jsize[uVar8]);
-        uVar8 = MeWrite((int)pcVar6,buf_1,iVar7);
+        uVar8 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       }
       piVar1 = constraints.Jsize + iVar12;
       iVar12 = iVar12 + 1;
       iVar7 = sprintf(buf_1,"%d\n",*piVar1);
-      iVar7 = MeWrite((int)pcVar6,buf_1,iVar7);
+      iVar7 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       if (iVar12 == constraints.num_constraints) goto LAB_000122dd;
     }
     do {
       iVar7 = sprintf(buf_1,"%d\n",constraints.Jsize[iVar12]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%d\n",constraints.Jsize[iVar12 + 1]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%d\n",constraints.Jsize[iVar12 + 2]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = iVar12 + 3;
       iVar12 = iVar12 + 4;
       iVar7 = sprintf(buf_1,"%d\n",constraints.Jsize[iVar7]);
-      iVar7 = MeWrite((int)pcVar6,buf_1,iVar7);
+      iVar7 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
     } while (iVar12 != constraints.num_constraints);
   }
 LAB_000122dd:
                     
   iVar7 = sprintf(buf_1,"%s\n",&DAT_00016509);
   iVar12 = 0;
-  iVar7 = MeWrite((int)pcVar6,buf_1,iVar7);
+  iVar7 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
   if (constraints.num_constraints != 0) {
     uVar8 = constraints.num_constraints & 3;
     uVar11 = extraout_EDX_11;
@@ -1104,31 +1104,31 @@ LAB_000122dd:
         bVar5 = 2 < uVar8;
         if (bVar5) {
           iVar7 = sprintf(buf_1,"%d\n",*constraints.Jofs);
-          uVar8 = MeWrite((int)pcVar6,buf_1,iVar7);
+          uVar8 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
         }
         uVar13 = (uint)bVar5;
         iVar12 = uVar13 + 1;
         iVar7 = sprintf(buf_1,"%d\n",constraints.Jofs[uVar13]);
-        uVar8 = MeWrite((int)pcVar6,buf_1,iVar7);
+        uVar8 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       }
       piVar1 = constraints.Jofs + iVar12;
       iVar12 = iVar12 + 1;
       iVar7 = sprintf(buf_1,"%d\n",*piVar1);
-      iVar7 = MeWrite((int)pcVar6,buf_1,iVar7);
+      iVar7 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       uVar11 = extraout_EDX_12;
       if (iVar12 == constraints.num_constraints) goto LAB_00012468;
     }
     do {
       iVar7 = sprintf(buf_1,"%d\n",constraints.Jofs[iVar12]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%d\n",constraints.Jofs[iVar12 + 1]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%d\n",constraints.Jofs[iVar12 + 2]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = iVar12 + 3;
       iVar12 = iVar12 + 4;
       iVar7 = sprintf(buf_1,"%d\n",constraints.Jofs[iVar7]);
-      iVar7 = MeWrite((int)pcVar6,buf_1,iVar7);
+      iVar7 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       uVar11 = extraout_EDX_13;
     } while (iVar12 != constraints.num_constraints);
   }
@@ -1137,7 +1137,7 @@ LAB_00012468:
   uVar8 = constraints.num_constraints * 2;
   iVar7 = sprintf(buf_1,"%s\n","Jbody");
   uVar13 = 0;
-  iVar7 = MeWrite((int)pcVar6,buf_1,iVar7);
+  iVar7 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
   if (uVar8 != 0) {
     uVar9 = uVar8 & 3;
     iVar7 = 0;
@@ -1146,218 +1146,218 @@ LAB_00012468:
         bVar5 = 2 < uVar9;
         if (bVar5) {
           iVar7 = sprintf(buf_1,"%d\n",(*constraints.Jbody)[0]);
-          uVar9 = MeWrite((int)pcVar6,buf_1,iVar7);
+          uVar9 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
         }
         uVar14 = (uint)bVar5;
         uVar13 = uVar14 + 1;
         iVar7 = sprintf(buf_1,"%d\n",(*constraints.Jbody)[uVar14]);
-        uVar9 = MeWrite((int)pcVar6,buf_1,iVar7);
+        uVar9 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       }
       piVar1 = *constraints.Jbody + uVar13;
       uVar13 = uVar13 + 1;
       iVar7 = sprintf(buf_1,"%d\n",*piVar1);
-      iVar7 = MeWrite((int)pcVar6,buf_1,iVar7);
+      iVar7 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       if (uVar13 == uVar8) goto LAB_000125f8;
     }
     do {
       iVar7 = sprintf(buf_1,"%d\n",(*constraints.Jbody)[uVar13]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%d\n",(*constraints.Jbody)[uVar13 + 1]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%d\n",constraints.Jbody[1][uVar13]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = uVar13 + 1;
       uVar13 = uVar13 + 4;
       iVar7 = sprintf(buf_1,"%d\n",constraints.Jbody[1][iVar7]);
-      iVar7 = MeWrite((int)pcVar6,buf_1,iVar7);
+      iVar7 = MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
     } while (uVar13 != uVar8);
   }
 LAB_000125f8:
                     
   iVar7 = sprintf(buf_1,"%s\n","num_bodies");
-  MeWrite((int)pcVar6,buf_1,iVar7);
+  MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
   iVar7 = sprintf(buf_1,"%d\n",num_bodies);
-  MeWrite((int)pcVar6,buf_1,iVar7);
+  MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
   i = 0;
   if (num_bodies != 0) {
     local_230 = blist;
     pcVar15 = pcVar6;
     do {
       iVar7 = sprintf(buf,"body %d\n",i);
-      MeWrite((int)pcVar6,buf,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf,iVar7);
       MVar3 = (*local_230)->invmass;
       iVar7 = sprintf(buf_1,"%s\n","invmass");
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
                     
       iVar7 = sprintf(buf_1,"%08x\n",MVar3);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = (*local_230)->flags;
       iVar12 = sprintf(buf_1,"%s\n","flags");
                     
-      MeWrite((int)pcVar6,buf_1,iVar12);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar12);
       iVar7 = sprintf(buf_1,"%d\n",iVar7);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       pMVar4 = *local_230;
       iVar7 = sprintf(buf_1,"%s\n","force");
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->force[0]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->force[1]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->force[2]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
                     
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->force[3]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       pMVar4 = *local_230;
       iVar7 = sprintf(buf_1,"%s\n","torque");
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->torque[0]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->torque[1]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->torque[2]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->torque[3]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
                     
       pMVar4 = *local_230;
       iVar7 = sprintf(buf_1,"%s\n","invI0");
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->invI0[0]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->invI0[1]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->invI0[2]);
                     
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->invI0[3]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       pMVar4 = *local_230;
       iVar7 = sprintf(buf_1,"%s\n","invI1");
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->invI1[0]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->invI1[1]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->invI1[2]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
                     
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->invI1[3]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       pMVar4 = *local_230;
       iVar7 = sprintf(buf_1,"%s\n","invI2");
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->invI2[0]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->invI2[1]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->invI2[2]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->invI2[3]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
                     
       pMVar4 = *local_230;
       iVar7 = sprintf(buf_1,"%s\n",&DAT_00016555);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->I0[0]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->I0[1]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->I0[2]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
                     
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->I0[3]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       pMVar4 = *local_230;
       iVar7 = sprintf(buf_1,"%s\n",&DAT_00016558);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->I1[0]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->I1[1]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->I1[2]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
                     
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->I1[3]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       pMVar4 = *local_230;
       iVar7 = sprintf(buf_1,"%s\n",&DAT_0001655b);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->I2[0]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->I2[1]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->I2[2]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
                     
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->I2[3]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       pMVar4 = *local_230;
       iVar7 = sprintf(buf_1,"%s\n",&DAT_0001655e);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->vel[0]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->vel[1]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->vel[2]);
                     
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->vel[3]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       pMVar4 = *local_230;
       iVar7 = sprintf(buf_1,"%s\n","velrot");
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->velrot[0]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->velrot[1]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->velrot[2]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
                     
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->velrot[3]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       pMVar4 = *local_230;
       iVar7 = sprintf(buf_1,"%s\n",&DAT_00016569);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->qrot[0]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->qrot[1]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->qrot[2]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->qrot[3]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
                     
       pMVar4 = *local_230;
       iVar7 = sprintf(buf_1,"%s\n","accel");
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->accel[0]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->accel[1]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->accel[2]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
                     
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->accel[3]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       pMVar4 = *local_230;
       iVar7 = sprintf(buf_1,"%s\n","fastSpinAxis");
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->fastSpinAxis[0]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->fastSpinAxis[1]);
       pcVar15 = buf_1;
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->fastSpinAxis[2]);
-      MeWrite((int)pcVar6,buf_1,iVar7);
+      MeWrite((kd_iptr)pcVar6,buf_1,iVar7);
       iVar7 = sprintf(buf_1,"%08x\n",pMVar4->fastSpinAxis[3]);
-      MeWrite((int)pcVar6,pcVar15,iVar7);
+      MeWrite((kd_iptr)pcVar6,pcVar15,iVar7);
       i = i + 1;
       local_230 = local_230 + 1;
     } while (i != num_bodies);
   }
-  MeClose((int)pcVar6);
+  MeClose((kd_iptr)pcVar6);
   return;
 }
 
@@ -1371,13 +1371,13 @@ void kd_readKeaInputFromFile
   bool bVar2;
   MeReal *pMVar3;
   uint uVar4;
-  int iVar5;
+  kd_iptr iVar5;
   void *pvVar6;
   MdtKeaBody *pMVar7;
   undefined4 extraout_ECX;
   undefined4 extraout_ECX_00;
   undefined4 extraout_ECX_01;
-  int iVar8;
+  kd_iptr iVar8;
   undefined4 extraout_ECX_02;
   undefined4 extraout_ECX_03;
   undefined4 extraout_ECX_04;
@@ -1407,7 +1407,7 @@ void kd_readKeaInputFromFile
   undefined4 extraout_EDX_18;
   MeReal *pMVar9;
   int *piVar10;
-  int iVar11;
+  kd_iptr iVar11;
   MeReal *pMVar12;
   MeReal *pMVar13;
   int *piVar14;
@@ -1616,10 +1616,10 @@ LAB_00013e6c:
       iVar17 = iVar17 + 2;
       pMVar9 = pMVar3;
       MeStreamReadLine(buf,0x100,pMVar3);
-      iVar8 = (int)(*constraints->Jstore)[0].col[0] + iVar11;
+      iVar8 = (kd_iptr)(*constraints->Jstore)[0].col[0] + iVar11;
       sscanf(buf,"%08x; %08x; %08x; %08x; %08x; %08x; %08x; %08x; %08x; %08x; %08x; %08x;\n",iVar8,iVar8 + 0x300,iVar8 + 0x600,iVar8 + 0x900,iVar8 + 0xc00,iVar8 + 0xf00,iVar8 + 0x1200,iVar8 + 0x1500,iVar8 + 0x1800,iVar8 + 0x1b00,iVar8 + 0x1e00,iVar8 + 0x2100);
       MeStreamReadLine(buf,0x100,pMVar3);
-      iVar5 = (int)constraints->Jstore[1][0].col[0] + iVar11;
+      iVar5 = (kd_iptr)constraints->Jstore[1][0].col[0] + iVar11;
       iVar5 = sscanf(buf,"%08x; %08x; %08x; %08x; %08x; %08x; %08x; %08x; %08x; %08x; %08x; %08x;\n"
                      ,iVar5,iVar5 + 0x300,iVar5 + 0x600,iVar5 + 0x900,iVar5 + 0xc00,iVar5 + 0xf00,
                      iVar5 + 0x1200,iVar5 + 0x1500,iVar5 + 0x1800,iVar5 + 0x1b00,iVar5 + 0x1e00,
@@ -2045,10 +2045,10 @@ LAB_00014f2c:
       MeStreamReadLine(buf_1,0x100,pMVar3);
       sscanf(buf_1,"%d\n",piVar10);
       MeStreamReadLine(buf_1,0x100,pMVar3);
-      iVar5 = (int)(piVar10 + 2);
+      iVar5 = (kd_iptr)(piVar10 + 2);
       sscanf(buf_1,"%d\n",piVar10 + 1);
       MeStreamReadLine(buf_1,0x100,pMVar3);
-      iVar11 = (int)(piVar10 + 3);
+      iVar11 = (kd_iptr)(piVar10 + 3);
       piVar10 = piVar10 + 4;
       sscanf(buf_1,"%d\n",iVar5);
       MeStreamReadLine(buf_1,0x100,pMVar3);
@@ -2064,7 +2064,7 @@ LAB_000150dc:
   if (*num_bodies != 0) {
     local_258 = blist;
     do {
-      pMVar7 = (MeMemoryAPI.create)(0xf0);
+      pMVar7 = (MeMemoryAPI.create)((int)sizeof(*(MdtKeaBody *)0));
       *local_258 = pMVar7;
       MeStreamReadLine(buf,0x100,pMVar3);
       pMVar7 = *local_258;

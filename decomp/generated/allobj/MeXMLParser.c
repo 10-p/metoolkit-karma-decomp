@@ -112,7 +112,7 @@ LAB_00010107:
           uVar8 = uVar9 + 1;
           uVar5 = __strtol_internal(c,&d,0);
           pcVar7 = d;
-          *(undefined4 *)((int)data + uVar9 * 4 + uVar3) = uVar5;
+          *(undefined4 *)((kd_iptr)data + uVar9 * 4 + uVar3) = uVar5;
           if (c == d) {
 LAB_0001013e:
             sprintf(file->error,"line %d, char %d: unsigned int array data invalid\n",iVar1,iVar2);
@@ -160,7 +160,7 @@ MeXMLError kd_MeXMLParseIntArray(MeXMLInput *file,MeXMLHandler *action,void *dat
   char *pcVar6;
   uint uVar7;
   uint uVar8;
-  int iVar9;
+  kd_iptr iVar9;
   bool bVar10;
   int posn;
   int line;
@@ -172,7 +172,7 @@ MeXMLError kd_MeXMLParseIntArray(MeXMLInput *file,MeXMLHandler *action,void *dat
   iVar1 = file->line;
   iVar2 = file->posn;
   uVar7 = 0;
-  iVar9 = (int)data + action->offset;
+  iVar9 = (kd_iptr)data + action->offset;
   MVar3 = readToNextTag(file,c,0x400);
   if (MVar3 == MeXMLErrorNone) {
     if (x[0] == '\0') {
@@ -269,7 +269,7 @@ LAB_0001043b:
           uVar8 = uVar9 + 1;
           lVar11 = (longdouble)__strtod_internal(c,&d);
           pcVar7 = d;
-          *(float *)((int)data + uVar9 * 4 + uVar3) = (float)lVar11;
+          *(float *)((kd_iptr)data + uVar9 * 4 + uVar3) = (float)lVar11;
           if (c == d) {
 LAB_00010472:
             sprintf(file->error,"line %d, char %d: float array data invalid\n",iVar1,iVar2);
@@ -351,7 +351,7 @@ LAB_000105cb:
           uVar8 = uVar9 + 1;
           lVar11 = (longdouble)__strtod_internal(c,&d);
           pcVar7 = d;
-          *(float *)((int)data + uVar9 * 4 + uVar3) = (float)lVar11;
+          *(float *)((kd_iptr)data + uVar9 * 4 + uVar3) = (float)lVar11;
           if (c == d) {
 LAB_00010602:
             sprintf(file->error,"line %d, char %d: MeReal array data invalid\n",iVar1,iVar2);
@@ -433,7 +433,7 @@ LAB_0001075b:
           uVar8 = uVar9 + 1;
           lVar11 = (longdouble)__strtod_internal(c,&d);
           pcVar7 = d;
-          *(double *)((int)data + uVar9 * 8 + uVar3) = (double)lVar11;
+          *(double *)((kd_iptr)data + uVar9 * 8 + uVar3) = (double)lVar11;
           if (c == d) {
 LAB_00010792:
             sprintf(file->error,"line %d, char %d: double array data invalid\n",iVar1,iVar2);
@@ -486,7 +486,7 @@ MeXMLError kd_MeXMLParseStringArray(MeXMLInput *file,MeXMLHandler *action,void *
   char *pcVar7;
   uint uVar8;
   undefined *puVar9;
-  uint i;
+  kd_uptr i;
   int posn;
   int line;
   char x [1024];
@@ -494,7 +494,7 @@ MeXMLError kd_MeXMLParseStringArray(MeXMLInput *file,MeXMLHandler *action,void *
   pcVar7 = x;
   iVar1 = file->line;
   iVar2 = file->posn;
-  __dest = (char *)(action->offset + (int)data);
+  __dest = (char *)(action->offset + (kd_iptr)data);
   i = 0;
   MVar3 = readToNextTag(file,pcVar7,0x400);
   if (MVar3 == MeXMLErrorNone) {
@@ -530,7 +530,7 @@ LAB_000108fc:
           pcVar4 = pcVar7 + sVar5;
           __dest = __dest + action->maxstr;
           pcVar7 = pcVar4 + 1;
-          i = (uint)pcVar6;
+          i = (kd_uptr)pcVar6;
           if (pcVar4[1] == '\0') goto LAB_000108d4;
         } while (pcVar6 < (char *)action->max);
       }
@@ -842,7 +842,7 @@ MeXMLError kd_MeXMLParseUInt(MeXMLInput *file,MeXMLHandler *action,void *data)
   if (MVar4 == MeXMLErrorNone) {
     uVar5 = __strtol_internal(x,&c,0);
     pcVar7 = c;
-    *(undefined4 *)(uVar2 + (int)data) = uVar5;
+    *(undefined4 *)(uVar2 + (kd_iptr)data) = uVar5;
     if (c == x) {
       sprintf(file->error,"line %d, char %d: Expected unsigned int, found %s\n",iVar1,iVar3,c);
     }
@@ -885,7 +885,7 @@ MeXMLError kd_MeXMLParseInt(MeXMLInput *file,MeXMLHandler *action,void *data)
   if (MVar4 == MeXMLErrorNone) {
     uVar5 = __strtol_internal(x,&c,0);
     pcVar7 = c;
-    *(undefined4 *)(uVar2 + (int)data) = uVar5;
+    *(undefined4 *)(uVar2 + (kd_iptr)data) = uVar5;
     if (c == x) {
       sprintf(file->error,"line %d, char %d: Expected int, found %s\n",iVar1,iVar3,c);
     }
@@ -928,7 +928,7 @@ MeXMLError kd_MeXMLParseFloat(MeXMLInput *file,MeXMLHandler *action,void *data)
   if (MVar4 == MeXMLErrorNone) {
     lVar7 = (longdouble)__strtod_internal(x,&c);
     pcVar6 = c;
-    *(float *)(uVar2 + (int)data) = (float)lVar7;
+    *(float *)(uVar2 + (kd_iptr)data) = (float)lVar7;
     if (c == x) {
       sprintf(file->error,"line %d, char %d: Expected float, found %s\n",iVar1,iVar3,c);
     }
@@ -971,7 +971,7 @@ MeXMLError kd_MeXMLParseMeReal(MeXMLInput *file,MeXMLHandler *action,void *data)
   if (MVar4 == MeXMLErrorNone) {
     lVar7 = (longdouble)__strtod_internal(x,&c);
     pcVar6 = c;
-    *(float *)(uVar2 + (int)data) = (float)lVar7;
+    *(float *)(uVar2 + (kd_iptr)data) = (float)lVar7;
     if (c == x) {
       sprintf(file->error,"line %d, char %d: Expected MeReal, found %s\n",iVar1,iVar3,c);
     }
@@ -1015,7 +1015,7 @@ MeXMLError kd_MeXMLParseDouble(MeXMLInput *file,MeXMLHandler *action,void *data)
   if (MVar4 == MeXMLErrorNone) {
     lVar7 = (longdouble)__strtod_internal(x,&c);
     pcVar6 = c;
-    *(double *)(uVar2 + (int)data) = (double)lVar7;
+    *(double *)(uVar2 + (kd_iptr)data) = (double)lVar7;
     if (c == x) {
       sprintf(file->error,"line %d, char %d: Expected double, found %s\n",iVar1,iVar3,c);
     }
@@ -1041,7 +1041,7 @@ MeXMLError kd_MeXMLParseString(MeXMLInput *file,MeXMLHandler *action,void *data)
 {
   MeXMLError MVar1;
 
-  MVar1 = readToNextTag(file,(char *)(action->offset + (int)data),action->max);
+  MVar1 = readToNextTag(file,(char *)(action->offset + (kd_iptr)data),action->max);
   return (MVar1 == MeXMLErrorNone) - MeXMLErrorMalformed & MVar1;
 }
 
@@ -1051,7 +1051,7 @@ MeXMLInput * kd_MeXMLInputCreate(MeStream stream)
 {
   MeXMLInput *pMVar1;
 
-  pMVar1 = (MeMemoryAPI.create)(0x1528);
+  pMVar1 = (MeMemoryAPI.create)((int)sizeof(*(MeXMLInput *)0));
   pMVar1->bufptr = 0x1000;
   pMVar1->bufmax = 0x1000;
   pMVar1->top = 0;

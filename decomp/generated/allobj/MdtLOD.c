@@ -60,14 +60,14 @@ void kd_MdtLODLastPartition(MdtPartitionOutput *po,MdtPartitionParams *params)
   MdtBody **ppMVar12;
   uint uVar13;
   MdtBody *pMVar14;
-  int iVar15;
-  int iVar16;
+  kd_iptr iVar15;
+  kd_iptr iVar16;
   undefined4 extraout_EDX = (undefined4)0;
   MdtLODPartitionData *pMVar17;
   MdtBaseConstraint **ppMVar18;
   MeReal MVar19;
-  int aiStack_90 [6];
-  uint auStack_78 [3];
+  int aiStack_90 [6 * (int)(sizeof(void *) / 4)];
+  uint auStack_78 [3 * (int)(sizeof(void *) / 4)];
   MdtLODPartitionData local_6c;
   int b0PIx;
   MdtBody *b1;
@@ -90,17 +90,17 @@ void kd_MdtLODLastPartition(MdtPartitionOutput *po,MdtPartitionParams *params)
   partitionCount = 0;
   clist = po->constraints + po->constraintsStart[p];
   iVar6 = -(iVar2 * 4 + 0x13U & 0xfffffff0);
-  *(code **)((int)auStack_78 + 8) = CompareImportance;
-  *(int *)((int)auStack_78 + 4) = iVar2 + 1;
-  *(int *)((int)auStack_78) = (kd_alloca_iVar6 = (char *)alloca((size_t)(iVar2) * 4 + 4));
-  *(MeHeap **)((int)aiStack_90 + 0x14) = &q;
-  *(undefined4 *)((int)aiStack_90 + 0x10) = 0x1006d;
-  MeHeapInit(*(void **)((int)aiStack_90 + 0x14),*(void **)((int)auStack_78),
-             *(int *)((int)auStack_78 + 4),*(void **)((int)auStack_78 + 8));
+  *(code **)((kd_iptr)auStack_78 + (2 * (int)sizeof(void *))) = CompareImportance;
+  *(int *)((kd_iptr)auStack_78 + (1 * (int)sizeof(void *))) = iVar2 + 1;
+  *(int *)((kd_iptr)auStack_78) = (kd_alloca_iVar6 = (char *)alloca((size_t)(iVar2) * 4 + 4));
+  *(MeHeap **)((kd_iptr)aiStack_90 + (5 * (int)sizeof(void *))) = &q;
+  *(undefined4 *)((kd_iptr)aiStack_90 + (4 * (int)sizeof(void *))) = 0x1006d;
+  MeHeapInit(*(void **)((kd_iptr)aiStack_90 + (5 * (int)sizeof(void *))),*(void **)((kd_iptr)auStack_78),
+             *(int *)((kd_iptr)auStack_78 + (1 * (int)sizeof(void *))),*(void **)((kd_iptr)auStack_78 + (2 * (int)sizeof(void *))));
   ppMVar18 = clist;
   iVar2 = -(uVar13 * 0x14 + 0xf & 0xfffffff0);
   i = 0;
-  pdataArray = (MdtLODPartitionData *)(kd_alloca_iVar2 = (char *)alloca((size_t)(uVar13) * 0x14 + 0));
+  pdataArray = (MdtLODPartitionData *)(kd_alloca_iVar2 = (char *)alloca((size_t)(uVar13) * (int)sizeof(*(MdtLODPartitionData *)0) + 0));
   if (0 < (int)uVar13) {
     uVar9 = uVar13 & 3;
     if ((int)uVar13 < 2) {
@@ -137,36 +137,36 @@ LAB_000100f8:
     if ((nCon & 1U) != 0) {
       ((*clist)->head).LODpartIndex = -1;
       ((*clist)->head).rowBudget = 0;
-      *(MdtBaseConstraint **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = *clist;
-      *(undefined4 *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x10138;
-      group = MdtConstraintDCastContactGroup(*(void **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
+      *(MdtBaseConstraint **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = *clist;
+      *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x10138;
+      group = MdtConstraintDCastContactGroup(*(void **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
       iVar16 = 0;
       if (group != (MdtContactGroupID)0x0) {
         pMVar3 = *ppMVar18;
-        *(MdtBaseConstraint **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = pMVar3;
-        *(undefined4 *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x1014d;
-        iVar16 = MdtConstraintGetRowCount(*(void **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
+        *(MdtBaseConstraint **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = pMVar3;
+        *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x1014d;
+        iVar16 = MdtConstraintGetRowCount(*(void **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
         (pMVar3->head).maxRows = iVar16;
       }
       pMVar3 = *ppMVar18;
-      *(int *)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p8)) = iVar16;
-      *(int *)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p4)) = iVar16;
-      *(MdtPartitionParams **)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p0)) = params;
-      *(MdtBaseConstraint **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = *ppMVar18;
-      *(undefined4 *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x10163;
+      *(int *)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p8)) = iVar16;
+      *(int *)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p4)) = iVar16;
+      *(MdtPartitionParams **)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p0)) = params;
+      *(MdtBaseConstraint **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = *ppMVar18;
+      *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x10163;
       MVar19 = ConstraintCalcImportance
-                         (*(MdtBaseConstraint **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)),
-                          *(MdtPartitionParams **)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p0)));
+                         (*(MdtBaseConstraint **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)),
+                          *(MdtPartitionParams **)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p0)));
       pMVar7 = group;
       (pMVar3->head).importance = MVar19;
       if ((group == (MdtContactGroupID)0x0) || (0 < (group->head).maxRows)) {
-        *(MdtContactGroupID *)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p8)) = group;
-        *(MdtContactGroupID *)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p4)) = pMVar7;
-        *(MdtBaseConstraint **)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p0)) = *ppMVar18;
-        *(MeHeap **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = &q;
-        *(undefined4 *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x1018b;
-        MeHeapPush(*(void **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)),
-                   *(void **)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p0)));
+        *(MdtContactGroupID *)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p8)) = group;
+        *(MdtContactGroupID *)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p4)) = pMVar7;
+        *(MdtBaseConstraint **)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p0)) = *ppMVar18;
+        *(MeHeap **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = &q;
+        *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x1018b;
+        MeHeapPush(*(void **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)),
+                   *(void **)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p0)));
       }
       ppMVar18 = ppMVar18 + 1;
       i = i + -1;
@@ -175,81 +175,81 @@ LAB_000100f8:
     do {
       ((*ppMVar18)->head).LODpartIndex = -1;
       ((*ppMVar18)->head).rowBudget = 0;
-      *(MdtBaseConstraint **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = *ppMVar18;
-      *(undefined4 *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x101c3;
-      group = MdtConstraintDCastContactGroup(*(void **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
+      *(MdtBaseConstraint **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = *ppMVar18;
+      *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x101c3;
+      group = MdtConstraintDCastContactGroup(*(void **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
       iVar16 = 0;
       if (group != (MdtContactGroupID)0x0) {
         pMVar3 = *ppMVar18;
-        *(MdtBaseConstraint **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = pMVar3;
-        *(undefined4 *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x101d8;
-        iVar16 = MdtConstraintGetRowCount(*(void **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
+        *(MdtBaseConstraint **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = pMVar3;
+        *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x101d8;
+        iVar16 = MdtConstraintGetRowCount(*(void **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
         (pMVar3->head).maxRows = iVar16;
       }
       pMVar3 = *ppMVar18;
-      *(int *)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p8)) = iVar16;
-      *(int *)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p4)) = iVar16;
-      *(MdtPartitionParams **)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p0)) = params;
-      *(MdtBaseConstraint **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = *ppMVar18;
-      *(undefined4 *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x101ee;
+      *(int *)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p8)) = iVar16;
+      *(int *)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p4)) = iVar16;
+      *(MdtPartitionParams **)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p0)) = params;
+      *(MdtBaseConstraint **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = *ppMVar18;
+      *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x101ee;
       MVar19 = ConstraintCalcImportance
-                         (*(MdtBaseConstraint **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)),
-                          *(MdtPartitionParams **)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p0)));
+                         (*(MdtBaseConstraint **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)),
+                          *(MdtPartitionParams **)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p0)));
       pMVar7 = group;
       (pMVar3->head).importance = MVar19;
       if ((group == (MdtContactGroupID)0x0) || (0 < (group->head).maxRows)) {
-        *(MdtContactGroupID *)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p8)) = group;
-        *(MdtContactGroupID *)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p4)) = pMVar7;
-        *(MdtBaseConstraint **)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p0)) = *ppMVar18;
-        *(MeHeap **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = &q;
-        *(undefined4 *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x10216;
-        MeHeapPush(*(void **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)),
-                   *(void **)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p0)));
+        *(MdtContactGroupID *)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p8)) = group;
+        *(MdtContactGroupID *)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p4)) = pMVar7;
+        *(MdtBaseConstraint **)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p0)) = *ppMVar18;
+        *(MeHeap **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = &q;
+        *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x10216;
+        MeHeapPush(*(void **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)),
+                   *(void **)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p0)));
       }
-      local_6c.rowCount = (int)(ppMVar18 + 1);
+      local_6c.rowCount = (kd_iptr)(ppMVar18 + 1);
       (ppMVar18[1]->head).LODpartIndex = -1;
       (ppMVar18[1]->head).rowBudget = 0;
-      *(MdtBaseConstraint **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = ppMVar18[1];
-      *(undefined4 *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x10245;
-      group = MdtConstraintDCastContactGroup(*(void **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
+      *(MdtBaseConstraint **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = ppMVar18[1];
+      *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x10245;
+      group = MdtConstraintDCastContactGroup(*(void **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
       iVar16 = 0;
       if (group != (MdtContactGroupID)0x0) {
         pMVar3 = ppMVar18[1];
-        *(MdtBaseConstraint **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = pMVar3;
-        *(undefined4 *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x1025b;
-        iVar16 = MdtConstraintGetRowCount(*(void **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
+        *(MdtBaseConstraint **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = pMVar3;
+        *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x1025b;
+        iVar16 = MdtConstraintGetRowCount(*(void **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
         (pMVar3->head).maxRows = iVar16;
       }
       iVar15 = local_6c.rowCount;
       pMVar3 = *(MdtBaseConstraint **)local_6c.rowCount;
-      *(int *)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p8)) = iVar16;
-      *(int *)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p4)) = iVar16;
-      *(MdtPartitionParams **)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p0)) = params;
-      *(MdtBaseConstraint **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) =
+      *(int *)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p8)) = iVar16;
+      *(int *)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p4)) = iVar16;
+      *(MdtPartitionParams **)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p0)) = params;
+      *(MdtBaseConstraint **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) =
            *(MdtBaseConstraint **)iVar15;
-      *(undefined4 *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x10274;
+      *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x10274;
       MVar19 = ConstraintCalcImportance
-                         (*(MdtBaseConstraint **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)),
-                          *(MdtPartitionParams **)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p0)));
+                         (*(MdtBaseConstraint **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)),
+                          *(MdtPartitionParams **)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p0)));
       iVar16 = local_6c.rowCount;
       (pMVar3->head).importance = MVar19;
       if ((group == (MdtContactGroupID)0x0) || (0 < (group->head).maxRows)) {
-        *(undefined4 *)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p8)) = extraout_EDX;
-        *(undefined4 *)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p4)) = extraout_EDX;
-        *(MdtBaseConstraint **)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p0)) = *(MdtBaseConstraint **)iVar16;
-        *(MeHeap **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = &q;
-        *(undefined4 *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x1029f;
-        MeHeapPush(*(void **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)),
-                   *(void **)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p0)));
+        *(undefined4 *)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p8)) = extraout_EDX;
+        *(undefined4 *)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p4)) = extraout_EDX;
+        *(MdtBaseConstraint **)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p0)) = *(MdtBaseConstraint **)iVar16;
+        *(MeHeap **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = &q;
+        *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x1029f;
+        MeHeapPush(*(void **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)),
+                   *(void **)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p0)));
       }
       ppMVar18 = ppMVar18 + 2;
       i = i + -2;
     } while (i != 0);
   }
 LAB_000102af:
-  *(MeHeap **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = &q;
-  *(undefined4 *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x102bb;
-  currentCon = MeHeapPop(*(void **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
+  *(MeHeap **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = &q;
+  *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x102bb;
+  currentCon = MeHeapPop(*(void **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
   if (currentCon != (MdtBaseConstraint *)0x0) {
     local_6c.bodyArray = (MdtBody **)(pdataArray + partitionCount);
     do {
@@ -261,36 +261,36 @@ LAB_000102af:
       if (b1 == (MdtBody *)0x0) {
         if (iVar16 == -1) {
           *(int *)local_6c.bodyArray = 0;
-          *(int *)((int)local_6c.bodyArray + 8) = 0;
-          *(MdtBody ***)((int)local_6c.bodyArray + 4) = (MdtBody **)0x0;
-          *(int *)((int)local_6c.bodyArray + 0x10) = 0;
-          *(MdtBaseConstraint ***)((int)local_6c.bodyArray + 0xc) = (MdtBaseConstraint **)0x0;
+          *(int *)((kd_iptr)local_6c.bodyArray + 8) = 0;
+          *(MdtBody ***)((kd_iptr)local_6c.bodyArray + 4) = (MdtBody **)0x0;
+          *(int *)((kd_iptr)local_6c.bodyArray + 0x10) = 0;
+          *(MdtBaseConstraint ***)((kd_iptr)local_6c.bodyArray + 0xc) = (MdtBaseConstraint **)0x0;
           iVar16 = partitionCount;
-          *(MeHeap **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = &q;
-          local_6c.bodyArray = (MdtBody **)((int)local_6c.bodyArray + 0x14);
-          *(MdtPartitionParams **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = params;
+          *(MeHeap **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = &q;
+          local_6c.bodyArray = (MdtBody **)((kd_iptr)local_6c.bodyArray + 0x14);
+          *(MdtPartitionParams **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = params;
           pMVar8 = pdataArray;
-          *(int *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_pc)) = partitionCount;
+          *(int *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_pc)) = partitionCount;
           partitionCount = partitionCount + 1;
-          *(MdtLODPartitionData **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p8)) = pMVar8;
-          *(MdtBaseConstraint **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p4)) = currentCon;
-          *(undefined4 *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p0)) = 0x109f5;
+          *(MdtLODPartitionData **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p8)) = pMVar8;
+          *(MdtBaseConstraint **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p4)) = currentCon;
+          *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p0)) = 0x109f5;
           MVar11 = IncrementConstraintRowBudget
-                             (*(MdtBaseConstraint **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p4)),
-                              *(MdtLODPartitionData **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p8)),
-                              *(int *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_pc)),
-                              *(MdtPartitionParams **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)),
-                              *(MeHeap **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
+                             (*(MdtBaseConstraint **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p4)),
+                              *(MdtLODPartitionData **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p8)),
+                              *(int *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_pc)),
+                              *(MdtPartitionParams **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)),
+                              *(MeHeap **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
           pMVar8 = pdataArray;
           if (MVar11 != 0) {
             pMVar17 = pdataArray + iVar16;
-            *(MdtLODPartitionData **)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p8)) = pdataArray;
-            *(MdtLODPartitionData **)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p4)) = pMVar8;
-            *(int *)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p0)) = pMVar17->bodyCount * 4 + 4;
-            *(MdtBody ***)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = pMVar17->bodyArray;
-            *(undefined4 *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x10a20;
-            ppMVar12 = (MeMemoryAPI.resize)(*(void **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)),
-                                        *(uint *)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p0)));
+            *(MdtLODPartitionData **)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p8)) = pdataArray;
+            *(MdtLODPartitionData **)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p4)) = pMVar8;
+            *(int *)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p0)) = pMVar17->bodyCount * 4 + 4;
+            *(MdtBody ***)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = pMVar17->bodyArray;
+            *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x10a20;
+            ppMVar12 = (MeMemoryAPI.resize)(*(void **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)),
+                                        *(uint *)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p0)));
             pMVar17->bodyArray = ppMVar12;
             b0->LODpartIndex = iVar16;
             iVar16 = pMVar17->bodyCount;
@@ -304,22 +304,22 @@ LAB_0001086e:
         }
         else {
 LAB_00010800:
-          *(MeHeap **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = &q;
+          *(MeHeap **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = &q;
 LAB_000107de:
           iVar16 = b0PIx;
-          *(MdtPartitionParams **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = params;
+          *(MdtPartitionParams **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = params;
           pMVar8 = pdataArray;
-          *(int *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_pc)) = iVar16;
+          *(int *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_pc)) = iVar16;
           pMVar3 = currentCon;
-          *(MdtLODPartitionData **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p8)) = pMVar8;
-          *(MdtBaseConstraint **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p4)) = pMVar3;
-          *(undefined4 *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p0)) = 0x107f3;
+          *(MdtLODPartitionData **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p8)) = pMVar8;
+          *(MdtBaseConstraint **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p4)) = pMVar3;
+          *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p0)) = 0x107f3;
           IncrementConstraintRowBudget
-                    (*(MdtBaseConstraint **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p4)),
-                     *(MdtLODPartitionData **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p8)),
-                     *(int *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_pc)),
-                     *(MdtPartitionParams **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)),
-                     *(MeHeap **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
+                    (*(MdtBaseConstraint **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p4)),
+                     *(MdtLODPartitionData **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p8)),
+                     *(int *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_pc)),
+                     *(MdtPartitionParams **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)),
+                     *(MeHeap **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
         }
       }
       else {
@@ -329,77 +329,77 @@ LAB_000107de:
           if (iVar15 == -1) {
                     
             *(int *)local_6c.bodyArray = 0;
-            *(int *)((int)local_6c.bodyArray + 8) = 0;
-            *(MdtBody ***)((int)local_6c.bodyArray + 4) = (MdtBody **)0x0;
-            *(int *)((int)local_6c.bodyArray + 0x10) = 0;
-            *(MdtBaseConstraint ***)((int)local_6c.bodyArray + 0xc) = (MdtBaseConstraint **)0x0;
+            *(int *)((kd_iptr)local_6c.bodyArray + 8) = 0;
+            *(MdtBody ***)((kd_iptr)local_6c.bodyArray + 4) = (MdtBody **)0x0;
+            *(int *)((kd_iptr)local_6c.bodyArray + 0x10) = 0;
+            *(MdtBaseConstraint ***)((kd_iptr)local_6c.bodyArray + 0xc) = (MdtBaseConstraint **)0x0;
             iVar16 = partitionCount;
-            *(MeHeap **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = &q;
-            local_6c.bodyArray = (MdtBody **)((int)local_6c.bodyArray + 0x14);
-            *(MdtPartitionParams **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = params;
+            *(MeHeap **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = &q;
+            local_6c.bodyArray = (MdtBody **)((kd_iptr)local_6c.bodyArray + 0x14);
+            *(MdtPartitionParams **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = params;
             pMVar8 = pdataArray;
-            *(int *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_pc)) = partitionCount;
+            *(int *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_pc)) = partitionCount;
             partitionCount = partitionCount + 1;
-            *(MdtLODPartitionData **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p8)) = pMVar8;
-            *(MdtBaseConstraint **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p4)) = currentCon;
-            *(undefined4 *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p0)) = 0x1092b;
+            *(MdtLODPartitionData **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p8)) = pMVar8;
+            *(MdtBaseConstraint **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p4)) = currentCon;
+            *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p0)) = 0x1092b;
             MVar11 = IncrementConstraintRowBudget
-                               (*(MdtBaseConstraint **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p4)),
-                                *(MdtLODPartitionData **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p8)),
-                                *(int *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_pc)),
-                                *(MdtPartitionParams **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)),
-                                *(MeHeap **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
+                               (*(MdtBaseConstraint **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p4)),
+                                *(MdtLODPartitionData **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p8)),
+                                *(int *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_pc)),
+                                *(MdtPartitionParams **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)),
+                                *(MeHeap **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
             pMVar17 = pdataArray;
             if (MVar11 != 0) {
                     
-              *(MeBool *)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p8)) = MVar11;
+              *(MeBool *)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p8)) = MVar11;
               pMVar17 = pMVar17 + iVar16;
-              *(MeBool *)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p4)) = MVar11;
-              *(int *)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p0)) = pMVar17->bodyCount * 4 + 4;
-              *(MdtBody ***)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = pMVar17->bodyArray;
-              *(undefined4 *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x10956;
-              ppMVar12 = (MeMemoryAPI.resize)(*(void **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)),
-                                          *(uint *)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p0)));
+              *(MeBool *)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p4)) = MVar11;
+              *(int *)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p0)) = pMVar17->bodyCount * 4 + 4;
+              *(MdtBody ***)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = pMVar17->bodyArray;
+              *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x10956;
+              ppMVar12 = (MeMemoryAPI.resize)(*(void **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)),
+                                          *(uint *)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p0)));
               pMVar17->bodyArray = ppMVar12;
               b0->LODpartIndex = iVar16;
               pMVar17->bodyArray[pMVar17->bodyCount] = b0;
               iVar15 = pMVar17->bodyCount + 1;
               pMVar17->bodyCount = iVar15;
                     
-              *(int *)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p0)) = iVar15 * 4 + 4;
-              *(MdtBody ***)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = pMVar17->bodyArray;
-              *(undefined4 *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x10989;
-              ppMVar12 = (MeMemoryAPI.resize)(*(void **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)),
-                                          *(uint *)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p0)));
+              *(int *)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p0)) = iVar15 * 4 + 4;
+              *(MdtBody ***)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = pMVar17->bodyArray;
+              *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x10989;
+              ppMVar12 = (MeMemoryAPI.resize)(*(void **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)),
+                                          *(uint *)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p0)));
               pMVar17->bodyArray = ppMVar12;
               b1->LODpartIndex = iVar16;
               goto LAB_00010865;
             }
           }
           else {
-            *(MeHeap **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = &q;
+            *(MeHeap **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = &q;
             pMVar3 = currentCon;
-            *(MdtPartitionParams **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = params;
-            *(int *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_pc)) = iVar15;
-            *(MdtLODPartitionData **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p8)) = pMVar8;
-            *(MdtBaseConstraint **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p4)) = pMVar3;
-            *(undefined4 *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p0)) = 0x1089b;
+            *(MdtPartitionParams **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = params;
+            *(int *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_pc)) = iVar15;
+            *(MdtLODPartitionData **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p8)) = pMVar8;
+            *(MdtBaseConstraint **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p4)) = pMVar3;
+            *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p0)) = 0x1089b;
             MVar11 = IncrementConstraintRowBudget
-                               (*(MdtBaseConstraint **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p4)),
-                                *(MdtLODPartitionData **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p8)),
-                                *(int *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_pc)),
-                                *(MdtPartitionParams **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)),
-                                *(MeHeap **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
+                               (*(MdtBaseConstraint **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p4)),
+                                *(MdtLODPartitionData **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p8)),
+                                *(int *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_pc)),
+                                *(MdtPartitionParams **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)),
+                                *(MeHeap **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
             if (MVar11 != 0) {
                     
               pMVar17 = pdataArray + iVar15;
-              *(int *)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p8)) = iVar15 * 5;
-              *(int *)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p4)) = iVar15 * 5;
-              *(int *)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p0)) = pMVar17->bodyCount * 4 + 4;
-              *(MdtBody ***)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = pMVar17->bodyArray;
-              *(undefined4 *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x108c6;
-              ppMVar12 = (MeMemoryAPI.resize)(*(void **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)),
-                                          *(uint *)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p0)));
+              *(int *)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p8)) = iVar15 * 5;
+              *(int *)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p4)) = iVar15 * 5;
+              *(int *)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p0)) = pMVar17->bodyCount * 4 + 4;
+              *(MdtBody ***)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = pMVar17->bodyArray;
+              *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x108c6;
+              ppMVar12 = (MeMemoryAPI.resize)(*(void **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)),
+                                          *(uint *)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p0)));
               pMVar17->bodyArray = ppMVar12;
               b0->LODpartIndex = iVar15;
               iVar16 = pMVar17->bodyCount;
@@ -410,32 +410,32 @@ LAB_000107de:
           }
         }
         else if (iVar15 == -1) {
-          *(MeHeap **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = &q;
+          *(MeHeap **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = &q;
           pMVar8 = pdataArray;
-          *(MdtPartitionParams **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = params;
+          *(MdtPartitionParams **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = params;
           pMVar3 = currentCon;
-          *(int *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_pc)) = iVar16;
-          *(MdtLODPartitionData **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p8)) = pMVar8;
-          *(MdtBaseConstraint **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p4)) = pMVar3;
-          *(undefined4 *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p0)) = 0x10825;
+          *(int *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_pc)) = iVar16;
+          *(MdtLODPartitionData **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p8)) = pMVar8;
+          *(MdtBaseConstraint **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p4)) = pMVar3;
+          *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p0)) = 0x10825;
           MVar11 = IncrementConstraintRowBudget
-                             (*(MdtBaseConstraint **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p4)),
-                              *(MdtLODPartitionData **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p8)),
-                              *(int *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_pc)),
-                              *(MdtPartitionParams **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)),
-                              *(MeHeap **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
+                             (*(MdtBaseConstraint **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p4)),
+                              *(MdtLODPartitionData **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p8)),
+                              *(int *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_pc)),
+                              *(MdtPartitionParams **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)),
+                              *(MeHeap **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
           pMVar17 = pdataArray;
           iVar16 = b0PIx;
           if (MVar11 != 0) {
                     
-            *(MdtBaseConstraint **)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p8)) = pMVar3;
-            *(MdtBaseConstraint **)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p4)) = pMVar3;
+            *(MdtBaseConstraint **)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p8)) = pMVar3;
+            *(MdtBaseConstraint **)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p4)) = pMVar3;
             pMVar17 = pMVar17 + iVar16;
-            *(int *)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p0)) = pMVar17->bodyCount * 4 + 4;
-            *(MdtBody ***)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = pMVar17->bodyArray;
-            *(undefined4 *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x10853;
-            ppMVar12 = (MeMemoryAPI.resize)(*(void **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)),
-                                        *(uint *)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p0)));
+            *(int *)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p0)) = pMVar17->bodyCount * 4 + 4;
+            *(MdtBody ***)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = pMVar17->bodyArray;
+            *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x10853;
+            ppMVar12 = (MeMemoryAPI.resize)(*(void **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)),
+                                        *(uint *)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p0)));
             pMVar17->bodyArray = ppMVar12;
             b1->LODpartIndex = b0PIx;
 LAB_00010865:
@@ -450,27 +450,27 @@ LAB_00010865:
                     
           iVar4 = pdataArray[iVar15].rowCount;
           iVar16 = pdataArray[iVar16].rowCount;
-          *(MdtBaseConstraint **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = currentCon;
-          *(undefined4 *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x1033b;
+          *(MdtBaseConstraint **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = currentCon;
+          *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x1033b;
           pvVar10 = MdtConstraintDCastContactGroup
-                              (*(void **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
+                              (*(void **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
           if ((iVar4 + iVar16 + 1 < params->maxMatrixSize) || (pvVar10 == (void *)0x0)) {
-            *(void **)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p8)) = pvVar10;
-            *(int *)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p4)) = iVar15;
-            *(int *)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p0)) = b0PIx;
-            *(MdtLODPartitionData **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = pdataArray;
-            *(undefined4 *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x107db;
-            MergePartitions(*(MdtLODPartitionData **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)),
-                            *(int *)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p0)),
-                            *(int *)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p4)));
-            *(MeHeap **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = &q;
+            *(void **)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p8)) = pvVar10;
+            *(int *)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p4)) = iVar15;
+            *(int *)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p0)) = b0PIx;
+            *(MdtLODPartitionData **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = pdataArray;
+            *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x107db;
+            MergePartitions(*(MdtLODPartitionData **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)),
+                            *(int *)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p0)),
+                            *(int *)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p4)));
+            *(MeHeap **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = &q;
             goto LAB_000107de;
           }
         }
       }
-      *(MeHeap **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = &q;
-      *(undefined4 *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x1035e;
-      currentCon = MeHeapPop(*(void **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
+      *(MeHeap **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = &q;
+      *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x1035e;
+      currentCon = MeHeapPop(*(void **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
     } while (currentCon != (MdtBaseConstraint *)0x0);
   }
   po->nPartitions = po->nPartitions + -1;
@@ -487,21 +487,21 @@ LAB_00010865:
   if (0 < partitionCount) {
     local_6c.bodyCount = 0;
     do {
-      if (0 < *(int *)((int)&pdataArray->bodyCount + local_6c.bodyCount)) {
+      if (0 < *(int *)((kd_iptr)&pdataArray->bodyCount + local_6c.bodyCount)) {
         po->bodiesSize[po->nPartitions] = 0;
         po->constraintsSize[po->nPartitions] = 0;
-        *(MdtPartitionInfo **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = po->info + po->nPartitions;
-        *(undefined4 *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x10421;
-        MdtPartInfoReset(*(void **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
+        *(MdtPartitionInfo **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = po->info + po->nPartitions;
+        *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x10421;
+        MdtPartInfoReset(*(void **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
         po->bodiesStart[po->nPartitions] = po->totalBodies;
         po->constraintsStart[po->nPartitions] = po->totalConstraints;
-        if (0 < *(int *)((int)&pdataArray->bodyCount + local_6c.bodyCount)) {
+        if (0 < *(int *)((kd_iptr)&pdataArray->bodyCount + local_6c.bodyCount)) {
           local_6c.conCount = local_6c.bodyCount;
           iVar16 = 0;
           do {
                     
             pMVar14 = *(MdtBody **)
-                       (*(int *)((int)&pdataArray->bodyArray + local_6c.bodyCount) + iVar16 * 4);
+                       (*(int *)((kd_iptr)&pdataArray->bodyArray + local_6c.bodyCount) + iVar16 * (int)sizeof(void *));
             iVar16 = iVar16 + 1;
             pMVar14->arrayIdPartition = po->bodiesSize[po->nPartitions];
             pMVar14->arrayIdWorld =
@@ -510,34 +510,34 @@ LAB_00010865:
             po->bodies[po->totalBodies] = pMVar14;
             po->totalBodies = po->totalBodies + 1;
             po->bodiesSize[po->nPartitions] = po->bodiesSize[po->nPartitions] + 1;
-          } while (iVar16 < *(int *)((int)&pdataArray->bodyCount + local_6c.bodyCount));
+          } while (iVar16 < *(int *)((kd_iptr)&pdataArray->bodyCount + local_6c.bodyCount));
         }
         iVar16 = 0;
-        if (0 < *(int *)((int)&pdataArray->conCount + local_6c.bodyCount)) {
+        if (0 < *(int *)((kd_iptr)&pdataArray->conCount + local_6c.bodyCount)) {
           local_6c.conArray = (MdtBaseConstraint **)local_6c.bodyCount;
           do {
                     
-            iVar15 = *(int *)((int)&pdataArray->conArray + (int)local_6c.conArray);
-            pMVar3 = *(MdtBaseConstraint **)(iVar15 + iVar16 * 4);
-            *(int *)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p8)) = iVar15;
+            iVar15 = *(int *)((kd_iptr)&pdataArray->conArray + (kd_iptr)local_6c.conArray);
+            pMVar3 = *(MdtBaseConstraint **)(iVar15 + iVar16 * (int)sizeof(void *));
+            *(int *)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p8)) = iVar15;
             iVar16 = iVar16 + 1;
-            *(int *)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p4)) = iVar15;
-            *(MdtPartitionParams **)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p0)) = params;
-            *(MdtBaseConstraint **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = pMVar3;
-            *(undefined4 *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x104df;
-            ResizeConstraint(*(MdtBaseConstraint **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)),
-                             *(MdtPartitionParams **)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p0)));
+            *(int *)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p4)) = iVar15;
+            *(MdtPartitionParams **)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p0)) = params;
+            *(MdtBaseConstraint **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = pMVar3;
+            *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x104df;
+            ResizeConstraint(*(MdtBaseConstraint **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)),
+                             *(MdtPartitionParams **)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p0)));
             po->constraints[po->totalConstraints] = pMVar3;
             po->totalConstraints = po->totalConstraints + 1;
             po->constraintsSize[po->nPartitions] = po->constraintsSize[po->nPartitions] + 1;
-            *(MdtBaseConstraint **)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p0)) = pMVar3;
-            *(MdtPartitionInfo **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) =
+            *(MdtBaseConstraint **)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p0)) = pMVar3;
+            *(MdtPartitionInfo **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) =
                  po->info + po->nPartitions;
-            *(undefined4 *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x10510;
+            *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x10510;
             MdtPartInfoAddConstraint
-                      (*(void **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)),
-                       *(void **)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p0)));
-          } while (iVar16 < *(int *)((int)&pdataArray->conCount + (int)local_6c.conArray));
+                      (*(void **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)),
+                       *(void **)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p0)));
+          } while (iVar16 < *(int *)((kd_iptr)&pdataArray->conCount + (kd_iptr)local_6c.conArray));
         }
         uVar13 = po->info[po->nPartitions].rowCount;
         if ((uVar13 & 3) != 0) {
@@ -558,14 +558,14 @@ LAB_00010865:
         (po->overallInfo).contactCount = iVar15 + iVar4;
         iVar15 = params->maxMatrixSize;
         if (pMVar5[iVar16].rowCount <= iVar15) {
-          *(int *)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p8)) = iVar15;
-          *(int *)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p4)) = iVar15;
-          *(MdtPartitionParams **)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p0)) = params;
-          *(MdtPartitionOutput **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = po;
-          *(undefined4 *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x107b9;
+          *(int *)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p8)) = iVar15;
+          *(int *)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p4)) = iVar15;
+          *(MdtPartitionParams **)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p0)) = params;
+          *(MdtPartitionOutput **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = po;
+          *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x107b9;
           MdtAutoDisableLastPartition
-                    (*(void **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)),
-                     *(void **)((int)(kd_frameslot_auStack_78_iVar2_iVar6_p0)));
+                    (*(void **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)),
+                     *(void **)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p0)));
         }
       }
       i = i + 1;
@@ -573,51 +573,51 @@ LAB_00010865:
     } while (i < partitionCount);
     if (0 < partitionCount) {
       i = partitionCount;
-      iVar16 = 0;
+      iVar16 = 0 * (int)sizeof(MdtLODPartitionData);
       uVar13 = -partitionCount & 3;
       if (uVar13 != 0) {
         if (uVar13 < 3) {
           if (uVar13 < 2) {
             if (pdataArray->bodyArray != (MdtBody **)0x0) {
-              *(MdtBody ***)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = pdataArray->bodyArray;
-              *(undefined4 *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x107a7;
-              (MeMemoryAPI.destroy)(*(void **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
+              *(MdtBody ***)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = pdataArray->bodyArray;
+              *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x107a7;
+              (MeMemoryAPI.destroy)(*(void **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
             }
             if (pdataArray->conArray != (MdtBaseConstraint **)0x0) {
-              *(MdtBaseConstraint ***)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) =
+              *(MdtBaseConstraint ***)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) =
                    pdataArray->conArray;
-              *(undefined4 *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x10798;
-              (MeMemoryAPI.destroy)(*(void **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
+              *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x10798;
+              (MeMemoryAPI.destroy)(*(void **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
             }
-            iVar16 = 0x14;
+            iVar16 = 1 * (int)sizeof(MdtLODPartitionData);
             i = i + -1;
           }
-          iVar15 = *(int *)((int)&pdataArray->bodyArray + iVar16);
+          iVar15 = *(int *)((kd_iptr)&pdataArray->bodyArray + iVar16);
           if (iVar15 != 0) {
-            *(int *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = iVar15;
-            *(undefined4 *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x10762;
-            (MeMemoryAPI.destroy)(*(void **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
+            *(int *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = iVar15;
+            *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x10762;
+            (MeMemoryAPI.destroy)(*(void **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
           }
-          iVar15 = *(int *)((int)&pdataArray->conArray + iVar16);
+          iVar15 = *(int *)((kd_iptr)&pdataArray->conArray + iVar16);
           if (iVar15 != 0) {
-            *(int *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = iVar15;
-            *(undefined4 *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x10750;
-            (MeMemoryAPI.destroy)(*(void **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
+            *(int *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = iVar15;
+            *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x10750;
+            (MeMemoryAPI.destroy)(*(void **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
           }
-          iVar16 = iVar16 + 0x14;
+          iVar16 = iVar16 + 1 * (int)sizeof(MdtLODPartitionData);
           i = i + -1;
         }
-        iVar15 = *(int *)((int)&pdataArray->bodyArray + iVar16);
+        iVar15 = *(int *)((kd_iptr)&pdataArray->bodyArray + iVar16);
         if (iVar15 != 0) {
-          *(int *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = iVar15;
-          *(undefined4 *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x1073e;
-          (MeMemoryAPI.destroy)(*(void **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
+          *(int *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = iVar15;
+          *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x1073e;
+          (MeMemoryAPI.destroy)(*(void **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
         }
-        iVar15 = *(int *)((int)&pdataArray->conArray + iVar16);
+        iVar15 = *(int *)((kd_iptr)&pdataArray->conArray + iVar16);
         if (iVar15 != 0) {
-          *(int *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = iVar15;
-          *(undefined4 *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x1072c;
-          (MeMemoryAPI.destroy)(*(void **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
+          *(int *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = iVar15;
+          *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x1072c;
+          (MeMemoryAPI.destroy)(*(void **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
         }
         iVar16 = iVar16 + 0x14;
         i = i + -1;
@@ -626,53 +626,53 @@ LAB_00010865:
         }
       }
       do {
-        iVar15 = *(int *)((int)&pdataArray->bodyArray + iVar16);
+        iVar15 = *(int *)((kd_iptr)&pdataArray->bodyArray + iVar16);
         if (iVar15 != 0) {
-          *(int *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = iVar15;
-          *(undefined4 *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x1071a;
-          (MeMemoryAPI.destroy)(*(void **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
+          *(int *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = iVar15;
+          *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x1071a;
+          (MeMemoryAPI.destroy)(*(void **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
         }
-        iVar15 = *(int *)((int)&pdataArray->conArray + iVar16);
+        iVar15 = *(int *)((kd_iptr)&pdataArray->conArray + iVar16);
         if (iVar15 != 0) {
-          *(int *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = iVar15;
-          *(undefined4 *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x10708;
-          (MeMemoryAPI.destroy)(*(void **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
+          *(int *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = iVar15;
+          *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x10708;
+          (MeMemoryAPI.destroy)(*(void **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
         }
-        iVar15 = *(int *)((int)&pdataArray[1].bodyArray + iVar16);
+        iVar15 = *(int *)((kd_iptr)&pdataArray[1].bodyArray + iVar16);
         if (iVar15 != 0) {
-          *(int *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = iVar15;
-          *(undefined4 *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x106f6;
-          (MeMemoryAPI.destroy)(*(void **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
+          *(int *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = iVar15;
+          *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x106f6;
+          (MeMemoryAPI.destroy)(*(void **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
         }
-        iVar15 = *(int *)((int)&pdataArray[1].conArray + iVar16);
+        iVar15 = *(int *)((kd_iptr)&pdataArray[1].conArray + iVar16);
         if (iVar15 != 0) {
-          *(int *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = iVar15;
-          *(undefined4 *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x106e4;
-          (MeMemoryAPI.destroy)(*(void **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
+          *(int *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = iVar15;
+          *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x106e4;
+          (MeMemoryAPI.destroy)(*(void **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
         }
-        iVar15 = *(int *)((int)&pdataArray[2].bodyArray + iVar16);
+        iVar15 = *(int *)((kd_iptr)&pdataArray[2].bodyArray + iVar16);
         if (iVar15 != 0) {
-          *(int *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = iVar15;
-          *(undefined4 *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x106d5;
-          (MeMemoryAPI.destroy)(*(void **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
+          *(int *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = iVar15;
+          *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x106d5;
+          (MeMemoryAPI.destroy)(*(void **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
         }
-        iVar15 = *(int *)((int)&pdataArray[2].conArray + iVar16);
+        iVar15 = *(int *)((kd_iptr)&pdataArray[2].conArray + iVar16);
         if (iVar15 != 0) {
-          *(int *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = iVar15;
-          *(undefined4 *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x106c6;
-          (MeMemoryAPI.destroy)(*(void **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
+          *(int *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = iVar15;
+          *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x106c6;
+          (MeMemoryAPI.destroy)(*(void **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
         }
-        iVar15 = *(int *)((int)&pdataArray[3].bodyArray + iVar16);
+        iVar15 = *(int *)((kd_iptr)&pdataArray[3].bodyArray + iVar16);
         if (iVar15 != 0) {
-          *(int *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = iVar15;
-          *(undefined4 *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x106b7;
-          (MeMemoryAPI.destroy)(*(void **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
+          *(int *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = iVar15;
+          *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x106b7;
+          (MeMemoryAPI.destroy)(*(void **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
         }
-        iVar15 = *(int *)((int)&pdataArray[3].conArray + iVar16);
+        iVar15 = *(int *)((kd_iptr)&pdataArray[3].conArray + iVar16);
         if (iVar15 != 0) {
-          *(int *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = iVar15;
-          *(undefined4 *)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x106a8;
-          (MeMemoryAPI.destroy)(*(void **)((int)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
+          *(int *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = iVar15;
+          *(undefined4 *)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p10)) = 0x106a8;
+          (MeMemoryAPI.destroy)(*(void **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
         }
         iVar16 = iVar16 + 0x50;
         i = i + -4;
@@ -718,29 +718,29 @@ static MeReal ConstraintCalcImportance(MdtBaseConstraint *con,MdtPartitionParams
   if (pvVar4 == (void *)0x0) {
     return 3.4028235e+38;
   }
-  iVar6 = *(int *)((int)pvVar4 + 0x160);
+  iVar6 = *(int *)((kd_iptr)pvVar4 + ((int)((char *)&((struct MdtContactGroup *)0)->count - (char *)0)));
   if (iVar6 != 0) {
-    if (*(int *)((int)pvVar4 + 0x58) == 0) {
+    if (*(int *)((kd_iptr)pvVar4 + ((int)((char *)&((struct MdtContactGroup *)0)->head.mdtbody[1] - (char *)0))) == 0) {
       fVar1 = (params->lodParams).toWorldBonus;
     }
-    fVar1 = (float)*(int *)((int)pvVar4 + 100) * (params->lodParams).rowCountBias +
+    fVar1 = (float)*(int *)((kd_iptr)pvVar4 + ((int)((char *)&((struct MdtContactGroup *)0)->head.maxRows - (char *)0))) * (params->lodParams).rowCountBias +
             fVar1 + (params->lodParams).zeroRowBonus;
     if (((0.0 < pMVar2->enabledTime) || ((pMVar2->flags & 4) == 0)) ||
        ((pMVar3 != (MdtBody *)0x0 && ((0.0 < pMVar3->enabledTime || ((pMVar3->flags & 4) == 0))))))
     {
       fVar1 = fVar1 + (params->lodParams).nonAutoBonus;
     }
-    pvVar5 = *(void **)((int)pvVar4 + 0x164);
+    pvVar5 = *(void **)((kd_iptr)pvVar4 + ((int)((char *)&((struct MdtContactGroup *)0)->first - (char *)0)));
     if (pvVar5 != (void *)0x0) {
       do {
-        pen = pen + *(float *)((int)pvVar5 + 0x178);
+        pen = pen + *(float *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContact *)0)->penetration - (char *)0)));
         MdtContactGetRelativeVelocity(pvVar5,vel);
-        normVel = *(float *)((int)pvVar5 + 0x174) * vel[2] +
-                  *(float *)((int)pvVar5 + 0x16c) * vel[0] +
-                  *(float *)((int)pvVar5 + 0x170) * vel[1] + normVel;
-        pvVar5 = *(void **)((int)pvVar5 + 0x1dc);
+        normVel = *(float *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContact *)0)->normal[2] - (char *)0))) * vel[2] +
+                  *(float *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContact *)0)->normal[0] - (char *)0))) * vel[0] +
+                  *(float *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContact *)0)->normal[1] - (char *)0))) * vel[1] + normVel;
+        pvVar5 = *(void **)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContact *)0)->nextContact - (char *)0)));
       } while (pvVar5 != (void *)0x0);
-      iVar6 = *(int *)((int)pvVar4 + 0x160);
+      iVar6 = *(int *)((kd_iptr)pvVar4 + ((int)((char *)&((struct MdtContactGroup *)0)->count - (char *)0)));
     }
     return normVel * (params->lodParams).normVelBias * (1.0 / (float)iVar6) +
            pen * (params->lodParams).penetrationBias * (1.0 / (float)iVar6) + fVar1;
@@ -753,7 +753,7 @@ static int CompareImportance(void *elem1,void *elem2)
 
 {
                     
-  return (uint)(*(float *)((int)elem2 + 0x15c) < *(float *)((int)elem1 + 0x15c));
+  return (uint)(*(float *)((kd_iptr)elem2 + 0x15c) < *(float *)((kd_iptr)elem1 + 0x15c));
 }
 
 /* ---- ResizeConstraint (static) ---- */
@@ -777,7 +777,7 @@ static void ResizeConstraint(MdtBaseConstraint *con,MdtPartitionParams *params)
   MdtContactGroupID pMVar5;
   undefined4 uVar6;
   uint uVar7;
-  int iVar8;
+  kd_iptr iVar8;
   int iVar9;
   size_t sStackY_40;
   int aiStack_2c [2];
@@ -803,8 +803,8 @@ static void ResizeConstraint(MdtBaseConstraint *con,MdtPartitionParams *params)
       if ((pMVar2->params).type != MdtContactTypeFrictionZero) {
         nFrictionContacts = nFrictionContacts + 1;
       }
-      *(MdtContactID *)((int)(kd_alloca_iVar3) + iVar8 * 4) = pMVar2;
-      *(undefined4 *)((int)(kd_blk2_aiStack_2c) + iVar8 * 4) = 0;
+      *(MdtContactID *)((kd_iptr)(kd_alloca_iVar3) + iVar8 * 4) = pMVar2;
+      *(undefined4 *)((kd_iptr)(kd_blk2_aiStack_2c) + iVar8 * 4) = 0;
       iVar8 = iVar8 + 1;
     }
     *(code **)(&(*kd_argslot_ffffffd0)) = kd_ComparePenetration;
@@ -812,7 +812,7 @@ static void ResizeConstraint(MdtBaseConstraint *con,MdtPartitionParams *params)
     *(undefined4 *)(&(*kd_argslot_ffffffcc)) = 4;
     *(int *)(&(*kd_argslot_ffffffc8)) = iVar8;
     *(int *)(&(*kd_argslot_ffffffc4)) = kd_alloca_iVar3;
-    *(undefined4 *)((int)kd_scratch2_sStackY_40) = 0x10ce8;
+    *(undefined4 *)((kd_iptr)kd_scratch2_sStackY_40) = 0x10ce8;
     qsort(*(void **)(&(*kd_argslot_ffffffc4)),*(size_t *)(&(*kd_argslot_ffffffc8)),
           *(size_t *)(&(*kd_argslot_ffffffcc)),
           *(__compar_fn_t *)(&(*kd_argslot_ffffffd0)));
@@ -828,43 +828,43 @@ static void ResizeConstraint(MdtBaseConstraint *con,MdtPartitionParams *params)
                          (ushort)(fVar4 == fVar1) << 0xe);
         if ((fVar4 < fVar1) || (uVar6 = 0, nFrictionContacts == 0)) {
           iVar8 = 0;
-          if (*(int *)(*(int *)((int)(kd_alloca_iVar3)) + 0x194) != 0) goto LAB_00010d30;
-          iVar9 = *(int *)((int)(kd_blk2_aiStack_2c));
+          if (*(int *)(*(int *)((kd_iptr)(kd_alloca_iVar3)) + 0x194) != 0) goto LAB_00010d30;
+          iVar9 = *(int *)((kd_iptr)(kd_blk2_aiStack_2c));
           while (iVar9 == 1) {
 LAB_00010d30:
             do {
               iVar8 = iVar8 + 1;
-            } while (*(int *)(*(int *)((int)(kd_alloca_iVar3) + iVar8 * 4) + 0x194) != 0);
-            iVar9 = *(int *)((int)(kd_blk2_aiStack_2c) + iVar8 * 4);
+            } while (*(int *)(*(int *)((kd_iptr)(kd_alloca_iVar3) + iVar8 * 4) + 0x194) != 0);
+            iVar9 = *(int *)((kd_iptr)(kd_blk2_aiStack_2c) + iVar8 * 4);
           }
           *(undefined4 *)(&(*kd_argslot_ffffffd0)) = uVar6;
           *(undefined4 *)(&(*kd_argslot_ffffffcc)) = uVar6;
           pMVar5 = group;
           *(undefined4 *)(&(*kd_argslot_ffffffc8)) =
-               *(undefined4 *)((int)(kd_alloca_iVar3) + iVar8 * 4);
+               *(undefined4 *)((kd_iptr)(kd_alloca_iVar3) + iVar8 * 4);
           *(MdtContactGroupID *)(&(*kd_argslot_ffffffc4)) = pMVar5;
-          *(undefined4 *)((int)kd_scratch2_sStackY_40) = 0x10d53;
+          *(undefined4 *)((kd_iptr)kd_scratch2_sStackY_40) = 0x10d53;
           MdtContactGroupDestroyContact
                     (*(void **)(&(*kd_argslot_ffffffc4)),
                      *(void **)(&(*kd_argslot_ffffffc8)));
-          *(undefined4 *)((int)(kd_blk2_aiStack_2c) + iVar8 * 4) = 1;
+          *(undefined4 *)((kd_iptr)(kd_blk2_aiStack_2c) + iVar8 * 4) = 1;
           iVar8 = nRows + -1;
           nContacts = nContacts + -1;
           nRows = iVar8;
         }
         else {
           iVar9 = 0;
-          if ((*(int *)(*(int *)((int)(kd_alloca_iVar3)) + 0x194) == 0) ||
-             (*(int *)((int)(kd_blk2_aiStack_2c)) == 1)) {
+          if ((*(int *)(*(int *)((kd_iptr)(kd_alloca_iVar3)) + 0x194) == 0) ||
+             (*(int *)((kd_iptr)(kd_blk2_aiStack_2c)) == 1)) {
             do {
               do {
                 iVar9 = iVar9 + 1;
-                iVar8 = *(int *)((int)(kd_alloca_iVar3) + iVar9 * 4);
+                iVar8 = *(int *)((kd_iptr)(kd_alloca_iVar3) + iVar9 * 4);
               } while (*(int *)(iVar8 + 0x194) == 0);
-            } while (*(int *)((int)(kd_blk2_aiStack_2c) + iVar9 * 4) == 1);
+            } while (*(int *)((kd_iptr)(kd_blk2_aiStack_2c) + iVar9 * 4) == 1);
           }
           else {
-            iVar8 = *(int *)((int)(kd_alloca_iVar3));
+            iVar8 = *(int *)((kd_iptr)(kd_alloca_iVar3));
           }
           if (*(int *)(iVar8 + 0x194) == 1) {
             nRows = nRows + -1;

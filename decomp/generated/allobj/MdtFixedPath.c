@@ -119,7 +119,7 @@ MdtConstraintID kd_MdtFixedPathQuaConstraint(MdtFixedPathID j)
 MdtFixedPathID kd_MdtConstraintDCastFixedPath(MdtConstraintID c)
 
 {
-  return (MdtFixedPathID)(((c->head).tag != 6) - 1 & (uint)c);
+  return (MdtFixedPathID)(((c->head).tag != 6) - 1 & (kd_uptr)c);
 }
 
 /* ---- MdtFixedPathGetPosition (exported as kd_MdtFixedPathGetPosition, asm label "MdtFixedPathGetPosition") ---- */

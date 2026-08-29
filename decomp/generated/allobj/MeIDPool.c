@@ -74,7 +74,7 @@ int kd_MeIDPoolRequestID(MeIDPool *pool)
         uVar8 = uVar8 + 3;
       }
                     
-      memset((void *)((int)pMVar5 + (uVar8 & 0xfffffffc)),0,4);
+      memset((void *)((kd_iptr)pMVar5 + (uVar8 & 0xfffffffc)),0,4);
       pool->block = pool->block + 1;
     }
   }
@@ -195,7 +195,7 @@ MeIDPool * kd_MeIDPoolCreate(void)
   MeIDPool *pMVar1;
   MeU32 *pMVar2;
 
-  pMVar1 = (MeMemoryAPI.create)(0x14);
+  pMVar1 = (MeMemoryAPI.create)((int)sizeof(*(MeIDPool *)0));
   pMVar1->maxIDs = 0x20;
   pMVar1->maxBlocks = 1;
   pMVar2 = (MeMemoryAPI.createZeroed)(4);
@@ -221,7 +221,7 @@ void kd_MeIDPoolCopy(MeIDPool *to,MeIDPool *from)
   to->assignedIDs = from->assignedIDs;
   to->block = uVar1;
   (MeMemoryAPI.destroy)(to->IDbitfield);
-  pMVar2 = (MeMemoryAPI.createZeroed)(to->maxBlocks << 2);
+  pMVar2 = (MeMemoryAPI.createZeroed)((to->maxBlocks) * (int)sizeof(*(MeU32 *)0));
   to->IDbitfield = pMVar2;
   pMVar4 = from->IDbitfield;
   for (uVar3 = to->maxBlocks & 0x3fffffff; uVar3 != 0; uVar3 = uVar3 - 1) {
@@ -251,9 +251,9 @@ MeBool kd_MeIDPoolIsEmpty(MeIDPool *pool)
   if (0 < iVar6) {
     do {
       MVar5 = *pMVar8;
-      pcVar1 = (char *)((int)pMVar8 + 1);
-      pcVar2 = (char *)((int)pMVar8 + 2);
-      pcVar3 = (char *)((int)pMVar8 + 3);
+      pcVar1 = (char *)((kd_iptr)pMVar8 + 1);
+      pcVar2 = (char *)((kd_iptr)pMVar8 + 2);
+      pcVar3 = (char *)((kd_iptr)pMVar8 + 3);
       pMVar8 = pMVar8 + 1;
       bVar4 = (bool)(bVar4 & (char)MVar5 == '\0' & *pcVar1 == '\0' & *pcVar2 == '\0' &
                     *pcVar3 == '\0');

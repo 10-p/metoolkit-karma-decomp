@@ -64,7 +64,7 @@ void kd_MeBoundingSphereCalc(MeVector3 *points,int numPoints,MeReal *centre,MeRe
     min[1] = max[1];
     min[2] = max[2];
     do {
-      pfVar8 = (float *)((int)*points + iVar9);
+      pfVar8 = (float *)((kd_iptr)*points + iVar9);
       if (min[0] <= *pfVar8) {
         if (max[0] < *pfVar8) {
           max[0] = *pfVar8;

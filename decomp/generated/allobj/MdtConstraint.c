@@ -453,7 +453,7 @@ MdtWorldID kd_MdtConstraintGetWorld(MdtConstraintID c)
 int kd_MdtConstraintGetRowCount(MdtConstraintID c)
 
 {
-  int iVar1;
+  kd_iptr iVar1;
   void *pvVar2;
   int iVar3;
 
@@ -464,11 +464,11 @@ int kd_MdtConstraintGetRowCount(MdtConstraintID c)
   }
   else {
                     
-    for (iVar1 = *(int *)((int)pvVar2 + 0x164); iVar1 != 0; iVar1 = *(int *)(iVar1 + 0x1dc)) {
-      if (*(int *)(iVar1 + 0x194) == 0) {
+    for (iVar1 = *(kd_iptr *)((kd_iptr)pvVar2 + ((int)((char *)&((struct MdtContactGroup *)0)->first - (char *)0))); iVar1 != 0; iVar1 = *(kd_iptr *)(iVar1 + ((int)((char *)&((struct MdtContact *)0)->nextContact - (char *)0)))) {
+      if (*(int *)(iVar1 + ((int)((char *)&((struct MdtContact *)0)->params - (char *)0))) == 0) {
         iVar3 = iVar3 + 1;
       }
-      else if (*(int *)(iVar1 + 0x194) == 1) {
+      else if (*(int *)(iVar1 + ((int)((char *)&((struct MdtContact *)0)->params - (char *)0))) == 1) {
         iVar3 = iVar3 + 2;
       }
       else {
@@ -604,7 +604,7 @@ void kd_MdtConstraintBodyGetAxes(MdtConstraintID c,uint bodyindex,MeReal *p,MeRe
     paMVar1 = (c->head).ref2;
     pMVar2 = (c->head).mdtbody[1];
   }
-  bodyindex = (uint)(paMVar1 + 1);
+  bodyindex = (kd_uptr)(paMVar1 + 1);
   ConvertCOMVector(pMVar2,(void *)bodyindex,(void *)0x0,o);
   return;
 }
@@ -654,7 +654,7 @@ MdtConstraintID kd_MdtConstraintGetFirst(MdtWorldID w)
   pvVar1 = MeDictFirst(&w->constraintDict);
   pMVar2 = (MdtConstraintID)0x0;
   if (pvVar1 != (void *)0x0) {
-    pMVar2 = *(MdtConstraintID *)((int)pvVar1 + 0x14);
+    pMVar2 = *(MdtConstraintID *)((kd_iptr)pvVar1 + ((int)((char *)&((struct MeDictNode *)0)->data - (char *)0)));
   }
   return pMVar2;
 }
@@ -669,7 +669,7 @@ MdtConstraintID kd_MdtConstraintGetNext(MdtConstraintID c)
   pvVar1 = MeDictNext(&((c->head).world)->constraintDict,&(c->head).worldNode);
   pMVar2 = (MdtConstraintID)0x0;
   if (pvVar1 != (void *)0x0) {
-    pMVar2 = *(MdtConstraintID *)((int)pvVar1 + 0x14);
+    pMVar2 = *(MdtConstraintID *)((kd_iptr)pvVar1 + ((int)((char *)&((struct MeDictNode *)0)->data - (char *)0)));
   }
   return pMVar2;
 }

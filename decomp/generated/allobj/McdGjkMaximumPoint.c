@@ -75,15 +75,15 @@ void kd_McdBoxMaximumPointNew(McdGeometryInstanceID ins,MeReal *inDir,MeReal *ou
   fVar1 = *inDir;
   fVar2 = inDir[1];
   fVar3 = inDir[2];
-  fVar6 = *(float *)((int)pvVar4 + 0x10);
+  fVar6 = *(float *)((kd_iptr)pvVar4 + 0x10);
   if (fVar3 * pfVar5[2] + fVar1 * *pfVar5 + fVar2 * pfVar5[1] < 0.0) {
     fVar6 = -fVar6;
   }
-  fVar7 = *(float *)((int)pvVar4 + 0x14);
+  fVar7 = *(float *)((kd_iptr)pvVar4 + 0x14);
   if (fVar3 * pfVar5[6] + fVar1 * pfVar5[4] + fVar2 * pfVar5[5] < 0.0) {
     fVar7 = -fVar7;
   }
-  fVar8 = *(float *)((int)pvVar4 + 0x18);
+  fVar8 = *(float *)((kd_iptr)pvVar4 + 0x18);
   if (fVar1 * pfVar5[8] + fVar2 * pfVar5[9] + fVar3 * pfVar5[10] < 0.0) {
     fVar8 = -fVar8;
   }
@@ -245,15 +245,15 @@ void kd_McdGjkMaximumPoint(McdGeometryInstanceID ins,MeReal *v,MeReal *out)
     fVar1 = *v;
     fVar2 = v[1];
     fVar3 = v[2];
-    fVar10 = *(float *)((int)pvVar9 + 0x10);
+    fVar10 = *(float *)((kd_iptr)pvVar9 + 0x10);
     if (fVar3 * pfVar7[2] + fVar1 * *pfVar7 + fVar2 * pfVar7[1] < 0.0) {
       fVar10 = -fVar10;
     }
-    fVar11 = *(float *)((int)pvVar9 + 0x14);
+    fVar11 = *(float *)((kd_iptr)pvVar9 + 0x14);
     if (fVar3 * pfVar7[6] + fVar1 * pfVar7[4] + fVar2 * pfVar7[5] < 0.0) {
       fVar11 = -fVar11;
     }
-    fVar12 = *(float *)((int)pvVar9 + 0x18);
+    fVar12 = *(float *)((kd_iptr)pvVar9 + 0x18);
     if (fVar1 * pfVar7[8] + fVar2 * pfVar7[9] + fVar3 * pfVar7[10] < 0.0) {
       fVar12 = -fVar12;
     }

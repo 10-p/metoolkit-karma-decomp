@@ -69,10 +69,10 @@ int kd_McdCylinderTriangleListIntersect(McdModelPair *p,McdIntersectResult *resu
   lsVec3 *plVar30;
   undefined4 *puVar31;
   float fVar32;
-  int aiStackY_2a0 [6];
-  MeReal aMStackY_288 [2];
+  int aiStackY_2a0 [6 * (int)(sizeof(void *) / 4)];
+  MeReal aMStackY_288 [2 * (int)(sizeof(void *) / 4)];
   float fStackY_280;
-  int iStack_270;
+  int iStack_270 [(int)(sizeof(void *) / 4)];
   McdUserTriangle MStack_26c;
   float *local_254;
   MeReal cylHH;
@@ -135,15 +135,15 @@ int kd_McdCylinderTriangleListIntersect(McdModelPair *p,McdIntersectResult *resu
   iVar6 = -(triList->triangleMaxCount * 0x18 + 0xfU & 0xfffffff0);
   triList->list = (McdUserTriangle *)(kd_alloca_iVar6 = (char *)alloca((size_t)(triList->triangleMaxCount) * 0x18 + 0));
   *(int *)(&(*kd_argslot_fffffd84)) = triList->triangleMaxCount;
-  *(float *)((int)&fStackY_280) = MVar21 + cylBSRad;
-  *(lsVec3 **)((int)aMStackY_288 + 4) = &cylPosTrans;
-  *(McdUserTriangle **)((int)aMStackY_288) = pMVar25->list;
-  *(McdModelPair **)((int)aiStackY_2a0 + 0x14) = p;
+  *(float *)((kd_iptr)&fStackY_280) = MVar21 + cylBSRad;
+  *(lsVec3 **)((kd_iptr)aMStackY_288 + (1 * (int)sizeof(void *))) = &cylPosTrans;
+  *(McdUserTriangle **)((kd_iptr)aMStackY_288) = pMVar25->list;
+  *(McdModelPair **)((kd_iptr)aiStackY_2a0 + (5 * (int)sizeof(void *))) = p;
   p_Var4 = triList->triangleListGenerator;
-  *(undefined4 *)((int)aiStackY_2a0 + 0x10) = 0x101ab;
-  count = (*p_Var4)(*(void **)((int)aiStackY_2a0 + 0x14),
-                    *(void **)((int)aMStackY_288),*(void **)((int)aMStackY_288 + 4),
-                    *(float *)((int)&fStackY_280),*(int *)(&(*kd_argslot_fffffd84)));
+  *(undefined4 *)((kd_iptr)aiStackY_2a0 + (4 * (int)sizeof(void *))) = 0x101ab;
+  count = (*p_Var4)(*(void **)((kd_iptr)aiStackY_2a0 + (5 * (int)sizeof(void *))),
+                    *(void **)((kd_iptr)aMStackY_288),*(void **)((kd_iptr)aMStackY_288 + (1 * (int)sizeof(void *))),
+                    *(float *)((kd_iptr)&fStackY_280),*(int *)(&(*kd_argslot_fffffd84)));
   MStack_26c.flags = (McdTriangleFlags)result->normal;
   result->normal[0] = 0.0;
   result->normal[1] = 0.0;
@@ -174,7 +174,7 @@ int kd_McdCylinderTriangleListIntersect(McdModelPair *p,McdIntersectResult *resu
       MStack_26c.triangleData.ptr = (void *)0x0;
       do {
         pMVar24 = fwk;
-        puVar31 = (undefined4 *)((int)triList->list->vertices + (int)MStack_26c.triangleData.ptr);
+        puVar31 = (undefined4 *)((kd_iptr)triList->list->vertices + (kd_iptr)MStack_26c.triangleData.ptr);
         pfVar28 = (float *)*puVar31;
         (*ct.vertices[0])[0] = fVar12 * pfVar28[2] + fVar32 * *pfVar28 + fVar9 * pfVar28[1] + fVar15
         ;
@@ -213,7 +213,7 @@ int kd_McdCylinderTriangleListIntersect(McdModelPair *p,McdIntersectResult *resu
         fVar2 = (*ct.vertices[2])[2];
         fVar3 = (*ct.vertices[0])[2];
         verts = footprint;
-        *(lsVec3 **)((int)&iStack_270) = footprint;
+        *(lsVec3 **)((kd_iptr)&iStack_270) = footprint;
         edge[2][2] = fVar3 - fVar2;
         *(MeReal *)(&(*kd_argslot_fffffd8c)) = pMVar24->mScale;
         MVar21 = cylHH;
@@ -221,24 +221,24 @@ int kd_McdCylinderTriangleListIntersect(McdModelPair *p,McdIntersectResult *resu
         MVar22 = cylRadius;
         *(McdUserTriangle **)(&(*kd_argslot_fffffd84)) = &ct;
         MVar23 = eps;
-        *(MeReal *)((int)&fStackY_280) = MVar21;
-        *(MeReal *)((int)aMStackY_288 + 4) = MVar22;
-        *(MeReal *)((int)aMStackY_288) = MVar23;
-        *(MeI16 **)((int)aiStackY_2a0 + 0x14) = &dims;
-        *(lsVec3 ***)((int)aiStackY_2a0 + 0x10) = &verts;
-        *(MeReal **)((int)aiStackY_2a0 + 0xc) = &PN;
-        *(lsVec3 **)((int)aiStackY_2a0 + 8) = &normal;
-        *(MeReal **)((int)aiStackY_2a0 + 4) = &separation;
-        *(undefined4 *)((int)aiStackY_2a0) = 0x10658;
+        *(MeReal *)((kd_iptr)&fStackY_280) = MVar21;
+        *(MeReal *)((kd_iptr)aMStackY_288 + (1 * (int)sizeof(void *))) = MVar22;
+        *(MeReal *)((kd_iptr)aMStackY_288) = MVar23;
+        *(MeI16 **)((kd_iptr)aiStackY_2a0 + (5 * (int)sizeof(void *))) = &dims;
+        *(lsVec3 ***)((kd_iptr)aiStackY_2a0 + (4 * (int)sizeof(void *))) = &verts;
+        *(MeReal **)((kd_iptr)aiStackY_2a0 + (3 * (int)sizeof(void *))) = &PN;
+        *(lsVec3 **)((kd_iptr)aiStackY_2a0 + (2 * (int)sizeof(void *))) = &normal;
+        *(MeReal **)((kd_iptr)aiStackY_2a0 + (1 * (int)sizeof(void *))) = &separation;
+        *(undefined4 *)((kd_iptr)aiStackY_2a0) = 0x10658;
         bVar26 = McdVanillaOverlapCylTri
-                           (*(MeReal **)((int)aiStackY_2a0 + 4),
-                            *(lsVec3 **)((int)aiStackY_2a0 + 8),
-                            *(MeReal **)((int)aiStackY_2a0 + 0xc),
-                            *(lsVec3 ***)((int)aiStackY_2a0 + 0x10),
-                            *(MeI16 **)((int)aiStackY_2a0 + 0x14),
-                            *(MeReal *)((int)aMStackY_288),
-                            *(MeReal *)((int)aMStackY_288 + 4),
-                            *(MeReal *)((int)&fStackY_280),
+                           (*(MeReal **)((kd_iptr)aiStackY_2a0 + (1 * (int)sizeof(void *))),
+                            *(lsVec3 **)((kd_iptr)aiStackY_2a0 + (2 * (int)sizeof(void *))),
+                            *(MeReal **)((kd_iptr)aiStackY_2a0 + (3 * (int)sizeof(void *))),
+                            *(lsVec3 ***)((kd_iptr)aiStackY_2a0 + (4 * (int)sizeof(void *))),
+                            *(MeI16 **)((kd_iptr)aiStackY_2a0 + (5 * (int)sizeof(void *))),
+                            *(MeReal *)((kd_iptr)aMStackY_288),
+                            *(MeReal *)((kd_iptr)aMStackY_288 + (1 * (int)sizeof(void *))),
+                            *(MeReal *)((kd_iptr)&fStackY_280),
                             *(McdUserTriangle **)(&(*kd_argslot_fffffd84)),
                             *(MeReal (**) [3])(&(*kd_argslot_fffffd88)),
                             *(MeReal *)(&(*kd_argslot_fffffd8c)));
@@ -296,7 +296,7 @@ int kd_McdCylinderTriangleListIntersect(McdModelPair *p,McdIntersectResult *resu
       } while ((j < count) && (result->contactCount < 400));
     }
     *(McdTriangleFlags *)(&(*kd_argslot_fffffd84)) = MStack_26c.flags;
-    *(undefined4 *)((int)&fStackY_280) = 0x10890;
+    *(undefined4 *)((kd_iptr)&fStackY_280) = 0x10890;
     MeVector3Normalize(*(MeReal **)(&(*kd_argslot_fffffd84)));
     uVar29 = (uint)(0 < result->contactCount);
     result->touch = uVar29;
@@ -483,9 +483,9 @@ static bool McdVanillaOverlapCylTri
     do {
                     
       uVar12 = 1 << ((byte)iVar15 & 0x1f) & 3;
-      fVar1 = *(float *)((int)*edge + iVar16 + 4);
-      fVar2 = *(float *)((int)*edge + iVar16);
-      fVar3 = *(float *)((int)aE[0].v + iVar16 + 8);
+      fVar1 = *(float *)((kd_iptr)*edge + iVar16 + 4);
+      fVar2 = *(float *)((kd_iptr)*edge + iVar16);
+      fVar3 = *(float *)((kd_iptr)aE[0].v + iVar16 + 8);
       fVar4 = (edge[uVar12][0] * fVar1 - edge[uVar12][1] * fVar2) * 0.5;
       fVar3 = sqE[iVar15] - fVar3 * fVar3;
       fVar1 = ((*inTri->vertices[iVar15])[0] * fVar1 - fVar2 * (*inTri->vertices[iVar15])[1]) +

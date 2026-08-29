@@ -90,5 +90,5 @@ MdtConstraintID kd_MdtUniversalQuaConstraint(MdtUniversalID j)
 MdtUniversalID kd_MdtConstraintDCastUniversal(MdtConstraintID c)
 
 {
-  return (MdtUniversalID)(((c->head).tag != 8) - 1 & (uint)c);
+  return (MdtUniversalID)(((c->head).tag != 8) - 1 & (kd_uptr)c);
 }

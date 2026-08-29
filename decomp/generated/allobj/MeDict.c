@@ -788,7 +788,7 @@ MeDict * kd_MeDictCreate(ulong maxcount,MeDictCompareFn comp)
 {
   MeDict *pMVar1;
 
-  pMVar1 = (MeMemoryAPI.create)(0x34);
+  pMVar1 = (MeMemoryAPI.create)((int)sizeof(*(MeDict *)0));
   if (pMVar1 != (MeDict *)0x0) {
     pMVar1->compare = comp;
     pMVar1->allocnode = dnode_alloc;
@@ -1152,7 +1152,7 @@ MeDictNode * kd_MeDictNodeCreate(void *data)
 {
   MeDictNode *pMVar1;
 
-  pMVar1 = (MeMemoryAPI.create)(0x18);
+  pMVar1 = (MeMemoryAPI.create)((int)sizeof(*(MeDictNode *)0));
   if (pMVar1 != (MeDictNode *)0x0) {
     pMVar1->left = (MeDictNode *)0x0;
     pMVar1->data = data;
@@ -1276,7 +1276,7 @@ static MeDictNode * dnode_alloc(void *context)
 {
   MeDictNode *pMVar1;
   
-  pMVar1 = (MeMemoryAPI.create)(0x18);
+  pMVar1 = (MeMemoryAPI.create)((int)sizeof(*(MeDictNode *)0));
   return pMVar1;
 }
 

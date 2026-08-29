@@ -76,10 +76,10 @@ int kd_MeXMLWriteElement(MeXMLOutput *op,int parent,char *tag,...)
   } while (uVar5 == 0);
   if ((uVar4 & 0x8080) == 0) {
     uVar5 = uVar5 >> 0x10;
-    puVar3 = (uint *)((int)puVar2 + 6);
+    puVar3 = (uint *)((kd_iptr)puVar2 + 6);
   }
-  MeStreamWrite(buffer,(uint)((int)puVar3 +
-                             ((-3 - (uint)CARRY1((byte)uVar5,(byte)uVar5)) - (int)buffer)),1,
+  MeStreamWrite(buffer,(uint)((kd_iptr)puVar3 +
+                             ((-3 - (uint)CARRY1((byte)uVar5,(byte)uVar5)) - (kd_iptr)buffer)),1,
                 op->stream);
   MeStreamWrite(&DAT_00010407,1,1,op->stream);
   return op->depth;
@@ -108,10 +108,10 @@ void kd_MeXMLWritePCDATA(MeXMLOutput *op,char *format,...)
   } while (uVar4 == 0);
   if ((uVar3 & 0x8080) == 0) {
     uVar4 = uVar4 >> 0x10;
-    puVar2 = (uint *)((int)puVar1 + 6);
+    puVar2 = (uint *)((kd_iptr)puVar1 + 6);
   }
-  MeStreamWrite(buffer,(uint)((int)puVar2 +
-                             ((-3 - (uint)CARRY1((byte)uVar4,(byte)uVar4)) - (int)buffer)),1,
+  MeStreamWrite(buffer,(uint)((kd_iptr)puVar2 +
+                             ((-3 - (uint)CARRY1((byte)uVar4,(byte)uVar4)) - (kd_iptr)buffer)),1,
                 op->stream);
   op->tagHead->contents = kPCDATA;
   closeTag(op);
@@ -142,10 +142,10 @@ void kd_MeXMLWriteComment(MeXMLOutput *op,char *c,...)
   } while (uVar4 == 0);
   if ((uVar3 & 0x8080) == 0) {
     uVar4 = uVar4 >> 0x10;
-    puVar2 = (uint *)((int)puVar1 + 6);
+    puVar2 = (uint *)((kd_iptr)puVar1 + 6);
   }
-  MeStreamWrite(buffer,(uint)((int)puVar2 +
-                             ((-3 - (uint)CARRY1((byte)uVar4,(byte)uVar4)) - (int)buffer)),1,
+  MeStreamWrite(buffer,(uint)((kd_iptr)puVar2 +
+                             ((-3 - (uint)CARRY1((byte)uVar4,(byte)uVar4)) - (kd_iptr)buffer)),1,
                 op->stream);
   MeStreamWrite("\n-->\n",5,1,op->stream);
   return;
@@ -165,7 +165,7 @@ static void pushTag(MeXMLOutput *op,char *tag)
 
   strncpy(buffer,tag,0x400);
   strtok(buffer," ");
-  ptVar1 = (MeMemoryAPI.create)(0xc);
+  ptVar1 = (MeMemoryAPI.create)((int)sizeof(*(tagNode *)0));
   puVar3 = (uint *)buffer;
   do {
     puVar2 = puVar3;
@@ -175,10 +175,10 @@ static void pushTag(MeXMLOutput *op,char *tag)
   } while (uVar5 == 0);
   if ((uVar4 & 0x8080) == 0) {
     uVar5 = uVar5 >> 0x10;
-    puVar3 = (uint *)((int)puVar2 + 6);
+    puVar3 = (uint *)((kd_iptr)puVar2 + 6);
   }
-  __dest = (MeMemoryAPI.create)((uint)((int)puVar3 +
-                                 (-(int)buffer - (uint)CARRY1((byte)uVar5,(byte)uVar5)) + -2));
+  __dest = (MeMemoryAPI.create)((uint)((kd_iptr)puVar3 +
+                                 (-(kd_iptr)buffer - (uint)CARRY1((byte)uVar5,(byte)uVar5)) + -2));
   ptVar1->tag = __dest;
   strcpy(__dest,buffer);
   ptVar1->contents = kNothing;
@@ -245,7 +245,7 @@ MeXMLOutput * kd_MeXMLOutputCreate(MeStream stream)
 {
   MeXMLOutput *pMVar1;
 
-  pMVar1 = (MeMemoryAPI.create)(0xc);
+  pMVar1 = (MeMemoryAPI.create)((int)sizeof(*(MeXMLOutput *)0));
   pMVar1->stream = stream;
   pMVar1->depth = 0;
   pMVar1->tagHead = (tagNode *)0x0;

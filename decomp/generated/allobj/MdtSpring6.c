@@ -144,7 +144,7 @@ MdtConstraintID kd_MdtSpring6QuaConstraint(MdtSpring6ID j)
 MdtSpring6ID kd_MdtConstraintDCastSpring6(MdtConstraintID c)
 
 {
-  return (MdtSpring6ID)(((c->head).tag != 0xd) - 1 & (uint)c);
+  return (MdtSpring6ID)(((c->head).tag != 0xd) - 1 & (kd_uptr)c);
 }
 
 /* ---- MdtSpring6GetLinearStiffness (exported as kd_MdtSpring6GetLinearStiffness, asm label "MdtSpring6GetLinearStiffness") ---- */

@@ -51,11 +51,11 @@ void kd_singPartmakejlenandbl2body
     do {
       *jlen = *jlen + 2;
       (*bl2body)[0] = body0;
-      *(int *)((int)bl2body + 4) = body1;
-      bl2body = (int (*) [8])((int)bl2body + 8);
+      *(int *)((kd_iptr)bl2body + 4) = body1;
+      bl2body = (int (*) [8])((kd_iptr)bl2body + 8);
       (*bl2cony)[0] = *next_constraint * 2;
-      *(int *)((int)bl2cony + 4) = *next_constraint * 2 + 1;
-      bl2cony = (int (*) [8])((int)bl2cony + 8);
+      *(int *)((kd_iptr)bl2cony + 4) = *next_constraint * 2 + 1;
+      bl2cony = (int (*) [8])((kd_iptr)bl2cony + 8);
       iVar1 = *next_constraint;
       iVar2 = offs + jsize[iVar1];
       if (iVar2 < 5) {

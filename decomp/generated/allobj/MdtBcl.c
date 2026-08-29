@@ -135,11 +135,11 @@ MeReal kd_MdtBclDotJ(MeReal *v,MdtKeaConstraints *clist,int row,int body)
   }
   paMVar1 = clist->Jstore;
   iVar2 = body * 0x60 + (iVar2 >> 2) * 0xb0 + iVar3 * 4;
-  return *(float *)((int)*paMVar1 + iVar2 + 0x50) * v[5] +
-         *(float *)((int)*paMVar1 + iVar2 + 0x40) * v[4] +
-         *(float *)((int)*paMVar1 + iVar2 + 0x30) * v[3] +
-         *(float *)((int)*paMVar1 + iVar2 + 0x20) * v[2] +
-         *(float *)((int)*paMVar1 + iVar2 + 0x10) * v[1] + *(float *)((int)*paMVar1 + iVar2) * *v;
+  return *(float *)((kd_iptr)*paMVar1 + iVar2 + 0x50) * v[5] +
+         *(float *)((kd_iptr)*paMVar1 + iVar2 + 0x40) * v[4] +
+         *(float *)((kd_iptr)*paMVar1 + iVar2 + 0x30) * v[3] +
+         *(float *)((kd_iptr)*paMVar1 + iVar2 + 0x20) * v[2] +
+         *(float *)((kd_iptr)*paMVar1 + iVar2 + 0x10) * v[1] + *(float *)((kd_iptr)*paMVar1 + iVar2) * *v;
 }
 
 /* ---- MdtBclEndConstraint (exported as kd_MdtBclEndConstraint, asm label "MdtBclEndConstraint") ---- */
@@ -296,25 +296,25 @@ void kd_MdtBclAddSphericalRowsWorld
     if (iVar7 < 0) {
       iVar10 = iVar7 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar7 * 4 + (iVar10 >> 2) * 0xb0 + z * 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar7 * 4 + (iVar10 >> 2) * 0xb0 + z * 0x10) = 0;
     iVar7 = clist->num_rows_inc_padding;
     iVar10 = iVar7;
     if (iVar7 < 0) {
       iVar10 = iVar7 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar7 * 4 + z * 0x10 + (iVar10 >> 2) * 0xb0 + 0x60) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar7 * 4 + z * 0x10 + (iVar10 >> 2) * 0xb0 + 0x60) = 0;
     iVar7 = clist->num_rows_inc_padding;
     iVar10 = iVar7;
     if (iVar7 < 0) {
       iVar10 = iVar7 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar7 * 4 + (iVar10 >> 2) * 0xb0 + z * 0x10 + 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar7 * 4 + (iVar10 >> 2) * 0xb0 + z * 0x10 + 0x10) = 0;
     iVar7 = clist->num_rows_inc_padding;
     iVar10 = iVar7;
     if (iVar7 < 0) {
       iVar10 = iVar7 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar7 * 4 + z * 0x10 + (iVar10 >> 2) * 0xb0 + 0x70) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar7 * 4 + z * 0x10 + (iVar10 >> 2) * 0xb0 + 0x70) = 0;
     z = z + 2;
   } while (z != 6);
   *pfVar9 = 0.0;
@@ -328,25 +328,25 @@ void kd_MdtBclAddSphericalRowsWorld
     if (iVar10 < 0) {
       iVar10 = iVar7 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar7 * 4 + 4 + (iVar10 >> 2) * 0xb0 + z_1 * 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar7 * 4 + 4 + (iVar10 >> 2) * 0xb0 + z_1 * 0x10) = 0;
     iVar7 = clist->num_rows_inc_padding;
     iVar10 = iVar7 + 1;
     if (iVar10 < 0) {
       iVar10 = iVar7 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar7 * 4 + z_1 * 0x10 + (iVar10 >> 2) * 0xb0 + 100) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar7 * 4 + z_1 * 0x10 + (iVar10 >> 2) * 0xb0 + 100) = 0;
     iVar7 = clist->num_rows_inc_padding;
     iVar10 = iVar7 + 1;
     if (iVar10 < 0) {
       iVar10 = iVar7 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar7 * 4 + (iVar10 >> 2) * 0xb0 + z_1 * 0x10 + 0x14) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar7 * 4 + (iVar10 >> 2) * 0xb0 + z_1 * 0x10 + 0x14) = 0;
     iVar7 = clist->num_rows_inc_padding;
     iVar10 = iVar7 + 1;
     if (iVar10 < 0) {
       iVar10 = iVar7 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar7 * 4 + z_1 * 0x10 + (iVar10 >> 2) * 0xb0 + 0x74) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar7 * 4 + z_1 * 0x10 + (iVar10 >> 2) * 0xb0 + 0x74) = 0;
     z_1 = z_1 + 2;
   } while (z_1 != 6);
   pfVar9[1] = 0.0;
@@ -360,25 +360,25 @@ void kd_MdtBclAddSphericalRowsWorld
     if (iVar10 < 0) {
       iVar10 = iVar7 + 5;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar7 * 4 + 8 + (iVar10 >> 2) * 0xb0 + z_2 * 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar7 * 4 + 8 + (iVar10 >> 2) * 0xb0 + z_2 * 0x10) = 0;
     iVar7 = clist->num_rows_inc_padding;
     iVar10 = iVar7 + 2;
     if (iVar10 < 0) {
       iVar10 = iVar7 + 5;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar7 * 4 + z_2 * 0x10 + (iVar10 >> 2) * 0xb0 + 0x68) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar7 * 4 + z_2 * 0x10 + (iVar10 >> 2) * 0xb0 + 0x68) = 0;
     iVar7 = clist->num_rows_inc_padding;
     iVar10 = iVar7 + 2;
     if (iVar10 < 0) {
       iVar10 = iVar7 + 5;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar7 * 4 + (iVar10 >> 2) * 0xb0 + z_2 * 0x10 + 0x18) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar7 * 4 + (iVar10 >> 2) * 0xb0 + z_2 * 0x10 + 0x18) = 0;
     iVar7 = clist->num_rows_inc_padding;
     iVar10 = iVar7 + 2;
     if (iVar10 < 0) {
       iVar10 = iVar7 + 5;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar7 * 4 + z_2 * 0x10 + (iVar10 >> 2) * 0xb0 + 0x78) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar7 * 4 + z_2 * 0x10 + (iVar10 >> 2) * 0xb0 + 0x78) = 0;
     z_2 = z_2 + 2;
   } while (z_2 != 6);
   pfVar9[2] = 0.0;
@@ -390,19 +390,19 @@ void kd_MdtBclAddSphericalRowsWorld
   if (iVar7 < 0) {
     iVar10 = iVar7 + 3;
   }
-  *(undefined4 *)((int)*clist->Jstore + iVar7 * 4 + (iVar10 >> 2) * 0xb0) = 0x3f800000;
+  *(undefined4 *)((kd_iptr)*clist->Jstore + iVar7 * 4 + (iVar10 >> 2) * 0xb0) = 0x3f800000;
   iVar7 = clist->num_rows_inc_padding;
   iVar10 = iVar7 + 1;
   if (iVar10 < 0) {
     iVar10 = iVar7 + 4;
   }
-  *(undefined4 *)((int)*clist->Jstore + iVar7 * 4 + (iVar10 >> 2) * 0xb0 + 0x14) = 0x3f800000;
+  *(undefined4 *)((kd_iptr)*clist->Jstore + iVar7 * 4 + (iVar10 >> 2) * 0xb0 + 0x14) = 0x3f800000;
   iVar7 = clist->num_rows_inc_padding;
   iVar10 = iVar7 + 2;
   if (iVar10 < 0) {
     iVar10 = iVar7 + 5;
   }
-  *(undefined4 *)((int)*clist->Jstore + iVar7 * 4 + (iVar10 >> 2) * 0xb0 + 0x28) = 0x3f800000;
+  *(undefined4 *)((kd_iptr)*clist->Jstore + iVar7 * 4 + (iVar10 >> 2) * 0xb0 + 0x28) = 0x3f800000;
   fVar1 = *body1pos;
   fVar2 = *cpos1world;
   fVar3 = body1pos[1];
@@ -426,15 +426,15 @@ void kd_MdtBclAddSphericalRowsWorld
     iVar11 = iVar7 + 5;
   }
   iVar11 = iVar11 >> 2;
-  *(undefined4 *)((int)*paMVar8 + iVar13 * 4 + 0x30) = 0;
-  *(float *)((int)*paMVar8 + iVar13 * 4 + 0x40) = fVar6 - fVar5;
-  *(float *)((int)*paMVar8 + iVar13 * 4 + 0x50) = -(fVar4 - fVar3);
-  *(float *)((int)*paMVar8 + iVar7 * 4 + iVar10 * 0xb0 + 0x34) = -(fVar6 - fVar5);
-  *(undefined4 *)((int)*paMVar8 + iVar7 * 4 + iVar10 * 0xb0 + 0x44) = 0;
-  *(float *)((int)*paMVar8 + iVar7 * 4 + iVar10 * 0xb0 + 0x54) = fVar2 - fVar1;
-  *(float *)((int)*paMVar8 + iVar7 * 4 + iVar11 * 0xb0 + 0x38) = fVar4 - fVar3;
-  *(float *)((int)*paMVar8 + iVar7 * 4 + iVar11 * 0xb0 + 0x48) = -(fVar2 - fVar1);
-  *(undefined4 *)((int)*paMVar8 + iVar7 * 4 + iVar11 * 0xb0 + 0x58) = 0;
+  *(undefined4 *)((kd_iptr)*paMVar8 + iVar13 * 4 + 0x30) = 0;
+  *(float *)((kd_iptr)*paMVar8 + iVar13 * 4 + 0x40) = fVar6 - fVar5;
+  *(float *)((kd_iptr)*paMVar8 + iVar13 * 4 + 0x50) = -(fVar4 - fVar3);
+  *(float *)((kd_iptr)*paMVar8 + iVar7 * 4 + iVar10 * 0xb0 + 0x34) = -(fVar6 - fVar5);
+  *(undefined4 *)((kd_iptr)*paMVar8 + iVar7 * 4 + iVar10 * 0xb0 + 0x44) = 0;
+  *(float *)((kd_iptr)*paMVar8 + iVar7 * 4 + iVar10 * 0xb0 + 0x54) = fVar2 - fVar1;
+  *(float *)((kd_iptr)*paMVar8 + iVar7 * 4 + iVar11 * 0xb0 + 0x38) = fVar4 - fVar3;
+  *(float *)((kd_iptr)*paMVar8 + iVar7 * 4 + iVar11 * 0xb0 + 0x48) = -(fVar2 - fVar1);
+  *(undefined4 *)((kd_iptr)*paMVar8 + iVar7 * 4 + iVar11 * 0xb0 + 0x58) = 0;
   *pfVar9 = *cpos1world - *cpos2world;
   pfVar9[1] = cpos1world[1] - cpos2world[1];
   pfVar9[2] = cpos1world[2] - cpos2world[2];
@@ -444,19 +444,19 @@ void kd_MdtBclAddSphericalRowsWorld
     if (iVar7 < 0) {
       iVar10 = iVar7 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar7 * 4 + (iVar10 >> 2) * 0xb0 + 0x60) = 0xbf800000;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar7 * 4 + (iVar10 >> 2) * 0xb0 + 0x60) = 0xbf800000;
     iVar7 = clist->num_rows_inc_padding;
     iVar10 = iVar7 + 1;
     if (iVar10 < 0) {
       iVar10 = iVar7 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar7 * 4 + (iVar10 >> 2) * 0xb0 + 0x74) = 0xbf800000;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar7 * 4 + (iVar10 >> 2) * 0xb0 + 0x74) = 0xbf800000;
     iVar7 = clist->num_rows_inc_padding;
     iVar10 = iVar7 + 2;
     if (iVar10 < 0) {
       iVar10 = iVar7 + 5;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar7 * 4 + (iVar10 >> 2) * 0xb0 + 0x88) = 0xbf800000;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar7 * 4 + (iVar10 >> 2) * 0xb0 + 0x88) = 0xbf800000;
     fVar1 = *body2pos;
     fVar2 = *cpos2world;
     fVar3 = body2pos[1];
@@ -480,15 +480,15 @@ void kd_MdtBclAddSphericalRowsWorld
       iVar11 = iVar7 + 5;
     }
     iVar11 = iVar11 >> 2;
-    *(undefined4 *)((int)*paMVar8 + iVar13 * 4 + 0x90) = 0;
-    *(float *)((int)*paMVar8 + iVar13 * 4 + 0xa0) = (fVar6 - fVar5) * -1.0;
-    *(float *)((int)*paMVar8 + iVar13 * 4 + 0xb0) = -(fVar4 - fVar3) * -1.0;
-    *(float *)((int)*paMVar8 + iVar7 * 4 + iVar10 * 0xb0 + 0x94) = -(fVar6 - fVar5) * -1.0;
-    *(undefined4 *)((int)*paMVar8 + iVar7 * 4 + iVar10 * 0xb0 + 0xa4) = 0;
-    *(float *)((int)*paMVar8 + iVar7 * 4 + iVar10 * 0xb0 + 0xb4) = (fVar2 - fVar1) * -1.0;
-    *(float *)((int)*paMVar8 + iVar7 * 4 + iVar11 * 0xb0 + 0x98) = (fVar4 - fVar3) * -1.0;
-    *(undefined4 *)((int)*paMVar8 + iVar7 * 4 + iVar11 * 0xb0 + 0xb8) = 0;
-    *(float *)((int)*paMVar8 + iVar7 * 4 + iVar11 * 0xb0 + 0xa8) = -(fVar2 - fVar1) * -1.0;
+    *(undefined4 *)((kd_iptr)*paMVar8 + iVar13 * 4 + 0x90) = 0;
+    *(float *)((kd_iptr)*paMVar8 + iVar13 * 4 + 0xa0) = (fVar6 - fVar5) * -1.0;
+    *(float *)((kd_iptr)*paMVar8 + iVar13 * 4 + 0xb0) = -(fVar4 - fVar3) * -1.0;
+    *(float *)((kd_iptr)*paMVar8 + iVar7 * 4 + iVar10 * 0xb0 + 0x94) = -(fVar6 - fVar5) * -1.0;
+    *(undefined4 *)((kd_iptr)*paMVar8 + iVar7 * 4 + iVar10 * 0xb0 + 0xa4) = 0;
+    *(float *)((kd_iptr)*paMVar8 + iVar7 * 4 + iVar10 * 0xb0 + 0xb4) = (fVar2 - fVar1) * -1.0;
+    *(float *)((kd_iptr)*paMVar8 + iVar7 * 4 + iVar11 * 0xb0 + 0x98) = (fVar4 - fVar3) * -1.0;
+    *(undefined4 *)((kd_iptr)*paMVar8 + iVar7 * 4 + iVar11 * 0xb0 + 0xb8) = 0;
+    *(float *)((kd_iptr)*paMVar8 + iVar7 * 4 + iVar11 * 0xb0 + 0xa8) = -(fVar2 - fVar1) * -1.0;
   }
   *pMVar14 = -3.4028235e+38;
   *pMVar12 = 3.4028235e+38;
@@ -516,12 +516,12 @@ void kd_MdtBclAddBSJoint(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
   MeReal ref1world [4] [4];
   MeReal *c;
 
-  clist->Jbody[clist->num_constraints][0] = *(int *)((int)constraint + 0xb4);
+  clist->Jbody[clist->num_constraints][0] = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtBSJoint *)0)->head.bodyindex[0] - (char *)0)));
                     
   paMVar5 = ref1world;
-  clist->Jbody[clist->num_constraints][1] = *(int *)((int)constraint + 0xb8);
-  pMVar7 = tlist + *(int *)((int)constraint + 0xb4);
-  pfVar6 = (float *)((int)constraint + 0xbc);
+  clist->Jbody[clist->num_constraints][1] = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtBSJoint *)0)->head.bodyindex[1] - (char *)0)));
+  pMVar7 = tlist + *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtBSJoint *)0)->head.bodyindex[0] - (char *)0)));
+  pfVar6 = (float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtBSJoint *)0)->head.ref1[0][0] - (char *)0)));
   iVar8 = 3;
   do {
     fVar1 = *pfVar6;
@@ -544,35 +544,35 @@ void kd_MdtBclAddBSJoint(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
     paMVar5 = paMVar5 + 1;
     iVar8 = iVar8 + -1;
   } while (-1 < iVar8);
-  if (*(int *)((int)constraint + 0xb8) == -1) {
-    ref2world[0][0] = *(MeReal *)((int)constraint + 0xfc);
-    ref2world[0][1] = *(MeReal *)((int)constraint + 0x100);
-    ref2world[0][2] = *(MeReal *)((int)constraint + 0x104);
-    ref2world[0][3] = *(MeReal *)((int)constraint + 0x108);
-    ref2world[1][0] = *(MeReal *)((int)constraint + 0x10c);
-    ref2world[1][1] = *(MeReal *)((int)constraint + 0x110);
-    ref2world[1][2] = *(MeReal *)((int)constraint + 0x114);
-    ref2world[1][3] = *(MeReal *)((int)constraint + 0x118);
-    ref2world[2][0] = *(MeReal *)((int)constraint + 0x11c);
-    ref2world[2][1] = *(MeReal *)((int)constraint + 0x120);
-    ref2world[2][2] = *(MeReal *)((int)constraint + 0x124);
-    ref2world[2][3] = *(MeReal *)((int)constraint + 0x128);
-    ref2world[3][0] = *(MeReal *)((int)constraint + 300);
-    ref2world[3][1] = *(MeReal *)((int)constraint + 0x130);
-    ref2world[3][2] = *(MeReal *)((int)constraint + 0x134);
-    ref2world[3][3] = *(MeReal *)((int)constraint + 0x138);
+  if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtBSJoint *)0)->head.bodyindex[1] - (char *)0))) == -1) {
+    ref2world[0][0] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtBSJoint *)0)->head.ref2[0][0] - (char *)0)));
+    ref2world[0][1] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtBSJoint *)0)->head.ref2[0][1] - (char *)0)));
+    ref2world[0][2] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtBSJoint *)0)->head.ref2[0][2] - (char *)0)));
+    ref2world[0][3] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtBSJoint *)0)->head.ref2[0][3] - (char *)0)));
+    ref2world[1][0] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtBSJoint *)0)->head.ref2[1][0] - (char *)0)));
+    ref2world[1][1] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtBSJoint *)0)->head.ref2[1][1] - (char *)0)));
+    ref2world[1][2] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtBSJoint *)0)->head.ref2[1][2] - (char *)0)));
+    ref2world[1][3] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtBSJoint *)0)->head.ref2[1][3] - (char *)0)));
+    ref2world[2][0] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtBSJoint *)0)->head.ref2[2][0] - (char *)0)));
+    ref2world[2][1] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtBSJoint *)0)->head.ref2[2][1] - (char *)0)));
+    ref2world[2][2] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtBSJoint *)0)->head.ref2[2][2] - (char *)0)));
+    ref2world[2][3] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtBSJoint *)0)->head.ref2[2][3] - (char *)0)));
+    ref2world[3][0] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtBSJoint *)0)->head.ref2[3][0] - (char *)0)));
+    ref2world[3][1] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtBSJoint *)0)->head.ref2[3][1] - (char *)0)));
+    ref2world[3][2] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtBSJoint *)0)->head.ref2[3][2] - (char *)0)));
+    ref2world[3][3] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtBSJoint *)0)->head.ref2[3][3] - (char *)0)));
     iVar8 = -1;
   }
   else {
     MeMatrix4MultiplyMatrix
-              (ref2world,(MeReal (*) [4])((int)constraint + 0xfc),
-               tlist[*(int *)((int)constraint + 0xb8)].R0);
-    iVar8 = *(int *)((int)constraint + 0xb8);
+              (ref2world,(MeReal (*) [4])((kd_iptr)constraint + ((int)((char *)&((struct MdtBSJoint *)0)->head.ref2[0][0] - (char *)0))),
+               tlist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtBSJoint *)0)->head.bodyindex[1] - (char *)0)))].R0);
+    iVar8 = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtBSJoint *)0)->head.bodyindex[1] - (char *)0)));
   }
   kd_MdtBclAddSphericalRowsWorld
-            (clist,tlist[*(int *)((int)constraint + 0xb4)].pos,tlist[iVar8].pos,ref1world[3],
-             ref2world[3],(uint)(iVar8 != -1),(MeReal *)((int)constraint + 0x13c),
-             (MeReal *)((int)constraint + 0x148));
+            (clist,tlist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtBSJoint *)0)->head.bodyindex[0] - (char *)0)))].pos,tlist[iVar8].pos,ref1world[3],
+             ref2world[3],(uint)(iVar8 != -1),(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtBSJoint *)0)->head.worldLinVel[0] - (char *)0))),
+             (MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtBSJoint *)0)->head.worldAngVel[0] - (char *)0))));
   kd_MdtBclEndConstraint(clist,3);
   return;
 }
@@ -633,25 +633,25 @@ void kd_MdtBclAddContact(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
   pMVar12 = clist->hi + iVar21;
   pfVar18 = clist->slipfactor + iVar21;
   pMVar16 = clist->xgamma + iVar21;
-  uVar4 = *(uint *)((int)constraint + 0x1a0);
-  if (*(int *)((int)constraint + 0x194) == 1) {
+  uVar4 = *(uint *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->params.options - (char *)0)));
+  if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->params - (char *)0))) == 1) {
     friction_rows = 1;
   }
   else {
-    friction_rows = (uint)(*(int *)((int)constraint + 0x194) == 2) * 2;
+    friction_rows = (uint)(*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->params - (char *)0))) == 2) * 2;
   }
   bVar11 = false;
-  if ((*(int *)((int)constraint + 0xb8) == -1) && ((uVar4 & 0x100) != 0)) {
+  if ((*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->head.bodyindex[1] - (char *)0))) == -1) && ((uVar4 & 0x100) != 0)) {
     bVar11 = true;
   }
-  pvVar5 = *(void **)((int)constraint + 0x54);
-  pvVar6 = *(void **)((int)constraint + 0x58);
+  pvVar5 = *(void **)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->head.mdtbody[0] - (char *)0)));
+  pvVar6 = *(void **)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->head.mdtbody[1] - (char *)0)));
   boxScale = 1.0;
   MdtBodyGetCenterOfMassPosition(pvVar5,pos0);
-  pos0[0] = *(float *)((int)constraint + 0x160) - pos0[0];
-  pos0[1] = *(float *)((int)constraint + 0x164) - pos0[1];
-  pos0[2] = *(float *)((int)constraint + 0x168) - pos0[2];
-  MdtBodyGetVelocityAtPoint(pvVar5,(void *)((int)constraint + 0x160),vel0);
+  pos0[0] = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->cpos[0] - (char *)0))) - pos0[0];
+  pos0[1] = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->cpos[1] - (char *)0))) - pos0[1];
+  pos0[2] = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->cpos[2] - (char *)0))) - pos0[2];
+  MdtBodyGetVelocityAtPoint(pvVar5,(void *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->cpos[0] - (char *)0))),vel0);
   if (pvVar6 == (void *)0x0) {
     if ((uVar4 & 0x100) == 0) {
       vel1[2] = 0.0;
@@ -659,27 +659,27 @@ void kd_MdtBclAddContact(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
       vel1[0] = 0.0;
     }
     else {
-      vel1[0] = *(MeReal *)((int)constraint + 0x188);
-      vel1[1] = *(MeReal *)((int)constraint + 0x18c);
-      vel1[2] = *(MeReal *)((int)constraint + 400);
+      vel1[0] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->worldVel[0] - (char *)0)));
+      vel1[1] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->worldVel[1] - (char *)0)));
+      vel1[2] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->worldVel[2] - (char *)0)));
     }
   }
   else {
     MdtBodyGetCenterOfMassPosition(pvVar6,pos1);
-    pos1[0] = *(float *)((int)constraint + 0x160) - pos1[0];
-    pos1[1] = *(float *)((int)constraint + 0x164) - pos1[1];
-    pos1[2] = *(float *)((int)constraint + 0x168) - pos1[2];
-    MdtBodyGetVelocityAtPoint(pvVar6,(void *)((int)constraint + 0x160),vel1);
+    pos1[0] = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->cpos[0] - (char *)0))) - pos1[0];
+    pos1[1] = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->cpos[1] - (char *)0))) - pos1[1];
+    pos1[2] = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->cpos[2] - (char *)0))) - pos1[2];
+    MdtBodyGetVelocityAtPoint(pvVar6,(void *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->cpos[0] - (char *)0))),vel1);
   }
   fVar8 = vel0[0] - vel1[0];
   fVar10 = vel0[1] - vel1[1];
   fVar9 = vel0[2] - vel1[2];
-  fVar1 = *(float *)((int)constraint + 0x16c);
-  fVar2 = *(float *)((int)constraint + 0x170);
-  fVar3 = *(float *)((int)constraint + 0x174);
-  clist->Jbody[clist->num_constraints][0] = *(int *)((int)constraint + 0xb4);
+  fVar1 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->normal[0] - (char *)0)));
+  fVar2 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->normal[1] - (char *)0)));
+  fVar3 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->normal[2] - (char *)0)));
+  clist->Jbody[clist->num_constraints][0] = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->head.bodyindex[0] - (char *)0)));
   fVar1 = fVar9 * fVar3 + fVar8 * fVar1 + fVar10 * fVar2;
-  clist->Jbody[clist->num_constraints][1] = *(int *)((int)constraint + 0xb8);
+  clist->Jbody[clist->num_constraints][1] = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->head.bodyindex[1] - (char *)0)));
                     
   iVar21 = 0;
   do {
@@ -688,20 +688,20 @@ void kd_MdtBclAddContact(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
     if (iVar7 < 0) {
       iVar14 = iVar7 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar7 * 4 + (iVar14 >> 2) * 0xb0 + iVar21 * 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar7 * 4 + (iVar14 >> 2) * 0xb0 + iVar21 * 0x10) = 0;
     iVar7 = clist->num_rows_inc_padding;
     iVar14 = iVar7;
     if (iVar7 < 0) {
       iVar14 = iVar7 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar7 * 4 + iVar21 * 0x10 + (iVar14 >> 2) * 0xb0 + 0x60) =
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar7 * 4 + iVar21 * 0x10 + (iVar14 >> 2) * 0xb0 + 0x60) =
          0;
     iVar7 = clist->num_rows_inc_padding;
     iVar14 = iVar7;
     if (iVar7 < 0) {
       iVar14 = iVar7 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar7 * 4 + (iVar14 >> 2) * 0xb0 + iVar21 * 0x10 + 0x10) =
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar7 * 4 + (iVar14 >> 2) * 0xb0 + iVar21 * 0x10 + 0x10) =
          0;
     iVar7 = clist->num_rows_inc_padding;
     iVar14 = iVar7;
@@ -709,7 +709,7 @@ void kd_MdtBclAddContact(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
       iVar14 = iVar7 + 3;
     }
     iVar20 = iVar21 + 2;
-    *(undefined4 *)((int)*clist->Jstore + iVar7 * 4 + iVar21 * 0x10 + (iVar14 >> 2) * 0xb0 + 0x70) =
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar7 * 4 + iVar21 * 0x10 + (iVar14 >> 2) * 0xb0 + 0x70) =
          0;
     iVar21 = iVar20;
   } while (iVar20 != 6);
@@ -717,44 +717,44 @@ void kd_MdtBclAddContact(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
   *pfVar18 = 0.0;
   *pfVar17 = 0.0;
   *pMVar16 = 0.0;
-  MdtContactWriteRow(clist,0,(MeReal *)((int)constraint + 0x16c),pos0,pos1,
+  MdtContactWriteRow(clist,0,(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->normal[0] - (char *)0))),pos0,pos1,
                      (uint)(pvVar6 != (void *)0x0));
-  *pMVar15 = -*(MeReal *)((int)constraint + 0x178);
+  *pMVar15 = -*(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->penetration - (char *)0)));
   if ((uVar4 & 8) == 0) {
     MVar13 = 0.0;
   }
   else {
-    MVar13 = -*(MeReal *)((int)constraint + 0x1b0);
+    MVar13 = -*(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->params.max_adhesive_force - (char *)0)));
   }
   *pMVar19 = MVar13;
   *pMVar12 = 3.4028235e+38;
   if (((uVar4 & 4) != 0) &&
-     (fVar2 = *(float *)((int)constraint + 0x1ac), *pfVar18 = fVar2, fVar2 < 0.0)) {
+     (fVar2 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->params.softness - (char *)0))), *pfVar18 = fVar2, fVar2 < 0.0)) {
     *pfVar18 = 0.0;
   }
-  if (((uVar4 & 2) != 0) && (fVar1 < -*(float *)((int)constraint + 0x1a8))) {
-    *pfVar17 = -*(float *)((int)constraint + 0x1a4) * fVar1;
+  if (((uVar4 & 2) != 0) && (fVar1 < -*(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->params.velThreshold - (char *)0))))) {
+    *pfVar17 = -*(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->params.restitution - (char *)0))) * fVar1;
   }
   if ((uVar4 & 0x100) != 0) {
-    *pfVar17 = *(float *)((int)constraint + 0x174) * *(float *)((int)constraint + 400) +
-               *(float *)((int)constraint + 0x170) * *(float *)((int)constraint + 0x18c) +
-               *(float *)((int)constraint + 0x16c) * *(float *)((int)constraint + 0x188) + *pfVar17;
+    *pfVar17 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->normal[2] - (char *)0))) * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->worldVel[2] - (char *)0))) +
+               *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->normal[1] - (char *)0))) * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->worldVel[1] - (char *)0))) +
+               *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->normal[0] - (char *)0))) * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->worldVel[0] - (char *)0))) + *pfVar17;
   }
   (*(unsigned char *)((char *)&(options) + 0)) = (byte)uVar4;
   if (friction_rows != 0) {
                     
     if ((uVar4 & 1) == 0) {
-      dir1[0] = fVar8 - fVar1 * *(float *)((int)constraint + 0x16c);
-      dir1[1] = fVar10 - fVar1 * *(float *)((int)constraint + 0x170);
-      dir1[2] = fVar9 - fVar1 * *(float *)((int)constraint + 0x174);
+      dir1[0] = fVar8 - fVar1 * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->normal[0] - (char *)0)));
+      dir1[1] = fVar10 - fVar1 * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->normal[1] - (char *)0)));
+      dir1[2] = fVar9 - fVar1 * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->normal[2] - (char *)0)));
     }
     else {
-      fVar1 = *(float *)((int)constraint + 0x184) * *(float *)((int)constraint + 0x174) +
-              *(float *)((int)constraint + 0x17c) * *(float *)((int)constraint + 0x16c) +
-              *(float *)((int)constraint + 0x180) * *(float *)((int)constraint + 0x170);
-      dir1[0] = *(float *)((int)constraint + 0x17c) - *(float *)((int)constraint + 0x16c) * fVar1;
-      dir1[1] = *(float *)((int)constraint + 0x180) - *(float *)((int)constraint + 0x170) * fVar1;
-      dir1[2] = *(float *)((int)constraint + 0x184) - *(float *)((int)constraint + 0x174) * fVar1;
+      fVar1 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->direction[2] - (char *)0))) * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->normal[2] - (char *)0))) +
+              *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->direction[0] - (char *)0))) * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->normal[0] - (char *)0))) +
+              *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->direction[1] - (char *)0))) * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->normal[1] - (char *)0)));
+      dir1[0] = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->direction[0] - (char *)0))) - *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->normal[0] - (char *)0))) * fVar1;
+      dir1[1] = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->direction[1] - (char *)0))) - *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->normal[1] - (char *)0))) * fVar1;
+      dir1[2] = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->direction[2] - (char *)0))) - *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->normal[2] - (char *)0))) * fVar1;
     }
     MVar13 = MeVector3Normalize(dir1);
     if (friction_rows == 1) {
@@ -763,12 +763,12 @@ void kd_MdtBclAddContact(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
       }
     }
     else if (0.001 <= MVar13) {
-      dir2[0] = dir1[1] * *(float *)((int)constraint + 0x174) -
-                dir1[2] * *(float *)((int)constraint + 0x170);
-      dir2[1] = dir1[2] * *(float *)((int)constraint + 0x16c) -
-                *(float *)((int)constraint + 0x174) * dir1[0];
-      dir2[2] = dir1[0] * *(float *)((int)constraint + 0x170) -
-                *(float *)((int)constraint + 0x16c) * dir1[1];
+      dir2[0] = dir1[1] * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->normal[2] - (char *)0))) -
+                dir1[2] * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->normal[1] - (char *)0)));
+      dir2[1] = dir1[2] * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->normal[0] - (char *)0))) -
+                *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->normal[2] - (char *)0))) * dir1[0];
+      dir2[2] = dir1[0] * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->normal[1] - (char *)0))) -
+                *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->normal[0] - (char *)0))) * dir1[1];
       if ((((byte)options ^ 1) & 1) != 0) {
         fVar2 = dir1[0] * 0.70710677;
         fVar1 = dir1[1] * 0.70710677;
@@ -783,23 +783,23 @@ void kd_MdtBclAddContact(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
       }
     }
     else {
-      fVar1 = *(float *)((int)constraint + 0x16c);
-      fVar2 = *(float *)((int)constraint + 0x170);
+      fVar1 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->normal[0] - (char *)0)));
+      fVar2 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->normal[1] - (char *)0)));
       if (ABS(fVar1) <= ABS(fVar2)) {
                     
-        fVar1 = *(float *)((int)constraint + 0x174);
+        fVar1 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->normal[2] - (char *)0)));
         fVar3 = 1.0 / SQRT(fVar1 * fVar1 + fVar2 * fVar2);
         dir1[0] = 0.0;
         dir1[2] = fVar2 * fVar3;
         dir1[1] = -fVar1 * fVar3;
         dir2[0] = fVar2 * dir1[2] - fVar1 * dir1[1];
-        fVar1 = *(MeReal *)((int)constraint + 0x16c);
+        fVar1 = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->normal[0] - (char *)0)));
         dir2[2] = fVar1 * dir1[1];
         dir2[1] = -fVar1 * dir1[2];
       }
       else {
                     
-        fVar3 = *(float *)((int)constraint + 0x174);
+        fVar3 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->normal[2] - (char *)0)));
         fVar8 = 1.0 / SQRT(fVar3 * fVar3 + fVar1 * fVar1);
         dir1[1] = 0.0;
         dir1[0] = fVar3 * fVar8;
@@ -818,7 +818,7 @@ void kd_MdtBclAddContact(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
         if (iVar14 < 0) {
           iVar14 = iVar7 + 4;
         }
-        *(undefined4 *)((int)*clist->Jstore + iVar7 * 4 + 4 + (iVar14 >> 2) * 0xb0 + iVar21 * 0x10)
+        *(undefined4 *)((kd_iptr)*clist->Jstore + iVar7 * 4 + 4 + (iVar14 >> 2) * 0xb0 + iVar21 * 0x10)
              = 0;
         iVar7 = clist->num_rows_inc_padding;
         iVar14 = iVar7 + 1;
@@ -826,14 +826,14 @@ void kd_MdtBclAddContact(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
           iVar14 = iVar7 + 4;
         }
         *(undefined4 *)
-         ((int)*clist->Jstore + iVar7 * 4 + iVar21 * 0x10 + (iVar14 >> 2) * 0xb0 + 100) = 0;
+         ((kd_iptr)*clist->Jstore + iVar7 * 4 + iVar21 * 0x10 + (iVar14 >> 2) * 0xb0 + 100) = 0;
         iVar7 = clist->num_rows_inc_padding;
         iVar14 = iVar7 + 1;
         if (iVar14 < 0) {
           iVar14 = iVar7 + 4;
         }
         *(undefined4 *)
-         ((int)*clist->Jstore + iVar7 * 4 + (iVar14 >> 2) * 0xb0 + iVar21 * 0x10 + 0x14) = 0;
+         ((kd_iptr)*clist->Jstore + iVar7 * 4 + (iVar14 >> 2) * 0xb0 + iVar21 * 0x10 + 0x14) = 0;
         iVar7 = clist->num_rows_inc_padding;
         iVar14 = iVar7 + 1;
         if (iVar14 < 0) {
@@ -841,7 +841,7 @@ void kd_MdtBclAddContact(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
         }
         iVar20 = iVar21 + 2;
         *(undefined4 *)
-         ((int)*clist->Jstore + iVar7 * 4 + iVar21 * 0x10 + (iVar14 >> 2) * 0xb0 + 0x74) = 0;
+         ((kd_iptr)*clist->Jstore + iVar7 * 4 + iVar21 * 0x10 + (iVar14 >> 2) * 0xb0 + 0x74) = 0;
         iVar21 = iVar20;
       } while (iVar20 != 6);
       pMVar15[1] = 0.0;
@@ -850,21 +850,21 @@ void kd_MdtBclAddContact(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
       pMVar16[1] = 0.0;
       MdtContactWriteRow(clist,1,dir1,pos0,pos1,(uint)(pvVar6 != (void *)0x0));
       if (((uVar4 & 0x10) != 0) &&
-         (fVar1 = *(float *)((int)constraint + 0x1bc), pfVar18[1] = fVar1, fVar1 < 0.0)) {
+         (fVar1 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->params.slip1 - (char *)0))), pfVar18[1] = fVar1, fVar1 < 0.0)) {
         pfVar18[1] = 0.0;
       }
       if ((uVar4 & 0x40) != 0) {
-        pfVar17[1] = *(float *)((int)constraint + 0x1cc);
+        pfVar17[1] = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->params.slide1 - (char *)0)));
       }
       if (bVar11) {
-        fVar1 = *(float *)((int)constraint + 400) * dir1[2] +
-                *(float *)((int)constraint + 0x18c) * dir1[1] +
-                *(float *)((int)constraint + 0x188) * dir1[0] + pfVar17[1];
+        fVar1 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->worldVel[2] - (char *)0))) * dir1[2] +
+                *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->worldVel[1] - (char *)0))) * dir1[1] +
+                *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->worldVel[0] - (char *)0))) * dir1[0] + pfVar17[1];
         pfVar17[1] = fVar1;
-        *(float *)((int)constraint + 0x1cc) = fVar1;
+        *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->params.slide1 - (char *)0))) = fVar1;
       }
-      if (*(uint *)((int)constraint + 0x198) < 2) {
-        fVar1 = boxScale * *(float *)((int)constraint + 0x1b4);
+      if (*(uint *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->params.model1 - (char *)0))) < 2) {
+        fVar1 = boxScale * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->params.friction1 - (char *)0)));
       }
       else {
         fVar1 = 3.4028235e+38;
@@ -882,21 +882,21 @@ void kd_MdtBclAddContact(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
       if (iVar14 < 0) {
         iVar14 = iVar7 + 5;
       }
-      *(undefined4 *)((int)*clist->Jstore + iVar7 * 4 + 8 + (iVar14 >> 2) * 0xb0 + iVar21 * 0x10) =
+      *(undefined4 *)((kd_iptr)*clist->Jstore + iVar7 * 4 + 8 + (iVar14 >> 2) * 0xb0 + iVar21 * 0x10) =
            0;
       iVar7 = clist->num_rows_inc_padding;
       iVar14 = iVar7 + 2;
       if (iVar14 < 0) {
         iVar14 = iVar7 + 5;
       }
-      *(undefined4 *)((int)*clist->Jstore + iVar7 * 4 + iVar21 * 0x10 + (iVar14 >> 2) * 0xb0 + 0x68)
+      *(undefined4 *)((kd_iptr)*clist->Jstore + iVar7 * 4 + iVar21 * 0x10 + (iVar14 >> 2) * 0xb0 + 0x68)
            = 0;
       iVar7 = clist->num_rows_inc_padding;
       iVar14 = iVar7 + 2;
       if (iVar14 < 0) {
         iVar14 = iVar7 + 5;
       }
-      *(undefined4 *)((int)*clist->Jstore + iVar7 * 4 + (iVar14 >> 2) * 0xb0 + iVar21 * 0x10 + 0x18)
+      *(undefined4 *)((kd_iptr)*clist->Jstore + iVar7 * 4 + (iVar14 >> 2) * 0xb0 + iVar21 * 0x10 + 0x18)
            = 0;
       iVar7 = clist->num_rows_inc_padding;
       iVar14 = iVar7 + 2;
@@ -904,7 +904,7 @@ void kd_MdtBclAddContact(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
         iVar14 = iVar7 + 5;
       }
       iVar20 = iVar21 + 2;
-      *(undefined4 *)((int)*clist->Jstore + iVar7 * 4 + iVar21 * 0x10 + (iVar14 >> 2) * 0xb0 + 0x78)
+      *(undefined4 *)((kd_iptr)*clist->Jstore + iVar7 * 4 + iVar21 * 0x10 + (iVar14 >> 2) * 0xb0 + 0x78)
            = 0;
       iVar21 = iVar20;
     } while (iVar20 != 6);
@@ -914,21 +914,21 @@ void kd_MdtBclAddContact(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
     pMVar16[2] = 0.0;
     MdtContactWriteRow(clist,2,dir2,pos0,pos1,(uint)(pvVar6 != (void *)0x0));
     if (((uVar4 & 0x20) != 0) &&
-       (fVar1 = *(float *)((int)constraint + 0x1c8), pfVar18[2] = fVar1, fVar1 < 0.0)) {
+       (fVar1 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->params.slip2 - (char *)0))), pfVar18[2] = fVar1, fVar1 < 0.0)) {
       pfVar18[2] = 0.0;
     }
     if ((char)(byte)options < '\0') {
-      pfVar17[2] = *(float *)((int)constraint + 0x1d0);
+      pfVar17[2] = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->params.slide2 - (char *)0)));
     }
     if (bVar11) {
-      fVar1 = *(float *)((int)constraint + 400) * dir2[2] +
-              *(float *)((int)constraint + 0x18c) * dir2[1] +
-              *(float *)((int)constraint + 0x188) * dir2[0] + pfVar17[2];
+      fVar1 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->worldVel[2] - (char *)0))) * dir2[2] +
+              *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->worldVel[1] - (char *)0))) * dir2[1] +
+              *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->worldVel[0] - (char *)0))) * dir2[0] + pfVar17[2];
       pfVar17[2] = fVar1;
-      *(float *)((int)constraint + 0x1d0) = fVar1;
+      *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->params.slide2 - (char *)0))) = fVar1;
     }
-    if (*(uint *)((int)constraint + 0x19c) < 2) {
-      fVar1 = boxScale * *(float *)((int)constraint + 0x1c0);
+    if (*(uint *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->params.model2 - (char *)0))) < 2) {
+      fVar1 = boxScale * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContact *)0)->params.friction2 - (char *)0)));
     }
     else {
       fVar1 = 3.4028235e+38;
@@ -951,26 +951,26 @@ void kd_MdtBclAddContactGroup
   float fVar2;
   MeReal averageForce;
 
-  if (*(int *)((int)constraint + 0x160) == 0) {
+  if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContactGroup *)0)->count - (char *)0))) == 0) {
     fVar2 = 0.0;
   }
   else {
-    fVar2 = *(float *)((int)constraint + 0x170) / (float)*(int *)((int)constraint + 0x160);
+    fVar2 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContactGroup *)0)->normalForce - (char *)0))) / (float)*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContactGroup *)0)->count - (char *)0)));
   }
-  for (constraint_00 = *(void **)((int)constraint + 0x164); constraint_00 != (void *)0x0;
-      constraint_00 = *(void **)((int)constraint_00 + 0x1dc)) {
-    uVar1 = *(undefined4 *)((int)constraint + 4);
-    *(undefined4 *)((int)constraint_00 + 0xb4) = *(undefined4 *)((int)constraint + 0xb4);
-    *(undefined4 *)((int)constraint_00 + 0x54) = *(undefined4 *)((int)constraint + 0x54);
-    *(undefined4 *)((int)constraint_00 + 4) = uVar1;
-    uVar1 = *(undefined4 *)((int)constraint + 0x58);
-    *(undefined4 *)((int)constraint_00 + 0xb8) = *(undefined4 *)((int)constraint + 0xb8);
-    *(undefined4 *)((int)constraint_00 + 0x58) = uVar1;
-    if (*(int *)((int)constraint_00 + 0x198) == 1) {
-      *(float *)((int)constraint_00 + 0x1b4) = fVar2 * *(float *)((int)constraint_00 + 0x1b8);
+  for (constraint_00 = *(void **)((kd_iptr)constraint + ((int)((char *)&((struct MdtContactGroup *)0)->first - (char *)0))); constraint_00 != (void *)0x0;
+      constraint_00 = *(void **)((kd_iptr)constraint_00 + ((int)((char *)&((struct MdtContact *)0)->nextContact - (char *)0)))) {
+    uVar1 = *(undefined4 *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContactGroup *)0)->head.sortKey - (char *)0)));
+    *(undefined4 *)((kd_iptr)constraint_00 + ((int)((char *)&((struct MdtContact *)0)->head.bodyindex[0] - (char *)0))) = *(undefined4 *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContactGroup *)0)->head.bodyindex[0] - (char *)0)));
+    *(undefined4 *)((kd_iptr)constraint_00 + ((int)((char *)&((struct MdtContact *)0)->head.mdtbody[0] - (char *)0))) = *(undefined4 *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContactGroup *)0)->head.mdtbody[0] - (char *)0)));
+    *(undefined4 *)((kd_iptr)constraint_00 + ((int)((char *)&((struct MdtContact *)0)->head.sortKey - (char *)0))) = uVar1;
+    uVar1 = *(undefined4 *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContactGroup *)0)->head.mdtbody[1] - (char *)0)));
+    *(undefined4 *)((kd_iptr)constraint_00 + ((int)((char *)&((struct MdtContact *)0)->head.bodyindex[1] - (char *)0))) = *(undefined4 *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContactGroup *)0)->head.bodyindex[1] - (char *)0)));
+    *(undefined4 *)((kd_iptr)constraint_00 + ((int)((char *)&((struct MdtContact *)0)->head.mdtbody[1] - (char *)0))) = uVar1;
+    if (*(int *)((kd_iptr)constraint_00 + ((int)((char *)&((struct MdtContact *)0)->params.model1 - (char *)0))) == 1) {
+      *(float *)((kd_iptr)constraint_00 + ((int)((char *)&((struct MdtContact *)0)->params.friction1 - (char *)0))) = fVar2 * *(float *)((kd_iptr)constraint_00 + ((int)((char *)&((struct MdtContact *)0)->params.frictioncoeff1 - (char *)0)));
     }
-    if (*(int *)((int)constraint_00 + 0x19c) == 1) {
-      *(float *)((int)constraint_00 + 0x1c0) = fVar2 * *(float *)((int)constraint_00 + 0x1c4);
+    if (*(int *)((kd_iptr)constraint_00 + ((int)((char *)&((struct MdtContact *)0)->params.model2 - (char *)0))) == 1) {
+      *(float *)((kd_iptr)constraint_00 + ((int)((char *)&((struct MdtContact *)0)->params.friction2 - (char *)0))) = fVar2 * *(float *)((kd_iptr)constraint_00 + ((int)((char *)&((struct MdtContact *)0)->params.frictioncoeff2 - (char *)0)));
     }
     kd_MdtBclAddContact(clist,constraint_00,tlist,blist,params);
   }
@@ -1041,25 +1041,25 @@ void kd_MdtBclAddHinge(MdtKeaConstraints *clist,void *constraint,MdtKeaTransform
     if (iVar6 < 0) {
       iVar17 = iVar6 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar6 * 4 + (iVar17 >> 2) * 0xb0 + z * 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar6 * 4 + (iVar17 >> 2) * 0xb0 + z * 0x10) = 0;
     iVar6 = clist->num_rows_inc_padding;
     iVar17 = iVar6;
     if (iVar6 < 0) {
       iVar17 = iVar6 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar6 * 4 + z * 0x10 + (iVar17 >> 2) * 0xb0 + 0x60) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar6 * 4 + z * 0x10 + (iVar17 >> 2) * 0xb0 + 0x60) = 0;
     iVar6 = clist->num_rows_inc_padding;
     iVar17 = iVar6;
     if (iVar6 < 0) {
       iVar17 = iVar6 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar6 * 4 + (iVar17 >> 2) * 0xb0 + z * 0x10 + 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar6 * 4 + (iVar17 >> 2) * 0xb0 + z * 0x10 + 0x10) = 0;
     iVar6 = clist->num_rows_inc_padding;
     iVar17 = iVar6;
     if (iVar6 < 0) {
       iVar17 = iVar6 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar6 * 4 + z * 0x10 + (iVar17 >> 2) * 0xb0 + 0x70) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar6 * 4 + z * 0x10 + (iVar17 >> 2) * 0xb0 + 0x70) = 0;
     z = z + 2;
   } while (z != 6);
   *pMVar14 = 0.0;
@@ -1073,25 +1073,25 @@ void kd_MdtBclAddHinge(MdtKeaConstraints *clist,void *constraint,MdtKeaTransform
     if (iVar17 < 0) {
       iVar17 = iVar6 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar6 * 4 + 4 + (iVar17 >> 2) * 0xb0 + z_1 * 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar6 * 4 + 4 + (iVar17 >> 2) * 0xb0 + z_1 * 0x10) = 0;
     iVar6 = clist->num_rows_inc_padding;
     iVar17 = iVar6 + 1;
     if (iVar17 < 0) {
       iVar17 = iVar6 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar6 * 4 + z_1 * 0x10 + (iVar17 >> 2) * 0xb0 + 100) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar6 * 4 + z_1 * 0x10 + (iVar17 >> 2) * 0xb0 + 100) = 0;
     iVar6 = clist->num_rows_inc_padding;
     iVar17 = iVar6 + 1;
     if (iVar17 < 0) {
       iVar17 = iVar6 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar6 * 4 + (iVar17 >> 2) * 0xb0 + z_1 * 0x10 + 0x14) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar6 * 4 + (iVar17 >> 2) * 0xb0 + z_1 * 0x10 + 0x14) = 0;
     iVar6 = clist->num_rows_inc_padding;
     iVar17 = iVar6 + 1;
     if (iVar17 < 0) {
       iVar17 = iVar6 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar6 * 4 + z_1 * 0x10 + (iVar17 >> 2) * 0xb0 + 0x74) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar6 * 4 + z_1 * 0x10 + (iVar17 >> 2) * 0xb0 + 0x74) = 0;
     z_1 = z_1 + 2;
   } while (z_1 != 6);
   pMVar14[1] = 0.0;
@@ -1105,25 +1105,25 @@ void kd_MdtBclAddHinge(MdtKeaConstraints *clist,void *constraint,MdtKeaTransform
     if (iVar17 < 0) {
       iVar17 = iVar6 + 5;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar6 * 4 + 8 + (iVar17 >> 2) * 0xb0 + z_2 * 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar6 * 4 + 8 + (iVar17 >> 2) * 0xb0 + z_2 * 0x10) = 0;
     iVar6 = clist->num_rows_inc_padding;
     iVar17 = iVar6 + 2;
     if (iVar17 < 0) {
       iVar17 = iVar6 + 5;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar6 * 4 + z_2 * 0x10 + (iVar17 >> 2) * 0xb0 + 0x68) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar6 * 4 + z_2 * 0x10 + (iVar17 >> 2) * 0xb0 + 0x68) = 0;
     iVar6 = clist->num_rows_inc_padding;
     iVar17 = iVar6 + 2;
     if (iVar17 < 0) {
       iVar17 = iVar6 + 5;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar6 * 4 + (iVar17 >> 2) * 0xb0 + z_2 * 0x10 + 0x18) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar6 * 4 + (iVar17 >> 2) * 0xb0 + z_2 * 0x10 + 0x18) = 0;
     iVar6 = clist->num_rows_inc_padding;
     iVar17 = iVar6 + 2;
     if (iVar17 < 0) {
       iVar17 = iVar6 + 5;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar6 * 4 + z_2 * 0x10 + (iVar17 >> 2) * 0xb0 + 0x78) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar6 * 4 + z_2 * 0x10 + (iVar17 >> 2) * 0xb0 + 0x78) = 0;
     z_2 = z_2 + 2;
   } while (z_2 != 6);
   pMVar14[2] = 0.0;
@@ -1137,25 +1137,25 @@ void kd_MdtBclAddHinge(MdtKeaConstraints *clist,void *constraint,MdtKeaTransform
     if (iVar17 < 0) {
       iVar17 = iVar6 + 6;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar6 * 4 + 0xc + (iVar17 >> 2) * 0xb0 + z_3 * 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar6 * 4 + 0xc + (iVar17 >> 2) * 0xb0 + z_3 * 0x10) = 0;
     iVar6 = clist->num_rows_inc_padding;
     iVar17 = iVar6 + 3;
     if (iVar17 < 0) {
       iVar17 = iVar6 + 6;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar6 * 4 + z_3 * 0x10 + (iVar17 >> 2) * 0xb0 + 0x6c) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar6 * 4 + z_3 * 0x10 + (iVar17 >> 2) * 0xb0 + 0x6c) = 0;
     iVar6 = clist->num_rows_inc_padding;
     iVar17 = iVar6 + 3;
     if (iVar17 < 0) {
       iVar17 = iVar6 + 6;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar6 * 4 + (iVar17 >> 2) * 0xb0 + z_3 * 0x10 + 0x1c) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar6 * 4 + (iVar17 >> 2) * 0xb0 + z_3 * 0x10 + 0x1c) = 0;
     iVar6 = clist->num_rows_inc_padding;
     iVar17 = iVar6 + 3;
     if (iVar17 < 0) {
       iVar17 = iVar6 + 6;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar6 * 4 + z_3 * 0x10 + (iVar17 >> 2) * 0xb0 + 0x7c) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar6 * 4 + z_3 * 0x10 + (iVar17 >> 2) * 0xb0 + 0x7c) = 0;
     z_3 = z_3 + 2;
   } while (z_3 != 6);
   pMVar14[3] = 0.0;
@@ -1169,25 +1169,25 @@ void kd_MdtBclAddHinge(MdtKeaConstraints *clist,void *constraint,MdtKeaTransform
     if (iVar17 < 0) {
       iVar17 = iVar6 + 7;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar6 * 4 + 0x10 + (iVar17 >> 2) * 0xb0 + z_4 * 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar6 * 4 + 0x10 + (iVar17 >> 2) * 0xb0 + z_4 * 0x10) = 0;
     iVar6 = clist->num_rows_inc_padding;
     iVar17 = iVar6 + 4;
     if (iVar17 < 0) {
       iVar17 = iVar6 + 7;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar6 * 4 + z_4 * 0x10 + (iVar17 >> 2) * 0xb0 + 0x70) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar6 * 4 + z_4 * 0x10 + (iVar17 >> 2) * 0xb0 + 0x70) = 0;
     iVar6 = clist->num_rows_inc_padding;
     iVar17 = iVar6 + 4;
     if (iVar17 < 0) {
       iVar17 = iVar6 + 7;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar6 * 4 + (iVar17 >> 2) * 0xb0 + z_4 * 0x10 + 0x20) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar6 * 4 + (iVar17 >> 2) * 0xb0 + z_4 * 0x10 + 0x20) = 0;
     iVar6 = clist->num_rows_inc_padding;
     iVar17 = iVar6 + 4;
     if (iVar17 < 0) {
       iVar17 = iVar6 + 7;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar6 * 4 + z_4 * 0x10 + (iVar17 >> 2) * 0xb0 + 0x80) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar6 * 4 + z_4 * 0x10 + (iVar17 >> 2) * 0xb0 + 0x80) = 0;
     z_4 = z_4 + 2;
   } while (z_4 != 6);
   pMVar14[4] = 0.0;
@@ -1201,33 +1201,33 @@ void kd_MdtBclAddHinge(MdtKeaConstraints *clist,void *constraint,MdtKeaTransform
     if (iVar17 < 0) {
       iVar17 = iVar6 + 8;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar6 * 4 + 0x14 + (iVar17 >> 2) * 0xb0 + z_5 * 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar6 * 4 + 0x14 + (iVar17 >> 2) * 0xb0 + z_5 * 0x10) = 0;
     iVar6 = clist->num_rows_inc_padding;
     iVar17 = iVar6 + 5;
     if (iVar17 < 0) {
       iVar17 = iVar6 + 8;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar6 * 4 + z_5 * 0x10 + (iVar17 >> 2) * 0xb0 + 0x74) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar6 * 4 + z_5 * 0x10 + (iVar17 >> 2) * 0xb0 + 0x74) = 0;
     iVar6 = clist->num_rows_inc_padding;
     iVar17 = iVar6 + 5;
     if (iVar17 < 0) {
       iVar17 = iVar6 + 8;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar6 * 4 + (iVar17 >> 2) * 0xb0 + z_5 * 0x10 + 0x24) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar6 * 4 + (iVar17 >> 2) * 0xb0 + z_5 * 0x10 + 0x24) = 0;
     iVar6 = clist->num_rows_inc_padding;
     iVar17 = iVar6 + 5;
     if (iVar17 < 0) {
       iVar17 = iVar6 + 8;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar6 * 4 + z_5 * 0x10 + (iVar17 >> 2) * 0xb0 + 0x84) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar6 * 4 + z_5 * 0x10 + (iVar17 >> 2) * 0xb0 + 0x84) = 0;
     z_5 = z_5 + 2;
   } while (z_5 != 6);
   pMVar14[5] = 0.0;
   factors.slipfactor[5] = 0.0;
   factors.c[5] = 0.0;
   factors.xgamma[5] = 0.0;
-  pMVar15 = tlist + *(int *)((int)constraint + 0xb4);
-  pfVar13 = (float *)((int)constraint + 0xbc);
+  pMVar15 = tlist + *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtHinge *)0)->head.bodyindex[0] - (char *)0)));
+  pfVar13 = (float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtHinge *)0)->head.ref1[0][0] - (char *)0)));
   iVar17 = 3;
   paMVar12 = ref1world;
   factors.xi = pMVar14;
@@ -1254,44 +1254,44 @@ void kd_MdtBclAddHinge(MdtKeaConstraints *clist,void *constraint,MdtKeaTransform
     paMVar12 = paMVar12 + 1;
     iVar17 = iVar17 + -1;
   } while (-1 < iVar17);
-  if (*(int *)((int)constraint + 0xb8) == -1) {
-    ref2world[0][0] = *(MeReal *)((int)constraint + 0xfc);
-    ref2world[0][1] = *(MeReal *)((int)constraint + 0x100);
-    ref2world[0][2] = *(MeReal *)((int)constraint + 0x104);
-    ref2world[0][3] = *(MeReal *)((int)constraint + 0x108);
-    ref2world[1][0] = *(MeReal *)((int)constraint + 0x10c);
-    ref2world[1][1] = *(MeReal *)((int)constraint + 0x110);
-    ref2world[1][2] = *(MeReal *)((int)constraint + 0x114);
-    ref2world[1][3] = *(MeReal *)((int)constraint + 0x118);
-    ref2world[2][0] = *(MeReal *)((int)constraint + 0x11c);
-    ref2world[2][1] = *(MeReal *)((int)constraint + 0x120);
-    ref2world[2][2] = *(MeReal *)((int)constraint + 0x124);
-    ref2world[2][3] = *(MeReal *)((int)constraint + 0x128);
-    ref2world[3][0] = *(MeReal *)((int)constraint + 300);
-    ref2world[3][1] = *(MeReal *)((int)constraint + 0x130);
-    ref2world[3][2] = *(MeReal *)((int)constraint + 0x134);
-    ref2world[3][3] = *(MeReal *)((int)constraint + 0x138);
+  if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtHinge *)0)->head.bodyindex[1] - (char *)0))) == -1) {
+    ref2world[0][0] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtHinge *)0)->head.ref2[0][0] - (char *)0)));
+    ref2world[0][1] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtHinge *)0)->head.ref2[0][1] - (char *)0)));
+    ref2world[0][2] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtHinge *)0)->head.ref2[0][2] - (char *)0)));
+    ref2world[0][3] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtHinge *)0)->head.ref2[0][3] - (char *)0)));
+    ref2world[1][0] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtHinge *)0)->head.ref2[1][0] - (char *)0)));
+    ref2world[1][1] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtHinge *)0)->head.ref2[1][1] - (char *)0)));
+    ref2world[1][2] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtHinge *)0)->head.ref2[1][2] - (char *)0)));
+    ref2world[1][3] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtHinge *)0)->head.ref2[1][3] - (char *)0)));
+    ref2world[2][0] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtHinge *)0)->head.ref2[2][0] - (char *)0)));
+    ref2world[2][1] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtHinge *)0)->head.ref2[2][1] - (char *)0)));
+    ref2world[2][2] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtHinge *)0)->head.ref2[2][2] - (char *)0)));
+    ref2world[2][3] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtHinge *)0)->head.ref2[2][3] - (char *)0)));
+    ref2world[3][0] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtHinge *)0)->head.ref2[3][0] - (char *)0)));
+    ref2world[3][1] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtHinge *)0)->head.ref2[3][1] - (char *)0)));
+    ref2world[3][2] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtHinge *)0)->head.ref2[3][2] - (char *)0)));
+    ref2world[3][3] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtHinge *)0)->head.ref2[3][3] - (char *)0)));
   }
   else {
     MeMatrix4MultiplyMatrix
-              (ref2world,(MeReal (*) [4])((int)constraint + 0xfc),
-               tlist[*(int *)((int)constraint + 0xb8)].R0);
+              (ref2world,(MeReal (*) [4])((kd_iptr)constraint + ((int)((char *)&((struct MdtHinge *)0)->head.ref2[0][0] - (char *)0))),
+               tlist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtHinge *)0)->head.bodyindex[1] - (char *)0)))].R0);
   }
-  clist->Jbody[clist->num_constraints][0] = *(int *)((int)constraint + 0xb4);
-  clist->Jbody[clist->num_constraints][1] = *(int *)((int)constraint + 0xb8);
-  if (*(int *)((int)constraint + 0x164) == 0) {
-    *(undefined4 *)((int)constraint + 0x170) = 0;
+  clist->Jbody[clist->num_constraints][0] = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtHinge *)0)->head.bodyindex[0] - (char *)0)));
+  clist->Jbody[clist->num_constraints][1] = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtHinge *)0)->head.bodyindex[1] - (char *)0)));
+  if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtHinge *)0)->limit.bCalculatePosition - (char *)0))) == 0) {
+    *(undefined4 *)((kd_iptr)constraint + ((int)((char *)&((struct MdtHinge *)0)->limit.overshoot - (char *)0))) = 0;
   }
   else {
-    if (*(int *)((int)constraint + 0xb8) == -1) {
-      pMVar7 = blist[*(int *)((int)constraint + 0xb4)];
+    if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtHinge *)0)->head.bodyindex[1] - (char *)0))) == -1) {
+      pMVar7 = blist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtHinge *)0)->head.bodyindex[0] - (char *)0)))];
       qacw[0] = pMVar7->velrot[0];
       qacw[1] = pMVar7->velrot[1];
       qacw[2] = pMVar7->velrot[2];
     }
     else {
-      pMVar7 = blist[*(int *)((int)constraint + 0xb4)];
-      pMVar8 = blist[*(int *)((int)constraint + 0xb8)];
+      pMVar7 = blist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtHinge *)0)->head.bodyindex[0] - (char *)0)))];
+      pMVar8 = blist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtHinge *)0)->head.bodyindex[1] - (char *)0)))];
       qacw[0] = pMVar7->velrot[0] - pMVar8->velrot[0];
       qacw[1] = pMVar7->velrot[1] - pMVar8->velrot[1];
       qacw[2] = pMVar7->velrot[2] - pMVar8->velrot[2];
@@ -1304,18 +1304,18 @@ void kd_MdtBclAddHinge(MdtKeaConstraints *clist,void *constraint,MdtKeaTransform
                     (longdouble)ref2world[1][0] * (longdouble)ref1world[1][0] +
                     (longdouble)ref2world[1][1] * (longdouble)ref1world[1][1] +
                     (longdouble)ref2world[1][2] * (longdouble)ref1world[1][2]);
-    *(float *)((int)constraint + 0x174) = -(float)lVar20;
-    *(float *)((int)constraint + 0x188) =
+    *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtHinge *)0)->limit.position - (char *)0))) = -(float)lVar20;
+    *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtHinge *)0)->limit.velocity - (char *)0))) =
          ref1world[0][2] * qacw[2] + ref1world[0][1] * qacw[1] + ref1world[0][0] * qacw[0];
-    CalculateLimitPositionAndOvershoot((MdtBclLimit *)((int)constraint + 0x160),*(MeReal *)params,1)
+    CalculateLimitPositionAndOvershoot((MdtBclLimit *)((kd_iptr)constraint + ((int)((char *)&((struct MdtHinge *)0)->limit - (char *)0))),*(MeReal *)params,1)
     ;
   }
-  local_1a4 = (MdtBclLimit *)((int)constraint + 0x160);
+  local_1a4 = (MdtBclLimit *)((kd_iptr)constraint + ((int)((char *)&((struct MdtHinge *)0)->limit - (char *)0)));
   kd_MdtBclAddSphericalRowsWorld
-            (clist,tlist[*(int *)((int)constraint + 0xb4)].pos,
-             tlist[*(int *)((int)constraint + 0xb8)].pos,ref1world[3],ref2world[3],
-             (uint)(*(int *)((int)constraint + 0xb8) != -1),(MeReal *)((int)constraint + 0x13c),
-             (MeReal *)((int)constraint + 0x148));
+            (clist,tlist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtHinge *)0)->head.bodyindex[0] - (char *)0)))].pos,
+             tlist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtHinge *)0)->head.bodyindex[1] - (char *)0)))].pos,ref1world[3],ref2world[3],
+             (uint)(*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtHinge *)0)->head.bodyindex[1] - (char *)0))) != -1),(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtHinge *)0)->head.worldLinVel[0] - (char *)0))),
+             (MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtHinge *)0)->head.worldAngVel[0] - (char *)0))));
   MeQuaternionFromTM(qacw,ref1world);
   MeQuaternionFromTM(qbcw,ref2world);
   i = 0;
@@ -1346,19 +1346,19 @@ void kd_MdtBclAddHinge(MdtKeaConstraints *clist,void *constraint,MdtKeaTransform
     if (iVar17 < 0) {
       iVar17 = iVar6 + 6;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar6 * 4 + 0xc + (iVar17 >> 2) * 0xb0 + i * 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar6 * 4 + 0xc + (iVar17 >> 2) * 0xb0 + i * 0x10) = 0;
     iVar6 = clist->num_rows_inc_padding;
     iVar17 = iVar6 + 3;
     if (iVar17 < 0) {
       iVar17 = iVar6 + 6;
     }
-    *(MeReal *)((int)*clist->Jstore + iVar6 * 4 + (iVar17 >> 2) * 0xb0 + i * 0x10 + 0x3c) = JwQ2[i];
+    *(MeReal *)((kd_iptr)*clist->Jstore + iVar6 * 4 + (iVar17 >> 2) * 0xb0 + i * 0x10 + 0x3c) = JwQ2[i];
     iVar6 = clist->num_rows_inc_padding;
     iVar17 = iVar6 + 4;
     if (iVar17 < 0) {
       iVar17 = iVar6 + 7;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar6 * 4 + 0x10 + (iVar17 >> 2) * 0xb0 + i * 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar6 * 4 + 0x10 + (iVar17 >> 2) * 0xb0 + i * 0x10) = 0;
     iVar6 = clist->num_rows_inc_padding;
     iVar17 = iVar6 + 4;
     if (iVar17 < 0) {
@@ -1367,9 +1367,9 @@ void kd_MdtBclAddHinge(MdtKeaConstraints *clist,void *constraint,MdtKeaTransform
     iVar9 = i * 0x10;
     pMVar1 = JwQ3 + i;
     i = i + 1;
-    *(MeReal *)((int)*clist->Jstore + iVar6 * 4 + (iVar17 >> 2) * 0xb0 + iVar9 + 0x40) = *pMVar1;
+    *(MeReal *)((kd_iptr)*clist->Jstore + iVar6 * 4 + (iVar17 >> 2) * 0xb0 + iVar9 + 0x40) = *pMVar1;
   } while (i < 3);
-  if (*(int *)((int)constraint + 0xb8) != -1) {
+  if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtHinge *)0)->head.bodyindex[1] - (char *)0))) != -1) {
     i = 0;
     do {
       iVar6 = clist->num_rows_inc_padding;
@@ -1377,27 +1377,27 @@ void kd_MdtBclAddHinge(MdtKeaConstraints *clist,void *constraint,MdtKeaTransform
       if (iVar17 < 0) {
         iVar17 = iVar6 + 6;
       }
-      *(undefined4 *)((int)*clist->Jstore + iVar6 * 4 + i * 0x10 + (iVar17 >> 2) * 0xb0 + 0x6c) = 0;
+      *(undefined4 *)((kd_iptr)*clist->Jstore + iVar6 * 4 + i * 0x10 + (iVar17 >> 2) * 0xb0 + 0x6c) = 0;
       iVar6 = clist->num_rows_inc_padding;
       iVar17 = iVar6 + 3;
       if (iVar17 < 0) {
         iVar17 = iVar6 + 6;
       }
-      *(float *)((int)*clist->Jstore + iVar6 * 4 + i * 0x10 + (iVar17 >> 2) * 0xb0 + 0x9c) =
+      *(float *)((kd_iptr)*clist->Jstore + iVar6 * 4 + i * 0x10 + (iVar17 >> 2) * 0xb0 + 0x9c) =
            -JwQ2[i];
       iVar6 = clist->num_rows_inc_padding;
       iVar17 = iVar6 + 4;
       if (iVar17 < 0) {
         iVar17 = iVar6 + 7;
       }
-      *(undefined4 *)((int)*clist->Jstore + iVar6 * 4 + i * 0x10 + (iVar17 >> 2) * 0xb0 + 0x70) = 0;
+      *(undefined4 *)((kd_iptr)*clist->Jstore + iVar6 * 4 + i * 0x10 + (iVar17 >> 2) * 0xb0 + 0x70) = 0;
       iVar6 = clist->num_rows_inc_padding;
       iVar17 = iVar6 + 4;
       if (iVar17 < 0) {
         iVar17 = iVar6 + 7;
       }
       uVar19 = i + 1;
-      *(float *)((int)*clist->Jstore + iVar6 * 4 + i * 0x10 + (iVar17 >> 2) * 0xb0 + 0xa0) =
+      *(float *)((kd_iptr)*clist->Jstore + iVar6 * 4 + i * 0x10 + (iVar17 >> 2) * 0xb0 + 0xa0) =
            -JwQ3[i];
       i = uVar19;
     } while (uVar19 < 3);
@@ -1414,7 +1414,7 @@ void kd_MdtBclAddHinge(MdtKeaConstraints *clist,void *constraint,MdtKeaTransform
   LinearAxis[2] = 0.0;
   bVar10 = LimitSingleAxis(local_1a4,&factors,5,params);
   if (bVar10) {
-    bVar11 = ActuateJointAxes(local_1a4,(int *)((int)constraint + 0xb4),LinearAxis,ref2world[0],
+    bVar11 = ActuateJointAxes(local_1a4,(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtHinge *)0)->head.bodyindex[0] - (char *)0))),LinearAxis,ref2world[0],
                               ref2world[0],blist,&factors,5,clist);
     bVar10 = true;
     if (bVar11) goto LAB_00012dd5;
@@ -1493,25 +1493,25 @@ void kd_MdtBclAddPrismatic(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
     if (iVar16 < 0) {
       iVar19 = iVar16 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + z * 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + z * 0x10) = 0;
     iVar16 = clist->num_rows_inc_padding;
     iVar19 = iVar16;
     if (iVar16 < 0) {
       iVar19 = iVar16 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar16 * 4 + z * 0x10 + (iVar19 >> 2) * 0xb0 + 0x60) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar16 * 4 + z * 0x10 + (iVar19 >> 2) * 0xb0 + 0x60) = 0;
     iVar16 = clist->num_rows_inc_padding;
     iVar19 = iVar16;
     if (iVar16 < 0) {
       iVar19 = iVar16 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + z * 0x10 + 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + z * 0x10 + 0x10) = 0;
     iVar16 = clist->num_rows_inc_padding;
     iVar19 = iVar16;
     if (iVar16 < 0) {
       iVar19 = iVar16 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar16 * 4 + z * 0x10 + (iVar19 >> 2) * 0xb0 + 0x70) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar16 * 4 + z * 0x10 + (iVar19 >> 2) * 0xb0 + 0x70) = 0;
     z = z + 2;
   } while (z != 6);
   *pfVar12 = 0.0;
@@ -1525,26 +1525,26 @@ void kd_MdtBclAddPrismatic(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
     if (iVar19 < 0) {
       iVar19 = iVar16 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar16 * 4 + 4 + (iVar19 >> 2) * 0xb0 + z_1 * 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar16 * 4 + 4 + (iVar19 >> 2) * 0xb0 + z_1 * 0x10) = 0;
     iVar16 = clist->num_rows_inc_padding;
     iVar19 = iVar16 + 1;
     if (iVar19 < 0) {
       iVar19 = iVar16 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar16 * 4 + z_1 * 0x10 + (iVar19 >> 2) * 0xb0 + 100) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar16 * 4 + z_1 * 0x10 + (iVar19 >> 2) * 0xb0 + 100) = 0;
     iVar16 = clist->num_rows_inc_padding;
     iVar19 = iVar16 + 1;
     if (iVar19 < 0) {
       iVar19 = iVar16 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + z_1 * 0x10 + 0x14) = 0
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + z_1 * 0x10 + 0x14) = 0
     ;
     iVar16 = clist->num_rows_inc_padding;
     iVar19 = iVar16 + 1;
     if (iVar19 < 0) {
       iVar19 = iVar16 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar16 * 4 + z_1 * 0x10 + (iVar19 >> 2) * 0xb0 + 0x74) = 0
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar16 * 4 + z_1 * 0x10 + (iVar19 >> 2) * 0xb0 + 0x74) = 0
     ;
     z_1 = z_1 + 2;
   } while (z_1 != 6);
@@ -1559,27 +1559,27 @@ void kd_MdtBclAddPrismatic(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
     if (iVar19 < 0) {
       iVar19 = iVar16 + 5;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar16 * 4 + 8 + (iVar19 >> 2) * 0xb0 + z_2 * 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar16 * 4 + 8 + (iVar19 >> 2) * 0xb0 + z_2 * 0x10) = 0;
     iVar16 = clist->num_rows_inc_padding;
     iVar19 = iVar16 + 2;
     if (iVar19 < 0) {
       iVar19 = iVar16 + 5;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar16 * 4 + z_2 * 0x10 + (iVar19 >> 2) * 0xb0 + 0x68) = 0
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar16 * 4 + z_2 * 0x10 + (iVar19 >> 2) * 0xb0 + 0x68) = 0
     ;
     iVar16 = clist->num_rows_inc_padding;
     iVar19 = iVar16 + 2;
     if (iVar19 < 0) {
       iVar19 = iVar16 + 5;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + z_2 * 0x10 + 0x18) = 0
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + z_2 * 0x10 + 0x18) = 0
     ;
     iVar16 = clist->num_rows_inc_padding;
     iVar19 = iVar16 + 2;
     if (iVar19 < 0) {
       iVar19 = iVar16 + 5;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar16 * 4 + z_2 * 0x10 + (iVar19 >> 2) * 0xb0 + 0x78) = 0
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar16 * 4 + z_2 * 0x10 + (iVar19 >> 2) * 0xb0 + 0x78) = 0
     ;
     z_2 = z_2 + 2;
   } while (z_2 != 6);
@@ -1594,27 +1594,27 @@ void kd_MdtBclAddPrismatic(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
     if (iVar19 < 0) {
       iVar19 = iVar16 + 6;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar16 * 4 + 0xc + (iVar19 >> 2) * 0xb0 + z_3 * 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar16 * 4 + 0xc + (iVar19 >> 2) * 0xb0 + z_3 * 0x10) = 0;
     iVar16 = clist->num_rows_inc_padding;
     iVar19 = iVar16 + 3;
     if (iVar19 < 0) {
       iVar19 = iVar16 + 6;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar16 * 4 + z_3 * 0x10 + (iVar19 >> 2) * 0xb0 + 0x6c) = 0
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar16 * 4 + z_3 * 0x10 + (iVar19 >> 2) * 0xb0 + 0x6c) = 0
     ;
     iVar16 = clist->num_rows_inc_padding;
     iVar19 = iVar16 + 3;
     if (iVar19 < 0) {
       iVar19 = iVar16 + 6;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + z_3 * 0x10 + 0x1c) = 0
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + z_3 * 0x10 + 0x1c) = 0
     ;
     iVar16 = clist->num_rows_inc_padding;
     iVar19 = iVar16 + 3;
     if (iVar19 < 0) {
       iVar19 = iVar16 + 6;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar16 * 4 + z_3 * 0x10 + (iVar19 >> 2) * 0xb0 + 0x7c) = 0
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar16 * 4 + z_3 * 0x10 + (iVar19 >> 2) * 0xb0 + 0x7c) = 0
     ;
     z_3 = z_3 + 2;
   } while (z_3 != 6);
@@ -1629,28 +1629,28 @@ void kd_MdtBclAddPrismatic(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
     if (iVar19 < 0) {
       iVar19 = iVar16 + 7;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar16 * 4 + 0x10 + (iVar19 >> 2) * 0xb0 + z_4 * 0x10) = 0
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar16 * 4 + 0x10 + (iVar19 >> 2) * 0xb0 + z_4 * 0x10) = 0
     ;
     iVar16 = clist->num_rows_inc_padding;
     iVar19 = iVar16 + 4;
     if (iVar19 < 0) {
       iVar19 = iVar16 + 7;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar16 * 4 + z_4 * 0x10 + (iVar19 >> 2) * 0xb0 + 0x70) = 0
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar16 * 4 + z_4 * 0x10 + (iVar19 >> 2) * 0xb0 + 0x70) = 0
     ;
     iVar16 = clist->num_rows_inc_padding;
     iVar19 = iVar16 + 4;
     if (iVar19 < 0) {
       iVar19 = iVar16 + 7;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + z_4 * 0x10 + 0x20) = 0
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + z_4 * 0x10 + 0x20) = 0
     ;
     iVar16 = clist->num_rows_inc_padding;
     iVar19 = iVar16 + 4;
     if (iVar19 < 0) {
       iVar19 = iVar16 + 7;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar16 * 4 + z_4 * 0x10 + (iVar19 >> 2) * 0xb0 + 0x80) = 0
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar16 * 4 + z_4 * 0x10 + (iVar19 >> 2) * 0xb0 + 0x80) = 0
     ;
     z_4 = z_4 + 2;
   } while (z_4 != 6);
@@ -1665,28 +1665,28 @@ void kd_MdtBclAddPrismatic(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
     if (iVar19 < 0) {
       iVar19 = iVar16 + 8;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar16 * 4 + 0x14 + (iVar19 >> 2) * 0xb0 + z_5 * 0x10) = 0
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar16 * 4 + 0x14 + (iVar19 >> 2) * 0xb0 + z_5 * 0x10) = 0
     ;
     iVar16 = clist->num_rows_inc_padding;
     iVar19 = iVar16 + 5;
     if (iVar19 < 0) {
       iVar19 = iVar16 + 8;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar16 * 4 + z_5 * 0x10 + (iVar19 >> 2) * 0xb0 + 0x74) = 0
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar16 * 4 + z_5 * 0x10 + (iVar19 >> 2) * 0xb0 + 0x74) = 0
     ;
     iVar16 = clist->num_rows_inc_padding;
     iVar19 = iVar16 + 5;
     if (iVar19 < 0) {
       iVar19 = iVar16 + 8;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + z_5 * 0x10 + 0x24) = 0
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + z_5 * 0x10 + 0x24) = 0
     ;
     iVar16 = clist->num_rows_inc_padding;
     iVar19 = iVar16 + 5;
     if (iVar19 < 0) {
       iVar19 = iVar16 + 8;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar16 * 4 + z_5 * 0x10 + (iVar19 >> 2) * 0xb0 + 0x84) = 0
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar16 * 4 + z_5 * 0x10 + (iVar19 >> 2) * 0xb0 + 0x84) = 0
     ;
     z_5 = z_5 + 2;
   } while (z_5 != 6);
@@ -1695,8 +1695,8 @@ void kd_MdtBclAddPrismatic(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
   paMVar13 = ref_Iw;
   factors.c[5] = 0.0;
   factors.xgamma[5] = 0.0;
-  pfVar15 = (float *)((int)constraint + 0xbc);
-  pMVar18 = tlist + *(int *)((int)constraint + 0xb4);
+  pfVar15 = (float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtPrismatic *)0)->head.ref1[0][0] - (char *)0)));
+  pMVar18 = tlist + *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtPrismatic *)0)->head.bodyindex[0] - (char *)0)));
   iVar19 = 3;
   factors.xi = pfVar12;
   factors.lo = pMVar17;
@@ -1722,42 +1722,42 @@ void kd_MdtBclAddPrismatic(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
     paMVar13 = paMVar13 + 1;
     iVar19 = iVar19 + -1;
   } while (-1 < iVar19);
-  if (*(int *)((int)constraint + 0xb8) == -1) {
-    ref_Jw[0][0] = *(MeReal *)((int)constraint + 0xfc);
-    ref_Jw[0][1] = *(MeReal *)((int)constraint + 0x100);
-    ref_Jw[0][2] = *(MeReal *)((int)constraint + 0x104);
-    ref_Jw[0][3] = *(MeReal *)((int)constraint + 0x108);
-    ref_Jw[1][0] = *(MeReal *)((int)constraint + 0x10c);
-    ref_Jw[1][1] = *(MeReal *)((int)constraint + 0x110);
-    ref_Jw[1][2] = *(MeReal *)((int)constraint + 0x114);
-    ref_Jw[1][3] = *(MeReal *)((int)constraint + 0x118);
-    ref_Jw[2][0] = *(MeReal *)((int)constraint + 0x11c);
-    ref_Jw[2][1] = *(MeReal *)((int)constraint + 0x120);
-    ref_Jw[2][2] = *(MeReal *)((int)constraint + 0x124);
-    ref_Jw[2][3] = *(MeReal *)((int)constraint + 0x128);
-    ref_Jw[3][0] = *(MeReal *)((int)constraint + 300);
-    ref_Jw[3][1] = *(MeReal *)((int)constraint + 0x130);
-    ref_Jw[3][2] = *(MeReal *)((int)constraint + 0x134);
-    ref_Jw[3][3] = *(MeReal *)((int)constraint + 0x138);
+  if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtPrismatic *)0)->head.bodyindex[1] - (char *)0))) == -1) {
+    ref_Jw[0][0] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtPrismatic *)0)->head.ref2[0][0] - (char *)0)));
+    ref_Jw[0][1] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtPrismatic *)0)->head.ref2[0][1] - (char *)0)));
+    ref_Jw[0][2] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtPrismatic *)0)->head.ref2[0][2] - (char *)0)));
+    ref_Jw[0][3] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtPrismatic *)0)->head.ref2[0][3] - (char *)0)));
+    ref_Jw[1][0] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtPrismatic *)0)->head.ref2[1][0] - (char *)0)));
+    ref_Jw[1][1] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtPrismatic *)0)->head.ref2[1][1] - (char *)0)));
+    ref_Jw[1][2] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtPrismatic *)0)->head.ref2[1][2] - (char *)0)));
+    ref_Jw[1][3] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtPrismatic *)0)->head.ref2[1][3] - (char *)0)));
+    ref_Jw[2][0] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtPrismatic *)0)->head.ref2[2][0] - (char *)0)));
+    ref_Jw[2][1] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtPrismatic *)0)->head.ref2[2][1] - (char *)0)));
+    ref_Jw[2][2] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtPrismatic *)0)->head.ref2[2][2] - (char *)0)));
+    ref_Jw[2][3] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtPrismatic *)0)->head.ref2[2][3] - (char *)0)));
+    ref_Jw[3][0] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtPrismatic *)0)->head.ref2[3][0] - (char *)0)));
+    ref_Jw[3][1] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtPrismatic *)0)->head.ref2[3][1] - (char *)0)));
+    ref_Jw[3][2] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtPrismatic *)0)->head.ref2[3][2] - (char *)0)));
+    ref_Jw[3][3] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtPrismatic *)0)->head.ref2[3][3] - (char *)0)));
   }
   else {
     MeMatrix4MultiplyMatrix
-              (ref_Jw,(MeReal (*) [4])((int)constraint + 0xfc),
-               tlist[*(int *)((int)constraint + 0xb8)].R0);
+              (ref_Jw,(MeReal (*) [4])((kd_iptr)constraint + ((int)((char *)&((struct MdtPrismatic *)0)->head.ref2[0][0] - (char *)0))),
+               tlist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtPrismatic *)0)->head.bodyindex[1] - (char *)0)))].R0);
   }
-  clist->Jbody[clist->num_constraints][0] = *(int *)((int)constraint + 0xb4);
-  clist->Jbody[clist->num_constraints][1] = *(int *)((int)constraint + 0xb8);
+  clist->Jbody[clist->num_constraints][0] = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtPrismatic *)0)->head.bodyindex[0] - (char *)0)));
+  clist->Jbody[clist->num_constraints][1] = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtPrismatic *)0)->head.bodyindex[1] - (char *)0)));
   fVar1 = ref_Jw[3][0] - ref_Iw[3][0];
   fVar8 = ref_Jw[3][1] - ref_Iw[3][1];
   fVar9 = ref_Jw[3][2] - ref_Iw[3][2];
-  iVar19 = *(int *)((int)constraint + 0xb4);
+  iVar19 = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtPrismatic *)0)->head.bodyindex[0] - (char *)0)));
   fVar4 = ref_Jw[3][0] - tlist[iVar19].pos[0];
   fVar3 = ref_Jw[3][1] - tlist[iVar19].pos[1];
   fVar2 = ref_Jw[3][2] - tlist[iVar19].pos[2];
   RotationalAxis1[0] = fVar3 * ref_Iw[0][2] - fVar2 * ref_Iw[0][1];
   RotationalAxis1[1] = fVar2 * ref_Iw[0][0] - fVar4 * ref_Iw[0][2];
   RotationalAxis1[2] = fVar4 * ref_Iw[0][1] - fVar3 * ref_Iw[0][0];
-  iVar16 = *(int *)((int)constraint + 0xb8);
+  iVar16 = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtPrismatic *)0)->head.bodyindex[1] - (char *)0)));
   if (iVar16 == -1) {
     pos_jJw[0] = ref_Jw[3][0];
     pos_jJw[1] = ref_Jw[3][1];
@@ -1783,17 +1783,17 @@ void kd_MdtBclAddPrismatic(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
             (pMVar5->velrot[2] * RotationalAxis2[2] +
             pMVar5->velrot[0] * RotationalAxis2[0] + pMVar5->velrot[1] * RotationalAxis2[1]);
   }
-  if (*(int *)((int)constraint + 0x164) == 0) {
-    *(undefined4 *)((int)constraint + 0x170) = 0;
+  if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtPrismatic *)0)->limit.bCalculatePosition - (char *)0))) == 0) {
+    *(undefined4 *)((kd_iptr)constraint + ((int)((char *)&((struct MdtPrismatic *)0)->limit.overshoot - (char *)0))) = 0;
   }
   else {
-    *(float *)((int)constraint + 0x188) = fVar7;
-    *(float *)((int)constraint + 0x174) =
+    *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtPrismatic *)0)->limit.velocity - (char *)0))) = fVar7;
+    *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtPrismatic *)0)->limit.position - (char *)0))) =
          -(ref_Iw[0][0] * fVar1 + ref_Iw[0][1] * fVar8 + ref_Iw[0][2] * fVar9);
-    CalculateLimitPositionAndOvershoot((MdtBclLimit *)((int)constraint + 0x160),*(MeReal *)params,0)
+    CalculateLimitPositionAndOvershoot((MdtBclLimit *)((kd_iptr)constraint + ((int)((char *)&((struct MdtPrismatic *)0)->limit - (char *)0))),*(MeReal *)params,0)
     ;
   }
-  local_15c = (MdtBclLimit *)((int)constraint + 0x160);
+  local_15c = (MdtBclLimit *)((kd_iptr)constraint + ((int)((char *)&((struct MdtPrismatic *)0)->limit - (char *)0)));
   *pfVar12 = ref_Iw[1][2] * fVar9 + ref_Iw[1][1] * fVar8 + ref_Iw[1][0] * fVar1;
   pfVar12[1] = ref_Iw[2][2] * fVar9 + ref_Iw[2][1] * fVar8 + ref_Iw[2][0] * fVar1;
   pfVar12[2] = ref_Jw[2][2] * ref_Iw[1][2] +
@@ -1807,37 +1807,37 @@ void kd_MdtBclAddPrismatic(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
   if (iVar16 < 0) {
     iVar19 = iVar16 + 3;
   }
-  *(float *)((int)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0) = -ref_Iw[1][0];
+  *(float *)((kd_iptr)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0) = -ref_Iw[1][0];
   iVar16 = clist->num_rows_inc_padding;
   iVar19 = iVar16;
   if (iVar16 < 0) {
     iVar19 = iVar16 + 3;
   }
-  *(float *)((int)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + 0x10) = -ref_Iw[1][1];
+  *(float *)((kd_iptr)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + 0x10) = -ref_Iw[1][1];
   iVar16 = clist->num_rows_inc_padding;
   iVar19 = iVar16;
   if (iVar16 < 0) {
     iVar19 = iVar16 + 3;
   }
-  *(float *)((int)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + 0x20) = -ref_Iw[1][2];
+  *(float *)((kd_iptr)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + 0x20) = -ref_Iw[1][2];
   iVar16 = clist->num_rows_inc_padding;
   iVar19 = iVar16 + 1;
   if (iVar19 < 0) {
     iVar19 = iVar16 + 4;
   }
-  *(float *)((int)*clist->Jstore + iVar16 * 4 + 4 + (iVar19 >> 2) * 0xb0) = -ref_Iw[2][0];
+  *(float *)((kd_iptr)*clist->Jstore + iVar16 * 4 + 4 + (iVar19 >> 2) * 0xb0) = -ref_Iw[2][0];
   iVar16 = clist->num_rows_inc_padding;
   iVar19 = iVar16 + 1;
   if (iVar19 < 0) {
     iVar19 = iVar16 + 4;
   }
-  *(float *)((int)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + 0x14) = -ref_Iw[2][1];
+  *(float *)((kd_iptr)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + 0x14) = -ref_Iw[2][1];
   iVar16 = clist->num_rows_inc_padding;
   iVar19 = iVar16 + 1;
   if (iVar19 < 0) {
     iVar19 = iVar16 + 4;
   }
-  *(float *)((int)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + 0x24) = -ref_Iw[2][2];
+  *(float *)((kd_iptr)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + 0x24) = -ref_Iw[2][2];
   iVar16 = clist->num_rows_inc_padding;
   iVar19 = iVar16;
   if (iVar16 < 0) {
@@ -1845,9 +1845,9 @@ void kd_MdtBclAddPrismatic(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
   }
   paMVar6 = clist->Jstore;
   iVar16 = iVar16 + (iVar19 >> 2) * 0x2c;
-  *(float *)((int)*paMVar6 + iVar16 * 4 + 0x30) = fVar2 * ref_Iw[1][1] - fVar3 * ref_Iw[1][2];
-  *(float *)((int)*paMVar6 + iVar16 * 4 + 0x40) = fVar4 * ref_Iw[1][2] - fVar2 * ref_Iw[1][0];
-  *(float *)((int)*paMVar6 + iVar16 * 4 + 0x50) = fVar3 * ref_Iw[1][0] - fVar4 * ref_Iw[1][1];
+  *(float *)((kd_iptr)*paMVar6 + iVar16 * 4 + 0x30) = fVar2 * ref_Iw[1][1] - fVar3 * ref_Iw[1][2];
+  *(float *)((kd_iptr)*paMVar6 + iVar16 * 4 + 0x40) = fVar4 * ref_Iw[1][2] - fVar2 * ref_Iw[1][0];
+  *(float *)((kd_iptr)*paMVar6 + iVar16 * 4 + 0x50) = fVar3 * ref_Iw[1][0] - fVar4 * ref_Iw[1][1];
   iVar16 = clist->num_rows_inc_padding;
   iVar19 = iVar16 + 1;
   if (iVar19 < 0) {
@@ -1855,49 +1855,49 @@ void kd_MdtBclAddPrismatic(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
   }
   iVar19 = iVar19 >> 2;
   paMVar6 = clist->Jstore;
-  *(float *)((int)*paMVar6 + iVar16 * 4 + iVar19 * 0xb0 + 0x34) =
+  *(float *)((kd_iptr)*paMVar6 + iVar16 * 4 + iVar19 * 0xb0 + 0x34) =
        fVar2 * ref_Iw[2][1] - fVar3 * ref_Iw[2][2];
-  *(float *)((int)*paMVar6 + iVar16 * 4 + iVar19 * 0xb0 + 0x44) =
+  *(float *)((kd_iptr)*paMVar6 + iVar16 * 4 + iVar19 * 0xb0 + 0x44) =
        fVar4 * ref_Iw[2][2] - fVar2 * ref_Iw[2][0];
-  *(float *)((int)*paMVar6 + iVar16 * 4 + iVar19 * 0xb0 + 0x54) =
+  *(float *)((kd_iptr)*paMVar6 + iVar16 * 4 + iVar19 * 0xb0 + 0x54) =
        fVar3 * ref_Iw[2][0] - fVar4 * ref_Iw[2][1];
-  if (*(int *)((int)constraint + 0xb8) != -1) {
+  if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtPrismatic *)0)->head.bodyindex[1] - (char *)0))) != -1) {
     iVar16 = clist->num_rows_inc_padding;
     iVar19 = iVar16;
     if (iVar16 < 0) {
       iVar19 = iVar16 + 3;
     }
-    *(MeReal *)((int)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + 0x60) = ref_Iw[1][0];
+    *(MeReal *)((kd_iptr)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + 0x60) = ref_Iw[1][0];
     iVar16 = clist->num_rows_inc_padding;
     iVar19 = iVar16;
     if (iVar16 < 0) {
       iVar19 = iVar16 + 3;
     }
-    *(MeReal *)((int)*clist->Jstore + iVar16 * 4 + 0x70 + (iVar19 >> 2) * 0xb0) = ref_Iw[1][1];
+    *(MeReal *)((kd_iptr)*clist->Jstore + iVar16 * 4 + 0x70 + (iVar19 >> 2) * 0xb0) = ref_Iw[1][1];
     iVar16 = clist->num_rows_inc_padding;
     iVar19 = iVar16;
     if (iVar16 < 0) {
       iVar19 = iVar16 + 3;
     }
-    *(MeReal *)((int)*clist->Jstore + iVar16 * 4 + 0x80 + (iVar19 >> 2) * 0xb0) = ref_Iw[1][2];
+    *(MeReal *)((kd_iptr)*clist->Jstore + iVar16 * 4 + 0x80 + (iVar19 >> 2) * 0xb0) = ref_Iw[1][2];
     iVar16 = clist->num_rows_inc_padding;
     iVar19 = iVar16 + 1;
     if (iVar19 < 0) {
       iVar19 = iVar16 + 4;
     }
-    *(MeReal *)((int)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + 100) = ref_Iw[2][0];
+    *(MeReal *)((kd_iptr)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + 100) = ref_Iw[2][0];
     iVar16 = clist->num_rows_inc_padding;
     iVar19 = iVar16 + 1;
     if (iVar19 < 0) {
       iVar19 = iVar16 + 4;
     }
-    *(MeReal *)((int)*clist->Jstore + iVar16 * 4 + 0x74 + (iVar19 >> 2) * 0xb0) = ref_Iw[2][1];
+    *(MeReal *)((kd_iptr)*clist->Jstore + iVar16 * 4 + 0x74 + (iVar19 >> 2) * 0xb0) = ref_Iw[2][1];
     iVar16 = clist->num_rows_inc_padding;
     iVar19 = iVar16 + 1;
     if (iVar19 < 0) {
       iVar19 = iVar16 + 4;
     }
-    *(MeReal *)((int)*clist->Jstore + iVar16 * 4 + 0x84 + (iVar19 >> 2) * 0xb0) = ref_Iw[2][2];
+    *(MeReal *)((kd_iptr)*clist->Jstore + iVar16 * 4 + 0x84 + (iVar19 >> 2) * 0xb0) = ref_Iw[2][2];
     iVar16 = clist->num_rows_inc_padding;
     iVar19 = iVar16;
     if (iVar16 < 0) {
@@ -1905,11 +1905,11 @@ void kd_MdtBclAddPrismatic(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
     }
     paMVar6 = clist->Jstore;
     iVar16 = iVar16 + (iVar19 >> 2) * 0x2c;
-    *(float *)((int)*paMVar6 + iVar16 * 4 + 0x90) =
+    *(float *)((kd_iptr)*paMVar6 + iVar16 * 4 + 0x90) =
          ref_Iw[1][2] * pos_jJw[1] - ref_Iw[1][1] * pos_jJw[2];
-    *(float *)((int)*paMVar6 + iVar16 * 4 + 0xa0) =
+    *(float *)((kd_iptr)*paMVar6 + iVar16 * 4 + 0xa0) =
          ref_Iw[1][0] * pos_jJw[2] - ref_Iw[1][2] * pos_jJw[0];
-    *(float *)((int)*paMVar6 + iVar16 * 4 + 0xb0) =
+    *(float *)((kd_iptr)*paMVar6 + iVar16 * 4 + 0xb0) =
          ref_Iw[1][1] * pos_jJw[0] - ref_Iw[1][0] * pos_jJw[1];
     iVar16 = clist->num_rows_inc_padding;
     iVar19 = iVar16 + 1;
@@ -1918,11 +1918,11 @@ void kd_MdtBclAddPrismatic(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
     }
     iVar19 = iVar19 >> 2;
     paMVar6 = clist->Jstore;
-    *(float *)((int)*paMVar6 + iVar16 * 4 + iVar19 * 0xb0 + 0x94) =
+    *(float *)((kd_iptr)*paMVar6 + iVar16 * 4 + iVar19 * 0xb0 + 0x94) =
          ref_Iw[2][2] * pos_jJw[1] - ref_Iw[2][1] * pos_jJw[2];
-    *(float *)((int)*paMVar6 + iVar16 * 4 + iVar19 * 0xb0 + 0xa4) =
+    *(float *)((kd_iptr)*paMVar6 + iVar16 * 4 + iVar19 * 0xb0 + 0xa4) =
          ref_Iw[2][0] * pos_jJw[2] - ref_Iw[2][2] * pos_jJw[0];
-    *(float *)((int)*paMVar6 + iVar16 * 4 + iVar19 * 0xb0 + 0xb4) =
+    *(float *)((kd_iptr)*paMVar6 + iVar16 * 4 + iVar19 * 0xb0 + 0xb4) =
          ref_Iw[2][1] * pos_jJw[0] - ref_Iw[2][0] * pos_jJw[1];
   }
   fVar2 = ref_Iw[1][1] * ref_Jw[2][2] - ref_Iw[1][2] * ref_Jw[2][1];
@@ -1933,38 +1933,38 @@ void kd_MdtBclAddPrismatic(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
   if (iVar19 < 0) {
     iVar19 = iVar16 + 5;
   }
-  *(float *)((int)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + 0x38) = fVar2;
+  *(float *)((kd_iptr)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + 0x38) = fVar2;
   iVar16 = clist->num_rows_inc_padding;
   iVar19 = iVar16 + 2;
   if (iVar19 < 0) {
     iVar19 = iVar16 + 5;
   }
-  *(float *)((int)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + 0x48) = fVar3;
+  *(float *)((kd_iptr)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + 0x48) = fVar3;
   iVar16 = clist->num_rows_inc_padding;
   iVar19 = iVar16 + 2;
   if (iVar19 < 0) {
     iVar19 = iVar16 + 5;
   }
-  *(float *)((int)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + 0x58) = fVar1;
-  if (*(int *)((int)constraint + 0xb8) != -1) {
+  *(float *)((kd_iptr)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + 0x58) = fVar1;
+  if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtPrismatic *)0)->head.bodyindex[1] - (char *)0))) != -1) {
     iVar16 = clist->num_rows_inc_padding;
     iVar19 = iVar16 + 2;
     if (iVar19 < 0) {
       iVar19 = iVar16 + 5;
     }
-    *(float *)((int)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + 0x98) = -fVar2;
+    *(float *)((kd_iptr)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + 0x98) = -fVar2;
     iVar16 = clist->num_rows_inc_padding;
     iVar19 = iVar16 + 2;
     if (iVar19 < 0) {
       iVar19 = iVar16 + 5;
     }
-    *(float *)((int)*clist->Jstore + iVar16 * 4 + 0xa8 + (iVar19 >> 2) * 0xb0) = -fVar3;
+    *(float *)((kd_iptr)*clist->Jstore + iVar16 * 4 + 0xa8 + (iVar19 >> 2) * 0xb0) = -fVar3;
     iVar16 = clist->num_rows_inc_padding;
     iVar19 = iVar16 + 2;
     if (iVar19 < 0) {
       iVar19 = iVar16 + 5;
     }
-    *(float *)((int)*clist->Jstore + iVar16 * 4 + 0xb8 + (iVar19 >> 2) * 0xb0) = -fVar1;
+    *(float *)((kd_iptr)*clist->Jstore + iVar16 * 4 + 0xb8 + (iVar19 >> 2) * 0xb0) = -fVar1;
   }
   fVar2 = ref_Iw[2][1] * ref_Jw[0][2] - ref_Iw[2][2] * ref_Jw[0][1];
   fVar3 = ref_Iw[2][2] * ref_Jw[0][0] - ref_Jw[0][2] * ref_Iw[2][0];
@@ -1974,38 +1974,38 @@ void kd_MdtBclAddPrismatic(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
   if (iVar19 < 0) {
     iVar19 = iVar16 + 6;
   }
-  *(float *)((int)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + 0x3c) = fVar2;
+  *(float *)((kd_iptr)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + 0x3c) = fVar2;
   iVar16 = clist->num_rows_inc_padding;
   iVar19 = iVar16 + 3;
   if (iVar19 < 0) {
     iVar19 = iVar16 + 6;
   }
-  *(float *)((int)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + 0x4c) = fVar3;
+  *(float *)((kd_iptr)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + 0x4c) = fVar3;
   iVar16 = clist->num_rows_inc_padding;
   iVar19 = iVar16 + 3;
   if (iVar19 < 0) {
     iVar19 = iVar16 + 6;
   }
-  *(float *)((int)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + 0x5c) = fVar1;
-  if (*(int *)((int)constraint + 0xb8) != -1) {
+  *(float *)((kd_iptr)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + 0x5c) = fVar1;
+  if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtPrismatic *)0)->head.bodyindex[1] - (char *)0))) != -1) {
     iVar16 = clist->num_rows_inc_padding;
     iVar19 = iVar16 + 3;
     if (iVar19 < 0) {
       iVar19 = iVar16 + 6;
     }
-    *(float *)((int)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + 0x9c) = -fVar2;
+    *(float *)((kd_iptr)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + 0x9c) = -fVar2;
     iVar16 = clist->num_rows_inc_padding;
     iVar19 = iVar16 + 3;
     if (iVar19 < 0) {
       iVar19 = iVar16 + 6;
     }
-    *(float *)((int)*clist->Jstore + iVar16 * 4 + 0xac + (iVar19 >> 2) * 0xb0) = -fVar3;
+    *(float *)((kd_iptr)*clist->Jstore + iVar16 * 4 + 0xac + (iVar19 >> 2) * 0xb0) = -fVar3;
     iVar16 = clist->num_rows_inc_padding;
     iVar19 = iVar16 + 3;
     if (iVar19 < 0) {
       iVar19 = iVar16 + 6;
     }
-    *(float *)((int)*clist->Jstore + iVar16 * 4 + 0xbc + (iVar19 >> 2) * 0xb0) = -fVar1;
+    *(float *)((kd_iptr)*clist->Jstore + iVar16 * 4 + 0xbc + (iVar19 >> 2) * 0xb0) = -fVar1;
   }
   fVar2 = ref_Iw[0][1] * ref_Jw[1][2] - ref_Iw[0][2] * ref_Jw[1][1];
   fVar3 = ref_Iw[0][2] * ref_Jw[1][0] - ref_Jw[1][2] * ref_Iw[0][0];
@@ -2015,38 +2015,38 @@ void kd_MdtBclAddPrismatic(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
   if (iVar19 < 0) {
     iVar19 = iVar16 + 7;
   }
-  *(float *)((int)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + 0x40) = fVar2;
+  *(float *)((kd_iptr)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + 0x40) = fVar2;
   iVar16 = clist->num_rows_inc_padding;
   iVar19 = iVar16 + 4;
   if (iVar19 < 0) {
     iVar19 = iVar16 + 7;
   }
-  *(float *)((int)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + 0x50) = fVar3;
+  *(float *)((kd_iptr)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + 0x50) = fVar3;
   iVar16 = clist->num_rows_inc_padding;
   iVar19 = iVar16 + 4;
   if (iVar19 < 0) {
     iVar19 = iVar16 + 7;
   }
-  *(float *)((int)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + 0x60) = fVar1;
-  if (*(int *)((int)constraint + 0xb8) != -1) {
+  *(float *)((kd_iptr)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + 0x60) = fVar1;
+  if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtPrismatic *)0)->head.bodyindex[1] - (char *)0))) != -1) {
     iVar16 = clist->num_rows_inc_padding;
     iVar19 = iVar16 + 4;
     if (iVar19 < 0) {
       iVar19 = iVar16 + 7;
     }
-    *(float *)((int)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + 0xa0) = -fVar2;
+    *(float *)((kd_iptr)*clist->Jstore + iVar16 * 4 + (iVar19 >> 2) * 0xb0 + 0xa0) = -fVar2;
     iVar16 = clist->num_rows_inc_padding;
     iVar19 = iVar16 + 4;
     if (iVar19 < 0) {
       iVar19 = iVar16 + 7;
     }
-    *(float *)((int)*clist->Jstore + iVar16 * 4 + 0xb0 + (iVar19 >> 2) * 0xb0) = -fVar3;
+    *(float *)((kd_iptr)*clist->Jstore + iVar16 * 4 + 0xb0 + (iVar19 >> 2) * 0xb0) = -fVar3;
     iVar16 = clist->num_rows_inc_padding;
     iVar19 = iVar16 + 4;
     if (iVar19 < 0) {
       iVar19 = iVar16 + 7;
     }
-    *(float *)((int)clist->Jstore[1] + iVar16 * 4 + (iVar19 >> 2) * 0xb0) = -fVar1;
+    *(float *)((kd_iptr)clist->Jstore[1] + iVar16 * 4 + (iVar19 >> 2) * 0xb0) = -fVar1;
   }
   *pMVar17 = -3.4028235e+38;
   *pMVar14 = 3.4028235e+38;
@@ -2060,7 +2060,7 @@ void kd_MdtBclAddPrismatic(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
   pMVar14[4] = 3.4028235e+38;
   bVar10 = LimitSingleAxis(local_15c,&factors,5,params);
   if (bVar10) {
-    bVar11 = ActuateJointAxes(local_15c,(int *)((int)constraint + 0xb4),ref_Iw[0],RotationalAxis1,
+    bVar11 = ActuateJointAxes(local_15c,(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtPrismatic *)0)->head.bodyindex[0] - (char *)0))),ref_Iw[0],RotationalAxis1,
                               RotationalAxis2,blist,&factors,5,clist);
     bVar10 = true;
     if (bVar11) goto LAB_000145ba;
@@ -2135,25 +2135,25 @@ void kd_MdtBclAddCarWheel(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
     if (iVar5 < 0) {
       iVar17 = iVar5 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + z * 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + z * 0x10) = 0;
     iVar5 = clist->num_rows_inc_padding;
     iVar17 = iVar5;
     if (iVar5 < 0) {
       iVar17 = iVar5 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar5 * 4 + z * 0x10 + (iVar17 >> 2) * 0xb0 + 0x60) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar5 * 4 + z * 0x10 + (iVar17 >> 2) * 0xb0 + 0x60) = 0;
     iVar5 = clist->num_rows_inc_padding;
     iVar17 = iVar5;
     if (iVar5 < 0) {
       iVar17 = iVar5 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + z * 0x10 + 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + z * 0x10 + 0x10) = 0;
     iVar5 = clist->num_rows_inc_padding;
     iVar17 = iVar5;
     if (iVar5 < 0) {
       iVar17 = iVar5 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar5 * 4 + z * 0x10 + (iVar17 >> 2) * 0xb0 + 0x70) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar5 * 4 + z * 0x10 + (iVar17 >> 2) * 0xb0 + 0x70) = 0;
     z = z + 2;
   } while (z != 6);
   *pfVar8 = 0.0;
@@ -2167,25 +2167,25 @@ void kd_MdtBclAddCarWheel(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
     if (iVar17 < 0) {
       iVar17 = iVar5 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar5 * 4 + 4 + (iVar17 >> 2) * 0xb0 + z_1 * 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar5 * 4 + 4 + (iVar17 >> 2) * 0xb0 + z_1 * 0x10) = 0;
     iVar5 = clist->num_rows_inc_padding;
     iVar17 = iVar5 + 1;
     if (iVar17 < 0) {
       iVar17 = iVar5 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar5 * 4 + z_1 * 0x10 + (iVar17 >> 2) * 0xb0 + 100) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar5 * 4 + z_1 * 0x10 + (iVar17 >> 2) * 0xb0 + 100) = 0;
     iVar5 = clist->num_rows_inc_padding;
     iVar17 = iVar5 + 1;
     if (iVar17 < 0) {
       iVar17 = iVar5 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + z_1 * 0x10 + 0x14) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + z_1 * 0x10 + 0x14) = 0;
     iVar5 = clist->num_rows_inc_padding;
     iVar17 = iVar5 + 1;
     if (iVar17 < 0) {
       iVar17 = iVar5 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar5 * 4 + z_1 * 0x10 + (iVar17 >> 2) * 0xb0 + 0x74) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar5 * 4 + z_1 * 0x10 + (iVar17 >> 2) * 0xb0 + 0x74) = 0;
     z_1 = z_1 + 2;
   } while (z_1 != 6);
   pfVar8[1] = 0.0;
@@ -2199,25 +2199,25 @@ void kd_MdtBclAddCarWheel(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
     if (iVar17 < 0) {
       iVar17 = iVar5 + 5;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar5 * 4 + 8 + (iVar17 >> 2) * 0xb0 + z_2 * 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar5 * 4 + 8 + (iVar17 >> 2) * 0xb0 + z_2 * 0x10) = 0;
     iVar5 = clist->num_rows_inc_padding;
     iVar17 = iVar5 + 2;
     if (iVar17 < 0) {
       iVar17 = iVar5 + 5;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar5 * 4 + z_2 * 0x10 + (iVar17 >> 2) * 0xb0 + 0x68) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar5 * 4 + z_2 * 0x10 + (iVar17 >> 2) * 0xb0 + 0x68) = 0;
     iVar5 = clist->num_rows_inc_padding;
     iVar17 = iVar5 + 2;
     if (iVar17 < 0) {
       iVar17 = iVar5 + 5;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + z_2 * 0x10 + 0x18) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + z_2 * 0x10 + 0x18) = 0;
     iVar5 = clist->num_rows_inc_padding;
     iVar17 = iVar5 + 2;
     if (iVar17 < 0) {
       iVar17 = iVar5 + 5;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar5 * 4 + z_2 * 0x10 + (iVar17 >> 2) * 0xb0 + 0x78) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar5 * 4 + z_2 * 0x10 + (iVar17 >> 2) * 0xb0 + 0x78) = 0;
     z_2 = z_2 + 2;
   } while (z_2 != 6);
   pfVar8[2] = 0.0;
@@ -2231,25 +2231,25 @@ void kd_MdtBclAddCarWheel(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
     if (iVar17 < 0) {
       iVar17 = iVar5 + 6;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar5 * 4 + 0xc + (iVar17 >> 2) * 0xb0 + z_3 * 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar5 * 4 + 0xc + (iVar17 >> 2) * 0xb0 + z_3 * 0x10) = 0;
     iVar5 = clist->num_rows_inc_padding;
     iVar17 = iVar5 + 3;
     if (iVar17 < 0) {
       iVar17 = iVar5 + 6;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar5 * 4 + z_3 * 0x10 + (iVar17 >> 2) * 0xb0 + 0x6c) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar5 * 4 + z_3 * 0x10 + (iVar17 >> 2) * 0xb0 + 0x6c) = 0;
     iVar5 = clist->num_rows_inc_padding;
     iVar17 = iVar5 + 3;
     if (iVar17 < 0) {
       iVar17 = iVar5 + 6;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + z_3 * 0x10 + 0x1c) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + z_3 * 0x10 + 0x1c) = 0;
     iVar5 = clist->num_rows_inc_padding;
     iVar17 = iVar5 + 3;
     if (iVar17 < 0) {
       iVar17 = iVar5 + 6;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar5 * 4 + z_3 * 0x10 + (iVar17 >> 2) * 0xb0 + 0x7c) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar5 * 4 + z_3 * 0x10 + (iVar17 >> 2) * 0xb0 + 0x7c) = 0;
     z_3 = z_3 + 2;
   } while (z_3 != 6);
   pfVar8[3] = 0.0;
@@ -2263,25 +2263,25 @@ void kd_MdtBclAddCarWheel(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
     if (iVar17 < 0) {
       iVar17 = iVar5 + 7;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar5 * 4 + 0x10 + (iVar17 >> 2) * 0xb0 + z_4 * 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar5 * 4 + 0x10 + (iVar17 >> 2) * 0xb0 + z_4 * 0x10) = 0;
     iVar5 = clist->num_rows_inc_padding;
     iVar17 = iVar5 + 4;
     if (iVar17 < 0) {
       iVar17 = iVar5 + 7;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar5 * 4 + z_4 * 0x10 + (iVar17 >> 2) * 0xb0 + 0x70) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar5 * 4 + z_4 * 0x10 + (iVar17 >> 2) * 0xb0 + 0x70) = 0;
     iVar5 = clist->num_rows_inc_padding;
     iVar17 = iVar5 + 4;
     if (iVar17 < 0) {
       iVar17 = iVar5 + 7;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + z_4 * 0x10 + 0x20) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + z_4 * 0x10 + 0x20) = 0;
     iVar5 = clist->num_rows_inc_padding;
     iVar17 = iVar5 + 4;
     if (iVar17 < 0) {
       iVar17 = iVar5 + 7;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar5 * 4 + z_4 * 0x10 + (iVar17 >> 2) * 0xb0 + 0x80) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar5 * 4 + z_4 * 0x10 + (iVar17 >> 2) * 0xb0 + 0x80) = 0;
     z_4 = z_4 + 2;
   } while (z_4 != 6);
   pfVar8[4] = 0.0;
@@ -2295,25 +2295,25 @@ void kd_MdtBclAddCarWheel(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
     if (iVar17 < 0) {
       iVar17 = iVar5 + 8;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar5 * 4 + 0x14 + (iVar17 >> 2) * 0xb0 + z_5 * 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar5 * 4 + 0x14 + (iVar17 >> 2) * 0xb0 + z_5 * 0x10) = 0;
     iVar5 = clist->num_rows_inc_padding;
     iVar17 = iVar5 + 5;
     if (iVar17 < 0) {
       iVar17 = iVar5 + 8;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar5 * 4 + z_5 * 0x10 + (iVar17 >> 2) * 0xb0 + 0x74) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar5 * 4 + z_5 * 0x10 + (iVar17 >> 2) * 0xb0 + 0x74) = 0;
     iVar5 = clist->num_rows_inc_padding;
     iVar17 = iVar5 + 5;
     if (iVar17 < 0) {
       iVar17 = iVar5 + 8;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + z_5 * 0x10 + 0x24) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + z_5 * 0x10 + 0x24) = 0;
     iVar5 = clist->num_rows_inc_padding;
     iVar17 = iVar5 + 5;
     if (iVar17 < 0) {
       iVar17 = iVar5 + 8;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar5 * 4 + z_5 * 0x10 + (iVar17 >> 2) * 0xb0 + 0x84) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar5 * 4 + z_5 * 0x10 + (iVar17 >> 2) * 0xb0 + 0x84) = 0;
     z_5 = z_5 + 2;
   } while (z_5 != 6);
   pfVar8[5] = 0.0;
@@ -2321,8 +2321,8 @@ void kd_MdtBclAddCarWheel(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
   paMVar9 = ref1world;
   pMVar15[5] = 0.0;
   pfVar13[5] = 0.0;
-  pfVar11 = (float *)((int)constraint + 0xbc);
-  pMVar14 = tlist + *(int *)((int)constraint + 0xb4);
+  pfVar11 = (float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->head.ref1[0][0] - (char *)0)));
+  pMVar14 = tlist + *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->head.bodyindex[0] - (char *)0)));
   iVar17 = 3;
   do {
     fVar1 = *pfVar11;
@@ -2345,32 +2345,32 @@ void kd_MdtBclAddCarWheel(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
     paMVar9 = paMVar9 + 1;
     iVar17 = iVar17 + -1;
   } while (-1 < iVar17);
-  if (*(int *)((int)constraint + 0xb8) == -1) {
-    ref2world[0][0] = *(MeReal *)((int)constraint + 0xfc);
-    ref2world[0][1] = *(MeReal *)((int)constraint + 0x100);
-    ref2world[0][2] = *(MeReal *)((int)constraint + 0x104);
-    ref2world[0][3] = *(MeReal *)((int)constraint + 0x108);
-    ref2world[1][0] = *(MeReal *)((int)constraint + 0x10c);
-    ref2world[1][1] = *(MeReal *)((int)constraint + 0x110);
-    ref2world[1][2] = *(MeReal *)((int)constraint + 0x114);
-    ref2world[1][3] = *(MeReal *)((int)constraint + 0x118);
-    ref2world[2][0] = *(MeReal *)((int)constraint + 0x11c);
-    ref2world[2][1] = *(MeReal *)((int)constraint + 0x120);
-    ref2world[2][2] = *(MeReal *)((int)constraint + 0x124);
-    ref2world[2][3] = *(MeReal *)((int)constraint + 0x128);
-    ref2world[3][0] = *(MeReal *)((int)constraint + 300);
-    ref2world[3][1] = *(MeReal *)((int)constraint + 0x130);
-    ref2world[3][2] = *(MeReal *)((int)constraint + 0x134);
-    ref2world[3][3] = *(MeReal *)((int)constraint + 0x138);
+  if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->head.bodyindex[1] - (char *)0))) == -1) {
+    ref2world[0][0] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->head.ref2[0][0] - (char *)0)));
+    ref2world[0][1] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->head.ref2[0][1] - (char *)0)));
+    ref2world[0][2] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->head.ref2[0][2] - (char *)0)));
+    ref2world[0][3] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->head.ref2[0][3] - (char *)0)));
+    ref2world[1][0] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->head.ref2[1][0] - (char *)0)));
+    ref2world[1][1] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->head.ref2[1][1] - (char *)0)));
+    ref2world[1][2] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->head.ref2[1][2] - (char *)0)));
+    ref2world[1][3] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->head.ref2[1][3] - (char *)0)));
+    ref2world[2][0] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->head.ref2[2][0] - (char *)0)));
+    ref2world[2][1] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->head.ref2[2][1] - (char *)0)));
+    ref2world[2][2] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->head.ref2[2][2] - (char *)0)));
+    ref2world[2][3] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->head.ref2[2][3] - (char *)0)));
+    ref2world[3][0] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->head.ref2[3][0] - (char *)0)));
+    ref2world[3][1] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->head.ref2[3][1] - (char *)0)));
+    ref2world[3][2] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->head.ref2[3][2] - (char *)0)));
+    ref2world[3][3] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->head.ref2[3][3] - (char *)0)));
   }
   else {
     MeMatrix4MultiplyMatrix
-              (ref2world,(MeReal (*) [4])((int)constraint + 0xfc),
-               tlist[*(int *)((int)constraint + 0xb8)].R0);
+              (ref2world,(MeReal (*) [4])((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->head.ref2[0][0] - (char *)0))),
+               tlist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->head.bodyindex[1] - (char *)0)))].R0);
   }
-  clist->Jbody[clist->num_constraints][0] = *(int *)((int)constraint + 0xb4);
-  clist->Jbody[clist->num_constraints][1] = *(int *)((int)constraint + 0xb8);
-  iVar17 = *(int *)((int)constraint + 0xb4);
+  clist->Jbody[clist->num_constraints][0] = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->head.bodyindex[0] - (char *)0)));
+  clist->Jbody[clist->num_constraints][1] = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->head.bodyindex[1] - (char *)0)));
+  iVar17 = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->head.bodyindex[0] - (char *)0)));
   fVar1 = ref1world[3][0] - tlist[iVar17].pos[0];
   fVar2 = ref1world[3][1] - tlist[iVar17].pos[1];
   fVar3 = ref1world[3][2] - tlist[iVar17].pos[2];
@@ -2399,171 +2399,171 @@ void kd_MdtBclAddCarWheel(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
   if (iVar5 < 0) {
     iVar17 = iVar5 + 3;
   }
-  *(MeReal *)((int)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0) = ref1world[0][0];
+  *(MeReal *)((kd_iptr)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0) = ref1world[0][0];
   iVar5 = clist->num_rows_inc_padding;
   iVar17 = iVar5;
   if (iVar5 < 0) {
     iVar17 = iVar5 + 3;
   }
-  *(MeReal *)((int)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x10) = ref1world[0][1];
+  *(MeReal *)((kd_iptr)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x10) = ref1world[0][1];
   iVar5 = clist->num_rows_inc_padding;
   iVar17 = iVar5;
   if (iVar5 < 0) {
     iVar17 = iVar5 + 3;
   }
-  *(MeReal *)((int)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x20) = ref1world[0][2];
+  *(MeReal *)((kd_iptr)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x20) = ref1world[0][2];
   iVar5 = clist->num_rows_inc_padding;
   iVar17 = iVar5;
   if (iVar5 < 0) {
     iVar17 = iVar5 + 3;
   }
-  *(float *)((int)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x60) = -ref1world[0][0];
+  *(float *)((kd_iptr)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x60) = -ref1world[0][0];
   iVar5 = clist->num_rows_inc_padding;
   iVar17 = iVar5;
   if (iVar5 < 0) {
     iVar17 = iVar5 + 3;
   }
-  *(float *)((int)*clist->Jstore + iVar5 * 4 + 0x70 + (iVar17 >> 2) * 0xb0) = -ref1world[0][1];
+  *(float *)((kd_iptr)*clist->Jstore + iVar5 * 4 + 0x70 + (iVar17 >> 2) * 0xb0) = -ref1world[0][1];
   iVar5 = clist->num_rows_inc_padding;
   iVar17 = iVar5;
   if (iVar5 < 0) {
     iVar17 = iVar5 + 3;
   }
-  *(float *)((int)*clist->Jstore + iVar5 * 4 + 0x80 + (iVar17 >> 2) * 0xb0) = -ref1world[0][2];
+  *(float *)((kd_iptr)*clist->Jstore + iVar5 * 4 + 0x80 + (iVar17 >> 2) * 0xb0) = -ref1world[0][2];
   iVar5 = clist->num_rows_inc_padding;
   iVar17 = iVar5;
   if (iVar5 < 0) {
     iVar17 = iVar5 + 3;
   }
-  *(float *)((int)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x30) =
+  *(float *)((kd_iptr)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x30) =
        fVar2 * ref1world[0][2] - fVar3 * ref1world[0][1];
   iVar5 = clist->num_rows_inc_padding;
   iVar17 = iVar5;
   if (iVar5 < 0) {
     iVar17 = iVar5 + 3;
   }
-  *(float *)((int)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x40) =
+  *(float *)((kd_iptr)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x40) =
        fVar3 * ref1world[0][0] - ref1world[0][2] * fVar1;
   iVar5 = clist->num_rows_inc_padding;
   iVar17 = iVar5;
   if (iVar5 < 0) {
     iVar17 = iVar5 + 3;
   }
-  *(float *)((int)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x50) =
+  *(float *)((kd_iptr)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x50) =
        fVar1 * ref1world[0][1] - fVar2 * ref1world[0][0];
   iVar5 = clist->num_rows_inc_padding;
   iVar17 = iVar5 + 1;
   if (iVar17 < 0) {
     iVar17 = iVar5 + 4;
   }
-  *(MeReal *)((int)*clist->Jstore + iVar5 * 4 + 4 + (iVar17 >> 2) * 0xb0) = a[0];
+  *(MeReal *)((kd_iptr)*clist->Jstore + iVar5 * 4 + 4 + (iVar17 >> 2) * 0xb0) = a[0];
   iVar5 = clist->num_rows_inc_padding;
   iVar17 = iVar5 + 1;
   if (iVar17 < 0) {
     iVar17 = iVar5 + 4;
   }
-  *(MeReal *)((int)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x14) = a[1];
+  *(MeReal *)((kd_iptr)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x14) = a[1];
   iVar5 = clist->num_rows_inc_padding;
   iVar17 = iVar5 + 1;
   if (iVar17 < 0) {
     iVar17 = iVar5 + 4;
   }
-  *(MeReal *)((int)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x24) = a[2];
+  *(MeReal *)((kd_iptr)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x24) = a[2];
   iVar5 = clist->num_rows_inc_padding;
   iVar17 = iVar5 + 1;
   if (iVar17 < 0) {
     iVar17 = iVar5 + 4;
   }
-  *(float *)((int)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 100) = -a[0];
+  *(float *)((kd_iptr)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 100) = -a[0];
   iVar5 = clist->num_rows_inc_padding;
   iVar17 = iVar5 + 1;
   if (iVar17 < 0) {
     iVar17 = iVar5 + 4;
   }
-  *(float *)((int)*clist->Jstore + iVar5 * 4 + 0x74 + (iVar17 >> 2) * 0xb0) = -a[1];
+  *(float *)((kd_iptr)*clist->Jstore + iVar5 * 4 + 0x74 + (iVar17 >> 2) * 0xb0) = -a[1];
   iVar5 = clist->num_rows_inc_padding;
   iVar17 = iVar5 + 1;
   if (iVar17 < 0) {
     iVar17 = iVar5 + 4;
   }
-  *(float *)((int)*clist->Jstore + iVar5 * 4 + 0x84 + (iVar17 >> 2) * 0xb0) = -a[2];
+  *(float *)((kd_iptr)*clist->Jstore + iVar5 * 4 + 0x84 + (iVar17 >> 2) * 0xb0) = -a[2];
   iVar5 = clist->num_rows_inc_padding;
   iVar17 = iVar5 + 1;
   if (iVar17 < 0) {
     iVar17 = iVar5 + 4;
   }
-  *(float *)((int)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x34) =
+  *(float *)((kd_iptr)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x34) =
        fVar2 * a[2] - fVar3 * a[1];
   iVar5 = clist->num_rows_inc_padding;
   iVar17 = iVar5 + 1;
   if (iVar17 < 0) {
     iVar17 = iVar5 + 4;
   }
-  *(float *)((int)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x44) =
+  *(float *)((kd_iptr)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x44) =
        fVar3 * a[0] - a[2] * fVar1;
   iVar5 = clist->num_rows_inc_padding;
   iVar17 = iVar5 + 1;
   if (iVar17 < 0) {
     iVar17 = iVar5 + 4;
   }
-  *(float *)((int)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x54) =
+  *(float *)((kd_iptr)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x54) =
        fVar1 * a[1] - fVar2 * a[0];
   iVar5 = clist->num_rows_inc_padding;
   iVar17 = iVar5 + 2;
   if (iVar17 < 0) {
     iVar17 = iVar5 + 5;
   }
-  *(MeReal *)((int)*clist->Jstore + iVar5 * 4 + 8 + (iVar17 >> 2) * 0xb0) = b[0];
+  *(MeReal *)((kd_iptr)*clist->Jstore + iVar5 * 4 + 8 + (iVar17 >> 2) * 0xb0) = b[0];
   iVar5 = clist->num_rows_inc_padding;
   iVar17 = iVar5 + 2;
   if (iVar17 < 0) {
     iVar17 = iVar5 + 5;
   }
-  *(MeReal *)((int)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x18) = b[1];
+  *(MeReal *)((kd_iptr)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x18) = b[1];
   iVar5 = clist->num_rows_inc_padding;
   iVar17 = iVar5 + 2;
   if (iVar17 < 0) {
     iVar17 = iVar5 + 5;
   }
-  *(MeReal *)((int)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x28) = b[2];
+  *(MeReal *)((kd_iptr)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x28) = b[2];
   iVar5 = clist->num_rows_inc_padding;
   iVar17 = iVar5 + 2;
   if (iVar17 < 0) {
     iVar17 = iVar5 + 5;
   }
-  *(float *)((int)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x68) = -b[0];
+  *(float *)((kd_iptr)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x68) = -b[0];
   iVar5 = clist->num_rows_inc_padding;
   iVar17 = iVar5 + 2;
   if (iVar17 < 0) {
     iVar17 = iVar5 + 5;
   }
-  *(float *)((int)*clist->Jstore + iVar5 * 4 + 0x78 + (iVar17 >> 2) * 0xb0) = -b[1];
+  *(float *)((kd_iptr)*clist->Jstore + iVar5 * 4 + 0x78 + (iVar17 >> 2) * 0xb0) = -b[1];
   iVar5 = clist->num_rows_inc_padding;
   iVar17 = iVar5 + 2;
   if (iVar17 < 0) {
     iVar17 = iVar5 + 5;
   }
-  *(float *)((int)*clist->Jstore + iVar5 * 4 + 0x88 + (iVar17 >> 2) * 0xb0) = -b[2];
+  *(float *)((kd_iptr)*clist->Jstore + iVar5 * 4 + 0x88 + (iVar17 >> 2) * 0xb0) = -b[2];
   iVar5 = clist->num_rows_inc_padding;
   iVar17 = iVar5 + 2;
   if (iVar17 < 0) {
     iVar17 = iVar5 + 5;
   }
-  *(float *)((int)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x38) =
+  *(float *)((kd_iptr)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x38) =
        fVar2 * b[2] - fVar3 * b[1];
   iVar5 = clist->num_rows_inc_padding;
   iVar17 = iVar5 + 2;
   if (iVar17 < 0) {
     iVar17 = iVar5 + 5;
   }
-  *(float *)((int)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x48) =
+  *(float *)((kd_iptr)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x48) =
        fVar3 * b[0] - b[2] * fVar1;
   iVar5 = clist->num_rows_inc_padding;
   iVar17 = iVar5 + 2;
   if (iVar17 < 0) {
     iVar17 = iVar5 + 5;
   }
-  *(float *)((int)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x58) =
+  *(float *)((kd_iptr)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x58) =
        fVar1 * b[1] - fVar2 * b[0];
   fVar4 = ref1world[3][0] - ref2world[3][0];
   fVar7 = ref1world[3][1] - ref2world[3][1];
@@ -2579,67 +2579,67 @@ void kd_MdtBclAddCarWheel(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
   pMVar10[2] = 3.4028235e+38;
   fVar4 = *pfVar8;
   iVar17 = 0;
-  if (fVar4 <= -*(float *)((int)constraint + 0x180)) {
-    if (-*(float *)((int)constraint + 0x17c) <= fVar4) {
+  if (fVar4 <= -*(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->slo - (char *)0)))) {
+    if (-*(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->shi - (char *)0))) <= fVar4) {
                     
-      *pfVar8 = fVar4 + *(float *)((int)constraint + 0x184);
-      fVar4 = 1.0 / (*(float *)((int)constraint + 0x160) * *(float *)params +
-                    *(float *)((int)constraint + 0x164));
+      *pfVar8 = fVar4 + *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->sref - (char *)0)));
+      fVar4 = 1.0 / (*(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->skp - (char *)0))) * *(float *)params +
+                    *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->skd - (char *)0))));
       *pfVar16 = fVar4;
       if (fVar4 < 0.0) {
         *pfVar16 = 0.0;
       }
-      *pfVar13 = fVar4 * *(float *)params * *(float *)((int)constraint + 0x160);
+      *pfVar13 = fVar4 * *(float *)params * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->skp - (char *)0)));
     }
     else {
-      *pfVar8 = *(float *)((int)constraint + 0x17c) + fVar4;
+      *pfVar8 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->shi - (char *)0))) + fVar4;
       iVar17 = 1;
       *pMVar12 = 0.0;
     }
   }
   else {
     iVar17 = -1;
-    *pfVar8 = fVar4 + *(float *)((int)constraint + 0x180);
+    *pfVar8 = fVar4 + *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->slo - (char *)0)));
     *pMVar10 = 0.0;
   }
   if (iVar17 != 0) {
                     
-    fVar4 = *(float *)((int)constraint + 0x188);
+    fVar4 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->slsoft - (char *)0)));
     *pfVar16 = fVar4;
     if (fVar4 < 0.0) {
       *pfVar16 = 0.0;
     }
     if (iVar17 == 1) {
-      fVar4 = (*(float *)((int)constraint + 0x17c) - *(float *)((int)constraint + 0x184)) *
-              *(float *)((int)constraint + 0x160);
+      fVar4 = (*(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->shi - (char *)0))) - *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->sref - (char *)0)))) *
+              *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->skp - (char *)0)));
     }
     else {
-      fVar4 = (*(float *)((int)constraint + 0x180) - *(float *)((int)constraint + 0x184)) *
-              *(float *)((int)constraint + 0x160);
+      fVar4 = (*(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->slo - (char *)0))) - *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->sref - (char *)0)))) *
+              *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->skp - (char *)0)));
     }
     fVar6 = ref1world[0][0] * fVar4;
     fVar7 = ref1world[0][1] * fVar4;
     fVar4 = fVar4 * ref1world[0][2];
-    blist[*(int *)((int)constraint + 0xb4)]->force[0] =
-         fVar6 + blist[*(int *)((int)constraint + 0xb4)]->force[0];
-    blist[*(int *)((int)constraint + 0xb4)]->force[1] =
-         fVar7 + blist[*(int *)((int)constraint + 0xb4)]->force[1];
-    blist[*(int *)((int)constraint + 0xb4)]->force[2] =
-         fVar4 + blist[*(int *)((int)constraint + 0xb4)]->force[2];
-    if (*(int *)((int)constraint + 0xb8) != -1) {
-      blist[*(int *)((int)constraint + 0xb8)]->force[0] =
-           blist[*(int *)((int)constraint + 0xb8)]->force[0] - fVar6;
-      blist[*(int *)((int)constraint + 0xb8)]->force[1] =
-           blist[*(int *)((int)constraint + 0xb8)]->force[1] - fVar7;
-      blist[*(int *)((int)constraint + 0xb8)]->force[2] =
-           blist[*(int *)((int)constraint + 0xb8)]->force[2] - fVar4;
+    blist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->head.bodyindex[0] - (char *)0)))]->force[0] =
+         fVar6 + blist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->head.bodyindex[0] - (char *)0)))]->force[0];
+    blist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->head.bodyindex[0] - (char *)0)))]->force[1] =
+         fVar7 + blist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->head.bodyindex[0] - (char *)0)))]->force[1];
+    blist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->head.bodyindex[0] - (char *)0)))]->force[2] =
+         fVar4 + blist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->head.bodyindex[0] - (char *)0)))]->force[2];
+    if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->head.bodyindex[1] - (char *)0))) != -1) {
+      blist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->head.bodyindex[1] - (char *)0)))]->force[0] =
+           blist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->head.bodyindex[1] - (char *)0)))]->force[0] - fVar6;
+      blist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->head.bodyindex[1] - (char *)0)))]->force[1] =
+           blist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->head.bodyindex[1] - (char *)0)))]->force[1] - fVar7;
+      blist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->head.bodyindex[1] - (char *)0)))]->force[2] =
+           blist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->head.bodyindex[1] - (char *)0)))]->force[2] - fVar4;
     }
-    blist[*(int *)((int)constraint + 0xb4)]->torque[0] =
-         (fVar2 * fVar4 - fVar3 * fVar7) + blist[*(int *)((int)constraint + 0xb4)]->torque[0];
-    blist[*(int *)((int)constraint + 0xb4)]->torque[1] =
-         (fVar3 * fVar6 - fVar4 * fVar1) + blist[*(int *)((int)constraint + 0xb4)]->torque[1];
-    blist[*(int *)((int)constraint + 0xb4)]->torque[2] =
-         (fVar1 * fVar7 - fVar2 * fVar6) + blist[*(int *)((int)constraint + 0xb4)]->torque[2];
+    blist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->head.bodyindex[0] - (char *)0)))]->torque[0] =
+         (fVar2 * fVar4 - fVar3 * fVar7) + blist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->head.bodyindex[0] - (char *)0)))]->torque[0];
+    blist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->head.bodyindex[0] - (char *)0)))]->torque[1] =
+         (fVar3 * fVar6 - fVar4 * fVar1) + blist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->head.bodyindex[0] - (char *)0)))]->torque[1];
+    blist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->head.bodyindex[0] - (char *)0)))]->torque[2] =
+         (fVar1 * fVar7 - fVar2 * fVar6) + blist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->head.bodyindex[0] - (char *)0)))]->torque[2];
   }
   fVar2 = ref2world[1][1] * ref1world[0][2] - ref2world[1][2] * ref1world[0][1];
   fVar3 = ref2world[1][2] * ref1world[0][0] - ref1world[0][2] * ref2world[1][0];
@@ -2649,37 +2649,37 @@ void kd_MdtBclAddCarWheel(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
   if (iVar17 < 0) {
     iVar17 = iVar5 + 6;
   }
-  *(float *)((int)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x3c) = -fVar2;
+  *(float *)((kd_iptr)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x3c) = -fVar2;
   iVar5 = clist->num_rows_inc_padding;
   iVar17 = iVar5 + 3;
   if (iVar17 < 0) {
     iVar17 = iVar5 + 6;
   }
-  *(float *)((int)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x4c) = -fVar3;
+  *(float *)((kd_iptr)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x4c) = -fVar3;
   iVar5 = clist->num_rows_inc_padding;
   iVar17 = iVar5 + 3;
   if (iVar17 < 0) {
     iVar17 = iVar5 + 6;
   }
-  *(float *)((int)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x5c) = -fVar1;
+  *(float *)((kd_iptr)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x5c) = -fVar1;
   iVar5 = clist->num_rows_inc_padding;
   iVar17 = iVar5 + 3;
   if (iVar17 < 0) {
     iVar17 = iVar5 + 6;
   }
-  *(float *)((int)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x9c) = fVar2;
+  *(float *)((kd_iptr)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x9c) = fVar2;
   iVar5 = clist->num_rows_inc_padding;
   iVar17 = iVar5 + 3;
   if (iVar17 < 0) {
     iVar17 = iVar5 + 6;
   }
-  *(float *)((int)*clist->Jstore + iVar5 * 4 + 0xac + (iVar17 >> 2) * 0xb0) = fVar3;
+  *(float *)((kd_iptr)*clist->Jstore + iVar5 * 4 + 0xac + (iVar17 >> 2) * 0xb0) = fVar3;
   iVar5 = clist->num_rows_inc_padding;
   iVar17 = iVar5 + 3;
   if (iVar17 < 0) {
     iVar17 = iVar5 + 6;
   }
-  *(float *)((int)*clist->Jstore + iVar5 * 4 + 0xbc + (iVar17 >> 2) * 0xb0) = fVar1;
+  *(float *)((kd_iptr)*clist->Jstore + iVar5 * 4 + 0xbc + (iVar17 >> 2) * 0xb0) = fVar1;
   pfVar8[3] = ref1world[0][2] * ref2world[1][2] +
               ref1world[0][1] * ref2world[1][1] + ref1world[0][0] * ref2world[1][0];
   pMVar12[3] = -3.4028235e+38;
@@ -2689,41 +2689,41 @@ void kd_MdtBclAddCarWheel(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
   if (iVar17 < 0) {
     iVar17 = iVar5 + 7;
   }
-  *(MeReal *)((int)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x40) = ref1world[0][0];
+  *(MeReal *)((kd_iptr)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x40) = ref1world[0][0];
   iVar5 = clist->num_rows_inc_padding;
   iVar17 = iVar5 + 4;
   if (iVar17 < 0) {
     iVar17 = iVar5 + 7;
   }
-  *(MeReal *)((int)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x50) = ref1world[0][1];
+  *(MeReal *)((kd_iptr)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x50) = ref1world[0][1];
   iVar5 = clist->num_rows_inc_padding;
   iVar17 = iVar5 + 4;
   if (iVar17 < 0) {
     iVar17 = iVar5 + 7;
   }
-  *(MeReal *)((int)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x60) = ref1world[0][2];
+  *(MeReal *)((kd_iptr)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x60) = ref1world[0][2];
   iVar5 = clist->num_rows_inc_padding;
   iVar17 = iVar5 + 4;
   if (iVar17 < 0) {
     iVar17 = iVar5 + 7;
   }
-  *(float *)((int)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0xa0) = -ref1world[0][0];
+  *(float *)((kd_iptr)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0xa0) = -ref1world[0][0];
   iVar5 = clist->num_rows_inc_padding;
   iVar17 = iVar5 + 4;
   if (iVar17 < 0) {
     iVar17 = iVar5 + 7;
   }
-  *(float *)((int)*clist->Jstore + iVar5 * 4 + 0xb0 + (iVar17 >> 2) * 0xb0) = -ref1world[0][1];
+  *(float *)((kd_iptr)*clist->Jstore + iVar5 * 4 + 0xb0 + (iVar17 >> 2) * 0xb0) = -ref1world[0][1];
   iVar5 = clist->num_rows_inc_padding;
   iVar17 = iVar5 + 4;
   if (iVar17 < 0) {
     iVar17 = iVar5 + 7;
   }
-  *(float *)((int)clist->Jstore[1] + iVar5 * 4 + (iVar17 >> 2) * 0xb0) = -ref1world[0][2];
-  pMVar15[4] = -*(MeReal *)((int)constraint + 0x168);
-  pMVar12[4] = -*(MeReal *)((int)constraint + 0x16c);
-  pMVar10[4] = *(MeReal *)((int)constraint + 0x16c);
-  if (*(int *)((int)constraint + 0x178) != 0) {
+  *(float *)((kd_iptr)clist->Jstore[1] + iVar5 * 4 + (iVar17 >> 2) * 0xb0) = -ref1world[0][2];
+  pMVar15[4] = -*(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->svel - (char *)0)));
+  pMVar12[4] = -*(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->sfmax - (char *)0)));
+  pMVar10[4] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->sfmax - (char *)0)));
+  if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->slock - (char *)0))) != 0) {
     pfVar8[4] = (ref2world[1][0] * ref1world[1][1] - ref2world[1][1] * ref1world[1][0]) *
                 ref1world[0][2] +
                 (ref2world[1][1] * ref1world[1][2] - ref2world[1][2] * ref1world[1][1]) *
@@ -2731,7 +2731,7 @@ void kd_MdtBclAddCarWheel(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
                 (ref2world[1][2] * ref1world[1][0] - ref1world[1][2] * ref2world[1][0]) *
                 ref1world[0][1];
   }
-  if (*(float *)((int)constraint + 0x174) <= 0.0001) {
+  if (*(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->hfmax - (char *)0))) <= 0.0001) {
     rows_added = 5;
   }
   else {
@@ -2740,40 +2740,40 @@ void kd_MdtBclAddCarWheel(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
     if (iVar17 < 0) {
       iVar17 = iVar5 + 8;
     }
-    *(MeReal *)((int)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x44) = ref2world[1][0];
+    *(MeReal *)((kd_iptr)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x44) = ref2world[1][0];
     iVar5 = clist->num_rows_inc_padding;
     iVar17 = iVar5 + 5;
     if (iVar17 < 0) {
       iVar17 = iVar5 + 8;
     }
-    *(MeReal *)((int)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x54) = ref2world[1][1];
+    *(MeReal *)((kd_iptr)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0x54) = ref2world[1][1];
     iVar5 = clist->num_rows_inc_padding;
     iVar17 = iVar5 + 5;
     if (iVar17 < 0) {
       iVar17 = iVar5 + 8;
     }
-    *(MeReal *)((int)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 100) = ref2world[1][2];
+    *(MeReal *)((kd_iptr)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 100) = ref2world[1][2];
     iVar5 = clist->num_rows_inc_padding;
     iVar17 = iVar5 + 5;
     if (iVar17 < 0) {
       iVar17 = iVar5 + 8;
     }
-    *(float *)((int)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0xa4) = -ref2world[1][0];
+    *(float *)((kd_iptr)*clist->Jstore + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 0xa4) = -ref2world[1][0];
     iVar5 = clist->num_rows_inc_padding;
     iVar17 = iVar5 + 5;
     if (iVar17 < 0) {
       iVar17 = iVar5 + 8;
     }
-    *(float *)((int)*clist->Jstore + iVar5 * 4 + 0xb4 + (iVar17 >> 2) * 0xb0) = -ref2world[1][1];
+    *(float *)((kd_iptr)*clist->Jstore + iVar5 * 4 + 0xb4 + (iVar17 >> 2) * 0xb0) = -ref2world[1][1];
     iVar5 = clist->num_rows_inc_padding;
     iVar17 = iVar5 + 5;
     if (iVar17 < 0) {
       iVar17 = iVar5 + 8;
     }
-    *(float *)((int)clist->Jstore[1] + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 4) = -ref2world[1][2];
-    pMVar15[5] = -*(MeReal *)((int)constraint + 0x170);
-    pMVar12[5] = -*(MeReal *)((int)constraint + 0x174);
-    pMVar10[5] = *(MeReal *)((int)constraint + 0x174);
+    *(float *)((kd_iptr)clist->Jstore[1] + iVar5 * 4 + (iVar17 >> 2) * 0xb0 + 4) = -ref2world[1][2];
+    pMVar15[5] = -*(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->hvel - (char *)0)));
+    pMVar12[5] = -*(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->hfmax - (char *)0)));
+    pMVar10[5] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtCarWheel *)0)->hfmax - (char *)0)));
     rows_added = 6;
   }
   kd_MdtBclEndConstraint(clist,rows_added);
@@ -2825,25 +2825,25 @@ void kd_MdtBclAddFixedPath(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
     if (iVar5 < 0) {
       iVar14 = iVar5 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar5 * 4 + (iVar14 >> 2) * 0xb0 + z * 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar5 * 4 + (iVar14 >> 2) * 0xb0 + z * 0x10) = 0;
     iVar5 = clist->num_rows_inc_padding;
     iVar14 = iVar5;
     if (iVar5 < 0) {
       iVar14 = iVar5 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar5 * 4 + z * 0x10 + (iVar14 >> 2) * 0xb0 + 0x60) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar5 * 4 + z * 0x10 + (iVar14 >> 2) * 0xb0 + 0x60) = 0;
     iVar5 = clist->num_rows_inc_padding;
     iVar14 = iVar5;
     if (iVar5 < 0) {
       iVar14 = iVar5 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar5 * 4 + (iVar14 >> 2) * 0xb0 + z * 0x10 + 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar5 * 4 + (iVar14 >> 2) * 0xb0 + z * 0x10 + 0x10) = 0;
     iVar5 = clist->num_rows_inc_padding;
     iVar14 = iVar5;
     if (iVar5 < 0) {
       iVar14 = iVar5 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar5 * 4 + z * 0x10 + (iVar14 >> 2) * 0xb0 + 0x70) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar5 * 4 + z * 0x10 + (iVar14 >> 2) * 0xb0 + 0x70) = 0;
     z = z + 2;
   } while (z != 6);
   *pMVar11 = 0.0;
@@ -2857,25 +2857,25 @@ void kd_MdtBclAddFixedPath(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
     if (iVar14 < 0) {
       iVar14 = iVar5 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar5 * 4 + 4 + (iVar14 >> 2) * 0xb0 + z_1 * 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar5 * 4 + 4 + (iVar14 >> 2) * 0xb0 + z_1 * 0x10) = 0;
     iVar5 = clist->num_rows_inc_padding;
     iVar14 = iVar5 + 1;
     if (iVar14 < 0) {
       iVar14 = iVar5 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar5 * 4 + z_1 * 0x10 + (iVar14 >> 2) * 0xb0 + 100) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar5 * 4 + z_1 * 0x10 + (iVar14 >> 2) * 0xb0 + 100) = 0;
     iVar5 = clist->num_rows_inc_padding;
     iVar14 = iVar5 + 1;
     if (iVar14 < 0) {
       iVar14 = iVar5 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar5 * 4 + (iVar14 >> 2) * 0xb0 + z_1 * 0x10 + 0x14) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar5 * 4 + (iVar14 >> 2) * 0xb0 + z_1 * 0x10 + 0x14) = 0;
     iVar5 = clist->num_rows_inc_padding;
     iVar14 = iVar5 + 1;
     if (iVar14 < 0) {
       iVar14 = iVar5 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar5 * 4 + z_1 * 0x10 + (iVar14 >> 2) * 0xb0 + 0x74) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar5 * 4 + z_1 * 0x10 + (iVar14 >> 2) * 0xb0 + 0x74) = 0;
     z_1 = z_1 + 2;
   } while (z_1 != 6);
   pMVar11[1] = 0.0;
@@ -2889,25 +2889,25 @@ void kd_MdtBclAddFixedPath(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
     if (iVar14 < 0) {
       iVar14 = iVar5 + 5;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar5 * 4 + 8 + (iVar14 >> 2) * 0xb0 + z_2 * 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar5 * 4 + 8 + (iVar14 >> 2) * 0xb0 + z_2 * 0x10) = 0;
     iVar5 = clist->num_rows_inc_padding;
     iVar14 = iVar5 + 2;
     if (iVar14 < 0) {
       iVar14 = iVar5 + 5;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar5 * 4 + z_2 * 0x10 + (iVar14 >> 2) * 0xb0 + 0x68) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar5 * 4 + z_2 * 0x10 + (iVar14 >> 2) * 0xb0 + 0x68) = 0;
     iVar5 = clist->num_rows_inc_padding;
     iVar14 = iVar5 + 2;
     if (iVar14 < 0) {
       iVar14 = iVar5 + 5;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar5 * 4 + (iVar14 >> 2) * 0xb0 + z_2 * 0x10 + 0x18) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar5 * 4 + (iVar14 >> 2) * 0xb0 + z_2 * 0x10 + 0x18) = 0;
     iVar5 = clist->num_rows_inc_padding;
     iVar14 = iVar5 + 2;
     if (iVar14 < 0) {
       iVar14 = iVar5 + 5;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar5 * 4 + z_2 * 0x10 + (iVar14 >> 2) * 0xb0 + 0x78) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar5 * 4 + z_2 * 0x10 + (iVar14 >> 2) * 0xb0 + 0x78) = 0;
     z_2 = z_2 + 2;
   } while (z_2 != 6);
   pMVar11[2] = 0.0;
@@ -2916,10 +2916,10 @@ void kd_MdtBclAddFixedPath(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
   pMVar13[2] = 0.0;
                     
   paMVar7 = ref1world;
-  clist->Jbody[clist->num_constraints][0] = *(int *)((int)constraint + 0xb4);
-  clist->Jbody[clist->num_constraints][1] = *(int *)((int)constraint + 0xb8);
-  pMVar12 = tlist + *(int *)((int)constraint + 0xb4);
-  pfVar10 = (float *)((int)constraint + 0xbc);
+  clist->Jbody[clist->num_constraints][0] = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtFixedPath *)0)->head.bodyindex[0] - (char *)0)));
+  clist->Jbody[clist->num_constraints][1] = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtFixedPath *)0)->head.bodyindex[1] - (char *)0)));
+  pMVar12 = tlist + *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtFixedPath *)0)->head.bodyindex[0] - (char *)0)));
+  pfVar10 = (float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtFixedPath *)0)->head.ref1[0][0] - (char *)0)));
   iVar14 = 3;
   do {
     fVar1 = *pfVar10;
@@ -2942,53 +2942,53 @@ void kd_MdtBclAddFixedPath(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
     paMVar7 = paMVar7 + 1;
     iVar14 = iVar14 + -1;
   } while (-1 < iVar14);
-  if (*(int *)((int)constraint + 0xb8) == -1) {
-    ref2world[0][0] = *(MeReal *)((int)constraint + 0xfc);
-    ref2world[0][1] = *(MeReal *)((int)constraint + 0x100);
-    ref2world[0][2] = *(MeReal *)((int)constraint + 0x104);
-    ref2world[0][3] = *(MeReal *)((int)constraint + 0x108);
-    ref2world[1][0] = *(MeReal *)((int)constraint + 0x10c);
-    ref2world[1][1] = *(MeReal *)((int)constraint + 0x110);
-    ref2world[1][2] = *(MeReal *)((int)constraint + 0x114);
-    ref2world[1][3] = *(MeReal *)((int)constraint + 0x118);
-    ref2world[2][0] = *(MeReal *)((int)constraint + 0x11c);
-    ref2world[2][1] = *(MeReal *)((int)constraint + 0x120);
-    ref2world[2][2] = *(MeReal *)((int)constraint + 0x124);
-    ref2world[2][3] = *(MeReal *)((int)constraint + 0x128);
-    ref2world[3][0] = *(MeReal *)((int)constraint + 300);
-    ref2world[3][1] = *(MeReal *)((int)constraint + 0x130);
-    ref2world[3][2] = *(MeReal *)((int)constraint + 0x134);
-    ref2world[3][3] = *(MeReal *)((int)constraint + 0x138);
+  if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtFixedPath *)0)->head.bodyindex[1] - (char *)0))) == -1) {
+    ref2world[0][0] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtFixedPath *)0)->head.ref2[0][0] - (char *)0)));
+    ref2world[0][1] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtFixedPath *)0)->head.ref2[0][1] - (char *)0)));
+    ref2world[0][2] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtFixedPath *)0)->head.ref2[0][2] - (char *)0)));
+    ref2world[0][3] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtFixedPath *)0)->head.ref2[0][3] - (char *)0)));
+    ref2world[1][0] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtFixedPath *)0)->head.ref2[1][0] - (char *)0)));
+    ref2world[1][1] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtFixedPath *)0)->head.ref2[1][1] - (char *)0)));
+    ref2world[1][2] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtFixedPath *)0)->head.ref2[1][2] - (char *)0)));
+    ref2world[1][3] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtFixedPath *)0)->head.ref2[1][3] - (char *)0)));
+    ref2world[2][0] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtFixedPath *)0)->head.ref2[2][0] - (char *)0)));
+    ref2world[2][1] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtFixedPath *)0)->head.ref2[2][1] - (char *)0)));
+    ref2world[2][2] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtFixedPath *)0)->head.ref2[2][2] - (char *)0)));
+    ref2world[2][3] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtFixedPath *)0)->head.ref2[2][3] - (char *)0)));
+    ref2world[3][0] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtFixedPath *)0)->head.ref2[3][0] - (char *)0)));
+    ref2world[3][1] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtFixedPath *)0)->head.ref2[3][1] - (char *)0)));
+    ref2world[3][2] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtFixedPath *)0)->head.ref2[3][2] - (char *)0)));
+    ref2world[3][3] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtFixedPath *)0)->head.ref2[3][3] - (char *)0)));
     iVar14 = -1;
   }
   else {
     MeMatrix4MultiplyMatrix
-              (ref2world,(MeReal (*) [4])((int)constraint + 0xfc),
-               tlist[*(int *)((int)constraint + 0xb8)].R0);
-    iVar14 = *(int *)((int)constraint + 0xb8);
+              (ref2world,(MeReal (*) [4])((kd_iptr)constraint + ((int)((char *)&((struct MdtFixedPath *)0)->head.ref2[0][0] - (char *)0))),
+               tlist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtFixedPath *)0)->head.bodyindex[1] - (char *)0)))].R0);
+    iVar14 = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtFixedPath *)0)->head.bodyindex[1] - (char *)0)));
   }
   kd_MdtBclAddSphericalRowsWorld
-            (clist,tlist[*(int *)((int)constraint + 0xb4)].pos,tlist[iVar14].pos,ref1world[3],
-             ref2world[3],(uint)(iVar14 != -1),(MeReal *)((int)constraint + 0x13c),
-             (MeReal *)((int)constraint + 0x148));
-  fVar1 = *(float *)((int)constraint + 0x178);
-  fVar2 = *(float *)((int)constraint + 0x17c);
-  fVar3 = *(float *)((int)constraint + 0x180);
+            (clist,tlist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtFixedPath *)0)->head.bodyindex[0] - (char *)0)))].pos,tlist[iVar14].pos,ref1world[3],
+             ref2world[3],(uint)(iVar14 != -1),(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtFixedPath *)0)->head.worldLinVel[0] - (char *)0))),
+             (MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtFixedPath *)0)->head.worldAngVel[0] - (char *)0))));
+  fVar1 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtFixedPath *)0)->vel1[0] - (char *)0)));
+  fVar2 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtFixedPath *)0)->vel1[1] - (char *)0)));
+  fVar3 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtFixedPath *)0)->vel1[2] - (char *)0)));
   negc[0] = ref1world[0][0] * fVar1 + ref1world[1][0] * fVar2 + ref1world[2][0] * fVar3;
   negc[1] = ref1world[2][1] * fVar3 + ref1world[0][1] * fVar1 + ref1world[1][1] * fVar2;
   negc[2] = ref1world[0][2] * fVar1 + ref1world[1][2] * fVar2 + ref1world[2][2] * fVar3;
   negc[3] = fVar1 * ref1world[0][3] + fVar2 * ref1world[1][3] + fVar3 * ref1world[2][3];
-  if (*(int *)((int)constraint + 0xb8) == -1) {
+  if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtFixedPath *)0)->head.bodyindex[1] - (char *)0))) == -1) {
     uVar8 = 0;
     do {
-      negc[uVar8] = negc[uVar8] - *(float *)((int)constraint + uVar8 * 4 + 0x184);
+      negc[uVar8] = negc[uVar8] - *(float *)((kd_iptr)constraint + uVar8 * 4 + 0x184);
       uVar8 = uVar8 + 1;
     } while (uVar8 < 3);
   }
   else {
-    fVar1 = *(float *)((int)constraint + 0x184);
-    fVar2 = *(float *)((int)constraint + 0x188);
-    fVar3 = *(float *)((int)constraint + 0x18c);
+    fVar1 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtFixedPath *)0)->vel2[0] - (char *)0)));
+    fVar2 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtFixedPath *)0)->vel2[1] - (char *)0)));
+    fVar3 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtFixedPath *)0)->vel2[2] - (char *)0)));
     negc[0] = negc[0] - (ref2world[0][0] * fVar1 + ref2world[1][0] * fVar2 + ref2world[2][0] * fVar3
                         );
     negc[1] = negc[1] - (ref2world[2][1] * fVar3 + ref2world[0][1] * fVar1 + ref2world[1][1] * fVar2
@@ -3053,25 +3053,25 @@ void kd_MdtBclAddUniversal(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
     if (iVar8 < 0) {
       iVar16 = iVar8 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar8 * 4 + (iVar16 >> 2) * 0xb0 + z * 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar8 * 4 + (iVar16 >> 2) * 0xb0 + z * 0x10) = 0;
     iVar8 = clist->num_rows_inc_padding;
     iVar16 = iVar8;
     if (iVar8 < 0) {
       iVar16 = iVar8 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar8 * 4 + z * 0x10 + (iVar16 >> 2) * 0xb0 + 0x60) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar8 * 4 + z * 0x10 + (iVar16 >> 2) * 0xb0 + 0x60) = 0;
     iVar8 = clist->num_rows_inc_padding;
     iVar16 = iVar8;
     if (iVar8 < 0) {
       iVar16 = iVar8 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar8 * 4 + (iVar16 >> 2) * 0xb0 + z * 0x10 + 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar8 * 4 + (iVar16 >> 2) * 0xb0 + z * 0x10 + 0x10) = 0;
     iVar8 = clist->num_rows_inc_padding;
     iVar16 = iVar8;
     if (iVar8 < 0) {
       iVar16 = iVar8 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar8 * 4 + z * 0x10 + (iVar16 >> 2) * 0xb0 + 0x70) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar8 * 4 + z * 0x10 + (iVar16 >> 2) * 0xb0 + 0x70) = 0;
     z = z + 2;
   } while (z != 6);
   *pMVar12 = 0.0;
@@ -3085,25 +3085,25 @@ void kd_MdtBclAddUniversal(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
     if (iVar16 < 0) {
       iVar16 = iVar8 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar8 * 4 + 4 + (iVar16 >> 2) * 0xb0 + z_1 * 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar8 * 4 + 4 + (iVar16 >> 2) * 0xb0 + z_1 * 0x10) = 0;
     iVar8 = clist->num_rows_inc_padding;
     iVar16 = iVar8 + 1;
     if (iVar16 < 0) {
       iVar16 = iVar8 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar8 * 4 + z_1 * 0x10 + (iVar16 >> 2) * 0xb0 + 100) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar8 * 4 + z_1 * 0x10 + (iVar16 >> 2) * 0xb0 + 100) = 0;
     iVar8 = clist->num_rows_inc_padding;
     iVar16 = iVar8 + 1;
     if (iVar16 < 0) {
       iVar16 = iVar8 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar8 * 4 + (iVar16 >> 2) * 0xb0 + z_1 * 0x10 + 0x14) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar8 * 4 + (iVar16 >> 2) * 0xb0 + z_1 * 0x10 + 0x14) = 0;
     iVar8 = clist->num_rows_inc_padding;
     iVar16 = iVar8 + 1;
     if (iVar16 < 0) {
       iVar16 = iVar8 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar8 * 4 + z_1 * 0x10 + (iVar16 >> 2) * 0xb0 + 0x74) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar8 * 4 + z_1 * 0x10 + (iVar16 >> 2) * 0xb0 + 0x74) = 0;
     z_1 = z_1 + 2;
   } while (z_1 != 6);
   pMVar12[1] = 0.0;
@@ -3117,25 +3117,25 @@ void kd_MdtBclAddUniversal(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
     if (iVar16 < 0) {
       iVar16 = iVar8 + 5;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar8 * 4 + 8 + (iVar16 >> 2) * 0xb0 + z_2 * 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar8 * 4 + 8 + (iVar16 >> 2) * 0xb0 + z_2 * 0x10) = 0;
     iVar8 = clist->num_rows_inc_padding;
     iVar16 = iVar8 + 2;
     if (iVar16 < 0) {
       iVar16 = iVar8 + 5;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar8 * 4 + z_2 * 0x10 + (iVar16 >> 2) * 0xb0 + 0x68) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar8 * 4 + z_2 * 0x10 + (iVar16 >> 2) * 0xb0 + 0x68) = 0;
     iVar8 = clist->num_rows_inc_padding;
     iVar16 = iVar8 + 2;
     if (iVar16 < 0) {
       iVar16 = iVar8 + 5;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar8 * 4 + (iVar16 >> 2) * 0xb0 + z_2 * 0x10 + 0x18) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar8 * 4 + (iVar16 >> 2) * 0xb0 + z_2 * 0x10 + 0x18) = 0;
     iVar8 = clist->num_rows_inc_padding;
     iVar16 = iVar8 + 2;
     if (iVar16 < 0) {
       iVar16 = iVar8 + 5;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar8 * 4 + z_2 * 0x10 + (iVar16 >> 2) * 0xb0 + 0x78) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar8 * 4 + z_2 * 0x10 + (iVar16 >> 2) * 0xb0 + 0x78) = 0;
     z_2 = z_2 + 2;
   } while (z_2 != 6);
   pMVar12[2] = 0.0;
@@ -3149,25 +3149,25 @@ void kd_MdtBclAddUniversal(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
     if (iVar16 < 0) {
       iVar16 = iVar8 + 6;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar8 * 4 + 0xc + (iVar16 >> 2) * 0xb0 + z_3 * 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar8 * 4 + 0xc + (iVar16 >> 2) * 0xb0 + z_3 * 0x10) = 0;
     iVar8 = clist->num_rows_inc_padding;
     iVar16 = iVar8 + 3;
     if (iVar16 < 0) {
       iVar16 = iVar8 + 6;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar8 * 4 + z_3 * 0x10 + (iVar16 >> 2) * 0xb0 + 0x6c) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar8 * 4 + z_3 * 0x10 + (iVar16 >> 2) * 0xb0 + 0x6c) = 0;
     iVar8 = clist->num_rows_inc_padding;
     iVar16 = iVar8 + 3;
     if (iVar16 < 0) {
       iVar16 = iVar8 + 6;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar8 * 4 + (iVar16 >> 2) * 0xb0 + z_3 * 0x10 + 0x1c) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar8 * 4 + (iVar16 >> 2) * 0xb0 + z_3 * 0x10 + 0x1c) = 0;
     iVar8 = clist->num_rows_inc_padding;
     iVar16 = iVar8 + 3;
     if (iVar16 < 0) {
       iVar16 = iVar8 + 6;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar8 * 4 + z_3 * 0x10 + (iVar16 >> 2) * 0xb0 + 0x7c) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar8 * 4 + z_3 * 0x10 + (iVar16 >> 2) * 0xb0 + 0x7c) = 0;
     z_3 = z_3 + 2;
   } while (z_3 != 6);
   pMVar12[3] = 0.0;
@@ -3176,10 +3176,10 @@ void kd_MdtBclAddUniversal(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
                     
   paMVar10 = ref1world;
   pMVar9[3] = 0.0;
-  clist->Jbody[clist->num_constraints][0] = *(int *)((int)constraint + 0xb4);
-  clist->Jbody[clist->num_constraints][1] = *(int *)((int)constraint + 0xb8);
-  pMVar13 = tlist + *(int *)((int)constraint + 0xb4);
-  pfVar11 = (float *)((int)constraint + 0xbc);
+  clist->Jbody[clist->num_constraints][0] = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtUniversal *)0)->head.bodyindex[0] - (char *)0)));
+  clist->Jbody[clist->num_constraints][1] = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtUniversal *)0)->head.bodyindex[1] - (char *)0)));
+  pMVar13 = tlist + *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtUniversal *)0)->head.bodyindex[0] - (char *)0)));
+  pfVar11 = (float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtUniversal *)0)->head.ref1[0][0] - (char *)0)));
   iVar16 = 3;
   do {
     fVar1 = *pfVar11;
@@ -3202,35 +3202,35 @@ void kd_MdtBclAddUniversal(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
     paMVar10 = paMVar10 + 1;
     iVar16 = iVar16 + -1;
   } while (-1 < iVar16);
-  if (*(int *)((int)constraint + 0xb8) == -1) {
-    ref2world[0][0] = *(MeReal *)((int)constraint + 0xfc);
-    ref2world[0][1] = *(MeReal *)((int)constraint + 0x100);
-    ref2world[0][2] = *(MeReal *)((int)constraint + 0x104);
-    ref2world[0][3] = *(MeReal *)((int)constraint + 0x108);
-    ref2world[1][0] = *(MeReal *)((int)constraint + 0x10c);
-    ref2world[1][1] = *(MeReal *)((int)constraint + 0x110);
-    ref2world[1][2] = *(MeReal *)((int)constraint + 0x114);
-    ref2world[1][3] = *(MeReal *)((int)constraint + 0x118);
-    ref2world[2][0] = *(MeReal *)((int)constraint + 0x11c);
-    ref2world[2][1] = *(MeReal *)((int)constraint + 0x120);
-    ref2world[2][2] = *(MeReal *)((int)constraint + 0x124);
-    ref2world[2][3] = *(MeReal *)((int)constraint + 0x128);
-    ref2world[3][0] = *(MeReal *)((int)constraint + 300);
-    ref2world[3][1] = *(MeReal *)((int)constraint + 0x130);
-    ref2world[3][2] = *(MeReal *)((int)constraint + 0x134);
-    ref2world[3][3] = *(MeReal *)((int)constraint + 0x138);
+  if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtUniversal *)0)->head.bodyindex[1] - (char *)0))) == -1) {
+    ref2world[0][0] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtUniversal *)0)->head.ref2[0][0] - (char *)0)));
+    ref2world[0][1] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtUniversal *)0)->head.ref2[0][1] - (char *)0)));
+    ref2world[0][2] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtUniversal *)0)->head.ref2[0][2] - (char *)0)));
+    ref2world[0][3] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtUniversal *)0)->head.ref2[0][3] - (char *)0)));
+    ref2world[1][0] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtUniversal *)0)->head.ref2[1][0] - (char *)0)));
+    ref2world[1][1] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtUniversal *)0)->head.ref2[1][1] - (char *)0)));
+    ref2world[1][2] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtUniversal *)0)->head.ref2[1][2] - (char *)0)));
+    ref2world[1][3] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtUniversal *)0)->head.ref2[1][3] - (char *)0)));
+    ref2world[2][0] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtUniversal *)0)->head.ref2[2][0] - (char *)0)));
+    ref2world[2][1] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtUniversal *)0)->head.ref2[2][1] - (char *)0)));
+    ref2world[2][2] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtUniversal *)0)->head.ref2[2][2] - (char *)0)));
+    ref2world[2][3] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtUniversal *)0)->head.ref2[2][3] - (char *)0)));
+    ref2world[3][0] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtUniversal *)0)->head.ref2[3][0] - (char *)0)));
+    ref2world[3][1] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtUniversal *)0)->head.ref2[3][1] - (char *)0)));
+    ref2world[3][2] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtUniversal *)0)->head.ref2[3][2] - (char *)0)));
+    ref2world[3][3] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtUniversal *)0)->head.ref2[3][3] - (char *)0)));
     iVar16 = -1;
   }
   else {
     MeMatrix4MultiplyMatrix
-              (ref2world,(MeReal (*) [4])((int)constraint + 0xfc),
-               tlist[*(int *)((int)constraint + 0xb8)].R0);
-    iVar16 = *(int *)((int)constraint + 0xb8);
+              (ref2world,(MeReal (*) [4])((kd_iptr)constraint + ((int)((char *)&((struct MdtUniversal *)0)->head.ref2[0][0] - (char *)0))),
+               tlist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtUniversal *)0)->head.bodyindex[1] - (char *)0)))].R0);
+    iVar16 = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtUniversal *)0)->head.bodyindex[1] - (char *)0)));
   }
   kd_MdtBclAddSphericalRowsWorld
-            (clist,tlist[*(int *)((int)constraint + 0xb4)].pos,tlist[iVar16].pos,ref1world[3],
-             ref2world[3],(uint)(iVar16 != -1),(MeReal *)((int)constraint + 0x13c),
-             (MeReal *)((int)constraint + 0x148));
+            (clist,tlist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtUniversal *)0)->head.bodyindex[0] - (char *)0)))].pos,tlist[iVar16].pos,ref1world[3],
+             ref2world[3],(uint)(iVar16 != -1),(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtUniversal *)0)->head.worldLinVel[0] - (char *)0))),
+             (MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtUniversal *)0)->head.worldAngVel[0] - (char *)0))));
   fVar2 = ref1world[0][1] * ref2world[1][2] - ref1world[0][2] * ref2world[1][1];
   fVar3 = ref1world[0][2] * ref2world[1][0] - ref2world[1][2] * ref1world[0][0];
   fVar1 = ref1world[0][0] * ref2world[1][1] - ref1world[0][1] * ref2world[1][0];
@@ -3239,38 +3239,38 @@ void kd_MdtBclAddUniversal(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
   if (iVar16 < 0) {
     iVar16 = iVar8 + 6;
   }
-  *(float *)((int)*clist->Jstore + iVar8 * 4 + (iVar16 >> 2) * 0xb0 + 0x3c) = fVar2;
+  *(float *)((kd_iptr)*clist->Jstore + iVar8 * 4 + (iVar16 >> 2) * 0xb0 + 0x3c) = fVar2;
   iVar8 = clist->num_rows_inc_padding;
   iVar16 = iVar8 + 3;
   if (iVar16 < 0) {
     iVar16 = iVar8 + 6;
   }
-  *(float *)((int)*clist->Jstore + iVar8 * 4 + (iVar16 >> 2) * 0xb0 + 0x4c) = fVar3;
+  *(float *)((kd_iptr)*clist->Jstore + iVar8 * 4 + (iVar16 >> 2) * 0xb0 + 0x4c) = fVar3;
   iVar8 = clist->num_rows_inc_padding;
   iVar16 = iVar8 + 3;
   if (iVar16 < 0) {
     iVar16 = iVar8 + 6;
   }
-  *(float *)((int)*clist->Jstore + iVar8 * 4 + (iVar16 >> 2) * 0xb0 + 0x5c) = fVar1;
-  if (*(int *)((int)constraint + 0xb8) != -1) {
+  *(float *)((kd_iptr)*clist->Jstore + iVar8 * 4 + (iVar16 >> 2) * 0xb0 + 0x5c) = fVar1;
+  if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtUniversal *)0)->head.bodyindex[1] - (char *)0))) != -1) {
     iVar8 = clist->num_rows_inc_padding;
     iVar16 = iVar8 + 3;
     if (iVar16 < 0) {
       iVar16 = iVar8 + 6;
     }
-    *(float *)((int)*clist->Jstore + iVar8 * 4 + (iVar16 >> 2) * 0xb0 + 0x9c) = -fVar2;
+    *(float *)((kd_iptr)*clist->Jstore + iVar8 * 4 + (iVar16 >> 2) * 0xb0 + 0x9c) = -fVar2;
     iVar8 = clist->num_rows_inc_padding;
     iVar16 = iVar8 + 3;
     if (iVar16 < 0) {
       iVar16 = iVar8 + 6;
     }
-    *(float *)((int)*clist->Jstore + iVar8 * 4 + 0xac + (iVar16 >> 2) * 0xb0) = -fVar3;
+    *(float *)((kd_iptr)*clist->Jstore + iVar8 * 4 + 0xac + (iVar16 >> 2) * 0xb0) = -fVar3;
     iVar8 = clist->num_rows_inc_padding;
     iVar16 = iVar8 + 3;
     if (iVar16 < 0) {
       iVar16 = iVar8 + 6;
     }
-    *(float *)((int)*clist->Jstore + iVar8 * 4 + 0xbc + (iVar16 >> 2) * 0xb0) = -fVar1;
+    *(float *)((kd_iptr)*clist->Jstore + iVar8 * 4 + 0xbc + (iVar16 >> 2) * 0xb0) = -fVar1;
   }
   pMVar6[iVar5 + 3] = -3.4028235e+38;
   pMVar7[iVar5 + 3] = 3.4028235e+38;
@@ -3303,7 +3303,7 @@ void kd_MdtBclAddSkeletal(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
   MeReal *pMVar16;
   int iVar17;
   int iVar18;
-  int iVar19;
+  kd_iptr iVar19;
   MeReal *pMVar20;
   MeReal *pMVar21;
   int iVar22;
@@ -3359,20 +3359,20 @@ void kd_MdtBclAddSkeletal(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
     if (iVar17 < 0) {
       iVar18 = iVar17 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar17 * 4 + (iVar18 >> 2) * 0xb0 + iVar19 * 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar17 * 4 + (iVar18 >> 2) * 0xb0 + iVar19 * 0x10) = 0;
     iVar17 = clist->num_rows_inc_padding;
     iVar18 = iVar17;
     if (iVar17 < 0) {
       iVar18 = iVar17 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar17 * 4 + iVar19 * 0x10 + (iVar18 >> 2) * 0xb0 + 0x60)
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar17 * 4 + iVar19 * 0x10 + (iVar18 >> 2) * 0xb0 + 0x60)
          = 0;
     iVar17 = clist->num_rows_inc_padding;
     iVar18 = iVar17;
     if (iVar17 < 0) {
       iVar18 = iVar17 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar17 * 4 + (iVar18 >> 2) * 0xb0 + iVar19 * 0x10 + 0x10)
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar17 * 4 + (iVar18 >> 2) * 0xb0 + iVar19 * 0x10 + 0x10)
          = 0;
     iVar17 = clist->num_rows_inc_padding;
     iVar18 = iVar17;
@@ -3380,7 +3380,7 @@ void kd_MdtBclAddSkeletal(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
       iVar18 = iVar17 + 3;
     }
     iVar22 = iVar19 + 2;
-    *(undefined4 *)((int)*clist->Jstore + iVar17 * 4 + iVar19 * 0x10 + (iVar18 >> 2) * 0xb0 + 0x70)
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar17 * 4 + iVar19 * 0x10 + (iVar18 >> 2) * 0xb0 + 0x70)
          = 0;
     iVar19 = iVar22;
   } while (iVar22 != 6);
@@ -3396,21 +3396,21 @@ void kd_MdtBclAddSkeletal(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
     if (iVar18 < 0) {
       iVar18 = iVar17 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar17 * 4 + 4 + (iVar18 >> 2) * 0xb0 + iVar19 * 0x10) = 0
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar17 * 4 + 4 + (iVar18 >> 2) * 0xb0 + iVar19 * 0x10) = 0
     ;
     iVar17 = clist->num_rows_inc_padding;
     iVar18 = iVar17 + 1;
     if (iVar18 < 0) {
       iVar18 = iVar17 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar17 * 4 + iVar19 * 0x10 + (iVar18 >> 2) * 0xb0 + 100) =
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar17 * 4 + iVar19 * 0x10 + (iVar18 >> 2) * 0xb0 + 100) =
          0;
     iVar17 = clist->num_rows_inc_padding;
     iVar18 = iVar17 + 1;
     if (iVar18 < 0) {
       iVar18 = iVar17 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar17 * 4 + (iVar18 >> 2) * 0xb0 + iVar19 * 0x10 + 0x14)
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar17 * 4 + (iVar18 >> 2) * 0xb0 + iVar19 * 0x10 + 0x14)
          = 0;
     iVar17 = clist->num_rows_inc_padding;
     iVar18 = iVar17 + 1;
@@ -3418,7 +3418,7 @@ void kd_MdtBclAddSkeletal(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
       iVar18 = iVar17 + 4;
     }
     iVar22 = iVar19 + 2;
-    *(undefined4 *)((int)*clist->Jstore + iVar17 * 4 + iVar19 * 0x10 + (iVar18 >> 2) * 0xb0 + 0x74)
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar17 * 4 + iVar19 * 0x10 + (iVar18 >> 2) * 0xb0 + 0x74)
          = 0;
     iVar19 = iVar22;
   } while (iVar22 != 6);
@@ -3434,21 +3434,21 @@ void kd_MdtBclAddSkeletal(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
     if (iVar18 < 0) {
       iVar18 = iVar17 + 5;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar17 * 4 + 8 + (iVar18 >> 2) * 0xb0 + iVar19 * 0x10) = 0
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar17 * 4 + 8 + (iVar18 >> 2) * 0xb0 + iVar19 * 0x10) = 0
     ;
     iVar17 = clist->num_rows_inc_padding;
     iVar18 = iVar17 + 2;
     if (iVar18 < 0) {
       iVar18 = iVar17 + 5;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar17 * 4 + iVar19 * 0x10 + (iVar18 >> 2) * 0xb0 + 0x68)
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar17 * 4 + iVar19 * 0x10 + (iVar18 >> 2) * 0xb0 + 0x68)
          = 0;
     iVar17 = clist->num_rows_inc_padding;
     iVar18 = iVar17 + 2;
     if (iVar18 < 0) {
       iVar18 = iVar17 + 5;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar17 * 4 + (iVar18 >> 2) * 0xb0 + iVar19 * 0x10 + 0x18)
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar17 * 4 + (iVar18 >> 2) * 0xb0 + iVar19 * 0x10 + 0x18)
          = 0;
     iVar17 = clist->num_rows_inc_padding;
     iVar18 = iVar17 + 2;
@@ -3456,7 +3456,7 @@ void kd_MdtBclAddSkeletal(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
       iVar18 = iVar17 + 5;
     }
     iVar22 = iVar19 + 2;
-    *(undefined4 *)((int)*clist->Jstore + iVar17 * 4 + iVar19 * 0x10 + (iVar18 >> 2) * 0xb0 + 0x78)
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar17 * 4 + iVar19 * 0x10 + (iVar18 >> 2) * 0xb0 + 0x78)
          = 0;
     iVar19 = iVar22;
   } while (iVar22 != 6);
@@ -3465,10 +3465,10 @@ void kd_MdtBclAddSkeletal(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
   pMVar16[2] = 0.0;
   pMVar21[2] = 0.0;
   nRows = 3;
-  clist->Jbody[clist->num_constraints][0] = *(int *)((int)constraint + 0xb4);
-  clist->Jbody[clist->num_constraints][1] = *(int *)((int)constraint + 0xb8);
-  MeQuaternionFromTM(qaca,(void *)((int)constraint + 0xbc));
-  iVar19 = *(int *)((int)constraint + 0x54);
+  clist->Jbody[clist->num_constraints][0] = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.bodyindex[0] - (char *)0)));
+  clist->Jbody[clist->num_constraints][1] = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.bodyindex[1] - (char *)0)));
+  MeQuaternionFromTM(qaca,(void *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.ref1[0][0] - (char *)0))));
+  iVar19 = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.mdtbody[0] - (char *)0)));
   qacw[0] = ((qaca[0] * *(float *)(iVar19 + 0xb0) - qaca[1] * *(float *)(iVar19 + 0xb4)) -
             qaca[2] * *(float *)(iVar19 + 0xb8)) - qaca[3] * *(float *)(iVar19 + 0xbc);
   qacw[1] = (*(float *)(iVar19 + 0xb8) * qaca[3] +
@@ -3497,39 +3497,39 @@ void kd_MdtBclAddSkeletal(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
   Racw[2][2] = (fVar8 - fVar10) + fVar1;
   Racw[2][1] = fVar3 - fVar9 * qacw[1];
   Racw[1][2] = fVar9 * qacw[1] + fVar3;
-  fVar1 = *(float *)((int)constraint + 0xec);
-  fVar2 = *(float *)((int)constraint + 0xf0);
-  pMVar23 = tlist + *(int *)((int)constraint + 0xb4);
-  fVar3 = *(float *)((int)constraint + 0xf4);
+  fVar1 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.ref1[3][0] - (char *)0)));
+  fVar2 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.ref1[3][1] - (char *)0)));
+  pMVar23 = tlist + *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.bodyindex[0] - (char *)0)));
+  fVar3 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.ref1[3][2] - (char *)0)));
   Racw[3][0] = fVar3 * pMVar23->R2[0] + fVar2 * pMVar23->R1[0] + fVar1 * pMVar23->R0[0] +
                pMVar23->pos[0];
   Racw[3][1] = fVar3 * pMVar23->R2[1] + fVar2 * pMVar23->R1[1] + fVar1 * pMVar23->R0[1] +
                pMVar23->pos[1];
   Racw[3][2] = fVar3 * pMVar23->R2[2] + fVar1 * pMVar23->R0[2] + fVar2 * pMVar23->R1[2] +
                pMVar23->pos[2];
-  if (*(int *)((int)constraint + 0xb8) == -1) {
-    Rbcw[0][0] = *(MeReal *)((int)constraint + 0xfc);
-    Rbcw[0][1] = *(MeReal *)((int)constraint + 0x100);
-    Rbcw[0][2] = *(MeReal *)((int)constraint + 0x104);
-    Rbcw[0][3] = *(MeReal *)((int)constraint + 0x108);
-    Rbcw[1][0] = *(MeReal *)((int)constraint + 0x10c);
-    Rbcw[1][1] = *(MeReal *)((int)constraint + 0x110);
-    Rbcw[1][2] = *(MeReal *)((int)constraint + 0x114);
-    Rbcw[1][3] = *(MeReal *)((int)constraint + 0x118);
-    Rbcw[2][0] = *(MeReal *)((int)constraint + 0x11c);
-    Rbcw[2][1] = *(MeReal *)((int)constraint + 0x120);
-    Rbcw[2][2] = *(MeReal *)((int)constraint + 0x124);
-    Rbcw[2][3] = *(MeReal *)((int)constraint + 0x128);
-    Rbcw[3][0] = *(MeReal *)((int)constraint + 300);
-    Rbcw[3][1] = *(MeReal *)((int)constraint + 0x130);
-    Rbcw[3][2] = *(MeReal *)((int)constraint + 0x134);
-    Rbcw[3][3] = *(MeReal *)((int)constraint + 0x138);
+  if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.bodyindex[1] - (char *)0))) == -1) {
+    Rbcw[0][0] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.ref2[0][0] - (char *)0)));
+    Rbcw[0][1] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.ref2[0][1] - (char *)0)));
+    Rbcw[0][2] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.ref2[0][2] - (char *)0)));
+    Rbcw[0][3] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.ref2[0][3] - (char *)0)));
+    Rbcw[1][0] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.ref2[1][0] - (char *)0)));
+    Rbcw[1][1] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.ref2[1][1] - (char *)0)));
+    Rbcw[1][2] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.ref2[1][2] - (char *)0)));
+    Rbcw[1][3] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.ref2[1][3] - (char *)0)));
+    Rbcw[2][0] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.ref2[2][0] - (char *)0)));
+    Rbcw[2][1] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.ref2[2][1] - (char *)0)));
+    Rbcw[2][2] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.ref2[2][2] - (char *)0)));
+    Rbcw[2][3] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.ref2[2][3] - (char *)0)));
+    Rbcw[3][0] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.ref2[3][0] - (char *)0)));
+    Rbcw[3][1] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.ref2[3][1] - (char *)0)));
+    Rbcw[3][2] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.ref2[3][2] - (char *)0)));
+    Rbcw[3][3] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.ref2[3][3] - (char *)0)));
     MeQuaternionFromTM(qbcw,Rbcw);
-    iVar19 = *(int *)((int)constraint + 0xb8);
+    iVar19 = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.bodyindex[1] - (char *)0)));
   }
   else {
-    MeQuaternionFromTM(qbcb,(void *)((int)constraint + 0xfc));
-    iVar19 = *(int *)((int)constraint + 0x58);
+    MeQuaternionFromTM(qbcb,(void *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.ref2[0][0] - (char *)0))));
+    iVar19 = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.mdtbody[1] - (char *)0)));
     qbcw[0] = ((qbcb[0] * *(float *)(iVar19 + 0xb0) - qbcb[1] * *(float *)(iVar19 + 0xb4)) -
               qbcb[2] * *(float *)(iVar19 + 0xb8)) - qbcb[3] * *(float *)(iVar19 + 0xbc);
     qbcw[1] = (*(float *)(iVar19 + 0xb8) * qbcb[3] +
@@ -3558,11 +3558,11 @@ void kd_MdtBclAddSkeletal(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
     Rbcw[2][2] = (fVar10 - fVar11) + fVar1;
     Rbcw[2][1] = fVar3 - fVar9 * qbcw[1];
     Rbcw[1][2] = fVar9 * qbcw[1] + fVar3;
-    iVar19 = *(int *)((int)constraint + 0xb8);
-    fVar1 = *(float *)((int)constraint + 300);
-    fVar2 = *(float *)((int)constraint + 0x130);
+    iVar19 = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.bodyindex[1] - (char *)0)));
+    fVar1 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.ref2[3][0] - (char *)0)));
+    fVar2 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.ref2[3][1] - (char *)0)));
     pMVar23 = tlist + iVar19;
-    fVar3 = *(float *)((int)constraint + 0x134);
+    fVar3 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.ref2[3][2] - (char *)0)));
     Rbcw[3][0] = fVar3 * pMVar23->R2[0] + fVar2 * pMVar23->R1[0] + fVar1 * pMVar23->R0[0] +
                  pMVar23->pos[0];
     Rbcw[3][1] = fVar3 * pMVar23->R2[1] + fVar2 * pMVar23->R1[1] + fVar1 * pMVar23->R0[1] +
@@ -3595,15 +3595,15 @@ void kd_MdtBclAddSkeletal(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
   fVar3 = (fVar1 + fVar1) * fVar10 - (fVar8 + fVar8) * fVar2;
   fVar2 = (fVar8 + fVar8) * fVar10 + (fVar1 + fVar1) * fVar2;
   kd_MdtBclAddSphericalRowsWorld
-            (clist,tlist[*(int *)((int)constraint + 0xb4)].pos,tlist[iVar19].pos,Racw[3],Rbcw[3],
-             (uint)(iVar19 != -1),(MeReal *)((int)constraint + 0x13c),
-             (MeReal *)((int)constraint + 0x148));
-  if (*(int *)((int)constraint + 0x168) != 0) {
+            (clist,tlist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.bodyindex[0] - (char *)0)))].pos,tlist[iVar19].pos,Racw[3],Rbcw[3],
+             (uint)(iVar19 != -1),(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.worldLinVel[0] - (char *)0))),
+             (MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.worldAngVel[0] - (char *)0))));
+  if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->twistOption - (char *)0))) != 0) {
                     
     JwQ1[0] = (((qmul[0][0] + qmul[1][1]) - qmul[3][3]) - qmul[2][2]) * 0.5;
     JwQ1[1] = (qmul[0][3] + qmul[1][2] + qmul[3][0] + qmul[2][1]) * 0.5;
     JwQ1[2] = (((qmul[1][3] - qmul[0][2]) + qmul[3][1]) - qmul[2][0]) * 0.5;
-    if (*(int *)((int)constraint + 0x168) == 2) {
+    if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->twistOption - (char *)0))) == 2) {
                     
       iVar19 = 0;
       do {
@@ -3613,21 +3613,21 @@ void kd_MdtBclAddSkeletal(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
           iVar18 = iVar17 + 6;
         }
         *(undefined4 *)
-         ((int)*clist->Jstore + iVar17 * 4 + 0xc + (iVar18 >> 2) * 0xb0 + iVar19 * 0x10) = 0;
+         ((kd_iptr)*clist->Jstore + iVar17 * 4 + 0xc + (iVar18 >> 2) * 0xb0 + iVar19 * 0x10) = 0;
         iVar17 = clist->num_rows_inc_padding;
         iVar18 = iVar17 + 3;
         if (iVar18 < 0) {
           iVar18 = iVar17 + 6;
         }
         *(undefined4 *)
-         ((int)*clist->Jstore + iVar17 * 4 + iVar19 * 0x10 + (iVar18 >> 2) * 0xb0 + 0x6c) = 0;
+         ((kd_iptr)*clist->Jstore + iVar17 * 4 + iVar19 * 0x10 + (iVar18 >> 2) * 0xb0 + 0x6c) = 0;
         iVar17 = clist->num_rows_inc_padding;
         iVar18 = iVar17 + 3;
         if (iVar18 < 0) {
           iVar18 = iVar17 + 6;
         }
         *(undefined4 *)
-         ((int)*clist->Jstore + iVar17 * 4 + (iVar18 >> 2) * 0xb0 + iVar19 * 0x10 + 0x1c) = 0;
+         ((kd_iptr)*clist->Jstore + iVar17 * 4 + (iVar18 >> 2) * 0xb0 + iVar19 * 0x10 + 0x1c) = 0;
         iVar17 = clist->num_rows_inc_padding;
         iVar18 = iVar17 + 3;
         if (iVar18 < 0) {
@@ -3635,7 +3635,7 @@ void kd_MdtBclAddSkeletal(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
         }
         iVar22 = iVar19 + 2;
         *(undefined4 *)
-         ((int)*clist->Jstore + iVar17 * 4 + iVar19 * 0x10 + (iVar18 >> 2) * 0xb0 + 0x7c) = 0;
+         ((kd_iptr)*clist->Jstore + iVar17 * 4 + iVar19 * 0x10 + (iVar18 >> 2) * 0xb0 + 0x7c) = 0;
         iVar19 = iVar22;
       } while (iVar22 != 6);
       pMVar20[3] = 0.0;
@@ -3647,13 +3647,13 @@ void kd_MdtBclAddSkeletal(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
       if (iVar19 < 0) {
         iVar19 = iVar18 + 6;
       }
-      *(undefined4 *)((int)*clist->Jstore + iVar18 * 4 + 0xc + (iVar19 >> 2) * 0xb0) = 0;
+      *(undefined4 *)((kd_iptr)*clist->Jstore + iVar18 * 4 + 0xc + (iVar19 >> 2) * 0xb0) = 0;
       iVar18 = clist->num_rows_inc_padding;
       iVar19 = iVar18 + 3;
       if (iVar19 < 0) {
         iVar19 = iVar18 + 6;
       }
-      *(MeReal *)((int)*clist->Jstore + iVar18 * 4 + (iVar19 >> 2) * 0xb0 + 0x3c) = JwQ1[0];
+      *(MeReal *)((kd_iptr)*clist->Jstore + iVar18 * 4 + (iVar19 >> 2) * 0xb0 + 0x3c) = JwQ1[0];
       uVar24 = 1;
       do {
         iVar18 = clist->num_rows_inc_padding;
@@ -3662,13 +3662,13 @@ void kd_MdtBclAddSkeletal(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
           iVar19 = iVar18 + 6;
         }
         *(undefined4 *)
-         ((int)*clist->Jstore + iVar18 * 4 + 0xc + (iVar19 >> 2) * 0xb0 + uVar24 * 0x10) = 0;
+         ((kd_iptr)*clist->Jstore + iVar18 * 4 + 0xc + (iVar19 >> 2) * 0xb0 + uVar24 * 0x10) = 0;
         iVar18 = clist->num_rows_inc_padding;
         iVar19 = iVar18 + 3;
         if (iVar19 < 0) {
           iVar19 = iVar18 + 6;
         }
-        *(MeReal *)((int)*clist->Jstore + iVar18 * 4 + (iVar19 >> 2) * 0xb0 + uVar24 * 0x10 + 0x3c)
+        *(MeReal *)((kd_iptr)*clist->Jstore + iVar18 * 4 + (iVar19 >> 2) * 0xb0 + uVar24 * 0x10 + 0x3c)
              = JwQ1[uVar24];
         iVar18 = clist->num_rows_inc_padding;
         iVar19 = iVar18 + 3;
@@ -3676,30 +3676,30 @@ void kd_MdtBclAddSkeletal(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
           iVar19 = iVar18 + 6;
         }
         *(undefined4 *)
-         ((int)*clist->Jstore + iVar18 * 4 + (iVar19 >> 2) * 0xb0 + uVar24 * 0x10 + 0x1c) = 0;
+         ((kd_iptr)*clist->Jstore + iVar18 * 4 + (iVar19 >> 2) * 0xb0 + uVar24 * 0x10 + 0x1c) = 0;
         iVar18 = clist->num_rows_inc_padding;
         iVar19 = iVar18 + 3;
         if (iVar19 < 0) {
           iVar19 = iVar18 + 6;
         }
         uVar15 = uVar24 + 2;
-        *(MeReal *)((int)*clist->Jstore + iVar18 * 4 + (iVar19 >> 2) * 0xb0 + uVar24 * 0x10 + 0x4c)
+        *(MeReal *)((kd_iptr)*clist->Jstore + iVar18 * 4 + (iVar19 >> 2) * 0xb0 + uVar24 * 0x10 + 0x4c)
              = JwQ1[uVar24 + 1];
         uVar24 = uVar15;
       } while (uVar15 < 3);
-      if (*(int *)((int)constraint + 0xb8) != -1) {
+      if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.bodyindex[1] - (char *)0))) != -1) {
         iVar18 = clist->num_rows_inc_padding;
         iVar19 = iVar18 + 3;
         if (iVar19 < 0) {
           iVar19 = iVar18 + 6;
         }
-        *(undefined4 *)((int)*clist->Jstore + iVar18 * 4 + (iVar19 >> 2) * 0xb0 + 0x6c) = 0;
+        *(undefined4 *)((kd_iptr)*clist->Jstore + iVar18 * 4 + (iVar19 >> 2) * 0xb0 + 0x6c) = 0;
         iVar18 = clist->num_rows_inc_padding;
         iVar19 = iVar18 + 3;
         if (iVar19 < 0) {
           iVar19 = iVar18 + 6;
         }
-        *(float *)((int)*clist->Jstore + iVar18 * 4 + (iVar19 >> 2) * 0xb0 + 0x9c) = -JwQ1[0];
+        *(float *)((kd_iptr)*clist->Jstore + iVar18 * 4 + (iVar19 >> 2) * 0xb0 + 0x9c) = -JwQ1[0];
         uVar24 = 1;
         do {
           iVar18 = clist->num_rows_inc_padding;
@@ -3708,13 +3708,13 @@ void kd_MdtBclAddSkeletal(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
             iVar19 = iVar18 + 6;
           }
           *(undefined4 *)
-           ((int)*clist->Jstore + iVar18 * 4 + uVar24 * 0x10 + (iVar19 >> 2) * 0xb0 + 0x6c) = 0;
+           ((kd_iptr)*clist->Jstore + iVar18 * 4 + uVar24 * 0x10 + (iVar19 >> 2) * 0xb0 + 0x6c) = 0;
           iVar18 = clist->num_rows_inc_padding;
           iVar19 = iVar18 + 3;
           if (iVar19 < 0) {
             iVar19 = iVar18 + 6;
           }
-          *(float *)((int)*clist->Jstore + uVar24 * 0x10 + iVar18 * 4 + (iVar19 >> 2) * 0xb0 + 0x9c)
+          *(float *)((kd_iptr)*clist->Jstore + uVar24 * 0x10 + iVar18 * 4 + (iVar19 >> 2) * 0xb0 + 0x9c)
                = -JwQ1[uVar24];
           iVar18 = clist->num_rows_inc_padding;
           iVar19 = iVar18 + 3;
@@ -3722,14 +3722,14 @@ void kd_MdtBclAddSkeletal(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
             iVar19 = iVar18 + 6;
           }
           *(undefined4 *)
-           ((int)*clist->Jstore + iVar18 * 4 + uVar24 * 0x10 + (iVar19 >> 2) * 0xb0 + 0x7c) = 0;
+           ((kd_iptr)*clist->Jstore + iVar18 * 4 + uVar24 * 0x10 + (iVar19 >> 2) * 0xb0 + 0x7c) = 0;
           iVar18 = clist->num_rows_inc_padding;
           iVar19 = iVar18 + 3;
           if (iVar19 < 0) {
             iVar19 = iVar18 + 6;
           }
           uVar15 = uVar24 + 2;
-          *(float *)((int)*clist->Jstore + uVar24 * 0x10 + iVar18 * 4 + (iVar19 >> 2) * 0xb0 + 0xac)
+          *(float *)((kd_iptr)*clist->Jstore + uVar24 * 0x10 + iVar18 * 4 + (iVar19 >> 2) * 0xb0 + 0xac)
                = -JwQ1[uVar24 + 1];
           uVar24 = uVar15;
         } while (uVar15 < 3);
@@ -3740,7 +3740,7 @@ void kd_MdtBclAddSkeletal(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
     }
     else {
                     
-      fVar10 = *(float *)((int)constraint + 0x16c) * *(float *)((int)constraint + 0x16c);
+      fVar10 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->cos_half_twist_limit_angle - (char *)0))) * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->cos_half_twist_limit_angle - (char *)0)));
       fVar11 = 1.0 - fVar10;
       fVar13 = -fVar11 * fVar8 * fVar8 + fVar10 * fVar1 * fVar1;
       if (fVar13 <= 0.0) goto LAB_0001875e;
@@ -3753,21 +3753,21 @@ void kd_MdtBclAddSkeletal(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
           iVar18 = iVar17 + 6;
         }
         *(undefined4 *)
-         ((int)*clist->Jstore + iVar17 * 4 + 0xc + (iVar18 >> 2) * 0xb0 + iVar19 * 0x10) = 0;
+         ((kd_iptr)*clist->Jstore + iVar17 * 4 + 0xc + (iVar18 >> 2) * 0xb0 + iVar19 * 0x10) = 0;
         iVar17 = clist->num_rows_inc_padding;
         iVar18 = iVar17 + 3;
         if (iVar18 < 0) {
           iVar18 = iVar17 + 6;
         }
         *(undefined4 *)
-         ((int)*clist->Jstore + iVar17 * 4 + iVar19 * 0x10 + (iVar18 >> 2) * 0xb0 + 0x6c) = 0;
+         ((kd_iptr)*clist->Jstore + iVar17 * 4 + iVar19 * 0x10 + (iVar18 >> 2) * 0xb0 + 0x6c) = 0;
         iVar17 = clist->num_rows_inc_padding;
         iVar18 = iVar17 + 3;
         if (iVar18 < 0) {
           iVar18 = iVar17 + 6;
         }
         *(undefined4 *)
-         ((int)*clist->Jstore + iVar17 * 4 + (iVar18 >> 2) * 0xb0 + iVar19 * 0x10 + 0x1c) = 0;
+         ((kd_iptr)*clist->Jstore + iVar17 * 4 + (iVar18 >> 2) * 0xb0 + iVar19 * 0x10 + 0x1c) = 0;
         iVar17 = clist->num_rows_inc_padding;
         iVar18 = iVar17 + 3;
         if (iVar18 < 0) {
@@ -3775,7 +3775,7 @@ void kd_MdtBclAddSkeletal(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
         }
         iVar22 = iVar19 + 2;
         *(undefined4 *)
-         ((int)*clist->Jstore + iVar17 * 4 + iVar19 * 0x10 + (iVar18 >> 2) * 0xb0 + 0x7c) = 0;
+         ((kd_iptr)*clist->Jstore + iVar17 * 4 + iVar19 * 0x10 + (iVar18 >> 2) * 0xb0 + 0x7c) = 0;
         iVar19 = iVar22;
       } while (iVar22 != 6);
       pMVar20[3] = 0.0;
@@ -3793,7 +3793,7 @@ void kd_MdtBclAddSkeletal(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
           iVar19 = iVar18 + 6;
         }
         *(undefined4 *)
-         ((int)*clist->Jstore + iVar18 * 4 + 0xc + (iVar19 >> 2) * 0xb0 + uVar24 * 0x10) = 0;
+         ((kd_iptr)*clist->Jstore + iVar18 * 4 + 0xc + (iVar19 >> 2) * 0xb0 + uVar24 * 0x10) = 0;
         iVar18 = clist->num_rows_inc_padding;
         iVar19 = iVar18 + 3;
         if (iVar19 < 0) {
@@ -3805,21 +3805,21 @@ void kd_MdtBclAddSkeletal(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
         paMVar7 = clist->Jstore;
         Jw[uVar24] = fVar12;
         uVar24 = uVar24 + 1;
-        *(float *)((int)*paMVar7 + iVar18 * 4 + (iVar19 >> 2) * 0xb0 + iVar17 + 0x3c) = fVar12;
+        *(float *)((kd_iptr)*paMVar7 + iVar18 * 4 + (iVar19 >> 2) * 0xb0 + iVar17 + 0x3c) = fVar12;
       } while (uVar24 < 3);
-      if (*(int *)((int)constraint + 0xb8) != -1) {
+      if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.bodyindex[1] - (char *)0))) != -1) {
         iVar18 = clist->num_rows_inc_padding;
         iVar19 = iVar18 + 3;
         if (iVar19 < 0) {
           iVar19 = iVar18 + 6;
         }
-        *(undefined4 *)((int)*clist->Jstore + iVar18 * 4 + (iVar19 >> 2) * 0xb0 + 0x6c) = 0;
+        *(undefined4 *)((kd_iptr)*clist->Jstore + iVar18 * 4 + (iVar19 >> 2) * 0xb0 + 0x6c) = 0;
         iVar18 = clist->num_rows_inc_padding;
         iVar19 = iVar18 + 3;
         if (iVar19 < 0) {
           iVar19 = iVar18 + 6;
         }
-        *(float *)((int)*clist->Jstore + iVar18 * 4 + (iVar19 >> 2) * 0xb0 + 0x9c) = -Jw[0];
+        *(float *)((kd_iptr)*clist->Jstore + iVar18 * 4 + (iVar19 >> 2) * 0xb0 + 0x9c) = -Jw[0];
         uVar24 = 1;
         do {
           iVar18 = clist->num_rows_inc_padding;
@@ -3828,13 +3828,13 @@ void kd_MdtBclAddSkeletal(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
             iVar19 = iVar18 + 6;
           }
           *(undefined4 *)
-           ((int)*clist->Jstore + iVar18 * 4 + uVar24 * 0x10 + (iVar19 >> 2) * 0xb0 + 0x6c) = 0;
+           ((kd_iptr)*clist->Jstore + iVar18 * 4 + uVar24 * 0x10 + (iVar19 >> 2) * 0xb0 + 0x6c) = 0;
           iVar18 = clist->num_rows_inc_padding;
           iVar19 = iVar18 + 3;
           if (iVar19 < 0) {
             iVar19 = iVar18 + 6;
           }
-          *(float *)((int)*clist->Jstore + uVar24 * 0x10 + iVar18 * 4 + (iVar19 >> 2) * 0xb0 + 0x9c)
+          *(float *)((kd_iptr)*clist->Jstore + uVar24 * 0x10 + iVar18 * 4 + (iVar19 >> 2) * 0xb0 + 0x9c)
                = -Jw[uVar24];
           iVar18 = clist->num_rows_inc_padding;
           iVar19 = iVar18 + 3;
@@ -3842,14 +3842,14 @@ void kd_MdtBclAddSkeletal(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
             iVar19 = iVar18 + 6;
           }
           *(undefined4 *)
-           ((int)*clist->Jstore + iVar18 * 4 + uVar24 * 0x10 + (iVar19 >> 2) * 0xb0 + 0x7c) = 0;
+           ((kd_iptr)*clist->Jstore + iVar18 * 4 + uVar24 * 0x10 + (iVar19 >> 2) * 0xb0 + 0x7c) = 0;
           iVar18 = clist->num_rows_inc_padding;
           iVar19 = iVar18 + 3;
           if (iVar19 < 0) {
             iVar19 = iVar18 + 6;
           }
           uVar15 = uVar24 + 2;
-          *(float *)((int)*clist->Jstore + uVar24 * 0x10 + iVar18 * 4 + (iVar19 >> 2) * 0xb0 + 0xac)
+          *(float *)((kd_iptr)*clist->Jstore + uVar24 * 0x10 + iVar18 * 4 + (iVar19 >> 2) * 0xb0 + 0xac)
                = -Jw[uVar24 + 1];
           uVar24 = uVar15;
         } while (uVar15 < 3);
@@ -3862,12 +3862,12 @@ void kd_MdtBclAddSkeletal(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
   }
 LAB_0001875e:
                     
-  if ((1 < *(uint *)((int)constraint + 0x164)) && (*(uint *)((int)constraint + 0x164) == 2)) {
+  if ((1 < *(uint *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->coneOption - (char *)0)))) && (*(uint *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->coneOption - (char *)0))) == 2)) {
                     
-    fVar1 = (*(float *)((int)constraint + 0x170) + 1.0) * fVar3 *
-            (1.0 / (1.0 - *(float *)((int)constraint + 0x170)));
-    fVar11 = (1.0 / (1.0 - *(float *)((int)constraint + 0x174))) *
-             (*(float *)((int)constraint + 0x174) + 1.0) * fVar2;
+    fVar1 = (*(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->cos_half_cone_limit_angle_1 - (char *)0))) + 1.0) * fVar3 *
+            (1.0 / (1.0 - *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->cos_half_cone_limit_angle_1 - (char *)0)))));
+    fVar11 = (1.0 / (1.0 - *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->cos_half_cone_limit_angle_2 - (char *)0))))) *
+             (*(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->cos_half_cone_limit_angle_2 - (char *)0))) + 1.0) * fVar2;
     fVar10 = SQRT((1.0 - fVar9) * 0.5);
                     
     fVar8 = SQRT((fVar9 + 1.0) * 0.5);
@@ -3896,7 +3896,7 @@ LAB_0001875e:
         if (iVar17 < 0) {
           iVar18 = iVar17 + 3;
         }
-        *(undefined4 *)((int)*clist->Jstore + iVar17 * 4 + (iVar18 >> 2) * 0xb0 + iVar19 * 0x10) = 0
+        *(undefined4 *)((kd_iptr)*clist->Jstore + iVar17 * 4 + (iVar18 >> 2) * 0xb0 + iVar19 * 0x10) = 0
         ;
         iVar17 = nRows + clist->num_rows_inc_padding;
         iVar18 = iVar17;
@@ -3904,13 +3904,13 @@ LAB_0001875e:
           iVar18 = iVar17 + 3;
         }
         *(undefined4 *)
-         ((int)*clist->Jstore + iVar17 * 4 + iVar19 * 0x10 + (iVar18 >> 2) * 0xb0 + 0x60) = 0;
+         ((kd_iptr)*clist->Jstore + iVar17 * 4 + iVar19 * 0x10 + (iVar18 >> 2) * 0xb0 + 0x60) = 0;
         iVar18 = nRows + clist->num_rows_inc_padding;
         if (iVar18 < 0) {
           iVar18 = iVar18 + 3;
         }
         *(undefined4 *)
-         ((int)*clist->Jstore +
+         ((kd_iptr)*clist->Jstore +
          nRows * 4 + clist->num_rows_inc_padding * 4 + (iVar18 >> 2) * 0xb0 + iVar19 * 0x10 + 0x10)
              = 0;
         iVar18 = nRows + clist->num_rows_inc_padding;
@@ -3919,7 +3919,7 @@ LAB_0001875e:
         }
         iVar17 = iVar19 + 2;
         *(undefined4 *)
-         ((int)*clist->Jstore +
+         ((kd_iptr)*clist->Jstore +
          nRows * 4 + clist->num_rows_inc_padding * 4 + iVar19 * 0x10 + (iVar18 >> 2) * 0xb0 + 0x70)
              = 0;
         iVar19 = iVar17;
@@ -3933,13 +3933,13 @@ LAB_0001875e:
       if (iVar18 < 0) {
         iVar19 = iVar18 + 3;
       }
-      *(undefined4 *)((int)*clist->Jstore + iVar18 * 4 + (iVar19 >> 2) * 0xb0) = 0;
+      *(undefined4 *)((kd_iptr)*clist->Jstore + iVar18 * 4 + (iVar19 >> 2) * 0xb0) = 0;
       iVar18 = nRows + clist->num_rows_inc_padding;
       iVar19 = iVar18;
       if (iVar18 < 0) {
         iVar19 = iVar18 + 3;
       }
-      *(MeReal *)((int)*clist->Jstore + iVar18 * 4 + (iVar19 >> 2) * 0xb0 + 0x30) = JwQ0[0];
+      *(MeReal *)((kd_iptr)*clist->Jstore + iVar18 * 4 + (iVar19 >> 2) * 0xb0 + 0x30) = JwQ0[0];
       uVar24 = 1;
       do {
         iVar18 = nRows + clist->num_rows_inc_padding;
@@ -3947,21 +3947,21 @@ LAB_0001875e:
         if (iVar18 < 0) {
           iVar19 = iVar18 + 3;
         }
-        *(undefined4 *)((int)*clist->Jstore + iVar18 * 4 + (iVar19 >> 2) * 0xb0 + uVar24 * 0x10) = 0
+        *(undefined4 *)((kd_iptr)*clist->Jstore + iVar18 * 4 + (iVar19 >> 2) * 0xb0 + uVar24 * 0x10) = 0
         ;
         iVar18 = nRows + clist->num_rows_inc_padding;
         iVar19 = iVar18;
         if (iVar18 < 0) {
           iVar19 = iVar18 + 3;
         }
-        *(MeReal *)((int)*clist->Jstore + iVar18 * 4 + (iVar19 >> 2) * 0xb0 + uVar24 * 0x10 + 0x30)
+        *(MeReal *)((kd_iptr)*clist->Jstore + iVar18 * 4 + (iVar19 >> 2) * 0xb0 + uVar24 * 0x10 + 0x30)
              = JwQ0[uVar24];
         iVar19 = nRows + clist->num_rows_inc_padding;
         if (iVar19 < 0) {
           iVar19 = iVar19 + 3;
         }
         *(undefined4 *)
-         ((int)*clist->Jstore +
+         ((kd_iptr)*clist->Jstore +
          nRows * 4 + clist->num_rows_inc_padding * 4 + (iVar19 >> 2) * 0xb0 + uVar24 * 0x10 + 0x10)
              = 0;
         iVar19 = nRows + clist->num_rows_inc_padding;
@@ -3970,24 +3970,24 @@ LAB_0001875e:
         }
         uVar15 = uVar24 + 2;
         *(MeReal *)
-         ((int)*clist->Jstore +
+         ((kd_iptr)*clist->Jstore +
          nRows * 4 + clist->num_rows_inc_padding * 4 + (iVar19 >> 2) * 0xb0 + uVar24 * 0x10 + 0x40)
              = JwQ0[uVar24 + 1];
         uVar24 = uVar15;
       } while (uVar15 < 3);
-      if (*(int *)((int)constraint + 0xb8) != -1) {
+      if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.bodyindex[1] - (char *)0))) != -1) {
         iVar18 = nRows + clist->num_rows_inc_padding;
         iVar19 = iVar18;
         if (iVar18 < 0) {
           iVar19 = iVar18 + 3;
         }
-        *(undefined4 *)((int)*clist->Jstore + iVar18 * 4 + (iVar19 >> 2) * 0xb0 + 0x60) = 0;
+        *(undefined4 *)((kd_iptr)*clist->Jstore + iVar18 * 4 + (iVar19 >> 2) * 0xb0 + 0x60) = 0;
         iVar18 = nRows + clist->num_rows_inc_padding;
         iVar19 = iVar18;
         if (iVar18 < 0) {
           iVar19 = iVar18 + 3;
         }
-        *(float *)((int)*clist->Jstore + iVar18 * 4 + (iVar19 >> 2) * 0xb0 + 0x90) = -JwQ0[0];
+        *(float *)((kd_iptr)*clist->Jstore + iVar18 * 4 + (iVar19 >> 2) * 0xb0 + 0x90) = -JwQ0[0];
         uVar24 = 1;
         do {
           iVar18 = nRows + clist->num_rows_inc_padding;
@@ -3996,20 +3996,20 @@ LAB_0001875e:
             iVar19 = iVar18 + 3;
           }
           *(undefined4 *)
-           ((int)*clist->Jstore + iVar18 * 4 + uVar24 * 0x10 + (iVar19 >> 2) * 0xb0 + 0x60) = 0;
+           ((kd_iptr)*clist->Jstore + iVar18 * 4 + uVar24 * 0x10 + (iVar19 >> 2) * 0xb0 + 0x60) = 0;
           iVar18 = nRows + clist->num_rows_inc_padding;
           iVar19 = iVar18;
           if (iVar18 < 0) {
             iVar19 = iVar18 + 3;
           }
-          *(float *)((int)*clist->Jstore + uVar24 * 0x10 + iVar18 * 4 + (iVar19 >> 2) * 0xb0 + 0x90)
+          *(float *)((kd_iptr)*clist->Jstore + uVar24 * 0x10 + iVar18 * 4 + (iVar19 >> 2) * 0xb0 + 0x90)
                = -JwQ0[uVar24];
           iVar19 = nRows + clist->num_rows_inc_padding;
           if (iVar19 < 0) {
             iVar19 = iVar19 + 3;
           }
           *(undefined4 *)
-           ((int)*clist->Jstore +
+           ((kd_iptr)*clist->Jstore +
            nRows * 4 + clist->num_rows_inc_padding * 4 + uVar24 * 0x10 + (iVar19 >> 2) * 0xb0 + 0x70
            ) = 0;
           iVar18 = nRows + clist->num_rows_inc_padding;
@@ -4018,7 +4018,7 @@ LAB_0001875e:
             iVar19 = iVar18 + 3;
           }
           uVar15 = uVar24 + 2;
-          *(float *)((int)*clist->Jstore + uVar24 * 0x10 + iVar18 * 4 + (iVar19 >> 2) * 0xb0 + 0xa0)
+          *(float *)((kd_iptr)*clist->Jstore + uVar24 * 0x10 + iVar18 * 4 + (iVar19 >> 2) * 0xb0 + 0xa0)
                = -JwQ0[uVar24 + 1];
           uVar24 = uVar15;
         } while (uVar15 < 3);
@@ -4027,13 +4027,13 @@ LAB_0001875e:
       pMVar20[nRows] = PositionError;
       pMVar5[iVar4 + nRows] = 0.0;
       pMVar6[iVar4 + nRows] = 3.4028235e+38;
-      fVar1 = 1.0 / (*(float *)((int)constraint + 0x180) * *(float *)params +
-                    *(float *)((int)constraint + 0x184));
+      fVar1 = 1.0 / (*(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->cone_stiffness - (char *)0))) * *(float *)params +
+                    *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->cone_damping - (char *)0))));
       pMVar14[nRows] = fVar1;
       if (fVar1 < 0.0) {
         pMVar14[nRows] = 0.0;
       }
-      pMVar21[nRows] = fVar1 * *(float *)params * *(float *)((int)constraint + 0x180);
+      pMVar21[nRows] = fVar1 * *(float *)params * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->cone_stiffness - (char *)0)));
       nRows = nRows + 1;
     }
   }
@@ -4087,20 +4087,20 @@ void kd_MdtBclAddLinear1(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
     if (iVar8 < 0) {
       iVar9 = iVar8 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar8 * 4 + (iVar9 >> 2) * 0xb0 + iVar11 * 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar8 * 4 + (iVar9 >> 2) * 0xb0 + iVar11 * 0x10) = 0;
     iVar8 = clist->num_rows_inc_padding;
     iVar9 = iVar8;
     if (iVar8 < 0) {
       iVar9 = iVar8 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar8 * 4 + iVar11 * 0x10 + (iVar9 >> 2) * 0xb0 + 0x60) =
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar8 * 4 + iVar11 * 0x10 + (iVar9 >> 2) * 0xb0 + 0x60) =
          0;
     iVar8 = clist->num_rows_inc_padding;
     iVar9 = iVar8;
     if (iVar8 < 0) {
       iVar9 = iVar8 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar8 * 4 + (iVar9 >> 2) * 0xb0 + iVar11 * 0x10 + 0x10) =
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar8 * 4 + (iVar9 >> 2) * 0xb0 + iVar11 * 0x10 + 0x10) =
          0;
     iVar8 = clist->num_rows_inc_padding;
     iVar9 = iVar8;
@@ -4108,7 +4108,7 @@ void kd_MdtBclAddLinear1(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
       iVar9 = iVar8 + 3;
     }
     iVar13 = iVar11 + 2;
-    *(undefined4 *)((int)*clist->Jstore + iVar8 * 4 + iVar11 * 0x10 + (iVar9 >> 2) * 0xb0 + 0x70) =
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar8 * 4 + iVar11 * 0x10 + (iVar9 >> 2) * 0xb0 + 0x70) =
          0;
     iVar11 = iVar13;
   } while (iVar13 != 6);
@@ -4117,22 +4117,22 @@ void kd_MdtBclAddLinear1(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
   pMVar12[iVar3] = 0.0;
   pMVar7[iVar3] = 0.0;
   uVar14 = 0;
-  clist->Jbody[clist->num_constraints][0] = *(int *)((int)constraint + 0xb4);
-  clist->Jbody[clist->num_constraints][1] = *(int *)((int)constraint + 0xb8);
-  if (*(int *)((int)constraint + 0xb8) == -1) {
-    iVar11 = *(int *)((int)constraint + 0xb4);
-    normal[0] = *(MeReal *)((int)constraint + 0x16c);
+  clist->Jbody[clist->num_constraints][0] = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtLinear1 *)0)->head.bodyindex[0] - (char *)0)));
+  clist->Jbody[clist->num_constraints][1] = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtLinear1 *)0)->head.bodyindex[1] - (char *)0)));
+  if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtLinear1 *)0)->head.bodyindex[1] - (char *)0))) == -1) {
+    iVar11 = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtLinear1 *)0)->head.bodyindex[0] - (char *)0)));
+    normal[0] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtLinear1 *)0)->pos2[0] - (char *)0)));
     displacement[0] = tlist[iVar11].pos[0];
-    normal[1] = *(MeReal *)((int)constraint + 0x170);
+    normal[1] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtLinear1 *)0)->pos2[1] - (char *)0)));
     displacement[1] = tlist[iVar11].pos[1];
-    normal[2] = *(MeReal *)((int)constraint + 0x174);
+    normal[2] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtLinear1 *)0)->pos2[2] - (char *)0)));
     displacement[2] = tlist[iVar11].pos[2];
   }
   else {
-    MeMatrixMultiply(normal,4,3,1,tlist[*(int *)((int)constraint + 0xb8)].R0,
-                     (MeReal *)((int)constraint + 0x16c));
-    pMVar12 = tlist[*(int *)((int)constraint + 0xb8)].pos;
-    pMVar10 = tlist[*(int *)((int)constraint + 0xb4)].pos;
+    MeMatrixMultiply(normal,4,3,1,tlist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtLinear1 *)0)->head.bodyindex[1] - (char *)0)))].R0,
+                     (MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtLinear1 *)0)->pos2[0] - (char *)0))));
+    pMVar12 = tlist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtLinear1 *)0)->head.bodyindex[1] - (char *)0)))].pos;
+    pMVar10 = tlist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtLinear1 *)0)->head.bodyindex[0] - (char *)0)))].pos;
     do {
       fVar1 = *pMVar12;
       pMVar12 = pMVar12 + 1;
@@ -4147,20 +4147,20 @@ void kd_MdtBclAddLinear1(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
   if (iVar9 < 0) {
     iVar11 = iVar9 + 3;
   }
-  *(MeReal *)((int)*clist->Jstore + iVar9 * 4 + (iVar11 >> 2) * 0xb0) = normal[0];
+  *(MeReal *)((kd_iptr)*clist->Jstore + iVar9 * 4 + (iVar11 >> 2) * 0xb0) = normal[0];
   iVar9 = clist->num_rows_inc_padding;
   iVar11 = iVar9;
   if (iVar9 < 0) {
     iVar11 = iVar9 + 3;
   }
-  *(MeReal *)((int)*clist->Jstore + iVar9 * 4 + (iVar11 >> 2) * 0xb0 + 0x10) = normal[1];
+  *(MeReal *)((kd_iptr)*clist->Jstore + iVar9 * 4 + (iVar11 >> 2) * 0xb0 + 0x10) = normal[1];
   iVar9 = clist->num_rows_inc_padding;
   iVar11 = iVar9;
   if (iVar9 < 0) {
     iVar11 = iVar9 + 3;
   }
-  *(MeReal *)((int)*clist->Jstore + iVar9 * 4 + (iVar11 >> 2) * 0xb0 + 0x20) = normal[2];
-  if (*(int *)((int)constraint + 0xb8) != -1) {
+  *(MeReal *)((kd_iptr)*clist->Jstore + iVar9 * 4 + (iVar11 >> 2) * 0xb0 + 0x20) = normal[2];
+  if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtLinear1 *)0)->head.bodyindex[1] - (char *)0))) != -1) {
     CrossProduct[0] = normal[1] * displacement[2] - normal[2] * displacement[1];
     CrossProduct[1] = normal[2] * displacement[0] - displacement[2] * normal[0];
     CrossProduct[2] = normal[0] * displacement[1] - normal[1] * displacement[0];
@@ -4169,13 +4169,13 @@ void kd_MdtBclAddLinear1(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
     if (iVar9 < 0) {
       iVar11 = iVar9 + 3;
     }
-    *(float *)((int)*clist->Jstore + iVar9 * 4 + (iVar11 >> 2) * 0xb0 + 0x60) = -normal[0];
+    *(float *)((kd_iptr)*clist->Jstore + iVar9 * 4 + (iVar11 >> 2) * 0xb0 + 0x60) = -normal[0];
     iVar9 = clist->num_rows_inc_padding;
     iVar11 = iVar9;
     if (iVar9 < 0) {
       iVar11 = iVar9 + 3;
     }
-    *(MeReal *)((int)*clist->Jstore + iVar9 * 4 + (iVar11 >> 2) * 0xb0 + 0x90) = CrossProduct[0];
+    *(MeReal *)((kd_iptr)*clist->Jstore + iVar9 * 4 + (iVar11 >> 2) * 0xb0 + 0x90) = CrossProduct[0];
     uVar14 = 1;
     do {
       iVar9 = clist->num_rows_inc_padding;
@@ -4183,21 +4183,21 @@ void kd_MdtBclAddLinear1(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
       if (iVar9 < 0) {
         iVar11 = iVar9 + 3;
       }
-      *(float *)((int)*clist->Jstore + iVar9 * 4 + uVar14 * 0x10 + (iVar11 >> 2) * 0xb0 + 0x60) =
+      *(float *)((kd_iptr)*clist->Jstore + iVar9 * 4 + uVar14 * 0x10 + (iVar11 >> 2) * 0xb0 + 0x60) =
            -normal[uVar14];
       iVar9 = clist->num_rows_inc_padding;
       iVar11 = iVar9;
       if (iVar9 < 0) {
         iVar11 = iVar9 + 3;
       }
-      *(MeReal *)((int)*clist->Jstore + iVar9 * 4 + uVar14 * 0x10 + (iVar11 >> 2) * 0xb0 + 0x90) =
+      *(MeReal *)((kd_iptr)*clist->Jstore + iVar9 * 4 + uVar14 * 0x10 + (iVar11 >> 2) * 0xb0 + 0x90) =
            CrossProduct[uVar14];
       iVar9 = clist->num_rows_inc_padding;
       iVar11 = iVar9;
       if (iVar9 < 0) {
         iVar11 = iVar9 + 3;
       }
-      *(float *)((int)*clist->Jstore + iVar9 * 4 + uVar14 * 0x10 + (iVar11 >> 2) * 0xb0 + 0x70) =
+      *(float *)((kd_iptr)*clist->Jstore + iVar9 * 4 + uVar14 * 0x10 + (iVar11 >> 2) * 0xb0 + 0x70) =
            -normal[uVar14 + 1];
       iVar9 = clist->num_rows_inc_padding;
       iVar11 = iVar9;
@@ -4205,7 +4205,7 @@ void kd_MdtBclAddLinear1(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
         iVar11 = iVar9 + 3;
       }
       uVar15 = uVar14 + 2;
-      *(MeReal *)((int)*clist->Jstore + iVar9 * 4 + uVar14 * 0x10 + (iVar11 >> 2) * 0xb0 + 0xa0) =
+      *(MeReal *)((kd_iptr)*clist->Jstore + iVar9 * 4 + uVar14 * 0x10 + (iVar11 >> 2) * 0xb0 + 0xa0) =
            CrossProduct[uVar14 + 1];
       uVar14 = uVar15;
     } while (uVar15 < 3);
@@ -4214,7 +4214,7 @@ void kd_MdtBclAddLinear1(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
   pMVar6[iVar3] = 3.4028235e+38;
   pMVar4[iVar3] =
        (displacement[2] * normal[2] + displacement[1] * normal[1] + displacement[0] * normal[0]) -
-       *(float *)((int)constraint + 0x178);
+       *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtLinear1 *)0)->displacement - (char *)0)));
   kd_MdtBclEndConstraint(clist,1);
   return;
 }
@@ -4274,20 +4274,20 @@ void kd_MdtBclAddLinear2(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
     if (iVar7 < 0) {
       iVar15 = iVar7 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar7 * 4 + (iVar15 >> 2) * 0xb0 + iVar16 * 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar7 * 4 + (iVar15 >> 2) * 0xb0 + iVar16 * 0x10) = 0;
     iVar7 = clist->num_rows_inc_padding;
     iVar15 = iVar7;
     if (iVar7 < 0) {
       iVar15 = iVar7 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar7 * 4 + iVar16 * 0x10 + (iVar15 >> 2) * 0xb0 + 0x60) =
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar7 * 4 + iVar16 * 0x10 + (iVar15 >> 2) * 0xb0 + 0x60) =
          0;
     iVar7 = clist->num_rows_inc_padding;
     iVar15 = iVar7;
     if (iVar7 < 0) {
       iVar15 = iVar7 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar7 * 4 + (iVar15 >> 2) * 0xb0 + iVar16 * 0x10 + 0x10) =
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar7 * 4 + (iVar15 >> 2) * 0xb0 + iVar16 * 0x10 + 0x10) =
          0;
     iVar7 = clist->num_rows_inc_padding;
     iVar15 = iVar7;
@@ -4295,7 +4295,7 @@ void kd_MdtBclAddLinear2(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
       iVar15 = iVar7 + 3;
     }
     iVar19 = iVar16 + 2;
-    *(undefined4 *)((int)*clist->Jstore + iVar7 * 4 + iVar16 * 0x10 + (iVar15 >> 2) * 0xb0 + 0x70) =
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar7 * 4 + iVar16 * 0x10 + (iVar15 >> 2) * 0xb0 + 0x70) =
          0;
     iVar16 = iVar19;
   } while (iVar19 != 6);
@@ -4311,20 +4311,20 @@ void kd_MdtBclAddLinear2(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
     if (iVar15 < 0) {
       iVar15 = iVar7 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar7 * 4 + 4 + (iVar15 >> 2) * 0xb0 + iVar16 * 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar7 * 4 + 4 + (iVar15 >> 2) * 0xb0 + iVar16 * 0x10) = 0;
     iVar7 = clist->num_rows_inc_padding;
     iVar15 = iVar7 + 1;
     if (iVar15 < 0) {
       iVar15 = iVar7 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar7 * 4 + iVar16 * 0x10 + (iVar15 >> 2) * 0xb0 + 100) =
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar7 * 4 + iVar16 * 0x10 + (iVar15 >> 2) * 0xb0 + 100) =
          0;
     iVar7 = clist->num_rows_inc_padding;
     iVar15 = iVar7 + 1;
     if (iVar15 < 0) {
       iVar15 = iVar7 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar7 * 4 + (iVar15 >> 2) * 0xb0 + iVar16 * 0x10 + 0x14) =
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar7 * 4 + (iVar15 >> 2) * 0xb0 + iVar16 * 0x10 + 0x14) =
          0;
     iVar7 = clist->num_rows_inc_padding;
     iVar15 = iVar7 + 1;
@@ -4332,7 +4332,7 @@ void kd_MdtBclAddLinear2(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
       iVar15 = iVar7 + 4;
     }
     iVar19 = iVar16 + 2;
-    *(undefined4 *)((int)*clist->Jstore + iVar7 * 4 + iVar16 * 0x10 + (iVar15 >> 2) * 0xb0 + 0x74) =
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar7 * 4 + iVar16 * 0x10 + (iVar15 >> 2) * 0xb0 + 0x74) =
          0;
     iVar16 = iVar19;
   } while (iVar19 != 6);
@@ -4341,31 +4341,31 @@ void kd_MdtBclAddLinear2(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
   (pMVar2 + iVar1)[1] = 0.0;
   (pMVar6 + iVar1)[1] = 0.0;
   uVar17 = 0;
-  clist->Jbody[clist->num_constraints][0] = *(int *)((int)constraint + 0xb4);
-  clist->Jbody[clist->num_constraints][1] = *(int *)((int)constraint + 0xb8);
-  if (*(int *)((int)constraint + 0xb8) == -1) {
+  clist->Jbody[clist->num_constraints][0] = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtLinear2 *)0)->head.bodyindex[0] - (char *)0)));
+  clist->Jbody[clist->num_constraints][1] = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtLinear2 *)0)->head.bodyindex[1] - (char *)0)));
+  if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtLinear2 *)0)->head.bodyindex[1] - (char *)0))) == -1) {
     do {
-      vector1[uVar17] = *(MeReal *)((int)constraint + uVar17 * 4 + 0x184);
-      vector2[uVar17] = *(MeReal *)((int)constraint + uVar17 * 4 + 400);
-      initial_pos[uVar17] = *(MeReal *)((int)constraint + uVar17 * 4 + 0x16c);
+      vector1[uVar17] = *(MeReal *)((kd_iptr)constraint + uVar17 * 4 + 0x184);
+      vector2[uVar17] = *(MeReal *)((kd_iptr)constraint + uVar17 * 4 + 400);
+      initial_pos[uVar17] = *(MeReal *)((kd_iptr)constraint + uVar17 * 4 + 0x16c);
       uVar17 = uVar17 + 1;
     } while (uVar17 < 3);
   }
   else {
-    MeMatrixMultiply(vector1,4,3,1,tlist[*(int *)((int)constraint + 0xb8)].R0,
-                     (MeReal *)((int)constraint + 0x184));
-    MeMatrixMultiply(vector2,4,3,1,tlist[*(int *)((int)constraint + 0xb8)].R0,
-                     (MeReal *)((int)constraint + 400));
-    MeMatrixMultiply(initial_pos,4,3,1,tlist[*(int *)((int)constraint + 0xb8)].R0,
-                     (MeReal *)((int)constraint + 0x16c));
-    iVar16 = *(int *)((int)constraint + 0xb8);
+    MeMatrixMultiply(vector1,4,3,1,tlist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtLinear2 *)0)->head.bodyindex[1] - (char *)0)))].R0,
+                     (MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtLinear2 *)0)->vec1[0] - (char *)0))));
+    MeMatrixMultiply(vector2,4,3,1,tlist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtLinear2 *)0)->head.bodyindex[1] - (char *)0)))].R0,
+                     (MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtLinear2 *)0)->vec2[0] - (char *)0))));
+    MeMatrixMultiply(initial_pos,4,3,1,tlist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtLinear2 *)0)->head.bodyindex[1] - (char *)0)))].R0,
+                     (MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtLinear2 *)0)->pos2[0] - (char *)0))));
+    iVar16 = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtLinear2 *)0)->head.bodyindex[1] - (char *)0)));
     initial_pos[0] = tlist[iVar16].pos[0] + initial_pos[0];
     initial_pos[1] = tlist[iVar16].pos[1] + initial_pos[1];
     initial_pos[2] = tlist[iVar16].pos[2] + initial_pos[2];
   }
-  MeMatrixMultiply(rel_pos,4,3,1,tlist[*(int *)((int)constraint + 0xb4)].R0,
-                   (MeReal *)((int)constraint + 0x160));
-  iVar16 = *(int *)((int)constraint + 0xb4);
+  MeMatrixMultiply(rel_pos,4,3,1,tlist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtLinear2 *)0)->head.bodyindex[0] - (char *)0)))].R0,
+                   (MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtLinear2 *)0)->pos1[0] - (char *)0))));
+  iVar16 = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtLinear2 *)0)->head.bodyindex[0] - (char *)0)));
   fVar12 = rel_pos[0] + tlist[iVar16].pos[0];
   fVar13 = fVar12 - initial_pos[0];
   uVar17 = 0;
@@ -4385,21 +4385,21 @@ void kd_MdtBclAddLinear2(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
     if (iVar15 < 0) {
       iVar16 = iVar15 + 3;
     }
-    *(MeReal *)((int)*clist->Jstore + iVar15 * 4 + (iVar16 >> 2) * 0xb0 + uVar17 * 0x10) =
+    *(MeReal *)((kd_iptr)*clist->Jstore + iVar15 * 4 + (iVar16 >> 2) * 0xb0 + uVar17 * 0x10) =
          vector1[uVar17];
     iVar15 = clist->num_rows_inc_padding;
     iVar16 = iVar15 + 1;
     if (iVar16 < 0) {
       iVar16 = iVar15 + 4;
     }
-    *(MeReal *)((int)*clist->Jstore + iVar15 * 4 + 4 + (iVar16 >> 2) * 0xb0 + uVar17 * 0x10) =
+    *(MeReal *)((kd_iptr)*clist->Jstore + iVar15 * 4 + 4 + (iVar16 >> 2) * 0xb0 + uVar17 * 0x10) =
          vector2[uVar17];
     iVar15 = clist->num_rows_inc_padding;
     iVar16 = iVar15;
     if (iVar15 < 0) {
       iVar16 = iVar15 + 3;
     }
-    *(MeReal *)((int)*clist->Jstore + iVar15 * 4 + (iVar16 >> 2) * 0xb0 + uVar17 * 0x10 + 0x30) =
+    *(MeReal *)((kd_iptr)*clist->Jstore + iVar15 * 4 + (iVar16 >> 2) * 0xb0 + uVar17 * 0x10 + 0x30) =
          Perpendicular1[uVar17];
     iVar15 = clist->num_rows_inc_padding;
     iVar16 = iVar15 + 1;
@@ -4409,9 +4409,9 @@ void kd_MdtBclAddLinear2(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
     iVar7 = uVar17 * 0x10;
     pMVar2 = Perpendicular2 + uVar17;
     uVar17 = uVar17 + 1;
-    *(MeReal *)((int)*clist->Jstore + iVar15 * 4 + (iVar16 >> 2) * 0xb0 + iVar7 + 0x34) = *pMVar2;
+    *(MeReal *)((kd_iptr)*clist->Jstore + iVar15 * 4 + (iVar16 >> 2) * 0xb0 + iVar7 + 0x34) = *pMVar2;
   } while (uVar17 < 3);
-  iVar16 = *(int *)((int)constraint + 0xb8);
+  iVar16 = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtLinear2 *)0)->head.bodyindex[1] - (char *)0)));
   if (iVar16 != -1) {
     fVar12 = fVar12 - tlist[iVar16].pos[0];
     fVar8 = fVar8 - tlist[iVar16].pos[1];
@@ -4429,21 +4429,21 @@ void kd_MdtBclAddLinear2(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
       if (iVar15 < 0) {
         iVar16 = iVar15 + 3;
       }
-      *(float *)((int)*clist->Jstore + iVar15 * 4 + uVar17 * 0x10 + (iVar16 >> 2) * 0xb0 + 0x60) =
+      *(float *)((kd_iptr)*clist->Jstore + iVar15 * 4 + uVar17 * 0x10 + (iVar16 >> 2) * 0xb0 + 0x60) =
            -vector1[uVar17];
       iVar15 = clist->num_rows_inc_padding;
       iVar16 = iVar15 + 1;
       if (iVar16 < 0) {
         iVar16 = iVar15 + 4;
       }
-      *(float *)((int)*clist->Jstore + iVar15 * 4 + uVar17 * 0x10 + (iVar16 >> 2) * 0xb0 + 100) =
+      *(float *)((kd_iptr)*clist->Jstore + iVar15 * 4 + uVar17 * 0x10 + (iVar16 >> 2) * 0xb0 + 100) =
            -vector2[uVar17];
       iVar15 = clist->num_rows_inc_padding;
       iVar16 = iVar15;
       if (iVar15 < 0) {
         iVar16 = iVar15 + 3;
       }
-      *(MeReal *)((int)*clist->Jstore + iVar15 * 4 + uVar17 * 0x10 + (iVar16 >> 2) * 0xb0 + 0x90) =
+      *(MeReal *)((kd_iptr)*clist->Jstore + iVar15 * 4 + uVar17 * 0x10 + (iVar16 >> 2) * 0xb0 + 0x90) =
            Perpendicular1[uVar17];
       iVar15 = clist->num_rows_inc_padding;
       iVar16 = iVar15 + 1;
@@ -4451,7 +4451,7 @@ void kd_MdtBclAddLinear2(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
         iVar16 = iVar15 + 4;
       }
       uVar18 = uVar17 + 1;
-      *(MeReal *)((int)*clist->Jstore + iVar15 * 4 + uVar17 * 0x10 + (iVar16 >> 2) * 0xb0 + 0x94) =
+      *(MeReal *)((kd_iptr)*clist->Jstore + iVar15 * 4 + uVar17 * 0x10 + (iVar16 >> 2) * 0xb0 + 0x94) =
            Perpendicular2[uVar17];
       uVar17 = uVar18;
     } while (uVar18 < 3);
@@ -4485,7 +4485,7 @@ void kd_MdtBclAddAngular3(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
   float fVar12;
   MeReal *pMVar13;
   int iVar14;
-  int iVar15;
+  kd_iptr iVar15;
   float *pfVar16;
   MeReal *pMVar17;
   MeReal *pMVar18;
@@ -4547,20 +4547,20 @@ void kd_MdtBclAddAngular3(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
     if (iVar2 < 0) {
       iVar14 = iVar2 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar2 * 4 + (iVar14 >> 2) * 0xb0 + iVar15 * 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar2 * 4 + (iVar14 >> 2) * 0xb0 + iVar15 * 0x10) = 0;
     iVar2 = clist->num_rows_inc_padding;
     iVar14 = iVar2;
     if (iVar2 < 0) {
       iVar14 = iVar2 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar2 * 4 + iVar15 * 0x10 + (iVar14 >> 2) * 0xb0 + 0x60) =
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar2 * 4 + iVar15 * 0x10 + (iVar14 >> 2) * 0xb0 + 0x60) =
          0;
     iVar2 = clist->num_rows_inc_padding;
     iVar14 = iVar2;
     if (iVar2 < 0) {
       iVar14 = iVar2 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar2 * 4 + (iVar14 >> 2) * 0xb0 + iVar15 * 0x10 + 0x10) =
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar2 * 4 + (iVar14 >> 2) * 0xb0 + iVar15 * 0x10 + 0x10) =
          0;
     iVar2 = clist->num_rows_inc_padding;
     iVar14 = iVar2;
@@ -4568,7 +4568,7 @@ void kd_MdtBclAddAngular3(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
       iVar14 = iVar2 + 3;
     }
     iVar21 = iVar15 + 2;
-    *(undefined4 *)((int)*clist->Jstore + iVar2 * 4 + iVar15 * 0x10 + (iVar14 >> 2) * 0xb0 + 0x70) =
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar2 * 4 + iVar15 * 0x10 + (iVar14 >> 2) * 0xb0 + 0x70) =
          0;
     iVar15 = iVar21;
   } while (iVar21 != 6);
@@ -4584,20 +4584,20 @@ void kd_MdtBclAddAngular3(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
     if (iVar14 < 0) {
       iVar14 = iVar2 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar2 * 4 + 4 + (iVar14 >> 2) * 0xb0 + iVar15 * 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar2 * 4 + 4 + (iVar14 >> 2) * 0xb0 + iVar15 * 0x10) = 0;
     iVar2 = clist->num_rows_inc_padding;
     iVar14 = iVar2 + 1;
     if (iVar14 < 0) {
       iVar14 = iVar2 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar2 * 4 + iVar15 * 0x10 + (iVar14 >> 2) * 0xb0 + 100) =
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar2 * 4 + iVar15 * 0x10 + (iVar14 >> 2) * 0xb0 + 100) =
          0;
     iVar2 = clist->num_rows_inc_padding;
     iVar14 = iVar2 + 1;
     if (iVar14 < 0) {
       iVar14 = iVar2 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar2 * 4 + (iVar14 >> 2) * 0xb0 + iVar15 * 0x10 + 0x14) =
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar2 * 4 + (iVar14 >> 2) * 0xb0 + iVar15 * 0x10 + 0x14) =
          0;
     iVar2 = clist->num_rows_inc_padding;
     iVar14 = iVar2 + 1;
@@ -4605,7 +4605,7 @@ void kd_MdtBclAddAngular3(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
       iVar14 = iVar2 + 4;
     }
     iVar21 = iVar15 + 2;
-    *(undefined4 *)((int)*clist->Jstore + iVar2 * 4 + iVar15 * 0x10 + (iVar14 >> 2) * 0xb0 + 0x74) =
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar2 * 4 + iVar15 * 0x10 + (iVar14 >> 2) * 0xb0 + 0x74) =
          0;
     iVar15 = iVar21;
   } while (iVar21 != 6);
@@ -4613,10 +4613,10 @@ void kd_MdtBclAddAngular3(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
   pfVar16[1] = 0.0;
   pMVar17[1] = 0.0;
   pfVar20[1] = 0.0;
-  clist->Jbody[clist->num_constraints][0] = *(int *)((int)constraint + 0xb4);
-  clist->Jbody[clist->num_constraints][1] = *(int *)((int)constraint + 0xb8);
-  MeQuaternionFromTM(qaca,(void *)((int)constraint + 0xbc));
-  iVar15 = *(int *)((int)constraint + 0x54);
+  clist->Jbody[clist->num_constraints][0] = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtAngular3 *)0)->head.bodyindex[0] - (char *)0)));
+  clist->Jbody[clist->num_constraints][1] = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtAngular3 *)0)->head.bodyindex[1] - (char *)0)));
+  MeQuaternionFromTM(qaca,(void *)((kd_iptr)constraint + ((int)((char *)&((struct MdtAngular3 *)0)->head.ref1[0][0] - (char *)0))));
+  iVar15 = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtAngular3 *)0)->head.mdtbody[0] - (char *)0)));
   qacw[0] = ((qaca[0] * *(float *)(iVar15 + 0xb0) - qaca[1] * *(float *)(iVar15 + 0xb4)) -
             qaca[2] * *(float *)(iVar15 + 0xb8)) - qaca[3] * *(float *)(iVar15 + 0xbc);
   qacw[1] = (*(float *)(iVar15 + 0xb8) * qaca[3] +
@@ -4627,21 +4627,21 @@ void kd_MdtBclAddAngular3(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
             *(float *)(iVar15 + 0xb4) * qaca[3];
   qacw[3] = (qaca[0] * *(float *)(iVar15 + 0xbc) + qaca[3] * *(float *)(iVar15 + 0xb0) +
             qaca[2] * *(float *)(iVar15 + 0xb4)) - qaca[1] * *(float *)(iVar15 + 0xb8);
-  if (*(int *)((int)constraint + 0xb8) == -1) {
-    MeQuaternionFromTM(qbcw,(void *)((int)constraint + 0xfc));
-    Rbcw[0][0] = *(MeReal *)((int)constraint + 0xfc);
-    Rbcw[0][1] = *(MeReal *)((int)constraint + 0x100);
-    Rbcw[0][2] = *(MeReal *)((int)constraint + 0x104);
-    Rbcw[1][0] = *(MeReal *)((int)constraint + 0x10c);
-    Rbcw[1][1] = *(MeReal *)((int)constraint + 0x110);
-    Rbcw[1][2] = *(MeReal *)((int)constraint + 0x114);
-    Rbcw[2][0] = *(MeReal *)((int)constraint + 0x11c);
-    Rbcw[2][1] = *(MeReal *)((int)constraint + 0x120);
-    Rbcw[2][2] = *(MeReal *)((int)constraint + 0x124);
+  if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtAngular3 *)0)->head.bodyindex[1] - (char *)0))) == -1) {
+    MeQuaternionFromTM(qbcw,(void *)((kd_iptr)constraint + ((int)((char *)&((struct MdtAngular3 *)0)->head.ref2[0][0] - (char *)0))));
+    Rbcw[0][0] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtAngular3 *)0)->head.ref2[0][0] - (char *)0)));
+    Rbcw[0][1] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtAngular3 *)0)->head.ref2[0][1] - (char *)0)));
+    Rbcw[0][2] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtAngular3 *)0)->head.ref2[0][2] - (char *)0)));
+    Rbcw[1][0] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtAngular3 *)0)->head.ref2[1][0] - (char *)0)));
+    Rbcw[1][1] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtAngular3 *)0)->head.ref2[1][1] - (char *)0)));
+    Rbcw[1][2] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtAngular3 *)0)->head.ref2[1][2] - (char *)0)));
+    Rbcw[2][0] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtAngular3 *)0)->head.ref2[2][0] - (char *)0)));
+    Rbcw[2][1] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtAngular3 *)0)->head.ref2[2][1] - (char *)0)));
+    Rbcw[2][2] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtAngular3 *)0)->head.ref2[2][2] - (char *)0)));
   }
   else {
-    MeQuaternionFromTM(qbcb,(void *)((int)constraint + 0xfc));
-    iVar15 = *(int *)((int)constraint + 0x58);
+    MeQuaternionFromTM(qbcb,(void *)((kd_iptr)constraint + ((int)((char *)&((struct MdtAngular3 *)0)->head.ref2[0][0] - (char *)0))));
+    iVar15 = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtAngular3 *)0)->head.mdtbody[1] - (char *)0)));
     qbcw[0] = ((qbcb[0] * *(float *)(iVar15 + 0xb0) - qbcb[1] * *(float *)(iVar15 + 0xb4)) -
               qbcb[2] * *(float *)(iVar15 + 0xb8)) - qbcb[3] * *(float *)(iVar15 + 0xbc);
     qbcw[1] = (*(float *)(iVar15 + 0xb8) * qbcb[3] +
@@ -4723,13 +4723,13 @@ void kd_MdtBclAddAngular3(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
     if (iVar14 < 0) {
       iVar15 = iVar14 + 3;
     }
-    *(MeReal *)((int)*clist->Jstore + iVar14 * 4 + (iVar15 >> 2) * 0xb0 + 0x30) = t1[0];
+    *(MeReal *)((kd_iptr)*clist->Jstore + iVar14 * 4 + (iVar15 >> 2) * 0xb0 + 0x30) = t1[0];
     iVar14 = clist->num_rows_inc_padding;
     iVar15 = iVar14 + 1;
     if (iVar15 < 0) {
       iVar15 = iVar14 + 4;
     }
-    *(MeReal *)((int)*clist->Jstore + iVar14 * 4 + (iVar15 >> 2) * 0xb0 + 0x34) = t2[0];
+    *(MeReal *)((kd_iptr)*clist->Jstore + iVar14 * 4 + (iVar15 >> 2) * 0xb0 + 0x34) = t2[0];
     uVar23 = 1;
     do {
       iVar14 = clist->num_rows_inc_padding;
@@ -4737,21 +4737,21 @@ void kd_MdtBclAddAngular3(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
       if (iVar14 < 0) {
         iVar15 = iVar14 + 3;
       }
-      *(MeReal *)((int)*clist->Jstore + iVar14 * 4 + (iVar15 >> 2) * 0xb0 + uVar23 * 0x10 + 0x30) =
+      *(MeReal *)((kd_iptr)*clist->Jstore + iVar14 * 4 + (iVar15 >> 2) * 0xb0 + uVar23 * 0x10 + 0x30) =
            t1[uVar23];
       iVar14 = clist->num_rows_inc_padding;
       iVar15 = iVar14 + 1;
       if (iVar15 < 0) {
         iVar15 = iVar14 + 4;
       }
-      *(MeReal *)((int)*clist->Jstore + iVar14 * 4 + (iVar15 >> 2) * 0xb0 + uVar23 * 0x10 + 0x34) =
+      *(MeReal *)((kd_iptr)*clist->Jstore + iVar14 * 4 + (iVar15 >> 2) * 0xb0 + uVar23 * 0x10 + 0x34) =
            t2[uVar23];
       iVar14 = clist->num_rows_inc_padding;
       iVar15 = iVar14;
       if (iVar14 < 0) {
         iVar15 = iVar14 + 3;
       }
-      *(MeReal *)((int)*clist->Jstore + iVar14 * 4 + (iVar15 >> 2) * 0xb0 + uVar23 * 0x10 + 0x40) =
+      *(MeReal *)((kd_iptr)*clist->Jstore + iVar14 * 4 + (iVar15 >> 2) * 0xb0 + uVar23 * 0x10 + 0x40) =
            t1[uVar23 + 1];
       iVar14 = clist->num_rows_inc_padding;
       iVar15 = iVar14 + 1;
@@ -4759,23 +4759,23 @@ void kd_MdtBclAddAngular3(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
         iVar15 = iVar14 + 4;
       }
       uVar22 = uVar23 + 2;
-      *(MeReal *)((int)*clist->Jstore + iVar14 * 4 + (iVar15 >> 2) * 0xb0 + uVar23 * 0x10 + 0x44) =
+      *(MeReal *)((kd_iptr)*clist->Jstore + iVar14 * 4 + (iVar15 >> 2) * 0xb0 + uVar23 * 0x10 + 0x44) =
            t2[uVar23 + 1];
       uVar23 = uVar22;
     } while (uVar22 < 3);
-    if (*(int *)((int)constraint + 0xb8) != -1) {
+    if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtAngular3 *)0)->head.bodyindex[1] - (char *)0))) != -1) {
       iVar14 = clist->num_rows_inc_padding;
       iVar15 = iVar14;
       if (iVar14 < 0) {
         iVar15 = iVar14 + 3;
       }
-      *(float *)((int)*clist->Jstore + iVar14 * 4 + (iVar15 >> 2) * 0xb0 + 0x90) = -t1[0];
+      *(float *)((kd_iptr)*clist->Jstore + iVar14 * 4 + (iVar15 >> 2) * 0xb0 + 0x90) = -t1[0];
       iVar14 = clist->num_rows_inc_padding;
       iVar15 = iVar14 + 1;
       if (iVar15 < 0) {
         iVar15 = iVar14 + 4;
       }
-      *(float *)((int)*clist->Jstore + iVar14 * 4 + (iVar15 >> 2) * 0xb0 + 0x94) = -t2[0];
+      *(float *)((kd_iptr)*clist->Jstore + iVar14 * 4 + (iVar15 >> 2) * 0xb0 + 0x94) = -t2[0];
       uVar23 = 1;
       do {
         iVar14 = clist->num_rows_inc_padding;
@@ -4783,21 +4783,21 @@ void kd_MdtBclAddAngular3(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
         if (iVar14 < 0) {
           iVar15 = iVar14 + 3;
         }
-        *(float *)((int)*clist->Jstore + iVar14 * 4 + uVar23 * 0x10 + (iVar15 >> 2) * 0xb0 + 0x90) =
+        *(float *)((kd_iptr)*clist->Jstore + iVar14 * 4 + uVar23 * 0x10 + (iVar15 >> 2) * 0xb0 + 0x90) =
              -t1[uVar23];
         iVar14 = clist->num_rows_inc_padding;
         iVar15 = iVar14 + 1;
         if (iVar15 < 0) {
           iVar15 = iVar14 + 4;
         }
-        *(float *)((int)*clist->Jstore + iVar14 * 4 + uVar23 * 0x10 + (iVar15 >> 2) * 0xb0 + 0x94) =
+        *(float *)((kd_iptr)*clist->Jstore + iVar14 * 4 + uVar23 * 0x10 + (iVar15 >> 2) * 0xb0 + 0x94) =
              -t2[uVar23];
         iVar14 = clist->num_rows_inc_padding;
         iVar15 = iVar14;
         if (iVar14 < 0) {
           iVar15 = iVar14 + 3;
         }
-        *(float *)((int)*clist->Jstore + iVar14 * 4 + uVar23 * 0x10 + (iVar15 >> 2) * 0xb0 + 0xa0) =
+        *(float *)((kd_iptr)*clist->Jstore + iVar14 * 4 + uVar23 * 0x10 + (iVar15 >> 2) * 0xb0 + 0xa0) =
              -t1[uVar23 + 1];
         iVar14 = clist->num_rows_inc_padding;
         iVar15 = iVar14 + 1;
@@ -4805,7 +4805,7 @@ void kd_MdtBclAddAngular3(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
           iVar15 = iVar14 + 4;
         }
         uVar22 = uVar23 + 2;
-        *(float *)((int)*clist->Jstore + iVar14 * 4 + uVar23 * 0x10 + (iVar15 >> 2) * 0xb0 + 0xa4) =
+        *(float *)((kd_iptr)*clist->Jstore + iVar14 * 4 + uVar23 * 0x10 + (iVar15 >> 2) * 0xb0 + 0xa4) =
              -t2[uVar23 + 1];
         uVar23 = uVar22;
       } while (uVar22 < 3);
@@ -4814,8 +4814,8 @@ void kd_MdtBclAddAngular3(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
     *pMVar18 = 3.4028235e+38;
     pMVar13[1] = -3.4028235e+38;
     pMVar18[1] = 3.4028235e+38;
-    hepsilon = 1.0 / (*(float *)((int)constraint + 0x164) * *(float *)params +
-                     *(float *)((int)constraint + 0x168));
+    hepsilon = 1.0 / (*(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtAngular3 *)0)->stiffness - (char *)0))) * *(float *)params +
+                     *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtAngular3 *)0)->damping - (char *)0))));
     *pfVar16 = hepsilon;
     if (hepsilon < 0.0) {
       *pfVar16 = 0.0;
@@ -4824,10 +4824,10 @@ void kd_MdtBclAddAngular3(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
     if (hepsilon < 0.0) {
       pfVar16[1] = 0.0;
     }
-    *pfVar20 = hepsilon * *(float *)params * *(float *)((int)constraint + 0x164);
-    pfVar20[1] = hepsilon * *(float *)params * *(float *)((int)constraint + 0x164);
+    *pfVar20 = hepsilon * *(float *)params * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtAngular3 *)0)->stiffness - (char *)0)));
+    pfVar20[1] = hepsilon * *(float *)params * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtAngular3 *)0)->stiffness - (char *)0)));
   }
-  if (*(int *)((int)constraint + 0x160) == 0) {
+  if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtAngular3 *)0)->bEnableRotation - (char *)0))) == 0) {
                     
     iVar15 = 0;
     do {
@@ -4836,21 +4836,21 @@ void kd_MdtBclAddAngular3(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
       if (iVar14 < 0) {
         iVar14 = iVar2 + 5;
       }
-      *(undefined4 *)((int)*clist->Jstore + iVar2 * 4 + 8 + (iVar14 >> 2) * 0xb0 + iVar15 * 0x10) =
+      *(undefined4 *)((kd_iptr)*clist->Jstore + iVar2 * 4 + 8 + (iVar14 >> 2) * 0xb0 + iVar15 * 0x10) =
            0;
       iVar2 = clist->num_rows_inc_padding;
       iVar14 = iVar2 + 2;
       if (iVar14 < 0) {
         iVar14 = iVar2 + 5;
       }
-      *(undefined4 *)((int)*clist->Jstore + iVar2 * 4 + iVar15 * 0x10 + (iVar14 >> 2) * 0xb0 + 0x68)
+      *(undefined4 *)((kd_iptr)*clist->Jstore + iVar2 * 4 + iVar15 * 0x10 + (iVar14 >> 2) * 0xb0 + 0x68)
            = 0;
       iVar2 = clist->num_rows_inc_padding;
       iVar14 = iVar2 + 2;
       if (iVar14 < 0) {
         iVar14 = iVar2 + 5;
       }
-      *(undefined4 *)((int)*clist->Jstore + iVar2 * 4 + (iVar14 >> 2) * 0xb0 + iVar15 * 0x10 + 0x18)
+      *(undefined4 *)((kd_iptr)*clist->Jstore + iVar2 * 4 + (iVar14 >> 2) * 0xb0 + iVar15 * 0x10 + 0x18)
            = 0;
       iVar2 = clist->num_rows_inc_padding;
       iVar14 = iVar2 + 2;
@@ -4858,7 +4858,7 @@ void kd_MdtBclAddAngular3(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
         iVar14 = iVar2 + 5;
       }
       iVar21 = iVar15 + 2;
-      *(undefined4 *)((int)*clist->Jstore + iVar2 * 4 + iVar15 * 0x10 + (iVar14 >> 2) * 0xb0 + 0x78)
+      *(undefined4 *)((kd_iptr)*clist->Jstore + iVar2 * 4 + iVar15 * 0x10 + (iVar14 >> 2) * 0xb0 + 0x78)
            = 0;
       iVar15 = iVar21;
     } while (iVar21 != 6);
@@ -4874,38 +4874,38 @@ void kd_MdtBclAddAngular3(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
     if (iVar15 < 0) {
       iVar15 = iVar14 + 5;
     }
-    *(MeReal *)((int)*clist->Jstore + iVar14 * 4 + (iVar15 >> 2) * 0xb0 + 0x38) = t2[0];
+    *(MeReal *)((kd_iptr)*clist->Jstore + iVar14 * 4 + (iVar15 >> 2) * 0xb0 + 0x38) = t2[0];
     iVar14 = clist->num_rows_inc_padding;
     iVar15 = iVar14 + 2;
     if (iVar15 < 0) {
       iVar15 = iVar14 + 5;
     }
-    *(MeReal *)((int)*clist->Jstore + iVar14 * 4 + (iVar15 >> 2) * 0xb0 + 0x48) = t2[1];
+    *(MeReal *)((kd_iptr)*clist->Jstore + iVar14 * 4 + (iVar15 >> 2) * 0xb0 + 0x48) = t2[1];
     iVar14 = clist->num_rows_inc_padding;
     iVar15 = iVar14 + 2;
     if (iVar15 < 0) {
       iVar15 = iVar14 + 5;
     }
-    *(MeReal *)((int)*clist->Jstore + iVar14 * 4 + (iVar15 >> 2) * 0xb0 + 0x58) = t2[2];
-    if (*(int *)((int)constraint + 0xb8) != -1) {
+    *(MeReal *)((kd_iptr)*clist->Jstore + iVar14 * 4 + (iVar15 >> 2) * 0xb0 + 0x58) = t2[2];
+    if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtAngular3 *)0)->head.bodyindex[1] - (char *)0))) != -1) {
       iVar14 = clist->num_rows_inc_padding;
       iVar15 = iVar14 + 2;
       if (iVar15 < 0) {
         iVar15 = iVar14 + 5;
       }
-      *(float *)((int)*clist->Jstore + iVar14 * 4 + (iVar15 >> 2) * 0xb0 + 0x98) = -t2[0];
+      *(float *)((kd_iptr)*clist->Jstore + iVar14 * 4 + (iVar15 >> 2) * 0xb0 + 0x98) = -t2[0];
       iVar14 = clist->num_rows_inc_padding;
       iVar15 = iVar14 + 2;
       if (iVar15 < 0) {
         iVar15 = iVar14 + 5;
       }
-      *(float *)((int)*clist->Jstore + iVar14 * 4 + 0xa8 + (iVar15 >> 2) * 0xb0) = -t2[1];
+      *(float *)((kd_iptr)*clist->Jstore + iVar14 * 4 + 0xa8 + (iVar15 >> 2) * 0xb0) = -t2[1];
       iVar14 = clist->num_rows_inc_padding;
       iVar15 = iVar14 + 2;
       if (iVar15 < 0) {
         iVar15 = iVar14 + 5;
       }
-      *(float *)((int)*clist->Jstore + iVar14 * 4 + 0xb8 + (iVar15 >> 2) * 0xb0) = -t2[2];
+      *(float *)((kd_iptr)*clist->Jstore + iVar14 * 4 + 0xb8 + (iVar15 >> 2) * 0xb0) = -t2[2];
     }
     pMVar13[2] = -3.4028235e+38;
     pMVar18[2] = 3.4028235e+38;
@@ -4914,7 +4914,7 @@ void kd_MdtBclAddAngular3(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
     if (hepsilon < 0.0) {
       pfVar16[2] = 0.0;
     }
-    pfVar20[2] = hepsilon * *(float *)params * *(float *)((int)constraint + 0x164);
+    pfVar20[2] = hepsilon * *(float *)params * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtAngular3 *)0)->stiffness - (char *)0)));
     uVar23 = 3;
   }
   else {
@@ -4979,20 +4979,20 @@ void kd_MdtBclAddSpring6(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
     if (iVar9 < 0) {
       iVar7 = iVar9 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar9 * 4 + (iVar7 >> 2) * 0xb0 + iVar16 * 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar9 * 4 + (iVar7 >> 2) * 0xb0 + iVar16 * 0x10) = 0;
     iVar9 = clist->num_rows_inc_padding;
     iVar7 = iVar9;
     if (iVar9 < 0) {
       iVar7 = iVar9 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar9 * 4 + iVar16 * 0x10 + (iVar7 >> 2) * 0xb0 + 0x60) =
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar9 * 4 + iVar16 * 0x10 + (iVar7 >> 2) * 0xb0 + 0x60) =
          0;
     iVar9 = clist->num_rows_inc_padding;
     iVar7 = iVar9;
     if (iVar9 < 0) {
       iVar7 = iVar9 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar9 * 4 + (iVar7 >> 2) * 0xb0 + iVar16 * 0x10 + 0x10) =
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar9 * 4 + (iVar7 >> 2) * 0xb0 + iVar16 * 0x10 + 0x10) =
          0;
     iVar9 = clist->num_rows_inc_padding;
     iVar7 = iVar9;
@@ -5000,7 +5000,7 @@ void kd_MdtBclAddSpring6(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
       iVar7 = iVar9 + 3;
     }
     iVar19 = iVar16 + 2;
-    *(undefined4 *)((int)*clist->Jstore + iVar9 * 4 + iVar16 * 0x10 + (iVar7 >> 2) * 0xb0 + 0x70) =
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar9 * 4 + iVar16 * 0x10 + (iVar7 >> 2) * 0xb0 + 0x70) =
          0;
     iVar16 = iVar19;
   } while (iVar19 != 6);
@@ -5016,20 +5016,20 @@ void kd_MdtBclAddSpring6(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
     if (iVar7 < 0) {
       iVar7 = iVar9 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar9 * 4 + 4 + (iVar7 >> 2) * 0xb0 + iVar16 * 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar9 * 4 + 4 + (iVar7 >> 2) * 0xb0 + iVar16 * 0x10) = 0;
     iVar9 = clist->num_rows_inc_padding;
     iVar7 = iVar9 + 1;
     if (iVar7 < 0) {
       iVar7 = iVar9 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar9 * 4 + iVar16 * 0x10 + (iVar7 >> 2) * 0xb0 + 100) = 0
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar9 * 4 + iVar16 * 0x10 + (iVar7 >> 2) * 0xb0 + 100) = 0
     ;
     iVar9 = clist->num_rows_inc_padding;
     iVar7 = iVar9 + 1;
     if (iVar7 < 0) {
       iVar7 = iVar9 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar9 * 4 + (iVar7 >> 2) * 0xb0 + iVar16 * 0x10 + 0x14) =
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar9 * 4 + (iVar7 >> 2) * 0xb0 + iVar16 * 0x10 + 0x14) =
          0;
     iVar9 = clist->num_rows_inc_padding;
     iVar7 = iVar9 + 1;
@@ -5037,7 +5037,7 @@ void kd_MdtBclAddSpring6(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
       iVar7 = iVar9 + 4;
     }
     iVar19 = iVar16 + 2;
-    *(undefined4 *)((int)*clist->Jstore + iVar9 * 4 + iVar16 * 0x10 + (iVar7 >> 2) * 0xb0 + 0x74) =
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar9 * 4 + iVar16 * 0x10 + (iVar7 >> 2) * 0xb0 + 0x74) =
          0;
     iVar16 = iVar19;
   } while (iVar19 != 6);
@@ -5053,20 +5053,20 @@ void kd_MdtBclAddSpring6(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
     if (iVar7 < 0) {
       iVar7 = iVar9 + 5;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar9 * 4 + 8 + (iVar7 >> 2) * 0xb0 + iVar16 * 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar9 * 4 + 8 + (iVar7 >> 2) * 0xb0 + iVar16 * 0x10) = 0;
     iVar9 = clist->num_rows_inc_padding;
     iVar7 = iVar9 + 2;
     if (iVar7 < 0) {
       iVar7 = iVar9 + 5;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar9 * 4 + iVar16 * 0x10 + (iVar7 >> 2) * 0xb0 + 0x68) =
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar9 * 4 + iVar16 * 0x10 + (iVar7 >> 2) * 0xb0 + 0x68) =
          0;
     iVar9 = clist->num_rows_inc_padding;
     iVar7 = iVar9 + 2;
     if (iVar7 < 0) {
       iVar7 = iVar9 + 5;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar9 * 4 + (iVar7 >> 2) * 0xb0 + iVar16 * 0x10 + 0x18) =
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar9 * 4 + (iVar7 >> 2) * 0xb0 + iVar16 * 0x10 + 0x18) =
          0;
     iVar9 = clist->num_rows_inc_padding;
     iVar7 = iVar9 + 2;
@@ -5074,7 +5074,7 @@ void kd_MdtBclAddSpring6(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
       iVar7 = iVar9 + 5;
     }
     iVar19 = iVar16 + 2;
-    *(undefined4 *)((int)*clist->Jstore + iVar9 * 4 + iVar16 * 0x10 + (iVar7 >> 2) * 0xb0 + 0x78) =
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar9 * 4 + iVar16 * 0x10 + (iVar7 >> 2) * 0xb0 + 0x78) =
          0;
     iVar16 = iVar19;
   } while (iVar19 != 6);
@@ -5090,21 +5090,21 @@ void kd_MdtBclAddSpring6(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
     if (iVar7 < 0) {
       iVar7 = iVar9 + 6;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar9 * 4 + 0xc + (iVar7 >> 2) * 0xb0 + iVar16 * 0x10) = 0
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar9 * 4 + 0xc + (iVar7 >> 2) * 0xb0 + iVar16 * 0x10) = 0
     ;
     iVar9 = clist->num_rows_inc_padding;
     iVar7 = iVar9 + 3;
     if (iVar7 < 0) {
       iVar7 = iVar9 + 6;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar9 * 4 + iVar16 * 0x10 + (iVar7 >> 2) * 0xb0 + 0x6c) =
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar9 * 4 + iVar16 * 0x10 + (iVar7 >> 2) * 0xb0 + 0x6c) =
          0;
     iVar9 = clist->num_rows_inc_padding;
     iVar7 = iVar9 + 3;
     if (iVar7 < 0) {
       iVar7 = iVar9 + 6;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar9 * 4 + (iVar7 >> 2) * 0xb0 + iVar16 * 0x10 + 0x1c) =
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar9 * 4 + (iVar7 >> 2) * 0xb0 + iVar16 * 0x10 + 0x1c) =
          0;
     iVar9 = clist->num_rows_inc_padding;
     iVar7 = iVar9 + 3;
@@ -5112,7 +5112,7 @@ void kd_MdtBclAddSpring6(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
       iVar7 = iVar9 + 6;
     }
     iVar19 = iVar16 + 2;
-    *(undefined4 *)((int)*clist->Jstore + iVar9 * 4 + iVar16 * 0x10 + (iVar7 >> 2) * 0xb0 + 0x7c) =
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar9 * 4 + iVar16 * 0x10 + (iVar7 >> 2) * 0xb0 + 0x7c) =
          0;
     iVar16 = iVar19;
   } while (iVar19 != 6);
@@ -5128,21 +5128,21 @@ void kd_MdtBclAddSpring6(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
     if (iVar7 < 0) {
       iVar7 = iVar9 + 7;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar9 * 4 + 0x10 + (iVar7 >> 2) * 0xb0 + iVar16 * 0x10) =
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar9 * 4 + 0x10 + (iVar7 >> 2) * 0xb0 + iVar16 * 0x10) =
          0;
     iVar9 = clist->num_rows_inc_padding;
     iVar7 = iVar9 + 4;
     if (iVar7 < 0) {
       iVar7 = iVar9 + 7;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar9 * 4 + iVar16 * 0x10 + (iVar7 >> 2) * 0xb0 + 0x70) =
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar9 * 4 + iVar16 * 0x10 + (iVar7 >> 2) * 0xb0 + 0x70) =
          0;
     iVar9 = clist->num_rows_inc_padding;
     iVar7 = iVar9 + 4;
     if (iVar7 < 0) {
       iVar7 = iVar9 + 7;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar9 * 4 + (iVar7 >> 2) * 0xb0 + iVar16 * 0x10 + 0x20) =
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar9 * 4 + (iVar7 >> 2) * 0xb0 + iVar16 * 0x10 + 0x20) =
          0;
     iVar9 = clist->num_rows_inc_padding;
     iVar7 = iVar9 + 4;
@@ -5150,7 +5150,7 @@ void kd_MdtBclAddSpring6(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
       iVar7 = iVar9 + 7;
     }
     iVar19 = iVar16 + 2;
-    *(undefined4 *)((int)*clist->Jstore + iVar9 * 4 + iVar16 * 0x10 + (iVar7 >> 2) * 0xb0 + 0x80) =
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar9 * 4 + iVar16 * 0x10 + (iVar7 >> 2) * 0xb0 + 0x80) =
          0;
     iVar16 = iVar19;
   } while (iVar19 != 6);
@@ -5166,21 +5166,21 @@ void kd_MdtBclAddSpring6(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
     if (iVar7 < 0) {
       iVar7 = iVar9 + 8;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar9 * 4 + 0x14 + (iVar7 >> 2) * 0xb0 + iVar16 * 0x10) =
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar9 * 4 + 0x14 + (iVar7 >> 2) * 0xb0 + iVar16 * 0x10) =
          0;
     iVar9 = clist->num_rows_inc_padding;
     iVar7 = iVar9 + 5;
     if (iVar7 < 0) {
       iVar7 = iVar9 + 8;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar9 * 4 + iVar16 * 0x10 + (iVar7 >> 2) * 0xb0 + 0x74) =
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar9 * 4 + iVar16 * 0x10 + (iVar7 >> 2) * 0xb0 + 0x74) =
          0;
     iVar9 = clist->num_rows_inc_padding;
     iVar7 = iVar9 + 5;
     if (iVar7 < 0) {
       iVar7 = iVar9 + 8;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar9 * 4 + (iVar7 >> 2) * 0xb0 + iVar16 * 0x10 + 0x24) =
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar9 * 4 + (iVar7 >> 2) * 0xb0 + iVar16 * 0x10 + 0x24) =
          0;
     iVar9 = clist->num_rows_inc_padding;
     iVar7 = iVar9 + 5;
@@ -5188,7 +5188,7 @@ void kd_MdtBclAddSpring6(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
       iVar7 = iVar9 + 8;
     }
     iVar19 = iVar16 + 2;
-    *(undefined4 *)((int)*clist->Jstore + iVar9 * 4 + iVar16 * 0x10 + (iVar7 >> 2) * 0xb0 + 0x84) =
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar9 * 4 + iVar16 * 0x10 + (iVar7 >> 2) * 0xb0 + 0x84) =
          0;
     iVar16 = iVar19;
   } while (iVar19 != 6);
@@ -5198,11 +5198,11 @@ void kd_MdtBclAddSpring6(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
   pfVar18[5] = 0.0;
                     
   paMVar8 = ref1world;
-  clist->Jbody[clist->num_constraints][0] = *(int *)((int)constraint + 0xb4);
-  clist->Jbody[clist->num_constraints][1] = *(int *)((int)constraint + 0xb8);
+  clist->Jbody[clist->num_constraints][0] = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->head.bodyindex[0] - (char *)0)));
+  clist->Jbody[clist->num_constraints][1] = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->head.bodyindex[1] - (char *)0)));
   iVar16 = 3;
-  pMVar12 = tlist + *(int *)((int)constraint + 0xb4);
-  pfVar11 = (float *)((int)constraint + 0xbc);
+  pMVar12 = tlist + *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->head.bodyindex[0] - (char *)0)));
+  pfVar11 = (float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->head.ref1[0][0] - (char *)0)));
   do {
     fVar1 = *pfVar11;
     fVar2 = pfVar11[1];
@@ -5224,28 +5224,28 @@ void kd_MdtBclAddSpring6(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
     paMVar8 = paMVar8 + 1;
     iVar16 = iVar16 + -1;
   } while (-1 < iVar16);
-  if (*(int *)((int)constraint + 0xb8) == -1) {
-    ref2world[0][0] = *(MeReal *)((int)constraint + 0xfc);
-    ref2world[0][1] = *(MeReal *)((int)constraint + 0x100);
-    ref2world[0][2] = *(MeReal *)((int)constraint + 0x104);
-    ref2world[0][3] = *(MeReal *)((int)constraint + 0x108);
-    ref2world[1][0] = *(MeReal *)((int)constraint + 0x10c);
-    ref2world[1][1] = *(MeReal *)((int)constraint + 0x110);
-    ref2world[1][2] = *(MeReal *)((int)constraint + 0x114);
-    ref2world[1][3] = *(MeReal *)((int)constraint + 0x118);
-    ref2world[2][0] = *(MeReal *)((int)constraint + 0x11c);
-    ref2world[2][1] = *(MeReal *)((int)constraint + 0x120);
-    ref2world[2][2] = *(MeReal *)((int)constraint + 0x124);
-    ref2world[2][3] = *(MeReal *)((int)constraint + 0x128);
-    ref2world[3][0] = *(MeReal *)((int)constraint + 300);
-    ref2world[3][1] = *(MeReal *)((int)constraint + 0x130);
-    ref2world[3][2] = *(MeReal *)((int)constraint + 0x134);
-    ref2world[3][3] = *(MeReal *)((int)constraint + 0x138);
+  if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->head.bodyindex[1] - (char *)0))) == -1) {
+    ref2world[0][0] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->head.ref2[0][0] - (char *)0)));
+    ref2world[0][1] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->head.ref2[0][1] - (char *)0)));
+    ref2world[0][2] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->head.ref2[0][2] - (char *)0)));
+    ref2world[0][3] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->head.ref2[0][3] - (char *)0)));
+    ref2world[1][0] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->head.ref2[1][0] - (char *)0)));
+    ref2world[1][1] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->head.ref2[1][1] - (char *)0)));
+    ref2world[1][2] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->head.ref2[1][2] - (char *)0)));
+    ref2world[1][3] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->head.ref2[1][3] - (char *)0)));
+    ref2world[2][0] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->head.ref2[2][0] - (char *)0)));
+    ref2world[2][1] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->head.ref2[2][1] - (char *)0)));
+    ref2world[2][2] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->head.ref2[2][2] - (char *)0)));
+    ref2world[2][3] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->head.ref2[2][3] - (char *)0)));
+    ref2world[3][0] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->head.ref2[3][0] - (char *)0)));
+    ref2world[3][1] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->head.ref2[3][1] - (char *)0)));
+    ref2world[3][2] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->head.ref2[3][2] - (char *)0)));
+    ref2world[3][3] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->head.ref2[3][3] - (char *)0)));
   }
   else {
     MeMatrix4MultiplyMatrix
-              (ref2world,(MeReal (*) [4])((int)constraint + 0xfc),
-               tlist[*(int *)((int)constraint + 0xb8)].R0);
+              (ref2world,(MeReal (*) [4])((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->head.ref2[0][0] - (char *)0))),
+               tlist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->head.bodyindex[1] - (char *)0)))].R0);
   }
   clist->Jstore[(uint)clist->num_rows_inc_padding >> 2][0].col[0][clist->num_rows_inc_padding & 3] =
        ref2world[0][0];
@@ -5289,30 +5289,30 @@ void kd_MdtBclAddSpring6(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
     iVar19 = iVar7 + 5;
   }
   iVar19 = iVar19 >> 2;
-  *(undefined4 *)((int)*paMVar5 + iVar16 * 4 + 0x30) = 0;
-  *(undefined4 *)((int)*paMVar5 + iVar16 * 4 + 0x40) = 0;
-  *(undefined4 *)((int)*paMVar5 + iVar16 * 4 + 0x50) = 0x80000000;
-  *(undefined4 *)((int)*paMVar5 + iVar7 * 4 + iVar9 * 0xb0 + 0x34) = 0x80000000;
-  *(undefined4 *)((int)*paMVar5 + iVar7 * 4 + iVar9 * 0xb0 + 0x44) = 0;
-  *(undefined4 *)((int)*paMVar5 + iVar7 * 4 + iVar9 * 0xb0 + 0x54) = 0;
-  *(undefined4 *)((int)*paMVar5 + iVar7 * 4 + iVar19 * 0xb0 + 0x38) = 0;
-  *(undefined4 *)((int)*paMVar5 + iVar7 * 4 + iVar19 * 0xb0 + 0x48) = 0x80000000;
-  *(undefined4 *)((int)*paMVar5 + iVar7 * 4 + iVar19 * 0xb0 + 0x58) = 0;
+  *(undefined4 *)((kd_iptr)*paMVar5 + iVar16 * 4 + 0x30) = 0;
+  *(undefined4 *)((kd_iptr)*paMVar5 + iVar16 * 4 + 0x40) = 0;
+  *(undefined4 *)((kd_iptr)*paMVar5 + iVar16 * 4 + 0x50) = 0x80000000;
+  *(undefined4 *)((kd_iptr)*paMVar5 + iVar7 * 4 + iVar9 * 0xb0 + 0x34) = 0x80000000;
+  *(undefined4 *)((kd_iptr)*paMVar5 + iVar7 * 4 + iVar9 * 0xb0 + 0x44) = 0;
+  *(undefined4 *)((kd_iptr)*paMVar5 + iVar7 * 4 + iVar9 * 0xb0 + 0x54) = 0;
+  *(undefined4 *)((kd_iptr)*paMVar5 + iVar7 * 4 + iVar19 * 0xb0 + 0x38) = 0;
+  *(undefined4 *)((kd_iptr)*paMVar5 + iVar7 * 4 + iVar19 * 0xb0 + 0x48) = 0x80000000;
+  *(undefined4 *)((kd_iptr)*paMVar5 + iVar7 * 4 + iVar19 * 0xb0 + 0x58) = 0;
   fVar1 = ref1world[3][0] - ref2world[3][0];
   fVar3 = ref1world[3][1] - ref2world[3][1];
   fVar2 = ref1world[3][2] - ref2world[3][2];
   *pfVar6 = fVar1 * ref2world[0][0] + fVar3 * ref2world[0][1] + fVar2 * ref2world[0][2];
   pfVar6[1] = ref2world[1][2] * fVar2 + ref2world[1][1] * fVar3 + ref2world[1][0] * fVar1;
   pfVar6[2] = ref2world[2][2] * fVar2 + ref2world[2][1] * fVar3 + ref2world[2][0] * fVar1;
-  *pfVar14 = ref2world[0][2] * *(float *)((int)constraint + 0x198) +
-             ref2world[0][1] * *(float *)((int)constraint + 0x194) +
-             ref2world[0][0] * *(float *)((int)constraint + 400);
-  pfVar14[1] = ref2world[1][2] * *(float *)((int)constraint + 0x198) +
-               ref2world[1][1] * *(float *)((int)constraint + 0x194) +
-               ref2world[1][0] * *(float *)((int)constraint + 400);
-  pfVar14[2] = ref2world[2][2] * *(float *)((int)constraint + 0x198) +
-               ref2world[2][1] * *(float *)((int)constraint + 0x194) +
-               ref2world[2][0] * *(float *)((int)constraint + 400);
+  *pfVar14 = ref2world[0][2] * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->worldLinearVel[2] - (char *)0))) +
+             ref2world[0][1] * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->worldLinearVel[1] - (char *)0))) +
+             ref2world[0][0] * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->worldLinearVel[0] - (char *)0)));
+  pfVar14[1] = ref2world[1][2] * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->worldLinearVel[2] - (char *)0))) +
+               ref2world[1][1] * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->worldLinearVel[1] - (char *)0))) +
+               ref2world[1][0] * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->worldLinearVel[0] - (char *)0)));
+  pfVar14[2] = ref2world[2][2] * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->worldLinearVel[2] - (char *)0))) +
+               ref2world[2][1] * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->worldLinearVel[1] - (char *)0))) +
+               ref2world[2][0] * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->worldLinearVel[0] - (char *)0)));
   *pMVar17 = -3.4028235e+38;
   *pMVar10 = 3.4028235e+38;
   pMVar17[1] = -3.4028235e+38;
@@ -5320,9 +5320,9 @@ void kd_MdtBclAddSpring6(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
   pMVar17[2] = -3.4028235e+38;
   pMVar10[2] = 3.4028235e+38;
   fVar1 = *(float *)params;
-  fVar2 = 1.0 / (fVar1 * *(float *)((int)constraint + 0x160) + *(float *)((int)constraint + 0x16c));
-  fVar3 = 1.0 / (fVar1 * *(float *)((int)constraint + 0x164) + *(float *)((int)constraint + 0x170));
-  fVar1 = 1.0 / (fVar1 * *(float *)((int)constraint + 0x168) + *(float *)((int)constraint + 0x174));
+  fVar2 = 1.0 / (fVar1 * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->linearStiffness[0] - (char *)0))) + *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->linearDamping[0] - (char *)0))));
+  fVar3 = 1.0 / (fVar1 * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->linearStiffness[1] - (char *)0))) + *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->linearDamping[1] - (char *)0))));
+  fVar1 = 1.0 / (fVar1 * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->linearStiffness[2] - (char *)0))) + *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->linearDamping[2] - (char *)0))));
   *pfVar15 = fVar2;
   pfVar15[1] = fVar3;
   pfVar15[2] = fVar1;
@@ -5335,9 +5335,9 @@ void kd_MdtBclAddSpring6(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
   if (pfVar15[2] < 0.0) {
     pfVar15[2] = 0.0;
   }
-  *pfVar18 = *(float *)params * fVar2 * *(float *)((int)constraint + 0x160);
-  pfVar18[1] = *(float *)params * fVar3 * *(float *)((int)constraint + 0x164);
-  pfVar18[2] = *(float *)params * fVar1 * *(float *)((int)constraint + 0x168);
+  *pfVar18 = *(float *)params * fVar2 * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->linearStiffness[0] - (char *)0)));
+  pfVar18[1] = *(float *)params * fVar3 * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->linearStiffness[1] - (char *)0)));
+  pfVar18[2] = *(float *)params * fVar1 * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->linearStiffness[2] - (char *)0)));
   iVar7 = clist->num_rows_inc_padding;
   iVar16 = iVar7 + 3;
   if (iVar16 < 0) {
@@ -5345,11 +5345,11 @@ void kd_MdtBclAddSpring6(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
   }
   iVar16 = iVar16 >> 2;
   paMVar5 = clist->Jstore;
-  *(float *)((int)*paMVar5 + iVar7 * 4 + iVar16 * 0xb0 + 0x3c) =
+  *(float *)((kd_iptr)*paMVar5 + iVar7 * 4 + iVar16 * 0xb0 + 0x3c) =
        ref2world[2][2] * ref1world[0][1] - ref2world[2][1] * ref1world[0][2];
-  *(float *)((int)*paMVar5 + iVar7 * 4 + iVar16 * 0xb0 + 0x4c) =
+  *(float *)((kd_iptr)*paMVar5 + iVar7 * 4 + iVar16 * 0xb0 + 0x4c) =
        ref2world[2][0] * ref1world[0][2] - ref2world[2][2] * ref1world[0][0];
-  *(float *)((int)*paMVar5 + iVar7 * 4 + iVar16 * 0xb0 + 0x5c) =
+  *(float *)((kd_iptr)*paMVar5 + iVar7 * 4 + iVar16 * 0xb0 + 0x5c) =
        ref2world[2][1] * ref1world[0][0] - ref2world[2][0] * ref1world[0][1];
   iVar7 = clist->num_rows_inc_padding;
   iVar16 = iVar7 + 4;
@@ -5358,11 +5358,11 @@ void kd_MdtBclAddSpring6(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
   }
   iVar16 = iVar16 >> 2;
   paMVar5 = clist->Jstore;
-  *(float *)((int)*paMVar5 + iVar7 * 4 + iVar16 * 0xb0 + 0x40) =
+  *(float *)((kd_iptr)*paMVar5 + iVar7 * 4 + iVar16 * 0xb0 + 0x40) =
        ref2world[1][2] * ref1world[0][1] - ref2world[1][1] * ref1world[0][2];
-  *(float *)((int)*paMVar5 + iVar7 * 4 + iVar16 * 0xb0 + 0x50) =
+  *(float *)((kd_iptr)*paMVar5 + iVar7 * 4 + iVar16 * 0xb0 + 0x50) =
        ref2world[1][0] * ref1world[0][2] - ref2world[1][2] * ref1world[0][0];
-  *(float *)((int)*paMVar5 + iVar7 * 4 + iVar16 * 0xb0 + 0x60) =
+  *(float *)((kd_iptr)*paMVar5 + iVar7 * 4 + iVar16 * 0xb0 + 0x60) =
        ref2world[1][1] * ref1world[0][0] - ref2world[1][0] * ref1world[0][1];
   iVar7 = clist->num_rows_inc_padding;
   iVar16 = iVar7 + 5;
@@ -5371,13 +5371,13 @@ void kd_MdtBclAddSpring6(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
   }
   iVar16 = iVar16 >> 2;
   paMVar5 = clist->Jstore;
-  *(float *)((int)*paMVar5 + iVar7 * 4 + iVar16 * 0xb0 + 0x44) =
+  *(float *)((kd_iptr)*paMVar5 + iVar7 * 4 + iVar16 * 0xb0 + 0x44) =
        ref2world[2][2] * ref1world[1][1] - ref2world[2][1] * ref1world[1][2];
-  *(float *)((int)*paMVar5 + iVar7 * 4 + iVar16 * 0xb0 + 0x54) =
+  *(float *)((kd_iptr)*paMVar5 + iVar7 * 4 + iVar16 * 0xb0 + 0x54) =
        ref2world[2][0] * ref1world[1][2] - ref2world[2][2] * ref1world[1][0];
-  *(float *)((int)*paMVar5 + iVar7 * 4 + iVar16 * 0xb0 + 100) =
+  *(float *)((kd_iptr)*paMVar5 + iVar7 * 4 + iVar16 * 0xb0 + 100) =
        ref2world[2][1] * ref1world[1][0] - ref2world[2][0] * ref1world[1][1];
-  if (*(int *)((int)constraint + 0xb8) != -1) {
+  if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->head.bodyindex[1] - (char *)0))) != -1) {
     iVar7 = clist->num_rows_inc_padding;
     iVar16 = iVar7 + 3;
     if (iVar16 < 0) {
@@ -5385,11 +5385,11 @@ void kd_MdtBclAddSpring6(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
     }
     iVar16 = iVar16 >> 2;
     paMVar5 = clist->Jstore;
-    *(float *)((int)*paMVar5 + iVar7 * 4 + iVar16 * 0xb0 + 0x9c) =
+    *(float *)((kd_iptr)*paMVar5 + iVar7 * 4 + iVar16 * 0xb0 + 0x9c) =
          ref1world[0][2] * ref2world[2][1] - ref1world[0][1] * ref2world[2][2];
-    *(float *)((int)*paMVar5 + iVar7 * 4 + iVar16 * 0xb0 + 0xac) =
+    *(float *)((kd_iptr)*paMVar5 + iVar7 * 4 + iVar16 * 0xb0 + 0xac) =
          ref1world[0][0] * ref2world[2][2] - ref1world[0][2] * ref2world[2][0];
-    *(float *)((int)*paMVar5 + iVar7 * 4 + iVar16 * 0xb0 + 0xbc) =
+    *(float *)((kd_iptr)*paMVar5 + iVar7 * 4 + iVar16 * 0xb0 + 0xbc) =
          ref1world[0][1] * ref2world[2][0] - ref1world[0][0] * ref2world[2][1];
     iVar7 = clist->num_rows_inc_padding;
     iVar16 = iVar7 + 4;
@@ -5398,11 +5398,11 @@ void kd_MdtBclAddSpring6(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
     }
     iVar16 = iVar16 >> 2;
     paMVar5 = clist->Jstore;
-    *(float *)((int)*paMVar5 + iVar7 * 4 + iVar16 * 0xb0 + 0xa0) =
+    *(float *)((kd_iptr)*paMVar5 + iVar7 * 4 + iVar16 * 0xb0 + 0xa0) =
          ref1world[0][2] * ref2world[1][1] - ref1world[0][1] * ref2world[1][2];
-    *(float *)((int)*paMVar5 + iVar7 * 4 + iVar16 * 0xb0 + 0xb0) =
+    *(float *)((kd_iptr)*paMVar5 + iVar7 * 4 + iVar16 * 0xb0 + 0xb0) =
          ref1world[0][0] * ref2world[1][2] - ref1world[0][2] * ref2world[1][0];
-    *(float *)((int)paMVar5[1] + iVar7 * 4 + iVar16 * 0xb0) =
+    *(float *)((kd_iptr)paMVar5[1] + iVar7 * 4 + iVar16 * 0xb0) =
          ref1world[0][1] * ref2world[1][0] - ref1world[0][0] * ref2world[1][1];
     iVar7 = clist->num_rows_inc_padding;
     iVar16 = iVar7 + 5;
@@ -5411,11 +5411,11 @@ void kd_MdtBclAddSpring6(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
     }
     iVar16 = iVar16 >> 2;
     paMVar5 = clist->Jstore;
-    *(float *)((int)*paMVar5 + iVar7 * 4 + iVar16 * 0xb0 + 0xa4) =
+    *(float *)((kd_iptr)*paMVar5 + iVar7 * 4 + iVar16 * 0xb0 + 0xa4) =
          ref1world[1][2] * ref2world[2][1] - ref1world[1][1] * ref2world[2][2];
-    *(float *)((int)*paMVar5 + iVar7 * 4 + iVar16 * 0xb0 + 0xb4) =
+    *(float *)((kd_iptr)*paMVar5 + iVar7 * 4 + iVar16 * 0xb0 + 0xb4) =
          ref1world[1][0] * ref2world[2][2] - ref1world[1][2] * ref2world[2][0];
-    *(float *)((int)paMVar5[1] + iVar7 * 4 + iVar16 * 0xb0 + 4) =
+    *(float *)((kd_iptr)paMVar5[1] + iVar7 * 4 + iVar16 * 0xb0 + 4) =
          ref1world[1][1] * ref2world[2][0] - ref1world[1][0] * ref2world[2][1];
   }
   pMVar17[3] = -3.4028235e+38;
@@ -5430,19 +5430,19 @@ void kd_MdtBclAddSpring6(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
               ref2world[1][1] * ref1world[0][1] + ref2world[1][0] * ref1world[0][0];
   pfVar6[5] = ref2world[2][2] * ref1world[1][2] +
               ref2world[2][1] * ref1world[1][1] + ref2world[2][0] * ref1world[1][0];
-  pfVar14[3] = ref2world[0][2] * *(float *)((int)constraint + 0x1a4) +
-               ref2world[0][1] * *(float *)((int)constraint + 0x1a0) +
-               ref2world[0][0] * *(float *)((int)constraint + 0x19c);
-  pfVar14[4] = ref2world[1][2] * *(float *)((int)constraint + 0x1a4) +
-               ref2world[1][0] * *(float *)((int)constraint + 0x19c) +
-               ref2world[1][1] * *(float *)((int)constraint + 0x1a0);
-  pfVar14[5] = ref2world[2][2] * *(float *)((int)constraint + 0x1a4) +
-               ref2world[2][0] * *(float *)((int)constraint + 0x19c) +
-               ref2world[2][1] * *(float *)((int)constraint + 0x1a0);
+  pfVar14[3] = ref2world[0][2] * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->worldAngularVel[2] - (char *)0))) +
+               ref2world[0][1] * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->worldAngularVel[1] - (char *)0))) +
+               ref2world[0][0] * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->worldAngularVel[0] - (char *)0)));
+  pfVar14[4] = ref2world[1][2] * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->worldAngularVel[2] - (char *)0))) +
+               ref2world[1][0] * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->worldAngularVel[0] - (char *)0))) +
+               ref2world[1][1] * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->worldAngularVel[1] - (char *)0)));
+  pfVar14[5] = ref2world[2][2] * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->worldAngularVel[2] - (char *)0))) +
+               ref2world[2][0] * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->worldAngularVel[0] - (char *)0))) +
+               ref2world[2][1] * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->worldAngularVel[1] - (char *)0)));
   fVar1 = *(float *)params;
-  fVar2 = 1.0 / (fVar1 * *(float *)((int)constraint + 0x178) + *(float *)((int)constraint + 0x184));
-  fVar3 = 1.0 / (fVar1 * *(float *)((int)constraint + 0x17c) + *(float *)((int)constraint + 0x188));
-  fVar1 = 1.0 / (fVar1 * *(float *)((int)constraint + 0x180) + *(float *)((int)constraint + 0x18c));
+  fVar2 = 1.0 / (fVar1 * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->angularStiffness[0] - (char *)0))) + *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->angularDamping[0] - (char *)0))));
+  fVar3 = 1.0 / (fVar1 * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->angularStiffness[1] - (char *)0))) + *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->angularDamping[1] - (char *)0))));
+  fVar1 = 1.0 / (fVar1 * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->angularStiffness[2] - (char *)0))) + *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->angularDamping[2] - (char *)0))));
   pfVar15[3] = fVar2;
   pfVar15[4] = fVar3;
   pfVar15[5] = fVar1;
@@ -5455,9 +5455,9 @@ void kd_MdtBclAddSpring6(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
   if (pfVar15[5] < 0.0) {
     pfVar15[5] = 0.0;
   }
-  pfVar18[3] = *(float *)params * fVar2 * *(float *)((int)constraint + 0x178);
-  pfVar18[4] = *(float *)params * fVar3 * *(float *)((int)constraint + 0x17c);
-  pfVar18[5] = *(float *)params * fVar1 * *(float *)((int)constraint + 0x180);
+  pfVar18[3] = *(float *)params * fVar2 * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->angularStiffness[0] - (char *)0)));
+  pfVar18[4] = *(float *)params * fVar3 * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->angularStiffness[1] - (char *)0)));
+  pfVar18[5] = *(float *)params * fVar1 * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring6 *)0)->angularStiffness[2] - (char *)0)));
   kd_MdtBclEndConstraint(clist,6);
   return;
 }
@@ -5514,20 +5514,20 @@ void kd_MdtBclAddSpring(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfor
     if (iVar4 < 0) {
       iVar12 = iVar4 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar4 * 4 + (iVar12 >> 2) * 0xb0 + iVar13 * 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar4 * 4 + (iVar12 >> 2) * 0xb0 + iVar13 * 0x10) = 0;
     iVar4 = clist->num_rows_inc_padding;
     iVar12 = iVar4;
     if (iVar4 < 0) {
       iVar12 = iVar4 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar4 * 4 + iVar13 * 0x10 + (iVar12 >> 2) * 0xb0 + 0x60) =
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar4 * 4 + iVar13 * 0x10 + (iVar12 >> 2) * 0xb0 + 0x60) =
          0;
     iVar4 = clist->num_rows_inc_padding;
     iVar12 = iVar4;
     if (iVar4 < 0) {
       iVar12 = iVar4 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar4 * 4 + (iVar12 >> 2) * 0xb0 + iVar13 * 0x10 + 0x10) =
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar4 * 4 + (iVar12 >> 2) * 0xb0 + iVar13 * 0x10 + 0x10) =
          0;
     iVar4 = clist->num_rows_inc_padding;
     iVar12 = iVar4;
@@ -5535,7 +5535,7 @@ void kd_MdtBclAddSpring(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfor
       iVar12 = iVar4 + 3;
     }
     iVar15 = iVar13 + 2;
-    *(undefined4 *)((int)*clist->Jstore + iVar4 * 4 + iVar13 * 0x10 + (iVar12 >> 2) * 0xb0 + 0x70) =
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar4 * 4 + iVar13 * 0x10 + (iVar12 >> 2) * 0xb0 + 0x70) =
          0;
     iVar13 = iVar15;
   } while (iVar15 != 6);
@@ -5543,34 +5543,34 @@ void kd_MdtBclAddSpring(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfor
   *factors.slipfactor = 0.0;
   *factors.c = 0.0;
   *factors.xgamma = 0.0;
-  clist->Jbody[clist->num_constraints][0] = *(int *)((int)constraint + 0xb4);
-  clist->Jbody[clist->num_constraints][1] = *(int *)((int)constraint + 0xb8);
-  if (*(int *)((int)constraint + 0x17c) == 0) {
+  clist->Jbody[clist->num_constraints][0] = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring *)0)->head.bodyindex[0] - (char *)0)));
+  clist->Jbody[clist->num_constraints][1] = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring *)0)->head.bodyindex[1] - (char *)0)));
+  if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring *)0)->limit.bCalculatePosition - (char *)0))) == 0) {
     return;
   }
                     
   factors.xi = pMVar14;
   factors.lo = pMVar2 + iVar1;
   factors.hi = pMVar3 + iVar1;
-  MeMatrixMultiply(abs_offset1,4,3,1,tlist[*(int *)((int)constraint + 0xb4)].R0,
-                   (MeReal *)((int)constraint + 0x160));
-  iVar13 = *(int *)((int)constraint + 0xb4);
+  MeMatrixMultiply(abs_offset1,4,3,1,tlist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring *)0)->head.bodyindex[0] - (char *)0)))].R0,
+                   (MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring *)0)->pos1[0] - (char *)0))));
+  iVar13 = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring *)0)->head.bodyindex[0] - (char *)0)));
   fVar9 = abs_offset1[0] + tlist[iVar13].pos[0];
   fVar8 = abs_offset1[1] + tlist[iVar13].pos[1];
   fVar7 = abs_offset1[2] + tlist[iVar13].pos[2];
-  if (*(int *)((int)constraint + 0xb8) == -1) {
-    SpringAxis[0] = fVar9 - *(float *)((int)constraint + 0x16c);
-    SpringAxis[1] = fVar8 - *(float *)((int)constraint + 0x170);
-    SpringAxis[2] = fVar7 - *(float *)((int)constraint + 0x174);
+  if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring *)0)->head.bodyindex[1] - (char *)0))) == -1) {
+    SpringAxis[0] = fVar9 - *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring *)0)->pos2[0] - (char *)0)));
+    SpringAxis[1] = fVar8 - *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring *)0)->pos2[1] - (char *)0)));
+    SpringAxis[2] = fVar7 - *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring *)0)->pos2[2] - (char *)0)));
     pMVar5 = blist[iVar13];
     velocity[0] = pMVar5->vel[0];
     velocity[1] = pMVar5->vel[1];
     velocity[2] = pMVar5->vel[2];
   }
   else {
-    MeMatrixMultiply(abs_offset2,4,3,1,tlist[*(int *)((int)constraint + 0xb8)].R0,
-                     (MeReal *)((int)constraint + 0x16c));
-    iVar13 = *(int *)((int)constraint + 0xb8);
+    MeMatrixMultiply(abs_offset2,4,3,1,tlist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring *)0)->head.bodyindex[1] - (char *)0)))].R0,
+                     (MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring *)0)->pos2[0] - (char *)0))));
+    iVar13 = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring *)0)->head.bodyindex[1] - (char *)0)));
     SpringAxis[0] = fVar9 - (abs_offset2[0] + tlist[iVar13].pos[0]);
     SpringAxis[1] = fVar8 - (abs_offset2[1] + tlist[iVar13].pos[1]);
     SpringAxis[2] = fVar7 - (abs_offset2[2] + tlist[iVar13].pos[2]);
@@ -5578,7 +5578,7 @@ void kd_MdtBclAddSpring(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfor
     RotationalAxis2[1] = abs_offset2[2] * SpringAxis[0] - SpringAxis[2] * abs_offset2[0];
     RotationalAxis2[2] = abs_offset2[0] * SpringAxis[1] - abs_offset2[1] * SpringAxis[0];
     pMVar5 = blist[iVar13];
-    pMVar6 = blist[*(int *)((int)constraint + 0xb4)];
+    pMVar6 = blist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring *)0)->head.bodyindex[0] - (char *)0)))];
     velocity[0] = pMVar6->vel[0] - pMVar5->vel[0];
     velocity[1] = pMVar6->vel[1] - pMVar5->vel[1];
     velocity[2] = pMVar6->vel[2] - pMVar5->vel[2];
@@ -5587,17 +5587,17 @@ void kd_MdtBclAddSpring(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfor
   RotationalAxis1[1] = abs_offset1[2] * SpringAxis[0] - abs_offset1[0] * SpringAxis[2];
                     
   RotationalAxis1[2] = abs_offset1[0] * SpringAxis[1] - abs_offset1[1] * SpringAxis[0];
-  *(float *)((int)constraint + 0x18c) =
+  *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring *)0)->limit.position - (char *)0))) =
        SQRT(SpringAxis[2] * SpringAxis[2] +
             SpringAxis[0] * SpringAxis[0] + SpringAxis[1] * SpringAxis[1]);
   MeVector3Normalize(SpringAxis);
-  limit = (MdtBclLimit *)((int)constraint + 0x178);
-  *(float *)((int)constraint + 0x1a0) =
+  limit = (MdtBclLimit *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring *)0)->limit - (char *)0)));
+  *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring *)0)->limit.velocity - (char *)0))) =
        velocity[2] * SpringAxis[2] + velocity[1] * SpringAxis[1] + velocity[0] * SpringAxis[0];
   CalculateLimitPositionAndOvershoot(limit,*(MeReal *)params,0);
   bVar10 = LimitSingleAxis(limit,&factors,0,params);
   if (bVar10) {
-    bVar11 = ActuateJointAxes(limit,(int *)((int)constraint + 0xb4),SpringAxis,RotationalAxis1,
+    bVar11 = ActuateJointAxes(limit,(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring *)0)->head.bodyindex[0] - (char *)0))),SpringAxis,RotationalAxis1,
                               RotationalAxis2,blist,&factors,0,clist);
     bVar10 = true;
     if (bVar11) goto LAB_0001cff9;
@@ -5605,81 +5605,81 @@ void kd_MdtBclAddSpring(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfor
   bVar10 = false;
 LAB_0001cff9:
   if (!bVar10) {
-    clist->Jbody[clist->num_constraints][0] = *(int *)((int)constraint + 0xb4);
-    clist->Jbody[clist->num_constraints][1] = *(int *)((int)constraint + 0xb8);
+    clist->Jbody[clist->num_constraints][0] = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring *)0)->head.bodyindex[0] - (char *)0)));
+    clist->Jbody[clist->num_constraints][1] = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring *)0)->head.bodyindex[1] - (char *)0)));
     iVar12 = clist->num_rows_inc_padding;
     iVar13 = iVar12;
     if (iVar12 < 0) {
       iVar13 = iVar12 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar12 * 4 + (iVar13 >> 2) * 0xb0) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar12 * 4 + (iVar13 >> 2) * 0xb0) = 0;
     iVar12 = clist->num_rows_inc_padding;
     iVar13 = iVar12;
     if (iVar12 < 0) {
       iVar13 = iVar12 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar12 * 4 + (iVar13 >> 2) * 0xb0 + 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar12 * 4 + (iVar13 >> 2) * 0xb0 + 0x10) = 0;
     iVar12 = clist->num_rows_inc_padding;
     iVar13 = iVar12;
     if (iVar12 < 0) {
       iVar13 = iVar12 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar12 * 4 + (iVar13 >> 2) * 0xb0 + 0x20) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar12 * 4 + (iVar13 >> 2) * 0xb0 + 0x20) = 0;
     iVar12 = clist->num_rows_inc_padding;
     iVar13 = iVar12;
     if (iVar12 < 0) {
       iVar13 = iVar12 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar12 * 4 + (iVar13 >> 2) * 0xb0 + 0x30) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar12 * 4 + (iVar13 >> 2) * 0xb0 + 0x30) = 0;
     iVar12 = clist->num_rows_inc_padding;
     iVar13 = iVar12;
     if (iVar12 < 0) {
       iVar13 = iVar12 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar12 * 4 + (iVar13 >> 2) * 0xb0 + 0x40) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar12 * 4 + (iVar13 >> 2) * 0xb0 + 0x40) = 0;
     iVar12 = clist->num_rows_inc_padding;
     iVar13 = iVar12;
     if (iVar12 < 0) {
       iVar13 = iVar12 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar12 * 4 + (iVar13 >> 2) * 0xb0 + 0x50) = 0;
-    if (*(int *)((int)constraint + 0xb8) != -1) {
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar12 * 4 + (iVar13 >> 2) * 0xb0 + 0x50) = 0;
+    if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSpring *)0)->head.bodyindex[1] - (char *)0))) != -1) {
       iVar12 = clist->num_rows_inc_padding;
       iVar13 = iVar12;
       if (iVar12 < 0) {
         iVar13 = iVar12 + 3;
       }
-      *(undefined4 *)((int)*clist->Jstore + iVar12 * 4 + (iVar13 >> 2) * 0xb0 + 0x60) = 0;
+      *(undefined4 *)((kd_iptr)*clist->Jstore + iVar12 * 4 + (iVar13 >> 2) * 0xb0 + 0x60) = 0;
       iVar12 = clist->num_rows_inc_padding;
       iVar13 = iVar12;
       if (iVar12 < 0) {
         iVar13 = iVar12 + 3;
       }
-      *(undefined4 *)((int)*clist->Jstore + iVar12 * 4 + (iVar13 >> 2) * 0xb0 + 0x70) = 0;
+      *(undefined4 *)((kd_iptr)*clist->Jstore + iVar12 * 4 + (iVar13 >> 2) * 0xb0 + 0x70) = 0;
       iVar12 = clist->num_rows_inc_padding;
       iVar13 = iVar12;
       if (iVar12 < 0) {
         iVar13 = iVar12 + 3;
       }
-      *(undefined4 *)((int)*clist->Jstore + iVar12 * 4 + (iVar13 >> 2) * 0xb0 + 0x80) = 0;
+      *(undefined4 *)((kd_iptr)*clist->Jstore + iVar12 * 4 + (iVar13 >> 2) * 0xb0 + 0x80) = 0;
       iVar12 = clist->num_rows_inc_padding;
       iVar13 = iVar12;
       if (iVar12 < 0) {
         iVar13 = iVar12 + 3;
       }
-      *(undefined4 *)((int)*clist->Jstore + iVar12 * 4 + (iVar13 >> 2) * 0xb0 + 0x90) = 0;
+      *(undefined4 *)((kd_iptr)*clist->Jstore + iVar12 * 4 + (iVar13 >> 2) * 0xb0 + 0x90) = 0;
       iVar12 = clist->num_rows_inc_padding;
       iVar13 = iVar12;
       if (iVar12 < 0) {
         iVar13 = iVar12 + 3;
       }
-      *(undefined4 *)((int)*clist->Jstore + iVar12 * 4 + (iVar13 >> 2) * 0xb0 + 0xa0) = 0;
+      *(undefined4 *)((kd_iptr)*clist->Jstore + iVar12 * 4 + (iVar13 >> 2) * 0xb0 + 0xa0) = 0;
       iVar12 = clist->num_rows_inc_padding;
       iVar13 = iVar12;
       if (iVar12 < 0) {
         iVar13 = iVar12 + 3;
       }
-      *(undefined4 *)((int)*clist->Jstore + iVar12 * 4 + (iVar13 >> 2) * 0xb0 + 0xb0) = 0;
+      *(undefined4 *)((kd_iptr)*clist->Jstore + iVar12 * 4 + (iVar13 >> 2) * 0xb0 + 0xb0) = 0;
     }
     *pMVar14 = 0.0;
     pMVar2[iVar1] = -3.4028235e+38;
@@ -5737,25 +5737,25 @@ void kd_MdtBclAddConeLimit(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
     if (iVar10 < 0) {
       iVar16 = iVar10 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + z * 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + z * 0x10) = 0;
     iVar10 = clist->num_rows_inc_padding;
     iVar16 = iVar10;
     if (iVar10 < 0) {
       iVar16 = iVar10 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar10 * 4 + z * 0x10 + (iVar16 >> 2) * 0xb0 + 0x60) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar10 * 4 + z * 0x10 + (iVar16 >> 2) * 0xb0 + 0x60) = 0;
     iVar10 = clist->num_rows_inc_padding;
     iVar16 = iVar10;
     if (iVar10 < 0) {
       iVar16 = iVar10 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + z * 0x10 + 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + z * 0x10 + 0x10) = 0;
     iVar10 = clist->num_rows_inc_padding;
     iVar16 = iVar10;
     if (iVar10 < 0) {
       iVar16 = iVar10 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar10 * 4 + z * 0x10 + (iVar16 >> 2) * 0xb0 + 0x70) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar10 * 4 + z * 0x10 + (iVar16 >> 2) * 0xb0 + 0x70) = 0;
     z = z + 2;
   } while (z != 6);
   *pfVar11 = 0.0;
@@ -5764,8 +5764,8 @@ void kd_MdtBclAddConeLimit(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
   paMVar12 = ref1world;
   pMVar6[iVar5] = 0.0;
   pMVar9[iVar5] = 0.0;
-  pfVar13 = (float *)((int)constraint + 0xbc);
-  pMVar14 = tlist + *(int *)((int)constraint + 0xb4);
+  pfVar13 = (float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtConeLimit *)0)->head.ref1[0][0] - (char *)0)));
+  pMVar14 = tlist + *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtConeLimit *)0)->head.bodyindex[0] - (char *)0)));
   iVar16 = 3;
   do {
     fVar1 = *pfVar13;
@@ -5788,108 +5788,108 @@ void kd_MdtBclAddConeLimit(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
     paMVar12 = paMVar12 + 1;
     iVar16 = iVar16 + -1;
   } while (-1 < iVar16);
-  if (*(int *)((int)constraint + 0xb8) == -1) {
-    ref2world[0][0] = *(MeReal *)((int)constraint + 0xfc);
-    ref2world[0][1] = *(MeReal *)((int)constraint + 0x100);
-    ref2world[0][2] = *(MeReal *)((int)constraint + 0x104);
-    ref2world[0][3] = *(MeReal *)((int)constraint + 0x108);
-    ref2world[1][0] = *(MeReal *)((int)constraint + 0x10c);
-    ref2world[1][1] = *(MeReal *)((int)constraint + 0x110);
-    ref2world[1][2] = *(MeReal *)((int)constraint + 0x114);
-    ref2world[1][3] = *(MeReal *)((int)constraint + 0x118);
-    ref2world[2][0] = *(MeReal *)((int)constraint + 0x11c);
-    ref2world[2][1] = *(MeReal *)((int)constraint + 0x120);
-    ref2world[2][2] = *(MeReal *)((int)constraint + 0x124);
-    ref2world[2][3] = *(MeReal *)((int)constraint + 0x128);
-    ref2world[3][0] = *(MeReal *)((int)constraint + 300);
-    ref2world[3][1] = *(MeReal *)((int)constraint + 0x130);
-    ref2world[3][2] = *(MeReal *)((int)constraint + 0x134);
-    ref2world[3][3] = *(MeReal *)((int)constraint + 0x138);
+  if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtConeLimit *)0)->head.bodyindex[1] - (char *)0))) == -1) {
+    ref2world[0][0] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtConeLimit *)0)->head.ref2[0][0] - (char *)0)));
+    ref2world[0][1] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtConeLimit *)0)->head.ref2[0][1] - (char *)0)));
+    ref2world[0][2] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtConeLimit *)0)->head.ref2[0][2] - (char *)0)));
+    ref2world[0][3] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtConeLimit *)0)->head.ref2[0][3] - (char *)0)));
+    ref2world[1][0] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtConeLimit *)0)->head.ref2[1][0] - (char *)0)));
+    ref2world[1][1] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtConeLimit *)0)->head.ref2[1][1] - (char *)0)));
+    ref2world[1][2] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtConeLimit *)0)->head.ref2[1][2] - (char *)0)));
+    ref2world[1][3] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtConeLimit *)0)->head.ref2[1][3] - (char *)0)));
+    ref2world[2][0] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtConeLimit *)0)->head.ref2[2][0] - (char *)0)));
+    ref2world[2][1] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtConeLimit *)0)->head.ref2[2][1] - (char *)0)));
+    ref2world[2][2] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtConeLimit *)0)->head.ref2[2][2] - (char *)0)));
+    ref2world[2][3] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtConeLimit *)0)->head.ref2[2][3] - (char *)0)));
+    ref2world[3][0] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtConeLimit *)0)->head.ref2[3][0] - (char *)0)));
+    ref2world[3][1] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtConeLimit *)0)->head.ref2[3][1] - (char *)0)));
+    ref2world[3][2] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtConeLimit *)0)->head.ref2[3][2] - (char *)0)));
+    ref2world[3][3] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtConeLimit *)0)->head.ref2[3][3] - (char *)0)));
   }
   else {
     MeMatrix4MultiplyMatrix
-              (ref2world,(MeReal (*) [4])((int)constraint + 0xfc),
-               tlist[*(int *)((int)constraint + 0xb8)].R0);
+              (ref2world,(MeReal (*) [4])((kd_iptr)constraint + ((int)((char *)&((struct MdtConeLimit *)0)->head.ref2[0][0] - (char *)0))),
+               tlist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtConeLimit *)0)->head.bodyindex[1] - (char *)0)))].R0);
   }
   lVar17 = (longdouble)ref2world[0][2] * (longdouble)ref1world[0][2] +
            (longdouble)ref2world[0][1] * (longdouble)ref1world[0][1] +
            (longdouble)ref2world[0][0] * (longdouble)ref1world[0][0];
-  if ((longdouble)*(float *)((int)constraint + 0x164) <= lVar17) {
-    clist->Jbody[clist->num_constraints][0] = *(int *)((int)constraint + 0xb4);
-    clist->Jbody[clist->num_constraints][1] = *(int *)((int)constraint + 0xb8);
+  if ((longdouble)*(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtConeLimit *)0)->cos_cone_half_angle - (char *)0))) <= lVar17) {
+    clist->Jbody[clist->num_constraints][0] = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtConeLimit *)0)->head.bodyindex[0] - (char *)0)));
+    clist->Jbody[clist->num_constraints][1] = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtConeLimit *)0)->head.bodyindex[1] - (char *)0)));
     iVar10 = clist->num_rows_inc_padding;
     iVar16 = iVar10;
     if (iVar10 < 0) {
       iVar16 = iVar10 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0) = 0;
     iVar10 = clist->num_rows_inc_padding;
     iVar16 = iVar10;
     if (iVar10 < 0) {
       iVar16 = iVar10 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + 0x10) = 0;
     iVar10 = clist->num_rows_inc_padding;
     iVar16 = iVar10;
     if (iVar10 < 0) {
       iVar16 = iVar10 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + 0x20) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + 0x20) = 0;
     iVar10 = clist->num_rows_inc_padding;
     iVar16 = iVar10;
     if (iVar10 < 0) {
       iVar16 = iVar10 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + 0x30) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + 0x30) = 0;
     iVar10 = clist->num_rows_inc_padding;
     iVar16 = iVar10;
     if (iVar10 < 0) {
       iVar16 = iVar10 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + 0x40) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + 0x40) = 0;
     iVar10 = clist->num_rows_inc_padding;
     iVar16 = iVar10;
     if (iVar10 < 0) {
       iVar16 = iVar10 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + 0x50) = 0;
-    if (*(int *)((int)constraint + 0xb8) != -1) {
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + 0x50) = 0;
+    if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtConeLimit *)0)->head.bodyindex[1] - (char *)0))) != -1) {
       iVar10 = clist->num_rows_inc_padding;
       iVar16 = iVar10;
       if (iVar10 < 0) {
         iVar16 = iVar10 + 3;
       }
-      *(undefined4 *)((int)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + 0x60) = 0;
+      *(undefined4 *)((kd_iptr)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + 0x60) = 0;
       iVar10 = clist->num_rows_inc_padding;
       iVar16 = iVar10;
       if (iVar10 < 0) {
         iVar16 = iVar10 + 3;
       }
-      *(undefined4 *)((int)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + 0x70) = 0;
+      *(undefined4 *)((kd_iptr)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + 0x70) = 0;
       iVar10 = clist->num_rows_inc_padding;
       iVar16 = iVar10;
       if (iVar10 < 0) {
         iVar16 = iVar10 + 3;
       }
-      *(undefined4 *)((int)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + 0x80) = 0;
+      *(undefined4 *)((kd_iptr)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + 0x80) = 0;
       iVar10 = clist->num_rows_inc_padding;
       iVar16 = iVar10;
       if (iVar10 < 0) {
         iVar16 = iVar10 + 3;
       }
-      *(undefined4 *)((int)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + 0x90) = 0;
+      *(undefined4 *)((kd_iptr)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + 0x90) = 0;
       iVar10 = clist->num_rows_inc_padding;
       iVar16 = iVar10;
       if (iVar10 < 0) {
         iVar16 = iVar10 + 3;
       }
-      *(undefined4 *)((int)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + 0xa0) = 0;
+      *(undefined4 *)((kd_iptr)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + 0xa0) = 0;
       iVar10 = clist->num_rows_inc_padding;
       iVar16 = iVar10;
       if (iVar10 < 0) {
         iVar16 = iVar10 + 3;
       }
-      *(undefined4 *)((int)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + 0xb0) = 0;
+      *(undefined4 *)((kd_iptr)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + 0xb0) = 0;
     }
     *pfVar11 = 0.0;
     pMVar7[iVar5] = -3.4028235e+38;
@@ -5897,8 +5897,8 @@ void kd_MdtBclAddConeLimit(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
   }
   else {
                     
-    clist->Jbody[clist->num_constraints][0] = *(int *)((int)constraint + 0xb4);
-    clist->Jbody[clist->num_constraints][1] = *(int *)((int)constraint + 0xb8);
+    clist->Jbody[clist->num_constraints][0] = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtConeLimit *)0)->head.bodyindex[0] - (char *)0)));
+    clist->Jbody[clist->num_constraints][1] = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtConeLimit *)0)->head.bodyindex[1] - (char *)0)));
     if ((longdouble)1 < lVar17) {
       lVar17 = (longdouble)1;
     }
@@ -5916,85 +5916,85 @@ void kd_MdtBclAddConeLimit(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
     if (iVar10 < 0) {
       iVar16 = iVar10 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0) = 0;
     iVar10 = clist->num_rows_inc_padding;
     iVar16 = iVar10;
     if (iVar10 < 0) {
       iVar16 = iVar10 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + 0x10) = 0;
     iVar10 = clist->num_rows_inc_padding;
     iVar16 = iVar10;
     if (iVar10 < 0) {
       iVar16 = iVar10 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + 0x20) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + 0x20) = 0;
     iVar10 = clist->num_rows_inc_padding;
     iVar16 = iVar10;
     if (iVar10 < 0) {
       iVar16 = iVar10 + 3;
     }
-    *(MeReal *)((int)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + 0x30) = cross[0];
+    *(MeReal *)((kd_iptr)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + 0x30) = cross[0];
     iVar10 = clist->num_rows_inc_padding;
     iVar16 = iVar10;
     if (iVar10 < 0) {
       iVar16 = iVar10 + 3;
     }
-    *(MeReal *)((int)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + 0x40) = cross[1];
+    *(MeReal *)((kd_iptr)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + 0x40) = cross[1];
     iVar10 = clist->num_rows_inc_padding;
     iVar16 = iVar10;
     if (iVar10 < 0) {
       iVar16 = iVar10 + 3;
     }
-    *(MeReal *)((int)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + 0x50) = cross[2];
-    if (*(int *)((int)constraint + 0xb8) != -1) {
+    *(MeReal *)((kd_iptr)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + 0x50) = cross[2];
+    if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtConeLimit *)0)->head.bodyindex[1] - (char *)0))) != -1) {
       iVar10 = clist->num_rows_inc_padding;
       iVar16 = iVar10;
       if (iVar10 < 0) {
         iVar16 = iVar10 + 3;
       }
-      *(undefined4 *)((int)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + 0x60) = 0;
+      *(undefined4 *)((kd_iptr)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + 0x60) = 0;
       iVar10 = clist->num_rows_inc_padding;
       iVar16 = iVar10;
       if (iVar10 < 0) {
         iVar16 = iVar10 + 3;
       }
-      *(undefined4 *)((int)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + 0x70) = 0;
+      *(undefined4 *)((kd_iptr)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + 0x70) = 0;
       iVar10 = clist->num_rows_inc_padding;
       iVar16 = iVar10;
       if (iVar10 < 0) {
         iVar16 = iVar10 + 3;
       }
-      *(undefined4 *)((int)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + 0x80) = 0;
+      *(undefined4 *)((kd_iptr)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + 0x80) = 0;
       iVar10 = clist->num_rows_inc_padding;
       iVar16 = iVar10;
       if (iVar10 < 0) {
         iVar16 = iVar10 + 3;
       }
-      *(float *)((int)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + 0x90) = -cross[0];
+      *(float *)((kd_iptr)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + 0x90) = -cross[0];
       iVar10 = clist->num_rows_inc_padding;
       iVar16 = iVar10;
       if (iVar10 < 0) {
         iVar16 = iVar10 + 3;
       }
-      *(float *)((int)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + 0xa0) = -cross[1];
+      *(float *)((kd_iptr)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + 0xa0) = -cross[1];
       iVar10 = clist->num_rows_inc_padding;
       iVar16 = iVar10;
       if (iVar10 < 0) {
         iVar16 = iVar10 + 3;
       }
-      *(float *)((int)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + 0xb0) = -cross[2];
+      *(float *)((kd_iptr)*clist->Jstore + iVar10 * 4 + (iVar16 >> 2) * 0xb0 + 0xb0) = -cross[2];
     }
-    *pfVar11 = *(float *)((int)constraint + 0x160) - (float)lVar17;
+    *pfVar11 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtConeLimit *)0)->cone_half_angle - (char *)0))) - (float)lVar17;
     pMVar7[iVar5] = 0.0;
     pMVar8[iVar5] = 3.4028235e+38;
-    fVar1 = 1.0 / (*(float *)((int)constraint + 0x168) * *(float *)params +
-                  *(float *)((int)constraint + 0x16c));
+    fVar1 = 1.0 / (*(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtConeLimit *)0)->stiffness - (char *)0))) * *(float *)params +
+                  *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtConeLimit *)0)->damping - (char *)0))));
     *pfVar15 = fVar1;
     if (fVar1 < 0.0) {
       *pfVar15 = 0.0;
     }
-    pMVar9[iVar5] = fVar1 * *(float *)params * *(float *)((int)constraint + 0x168);
+    pMVar9[iVar5] = fVar1 * *(float *)params * *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtConeLimit *)0)->stiffness - (char *)0)));
   }
   kd_MdtBclEndConstraint(clist,1);
   return;
@@ -6044,25 +6044,25 @@ void kd_MdtBclAddSphericalRows
     if (iVar1 < 0) {
       iVar4 = iVar1 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar1 * 4 + (iVar4 >> 2) * 0xb0 + z * 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar1 * 4 + (iVar4 >> 2) * 0xb0 + z * 0x10) = 0;
     iVar1 = clist->num_rows_inc_padding;
     iVar4 = iVar1;
     if (iVar1 < 0) {
       iVar4 = iVar1 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar1 * 4 + z * 0x10 + (iVar4 >> 2) * 0xb0 + 0x60) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar1 * 4 + z * 0x10 + (iVar4 >> 2) * 0xb0 + 0x60) = 0;
     iVar1 = clist->num_rows_inc_padding;
     iVar4 = iVar1;
     if (iVar1 < 0) {
       iVar4 = iVar1 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar1 * 4 + (iVar4 >> 2) * 0xb0 + z * 0x10 + 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar1 * 4 + (iVar4 >> 2) * 0xb0 + z * 0x10 + 0x10) = 0;
     iVar1 = clist->num_rows_inc_padding;
     iVar4 = iVar1;
     if (iVar1 < 0) {
       iVar4 = iVar1 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar1 * 4 + z * 0x10 + (iVar4 >> 2) * 0xb0 + 0x70) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar1 * 4 + z * 0x10 + (iVar4 >> 2) * 0xb0 + 0x70) = 0;
     z = z + 2;
   } while (z != 6);
   *pfVar3 = 0.0;
@@ -6076,25 +6076,25 @@ void kd_MdtBclAddSphericalRows
     if (iVar4 < 0) {
       iVar4 = iVar1 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar1 * 4 + 4 + (iVar4 >> 2) * 0xb0 + z_1 * 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar1 * 4 + 4 + (iVar4 >> 2) * 0xb0 + z_1 * 0x10) = 0;
     iVar1 = clist->num_rows_inc_padding;
     iVar4 = iVar1 + 1;
     if (iVar4 < 0) {
       iVar4 = iVar1 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar1 * 4 + z_1 * 0x10 + (iVar4 >> 2) * 0xb0 + 100) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar1 * 4 + z_1 * 0x10 + (iVar4 >> 2) * 0xb0 + 100) = 0;
     iVar1 = clist->num_rows_inc_padding;
     iVar4 = iVar1 + 1;
     if (iVar4 < 0) {
       iVar4 = iVar1 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar1 * 4 + (iVar4 >> 2) * 0xb0 + z_1 * 0x10 + 0x14) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar1 * 4 + (iVar4 >> 2) * 0xb0 + z_1 * 0x10 + 0x14) = 0;
     iVar1 = clist->num_rows_inc_padding;
     iVar4 = iVar1 + 1;
     if (iVar4 < 0) {
       iVar4 = iVar1 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar1 * 4 + z_1 * 0x10 + (iVar4 >> 2) * 0xb0 + 0x74) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar1 * 4 + z_1 * 0x10 + (iVar4 >> 2) * 0xb0 + 0x74) = 0;
     z_1 = z_1 + 2;
   } while (z_1 != 6);
   pfVar3[1] = 0.0;
@@ -6108,25 +6108,25 @@ void kd_MdtBclAddSphericalRows
     if (iVar4 < 0) {
       iVar4 = iVar1 + 5;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar1 * 4 + 8 + (iVar4 >> 2) * 0xb0 + z_2 * 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar1 * 4 + 8 + (iVar4 >> 2) * 0xb0 + z_2 * 0x10) = 0;
     iVar1 = clist->num_rows_inc_padding;
     iVar4 = iVar1 + 2;
     if (iVar4 < 0) {
       iVar4 = iVar1 + 5;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar1 * 4 + z_2 * 0x10 + (iVar4 >> 2) * 0xb0 + 0x68) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar1 * 4 + z_2 * 0x10 + (iVar4 >> 2) * 0xb0 + 0x68) = 0;
     iVar1 = clist->num_rows_inc_padding;
     iVar4 = iVar1 + 2;
     if (iVar4 < 0) {
       iVar4 = iVar1 + 5;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar1 * 4 + (iVar4 >> 2) * 0xb0 + z_2 * 0x10 + 0x18) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar1 * 4 + (iVar4 >> 2) * 0xb0 + z_2 * 0x10 + 0x18) = 0;
     iVar1 = clist->num_rows_inc_padding;
     iVar4 = iVar1 + 2;
     if (iVar4 < 0) {
       iVar4 = iVar1 + 5;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar1 * 4 + z_2 * 0x10 + (iVar4 >> 2) * 0xb0 + 0x78) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar1 * 4 + z_2 * 0x10 + (iVar4 >> 2) * 0xb0 + 0x78) = 0;
     z_2 = z_2 + 2;
   } while (z_2 != 6);
   pfVar3[2] = 0.0;
@@ -6138,19 +6138,19 @@ void kd_MdtBclAddSphericalRows
   if (iVar1 < 0) {
     iVar4 = iVar1 + 3;
   }
-  *(undefined4 *)((int)*clist->Jstore + iVar1 * 4 + (iVar4 >> 2) * 0xb0) = 0x3f800000;
+  *(undefined4 *)((kd_iptr)*clist->Jstore + iVar1 * 4 + (iVar4 >> 2) * 0xb0) = 0x3f800000;
   iVar1 = clist->num_rows_inc_padding;
   iVar4 = iVar1 + 1;
   if (iVar4 < 0) {
     iVar4 = iVar1 + 4;
   }
-  *(undefined4 *)((int)*clist->Jstore + iVar1 * 4 + (iVar4 >> 2) * 0xb0 + 0x14) = 0x3f800000;
+  *(undefined4 *)((kd_iptr)*clist->Jstore + iVar1 * 4 + (iVar4 >> 2) * 0xb0 + 0x14) = 0x3f800000;
   iVar1 = clist->num_rows_inc_padding;
   iVar4 = iVar1 + 2;
   if (iVar4 < 0) {
     iVar4 = iVar1 + 5;
   }
-  *(undefined4 *)((int)*clist->Jstore + iVar1 * 4 + (iVar4 >> 2) * 0xb0 + 0x28) = 0x3f800000;
+  *(undefined4 *)((kd_iptr)*clist->Jstore + iVar1 * 4 + (iVar4 >> 2) * 0xb0 + 0x28) = 0x3f800000;
   MeMatrixMultiply(at1,4,3,1,body0trans,pos0);
   iVar1 = clist->num_rows_inc_padding;
   iVar4 = iVar1;
@@ -6169,15 +6169,15 @@ void kd_MdtBclAddSphericalRows
     iVar5 = iVar1 + 5;
   }
   iVar5 = iVar5 >> 2;
-  *(undefined4 *)((int)*paMVar2 + iVar7 * 4 + 0x30) = 0;
-  *(MeReal *)((int)*paMVar2 + iVar7 * 4 + 0x40) = at1[2];
-  *(float *)((int)*paMVar2 + iVar7 * 4 + 0x50) = -at1[1];
-  *(float *)((int)*paMVar2 + iVar1 * 4 + iVar4 * 0xb0 + 0x34) = -at1[2];
-  *(undefined4 *)((int)*paMVar2 + iVar1 * 4 + iVar4 * 0xb0 + 0x44) = 0;
-  *(MeReal *)((int)*paMVar2 + iVar1 * 4 + iVar4 * 0xb0 + 0x54) = at1[0];
-  *(MeReal *)((int)*paMVar2 + iVar1 * 4 + iVar5 * 0xb0 + 0x38) = at1[1];
-  *(float *)((int)*paMVar2 + iVar1 * 4 + iVar5 * 0xb0 + 0x48) = -at1[0];
-  *(undefined4 *)((int)*paMVar2 + iVar1 * 4 + iVar5 * 0xb0 + 0x58) = 0;
+  *(undefined4 *)((kd_iptr)*paMVar2 + iVar7 * 4 + 0x30) = 0;
+  *(MeReal *)((kd_iptr)*paMVar2 + iVar7 * 4 + 0x40) = at1[2];
+  *(float *)((kd_iptr)*paMVar2 + iVar7 * 4 + 0x50) = -at1[1];
+  *(float *)((kd_iptr)*paMVar2 + iVar1 * 4 + iVar4 * 0xb0 + 0x34) = -at1[2];
+  *(undefined4 *)((kd_iptr)*paMVar2 + iVar1 * 4 + iVar4 * 0xb0 + 0x44) = 0;
+  *(MeReal *)((kd_iptr)*paMVar2 + iVar1 * 4 + iVar4 * 0xb0 + 0x54) = at1[0];
+  *(MeReal *)((kd_iptr)*paMVar2 + iVar1 * 4 + iVar5 * 0xb0 + 0x38) = at1[1];
+  *(float *)((kd_iptr)*paMVar2 + iVar1 * 4 + iVar5 * 0xb0 + 0x48) = -at1[0];
+  *(undefined4 *)((kd_iptr)*paMVar2 + iVar1 * 4 + iVar5 * 0xb0 + 0x58) = 0;
   if (body1Present == 0) {
     iVar4 = 0;
     do {
@@ -6191,19 +6191,19 @@ void kd_MdtBclAddSphericalRows
     if (iVar1 < 0) {
       iVar4 = iVar1 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar1 * 4 + (iVar4 >> 2) * 0xb0 + 0x60) = 0xbf800000;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar1 * 4 + (iVar4 >> 2) * 0xb0 + 0x60) = 0xbf800000;
     iVar1 = clist->num_rows_inc_padding;
     iVar4 = iVar1 + 1;
     if (iVar4 < 0) {
       iVar4 = iVar1 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar1 * 4 + (iVar4 >> 2) * 0xb0 + 0x74) = 0xbf800000;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar1 * 4 + (iVar4 >> 2) * 0xb0 + 0x74) = 0xbf800000;
     iVar1 = clist->num_rows_inc_padding;
     iVar4 = iVar1 + 2;
     if (iVar4 < 0) {
       iVar4 = iVar1 + 5;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar1 * 4 + (iVar4 >> 2) * 0xb0 + 0x88) = 0xbf800000;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar1 * 4 + (iVar4 >> 2) * 0xb0 + 0x88) = 0xbf800000;
     MeMatrixMultiply(at2,4,3,1,body1trans,pos1);
     iVar1 = clist->num_rows_inc_padding;
     iVar4 = iVar1;
@@ -6222,15 +6222,15 @@ void kd_MdtBclAddSphericalRows
       iVar5 = iVar1 + 5;
     }
     iVar5 = iVar5 >> 2;
-    *(undefined4 *)((int)*paMVar2 + iVar7 * 4 + 0x90) = 0;
-    *(float *)((int)*paMVar2 + iVar7 * 4 + 0xa0) = at2[2] * -1.0;
-    *(float *)((int)*paMVar2 + iVar7 * 4 + 0xb0) = -at2[1] * -1.0;
-    *(float *)((int)*paMVar2 + iVar1 * 4 + iVar4 * 0xb0 + 0x94) = -at2[2] * -1.0;
-    *(undefined4 *)((int)*paMVar2 + iVar1 * 4 + iVar4 * 0xb0 + 0xa4) = 0;
-    *(float *)((int)*paMVar2 + iVar1 * 4 + iVar4 * 0xb0 + 0xb4) = at2[0] * -1.0;
-    *(float *)((int)*paMVar2 + iVar1 * 4 + iVar5 * 0xb0 + 0x98) = at2[1] * -1.0;
-    *(undefined4 *)((int)*paMVar2 + iVar1 * 4 + iVar5 * 0xb0 + 0xb8) = 0;
-    *(float *)((int)*paMVar2 + iVar1 * 4 + iVar5 * 0xb0 + 0xa8) = -at2[0] * -1.0;
+    *(undefined4 *)((kd_iptr)*paMVar2 + iVar7 * 4 + 0x90) = 0;
+    *(float *)((kd_iptr)*paMVar2 + iVar7 * 4 + 0xa0) = at2[2] * -1.0;
+    *(float *)((kd_iptr)*paMVar2 + iVar7 * 4 + 0xb0) = -at2[1] * -1.0;
+    *(float *)((kd_iptr)*paMVar2 + iVar1 * 4 + iVar4 * 0xb0 + 0x94) = -at2[2] * -1.0;
+    *(undefined4 *)((kd_iptr)*paMVar2 + iVar1 * 4 + iVar4 * 0xb0 + 0xa4) = 0;
+    *(float *)((kd_iptr)*paMVar2 + iVar1 * 4 + iVar4 * 0xb0 + 0xb4) = at2[0] * -1.0;
+    *(float *)((kd_iptr)*paMVar2 + iVar1 * 4 + iVar5 * 0xb0 + 0x98) = at2[1] * -1.0;
+    *(undefined4 *)((kd_iptr)*paMVar2 + iVar1 * 4 + iVar5 * 0xb0 + 0xb8) = 0;
+    *(float *)((kd_iptr)*paMVar2 + iVar1 * 4 + iVar5 * 0xb0 + 0xa8) = -at2[0] * -1.0;
     *pfVar3 = (body0trans[0xc] + at1[0]) - (body1trans[0xc] + at2[0]);
     pfVar3[1] = (body0trans[0xd] + at1[1]) - (body1trans[0xd] + at2[1]);
     pfVar3[2] = (body0trans[0xe] + at1[2]) - (body1trans[0xe] + at2[2]);
@@ -6321,20 +6321,20 @@ void kd_MdtBclAddRPROJoint(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
     if (iVar19 < 0) {
       iVar24 = iVar19 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar19 * 4 + (iVar24 >> 2) * 0xb0 + iVar25 * 0x10) = 0;
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar19 * 4 + (iVar24 >> 2) * 0xb0 + iVar25 * 0x10) = 0;
     iVar19 = clist->num_rows_inc_padding;
     iVar24 = iVar19;
     if (iVar19 < 0) {
       iVar24 = iVar19 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar19 * 4 + iVar25 * 0x10 + (iVar24 >> 2) * 0xb0 + 0x60)
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar19 * 4 + iVar25 * 0x10 + (iVar24 >> 2) * 0xb0 + 0x60)
          = 0;
     iVar19 = clist->num_rows_inc_padding;
     iVar24 = iVar19;
     if (iVar19 < 0) {
       iVar24 = iVar19 + 3;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar19 * 4 + (iVar24 >> 2) * 0xb0 + iVar25 * 0x10 + 0x10)
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar19 * 4 + (iVar24 >> 2) * 0xb0 + iVar25 * 0x10 + 0x10)
          = 0;
     iVar19 = clist->num_rows_inc_padding;
     iVar24 = iVar19;
@@ -6342,7 +6342,7 @@ void kd_MdtBclAddRPROJoint(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
       iVar24 = iVar19 + 3;
     }
     iVar23 = iVar25 + 2;
-    *(undefined4 *)((int)*clist->Jstore + iVar19 * 4 + iVar25 * 0x10 + (iVar24 >> 2) * 0xb0 + 0x70)
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar19 * 4 + iVar25 * 0x10 + (iVar24 >> 2) * 0xb0 + 0x70)
          = 0;
     iVar25 = iVar23;
   } while (iVar23 != 6);
@@ -6358,21 +6358,21 @@ void kd_MdtBclAddRPROJoint(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
     if (iVar24 < 0) {
       iVar24 = iVar19 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar19 * 4 + 4 + (iVar24 >> 2) * 0xb0 + iVar25 * 0x10) = 0
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar19 * 4 + 4 + (iVar24 >> 2) * 0xb0 + iVar25 * 0x10) = 0
     ;
     iVar19 = clist->num_rows_inc_padding;
     iVar24 = iVar19 + 1;
     if (iVar24 < 0) {
       iVar24 = iVar19 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar19 * 4 + iVar25 * 0x10 + (iVar24 >> 2) * 0xb0 + 100) =
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar19 * 4 + iVar25 * 0x10 + (iVar24 >> 2) * 0xb0 + 100) =
          0;
     iVar19 = clist->num_rows_inc_padding;
     iVar24 = iVar19 + 1;
     if (iVar24 < 0) {
       iVar24 = iVar19 + 4;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar19 * 4 + (iVar24 >> 2) * 0xb0 + iVar25 * 0x10 + 0x14)
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar19 * 4 + (iVar24 >> 2) * 0xb0 + iVar25 * 0x10 + 0x14)
          = 0;
     iVar19 = clist->num_rows_inc_padding;
     iVar24 = iVar19 + 1;
@@ -6380,7 +6380,7 @@ void kd_MdtBclAddRPROJoint(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
       iVar24 = iVar19 + 4;
     }
     iVar23 = iVar25 + 2;
-    *(undefined4 *)((int)*clist->Jstore + iVar19 * 4 + iVar25 * 0x10 + (iVar24 >> 2) * 0xb0 + 0x74)
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar19 * 4 + iVar25 * 0x10 + (iVar24 >> 2) * 0xb0 + 0x74)
          = 0;
     iVar25 = iVar23;
   } while (iVar23 != 6);
@@ -6396,21 +6396,21 @@ void kd_MdtBclAddRPROJoint(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
     if (iVar24 < 0) {
       iVar24 = iVar19 + 5;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar19 * 4 + 8 + (iVar24 >> 2) * 0xb0 + iVar25 * 0x10) = 0
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar19 * 4 + 8 + (iVar24 >> 2) * 0xb0 + iVar25 * 0x10) = 0
     ;
     iVar19 = clist->num_rows_inc_padding;
     iVar24 = iVar19 + 2;
     if (iVar24 < 0) {
       iVar24 = iVar19 + 5;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar19 * 4 + iVar25 * 0x10 + (iVar24 >> 2) * 0xb0 + 0x68)
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar19 * 4 + iVar25 * 0x10 + (iVar24 >> 2) * 0xb0 + 0x68)
          = 0;
     iVar19 = clist->num_rows_inc_padding;
     iVar24 = iVar19 + 2;
     if (iVar24 < 0) {
       iVar24 = iVar19 + 5;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar19 * 4 + (iVar24 >> 2) * 0xb0 + iVar25 * 0x10 + 0x18)
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar19 * 4 + (iVar24 >> 2) * 0xb0 + iVar25 * 0x10 + 0x18)
          = 0;
     iVar19 = clist->num_rows_inc_padding;
     iVar24 = iVar19 + 2;
@@ -6418,7 +6418,7 @@ void kd_MdtBclAddRPROJoint(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
       iVar24 = iVar19 + 5;
     }
     iVar23 = iVar25 + 2;
-    *(undefined4 *)((int)*clist->Jstore + iVar19 * 4 + iVar25 * 0x10 + (iVar24 >> 2) * 0xb0 + 0x78)
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar19 * 4 + iVar25 * 0x10 + (iVar24 >> 2) * 0xb0 + 0x78)
          = 0;
     iVar25 = iVar23;
   } while (iVar23 != 6);
@@ -6434,21 +6434,21 @@ void kd_MdtBclAddRPROJoint(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
     if (iVar24 < 0) {
       iVar24 = iVar19 + 6;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar19 * 4 + 0xc + (iVar24 >> 2) * 0xb0 + iVar25 * 0x10) =
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar19 * 4 + 0xc + (iVar24 >> 2) * 0xb0 + iVar25 * 0x10) =
          0;
     iVar19 = clist->num_rows_inc_padding;
     iVar24 = iVar19 + 3;
     if (iVar24 < 0) {
       iVar24 = iVar19 + 6;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar19 * 4 + iVar25 * 0x10 + (iVar24 >> 2) * 0xb0 + 0x6c)
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar19 * 4 + iVar25 * 0x10 + (iVar24 >> 2) * 0xb0 + 0x6c)
          = 0;
     iVar19 = clist->num_rows_inc_padding;
     iVar24 = iVar19 + 3;
     if (iVar24 < 0) {
       iVar24 = iVar19 + 6;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar19 * 4 + (iVar24 >> 2) * 0xb0 + iVar25 * 0x10 + 0x1c)
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar19 * 4 + (iVar24 >> 2) * 0xb0 + iVar25 * 0x10 + 0x1c)
          = 0;
     iVar19 = clist->num_rows_inc_padding;
     iVar24 = iVar19 + 3;
@@ -6456,7 +6456,7 @@ void kd_MdtBclAddRPROJoint(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
       iVar24 = iVar19 + 6;
     }
     iVar23 = iVar25 + 2;
-    *(undefined4 *)((int)*clist->Jstore + iVar19 * 4 + iVar25 * 0x10 + (iVar24 >> 2) * 0xb0 + 0x7c)
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar19 * 4 + iVar25 * 0x10 + (iVar24 >> 2) * 0xb0 + 0x7c)
          = 0;
     iVar25 = iVar23;
   } while (iVar23 != 6);
@@ -6472,21 +6472,21 @@ void kd_MdtBclAddRPROJoint(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
     if (iVar24 < 0) {
       iVar24 = iVar19 + 7;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar19 * 4 + 0x10 + (iVar24 >> 2) * 0xb0 + iVar25 * 0x10)
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar19 * 4 + 0x10 + (iVar24 >> 2) * 0xb0 + iVar25 * 0x10)
          = 0;
     iVar19 = clist->num_rows_inc_padding;
     iVar24 = iVar19 + 4;
     if (iVar24 < 0) {
       iVar24 = iVar19 + 7;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar19 * 4 + iVar25 * 0x10 + (iVar24 >> 2) * 0xb0 + 0x70)
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar19 * 4 + iVar25 * 0x10 + (iVar24 >> 2) * 0xb0 + 0x70)
          = 0;
     iVar19 = clist->num_rows_inc_padding;
     iVar24 = iVar19 + 4;
     if (iVar24 < 0) {
       iVar24 = iVar19 + 7;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar19 * 4 + (iVar24 >> 2) * 0xb0 + iVar25 * 0x10 + 0x20)
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar19 * 4 + (iVar24 >> 2) * 0xb0 + iVar25 * 0x10 + 0x20)
          = 0;
     iVar19 = clist->num_rows_inc_padding;
     iVar24 = iVar19 + 4;
@@ -6494,7 +6494,7 @@ void kd_MdtBclAddRPROJoint(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
       iVar24 = iVar19 + 7;
     }
     iVar23 = iVar25 + 2;
-    *(undefined4 *)((int)*clist->Jstore + iVar19 * 4 + iVar25 * 0x10 + (iVar24 >> 2) * 0xb0 + 0x80)
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar19 * 4 + iVar25 * 0x10 + (iVar24 >> 2) * 0xb0 + 0x80)
          = 0;
     iVar25 = iVar23;
   } while (iVar23 != 6);
@@ -6510,21 +6510,21 @@ void kd_MdtBclAddRPROJoint(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
     if (iVar24 < 0) {
       iVar24 = iVar19 + 8;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar19 * 4 + 0x14 + (iVar24 >> 2) * 0xb0 + iVar25 * 0x10)
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar19 * 4 + 0x14 + (iVar24 >> 2) * 0xb0 + iVar25 * 0x10)
          = 0;
     iVar19 = clist->num_rows_inc_padding;
     iVar24 = iVar19 + 5;
     if (iVar24 < 0) {
       iVar24 = iVar19 + 8;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar19 * 4 + iVar25 * 0x10 + (iVar24 >> 2) * 0xb0 + 0x74)
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar19 * 4 + iVar25 * 0x10 + (iVar24 >> 2) * 0xb0 + 0x74)
          = 0;
     iVar19 = clist->num_rows_inc_padding;
     iVar24 = iVar19 + 5;
     if (iVar24 < 0) {
       iVar24 = iVar19 + 8;
     }
-    *(undefined4 *)((int)*clist->Jstore + iVar19 * 4 + (iVar24 >> 2) * 0xb0 + iVar25 * 0x10 + 0x24)
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar19 * 4 + (iVar24 >> 2) * 0xb0 + iVar25 * 0x10 + 0x24)
          = 0;
     iVar19 = clist->num_rows_inc_padding;
     iVar24 = iVar19 + 5;
@@ -6532,7 +6532,7 @@ void kd_MdtBclAddRPROJoint(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
       iVar24 = iVar19 + 8;
     }
     iVar23 = iVar25 + 2;
-    *(undefined4 *)((int)*clist->Jstore + iVar19 * 4 + iVar25 * 0x10 + (iVar24 >> 2) * 0xb0 + 0x84)
+    *(undefined4 *)((kd_iptr)*clist->Jstore + iVar19 * 4 + iVar25 * 0x10 + (iVar24 >> 2) * 0xb0 + 0x84)
          = 0;
     iVar25 = iVar23;
   } while (iVar23 != 6);
@@ -6540,14 +6540,14 @@ void kd_MdtBclAddRPROJoint(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
   pMVar21[5] = 0.0;
   pMVar20[5] = 0.0;
   pMVar22[5] = 0.0;
-  clist->Jbody[clist->num_constraints][0] = *(int *)((int)constraint + 0xb4);
-  clist->Jbody[clist->num_constraints][1] = *(int *)((int)constraint + 0xb8);
+  clist->Jbody[clist->num_constraints][0] = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->head.bodyindex[0] - (char *)0)));
+  clist->Jbody[clist->num_constraints][1] = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->head.bodyindex[1] - (char *)0)));
   kd_MdtBclAddSphericalRows
-            (clist,tlist[*(int *)((int)constraint + 0xb4)].R0,
-             tlist[*(int *)((int)constraint + 0xb8)].R0,(MeReal *)((int)constraint + 0xec),
-             (MeReal *)((int)constraint + 300),(uint)(*(int *)((int)constraint + 0xb8) != -1));
-  if (*(int *)((int)constraint + 0x170) == 0) {
-    local_238 = *(int *)((int)constraint + 0xb4);
+            (clist,tlist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->head.bodyindex[0] - (char *)0)))].R0,
+             tlist[*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->head.bodyindex[1] - (char *)0)))].R0,(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->head.ref1[3][0] - (char *)0))),
+             (MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->head.ref2[3][0] - (char *)0))),(uint)(*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->head.bodyindex[1] - (char *)0))) != -1));
+  if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->use_q1 - (char *)0))) == 0) {
+    local_238 = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->head.bodyindex[0] - (char *)0)));
     pMVar13 = blist[local_238];
     ejej0[0] = pMVar13->qrot[0];
     ejej0[1] = pMVar13->qrot[1];
@@ -6555,12 +6555,12 @@ void kd_MdtBclAddRPROJoint(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
     ejej0[3] = pMVar13->qrot[3];
   }
   else {
-    local_238 = *(int *)((int)constraint + 0xb4);
+    local_238 = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->head.bodyindex[0] - (char *)0)));
     pMVar13 = blist[local_238];
-    fVar1 = *(float *)((int)constraint + 0x160);
-    fVar2 = *(float *)((int)constraint + 0x164);
-    fVar3 = *(float *)((int)constraint + 0x168);
-    fVar4 = *(float *)((int)constraint + 0x16c);
+    fVar1 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->q1[0] - (char *)0)));
+    fVar2 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->q1[1] - (char *)0)));
+    fVar3 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->q1[2] - (char *)0)));
+    fVar4 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->q1[3] - (char *)0)));
     ejej0[0] = ((fVar1 * pMVar13->qrot[0] - fVar2 * pMVar13->qrot[1]) - fVar3 * pMVar13->qrot[2]) -
                fVar4 * pMVar13->qrot[3];
     ejej0[1] = (pMVar13->qrot[2] * fVar4 + fVar2 * pMVar13->qrot[0] + fVar1 * pMVar13->qrot[1]) -
@@ -6579,9 +6579,9 @@ void kd_MdtBclAddRPROJoint(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
   EMatrixB1[0][1] = ejej0[0];
   EMatrixB1[2][2] = ejej0[1];
   EMatrixB1[1][1] = ejej0[3];
-  iVar25 = *(int *)((int)constraint + 0xb8);
+  iVar25 = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->head.bodyindex[1] - (char *)0)));
   if (iVar25 == -1) {
-    if (*(int *)((int)constraint + 0x170) == 0) {
+    if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->use_q1 - (char *)0))) == 0) {
       pMVar13 = blist[local_238];
       qr[0] = pMVar13->qrot[0];
       qr[1] = pMVar13->qrot[1];
@@ -6590,10 +6590,10 @@ void kd_MdtBclAddRPROJoint(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
     }
     else {
       pMVar13 = blist[local_238];
-      fVar1 = *(float *)((int)constraint + 0x160);
-      fVar2 = *(float *)((int)constraint + 0x164);
-      fVar3 = *(float *)((int)constraint + 0x168);
-      fVar4 = *(float *)((int)constraint + 0x16c);
+      fVar1 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->q1[0] - (char *)0)));
+      fVar2 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->q1[1] - (char *)0)));
+      fVar3 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->q1[2] - (char *)0)));
+      fVar4 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->q1[3] - (char *)0)));
       qr[0] = ((fVar1 * pMVar13->qrot[0] - fVar2 * pMVar13->qrot[1]) - fVar3 * pMVar13->qrot[2]) -
               fVar4 * pMVar13->qrot[3];
       qr[1] = (pMVar13->qrot[2] * fVar4 + fVar2 * pMVar13->qrot[0] + fVar1 * pMVar13->qrot[1]) -
@@ -6603,15 +6603,15 @@ void kd_MdtBclAddRPROJoint(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
       qr[3] = (fVar1 * pMVar13->qrot[3] + fVar4 * pMVar13->qrot[0] + fVar3 * pMVar13->qrot[1]) -
               fVar2 * pMVar13->qrot[2];
     }
-    GMatrixB2[1][3] = *(MeReal *)((int)constraint + 0x1a8);
+    GMatrixB2[1][3] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->q_rel[1] - (char *)0)));
     GMatrixB2[2][2] = -GMatrixB2[1][3];
-    GMatrixB2[2][1] = *(MeReal *)((int)constraint + 0x1ac);
+    GMatrixB2[2][1] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->q_rel[2] - (char *)0)));
     GMatrixB2[1][0] = -GMatrixB2[2][1];
-    GMatrixB2[0][2] = *(float *)((int)constraint + 0x1b0);
+    GMatrixB2[0][2] = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->q_rel[3] - (char *)0)));
     GMatrixB2[2][0] = -GMatrixB2[0][2];
-    GMatrixB2[2][3] = *(MeReal *)((int)constraint + 0x1a4);
+    GMatrixB2[2][3] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->q_rel[0] - (char *)0)));
   }
-  else if (*(int *)((int)constraint + 0x184) == 0) {
+  else if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->use_q2 - (char *)0))) == 0) {
     pMVar13 = blist[iVar25];
     err[0] = pMVar13->qrot[0];
     err[1] = -pMVar13->qrot[1];
@@ -6626,10 +6626,10 @@ void kd_MdtBclAddRPROJoint(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
             err[1] * pMVar14->qrot[3];
     qr[3] = (fVar1 * pMVar14->qrot[0] + err[0] * pMVar14->qrot[3] + err[1] * pMVar14->qrot[2]) -
             err[2] * pMVar14->qrot[1];
-    fVar1 = *(float *)((int)constraint + 0x1a8);
-    fVar2 = *(float *)((int)constraint + 0x1a4);
-    fVar3 = *(float *)((int)constraint + 0x1ac);
-    fVar4 = *(float *)((int)constraint + 0x1b0);
+    fVar1 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->q_rel[1] - (char *)0)));
+    fVar2 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->q_rel[0] - (char *)0)));
+    fVar3 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->q_rel[2] - (char *)0)));
+    fVar4 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->q_rel[3] - (char *)0)));
     GMatrixB2[2][3] =
          ((fVar2 * pMVar13->qrot[0] - fVar1 * pMVar13->qrot[1]) - fVar3 * pMVar13->qrot[2]) -
          fVar4 * pMVar13->qrot[3];
@@ -6652,17 +6652,17 @@ void kd_MdtBclAddRPROJoint(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
     local_1f0 = -pMVar13->qrot[1];
     local_1f4 = -pMVar13->qrot[2];
     local_1f8 = -pMVar13->qrot[3];
-    fVar2 = *(float *)((int)constraint + 0x174);
-    local_1fc = -*(float *)((int)constraint + 0x178);
-    local_200 = -*(float *)((int)constraint + 0x17c);
-    local_204 = -*(float *)((int)constraint + 0x180);
-    fVar3 = *(float *)((int)constraint + 0x1a4);
-    fVar4 = *(float *)((int)constraint + 0x1a8);
-    fVar5 = *(float *)((int)constraint + 0x178);
-    fVar6 = *(float *)((int)constraint + 0x1ac);
-    fVar7 = *(float *)((int)constraint + 0x17c);
-    fVar8 = *(float *)((int)constraint + 0x1b0);
-    fVar9 = *(float *)((int)constraint + 0x180);
+    fVar2 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->q2[0] - (char *)0)));
+    local_1fc = -*(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->q2[1] - (char *)0)));
+    local_200 = -*(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->q2[2] - (char *)0)));
+    local_204 = -*(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->q2[3] - (char *)0)));
+    fVar3 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->q_rel[0] - (char *)0)));
+    fVar4 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->q_rel[1] - (char *)0)));
+    fVar5 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->q2[1] - (char *)0)));
+    fVar6 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->q_rel[2] - (char *)0)));
+    fVar7 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->q2[2] - (char *)0)));
+    fVar8 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->q_rel[3] - (char *)0)));
+    fVar9 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->q2[3] - (char *)0)));
     fVar17 = ((fVar2 * fVar3 - fVar4 * fVar5) - fVar6 * fVar7) - fVar8 * fVar9;
     fVar16 = (fVar7 * fVar8 + fVar4 * fVar2 + fVar5 * fVar3) - fVar9 * fVar6;
     fVar15 = (fVar3 * fVar7 + fVar2 * fVar6 + fVar4 * fVar9) - fVar5 * fVar8;
@@ -6676,11 +6676,11 @@ void kd_MdtBclAddRPROJoint(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
     GMatrixB2[0][2] =
          (fVar15 * pMVar13->qrot[1] + fVar17 * pMVar13->qrot[3] + fVar3 * pMVar13->qrot[0]) -
          fVar16 * pMVar13->qrot[2];
-    fVar3 = *(float *)((int)constraint + 0x160);
-    fVar4 = *(float *)((int)constraint + 0x164);
+    fVar3 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->q1[0] - (char *)0)));
+    fVar4 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->q1[1] - (char *)0)));
     pMVar13 = blist[local_238];
-    fVar5 = *(float *)((int)constraint + 0x168);
-    fVar6 = *(float *)((int)constraint + 0x16c);
+    fVar5 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->q1[2] - (char *)0)));
+    fVar6 = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->q1[3] - (char *)0)));
     fVar7 = ((fVar3 * pMVar13->qrot[0] - fVar4 * pMVar13->qrot[1]) - fVar5 * pMVar13->qrot[2]) -
             fVar6 * pMVar13->qrot[3];
     fVar9 = (pMVar13->qrot[2] * fVar6 + fVar4 * pMVar13->qrot[0] + fVar3 * pMVar13->qrot[1]) -
@@ -6737,13 +6737,13 @@ void kd_MdtBclAddRPROJoint(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
     if (iVar24 < 0) {
       iVar24 = iVar19 + 6;
     }
-    *(MeReal *)((int)*clist->Jstore + iVar19 * 4 + (iVar24 >> 2) * 0xb0 + 0x3c) = GEt[0][local_244];
+    *(MeReal *)((kd_iptr)*clist->Jstore + iVar19 * 4 + (iVar24 >> 2) * 0xb0 + 0x3c) = GEt[0][local_244];
     iVar19 = clist->num_rows_inc_padding + iVar25;
     iVar24 = iVar19 + 3;
     if (iVar24 < 0) {
       iVar24 = iVar19 + 6;
     }
-    *(MeReal *)((int)*clist->Jstore + iVar19 * 4 + (iVar24 >> 2) * 0xb0 + 0x4c) =
+    *(MeReal *)((kd_iptr)*clist->Jstore + iVar19 * 4 + (iVar24 >> 2) * 0xb0 + 0x4c) =
          GEt[0][local_244 + 1];
     iVar19 = clist->num_rows_inc_padding + iVar25;
     iVar24 = iVar19 + 3;
@@ -6751,11 +6751,11 @@ void kd_MdtBclAddRPROJoint(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
       iVar24 = iVar19 + 6;
     }
     iVar25 = iVar25 + 1;
-    *(MeReal *)((int)*clist->Jstore + iVar19 * 4 + (iVar24 >> 2) * 0xb0 + 0x5c) =
+    *(MeReal *)((kd_iptr)*clist->Jstore + iVar19 * 4 + (iVar24 >> 2) * 0xb0 + 0x5c) =
          GEt[0][local_244 + 2];
     local_244 = local_244 + 3;
   } while (iVar25 < 3);
-  if (*(int *)((int)constraint + 0xb8) != -1) {
+  if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->head.bodyindex[1] - (char *)0))) != -1) {
     iVar25 = 0;
     local_240 = 0;
     do {
@@ -6765,14 +6765,14 @@ void kd_MdtBclAddRPROJoint(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
       if (iVar24 < 0) {
         iVar24 = iVar19 + 6;
       }
-      *(float *)((int)*clist->Jstore + iVar19 * 4 + (iVar24 >> 2) * 0xb0 + 0x9c) =
+      *(float *)((kd_iptr)*clist->Jstore + iVar19 * 4 + (iVar24 >> 2) * 0xb0 + 0x9c) =
            -GEt[0][local_240];
       iVar19 = clist->num_rows_inc_padding + iVar25;
       iVar24 = iVar19 + 3;
       if (iVar24 < 0) {
         iVar24 = iVar19 + 6;
       }
-      *(float *)((int)*clist->Jstore + iVar19 * 4 + 0xac + (iVar24 >> 2) * 0xb0) =
+      *(float *)((kd_iptr)*clist->Jstore + iVar19 * 4 + 0xac + (iVar24 >> 2) * 0xb0) =
            -GEt[0][local_240 + 1];
       iVar19 = clist->num_rows_inc_padding + iVar25;
       iVar24 = iVar19 + 3;
@@ -6780,18 +6780,18 @@ void kd_MdtBclAddRPROJoint(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
         iVar24 = iVar19 + 6;
       }
       iVar25 = iVar25 + 1;
-      *(float *)((int)*clist->Jstore + iVar19 * 4 + 0xbc + (iVar24 >> 2) * 0xb0) =
+      *(float *)((kd_iptr)*clist->Jstore + iVar19 * 4 + 0xbc + (iVar24 >> 2) * 0xb0) =
            -GEt[0][local_240 + 2];
       local_240 = local_240 + 3;
     } while (iVar25 < 3);
   }
-  Gr[1][3] = *(MeReal *)((int)constraint + 0x1a8);
+  Gr[1][3] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->q_rel[1] - (char *)0)));
   Gr[0][0] = -Gr[1][3];
-  Gr[2][1] = *(MeReal *)((int)constraint + 0x1ac);
+  Gr[2][1] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->q_rel[2] - (char *)0)));
   Gr[0][3] = -Gr[2][1];
-  Gr[0][2] = *(float *)((int)constraint + 0x1b0);
+  Gr[0][2] = *(float *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->q_rel[3] - (char *)0)));
   Gr[1][1] = -Gr[0][2];
-  Gr[0][1] = *(MeReal *)((int)constraint + 0x1a4);
+  Gr[0][1] = *(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->q_rel[0] - (char *)0)));
   Gr[1][0] = Gr[0][3];
   Gr[1][2] = Gr[0][1];
   Gr[2][0] = Gr[1][1];
@@ -6814,14 +6814,14 @@ void kd_MdtBclAddRPROJoint(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
   Eq[2][0] = Eq[0][2];
   Eq[2][1] = Eq[1][0];
   MyMultiplyT2(3,4,3,Gr[0],Eq[0],GrEqt[0]);
-  MyMultiplyT2(3,3,1,GrEqt[0],(MeReal *)((int)constraint + 0x1b4),pMVar20 + 3);
+  MyMultiplyT2(3,3,1,GrEqt[0],(MeReal *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->omega[0] - (char *)0))),pMVar20 + 3);
   pMVar20[3] = pMVar20[3] * 0.5;
   pMVar20[4] = pMVar20[4] * 0.5;
   pMVar20[5] = pMVar20[5] * 0.5;
   iVar25 = 0;
   do {
-    pMVar11[iVar10 + iVar25] = -*(MeReal *)((int)constraint + iVar25 * 4 + 0x1cc);
-    fVar1 = *(float *)((int)constraint + iVar25 * 4 + 0x1cc);
+    pMVar11[iVar10 + iVar25] = -*(MeReal *)((kd_iptr)constraint + iVar25 * 4 + 0x1cc);
+    fVar1 = *(float *)((kd_iptr)constraint + iVar25 * 4 + 0x1cc);
     pMVar12[iVar10 + iVar25] = fVar1;
     if (fVar1 == 0.0) {
       pMVar18[iVar25] = 0.0;
@@ -6830,14 +6830,14 @@ void kd_MdtBclAddRPROJoint(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
       if (iVar19 < 0) {
         iVar24 = iVar19 + 3;
       }
-      *(undefined4 *)((int)*clist->Jstore + iVar19 * 4 + (iVar24 >> 2) * 0xb0) = 0;
-      if (*(int *)((int)constraint + 0xb8) != -1) {
+      *(undefined4 *)((kd_iptr)*clist->Jstore + iVar19 * 4 + (iVar24 >> 2) * 0xb0) = 0;
+      if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->head.bodyindex[1] - (char *)0))) != -1) {
         iVar19 = clist->num_rows_inc_padding + iVar25;
         iVar24 = iVar19;
         if (iVar19 < 0) {
           iVar24 = iVar19 + 3;
         }
-        *(undefined4 *)((int)*clist->Jstore + iVar19 * 4 + (iVar24 >> 2) * 0xb0 + 0x60) = 0;
+        *(undefined4 *)((kd_iptr)*clist->Jstore + iVar19 * 4 + (iVar24 >> 2) * 0xb0 + 0x60) = 0;
       }
       j = 1;
       do {
@@ -6846,14 +6846,14 @@ void kd_MdtBclAddRPROJoint(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
         if (iVar19 < 0) {
           iVar24 = iVar19 + 3;
         }
-        *(undefined4 *)((int)*clist->Jstore + iVar19 * 4 + (iVar24 >> 2) * 0xb0 + j * 0x10) = 0;
-        if (*(int *)((int)constraint + 0xb8) != -1) {
+        *(undefined4 *)((kd_iptr)*clist->Jstore + iVar19 * 4 + (iVar24 >> 2) * 0xb0 + j * 0x10) = 0;
+        if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->head.bodyindex[1] - (char *)0))) != -1) {
           iVar19 = clist->num_rows_inc_padding + iVar25;
           iVar24 = iVar19;
           if (iVar19 < 0) {
             iVar24 = iVar19 + 3;
           }
-          *(undefined4 *)((int)*clist->Jstore + iVar19 * 4 + j * 0x10 + (iVar24 >> 2) * 0xb0 + 0x60)
+          *(undefined4 *)((kd_iptr)*clist->Jstore + iVar19 * 4 + j * 0x10 + (iVar24 >> 2) * 0xb0 + 0x60)
                = 0;
         }
         iVar24 = clist->num_rows_inc_padding + iVar25;
@@ -6861,15 +6861,15 @@ void kd_MdtBclAddRPROJoint(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
           iVar24 = iVar24 + 3;
         }
         *(undefined4 *)
-         ((int)*clist->Jstore +
+         ((kd_iptr)*clist->Jstore +
          clist->num_rows_inc_padding * 4 + iVar25 * 4 + (iVar24 >> 2) * 0xb0 + j * 0x10 + 0x10) = 0;
-        if (*(int *)((int)constraint + 0xb8) != -1) {
+        if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->head.bodyindex[1] - (char *)0))) != -1) {
           iVar24 = clist->num_rows_inc_padding + iVar25;
           if (iVar24 < 0) {
             iVar24 = iVar24 + 3;
           }
           *(undefined4 *)
-           ((int)*clist->Jstore +
+           ((kd_iptr)*clist->Jstore +
            clist->num_rows_inc_padding * 4 + iVar25 * 4 + j * 0x10 + (iVar24 >> 2) * 0xb0 + 0x70) =
                0;
         }
@@ -6880,8 +6880,8 @@ void kd_MdtBclAddRPROJoint(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
   } while (iVar25 < 3);
   iVar25 = 3;
   do {
-    pMVar11[iVar10 + iVar25] = -*(MeReal *)((int)constraint + iVar25 * 4 + 0x1b4);
-    fVar1 = *(float *)((int)constraint + iVar25 * 4 + 0x1b4);
+    pMVar11[iVar10 + iVar25] = -*(MeReal *)((kd_iptr)constraint + iVar25 * 4 + 0x1b4);
+    fVar1 = *(float *)((kd_iptr)constraint + iVar25 * 4 + 0x1b4);
     pMVar12[iVar10 + iVar25] = fVar1;
     if (fVar1 == 0.0) {
       pMVar18[iVar25] = 0.0;
@@ -6890,14 +6890,14 @@ void kd_MdtBclAddRPROJoint(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
       if (iVar19 < 0) {
         iVar24 = iVar19 + 3;
       }
-      *(undefined4 *)((int)*clist->Jstore + iVar19 * 4 + (iVar24 >> 2) * 0xb0 + 0x30) = 0;
-      if (*(int *)((int)constraint + 0xb8) != -1) {
+      *(undefined4 *)((kd_iptr)*clist->Jstore + iVar19 * 4 + (iVar24 >> 2) * 0xb0 + 0x30) = 0;
+      if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->head.bodyindex[1] - (char *)0))) != -1) {
         iVar19 = clist->num_rows_inc_padding + iVar25;
         iVar24 = iVar19;
         if (iVar19 < 0) {
           iVar24 = iVar19 + 3;
         }
-        *(undefined4 *)((int)*clist->Jstore + iVar19 * 4 + 0x90 + (iVar24 >> 2) * 0xb0) = 0;
+        *(undefined4 *)((kd_iptr)*clist->Jstore + iVar19 * 4 + 0x90 + (iVar24 >> 2) * 0xb0) = 0;
       }
       j_1 = 4;
       do {
@@ -6906,31 +6906,31 @@ void kd_MdtBclAddRPROJoint(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
         if (iVar19 < 0) {
           iVar24 = iVar19 + 3;
         }
-        *(undefined4 *)((int)*clist->Jstore + iVar19 * 4 + (iVar24 >> 2) * 0xb0 + j_1 * 0x10) = 0;
-        if (*(int *)((int)constraint + 0xb8) != -1) {
+        *(undefined4 *)((kd_iptr)*clist->Jstore + iVar19 * 4 + (iVar24 >> 2) * 0xb0 + j_1 * 0x10) = 0;
+        if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->head.bodyindex[1] - (char *)0))) != -1) {
           iVar19 = clist->num_rows_inc_padding + iVar25;
           iVar24 = iVar19;
           if (iVar19 < 0) {
             iVar24 = iVar19 + 3;
           }
           *(undefined4 *)
-           ((int)*clist->Jstore + iVar19 * 4 + j_1 * 0x10 + (iVar24 >> 2) * 0xb0 + 0x60) = 0;
+           ((kd_iptr)*clist->Jstore + iVar19 * 4 + j_1 * 0x10 + (iVar24 >> 2) * 0xb0 + 0x60) = 0;
         }
         iVar24 = clist->num_rows_inc_padding + iVar25;
         if (iVar24 < 0) {
           iVar24 = iVar24 + 3;
         }
         *(undefined4 *)
-         ((int)*clist->Jstore +
+         ((kd_iptr)*clist->Jstore +
          clist->num_rows_inc_padding * 4 + iVar25 * 4 + (iVar24 >> 2) * 0xb0 + j_1 * 0x10 + 0x10) =
              0;
-        if (*(int *)((int)constraint + 0xb8) != -1) {
+        if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->head.bodyindex[1] - (char *)0))) != -1) {
           iVar24 = clist->num_rows_inc_padding + iVar25;
           if (iVar24 < 0) {
             iVar24 = iVar24 + 3;
           }
           *(undefined4 *)
-           ((int)*clist->Jstore +
+           ((kd_iptr)*clist->Jstore +
            clist->num_rows_inc_padding * 4 + iVar25 * 4 + j_1 * 0x10 + (iVar24 >> 2) * 0xb0 + 0x70)
                = 0;
         }
@@ -7220,19 +7220,19 @@ static void MdtContactWriteRow(MdtKeaConstraints *clist,int row,MeReal *vector,M
   if (iVar3 < 0) {
     iVar2 = iVar3 + 3;
   }
-  *(MeReal *)((int)*clist->Jstore + iVar3 * 4 + (iVar2 >> 2) * 0xb0) = *vector;
+  *(MeReal *)((kd_iptr)*clist->Jstore + iVar3 * 4 + (iVar2 >> 2) * 0xb0) = *vector;
   iVar3 = row + clist->num_rows_inc_padding;
   iVar2 = iVar3;
   if (iVar3 < 0) {
     iVar2 = iVar3 + 3;
   }
-  *(MeReal *)((int)*clist->Jstore + iVar3 * 4 + (iVar2 >> 2) * 0xb0 + 0x10) = vector[1];
+  *(MeReal *)((kd_iptr)*clist->Jstore + iVar3 * 4 + (iVar2 >> 2) * 0xb0 + 0x10) = vector[1];
   iVar3 = row + clist->num_rows_inc_padding;
   iVar2 = iVar3;
   if (iVar3 < 0) {
     iVar2 = iVar3 + 3;
   }
-  *(MeReal *)((int)*clist->Jstore + iVar3 * 4 + (iVar2 >> 2) * 0xb0 + 0x20) = vector[2];
+  *(MeReal *)((kd_iptr)*clist->Jstore + iVar3 * 4 + (iVar2 >> 2) * 0xb0 + 0x20) = vector[2];
   iVar3 = row + clist->num_rows_inc_padding;
   iVar2 = iVar3;
   if (iVar3 < 0) {
@@ -7240,28 +7240,28 @@ static void MdtContactWriteRow(MdtKeaConstraints *clist,int row,MeReal *vector,M
   }
   iVar3 = iVar3 + (iVar2 >> 2) * 0x2c;
   paMVar1 = clist->Jstore;
-  *(float *)((int)*paMVar1 + iVar3 * 4 + 0x30) = vector[2] * pos0[1] - vector[1] * pos0[2];
-  *(float *)((int)*paMVar1 + iVar3 * 4 + 0x40) = *vector * pos0[2] - vector[2] * *pos0;
-  *(float *)((int)*paMVar1 + iVar3 * 4 + 0x50) = vector[1] * *pos0 - *vector * pos0[1];
+  *(float *)((kd_iptr)*paMVar1 + iVar3 * 4 + 0x30) = vector[2] * pos0[1] - vector[1] * pos0[2];
+  *(float *)((kd_iptr)*paMVar1 + iVar3 * 4 + 0x40) = *vector * pos0[2] - vector[2] * *pos0;
+  *(float *)((kd_iptr)*paMVar1 + iVar3 * 4 + 0x50) = vector[1] * *pos0 - *vector * pos0[1];
   if (writeBody1 != 0) {
     iVar3 = row + clist->num_rows_inc_padding;
     iVar2 = iVar3;
     if (iVar3 < 0) {
       iVar2 = iVar3 + 3;
     }
-    *(float *)((int)*clist->Jstore + iVar3 * 4 + (iVar2 >> 2) * 0xb0 + 0x60) = -*vector;
+    *(float *)((kd_iptr)*clist->Jstore + iVar3 * 4 + (iVar2 >> 2) * 0xb0 + 0x60) = -*vector;
     iVar3 = row + clist->num_rows_inc_padding;
     iVar2 = iVar3;
     if (iVar3 < 0) {
       iVar2 = iVar3 + 3;
     }
-    *(float *)((int)*clist->Jstore + iVar3 * 4 + 0x70 + (iVar2 >> 2) * 0xb0) = -vector[1];
+    *(float *)((kd_iptr)*clist->Jstore + iVar3 * 4 + 0x70 + (iVar2 >> 2) * 0xb0) = -vector[1];
     iVar3 = row + clist->num_rows_inc_padding;
     iVar2 = iVar3;
     if (iVar3 < 0) {
       iVar2 = iVar3 + 3;
     }
-    *(float *)((int)*clist->Jstore + iVar3 * 4 + 0x80 + (iVar2 >> 2) * 0xb0) = -vector[2];
+    *(float *)((kd_iptr)*clist->Jstore + iVar3 * 4 + 0x80 + (iVar2 >> 2) * 0xb0) = -vector[2];
     iVar3 = row + clist->num_rows_inc_padding;
     iVar2 = iVar3;
     if (iVar3 < 0) {
@@ -7269,9 +7269,9 @@ static void MdtContactWriteRow(MdtKeaConstraints *clist,int row,MeReal *vector,M
     }
     iVar3 = iVar3 + (iVar2 >> 2) * 0x2c;
     paMVar1 = clist->Jstore;
-    *(float *)((int)*paMVar1 + iVar3 * 4 + 0x90) = pos1[2] * vector[1] - pos1[1] * vector[2];
-    *(float *)((int)*paMVar1 + iVar3 * 4 + 0xa0) = *pos1 * vector[2] - pos1[2] * *vector;
-    *(float *)((int)*paMVar1 + iVar3 * 4 + 0xb0) = pos1[1] * *vector - *pos1 * vector[1];
+    *(float *)((kd_iptr)*paMVar1 + iVar3 * 4 + 0x90) = pos1[2] * vector[1] - pos1[1] * vector[2];
+    *(float *)((kd_iptr)*paMVar1 + iVar3 * 4 + 0xa0) = *pos1 * vector[2] - pos1[2] * *vector;
+    *(float *)((kd_iptr)*paMVar1 + iVar3 * 4 + 0xb0) = pos1[1] * *vector - *pos1 * vector[1];
   }
   return;
 }

@@ -57,7 +57,7 @@ KD_WEAK_DATA const char kd_ZTS18keaMatrix_pcSparse[]
 
 KD_WEAK_DATA const void *kd_ZTI18keaMatrix_pcSparse[3]
     KD_MANGLED("_ZTI18keaMatrix_pcSparse") = {
-        (const void *)((const char *)&kd_ext__ZTVN10__cxxabiv120__si_class_type_infoE[0] + 8),
+        (const void *)((const char *)&kd_ext__ZTVN10__cxxabiv120__si_class_type_infoE[0] + (2 * (int)sizeof(void *))),
         (const void *)kd_ZTS18keaMatrix_pcSparse,
         (const void *)kd_ZTI9keaMatrix
     };

@@ -206,12 +206,12 @@ static MeReal compVolumeIntegrals(McdConvexHull *p,MeReal *T1,MeReal *T2,MeReal 
           iVar29 = iVar28 + 1;
           pvVar25 = McdCnvFaceGetEdge(p,f,iVar28);
           pMVar5 = p->vertex;
-          fVar1 = pMVar5[*(int *)((int)pvVar25 + 4)].position[iVar26];
-          fVar2 = pMVar5[*(int *)((int)pvVar25 + 4)].position[iVar27];
+          fVar1 = pMVar5[*(int *)((kd_iptr)pvVar25 + ((int)((char *)&((struct McdCnvEdge *)0)->fromVert - (char *)0)))].position[iVar26];
+          fVar2 = pMVar5[*(int *)((kd_iptr)pvVar25 + ((int)((char *)&((struct McdCnvEdge *)0)->fromVert - (char *)0)))].position[iVar27];
           fVar6 = fVar1 * fVar1;
-          fVar3 = pMVar5[*(int *)((int)pvVar25 + 8)].position[iVar26];
+          fVar3 = pMVar5[*(int *)((kd_iptr)pvVar25 + ((int)((char *)&((struct McdCnvEdge *)0)->toVert - (char *)0)))].position[iVar26];
           fVar17 = fVar2 * fVar2;
-          fVar4 = pMVar5[*(int *)((int)pvVar25 + 8)].position[iVar27];
+          fVar4 = pMVar5[*(int *)((kd_iptr)pvVar25 + ((int)((char *)&((struct McdCnvEdge *)0)->toVert - (char *)0)))].position[iVar27];
           fVar18 = fVar17 * fVar2;
           fVar7 = fVar3 - fVar1;
           fVar8 = fVar6 * fVar1;

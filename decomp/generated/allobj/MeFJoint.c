@@ -62,7 +62,7 @@ MeFJoint * kd_MeFJointCreateCopy(MeFJoint *fj,MeBool recurse)
   MeBool MVar1;
   MeFJoint *pMVar2;
 
-  pMVar2 = (MeMemoryAPI.createZeroed)(0xd0);
+  pMVar2 = (MeMemoryAPI.createZeroed)((int)sizeof(*(MeFJoint *)0));
   pMVar2->type = fj->type;
   _FSetStringProperty(pMVar2,fj->id);
   _FSetStringProperty(pMVar2->part,fj->part[0]);
@@ -520,7 +520,7 @@ MeFJoint * kd_MeFJointCreate(char *name,MeFJointType type)
 {
   MeFJoint *fj;
 
-  fj = (MeMemoryAPI.createZeroed)(0xd0);
+  fj = (MeMemoryAPI.createZeroed)((int)sizeof(*(MeFJoint *)0));
   _FSetStringProperty(fj,name);
   fj->type = type;
                     

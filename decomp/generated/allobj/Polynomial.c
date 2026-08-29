@@ -103,7 +103,7 @@ LAB_000100c6:
       do {
 
         newRootsFound = 0;
-        coef_00 = coef + (-1 - order);
+        coef_00 = coef + (-1 - (kd_uptr)order);
         uVar8 = presentOrder - 1;
         fVar1 = coef_00[presentOrder];
         fVar2 = fVar1;
@@ -124,8 +124,8 @@ LAB_000100c6:
             if (uVar3 == 0xffffffff) goto LAB_000101f7;
           }
           do {
-            fVar2 = (((fVar2 * xmin + coef_00[uVar3]) * xmin + coef[(uVar3 - 2) - order]) * xmin +
-                    coef[(uVar3 - 3) - order]) * xmin + coef[(uVar3 - 4) - order];
+            fVar2 = (((fVar2 * xmin + coef_00[uVar3]) * xmin + coef[((kd_uptr)uVar3 - 2) - order]) * xmin +
+                    coef[((kd_uptr)uVar3 - 3) - order]) * xmin + coef[((kd_uptr)uVar3 - 4) - order];
             uVar3 = uVar3 - 4;
           } while (uVar3 != 0xffffffff);
         }
@@ -158,9 +158,9 @@ LAB_000101f7:
                 if (uVar6 - 1 == 0xffffffff) goto LAB_00010267;
               }
               do {
-                fVar2 = (((fVar2 * xmax_00 + coef_00[uVar5]) * xmax_00 + coef[(uVar5 - 2) - order])
-                         * xmax_00 + coef[(uVar5 - 3) - order]) * xmax_00 +
-                        coef[(uVar5 - 4) - order];
+                fVar2 = (((fVar2 * xmax_00 + coef_00[uVar5]) * xmax_00 + coef[((kd_uptr)uVar5 - 2) - order])
+                         * xmax_00 + coef[((kd_uptr)uVar5 - 3) - order]) * xmax_00 +
+                        coef[((kd_uptr)uVar5 - 4) - order];
                 uVar5 = uVar5 - 4;
               } while (uVar5 != 0xffffffff);
             }
@@ -199,8 +199,8 @@ LAB_00010267:
             if (uVar8 == 0xffffffff) goto LAB_000102ef;
           }
           do {
-            fVar1 = (((fVar1 * xmax + coef_00[uVar8]) * xmax + coef[(uVar8 - 2) - order]) * xmax +
-                    coef[(uVar8 - 3) - order]) * xmax + coef[(uVar8 - 4) - order];
+            fVar1 = (((fVar1 * xmax + coef_00[uVar8]) * xmax + coef[((kd_uptr)uVar8 - 2) - order]) * xmax +
+                    coef[((kd_uptr)uVar8 - 3) - order]) * xmax + coef[((kd_uptr)uVar8 - 4) - order];
             uVar8 = uVar8 - 4;
           } while (uVar8 != 0xffffffff);
         }

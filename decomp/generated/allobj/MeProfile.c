@@ -207,7 +207,7 @@ void kd_MeProfileEndFrame(void)
     pMVar8 = firstfd;
   }
   if (logging == kMeProfileLogAll) {
-    thisfd = (MeMemoryAPI.create)(0x24);
+    thisfd = (MeMemoryAPI.create)((int)sizeof(*(MeProfileFrameData *)0));
     if (firstfd == (MeProfileFrameData *)0x0) {
       MeProfileEndFrame__frame = 0;
       firstfd = thisfd;
@@ -219,7 +219,7 @@ void kd_MeProfileEndFrame(void)
   else if (logging == kMeProfileDontLog) {
     thisfd = pMVar8;
     if (pMVar8 == (MeProfileFrameData *)0x0) {
-      thisfd = (MeMemoryAPI.create)(0x24);
+      thisfd = (MeMemoryAPI.create)((int)sizeof(*(MeProfileFrameData *)0));
       thisfd->next = (MeProfileFrameData *)0x0;
       thisfd->firstfsi = (MeProfileFrameSectionInfo *)0x0;
     }
@@ -229,27 +229,27 @@ void kd_MeProfileEndFrame(void)
     iVar14 = (uint)thist.count0 - (uint)kd_frameTime.count0;
     firstfd = thisfd;
     *(uint *)&(thisfd->timings).cpuCycles = (uint)thist.cpuCycles - (uint)kd_frameTime.cpuCycles;
-    *(uint *)((int)&(thisfd->timings).cpuCycles + 4) = iVar11 - (uint)bVar16;
+    *(uint *)((kd_iptr)&(thisfd->timings).cpuCycles + 4) = iVar11 - (uint)bVar16;
     iVar11 = (*(unsigned int *)((char *)&(thist.count0) + 4)) - (*(unsigned int *)((char *)&(kd_frameTime.count0) + 4));
     bVar16 = (uint)thist.count1 < (uint)kd_frameTime.count1;
     iVar15 = (uint)thist.count1 - (uint)kd_frameTime.count1;
     *(int *)&(thisfd->timings).count0 = iVar14;
     iVar14 = (*(unsigned int *)((char *)&(thist.count1) + 4)) - (*(unsigned int *)((char *)&(kd_frameTime.count1) + 4));
-    *(uint *)((int)&(thisfd->timings).count0 + 4) = iVar11 - (uint)bVar17;
+    *(uint *)((kd_iptr)&(thisfd->timings).count0 + 4) = iVar11 - (uint)bVar17;
     *(int *)&(thisfd->timings).count1 = iVar15;
-    *(uint *)((int)&(thisfd->timings).count1 + 4) = iVar14 - (uint)bVar16;
+    *(uint *)((kd_iptr)&(thisfd->timings).count1 + 4) = iVar14 - (uint)bVar16;
   }
   else if (logging == kMeProfileLogTotals) {
     if (pMVar8 == (MeProfileFrameData *)0x0) {
-      thisfd = (MeMemoryAPI.create)(0x24);
+      thisfd = (MeMemoryAPI.create)((int)sizeof(*(MeProfileFrameData *)0));
       thisfd->next = (MeProfileFrameData *)0x0;
       thisfd->firstfsi = (MeProfileFrameSectionInfo *)0x0;
       *(undefined4 *)&(thisfd->timings).cpuCycles = 0;
-      *(undefined4 *)((int)&(thisfd->timings).cpuCycles + 4) = 0;
+      *(undefined4 *)((kd_iptr)&(thisfd->timings).cpuCycles + 4) = 0;
       *(undefined4 *)&(thisfd->timings).count0 = 0;
-      *(undefined4 *)((int)&(thisfd->timings).count0 + 4) = 0;
+      *(undefined4 *)((kd_iptr)&(thisfd->timings).count0 + 4) = 0;
       *(undefined4 *)&(thisfd->timings).count1 = 0;
-      *(undefined4 *)((int)&(thisfd->timings).count1 + 4) = 0;
+      *(undefined4 *)((kd_iptr)&(thisfd->timings).count1 + 4) = 0;
       firstfd = thisfd;
     }
     else {
@@ -259,7 +259,7 @@ void kd_MeProfileEndFrame(void)
       pMVar3 = &pMVar8->timings;
       MVar10 = pMVar3->cpuCycles;
       *(uint *)&pMVar3->cpuCycles = (int)pMVar3->cpuCycles + uVar13;
-      piVar2 = (int *)((int)&(pMVar8->timings).cpuCycles + 4);
+      piVar2 = (int *)((kd_iptr)&(pMVar8->timings).cpuCycles + 4);
       *piVar2 = *piVar2 + (iVar11 - (uint)bVar16) + (uint)CARRY4((uint)MVar10,uVar13);
       bVar16 = (uint)thist.count0 < (uint)kd_frameTime.count0;
       uVar13 = (uint)thist.count0 - (uint)kd_frameTime.count0;
@@ -267,7 +267,7 @@ void kd_MeProfileEndFrame(void)
       pMVar4 = &(pMVar8->timings).count0;
       MVar10 = *pMVar4;
       *(uint *)pMVar4 = (int)*pMVar4 + uVar13;
-      piVar2 = (int *)((int)&(pMVar8->timings).count0 + 4);
+      piVar2 = (int *)((kd_iptr)&(pMVar8->timings).count0 + 4);
       *piVar2 = *piVar2 + (iVar11 - (uint)bVar16) + (uint)CARRY4((uint)MVar10,uVar13);
       bVar16 = (uint)thist.count1 < (uint)kd_frameTime.count1;
       uVar13 = (uint)thist.count1 - (uint)kd_frameTime.count1;
@@ -275,7 +275,7 @@ void kd_MeProfileEndFrame(void)
       pMVar4 = &(pMVar8->timings).count1;
       MVar10 = *pMVar4;
       *(uint *)pMVar4 = (int)*pMVar4 + uVar13;
-      piVar2 = (int *)((int)&(pMVar8->timings).count1 + 4);
+      piVar2 = (int *)((kd_iptr)&(pMVar8->timings).count1 + 4);
       *piVar2 = *piVar2 + (iVar11 - (uint)bVar16) + (uint)CARRY4((uint)MVar10,uVar13);
       thisfd = pMVar8;
     }
@@ -285,19 +285,19 @@ void kd_MeProfileEndFrame(void)
   pMVar5 = firstt;
   if (logging == kMeProfileLogAll) {
     for (; pMVar5 != (MeProfileTimer *)0x0; pMVar5 = pMVar5->next) {
-      pMVar12 = (MeMemoryAPI.create)(0x24);
+      pMVar12 = (MeMemoryAPI.create)((int)sizeof(*(MeProfileFrameSectionInfo *)0));
       pMVar12->next = (MeProfileFrameSectionInfo *)0x0;
       pMVar12->codeSection = pMVar5->codeSection;
       pMVar12->timesCalled = pMVar5->timesCalled;
       MVar9 = pMVar5->cpuCycles;
-      *(undefined4 *)((int)&pMVar12->cpuCycles + 4) = *(undefined4 *)((int)&pMVar5->cpuCycles + 4);
+      *(undefined4 *)((kd_iptr)&pMVar12->cpuCycles + 4) = *(undefined4 *)((kd_iptr)&pMVar5->cpuCycles + 4);
       *(int *)&pMVar12->cpuCycles = (int)MVar9;
-      uVar7 = *(undefined4 *)((int)&pMVar5->count0 + 4);
+      uVar7 = *(undefined4 *)((kd_iptr)&pMVar5->count0 + 4);
       *(int *)&pMVar12->count0 = (int)pMVar5->count0;
-      *(undefined4 *)((int)&pMVar12->count0 + 4) = uVar7;
-      uVar7 = *(undefined4 *)((int)&pMVar5->count1 + 4);
+      *(undefined4 *)((kd_iptr)&pMVar12->count0 + 4) = uVar7;
+      uVar7 = *(undefined4 *)((kd_iptr)&pMVar5->count1 + 4);
       *(int *)&pMVar12->count1 = (int)pMVar5->count1;
-      *(undefined4 *)((int)&pMVar12->count1 + 4) = uVar7;
+      *(undefined4 *)((kd_iptr)&pMVar12->count1 + 4) = uVar7;
       if (thisfd->firstfsi == (MeProfileFrameSectionInfo *)0x0) {
         thisfd->firstfsi = pMVar12;
       }
@@ -316,19 +316,19 @@ void kd_MeProfileEndFrame(void)
     }
     thisfd->firstfsi = (MeProfileFrameSectionInfo *)0x0;
     for (pMVar5 = firstt; pMVar5 != (MeProfileTimer *)0x0; pMVar5 = pMVar5->next) {
-      pMVar12 = (MeMemoryAPI.create)(0x24);
+      pMVar12 = (MeMemoryAPI.create)((int)sizeof(*(MeProfileFrameSectionInfo *)0));
       pMVar12->next = (MeProfileFrameSectionInfo *)0x0;
       pMVar12->codeSection = pMVar5->codeSection;
       pMVar12->timesCalled = pMVar5->timesCalled;
       MVar9 = pMVar5->cpuCycles;
-      *(undefined4 *)((int)&pMVar12->cpuCycles + 4) = *(undefined4 *)((int)&pMVar5->cpuCycles + 4);
+      *(undefined4 *)((kd_iptr)&pMVar12->cpuCycles + 4) = *(undefined4 *)((kd_iptr)&pMVar5->cpuCycles + 4);
       *(int *)&pMVar12->cpuCycles = (int)MVar9;
       MVar9 = pMVar5->count0;
-      *(undefined4 *)((int)&pMVar12->count0 + 4) = *(undefined4 *)((int)&pMVar5->count0 + 4);
+      *(undefined4 *)((kd_iptr)&pMVar12->count0 + 4) = *(undefined4 *)((kd_iptr)&pMVar5->count0 + 4);
       *(int *)&pMVar12->count0 = (int)MVar9;
-      uVar7 = *(undefined4 *)((int)&pMVar5->count1 + 4);
+      uVar7 = *(undefined4 *)((kd_iptr)&pMVar5->count1 + 4);
       *(int *)&pMVar12->count1 = (int)pMVar5->count1;
-      *(undefined4 *)((int)&pMVar12->count1 + 4) = uVar7;
+      *(undefined4 *)((kd_iptr)&pMVar12->count1 + 4) = uVar7;
       if (thisfd->firstfsi == (MeProfileFrameSectionInfo *)0x0) {
         thisfd->firstfsi = pMVar12;
       }
@@ -345,19 +345,19 @@ void kd_MeProfileEndFrame(void)
       if (pMVar12 == (MeProfileFrameSectionInfo *)0x0) {
 LAB_000101b7:
         if (bVar16) goto LAB_0001017d;
-        unaff_EDI = (MeMemoryAPI.create)(0x24);
+        unaff_EDI = (MeMemoryAPI.create)((int)sizeof(*(MeProfileFrameSectionInfo *)0));
         unaff_EDI->next = (MeProfileFrameSectionInfo *)0x0;
         unaff_EDI->codeSection = pMVar5->codeSection;
         unaff_EDI->timesCalled = pMVar5->timesCalled;
         MVar9 = pMVar5->cpuCycles;
-        *(undefined4 *)((int)&unaff_EDI->cpuCycles + 4) =
-             *(undefined4 *)((int)&pMVar5->cpuCycles + 4);
+        *(undefined4 *)((kd_iptr)&unaff_EDI->cpuCycles + 4) =
+             *(undefined4 *)((kd_iptr)&pMVar5->cpuCycles + 4);
         *(int *)&unaff_EDI->cpuCycles = (int)MVar9;
         MVar9 = pMVar5->count0;
-        *(undefined4 *)((int)&unaff_EDI->count0 + 4) = *(undefined4 *)((int)&pMVar5->count0 + 4);
+        *(undefined4 *)((kd_iptr)&unaff_EDI->count0 + 4) = *(undefined4 *)((kd_iptr)&pMVar5->count0 + 4);
         *(int *)&unaff_EDI->count0 = (int)MVar9;
         MVar9 = pMVar5->count1;
-        *(undefined4 *)((int)&unaff_EDI->count1 + 4) = *(undefined4 *)((int)&pMVar5->count1 + 4);
+        *(undefined4 *)((kd_iptr)&unaff_EDI->count1 + 4) = *(undefined4 *)((kd_iptr)&pMVar5->count1 + 4);
         *(int *)&unaff_EDI->count1 = (int)MVar9;
         if (thisfd->firstfsi == (MeProfileFrameSectionInfo *)0x0) {
           thisfd->firstfsi = unaff_EDI;
@@ -382,25 +382,25 @@ LAB_000101b7:
 LAB_0001017d:
         unaff_EDI->timesCalled = unaff_EDI->timesCalled + pMVar5->timesCalled;
         uVar13 = (uint)pMVar5->cpuCycles;
-        iVar11 = *(int *)((int)&pMVar5->cpuCycles + 4);
+        iVar11 = *(int *)((kd_iptr)&pMVar5->cpuCycles + 4);
         pMVar1 = &unaff_EDI->cpuCycles;
         MVar9 = *pMVar1;
         *(uint *)pMVar1 = (int)*pMVar1 + uVar13;
-        piVar2 = (int *)((int)&unaff_EDI->cpuCycles + 4);
+        piVar2 = (int *)((kd_iptr)&unaff_EDI->cpuCycles + 4);
         *piVar2 = *piVar2 + iVar11 + (uint)CARRY4((uint)MVar9,uVar13);
         uVar13 = (uint)pMVar5->count0;
-        iVar11 = *(int *)((int)&pMVar5->count0 + 4);
+        iVar11 = *(int *)((kd_iptr)&pMVar5->count0 + 4);
         pMVar1 = &unaff_EDI->count0;
         MVar9 = *pMVar1;
         *(uint *)pMVar1 = (int)*pMVar1 + uVar13;
-        piVar2 = (int *)((int)&unaff_EDI->count0 + 4);
+        piVar2 = (int *)((kd_iptr)&unaff_EDI->count0 + 4);
         *piVar2 = *piVar2 + iVar11 + (uint)CARRY4((uint)MVar9,uVar13);
         uVar13 = (uint)pMVar5->count1;
-        iVar11 = *(int *)((int)&pMVar5->count1 + 4);
+        iVar11 = *(int *)((kd_iptr)&pMVar5->count1 + 4);
         pMVar1 = &unaff_EDI->count1;
         MVar9 = *pMVar1;
         *(uint *)pMVar1 = (int)*pMVar1 + uVar13;
-        piVar2 = (int *)((int)&unaff_EDI->count1 + 4);
+        piVar2 = (int *)((kd_iptr)&unaff_EDI->count1 + 4);
         *piVar2 = *piVar2 + iVar11 + (uint)CARRY4((uint)MVar9,uVar13);
       }
     }
@@ -440,24 +440,24 @@ void kd_MeProfileStartSectionFn(char *codeSection,uchar autoStop)
       unaff_EDI = pMVar2;
     }
     if (!bVar1) {
-      unaff_ESI = (MeMemoryAPI.create)(0x40);
+      unaff_ESI = (MeMemoryAPI.create)((int)sizeof(*(MeProfileTimer *)0));
       unaff_ESI->next = (MeProfileTimer *)0x0;
       unaff_ESI->codeSection = (char *)0x0;
       unaff_ESI->timesCalled = 0;
       *(undefined4 *)&unaff_ESI->cpuCycles = 0;
-      *(undefined4 *)((int)&unaff_ESI->cpuCycles + 4) = 0;
+      *(undefined4 *)((kd_iptr)&unaff_ESI->cpuCycles + 4) = 0;
       *(undefined4 *)&unaff_ESI->count0 = 0;
-      *(undefined4 *)((int)&unaff_ESI->count0 + 4) = 0;
+      *(undefined4 *)((kd_iptr)&unaff_ESI->count0 + 4) = 0;
       *(undefined4 *)&unaff_ESI->count1 = 0;
-      *(undefined4 *)((int)&unaff_ESI->count1 + 4) = 0;
+      *(undefined4 *)((kd_iptr)&unaff_ESI->count1 + 4) = 0;
       unaff_ESI->autoStop = '\0';
       unaff_ESI->isRunning = '\0';
       *(undefined4 *)&unaff_ESI->cpuCycleStartValue = 0;
-      *(undefined4 *)((int)&unaff_ESI->cpuCycleStartValue + 4) = 0;
+      *(undefined4 *)((kd_iptr)&unaff_ESI->cpuCycleStartValue + 4) = 0;
       *(undefined4 *)&unaff_ESI->count0StartValue = 0;
-      *(undefined4 *)((int)&unaff_ESI->count0StartValue + 4) = 0;
+      *(undefined4 *)((kd_iptr)&unaff_ESI->count0StartValue + 4) = 0;
       *(undefined4 *)&unaff_ESI->count1StartValue = 0;
-      *(undefined4 *)((int)&unaff_ESI->count1StartValue + 4) = 0;
+      *(undefined4 *)((kd_iptr)&unaff_ESI->count1StartValue + 4) = 0;
       pMVar2 = unaff_ESI;
       if (firstt != (MeProfileTimer *)0x0) {
         unaff_EDI->next = unaff_ESI;
@@ -471,10 +471,10 @@ void kd_MeProfileStartSectionFn(char *codeSection,uchar autoStop)
     unaff_ESI->isRunning = '\x01';
     MeProfileGetTimerValue(&result);
     *(undefined4 *)&unaff_ESI->cpuCycleStartValue = (undefined4)result.cpuCycles;
-    *(undefined4 *)((int)&unaff_ESI->cpuCycleStartValue + 4) = (*(unsigned int *)((char *)&(result.cpuCycles) + 4));
-    *(undefined4 *)((int)&unaff_ESI->count0StartValue + 4) = (*(unsigned int *)((char *)&(result.count0) + 4));
+    *(undefined4 *)((kd_iptr)&unaff_ESI->cpuCycleStartValue + 4) = (*(unsigned int *)((char *)&(result.cpuCycles) + 4));
+    *(undefined4 *)((kd_iptr)&unaff_ESI->count0StartValue + 4) = (*(unsigned int *)((char *)&(result.count0) + 4));
     *(undefined4 *)&unaff_ESI->count0StartValue = (undefined4)result.count0;
-    *(undefined4 *)((int)&unaff_ESI->count1StartValue + 4) = (*(unsigned int *)((char *)&(result.count1) + 4));
+    *(undefined4 *)((kd_iptr)&unaff_ESI->count1StartValue + 4) = (*(unsigned int *)((char *)&(result.count1) + 4));
     *(undefined4 *)&unaff_ESI->count1StartValue = (undefined4)result.count1;
   }
   return;
@@ -509,29 +509,29 @@ void kd_MeProfileEndSectionFn(char *cs)
     if (bVar4) {
       unaff_ESI->isRunning = '\0';
       uVar7 = (uint)result.cpuCycles - (int)unaff_ESI->cpuCycleStartValue;
-      iVar6 = *(int *)((int)&unaff_ESI->cpuCycleStartValue + 4);
+      iVar6 = *(int *)((kd_iptr)&unaff_ESI->cpuCycleStartValue + 4);
       pMVar1 = &unaff_ESI->cpuCycles;
       MVar5 = *pMVar1;
       *(uint *)pMVar1 = (int)*pMVar1 + uVar7;
-      piVar2 = (int *)((int)&unaff_ESI->cpuCycles + 4);
+      piVar2 = (int *)((kd_iptr)&unaff_ESI->cpuCycles + 4);
       *piVar2 = *piVar2 + (((*(unsigned int *)((char *)&(result.cpuCycles) + 4)) - iVar6) -
                           (uint)((uint)result.cpuCycles < (uint)unaff_ESI->cpuCycleStartValue)) +
                 (uint)CARRY4((uint)MVar5,uVar7);
       uVar7 = (uint)result.count0 - (int)unaff_ESI->count0StartValue;
-      iVar6 = *(int *)((int)&unaff_ESI->count0StartValue + 4);
+      iVar6 = *(int *)((kd_iptr)&unaff_ESI->count0StartValue + 4);
       pMVar1 = &unaff_ESI->count0;
       MVar5 = *pMVar1;
       *(uint *)pMVar1 = (int)*pMVar1 + uVar7;
-      piVar2 = (int *)((int)&unaff_ESI->count0 + 4);
+      piVar2 = (int *)((kd_iptr)&unaff_ESI->count0 + 4);
       *piVar2 = *piVar2 + (((*(unsigned int *)((char *)&(result.count0) + 4)) - iVar6) -
                           (uint)((uint)result.count0 < (uint)unaff_ESI->count0StartValue)) +
                 (uint)CARRY4((uint)MVar5,uVar7);
       uVar7 = (uint)result.count1 - (int)unaff_ESI->count1StartValue;
-      iVar6 = *(int *)((int)&unaff_ESI->count1StartValue + 4);
+      iVar6 = *(int *)((kd_iptr)&unaff_ESI->count1StartValue + 4);
       pMVar1 = &unaff_ESI->count1;
       MVar5 = *pMVar1;
       *(uint *)pMVar1 = (int)*pMVar1 + uVar7;
-      piVar2 = (int *)((int)&unaff_ESI->count1 + 4);
+      piVar2 = (int *)((kd_iptr)&unaff_ESI->count1 + 4);
       *piVar2 = *piVar2 + (((*(unsigned int *)((char *)&(result.count1) + 4)) - iVar6) -
                           (uint)((uint)result.count1 < (uint)unaff_ESI->count1StartValue)) +
                 (uint)CARRY4((uint)MVar5,uVar7);
@@ -753,17 +753,17 @@ joined_r0x00010efd:
       bVar15 = CARRY4((uint)cyclesAllFrames,uVar13);
       (*(unsigned int *)((char *)&(cyclesAllFrames) + 0)) = (uint)cyclesAllFrames + uVar13;
       (*(unsigned int *)((char *)&(cyclesAllFrames) + 4)) =
-           (*(unsigned int *)((char *)&(cyclesAllFrames) + 4)) + *(int *)((int)&(pMVar2->timings).cpuCycles + 4) + (uint)bVar15;
+           (*(unsigned int *)((char *)&(cyclesAllFrames) + 4)) + *(int *)((kd_iptr)&(pMVar2->timings).cpuCycles + 4) + (uint)bVar15;
       uVar13 = (uint)(pMVar2->timings).count0;
       bVar15 = CARRY4((uint)count0AllFrames,uVar13);
       (*(unsigned int *)((char *)&(count0AllFrames) + 0)) = (uint)count0AllFrames + uVar13;
       (*(unsigned int *)((char *)&(count0AllFrames) + 4)) =
-           (*(unsigned int *)((char *)&(count0AllFrames) + 4)) + *(int *)((int)&(pMVar2->timings).count0 + 4) + (uint)bVar15;
+           (*(unsigned int *)((char *)&(count0AllFrames) + 4)) + *(int *)((kd_iptr)&(pMVar2->timings).count0 + 4) + (uint)bVar15;
       uVar13 = (uint)(pMVar2->timings).count1;
       bVar15 = CARRY4((uint)count1AllFrames,uVar13);
       (*(unsigned int *)((char *)&(count1AllFrames) + 0)) = (uint)count1AllFrames + uVar13;
       (*(unsigned int *)((char *)&(count1AllFrames) + 4)) =
-           (*(unsigned int *)((char *)&(count1AllFrames) + 4)) + *(int *)((int)&(pMVar2->timings).count1 + 4) + (uint)bVar15;
+           (*(unsigned int *)((char *)&(count1AllFrames) + 4)) + *(int *)((kd_iptr)&(pMVar2->timings).count1 + 4) + (uint)bVar15;
       iVar14 = 0;
       for (pMVar3 = pMVar2->firstfsi; pMVar3 != (MeProfileFrameSectionInfo *)0x0;
           pMVar3 = pMVar3->next) {
@@ -777,19 +777,19 @@ joined_r0x00010efd:
         *puVar1 = *puVar1 + uVar7;
         puVar8[iVar14 * 2 + 1] = puVar8[iVar14 * 2 + 1] + (uint)CARRY4(uVar13,uVar7);
         uVar7 = (uint)pMVar3->cpuCycles;
-        iVar4 = *(int *)((int)&pMVar3->cpuCycles + 4);
+        iVar4 = *(int *)((kd_iptr)&pMVar3->cpuCycles + 4);
         puVar1 = puVar9 + iVar14 * 2;
         uVar13 = *puVar1;
         *puVar1 = *puVar1 + uVar7;
         puVar9[iVar14 * 2 + 1] = puVar9[iVar14 * 2 + 1] + iVar4 + (uint)CARRY4(uVar13,uVar7);
         uVar7 = (uint)pMVar3->count0;
-        iVar4 = *(int *)((int)&pMVar3->count0 + 4);
+        iVar4 = *(int *)((kd_iptr)&pMVar3->count0 + 4);
         puVar1 = puVar10 + iVar14 * 2;
         uVar13 = *puVar1;
         *puVar1 = *puVar1 + uVar7;
         puVar10[iVar14 * 2 + 1] = puVar10[iVar14 * 2 + 1] + iVar4 + (uint)CARRY4(uVar13,uVar7);
         uVar7 = (uint)pMVar3->count1;
-        iVar4 = *(int *)((int)&pMVar3->count1 + 4);
+        iVar4 = *(int *)((kd_iptr)&pMVar3->count1 + 4);
         puVar1 = puVar6 + iVar14 * 2;
         uVar13 = *puVar1;
         *puVar1 = *puVar1 + uVar7;
@@ -915,12 +915,12 @@ joined_r0x0001099b:
     iVar14 = 0;
     bVar15 = CARRY4((uint)total,uVar13);
     (*(unsigned int *)((char *)&(total) + 0)) = (uint)total + uVar13;
-    (*(unsigned int *)((char *)&(total) + 4)) = (*(unsigned int *)((char *)&(total) + 4)) + *(int *)((int)&(pMVar2->timings).cpuCycles + 4) + (uint)bVar15;
+    (*(unsigned int *)((char *)&(total) + 4)) = (*(unsigned int *)((char *)&(total) + 4)) + *(int *)((kd_iptr)&(pMVar2->timings).cpuCycles + 4) + (uint)bVar15;
     for (pMVar3 = pMVar2->firstfsi; pMVar3 != (MeProfileFrameSectionInfo *)0x0;
         pMVar3 = pMVar3->next) {
                     
       uVar7 = (uint)pMVar3->cpuCycles;
-      iVar4 = *(int *)((int)&pMVar3->cpuCycles + 4);
+      iVar4 = *(int *)((kd_iptr)&pMVar3->cpuCycles + 4);
       puVar1 = puVar6 + iVar14 * 2;
       uVar13 = *puVar1;
       *puVar1 = *puVar1 + uVar7;
@@ -930,7 +930,7 @@ joined_r0x0001099b:
       bVar15 = CARRY4((uint)sectionsTotal,uVar13);
       (*(unsigned int *)((char *)&(sectionsTotal) + 0)) = (uint)sectionsTotal + uVar13;
       (*(unsigned int *)((char *)&(sectionsTotal) + 4)) =
-           (*(unsigned int *)((char *)&(sectionsTotal) + 4)) + *(int *)((int)&pMVar3->cpuCycles + 4) + (uint)bVar15;
+           (*(unsigned int *)((char *)&(sectionsTotal) + 4)) + *(int *)((kd_iptr)&pMVar3->cpuCycles + 4) + (uint)bVar15;
     }
                     
   }
@@ -1034,16 +1034,16 @@ static void doGnuplot(void)
   firstWD = (weightingData *)0x0;
   pwVar7 = firstWD;
   for (pMVar1 = firstt; pMVar1 != (MeProfileTimer *)0x0; pMVar1 = pMVar1->next) {
-    pwVar11 = (MeMemoryAPI.create)(0x24);
+    pwVar11 = (MeMemoryAPI.create)((int)sizeof(*(weightingData *)0));
     pwVar11->next = (_weightingData *)0x0;
     *(undefined4 *)&pwVar11->timesCalled = 0;
-    *(undefined4 *)((int)&pwVar11->timesCalled + 4) = 0;
+    *(undefined4 *)((kd_iptr)&pwVar11->timesCalled + 4) = 0;
     *(undefined4 *)&pwVar11->cpuCycles = 0;
-    *(undefined4 *)((int)&pwVar11->cpuCycles + 4) = 0;
+    *(undefined4 *)((kd_iptr)&pwVar11->cpuCycles + 4) = 0;
     *(undefined4 *)&pwVar11->count0 = 0;
-    *(undefined4 *)((int)&pwVar11->count0 + 4) = 0;
+    *(undefined4 *)((kd_iptr)&pwVar11->count0 + 4) = 0;
     *(undefined4 *)&pwVar11->count1 = 0;
-    *(undefined4 *)((int)&pwVar11->count1 + 4) = 0;
+    *(undefined4 *)((kd_iptr)&pwVar11->count1 + 4) = 0;
     firstWD = pwVar11;
     if (pwVar7 != (weightingData *)0x0) {
       tailWD->next = pwVar11;
@@ -1052,7 +1052,7 @@ static void doGnuplot(void)
     pwVar7 = firstWD;
     tailWD = pwVar11;
   }
-  p_Var12 = (MeMemoryAPI.createZeroed)(0x24);
+  p_Var12 = (MeMemoryAPI.createZeroed)((int)sizeof(*(_weightingData *)0));
   tailWD->next = p_Var12;
   thisfd = firstfd;
   MeInfo(0,"twiddler=%d output.settletime=%d thisfd=%08x");
@@ -1068,27 +1068,27 @@ static void doGnuplot(void)
   for (pMVar2 = thisfd->firstfsi; pMVar2 != (MeProfileFrameSectionInfo *)0x0; pMVar2 = pMVar2->next)
   {
     MVar9 = pMVar2->cpuCycles;
-    *(undefined4 *)((int)&p_Var3->cpuCycles + 4) = *(undefined4 *)((int)&pMVar2->cpuCycles + 4);
+    *(undefined4 *)((kd_iptr)&p_Var3->cpuCycles + 4) = *(undefined4 *)((kd_iptr)&pMVar2->cpuCycles + 4);
     *(int *)&p_Var3->cpuCycles = (int)MVar9;
     *(uint *)&p_Var3->timesCalled = pMVar2->timesCalled;
-    *(undefined4 *)((int)&p_Var3->timesCalled + 4) = 0;
+    *(undefined4 *)((kd_iptr)&p_Var3->timesCalled + 4) = 0;
     MVar9 = pMVar2->count0;
-    *(undefined4 *)((int)&p_Var3->count0 + 4) = *(undefined4 *)((int)&pMVar2->count0 + 4);
+    *(undefined4 *)((kd_iptr)&p_Var3->count0 + 4) = *(undefined4 *)((kd_iptr)&pMVar2->count0 + 4);
     *(int *)&p_Var3->count0 = (int)MVar9;
     MVar9 = pMVar2->count1;
-    *(undefined4 *)((int)&p_Var3->count1 + 4) = *(undefined4 *)((int)&pMVar2->count1 + 4);
+    *(undefined4 *)((kd_iptr)&p_Var3->count1 + 4) = *(undefined4 *)((kd_iptr)&pMVar2->count1 + 4);
     *(int *)&p_Var3->count1 = (int)MVar9;
     p_Var3 = p_Var3->next;
   }
   MVar10 = (thisfd->timings).cpuCycles;
-  *(undefined4 *)((int)&p_Var12->cpuCycles + 4) =
-       *(undefined4 *)((int)&(thisfd->timings).cpuCycles + 4);
+  *(undefined4 *)((kd_iptr)&p_Var12->cpuCycles + 4) =
+       *(undefined4 *)((kd_iptr)&(thisfd->timings).cpuCycles + 4);
   *(int *)&p_Var12->cpuCycles = (int)MVar10;
   MVar10 = (thisfd->timings).count0;
-  *(undefined4 *)((int)&p_Var12->count0 + 4) = *(undefined4 *)((int)&(thisfd->timings).count0 + 4);
+  *(undefined4 *)((kd_iptr)&p_Var12->count0 + 4) = *(undefined4 *)((kd_iptr)&(thisfd->timings).count0 + 4);
   *(int *)&p_Var12->count0 = (int)MVar10;
   MVar10 = (thisfd->timings).count1;
-  *(undefined4 *)((int)&p_Var12->count1 + 4) = *(undefined4 *)((int)&(thisfd->timings).count1 + 4);
+  *(undefined4 *)((kd_iptr)&p_Var12->count1 + 4) = *(undefined4 *)((kd_iptr)&(thisfd->timings).count1 + 4);
   *(int *)&p_Var12->count1 = (int)MVar10;
   if (output.style == kMeProfileOutputGnuplot) {
     iVar13 = MeOpen("cyclePlot.gpt",1);
@@ -1102,11 +1102,11 @@ static void doGnuplot(void)
     } while (uVar23 == 0);
     if ((uVar22 & 0x8080) == 0) {
       uVar23 = uVar23 >> 0x10;
-      puVar18 = (uint *)((int)puVar20 + 6);
+      puVar18 = (uint *)((kd_iptr)puVar20 + 6);
     }
     iVar24 = 2;
     MeWrite(iVar13,buffer,
-            (int)((int)puVar18 + ((-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23)) - (int)buffer)));
+            (int)((kd_iptr)puVar18 + ((-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23)) - (kd_iptr)buffer)));
     for (pMVar1 = firstt; pMVar1 != (MeProfileTimer *)0x0; pMVar1 = pMVar1->next) {
       pcVar29 = pMVar1->codeSection;
       iVar15 = iVar24;
@@ -1121,9 +1121,9 @@ static void doGnuplot(void)
       } while (uVar23 == 0);
       if ((uVar22 & 0x8080) == 0) {
         uVar23 = uVar23 >> 0x10;
-        puVar18 = (uint *)((int)puVar20 + 6);
+        puVar18 = (uint *)((kd_iptr)puVar20 + 6);
       }
-      sprintf((char *)((int)puVar18 + (-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23))),", ");
+      sprintf((char *)((kd_iptr)puVar18 + (-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23))),", ");
       puVar18 = (uint *)buffer;
       do {
         puVar20 = puVar18;
@@ -1133,11 +1133,11 @@ static void doGnuplot(void)
       } while (uVar23 == 0);
       if ((uVar22 & 0x8080) == 0) {
         uVar23 = uVar23 >> 0x10;
-        puVar18 = (uint *)((int)puVar20 + 6);
+        puVar18 = (uint *)((kd_iptr)puVar20 + 6);
       }
       iVar24 = iVar24 + 4;
       MeWrite(iVar13,buffer,
-              (int)puVar18 + ((-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23)) - (int)buffer));
+              (kd_iptr)puVar18 + ((-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23)) - (kd_iptr)buffer));
     }
     pcVar29 = "Whole Frame";
     sprintf(buffer,"\"MeProfile.dat\" using 1:%d title \"%s\" with lines",iVar24,"Whole Frame");
@@ -1150,9 +1150,9 @@ static void doGnuplot(void)
     } while (uVar23 == 0);
     if ((uVar22 & 0x8080) == 0) {
       uVar23 = uVar23 >> 0x10;
-      puVar18 = (uint *)((int)puVar20 + 6);
+      puVar18 = (uint *)((kd_iptr)puVar20 + 6);
     }
-    sprintf((char *)((int)puVar18 + (-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23))),"");
+    sprintf((char *)((kd_iptr)puVar18 + (-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23))),"");
     puVar18 = (uint *)buffer;
     do {
       puVar20 = puVar18;
@@ -1162,10 +1162,10 @@ static void doGnuplot(void)
     } while (uVar23 == 0);
     if ((uVar22 & 0x8080) == 0) {
       uVar23 = uVar23 >> 0x10;
-      puVar18 = (uint *)((int)puVar20 + 6);
+      puVar18 = (uint *)((kd_iptr)puVar20 + 6);
     }
     MeWrite(iVar13,buffer,
-            (int)puVar18 + ((-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23)) - (int)buffer));
+            (kd_iptr)puVar18 + ((-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23)) - (kd_iptr)buffer));
     MeClose(iVar13);
     iVar13 = MeOpen("timesCalledPlot.gpt",1);
     sprintf(buffer,"plot ");
@@ -1178,11 +1178,11 @@ static void doGnuplot(void)
     } while (uVar23 == 0);
     if ((uVar22 & 0x8080) == 0) {
       uVar23 = uVar23 >> 0x10;
-      puVar18 = (uint *)((int)puVar20 + 6);
+      puVar18 = (uint *)((kd_iptr)puVar20 + 6);
     }
     iVar24 = 3;
     MeWrite(iVar13,buffer,
-            (int)puVar18 + ((-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23)) - (int)buffer));
+            (kd_iptr)puVar18 + ((-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23)) - (kd_iptr)buffer));
     for (pMVar1 = firstt; pMVar1 != (MeProfileTimer *)0x0; pMVar1 = pMVar1->next) {
       if (pMVar1->next == (MeProfileTimer *)0x0) {
         puVar14 = &DAT_000135a2;
@@ -1201,11 +1201,11 @@ static void doGnuplot(void)
       } while (uVar23 == 0);
       if ((uVar22 & 0x8080) == 0) {
         uVar23 = uVar23 >> 0x10;
-        puVar18 = (uint *)((int)puVar20 + 6);
+        puVar18 = (uint *)((kd_iptr)puVar20 + 6);
       }
       iVar24 = iVar24 + 4;
       MeWrite(iVar13,buffer,
-              (int)puVar18 + ((-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23)) - (int)buffer));
+              (kd_iptr)puVar18 + ((-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23)) - (kd_iptr)buffer));
     }
     MeClose(iVar13);
     iVar13 = MeOpen("count0Plot.gpt",1);
@@ -1219,11 +1219,11 @@ static void doGnuplot(void)
     } while (uVar23 == 0);
     if ((uVar22 & 0x8080) == 0) {
       uVar23 = uVar23 >> 0x10;
-      puVar18 = (uint *)((int)puVar20 + 6);
+      puVar18 = (uint *)((kd_iptr)puVar20 + 6);
     }
     iVar24 = 4;
     MeWrite(iVar13,buffer,
-            (int)puVar18 + ((-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23)) - (int)buffer));
+            (kd_iptr)puVar18 + ((-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23)) - (kd_iptr)buffer));
     for (pMVar1 = firstt; pMVar1 != (MeProfileTimer *)0x0; pMVar1 = pMVar1->next) {
       if (HWTMode->counterMode == kMeProfileCounterModeFlops) {
         pcVar29 = pMVar1->codeSection;
@@ -1245,11 +1245,11 @@ LAB_000128f2:
       } while (uVar23 == 0);
       if ((uVar22 & 0x8080) == 0) {
         uVar23 = uVar23 >> 0x10;
-        puVar18 = (uint *)((int)puVar20 + 6);
+        puVar18 = (uint *)((kd_iptr)puVar20 + 6);
       }
       iVar24 = iVar24 + 4;
       MeWrite(iVar13,buffer,
-              (int)puVar18 + ((-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23)) - (int)buffer));
+              (kd_iptr)puVar18 + ((-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23)) - (kd_iptr)buffer));
     }
     pcVar29 = "Whole Frame";
     sprintf(buffer,"\"MeProfile.dat\" using 1:%d title \"%s\" with lines",iVar24 + -1,"Whole Frame")
@@ -1263,11 +1263,11 @@ LAB_000128f2:
     } while (uVar23 == 0);
     if ((uVar22 & 0x8080) == 0) {
       uVar23 = uVar23 >> 0x10;
-      puVar18 = (uint *)((int)puVar20 + 6);
+      puVar18 = (uint *)((kd_iptr)puVar20 + 6);
     }
-    pcVar19 = (char *)((int)puVar18 + ((-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23)) - (int)buffer)
+    pcVar19 = (char *)((kd_iptr)puVar18 + ((-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23)) - (kd_iptr)buffer)
                       );
-    MeWrite(iVar13,buffer,(int)pcVar19);
+    MeWrite(iVar13,buffer,(kd_iptr)pcVar19);
     MeClose(iVar13);
     iVar13 = MeOpen("count1Plot.gpt",1);
     sprintf(buffer,"plot ");
@@ -1280,11 +1280,11 @@ LAB_000128f2:
     } while (uVar23 == 0);
     if ((uVar22 & 0x8080) == 0) {
       uVar23 = uVar23 >> 0x10;
-      puVar18 = (uint *)((int)puVar20 + 6);
+      puVar18 = (uint *)((kd_iptr)puVar20 + 6);
     }
     iVar24 = 5;
     MeWrite(iVar13,buffer,
-            (int)puVar18 + ((-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23)) - (int)buffer));
+            (kd_iptr)puVar18 + ((-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23)) - (kd_iptr)buffer));
     for (pMVar1 = firstt; pMVar1 != (MeProfileTimer *)0x0; pMVar1 = pMVar1->next) {
       if (HWTMode->counterMode == kMeProfileCounterModeFlops) {
         pcVar29 = pMVar1->codeSection;
@@ -1309,9 +1309,9 @@ LAB_000128c1:
       } while (uVar23 == 0);
       if ((uVar22 & 0x8080) == 0) {
         uVar23 = uVar23 >> 0x10;
-        puVar18 = (uint *)((int)puVar20 + 6);
+        puVar18 = (uint *)((kd_iptr)puVar20 + 6);
       }
-      sprintf((char *)((int)puVar18 + (-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23))),", ");
+      sprintf((char *)((kd_iptr)puVar18 + (-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23))),", ");
       puVar18 = (uint *)buffer;
       do {
         puVar20 = puVar18;
@@ -1321,11 +1321,11 @@ LAB_000128c1:
       } while (uVar23 == 0);
       if ((uVar22 & 0x8080) == 0) {
         uVar23 = uVar23 >> 0x10;
-        puVar18 = (uint *)((int)puVar20 + 6);
+        puVar18 = (uint *)((kd_iptr)puVar20 + 6);
       }
       iVar24 = iVar24 + 4;
       MeWrite(iVar13,buffer,
-              (int)puVar18 + ((-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23)) - (int)buffer));
+              (kd_iptr)puVar18 + ((-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23)) - (kd_iptr)buffer));
     }
     pcVar29 = "Whole Frame";
     iVar24 = iVar24 + -1;
@@ -1339,9 +1339,9 @@ LAB_000128c1:
     } while (uVar23 == 0);
     if ((uVar22 & 0x8080) == 0) {
       uVar23 = uVar23 >> 0x10;
-      puVar18 = (uint *)((int)puVar20 + 6);
+      puVar18 = (uint *)((kd_iptr)puVar20 + 6);
     }
-    sprintf((char *)((int)puVar18 + (-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23))),"");
+    sprintf((char *)((kd_iptr)puVar18 + (-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23))),"");
     puVar18 = (uint *)buffer;
     do {
       puVar20 = puVar18;
@@ -1351,10 +1351,10 @@ LAB_000128c1:
     } while (uVar23 == 0);
     if ((uVar22 & 0x8080) == 0) {
       uVar23 = uVar23 >> 0x10;
-      puVar18 = (uint *)((int)puVar20 + 6);
+      puVar18 = (uint *)((kd_iptr)puVar20 + 6);
     }
     MeWrite(iVar13,buffer,
-            (int)puVar18 + ((-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23)) - (int)buffer));
+            (kd_iptr)puVar18 + ((-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23)) - (kd_iptr)buffer));
     MeClose(iVar13);
     iVar24 = MeOpen("MeProfile.dat",1);
     iVar13 = iVar24;
@@ -1370,11 +1370,11 @@ LAB_000128c1:
         } while (uVar23 == 0);
         if ((uVar22 & 0x8080) == 0) {
           uVar23 = uVar23 >> 0x10;
-          puVar18 = (uint *)((int)puVar20 + 6);
+          puVar18 = (uint *)((kd_iptr)puVar20 + 6);
         }
         iVar13 = MeWrite(iVar24,buffer,
-                         (int)((int)puVar18 +
-                              ((-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23)) - (int)buffer)));
+                         (int)((kd_iptr)puVar18 +
+                              ((-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23)) - (kd_iptr)buffer)));
       }
       sprintf(buffer,"%d",pMVar4->frameNumber);
       puVar18 = (uint *)buffer;
@@ -1386,17 +1386,17 @@ LAB_000128c1:
       } while (uVar23 == 0);
       if ((uVar22 & 0x8080) == 0) {
         uVar23 = uVar23 >> 0x10;
-        puVar18 = (uint *)((int)puVar20 + 6);
+        puVar18 = (uint *)((kd_iptr)puVar20 + 6);
       }
       MeWrite(iVar24,buffer,
-              (int)puVar18 + ((-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23)) - (int)buffer));
+              (kd_iptr)puVar18 + ((-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23)) - (kd_iptr)buffer));
       p_Var3 = pwVar7;
       fVar8 = output.jaggedness;
       for (pMVar2 = pMVar4->firstfsi; output.jaggedness = fVar8,
           pMVar2 != (MeProfileFrameSectionInfo *)0x0; pMVar2 = pMVar2->next) {
         uVar26 = __fixunssfdi(fVar8);
         uVar22 = (uint)pMVar2->cpuCycles;
-        iVar13 = *(int *)((int)&pMVar2->cpuCycles + 4);
+        iVar13 = *(int *)((kd_iptr)&pMVar2->cpuCycles + 4);
         lVar5 = (uVar26 & 0xffffffff) * (ulonglong)uVar22;
         uVar16 = (uint)lVar5;
         uVar27 = __fixunssfdi(1.0 - fVar8);
@@ -1408,9 +1408,9 @@ LAB_000128c1:
                  (int)((ulonglong)lVar5 >> 0x20) + (int)uVar26 * iVar13 +
                  uVar23 * (int)(uVar27 >> 0x20) +
                  (int)((ulonglong)lVar6 >> 0x20) +
-                 *(int *)((int)&p_Var3->cpuCycles + 4) * (int)uVar27 + (uint)CARRY4(uVar16,uVar17);
+                 *(int *)((kd_iptr)&p_Var3->cpuCycles + 4) * (int)uVar27 + (uint)CARRY4(uVar16,uVar17);
         *(int *)&p_Var3->cpuCycles = iVar15;
-        *(int *)((int)&p_Var3->cpuCycles + 4) = iVar13;
+        *(int *)((kd_iptr)&p_Var3->cpuCycles + 4) = iVar13;
         sprintf(buffer," %llu",iVar15);
         puVar18 = (uint *)buffer;
         do {
@@ -1421,10 +1421,10 @@ LAB_000128c1:
         } while (uVar23 == 0);
         if ((uVar22 & 0x8080) == 0) {
           uVar23 = uVar23 >> 0x10;
-          puVar18 = (uint *)((int)puVar20 + 6);
+          puVar18 = (uint *)((kd_iptr)puVar20 + 6);
         }
         MeWrite(iVar24,buffer,
-                (int)((int)puVar18 + ((-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23)) - (int)buffer))
+                (int)((kd_iptr)puVar18 + ((-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23)) - (kd_iptr)buffer))
                );
         fVar8 = output.jaggedness;
         uVar26 = __fixunssfdi(output.jaggedness);
@@ -1439,10 +1439,10 @@ LAB_000128c1:
         iVar13 = (int)(uVar26 >> 0x20) * uVar22 + (int)((ulonglong)lVar5 >> 0x20) +
                  uVar23 * (int)(uVar27 >> 0x20) +
                  (int)((ulonglong)lVar6 >> 0x20) +
-                 *(int *)((int)&p_Var3->timesCalled + 4) * (int)uVar27 + (uint)CARRY4(uVar16,uVar17)
+                 *(int *)((kd_iptr)&p_Var3->timesCalled + 4) * (int)uVar27 + (uint)CARRY4(uVar16,uVar17)
         ;
         *(int *)&p_Var3->timesCalled = iVar15;
-        *(int *)((int)&p_Var3->timesCalled + 4) = iVar13;
+        *(int *)((kd_iptr)&p_Var3->timesCalled + 4) = iVar13;
         sprintf(buffer," %llu",iVar15);
         puVar18 = (uint *)buffer;
         do {
@@ -1453,15 +1453,15 @@ LAB_000128c1:
         } while (uVar23 == 0);
         if ((uVar22 & 0x8080) == 0) {
           uVar23 = uVar23 >> 0x10;
-          puVar18 = (uint *)((int)puVar20 + 6);
+          puVar18 = (uint *)((kd_iptr)puVar20 + 6);
         }
         MeWrite(iVar24,buffer,
-                (int)((int)puVar18 + ((-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23)) - (int)buffer))
+                (int)((kd_iptr)puVar18 + ((-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23)) - (kd_iptr)buffer))
                );
         fVar8 = output.jaggedness;
         uVar26 = __fixunssfdi(output.jaggedness);
         uVar22 = (uint)pMVar2->count0;
-        iVar13 = *(int *)((int)&pMVar2->count0 + 4);
+        iVar13 = *(int *)((kd_iptr)&pMVar2->count0 + 4);
         lVar5 = (uVar26 & 0xffffffff) * (ulonglong)uVar22;
         uVar16 = (uint)lVar5;
         uVar27 = __fixunssfdi(1.0 - fVar8);
@@ -1472,10 +1472,10 @@ LAB_000128c1:
         iVar13 = (int)(uVar26 >> 0x20) * uVar22 +
                  (int)((ulonglong)lVar5 >> 0x20) + (int)uVar26 * iVar13 +
                  uVar23 * (int)(uVar27 >> 0x20) +
-                 (int)((ulonglong)lVar6 >> 0x20) + *(int *)((int)&p_Var3->count0 + 4) * (int)uVar27
+                 (int)((ulonglong)lVar6 >> 0x20) + *(int *)((kd_iptr)&p_Var3->count0 + 4) * (int)uVar27
                  + (uint)CARRY4(uVar16,uVar17);
         *(int *)&p_Var3->count0 = iVar15;
-        *(int *)((int)&p_Var3->count0 + 4) = iVar13;
+        *(int *)((kd_iptr)&p_Var3->count0 + 4) = iVar13;
         sprintf(buffer," %llu",iVar15);
         puVar18 = (uint *)buffer;
         do {
@@ -1486,15 +1486,15 @@ LAB_000128c1:
         } while (uVar23 == 0);
         if ((uVar22 & 0x8080) == 0) {
           uVar23 = uVar23 >> 0x10;
-          puVar18 = (uint *)((int)puVar20 + 6);
+          puVar18 = (uint *)((kd_iptr)puVar20 + 6);
         }
         MeWrite(iVar24,buffer,
-                (int)((int)puVar18 + ((-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23)) - (int)buffer))
+                (int)((kd_iptr)puVar18 + ((-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23)) - (kd_iptr)buffer))
                );
         fVar8 = output.jaggedness;
         uVar26 = __fixunssfdi(output.jaggedness);
         uVar22 = (uint)pMVar2->count1;
-        iVar13 = *(int *)((int)&pMVar2->count1 + 4);
+        iVar13 = *(int *)((kd_iptr)&pMVar2->count1 + 4);
         lVar5 = (uVar26 & 0xffffffff) * (ulonglong)uVar22;
         uVar16 = (uint)lVar5;
         uVar27 = __fixunssfdi(1.0 - fVar8);
@@ -1505,10 +1505,10 @@ LAB_000128c1:
         iVar13 = (int)(uVar26 >> 0x20) * uVar22 +
                  (int)((ulonglong)lVar5 >> 0x20) + (int)uVar26 * iVar13 +
                  uVar23 * (int)(uVar27 >> 0x20) +
-                 (int)((ulonglong)lVar6 >> 0x20) + *(int *)((int)&p_Var3->count1 + 4) * (int)uVar27
+                 (int)((ulonglong)lVar6 >> 0x20) + *(int *)((kd_iptr)&p_Var3->count1 + 4) * (int)uVar27
                  + (uint)CARRY4(uVar16,uVar17);
         *(int *)&p_Var3->count1 = iVar15;
-        *(int *)((int)&p_Var3->count1 + 4) = iVar13;
+        *(int *)((kd_iptr)&p_Var3->count1 + 4) = iVar13;
         sprintf(buffer," %llu",iVar15);
         puVar18 = (uint *)buffer;
         do {
@@ -1519,17 +1519,17 @@ LAB_000128c1:
         } while (uVar23 == 0);
         if ((uVar22 & 0x8080) == 0) {
           uVar23 = uVar23 >> 0x10;
-          puVar18 = (uint *)((int)puVar20 + 6);
+          puVar18 = (uint *)((kd_iptr)puVar20 + 6);
         }
         MeWrite(iVar24,buffer,
-                (int)((int)puVar18 + ((-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23)) - (int)buffer))
+                (int)((kd_iptr)puVar18 + ((-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23)) - (kd_iptr)buffer))
                );
         p_Var3 = p_Var3->next;
         fVar8 = output.jaggedness;
       }
       uVar26 = __fixunssfdi(fVar8);
       uVar22 = (uint)(pMVar4->timings).cpuCycles;
-      iVar13 = *(int *)((int)&(pMVar4->timings).cpuCycles + 4);
+      iVar13 = *(int *)((kd_iptr)&(pMVar4->timings).cpuCycles + 4);
       lVar5 = (uVar26 & 0xffffffff) * (ulonglong)uVar22;
       uVar16 = (uint)lVar5;
       uVar27 = __fixunssfdi(1.0 - fVar8);
@@ -1540,10 +1540,10 @@ LAB_000128c1:
       iVar13 = (int)(uVar26 >> 0x20) * uVar22 +
                (int)((ulonglong)lVar5 >> 0x20) + (int)uVar26 * iVar13 +
                uVar23 * (int)(uVar27 >> 0x20) +
-               (int)((ulonglong)lVar6 >> 0x20) + *(int *)((int)&p_Var3->cpuCycles + 4) * (int)uVar27
+               (int)((ulonglong)lVar6 >> 0x20) + *(int *)((kd_iptr)&p_Var3->cpuCycles + 4) * (int)uVar27
                + (uint)CARRY4(uVar16,uVar17);
       *(int *)&p_Var12->cpuCycles = iVar15;
-      *(int *)((int)&p_Var12->cpuCycles + 4) = iVar13;
+      *(int *)((kd_iptr)&p_Var12->cpuCycles + 4) = iVar13;
       sprintf(buffer," %llu",iVar15);
       puVar18 = (uint *)buffer;
       do {
@@ -1554,14 +1554,14 @@ LAB_000128c1:
       } while (uVar23 == 0);
       if ((uVar22 & 0x8080) == 0) {
         uVar23 = uVar23 >> 0x10;
-        puVar18 = (uint *)((int)puVar20 + 6);
+        puVar18 = (uint *)((kd_iptr)puVar20 + 6);
       }
       MeWrite(iVar24,buffer,
-              (int)((int)puVar18 + ((-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23)) - (int)buffer)));
+              (int)((kd_iptr)puVar18 + ((-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23)) - (kd_iptr)buffer)));
       fVar8 = output.jaggedness;
       uVar26 = __fixunssfdi(output.jaggedness);
       uVar22 = (uint)(pMVar4->timings).count0;
-      iVar13 = *(int *)((int)&(pMVar4->timings).count0 + 4);
+      iVar13 = *(int *)((kd_iptr)&(pMVar4->timings).count0 + 4);
       lVar5 = (uVar26 & 0xffffffff) * (ulonglong)uVar22;
       uVar16 = (uint)lVar5;
       uVar27 = __fixunssfdi(1.0 - fVar8);
@@ -1572,10 +1572,10 @@ LAB_000128c1:
       iVar13 = (int)(uVar26 >> 0x20) * uVar22 +
                (int)((ulonglong)lVar5 >> 0x20) + (int)uVar26 * iVar13 +
                uVar23 * (int)(uVar27 >> 0x20) +
-               (int)((ulonglong)lVar6 >> 0x20) + *(int *)((int)&p_Var3->count0 + 4) * (int)uVar27 +
+               (int)((ulonglong)lVar6 >> 0x20) + *(int *)((kd_iptr)&p_Var3->count0 + 4) * (int)uVar27 +
                (uint)CARRY4(uVar16,uVar17);
       *(int *)&p_Var12->count0 = iVar15;
-      *(int *)((int)&p_Var12->count0 + 4) = iVar13;
+      *(int *)((kd_iptr)&p_Var12->count0 + 4) = iVar13;
       sprintf(buffer," %llu",iVar15);
       puVar18 = (uint *)buffer;
       do {
@@ -1586,14 +1586,14 @@ LAB_000128c1:
       } while (uVar23 == 0);
       if ((uVar22 & 0x8080) == 0) {
         uVar23 = uVar23 >> 0x10;
-        puVar18 = (uint *)((int)puVar20 + 6);
+        puVar18 = (uint *)((kd_iptr)puVar20 + 6);
       }
       MeWrite(iVar24,buffer,
-              (int)((int)puVar18 + ((-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23)) - (int)buffer)));
+              (int)((kd_iptr)puVar18 + ((-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23)) - (kd_iptr)buffer)));
       fVar8 = output.jaggedness;
       uVar26 = __fixunssfdi(output.jaggedness);
       uVar22 = (uint)(pMVar4->timings).count1;
-      iVar13 = *(int *)((int)&(pMVar4->timings).count1 + 4);
+      iVar13 = *(int *)((kd_iptr)&(pMVar4->timings).count1 + 4);
       lVar5 = (uVar26 & 0xffffffff) * (ulonglong)uVar22;
       uVar16 = (uint)lVar5;
       uVar27 = __fixunssfdi(1.0 - fVar8);
@@ -1604,10 +1604,10 @@ LAB_000128c1:
       iVar13 = (int)(uVar26 >> 0x20) * uVar22 +
                (int)((ulonglong)lVar5 >> 0x20) + (int)uVar26 * iVar13 +
                uVar23 * (int)(uVar27 >> 0x20) +
-               (int)((ulonglong)lVar6 >> 0x20) + *(int *)((int)&p_Var3->count1 + 4) * (int)uVar27 +
+               (int)((ulonglong)lVar6 >> 0x20) + *(int *)((kd_iptr)&p_Var3->count1 + 4) * (int)uVar27 +
                (uint)CARRY4(uVar16,uVar17);
       *(int *)&p_Var12->count1 = iVar15;
-      *(int *)((int)&p_Var12->count1 + 4) = iVar13;
+      *(int *)((kd_iptr)&p_Var12->count1 + 4) = iVar13;
       sprintf(buffer," %llu",iVar15);
       puVar18 = (uint *)buffer;
       do {
@@ -1618,10 +1618,10 @@ LAB_000128c1:
       } while (uVar23 == 0);
       if ((uVar22 & 0x8080) == 0) {
         uVar23 = uVar23 >> 0x10;
-        puVar18 = (uint *)((int)puVar20 + 6);
+        puVar18 = (uint *)((kd_iptr)puVar20 + 6);
       }
       MeWrite(iVar24,buffer,
-              (int)((int)puVar18 + ((-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23)) - (int)buffer)));
+              (int)((kd_iptr)puVar18 + ((-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23)) - (kd_iptr)buffer)));
       sprintf(buffer,"");
       puVar18 = (uint *)buffer;
       do {
@@ -1632,25 +1632,25 @@ LAB_000128c1:
       } while (uVar23 == 0);
       if ((uVar22 & 0x8080) == 0) {
         uVar23 = uVar23 >> 0x10;
-        puVar18 = (uint *)((int)puVar20 + 6);
+        puVar18 = (uint *)((kd_iptr)puVar20 + 6);
       }
       MeWrite(iVar24,buffer,
-              (int)puVar18 + ((-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23)) - (int)buffer));
+              (kd_iptr)puVar18 + ((-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23)) - (kd_iptr)buffer));
       uVar22 = (uint)(pMVar4->timings).cpuCycles;
       bVar25 = CARRY4((uint)cpuCycleAcc,uVar22);
       (*(unsigned int *)((char *)&(cpuCycleAcc) + 0)) = (uint)cpuCycleAcc + uVar22;
       (*(unsigned int *)((char *)&(cpuCycleAcc) + 4)) =
-           (*(unsigned int *)((char *)&(cpuCycleAcc) + 4)) + *(int *)((int)&(pMVar4->timings).cpuCycles + 4) + (uint)bVar25;
+           (*(unsigned int *)((char *)&(cpuCycleAcc) + 4)) + *(int *)((kd_iptr)&(pMVar4->timings).cpuCycles + 4) + (uint)bVar25;
       uVar22 = (uint)(pMVar4->timings).count0;
       bVar25 = CARRY4((uint)count0Acc,uVar22);
       (*(unsigned int *)((char *)&(count0Acc) + 0)) = (uint)count0Acc + uVar22;
       (*(unsigned int *)((char *)&(count0Acc) + 4)) =
-           (*(unsigned int *)((char *)&(count0Acc) + 4)) + *(int *)((int)&(pMVar4->timings).count0 + 4) + (uint)bVar25;
+           (*(unsigned int *)((char *)&(count0Acc) + 4)) + *(int *)((kd_iptr)&(pMVar4->timings).count0 + 4) + (uint)bVar25;
       uVar23 = (uint)(pMVar4->timings).count1;
       bVar25 = CARRY4((uint)count1Acc,uVar23);
       (*(unsigned int *)((char *)&(count1Acc) + 0)) = (uint)count1Acc + uVar23;
       (*(unsigned int *)((char *)&(count1Acc) + 4)) =
-           (*(unsigned int *)((char *)&(count1Acc) + 4)) + *(int *)((int)&(pMVar4->timings).count1 + 4) + (uint)bVar25;
+           (*(unsigned int *)((char *)&(count1Acc) + 4)) + *(int *)((kd_iptr)&(pMVar4->timings).count1 + 4) + (uint)bVar25;
       frames = (ushort)pMVar4->frameNumber;
       iVar13 = CONCAT22((short)(uVar22 >> 0x10),frames);
     }
@@ -1669,10 +1669,10 @@ LAB_000128c1:
     } while (uVar23 == 0);
     if ((uVar22 & 0x8080) == 0) {
       uVar23 = uVar23 >> 0x10;
-      puVar18 = (uint *)((int)puVar20 + 6);
+      puVar18 = (uint *)((kd_iptr)puVar20 + 6);
     }
     MeWrite(iVar24,buffer,
-            (int)puVar18 + ((-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23)) - (int)buffer));
+            (kd_iptr)puVar18 + ((-3 - (uint)CARRY1((byte)uVar23,(byte)uVar23)) - (kd_iptr)buffer));
     MeClose(iVar24);
   }
   else {
@@ -1693,7 +1693,7 @@ void kd_MeProfileStartTiming(MeProfileTimerMode mode,MeProfileLogModes_enum log)
   output.jaggedness = 0.2;
   output.settletime = 10;
   output.style = kMeProfileOutputEvent;
-  pMVar1 = (MeMemoryAPI.create)(0x10);
+  pMVar1 = (MeMemoryAPI.create)((int)sizeof(*(MeProfileTimerMode *)0));
   HWTMode = pMVar1;
   pMVar1->granularity = mode.granularity;
   pMVar1->counterMode = mode.counterMode;
@@ -1723,11 +1723,11 @@ void kd_MeProfileStartFrame(void)
     for (; pMVar1 != (MeProfileTimer *)0x0; pMVar1 = pMVar1->next) {
       pMVar1->timesCalled = 0;
       *(undefined4 *)&pMVar1->cpuCycles = 0;
-      *(undefined4 *)((int)&pMVar1->cpuCycles + 4) = 0;
+      *(undefined4 *)((kd_iptr)&pMVar1->cpuCycles + 4) = 0;
       *(undefined4 *)&pMVar1->count0 = 0;
-      *(undefined4 *)((int)&pMVar1->count0 + 4) = 0;
+      *(undefined4 *)((kd_iptr)&pMVar1->count0 + 4) = 0;
       *(undefined4 *)&pMVar1->count1 = 0;
-      *(undefined4 *)((int)&pMVar1->count1 + 4) = 0;
+      *(undefined4 *)((kd_iptr)&pMVar1->count1 + 4) = 0;
     }
   }
   if (insideFrame != '\0') {
@@ -1777,7 +1777,7 @@ MeReal kd_MeProfileGetAllSectionTime(void)
             pMVar1 = pMVar1->next) {
           bVar7 = CARRY4(uVar5,(uint)pMVar1->cpuCycles);
           uVar5 = uVar5 + (int)pMVar1->cpuCycles;
-          iVar6 = iVar6 + *(int *)((int)&pMVar1->cpuCycles + 4) + (uint)bVar7;
+          iVar6 = iVar6 + *(int *)((kd_iptr)&pMVar1->cpuCycles + 4) + (uint)bVar7;
         }
         pMVar3 = pMVar3->next;
       } while (pMVar3 != (MeProfileFrameData *)0x0);

@@ -148,19 +148,19 @@ static void transferContactGroups(MdtConstraintID c,void *ccbdata)
     return;
   }
   otherModel = (McdModelID)*piVar4;
-  pMVar1 = *(McdModelID *)((int)ccbdata + 8);
+  pMVar1 = *(McdModelID *)((kd_iptr)ccbdata + 8);
   if ((otherModel != pMVar1) && ((McdModelID)piVar4[1] != pMVar1)) {
     return;
   }
-  if ((*(int *)((int)ccbdata + 4) != 0) && (*(int *)((int)ccbdata + 0xc) != 0)) {
+  if ((*(int *)((kd_iptr)ccbdata + 4) != 0) && (*(int *)((kd_iptr)ccbdata + 0xc) != 0)) {
     if (otherModel == pMVar1) {
       otherModel = (McdModelID)piVar4[1];
     }
     pvVar5 = McdModelGetSpace(otherModel);
-    if (pvVar5 == *(void **)((int)ccbdata + 0xc)) {
+    if (pvVar5 == *(void **)((kd_iptr)ccbdata + 0xc)) {
       pMVar8 = kd_McdModelGetBody(otherModel);
-      if (pMVar8 != *(MdtBodyID *)((int)ccbdata + 4)) goto LAB_000102ca;
-      iVar9 = McdSpacePairIsEnabled(*(void **)((int)ccbdata + 8),otherModel);
+      if (pMVar8 != *(MdtBodyID *)((kd_iptr)ccbdata + 4)) goto LAB_000102ca;
+      iVar9 = McdSpacePairIsEnabled(*(void **)((kd_iptr)ccbdata + 8),otherModel);
       if (iVar9 != 0) {
         MeFatalError(1,
                      "McdModelSetBody: Attempt to assign model A to a body\nwhich has an associated model B which is not pairwise disabled with A"
@@ -191,10 +191,10 @@ LAB_000102ca:
   pvVar7 = MdtContactGroupQuaConstraint(pvVar3);
   pvVar7 = MdtConstraintGetBody(pvVar7,uVar10);
   if (pvVar7 == *(void **)ccbdata) {
-    pvVar6 = *(void **)((int)ccbdata + 4);
+    pvVar6 = *(void **)((kd_iptr)ccbdata + 4);
   }
   else {
-    pvVar5 = *(void **)((int)ccbdata + 4);
+    pvVar5 = *(void **)((kd_iptr)ccbdata + 4);
   }
   pvVar7 = MdtContactGroupQuaConstraint(pvVar3);
   MdtConstraintSetBodies(pvVar7,pvVar6,pvVar5);

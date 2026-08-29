@@ -79,22 +79,22 @@ void kd_McdBoxGetSlice(McdGeometryInstanceID ins,MeReal *normal,MeReal dist,int 
   }
   pMVar13 = pMVar5[1].prev;
   if (norm[1] < 0.0) {
-    pMVar13 = (McdGeometryID)((uint)pMVar13 ^ 0x80000000);
+    pMVar13 = (McdGeometryID)((kd_uptr)pMVar13 ^ 0x80000000);
   }
   pMVar14 = pMVar5[1].next;
   if (norm[2] < 0.0) {
-    pMVar14 = (McdGeometryID)((uint)pMVar14 ^ 0x80000000);
+    pMVar14 = (McdGeometryID)((kd_uptr)pMVar14 ^ 0x80000000);
   }
   paMVar18 = v;
   uVar17 = 0;
   do {
     pMVar15 = pMVar13;
     if ((uVar17 & 2) != 0) {
-      pMVar15 = (McdGeometryID)((uint)pMVar13 ^ 0x80000000);
+      pMVar15 = (McdGeometryID)((kd_uptr)pMVar13 ^ 0x80000000);
     }
     pMVar10 = pMVar14;
     if ((uVar17 & 4) != 0) {
-      pMVar10 = (McdGeometryID)((uint)pMVar14 ^ 0x80000000);
+      pMVar10 = (McdGeometryID)((kd_uptr)pMVar14 ^ 0x80000000);
     }
     (*paMVar18)[0] = fVar12;
     uVar11 = uVar17 + 1;
@@ -107,11 +107,11 @@ void kd_McdBoxGetSlice(McdGeometryInstanceID ins,MeReal *normal,MeReal dist,int 
     }
     pMVar15 = pMVar13;
     if ((uVar11 & 2) != 0) {
-      pMVar15 = (McdGeometryID)((uint)pMVar13 ^ 0x80000000);
+      pMVar15 = (McdGeometryID)((kd_uptr)pMVar13 ^ 0x80000000);
     }
     pMVar10 = pMVar14;
     if ((uVar11 & 4) != 0) {
-      pMVar10 = (McdGeometryID)((uint)pMVar14 ^ 0x80000000);
+      pMVar10 = (McdGeometryID)((kd_uptr)pMVar14 ^ 0x80000000);
     }
     uVar17 = uVar17 + 2;
     paMVar18[1][1] = (*(MeReal *)&(pMVar15));
@@ -196,7 +196,7 @@ void kd_McdConvexMeshPlaneCut
   int v;
   MeReal dv;
   McdCnvVertex *vert;
-  int start;
+  kd_iptr start;
   MeDictNode nodemem [200];
   MeSet set;
   MeReal temp [3];
@@ -209,7 +209,7 @@ void kd_McdConvexMeshPlaneCut
     MeSetAdd(&set,(void *)start);
     while (set.next != (MeDictNode *)0x0) {
       pvVar9 = MeSetIteratorNext(&set);
-      pMVar14 = pMVar3 + (int)pvVar9;
+      pMVar14 = pMVar3 + (kd_iptr)pvVar9;
       fVar16 = norm[2] * pMVar14->position[2] +
                norm[1] * pMVar14->position[1] + *norm * pMVar14->position[0];
       if ((flags & 2U) != 0) {
@@ -230,11 +230,11 @@ void kd_McdConvexMeshPlaneCut
         }
       }
       iVar15 = 0;
-      iVar10 = McdCnvVertexGetCount(&conv->mHull,(int)pvVar9);
+      iVar10 = McdCnvVertexGetCount(&conv->mHull,(kd_iptr)pvVar9);
       if (0 < iVar10) {
         do {
-          pvVar11 = (void *)McdCnvVertexGetNeighbor(&conv->mHull,(int)pvVar9,iVar15);
-          pMVar12 = pMVar3 + (int)pvVar11;
+          pvVar11 = (void *)McdCnvVertexGetNeighbor(&conv->mHull,(kd_iptr)pvVar9,iVar15);
+          pMVar12 = pMVar3 + (kd_iptr)pvVar11;
           fVar2 = pMVar12->position[2] * norm[2] +
                   pMVar12->position[1] * norm[1] + pMVar12->position[0] * *norm;
           if (dp <= fVar2) {
@@ -242,7 +242,7 @@ void kd_McdConvexMeshPlaneCut
           }
           else if ((flags & 1U) != 0) {
             fVar5 = 1.0 / (fVar16 - fVar2);
-            pMVar12 = pMVar3 + (int)pvVar11;
+            pMVar12 = pMVar3 + (kd_iptr)pvVar11;
             fVar8 = (fVar16 - dp) * fVar5;
             fVar5 = (dp - fVar2) * fVar5;
             fVar7 = fVar5 * pMVar14->position[0] + pMVar12->position[0] * fVar8;
@@ -737,10 +737,10 @@ int kd_McdPlaneIntersectTest
       iVar11 = 0;
       do {
         pMVar10 = result->contacts;
-        *(MeReal *)((int)pMVar10->normal + iVar11) = norm[0];
-        *(MeReal *)((int)pMVar10->normal + iVar11 + 4) = norm[1];
-        *(MeReal *)((int)pMVar10->normal + iVar11 + 8) = norm[2];
-        pfVar7 = (float *)((int)result->contacts->position + iVar11);
+        *(MeReal *)((kd_iptr)pMVar10->normal + iVar11) = norm[0];
+        *(MeReal *)((kd_iptr)pMVar10->normal + iVar11 + 4) = norm[1];
+        *(MeReal *)((kd_iptr)pMVar10->normal + iVar11 + 8) = norm[2];
+        pfVar7 = (float *)((kd_iptr)result->contacts->position + iVar11);
         *pfVar7 = fVar1 * norm[0] + (*outVert)[0];
         pfVar7[1] = fVar1 * norm[1] + (*outVert)[1];
         pfVar7[2] = fVar1 * norm[2] + (*outVert)[2];
@@ -750,7 +750,7 @@ int kd_McdPlaneIntersectTest
         }
         iVar9 = iVar9 + 1;
         outVert = outVert + 1;
-        *(float *)((int)result->contacts->normal + iVar11 + 0xc) = fVar8;
+        *(float *)((kd_iptr)result->contacts->normal + iVar11 + 0xc) = fVar8;
       } while ((iVar9 < numv) && (iVar11 = iVar11 + 0x28, iVar9 < result->contactMaxCount));
     }
     pMVar10 = result->contacts;

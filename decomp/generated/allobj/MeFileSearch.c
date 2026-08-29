@@ -77,11 +77,11 @@ int kd_MeOpenPrefixed(char *filename,MeOpenMode_enum mode,uint allPrefixes)
       } while (uVar5 == 0);
       if ((uVar4 & 0x8080) == 0) {
         uVar5 = uVar5 >> 0x10;
-        puVar2 = (uint *)((int)puVar3 + 6);
+        puVar2 = (uint *)((kd_iptr)puVar3 + 6);
       }
       strncat(fullname,__s,
-              0x1000 - (int)((int)puVar2 +
-                            ((-3 - (uint)CARRY1((byte)uVar5,(byte)uVar5)) - (int)fullname)));
+              0x1000 - (int)((kd_iptr)puVar2 +
+                            ((-3 - (uint)CARRY1((byte)uVar5,(byte)uVar5)) - (kd_iptr)fullname)));
       puVar2 = (uint *)fullname;
     }
     do {
@@ -92,11 +92,11 @@ int kd_MeOpenPrefixed(char *filename,MeOpenMode_enum mode,uint allPrefixes)
     } while (uVar5 == 0);
     if ((uVar4 & 0x8080) == 0) {
       uVar5 = uVar5 >> 0x10;
-      puVar2 = (uint *)((int)puVar3 + 6);
+      puVar2 = (uint *)((kd_iptr)puVar3 + 6);
     }
     strncat(fullname,filename,
-            0x1000 - (int)((int)puVar2 +
-                          ((-3 - (uint)CARRY1((byte)uVar5,(byte)uVar5)) - (int)fullname)));
+            0x1000 - (int)((kd_iptr)puVar2 +
+                          ((-3 - (uint)CARRY1((byte)uVar5,(byte)uVar5)) - (kd_iptr)fullname)));
     fullname[0xfff] = '\0';
     iVar1 = MeOpenRaw(fullname,mode);
     if (-1 < iVar1) {

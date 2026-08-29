@@ -70,7 +70,7 @@ KD_WEAK_DATA const char kd_ZTS11CxSmallSort[]
 
 KD_WEAK_DATA const void *kd_ZTI11CxSmallSort[2]
     KD_MANGLED("_ZTI11CxSmallSort") = {
-        (const void *)((const char *)&kd_ext__ZTVN10__cxxabiv117__class_type_infoE[0] + 8),
+        (const void *)((const char *)&kd_ext__ZTVN10__cxxabiv117__class_type_infoE[0] + (2 * (int)sizeof(void *))),
         (const void *)kd_ZTS11CxSmallSort
     };
 
@@ -96,7 +96,7 @@ CxSmallSort__lsda_exception_table_00010000(CxSmallSort *this,int inNObjects,int 
 
 {
   MeU8 *pMVar1;
-  uint uVar2;
+  kd_uptr uVar2;
   MeU8 *pMVar3;
   
   uVar2 = inNObjects * (inNObjects + -1) >> 1;
@@ -107,7 +107,7 @@ CxSmallSort__lsda_exception_table_00010000(CxSmallSort *this,int inNObjects,int 
   pMVar3 = pMVar1 + (this->mPairState).mSize;
   (this->mPairState).mArray = pMVar1;
   if (pMVar3 <= pMVar1) goto code_r0x00010076;
-  uVar2 = (int)pMVar3 - (int)pMVar1 & 3;
+  uVar2 = (kd_iptr)pMVar3 - (kd_iptr)pMVar1 & 3;
   if (pMVar1 + 1 < pMVar3) {
     if (uVar2 != 0) {
       if (1 < uVar2) {
@@ -181,7 +181,7 @@ void __thiscall kd_CxSmallSort__CxSmallSort(CxSmallSort *this,int inNObjects,int
 
 {
   MeU8 *pMVar1;
-  uint uVar2;
+  kd_uptr uVar2;
   MeU8 *pMVar3;
 
   uVar2 = inNObjects * (inNObjects + -1) >> 1;
@@ -192,7 +192,7 @@ void __thiscall kd_CxSmallSort__CxSmallSort(CxSmallSort *this,int inNObjects,int
   pMVar3 = pMVar1 + (this->mPairState).mSize;
   (this->mPairState).mArray = pMVar1;
   if (pMVar3 <= pMVar1) goto LAB_00010206;
-  uVar2 = (int)pMVar3 - (int)pMVar1 & 3;
+  uVar2 = (kd_iptr)pMVar3 - (kd_iptr)pMVar1 & 3;
   if (pMVar1 + 1 < pMVar3) {
     if (uVar2 != 0) {
       if (1 < uVar2) {
@@ -307,7 +307,7 @@ CxSmallSort * kd_CxSmallSort__New(McdFramework *fwk,MeU8 inAxes,int inNObjects,i
   if (((6 < (byte)(inAxes - 1)) || (inNObjects < 1)) || (inNPairs < 1)) {
     return (CxSmallSort *)0x0;
   }
-  this = (MeMemoryAPI.create)(0xd4);
+  this = (MeMemoryAPI.create)((int)sizeof(*(CxSmallSort *)0));
   if (this == (CxSmallSort *)0x0) {
     return (CxSmallSort *)0x0;
   }
@@ -316,11 +316,11 @@ CxSmallSort * kd_CxSmallSort__New(McdFramework *fwk,MeU8 inAxes,int inNObjects,i
   this->mAABBUpdateFn = (McdUpdateAABBFnPtr)0x0;
   this->mUserData = (void *)0x0;
   this->mFramework = fwk;
-  pMVar3 = (MeMemoryAPI.create)(inNObjects << 2);
+  pMVar3 = (MeMemoryAPI.create)((inNObjects) * (int)sizeof(*(MeI32 *)0));
   this->mFreeIDs = pMVar3;
-  pCVar4 = (MeMemoryAPI.create)(inNObjects * 0x98);
+  pCVar4 = (MeMemoryAPI.create)((inNObjects) * (int)sizeof(*(CxSmallSortRep *)0));
   this->mRepList = pCVar4;
-  for (uVar8 = (uint)(inNObjects * 0x98) >> 2; uVar8 != 0; uVar8 = uVar8 - 1) {
+  for (uVar8 = (uint)((inNObjects) * (int)sizeof(*(CxSmallSortRep *)0)) / (uint)((char *)&((CxSmallSortRep *)0)->super_Link.mPrev - (char *)0); uVar8 != 0; uVar8 = uVar8 - 1) {
     (pCVar4->super_Link).mNext = (Link *)0x0;
     pCVar4 = (CxSmallSortRep *)&(pCVar4->super_Link).mPrev;
   }
@@ -332,7 +332,7 @@ CxSmallSort * kd_CxSmallSort__New(McdFramework *fwk,MeU8 inAxes,int inNObjects,i
 LAB_000104e2:
     this->mFreeIDs[uVar8] = (uVar8 ^ 0xffffffff) + this->mModelMax;
     uVar8 = uVar8 + 1;
-    *(undefined4 *)((int)this->mRepList->mAABBMarkers + iVar9 + -0x18) = 0xffffffff;
+    *(undefined4 *)((kd_iptr)this->mRepList->mAABBMarkers + iVar9 + -0x18) = 0xffffffff;
     iVar9 = iVar9 + 0x98;
     if (inNObjects <= (int)uVar8) goto LAB_0001059a;
   }
@@ -346,27 +346,27 @@ LAB_000104e2:
       uVar8 = (uint)(2 < uVar5);
       this->mFreeIDs[uVar8] = (uVar8 ^ 0xffffffff) + this->mModelMax;
       uVar8 = uVar8 + 1;
-      *(undefined4 *)((int)this->mRepList->mAABBMarkers + iVar9 + -0x18) = 0xffffffff;
+      *(undefined4 *)((kd_iptr)this->mRepList->mAABBMarkers + iVar9 + -0x18) = 0xffffffff;
       iVar9 = iVar9 + 0x98;
     }
     goto LAB_000104e2;
   }
   do {
     this->mFreeIDs[uVar8] = (uVar8 ^ 0xffffffff) + this->mModelMax;
-    *(undefined4 *)((int)this->mRepList->mAABBMarkers + iVar9 + -0x18) = 0xffffffff;
+    *(undefined4 *)((kd_iptr)this->mRepList->mAABBMarkers + iVar9 + -0x18) = 0xffffffff;
     this->mFreeIDs[uVar8 + 1] = (uVar8 + 1 ^ 0xffffffff) + this->mModelMax;
-    *(undefined4 *)((int)this->mRepList[1].mAABBMarkers + iVar9 + -0x18) = 0xffffffff;
+    *(undefined4 *)((kd_iptr)this->mRepList[1].mAABBMarkers + iVar9 + -0x18) = 0xffffffff;
     this->mFreeIDs[uVar8 + 2] = (uVar8 + 2 ^ 0xffffffff) + this->mModelMax;
     uVar5 = uVar8 + 3;
     uVar8 = uVar8 + 4;
-    *(undefined4 *)((int)this->mRepList[2].mAABBMarkers + iVar9 + -0x18) = 0xffffffff;
+    *(undefined4 *)((kd_iptr)this->mRepList[2].mAABBMarkers + iVar9 + -0x18) = 0xffffffff;
     this->mFreeIDs[uVar5] = (uVar5 ^ 0xffffffff) + this->mModelMax;
-    *(undefined4 *)((int)this->mRepList[3].mAABBMarkers + iVar9 + -0x18) = 0xffffffff;
+    *(undefined4 *)((kd_iptr)this->mRepList[3].mAABBMarkers + iVar9 + -0x18) = 0xffffffff;
     iVar9 = iVar9 + 0x260;
   } while ((int)uVar8 < inNObjects);
 LAB_0001059a:
   this->mFreeIDCount = this->mModelMax;
-  pMVar3 = (MeMemoryAPI.create)(inNObjects << 2);
+  pMVar3 = (MeMemoryAPI.create)((inNObjects) * (int)sizeof(*(MeI32 *)0));
                     
   this->mReleasedIDs = pMVar3;
   this->mAxes = inAxes;
@@ -467,7 +467,7 @@ kd_CxSmallSort__Insert(CxSmallSort *this,McdModelID inData,McdCullingTable *cull
   pCVar1->mAABBMarkers[0].mRep = pCVar1;
   pCVar1->mAABBMarkers[0].mType = '\0';
   pLVar2 = this->mSort[0].mRoot.mPrev;
-  pLVar2 = (Link *)((pLVar2 == &this->mSort[0].mRoot) - 1 & (uint)pLVar2);
+  pLVar2 = (Link *)((pLVar2 == &this->mSort[0].mRoot) - 1 & (kd_uptr)pLVar2);
   pLVar11 = pLVar2->mPrev;
   pCVar1->mAABBMarkers[0].super_Link.mNext = pLVar2;
   pCVar1->mAABBMarkers[0].super_Link.mPrev = pLVar11;
@@ -478,7 +478,7 @@ kd_CxSmallSort__Insert(CxSmallSort *this,McdModelID inData,McdCullingTable *cull
   pCVar1->mAABBMarkers[1].mType = '\x01';
   pLVar2 = this->mSort[0].mRoot.mPrev;
   pLVar11 = &this->mSort[1].mRoot;
-  pLVar2 = (Link *)((pLVar2 == &this->mSort[0].mRoot) - 1 & (uint)pLVar2);
+  pLVar2 = (Link *)((pLVar2 == &this->mSort[0].mRoot) - 1 & (kd_uptr)pLVar2);
   pCVar1->mAABBMarkers[1].super_Link.mNext = pLVar2;
   pLVar2 = pLVar2->mPrev;
   pCVar1->mAABBMarkers[1].super_Link.mPrev = pLVar2;
@@ -490,7 +490,7 @@ kd_CxSmallSort__Insert(CxSmallSort *this,McdModelID inData,McdCullingTable *cull
     pLVar2[1].mNext = (Link *)0x7f7fffff;
     pLVar2[1].mPrev = &pCVar1->super_Link;
     *(undefined1 *)&pLVar2[2].mNext = 0;
-    pLVar9 = (Link *)((pLVar11->mPrev == pLVar11) - 1 & (uint)pLVar11->mPrev);
+    pLVar9 = (Link *)((pLVar11->mPrev == pLVar11) - 1 & (kd_uptr)pLVar11->mPrev);
     ((Link *)&pLVar2->mNext)->mNext = pLVar9;
     pLVar9 = pLVar9->mPrev;
     pLVar2->mPrev = pLVar9;
@@ -500,7 +500,7 @@ kd_CxSmallSort__Insert(CxSmallSort *this,McdModelID inData,McdCullingTable *cull
     pLVar2[3].mPrev = (Link *)0x7f7fffff;
     pLVar2[4].mNext = &pCVar1->super_Link;
     *(undefined1 *)&pLVar2[4].mPrev = 1;
-    pLVar9 = (Link *)((pLVar11->mPrev == pLVar11) - 1 & (uint)pLVar11->mPrev);
+    pLVar9 = (Link *)((pLVar11->mPrev == pLVar11) - 1 & (kd_uptr)pLVar11->mPrev);
     *ppLVar5 = pLVar9;
     pLVar9 = pLVar9->mPrev;
     pLVar2[3].mNext = pLVar9;
@@ -511,7 +511,7 @@ kd_CxSmallSort__Insert(CxSmallSort *this,McdModelID inData,McdCullingTable *cull
     pLVar2[6].mNext = (Link *)0x7f7fffff;
     pLVar2[6].mPrev = &pCVar1->super_Link;
     *(undefined1 *)&pLVar2[7].mNext = 0;
-    pLVar3 = (Link *)((pLVar11[1].mPrev == pLVar9) - 1 & (uint)pLVar11[1].mPrev);
+    pLVar3 = (Link *)((pLVar11[1].mPrev == pLVar9) - 1 & (kd_uptr)pLVar11[1].mPrev);
     pLVar6->mNext = pLVar3;
     pLVar3 = pLVar3->mPrev;
     pLVar2[5].mPrev = pLVar3;
@@ -523,7 +523,7 @@ kd_CxSmallSort__Insert(CxSmallSort *this,McdModelID inData,McdCullingTable *cull
     *(undefined1 *)&pLVar2[9].mPrev = 1;
     pLVar3 = pLVar11 + 1;
     pLVar11 = pLVar11 + 2;
-    pLVar9 = (Link *)((pLVar3->mPrev == pLVar9) - 1 & (uint)pLVar3->mPrev);
+    pLVar9 = (Link *)((pLVar3->mPrev == pLVar9) - 1 & (kd_uptr)pLVar3->mPrev);
     *ppLVar5 = pLVar9;
     pLVar9 = pLVar9->mPrev;
     pLVar2[8].mNext = pLVar9;
@@ -688,7 +688,7 @@ bool __thiscall kd_CxSmallSort__Remove(CxSmallSort *this,MeI32 inID)
         if (this->mNAxes == ((byte)((int)(uint)pMVar6[iVar9] >> (sbyte)(uVar5 << 2)) & 0xf)) {
           McdModelPairManagerDeactivate
                     (this->mManager,this->mRepList[inID].mModel,
-                     *(void **)((int)(this->mRepList->mAABBMarkers + -1) + local_30));
+                     *(void **)((kd_iptr)(this->mRepList->mAABBMarkers + -1) + local_30));
           pMVar6 = (this->mPairState).mArray;
         }
                     
@@ -908,7 +908,7 @@ void __thiscall kd_CxSmallSort__MoveStartMarkerUp(CxSmallSort *this,CxSmallSortM
   MeU8 *pMVar5;
   McdCullingTable *pMVar6;
   byte bVar7;
-  uint uVar8;
+  kd_uptr uVar8;
   uint uVar9;
   sbyte sVar10;
   int iVar11;
@@ -939,9 +939,9 @@ void __thiscall kd_CxSmallSort__MoveStartMarkerUp(CxSmallSort *this,CxSmallSortM
         pLVar12 = pLVar18[1].mPrev;
                     
         pLVar4 = pLVar12[1].mNext;
-        uVar14 = (int)((int)pLVar4 - uVar3) >> 0x1f;
-        uVar15 = uVar3 & (uVar14 ^ 0xffffffff) | (uint)pLVar4 & uVar14;
-        uVar14 = uVar14 & uVar3 | (uVar14 ^ 0xffffffff) & (uint)pLVar4;
+        uVar14 = (int)((kd_iptr)pLVar4 - uVar3) >> 0x1f;
+        uVar15 = uVar3 & (uVar14 ^ 0xffffffff) | (kd_uptr)pLVar4 & uVar14;
+        uVar14 = uVar14 & uVar3 | (uVar14 ^ 0xffffffff) & (kd_uptr)pLVar4;
         pMVar5 = (this->mPairState).mArray;
         iVar11 = (uVar14 + uVar15 * this->mModelMax) - ((int)((uVar15 + 2) * (uVar15 + 1)) >> 1);
                     
@@ -957,10 +957,10 @@ void __thiscall kd_CxSmallSort__MoveStartMarkerUp(CxSmallSort *this,CxSmallSortM
                     
             pLVar12 = pLVar12[3].mPrev;
             uVar9 = pCVar2->mCullingIndex;
-            uVar13 = 0xffffffff - ((int)((int)pLVar12 - uVar9) >> 0x1f);
-            uVar8 = (uint)pLVar12 & uVar13 | (uVar13 ^ 0xffffffff) & uVar9;
+            uVar13 = 0xffffffff - ((int)((kd_iptr)pLVar12 - uVar9) >> 0x1f);
+            uVar8 = (kd_uptr)pLVar12 & uVar13 | (uVar13 ^ 0xffffffff) & uVar9;
             uVar9 = (uVar8 * (uVar8 + 1) >> 1) +
-                    (uVar13 & uVar9 | (uVar13 ^ 0xffffffff) & (uint)pLVar12);
+                    (uVar13 & uVar9 | (uVar13 ^ 0xffffffff) & (kd_uptr)pLVar12);
             if ((pMVar6->array[uVar9 >> 5] & 1 << ((byte)uVar9 & 0x1f)) != 0) goto LAB_000111db;
           }
           McdModelPairManagerDeactivate
@@ -998,7 +998,7 @@ void __thiscall kd_CxSmallSort__MoveStartMarkerDown(CxSmallSort *this,CxSmallSor
   MeU8 *pMVar5;
   McdCullingTable *pMVar6;
   MeU8 MVar7;
-  uint uVar8;
+  kd_uptr uVar8;
   uint uVar9;
   sbyte sVar10;
   Link *pLVar11;
@@ -1027,9 +1027,9 @@ void __thiscall kd_CxSmallSort__MoveStartMarkerDown(CxSmallSort *this,CxSmallSor
         pLVar11 = pLVar18[1].mPrev;
                     
         pLVar4 = pLVar11[1].mNext;
-        uVar13 = (int)((int)pLVar4 - uVar3) >> 0x1f;
-        uVar17 = uVar3 & (uVar13 ^ 0xffffffff) | uVar13 & (uint)pLVar4;
-        uVar13 = uVar13 & uVar3 | (uVar13 ^ 0xffffffff) & (uint)pLVar4;
+        uVar13 = (int)((kd_iptr)pLVar4 - uVar3) >> 0x1f;
+        uVar17 = uVar3 & (uVar13 ^ 0xffffffff) | uVar13 & (kd_uptr)pLVar4;
+        uVar13 = uVar13 & uVar3 | (uVar13 ^ 0xffffffff) & (kd_uptr)pLVar4;
         iVar12 = (uVar13 + uVar17 * this->mModelMax) - ((int)((uVar17 + 2) * (uVar17 + 1)) >> 1);
         iVar14 = iVar12 >> 1;
         pMVar5 = (this->mPairState).mArray;
@@ -1045,10 +1045,10 @@ void __thiscall kd_CxSmallSort__MoveStartMarkerDown(CxSmallSort *this,CxSmallSor
                     
             pLVar11 = pLVar11[3].mPrev;
             uVar9 = pCVar2->mCullingIndex;
-            uVar15 = 0xffffffff - ((int)((int)pLVar11 - uVar9) >> 0x1f);
-            uVar8 = (uint)pLVar11 & uVar15 | (uVar15 ^ 0xffffffff) & uVar9;
+            uVar15 = 0xffffffff - ((int)((kd_iptr)pLVar11 - uVar9) >> 0x1f);
+            uVar8 = (kd_uptr)pLVar11 & uVar15 | (uVar15 ^ 0xffffffff) & uVar9;
             uVar9 = (uVar8 * (uVar8 + 1) >> 1) +
-                    (uVar15 & uVar9 | (uVar15 ^ 0xffffffff) & (uint)pLVar11);
+                    (uVar15 & uVar9 | (uVar15 ^ 0xffffffff) & (kd_uptr)pLVar11);
             if ((pMVar6->array[uVar9 >> 5] & 1 << ((byte)uVar9 & 0x1f)) != 0) goto LAB_000113cc;
           }
           McdModelPairManagerActivate
@@ -1087,7 +1087,7 @@ void __thiscall kd_CxSmallSort__MoveEndMarkerUp(CxSmallSort *this,CxSmallSortMar
   MeU8 *pMVar5;
   McdCullingTable *pMVar6;
   MeU8 MVar7;
-  uint uVar8;
+  kd_uptr uVar8;
   uint uVar9;
   sbyte sVar10;
   int iVar11;
@@ -1116,9 +1116,9 @@ void __thiscall kd_CxSmallSort__MoveEndMarkerUp(CxSmallSort *this,CxSmallSortMar
         pLVar18 = pLVar14[1].mPrev;
                     
         pLVar4 = pLVar18[1].mNext;
-        uVar12 = (int)((int)pLVar4 - uVar3) >> 0x1f;
-        uVar17 = uVar3 & (uVar12 ^ 0xffffffff) | uVar12 & (uint)pLVar4;
-        uVar12 = uVar12 & uVar3 | (uVar12 ^ 0xffffffff) & (uint)pLVar4;
+        uVar12 = (int)((kd_iptr)pLVar4 - uVar3) >> 0x1f;
+        uVar17 = uVar3 & (uVar12 ^ 0xffffffff) | uVar12 & (kd_uptr)pLVar4;
+        uVar12 = uVar12 & uVar3 | (uVar12 ^ 0xffffffff) & (kd_uptr)pLVar4;
         iVar11 = (uVar12 + uVar17 * this->mModelMax) - ((int)((uVar17 + 2) * (uVar17 + 1)) >> 1);
         iVar13 = iVar11 >> 1;
         pMVar5 = (this->mPairState).mArray;
@@ -1134,10 +1134,10 @@ void __thiscall kd_CxSmallSort__MoveEndMarkerUp(CxSmallSort *this,CxSmallSortMar
                     
             pLVar18 = pLVar18[3].mPrev;
             uVar9 = pCVar2->mCullingIndex;
-            uVar15 = 0xffffffff - ((int)((int)pLVar18 - uVar9) >> 0x1f);
-            uVar8 = (uint)pLVar18 & uVar15 | (uVar15 ^ 0xffffffff) & uVar9;
+            uVar15 = 0xffffffff - ((int)((kd_iptr)pLVar18 - uVar9) >> 0x1f);
+            uVar8 = (kd_uptr)pLVar18 & uVar15 | (uVar15 ^ 0xffffffff) & uVar9;
             uVar9 = (uVar8 * (uVar8 + 1) >> 1) +
-                    (uVar15 & uVar9 | (uVar15 ^ 0xffffffff) & (uint)pLVar18);
+                    (uVar15 & uVar9 | (uVar15 ^ 0xffffffff) & (kd_uptr)pLVar18);
             if ((pMVar6->array[uVar9 >> 5] & 1 << ((byte)uVar9 & 0x1f)) != 0) goto LAB_0001165c;
           }
           McdModelPairManagerActivate
@@ -1313,7 +1313,7 @@ LAB_00011a95:
       }
     }
     iVar6 = iVar6 + 1;
-    pCVar5 = (CxSmallSortRep *)&pCVar5->mAABBMarkers[0].mOrdinate;
+    pCVar5 = (CxSmallSortRep *)((char *)&pCVar5->mAABBMarkers[0].mOrdinate + (2 * (int)sizeof(((CxSmallSortRep *)0)->mAABBMarkers[0]) - (int)((char *)&((CxSmallSortRep *)0)->mAABBMarkers[0].mOrdinate - (char *)0)));
     if (2 < iVar6) {
       return;
     }
@@ -1366,7 +1366,7 @@ bool __thiscall kd_CxSmallSort__UpdateAll(CxSmallSort *this,MeReal duration)
       while( true ) {
         (*p_Var2)((McdModel *)pLVar3[1].mPrev,duration);
         McdModelGetAABB(pLVar3[1].mPrev,min,max);
-        kd_CxSmallSort___Update(this,(MeI32)pLVar3[1].mNext,min,max);
+        kd_CxSmallSort___Update(this,(kd_iptr)pLVar3[1].mNext,min,max);
         pLVar3 = pLVar3->mNext;
         if (pLVar3 == &(this->mActiveList).mRoot) break;
         p_Var2 = this->mAABBUpdateFn;

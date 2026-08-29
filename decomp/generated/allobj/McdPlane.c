@@ -62,7 +62,7 @@ McdPlaneID kd_McdPlaneCreate(McdFramework *frame)
 {
   McdPlaneID pMVar1;
 
-  pMVar1 = (MeMemoryAPI.createAligned)(0x10,0x10);
+  pMVar1 = (MeMemoryAPI.createAligned)((int)sizeof(*(McdPlaneID)0),0x10);
   if (pMVar1 != (McdPlaneID)0x0) {
     McdGeometryInit(pMVar1,frame,3);
   }
@@ -93,33 +93,33 @@ void kd_McdPlaneUpdateAABB(McdGeometryInstanceID ins,MeMatrix4Ptr finalTM,MeBool
   ins->max[0] = 3.4028235e+38;
   ins->max[1] = 3.4028235e+38;
   ins->max[2] = 3.4028235e+38;
-  if (*(float *)((int)pvVar1 + 0x20) <= 0.9999995) {
-    if (-0.9999995 <= *(float *)((int)pvVar1 + 0x20)) {
-      if (*(float *)((int)pvVar1 + 0x24) <= 0.9999995) {
-        if (-0.9999995 <= *(float *)((int)pvVar1 + 0x24)) {
-          if (*(float *)((int)pvVar1 + 0x28) <= 0.9999995) {
-            if (*(float *)((int)pvVar1 + 0x28) < -0.9999995) {
-              ins->min[2] = *(MeReal *)((int)pvVar1 + 0x38);
+  if (*(float *)((kd_iptr)pvVar1 + 0x20) <= 0.9999995) {
+    if (-0.9999995 <= *(float *)((kd_iptr)pvVar1 + 0x20)) {
+      if (*(float *)((kd_iptr)pvVar1 + 0x24) <= 0.9999995) {
+        if (-0.9999995 <= *(float *)((kd_iptr)pvVar1 + 0x24)) {
+          if (*(float *)((kd_iptr)pvVar1 + 0x28) <= 0.9999995) {
+            if (*(float *)((kd_iptr)pvVar1 + 0x28) < -0.9999995) {
+              ins->min[2] = *(MeReal *)((kd_iptr)pvVar1 + 0x38);
             }
           }
           else {
-            ins->max[2] = *(MeReal *)((int)pvVar1 + 0x38);
+            ins->max[2] = *(MeReal *)((kd_iptr)pvVar1 + 0x38);
           }
         }
         else {
-          ins->min[1] = *(MeReal *)((int)pvVar1 + 0x34);
+          ins->min[1] = *(MeReal *)((kd_iptr)pvVar1 + 0x34);
         }
       }
       else {
-        ins->max[1] = *(MeReal *)((int)pvVar1 + 0x34);
+        ins->max[1] = *(MeReal *)((kd_iptr)pvVar1 + 0x34);
       }
     }
     else {
-      ins->min[0] = *(MeReal *)((int)pvVar1 + 0x30);
+      ins->min[0] = *(MeReal *)((kd_iptr)pvVar1 + 0x30);
     }
   }
   else {
-    ins->max[0] = *(MeReal *)((int)pvVar1 + 0x30);
+    ins->max[0] = *(MeReal *)((kd_iptr)pvVar1 + 0x30);
   }
   if (finalTM != (MeMatrix4Ptr)0x0) {
                     
@@ -205,8 +205,8 @@ void kd_McdPlaneMaximumPoint(McdGeometryInstanceID ins,MeReal *inDir,MeReal *out
   void *pvVar3;
 
   pvVar3 = McdGeometryInstanceGetTransformPtr(ins);
-  if (inDir[2] * *(float *)((int)pvVar3 + 0x28) +
-      inDir[1] * *(float *)((int)pvVar3 + 0x24) + *inDir * *(float *)((int)pvVar3 + 0x20) <
+  if (inDir[2] * *(float *)((kd_iptr)pvVar3 + 0x28) +
+      inDir[1] * *(float *)((kd_iptr)pvVar3 + 0x24) + *inDir * *(float *)((kd_iptr)pvVar3 + 0x20) <
       0.9999995) {
     fVar1 = inDir[1];
     fVar2 = inDir[2];
@@ -215,9 +215,9 @@ void kd_McdPlaneMaximumPoint(McdGeometryInstanceID ins,MeReal *inDir,MeReal *out
     outPoint[2] = fVar2 * 3.4028235e+38;
   }
   else {
-    *outPoint = *(MeReal *)((int)pvVar3 + 0x30);
-    outPoint[1] = *(MeReal *)((int)pvVar3 + 0x34);
-    outPoint[2] = *(MeReal *)((int)pvVar3 + 0x38);
+    *outPoint = *(MeReal *)((kd_iptr)pvVar3 + 0x30);
+    outPoint[1] = *(MeReal *)((kd_iptr)pvVar3 + 0x34);
+    outPoint[2] = *(MeReal *)((kd_iptr)pvVar3 + 0x38);
   }
   return;
 }

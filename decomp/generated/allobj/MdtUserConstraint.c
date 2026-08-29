@@ -75,7 +75,7 @@ MdtConstraintID kd_MdtUserConstraintQuaConstraint(MdtUserConstraintID j)
 MdtUserConstraintID kd_MdtConstraintDCastUserConstraint(MdtConstraintID c)
 
 {
-  return (MdtUserConstraintID)(((c->head).tag != 0x10) - 1 & (uint)c);
+  return (MdtUserConstraintID)(((c->head).tag != 0x10) - 1 & (kd_uptr)c);
 }
 
 /* ---- MdtUserConstraintGetFunction (exported as kd_MdtUserConstraintGetFunction, asm label "MdtUserConstraintGetFunction") ---- */

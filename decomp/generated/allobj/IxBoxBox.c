@@ -119,7 +119,7 @@ MeBool kd_McdBoxBoxIntersect(McdModelPair *p,McdIntersectResult *result)
     plVar11 = footprint;
     verts = plVar11;
     BoxBoxIntersect(&verts,&tAB,inR1,inR2,pMVar1->mScale);
-    uVar2 = ((int)verts - (int)plVar11 >> 2) * -0x55555555;
+    uVar2 = ((kd_iptr)verts - (kd_iptr)plVar11 >> 2) * -0x55555555;
     result->contactCount = 0;
     pMVar9 = result->contacts;
     result->normal[0] = normal.v[2] * pfVar4[8] + normal.v[0] * *pfVar4 + normal.v[1] * pfVar4[4];
@@ -520,15 +520,15 @@ LAB_000110bd:
       iVar18 = 0;
       do {
                     
-        fVar2 = *(float *)((int)inT12->row[j].v.v + iVar18);
+        fVar2 = *(float *)((kd_iptr)inT12->row[j].v.v + iVar18);
         fVar2 = 1.0 - fVar2 * fVar2;
         if (1e-06 < fVar2) {
                     
           uVar21 = 1 << ((byte)iVar19 & 0x1f) & 3;
           local_d8 = (sbyte)uVar21;
           uVar10 = 1 << local_d8 & 3;
-          fVar4 = *(float *)((int)arot.row[uVar17].v.v + iVar18) * inR2->v[uVar15] +
-                  *(float *)((int)arot.row[uVar15].v.v + iVar18) * inR2->v[uVar17];
+          fVar4 = *(float *)((kd_iptr)arot.row[uVar17].v.v + iVar18) * inR2->v[uVar15] +
+                  *(float *)((kd_iptr)arot.row[uVar15].v.v + iVar18) * inR2->v[uVar17];
           fVar5 = inT12->row[j].v.v[uVar21] * (plVar16->v).v[uVar10] -
                   inT12->row[j].v.v[uVar10] * (plVar16->v).v[uVar21];
           fVar3 = ABS(fVar5);

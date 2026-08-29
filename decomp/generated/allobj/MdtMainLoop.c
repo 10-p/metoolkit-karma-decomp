@@ -100,7 +100,7 @@ LAB_000100a5:
     return;
   }
 LAB_0001007a:
-  if (po->info[iVar7].rowCount <= *(int *)((int)pcbdata + 0x18)) {
+  if (po->info[iVar7].rowCount <= *(int *)((kd_iptr)pcbdata + 0x18)) {
     return;
   }
   MdtLODLastPartition(po,pcbdata);
@@ -754,7 +754,7 @@ uint kd_MdtUnpackForces(MdtKeaForcePair *force,uint partitionindex,MdtPartitionO
   float fVar1;
   float fVar2;
   float fVar3;
-  int iVar4;
+  kd_iptr iVar4;
   void *pvVar5;
   MdtKeaForcePair *pMVar6;
   uint uVar7;
@@ -792,71 +792,71 @@ uint kd_MdtUnpackForces(MdtKeaForcePair *force,uint partitionindex,MdtPartitionO
       }
       else {
                     
-        iVar4 = *(int *)((int)pvVar5 + 0x164);
-        *(undefined4 *)((int)pvVar5 + 0x68) = 0;
-        *(undefined4 *)((int)pvVar5 + 0x88) = 0;
-        *(undefined4 *)((int)pvVar5 + 0x78) = 0;
-        *(undefined4 *)((int)pvVar5 + 0x98) = 0;
-        *(undefined4 *)((int)pvVar5 + 0x6c) = 0;
-        *(undefined4 *)((int)pvVar5 + 0x8c) = 0;
-        *(undefined4 *)((int)pvVar5 + 0x7c) = 0;
-        *(undefined4 *)((int)pvVar5 + 0x9c) = 0;
-        *(undefined4 *)((int)pvVar5 + 0x70) = 0;
-        *(undefined4 *)((int)pvVar5 + 0x90) = 0;
-        *(undefined4 *)((int)pvVar5 + 0x80) = 0;
-        *(undefined4 *)((int)pvVar5 + 0xa0) = 0;
-        *(undefined4 *)((int)pvVar5 + 0x74) = 0;
-        *(undefined4 *)((int)pvVar5 + 0x94) = 0;
-        *(undefined4 *)((int)pvVar5 + 0x84) = 0;
-        *(undefined4 *)((int)pvVar5 + 0xa4) = 0;
-        *(undefined4 *)((int)pvVar5 + 0x170) = 0;
+        iVar4 = *(kd_iptr *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContactGroup *)0)->first - (char *)0)));
+        *(undefined4 *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContactGroup *)0)->head.resultForce[0][0] - (char *)0))) = 0;
+        *(undefined4 *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContactGroup *)0)->head.resultTorque[0][0] - (char *)0))) = 0;
+        *(undefined4 *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContactGroup *)0)->head.resultForce[1][0] - (char *)0))) = 0;
+        *(undefined4 *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContactGroup *)0)->head.resultTorque[1][0] - (char *)0))) = 0;
+        *(undefined4 *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContactGroup *)0)->head.resultForce[0][1] - (char *)0))) = 0;
+        *(undefined4 *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContactGroup *)0)->head.resultTorque[0][1] - (char *)0))) = 0;
+        *(undefined4 *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContactGroup *)0)->head.resultForce[1][1] - (char *)0))) = 0;
+        *(undefined4 *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContactGroup *)0)->head.resultTorque[1][1] - (char *)0))) = 0;
+        *(undefined4 *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContactGroup *)0)->head.resultForce[0][2] - (char *)0))) = 0;
+        *(undefined4 *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContactGroup *)0)->head.resultTorque[0][2] - (char *)0))) = 0;
+        *(undefined4 *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContactGroup *)0)->head.resultForce[1][2] - (char *)0))) = 0;
+        *(undefined4 *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContactGroup *)0)->head.resultTorque[1][2] - (char *)0))) = 0;
+        *(undefined4 *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContactGroup *)0)->head.resultForce[0][3] - (char *)0))) = 0;
+        *(undefined4 *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContactGroup *)0)->head.resultTorque[0][3] - (char *)0))) = 0;
+        *(undefined4 *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContactGroup *)0)->head.resultForce[1][3] - (char *)0))) = 0;
+        *(undefined4 *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContactGroup *)0)->head.resultTorque[1][3] - (char *)0))) = 0;
+        *(undefined4 *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContactGroup *)0)->normalForce - (char *)0))) = 0;
         uVar7 = uVar8;
-        for (; iVar4 != 0; iVar4 = *(int *)(iVar4 + 0x1dc)) {
+        for (; iVar4 != 0; iVar4 = *(kd_iptr *)(iVar4 + ((int)((char *)&((struct MdtContact *)0)->nextContact - (char *)0)))) {
           pMVar6 = force + uVar7;
           fVar1 = (pMVar6->primary_body).force[0];
-          *(float *)(iVar4 + 0x68) = fVar1;
+          *(float *)(iVar4 + ((int)((char *)&((struct MdtContact *)0)->head.resultForce[0][0] - (char *)0))) = fVar1;
           fVar2 = (pMVar6->primary_body).torque[0];
-          *(float *)(iVar4 + 0x88) = fVar2;
-          *(MeReal *)(iVar4 + 0x78) = (pMVar6->secondary_body).force[0];
-          fVar3 = *(float *)((int)pvVar5 + 0x68);
-          *(MeReal *)(iVar4 + 0x98) = (pMVar6->secondary_body).torque[0];
-          *(float *)((int)pvVar5 + 0x68) = fVar1 + fVar3;
-          fVar1 = *(float *)(iVar4 + 0x78);
-          *(float *)((int)pvVar5 + 0x88) = fVar2 + *(float *)((int)pvVar5 + 0x88);
-          *(float *)((int)pvVar5 + 0x78) = fVar1 + *(float *)((int)pvVar5 + 0x78);
-          *(float *)((int)pvVar5 + 0x98) = *(float *)(iVar4 + 0x98) + *(float *)((int)pvVar5 + 0x98)
+          *(float *)(iVar4 + ((int)((char *)&((struct MdtContact *)0)->head.resultTorque[0][0] - (char *)0))) = fVar2;
+          *(MeReal *)(iVar4 + ((int)((char *)&((struct MdtContact *)0)->head.resultForce[1][0] - (char *)0))) = (pMVar6->secondary_body).force[0];
+          fVar3 = *(float *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContactGroup *)0)->head.resultForce[0][0] - (char *)0)));
+          *(MeReal *)(iVar4 + ((int)((char *)&((struct MdtContact *)0)->head.resultTorque[1][0] - (char *)0))) = (pMVar6->secondary_body).torque[0];
+          *(float *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContactGroup *)0)->head.resultForce[0][0] - (char *)0))) = fVar1 + fVar3;
+          fVar1 = *(float *)(iVar4 + ((int)((char *)&((struct MdtContact *)0)->head.resultForce[1][0] - (char *)0)));
+          *(float *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContactGroup *)0)->head.resultTorque[0][0] - (char *)0))) = fVar2 + *(float *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContactGroup *)0)->head.resultTorque[0][0] - (char *)0)));
+          *(float *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContactGroup *)0)->head.resultForce[1][0] - (char *)0))) = fVar1 + *(float *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContactGroup *)0)->head.resultForce[1][0] - (char *)0)));
+          *(float *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContactGroup *)0)->head.resultTorque[1][0] - (char *)0))) = *(float *)(iVar4 + ((int)((char *)&((struct MdtContact *)0)->head.resultTorque[1][0] - (char *)0))) + *(float *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContactGroup *)0)->head.resultTorque[1][0] - (char *)0)))
           ;
           fVar1 = (pMVar6->primary_body).force[1];
-          *(float *)(iVar4 + 0x6c) = fVar1;
+          *(float *)(iVar4 + ((int)((char *)&((struct MdtContact *)0)->head.resultForce[0][1] - (char *)0))) = fVar1;
           fVar2 = (pMVar6->primary_body).torque[1];
-          *(float *)(iVar4 + 0x8c) = fVar2;
-          *(MeReal *)(iVar4 + 0x7c) = (pMVar6->secondary_body).force[1];
-          fVar3 = *(float *)((int)pvVar5 + 0x6c);
-          *(MeReal *)(iVar4 + 0x9c) = (pMVar6->secondary_body).torque[1];
-          *(float *)((int)pvVar5 + 0x6c) = fVar1 + fVar3;
-          fVar1 = *(float *)(iVar4 + 0x7c);
-          *(float *)((int)pvVar5 + 0x8c) = fVar2 + *(float *)((int)pvVar5 + 0x8c);
-          *(float *)((int)pvVar5 + 0x7c) = fVar1 + *(float *)((int)pvVar5 + 0x7c);
-          *(float *)((int)pvVar5 + 0x9c) = *(float *)(iVar4 + 0x9c) + *(float *)((int)pvVar5 + 0x9c)
+          *(float *)(iVar4 + ((int)((char *)&((struct MdtContact *)0)->head.resultTorque[0][1] - (char *)0))) = fVar2;
+          *(MeReal *)(iVar4 + ((int)((char *)&((struct MdtContact *)0)->head.resultForce[1][1] - (char *)0))) = (pMVar6->secondary_body).force[1];
+          fVar3 = *(float *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContactGroup *)0)->head.resultForce[0][1] - (char *)0)));
+          *(MeReal *)(iVar4 + ((int)((char *)&((struct MdtContact *)0)->head.resultTorque[1][1] - (char *)0))) = (pMVar6->secondary_body).torque[1];
+          *(float *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContactGroup *)0)->head.resultForce[0][1] - (char *)0))) = fVar1 + fVar3;
+          fVar1 = *(float *)(iVar4 + ((int)((char *)&((struct MdtContact *)0)->head.resultForce[1][1] - (char *)0)));
+          *(float *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContactGroup *)0)->head.resultTorque[0][1] - (char *)0))) = fVar2 + *(float *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContactGroup *)0)->head.resultTorque[0][1] - (char *)0)));
+          *(float *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContactGroup *)0)->head.resultForce[1][1] - (char *)0))) = fVar1 + *(float *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContactGroup *)0)->head.resultForce[1][1] - (char *)0)));
+          *(float *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContactGroup *)0)->head.resultTorque[1][1] - (char *)0))) = *(float *)(iVar4 + ((int)((char *)&((struct MdtContact *)0)->head.resultTorque[1][1] - (char *)0))) + *(float *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContactGroup *)0)->head.resultTorque[1][1] - (char *)0)))
           ;
           fVar1 = (pMVar6->primary_body).force[2];
-          *(float *)(iVar4 + 0x70) = fVar1;
+          *(float *)(iVar4 + ((int)((char *)&((struct MdtContact *)0)->head.resultForce[0][2] - (char *)0))) = fVar1;
           fVar2 = (pMVar6->primary_body).torque[2];
-          *(float *)(iVar4 + 0x90) = fVar2;
-          *(MeReal *)(iVar4 + 0x80) = (pMVar6->secondary_body).force[2];
-          fVar3 = *(float *)((int)pvVar5 + 0x70);
-          *(MeReal *)(iVar4 + 0xa0) = (pMVar6->secondary_body).torque[2];
-          *(float *)((int)pvVar5 + 0x70) = fVar1 + fVar3;
-          fVar1 = *(float *)(iVar4 + 0x80);
-          *(float *)((int)pvVar5 + 0x90) = fVar2 + *(float *)((int)pvVar5 + 0x90);
-          *(float *)((int)pvVar5 + 0x80) = fVar1 + *(float *)((int)pvVar5 + 0x80);
-          *(float *)((int)pvVar5 + 0xa0) = *(float *)(iVar4 + 0xa0) + *(float *)((int)pvVar5 + 0xa0)
+          *(float *)(iVar4 + ((int)((char *)&((struct MdtContact *)0)->head.resultTorque[0][2] - (char *)0))) = fVar2;
+          *(MeReal *)(iVar4 + ((int)((char *)&((struct MdtContact *)0)->head.resultForce[1][2] - (char *)0))) = (pMVar6->secondary_body).force[2];
+          fVar3 = *(float *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContactGroup *)0)->head.resultForce[0][2] - (char *)0)));
+          *(MeReal *)(iVar4 + ((int)((char *)&((struct MdtContact *)0)->head.resultTorque[1][2] - (char *)0))) = (pMVar6->secondary_body).torque[2];
+          *(float *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContactGroup *)0)->head.resultForce[0][2] - (char *)0))) = fVar1 + fVar3;
+          fVar1 = *(float *)(iVar4 + ((int)((char *)&((struct MdtContact *)0)->head.resultForce[1][2] - (char *)0)));
+          *(float *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContactGroup *)0)->head.resultTorque[0][2] - (char *)0))) = fVar2 + *(float *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContactGroup *)0)->head.resultTorque[0][2] - (char *)0)));
+          *(float *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContactGroup *)0)->head.resultForce[1][2] - (char *)0))) = fVar1 + *(float *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContactGroup *)0)->head.resultForce[1][2] - (char *)0)));
+          *(float *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContactGroup *)0)->head.resultTorque[1][2] - (char *)0))) = *(float *)(iVar4 + ((int)((char *)&((struct MdtContact *)0)->head.resultTorque[1][2] - (char *)0))) + *(float *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContactGroup *)0)->head.resultTorque[1][2] - (char *)0)))
           ;
-          *(float *)((int)pvVar5 + 0x170) =
-               *(float *)(iVar4 + 0x174) * *(float *)(iVar4 + 0x70) +
-               *(float *)(iVar4 + 0x170) * *(float *)(iVar4 + 0x6c) +
-               *(float *)(iVar4 + 0x16c) * *(float *)(iVar4 + 0x68) +
-               *(float *)((int)pvVar5 + 0x170);
+          *(float *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContactGroup *)0)->normalForce - (char *)0))) =
+               *(float *)(iVar4 + ((int)((char *)&((struct MdtContact *)0)->normal[2] - (char *)0))) * *(float *)(iVar4 + ((int)((char *)&((struct MdtContact *)0)->head.resultForce[0][2] - (char *)0))) +
+               *(float *)(iVar4 + ((int)((char *)&((struct MdtContact *)0)->normal[1] - (char *)0))) * *(float *)(iVar4 + ((int)((char *)&((struct MdtContact *)0)->head.resultForce[0][1] - (char *)0))) +
+               *(float *)(iVar4 + ((int)((char *)&((struct MdtContact *)0)->normal[0] - (char *)0))) * *(float *)(iVar4 + ((int)((char *)&((struct MdtContact *)0)->head.resultForce[0][0] - (char *)0))) +
+               *(float *)((kd_iptr)pvVar5 + ((int)((char *)&((struct MdtContactGroup *)0)->normalForce - (char *)0)));
           uVar7 = uVar7 + 1;
         }
       }
@@ -895,7 +895,7 @@ kd_MdtKeaConstraintsCreateFromChunk(MeChunk *chunk,int maxPartitions,int maxKeaC
   int maxRowsIncPadding;
 
   iVar1 = maxRows + (maxPartitions + maxKeaConstraints) * 4;
-  iVar2 = maxPartitions * 0xc + 0x5c;
+  iVar2 = maxPartitions * 0xc + (int)sizeof(MdtKeaConstraints);
   if (0 < maxKeaConstraints) {
     jbodySize = maxKeaConstraints * 8;
     if ((jbodySize & 0x3fU) != 0) {
@@ -966,29 +966,29 @@ kd_MdtKeaConstraintsCreateFromChunk(MeChunk *chunk,int maxPartitions,int maxKeaC
     pMVar3->max_rows_exc_padding = maxRows;
     pMVar3->max_rows_inc_padding = iVar1;
     paiVar7 = (MdtKeaBodyIndexPair *)
-              (maxPartitions * 4 + 0x3f + (int)(piVar8 + maxPartitions) & 0xffffffc0);
+              (maxPartitions * 4 + 0x3f + (kd_iptr)(piVar8 + maxPartitions) & (0xffffffc0 | ~(kd_uptr)0xffffffffU));
     pMVar3->Jbody = paiVar7;
-    piVar8 = (int *)((int)*paiVar7 + jbodySize);
+    piVar8 = (int *)((kd_iptr)*paiVar7 + jbodySize);
     pMVar3->Jofs = piVar8;
-    piVar8 = (int *)((int)piVar8 + jofsSize);
+    piVar8 = (int *)((kd_iptr)piVar8 + jofsSize);
     pMVar3->Jsize = piVar8;
-    pMVar5 = (MeReal *)(jsizeSize + 0x3f + (int)piVar8 & 0xffffffc0);
+    pMVar5 = (MeReal *)(jsizeSize + 0x3f + (kd_iptr)piVar8 & (0xffffffc0 | ~(kd_uptr)0xffffffffU));
     pMVar3->xgamma = pMVar5;
-    pMVar5 = (MeReal *)(xgammaSize + 0x3f + (int)pMVar5 & 0xffffffc0);
+    pMVar5 = (MeReal *)(xgammaSize + 0x3f + (kd_iptr)pMVar5 & (0xffffffc0 | ~(kd_uptr)0xffffffffU));
     pMVar3->slipfactor = pMVar5;
-    pMVar6 = (MdtKeaForcePair *)(slipfactorSize + 0x3f + (int)pMVar5 & 0xffffffc0);
+    pMVar6 = (MdtKeaForcePair *)(slipfactorSize + 0x3f + (kd_iptr)pMVar5 & (0xffffffc0 | ~(kd_uptr)0xffffffffU));
     pMVar3->force = pMVar6;
-    pMVar5 = (MeReal *)((int)(pMVar6->secondary_body).torque + forceSize + 0xf & 0xffffffc0);
+    pMVar5 = (MeReal *)((kd_iptr)(pMVar6->secondary_body).torque + forceSize + 0xf & (0xffffffc0 | ~(kd_uptr)0xffffffffU));
     pMVar3->lambda = pMVar5;
-    pMVar5 = (MeReal *)(lambdaSize + 0x3f + (int)pMVar5 & 0xffffffc0);
+    pMVar5 = (MeReal *)(lambdaSize + 0x3f + (kd_iptr)pMVar5 & (0xffffffc0 | ~(kd_uptr)0xffffffffU));
     pMVar3->hi = pMVar5;
-    pMVar5 = (MeReal *)(hiSize + 0x3f + (int)pMVar5 & 0xffffffc0);
+    pMVar5 = (MeReal *)(hiSize + 0x3f + (kd_iptr)pMVar5 & (0xffffffc0 | ~(kd_uptr)0xffffffffU));
     pMVar3->lo = pMVar5;
-    pMVar5 = (MeReal *)(loSize + 0x3f + (int)pMVar5 & 0xffffffc0);
+    pMVar5 = (MeReal *)(loSize + 0x3f + (kd_iptr)pMVar5 & (0xffffffc0 | ~(kd_uptr)0xffffffffU));
     pMVar3->c = pMVar5;
-    pMVar5 = (MeReal *)(cSize + 0x3f + (int)pMVar5 & 0xffffffc0);
+    pMVar5 = (MeReal *)(cSize + 0x3f + (kd_iptr)pMVar5 & (0xffffffc0 | ~(kd_uptr)0xffffffffU));
     pMVar3->xi = pMVar5;
-    pMVar3->Jstore = (MdtKeaJBlockPair *)(xiSize + 0x3f + (int)pMVar5 & 0xffffffc0);
+    pMVar3->Jstore = (MdtKeaJBlockPair *)(xiSize + 0x3f + (kd_iptr)pMVar5 & (0xffffffc0 | ~(kd_uptr)0xffffffffU));
   }
   return pMVar3;
 }

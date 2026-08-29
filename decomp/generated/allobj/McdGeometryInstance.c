@@ -132,7 +132,7 @@ void kd_McdGeometryInstanceSetGeometry(McdGeometryInstanceID ins,McdGeometryID g
   }
   pvVar4 = McdGeometryGetFramework(geom);
                     
-  pvVar4 = (void *)((int)pvVar4 + 0x60);
+  pvVar4 = (void *)((kd_iptr)pvVar4 + ((int)((char *)&((struct _McdFramework *)0)->instancePool - (char *)0)));
   p_Var5 = (MePoolAPI.getStruct)(pvVar4);
   p_Var5->min[0] = 3.4028235e+38;
   p_Var5->mMaterial = 0;

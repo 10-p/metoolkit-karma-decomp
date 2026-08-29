@@ -131,10 +131,10 @@ MeReal kd_SegmentConvexHullSep
   iVar13 = 0;
   iVar7 = convex->numEdge;
   if (0 < iVar7) {
-    local_a8 = 0;
+    local_a8 = 0 * (int)sizeof(McdCnvEdge);
     do {
                     
-      pfVar12 = (float *)((int)&convex->edge->invLength + local_a8);
+      pfVar12 = (float *)((kd_iptr)&convex->edge->invLength + local_a8);
       if ((int)pfVar12[3] <= (int)pfVar12[4]) {
         pMVar11 = convex->vertex + (int)pfVar12[1];
         pMVar10 = convex->vertex + (int)pfVar12[2];
@@ -225,7 +225,7 @@ MeReal kd_SegmentConvexHullSep
         }
       }
       iVar13 = iVar13 + 1;
-      local_a8 = local_a8 + 0x14;
+      local_a8 = local_a8 + 1 * (int)sizeof(McdCnvEdge);
     } while (iVar13 < iVar7);
   }
   *regionType = closestRegionType;

@@ -79,7 +79,7 @@ static void MePoolFixedInit(MePool *u,int poolSize,int structSize,int alignment)
       (u->u).fixed.createdAligned = 1;
       (u->u).fixed.structArray = pvVar1;
     }
-    ppvVar2 = (MeMemoryAPI.create)(poolSize << 2);
+    ppvVar2 = (MeMemoryAPI.create)((poolSize) * (int)sizeof(*(void **)0));
     (u->u).fixed.freeStructStack = ppvVar2;
     iVar3 = structSize;
   }
@@ -93,7 +93,7 @@ static void MePoolFixedInit(MePool *u,int poolSize,int structSize,int alignment)
     do {
       (u->u).fixed.freeStructStack[iVar3] = pvVar1;
       iVar3 = iVar3 + 1;
-      pvVar1 = (void *)((int)pvVar1 + (u->u).fixed.structSize);
+      pvVar1 = (void *)((kd_iptr)pvVar1 + (u->u).fixed.structSize);
     } while (iVar3 < (u->u).fixed.poolSize);
   }
   (u->u).fixed.nextFreeStruct = 0;
@@ -130,7 +130,7 @@ static void MePoolFixedReset(MePool *u)
     do {
       (u->u).fixed.freeStructStack[iVar2] = pvVar1;
       iVar2 = iVar2 + 1;
-      pvVar1 = (void *)((int)pvVar1 + (u->u).fixed.structSize);
+      pvVar1 = (void *)((kd_iptr)pvVar1 + (u->u).fixed.structSize);
     } while (iVar2 < (u->u).fixed.poolSize);
   }
   return;
@@ -251,7 +251,7 @@ static void * MePoolMallocGetStruct(MePool *u)
 static void MePoolMallocPutStruct(MePool *u,void *s)
 
 {
-  int iVar1;
+  kd_iptr iVar1;
   code *pcVar2;
 
   if (s != (void *)0x0) {
@@ -273,7 +273,7 @@ static int MePoolMallocGetUsed(MePool *u)
 
 {
                     
-  return (int)(u->u).fixed.structArray;
+  return (kd_iptr)(u->u).fixed.structArray;
 }
 
 /* ---- MePoolMallocGetUnused (static) ---- */

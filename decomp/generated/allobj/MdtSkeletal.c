@@ -145,7 +145,7 @@ MdtConstraintID kd_MdtSkeletalQuaConstraint(MdtSkeletalID j)
 MdtSkeletalID kd_MdtConstraintDCastSkeletal(MdtConstraintID c)
 
 {
-  return (MdtSkeletalID)(((c->head).tag != 9) - 1 & (uint)c);
+  return (MdtSkeletalID)(((c->head).tag != 9) - 1 & (kd_uptr)c);
 }
 
 /* ---- MdtSkeletalGetConeOption (exported as kd_MdtSkeletalGetConeOption, asm label "MdtSkeletalGetConeOption") ---- */

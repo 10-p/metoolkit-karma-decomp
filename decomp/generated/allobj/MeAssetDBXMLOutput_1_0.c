@@ -71,7 +71,7 @@ MeXMLElementID kd_KaFileWriteXML_1_0(MeXMLOutput *op,MeFAsset *fa,MeXMLElementID
     void *kd_frameslot_buffer_iVar8_iVar11_iVar10_iVar3_m20[2];
 
   bool bVar1;
-  MeXMLElementID MVar2;
+  kd_iptr MVar2;
   int iVar3;
   void *pvVar4;
   uint uVar5;
@@ -104,7 +104,7 @@ MeXMLElementID kd_KaFileWriteXML_1_0(MeXMLOutput *op,MeFAsset *fa,MeXMLElementID
   void *pvStack_430;
   int local_42c;
   int count;
-  int i;
+  kd_iptr i;
   MeXMLElementID asset;
   char buffer [1024];
 
@@ -141,12 +141,12 @@ MeXMLElementID kd_KaFileWriteXML_1_0(MeXMLOutput *op,MeFAsset *fa,MeXMLElementID
   local_440 = 0x100e0;
   uVar5 = MeFAssetGetGeometryCount(fa);
   iVar3 = -(uVar5 * 4 + 0xf & 0xfffffff0);
-  *(uint *)((int)&pvStack_430) = uVar5;
+  *(uint *)((kd_iptr)&pvStack_430) = uVar5;
   *(uint *)((kd_frameslot_buffer_iVar3_m18)) = uVar5;
-  *(int *)((kd_frameslot_buffer_iVar3_m1c)) = (int)&local_42c;
+  *(int *)((kd_frameslot_buffer_iVar3_m1c)) = (kd_iptr)&local_42c;
   *(MeFAsset **)((kd_frameslot_buffer_iVar3_m20)) = fa;
   iVar10 = 0;
-  *(undefined4 *)((int)&local_440) = 0x10101;
+  *(undefined4 *)((kd_iptr)&local_440) = 0x10101;
   MeFAssetGetGeometrySortedByName
             (*(void **)((kd_frameslot_buffer_iVar3_m20)),*(void **)((kd_frameslot_buffer_iVar3_m1c)));
   MVar2 = asset;
@@ -155,13 +155,13 @@ MeXMLElementID kd_KaFileWriteXML_1_0(MeXMLOutput *op,MeFAsset *fa,MeXMLElementID
     if ((int)uVar5 < 2) {
 LAB_0001011a:
       MVar2 = asset;
-      *(uint *)((int)&pvStack_430) = uVar6;
+      *(uint *)((kd_iptr)&pvStack_430) = uVar6;
       *(MeXMLElementID *)((kd_frameslot_buffer_iVar3_m18)) = MVar2;
       iVar11 = iVar10 * 4;
       iVar10 = iVar10 + 1;
-      *(undefined4 *)((kd_frameslot_buffer_iVar3_m1c)) = *(undefined4 *)((int)&local_42c);
+      *(undefined4 *)((kd_frameslot_buffer_iVar3_m1c)) = *(undefined4 *)((kd_iptr)&local_42c);
       *(MeXMLOutput **)((kd_frameslot_buffer_iVar3_m20)) = op;
-      *(undefined4 *)((int)&local_440) = 0x10130;
+      *(undefined4 *)((kd_iptr)&local_440) = 0x10130;
       MeFGeometryWriteXML_1_0
                 (*(MeXMLOutput **)((kd_frameslot_buffer_iVar3_m20)),*(MeFGeometry **)((kd_frameslot_buffer_iVar3_m1c))
                  ,*(MeXMLElementID *)((kd_frameslot_buffer_iVar3_m18)));
@@ -173,11 +173,11 @@ LAB_0001011a:
       if (uVar6 != 0) {
         if (1 < uVar6) {
           if (2 < uVar6) {
-            *(uint *)((int)&pvStack_430) = uVar6;
+            *(uint *)((kd_iptr)&pvStack_430) = uVar6;
             *(MeXMLElementID *)((kd_frameslot_buffer_iVar3_m18)) = MVar2;
-            *(undefined4 *)((kd_frameslot_buffer_iVar3_m1c)) = *(undefined4 *)((int)&local_42c);
+            *(undefined4 *)((kd_frameslot_buffer_iVar3_m1c)) = *(undefined4 *)((kd_iptr)&local_42c);
             *(MeXMLOutput **)((kd_frameslot_buffer_iVar3_m20)) = op;
-            *(undefined4 *)((int)&local_440) = 0x107db;
+            *(undefined4 *)((kd_iptr)&local_440) = 0x107db;
             MeFGeometryWriteXML_1_0
                       (*(MeXMLOutput **)((kd_frameslot_buffer_iVar3_m20)),
                        *(MeFGeometry **)((kd_frameslot_buffer_iVar3_m1c)),
@@ -185,13 +185,13 @@ LAB_0001011a:
             uVar9 = extraout_EDX_06;
           }
           uVar6 = (uint)(2 < uVar6);
-          *(undefined4 *)((int)&pvStack_430) = uVar9;
+          *(undefined4 *)((kd_iptr)&pvStack_430) = uVar9;
           *(MeXMLElementID *)((kd_frameslot_buffer_iVar3_m18)) = asset;
           iVar10 = uVar6 + 1;
           *(undefined4 *)((kd_frameslot_buffer_iVar3_m1c)) =
-               *(undefined4 *)((int)&local_42c + uVar6 * 4);
+               *(undefined4 *)((kd_iptr)&local_42c + uVar6 * 4);
           *(MeXMLOutput **)((kd_frameslot_buffer_iVar3_m20)) = op;
-          *(undefined4 *)((int)&local_440) = 0x107ba;
+          *(undefined4 *)((kd_iptr)&local_440) = 0x107ba;
           uVar6 = MeFGeometryWriteXML_1_0
                             (*(MeXMLOutput **)((kd_frameslot_buffer_iVar3_m20)),
                              *(MeFGeometry **)((kd_frameslot_buffer_iVar3_m1c)),
@@ -201,26 +201,26 @@ LAB_0001011a:
       }
     }
     do {
-      *(undefined4 *)((int)&pvStack_430) = uVar9;
+      *(undefined4 *)((kd_iptr)&pvStack_430) = uVar9;
       *(MeXMLElementID *)((kd_frameslot_buffer_iVar3_m18)) = asset;
       *(undefined4 *)((kd_frameslot_buffer_iVar3_m1c)) =
-           *(undefined4 *)((int)&local_42c * 4);
+           *(undefined4 *)((kd_iptr)&local_42c * 4);
       *(MeXMLOutput **)((kd_frameslot_buffer_iVar3_m20)) = op;
-      *(undefined4 *)((int)&local_440) = 0x1014c;
+      *(undefined4 *)((kd_iptr)&local_440) = 0x1014c;
       MeFGeometryWriteXML_1_0
                 (*(MeXMLOutput **)((kd_frameslot_buffer_iVar3_m20)),*(MeFGeometry **)((kd_frameslot_buffer_iVar3_m1c))
                  ,*(MeXMLElementID *)((kd_frameslot_buffer_iVar3_m18)));
       *(MeXMLElementID *)((kd_frameslot_buffer_iVar3_m18)) = asset;
-      *(undefined4 *)((kd_frameslot_buffer_iVar3_m1c)) = *(undefined4 *)((int)&count * 4);
+      *(undefined4 *)((kd_frameslot_buffer_iVar3_m1c)) = *(undefined4 *)((kd_iptr)&count * 4);
       *(MeXMLOutput **)((kd_frameslot_buffer_iVar3_m20)) = op;
-      *(undefined4 *)((int)&local_440) = 0x10164;
+      *(undefined4 *)((kd_iptr)&local_440) = 0x10164;
       MeFGeometryWriteXML_1_0
                 (*(MeXMLOutput **)((kd_frameslot_buffer_iVar3_m20)),*(MeFGeometry **)((kd_frameslot_buffer_iVar3_m1c))
                  ,*(MeXMLElementID *)((kd_frameslot_buffer_iVar3_m18)));
       *(MeXMLElementID *)((kd_frameslot_buffer_iVar3_m18)) = asset;
-      *(undefined4 *)((kd_frameslot_buffer_iVar3_m1c)) = *(undefined4 *)((int)&i * 4);
+      *(undefined4 *)((kd_frameslot_buffer_iVar3_m1c)) = *(undefined4 *)((kd_iptr)&i * 4);
       *(MeXMLOutput **)((kd_frameslot_buffer_iVar3_m20)) = op;
-      *(undefined4 *)((int)&local_440) = 0x1017c;
+      *(undefined4 *)((kd_iptr)&local_440) = 0x1017c;
       MeFGeometryWriteXML_1_0
                 (*(MeXMLOutput **)((kd_frameslot_buffer_iVar3_m20)),*(MeFGeometry **)((kd_frameslot_buffer_iVar3_m1c))
                  ,*(MeXMLElementID *)((kd_frameslot_buffer_iVar3_m18)));
@@ -229,7 +229,7 @@ LAB_0001011a:
       iVar10 = iVar10 + 4;
       *(undefined4 *)((kd_frameslot_buffer_iVar3_m1c)) = *(undefined4 *)(buffer + iVar11 + iVar3 + -4);
       *(MeXMLOutput **)((kd_frameslot_buffer_iVar3_m20)) = op;
-      *(undefined4 *)((int)&local_440) = 0x10197;
+      *(undefined4 *)((kd_iptr)&local_440) = 0x10197;
       MeFGeometryWriteXML_1_0
                 (*(MeXMLOutput **)((kd_frameslot_buffer_iVar3_m20)),*(MeFGeometry **)((kd_frameslot_buffer_iVar3_m1c))
                  ,*(MeXMLElementID *)((kd_frameslot_buffer_iVar3_m18)));
@@ -240,14 +240,14 @@ LAB_0001019e:
                     
   iVar11 = 0;
   *(MeFAsset **)((kd_frameslot_buffer_iVar3_m20)) = fa;
-  *(undefined4 *)((int)&local_440) = 0x101ac;
+  *(undefined4 *)((kd_iptr)&local_440) = 0x101ac;
   uVar5 = MeFAssetGetModelCount(*(void **)((kd_frameslot_buffer_iVar3_m20)));
   iVar10 = -(uVar5 * 4 + 0xf & 0xfffffff0);
-  *(uint *)((int)&pvStack_430) = uVar5;
+  *(uint *)((kd_iptr)&pvStack_430) = uVar5;
   *(uint *)((kd_frameslot_buffer_iVar10_iVar3_m18)) = uVar5;
-  *(int *)((kd_frameslot_buffer_iVar10_iVar3_m1c)) = (int)&local_42c + iVar3;
+  *(int *)((kd_frameslot_buffer_iVar10_iVar3_m1c)) = (kd_iptr)&local_42c + iVar3;
   *(MeFAsset **)((kd_frameslot_buffer_iVar10_iVar3_m20)) = fa;
-  *(undefined4 *)((int)&local_440) = 0x101cb;
+  *(undefined4 *)((kd_iptr)&local_440) = 0x101cb;
   MeFAssetGetModelsSortedByName
             (*(void **)((kd_frameslot_buffer_iVar10_iVar3_m20)),*(void **)((kd_frameslot_buffer_iVar10_iVar3_m1c))
             );
@@ -258,14 +258,14 @@ LAB_0001019e:
     if ((int)uVar5 < 2) {
 LAB_000101e4:
       MVar2 = asset;
-      *(undefined4 *)((int)&pvStack_430) = uVar9;
+      *(undefined4 *)((kd_iptr)&pvStack_430) = uVar9;
       *(MeXMLElementID *)((kd_frameslot_buffer_iVar10_iVar3_m18)) = MVar2;
       iVar8 = iVar11 * 4;
       iVar11 = iVar11 + 1;
       *(undefined4 *)((kd_frameslot_buffer_iVar10_iVar3_m1c)) =
-           *(undefined4 *)((int)&local_42c);
+           *(undefined4 *)((kd_iptr)&local_42c);
       *(MeXMLOutput **)((kd_frameslot_buffer_iVar10_iVar3_m20)) = op;
-      *(undefined4 *)((int)&local_440) = 0x101fa;
+      *(undefined4 *)((kd_iptr)&local_440) = 0x101fa;
       MVar7 = MeFModelWriteXML_1_0
                         (*(MeXMLOutput **)((kd_frameslot_buffer_iVar10_iVar3_m20)),
                          *(MeFModel **)((kd_frameslot_buffer_iVar10_iVar3_m1c)),
@@ -278,12 +278,12 @@ LAB_000101e4:
         if (1 < uVar6) {
           bVar1 = 2 < uVar6;
           if (bVar1) {
-            *(undefined4 *)((int)&pvStack_430) = extraout_ECX;
+            *(undefined4 *)((kd_iptr)&pvStack_430) = extraout_ECX;
             *(MeXMLElementID *)((kd_frameslot_buffer_iVar10_iVar3_m18)) = MVar2;
             *(undefined4 *)((kd_frameslot_buffer_iVar10_iVar3_m1c)) =
-                 *(undefined4 *)((int)&local_42c);
+                 *(undefined4 *)((kd_iptr)&local_42c);
             *(MeXMLOutput **)((kd_frameslot_buffer_iVar10_iVar3_m20)) = op;
-            *(undefined4 *)((int)&local_440) = 0x10789;
+            *(undefined4 *)((kd_iptr)&local_440) = 0x10789;
             uVar6 = MeFModelWriteXML_1_0
                               (*(MeXMLOutput **)((kd_frameslot_buffer_iVar10_iVar3_m20)),
                                *(MeFModel **)((kd_frameslot_buffer_iVar10_iVar3_m1c)),
@@ -291,13 +291,13 @@ LAB_000101e4:
           }
           MVar2 = asset;
           uVar13 = (uint)bVar1;
-          *(uint *)((int)&pvStack_430) = uVar6;
+          *(uint *)((kd_iptr)&pvStack_430) = uVar6;
           *(MeXMLElementID *)((kd_frameslot_buffer_iVar10_iVar3_m18)) = MVar2;
           iVar11 = uVar13 + 1;
           *(undefined4 *)((kd_frameslot_buffer_iVar10_iVar3_m1c)) =
-               *(undefined4 *)((int)&local_42c + uVar13 * 4);
+               *(undefined4 *)((kd_iptr)&local_42c + uVar13 * 4);
           *(MeXMLOutput **)((kd_frameslot_buffer_iVar10_iVar3_m20)) = op;
-          *(undefined4 *)((int)&local_440) = 0x10768;
+          *(undefined4 *)((kd_iptr)&local_440) = 0x10768;
           MeFModelWriteXML_1_0
                     (*(MeXMLOutput **)((kd_frameslot_buffer_iVar10_iVar3_m20)),
                      *(MeFModel **)((kd_frameslot_buffer_iVar10_iVar3_m1c)),
@@ -309,30 +309,30 @@ LAB_000101e4:
     }
     do {
       MVar2 = asset;
-      *(MeXMLElementID *)((int)&pvStack_430) = MVar7;
+      *(MeXMLElementID *)((kd_iptr)&pvStack_430) = MVar7;
       *(MeXMLElementID *)((kd_frameslot_buffer_iVar10_iVar3_m18)) = MVar2;
       *(undefined4 *)((kd_frameslot_buffer_iVar10_iVar3_m1c)) =
-           *(undefined4 *)((int)&local_42c * 4);
+           *(undefined4 *)((kd_iptr)&local_42c * 4);
       *(MeXMLOutput **)((kd_frameslot_buffer_iVar10_iVar3_m20)) = op;
-      *(undefined4 *)((int)&local_440) = 0x10216;
+      *(undefined4 *)((kd_iptr)&local_440) = 0x10216;
       MeFModelWriteXML_1_0
                 (*(MeXMLOutput **)((kd_frameslot_buffer_iVar10_iVar3_m20)),
                  *(MeFModel **)((kd_frameslot_buffer_iVar10_iVar3_m1c)),
                  *(MeXMLElementID *)((kd_frameslot_buffer_iVar10_iVar3_m18)));
       *(MeXMLElementID *)((kd_frameslot_buffer_iVar10_iVar3_m18)) = asset;
       *(undefined4 *)((kd_frameslot_buffer_iVar10_iVar3_m1c)) =
-           *(undefined4 *)((int)&count * 4);
+           *(undefined4 *)((kd_iptr)&count * 4);
       *(MeXMLOutput **)((kd_frameslot_buffer_iVar10_iVar3_m20)) = op;
-      *(undefined4 *)((int)&local_440) = 0x1022e;
+      *(undefined4 *)((kd_iptr)&local_440) = 0x1022e;
       MeFModelWriteXML_1_0
                 (*(MeXMLOutput **)((kd_frameslot_buffer_iVar10_iVar3_m20)),
                  *(MeFModel **)((kd_frameslot_buffer_iVar10_iVar3_m1c)),
                  *(MeXMLElementID *)((kd_frameslot_buffer_iVar10_iVar3_m18)));
       *(MeXMLElementID *)((kd_frameslot_buffer_iVar10_iVar3_m18)) = asset;
       *(undefined4 *)((kd_frameslot_buffer_iVar10_iVar3_m1c)) =
-           *(undefined4 *)((int)&i * 4);
+           *(undefined4 *)((kd_iptr)&i * 4);
       *(MeXMLOutput **)((kd_frameslot_buffer_iVar10_iVar3_m20)) = op;
-      *(undefined4 *)((int)&local_440) = 0x10246;
+      *(undefined4 *)((kd_iptr)&local_440) = 0x10246;
       MeFModelWriteXML_1_0
                 (*(MeXMLOutput **)((kd_frameslot_buffer_iVar10_iVar3_m20)),
                  *(MeFModel **)((kd_frameslot_buffer_iVar10_iVar3_m1c)),
@@ -343,7 +343,7 @@ LAB_000101e4:
       *(undefined4 *)((kd_frameslot_buffer_iVar10_iVar3_m1c)) =
            *(undefined4 *)(buffer + iVar8 + iVar10 + iVar3 + -4);
       *(MeXMLOutput **)((kd_frameslot_buffer_iVar10_iVar3_m20)) = op;
-      *(undefined4 *)((int)&local_440) = 0x10261;
+      *(undefined4 *)((kd_iptr)&local_440) = 0x10261;
       MVar7 = MeFModelWriteXML_1_0
                         (*(MeXMLOutput **)((kd_frameslot_buffer_iVar10_iVar3_m20)),
                          *(MeFModel **)((kd_frameslot_buffer_iVar10_iVar3_m1c)),
@@ -353,15 +353,15 @@ LAB_000101e4:
 LAB_00010268:
                     
   *(MeFAsset **)((kd_frameslot_buffer_iVar10_iVar3_m20)) = fa;
-  *(undefined4 *)((int)&local_440) = 0x10274;
+  *(undefined4 *)((kd_iptr)&local_440) = 0x10274;
   iVar8 = MeFAssetGetPartCount(*(void **)((kd_frameslot_buffer_iVar10_iVar3_m20)));
   count = iVar8;
   iVar11 = -(iVar8 * 4 + 0xfU & 0xfffffff0);
-  *(int *)((int)&pvStack_430) = iVar8;
+  *(int *)((kd_iptr)&pvStack_430) = iVar8;
   *(int *)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m18)) = iVar8;
-  *(int *)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m1c)) = (int)&local_42c + iVar10 + iVar3;
+  *(int *)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m1c)) = (kd_iptr)&local_42c + iVar10 + iVar3;
   *(MeFAsset **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)) = fa;
-  *(undefined4 *)((int)&local_440) = 0x10297;
+  *(undefined4 *)((kd_iptr)&local_440) = 0x10297;
   MeFAssetGetPartsSortedByName
             (*(void **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)),
              *(void **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m1c)));
@@ -373,12 +373,12 @@ LAB_00010268:
 LAB_000102c6:
       MVar2 = asset;
       iVar8 = i;
-      *(uint *)((int)&pvStack_430) = uVar5;
+      *(uint *)((kd_iptr)&pvStack_430) = uVar5;
       *(MeXMLElementID *)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m18)) = MVar2;
       *(undefined4 *)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m1c)) =
-           *(undefined4 *)((int)&local_42c * 4);
+           *(undefined4 *)((kd_iptr)&local_42c * 4);
       *(MeXMLOutput **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)) = op;
-      *(undefined4 *)((int)&local_440) = 0x102e1;
+      *(undefined4 *)((kd_iptr)&local_440) = 0x102e1;
       MeFAssetPartWriteXML_1_0
                 (*(MeXMLOutput **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)),
                  *(MeFAssetPart **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m1c)),
@@ -392,12 +392,12 @@ LAB_000102c6:
       if (uVar5 != 0) {
         if (1 < uVar5) {
           if (2 < uVar5) {
-            *(uint *)((int)&pvStack_430) = uVar5;
+            *(uint *)((kd_iptr)&pvStack_430) = uVar5;
             *(MeXMLElementID *)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m18)) = MVar2;
             *(undefined4 *)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m1c)) =
-                 *(undefined4 *)((int)&local_42c);
+                 *(undefined4 *)((kd_iptr)&local_42c);
             *(MeXMLOutput **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)) = op;
-            *(undefined4 *)((int)&local_440) = 0x1072d;
+            *(undefined4 *)((kd_iptr)&local_440) = 0x1072d;
             MeFAssetPartWriteXML_1_0
                       (*(MeXMLOutput **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)),
                        *(MeFAssetPart **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m1c)),
@@ -407,13 +407,13 @@ LAB_000102c6:
           }
           MVar2 = asset;
           i = (int)(2 < uVar5);
-          *(MeFAsset **)((int)&pvStack_430) = pMVar15;
+          *(MeFAsset **)((kd_iptr)&pvStack_430) = pMVar15;
           iVar8 = i;
           *(MeXMLElementID *)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m18)) = MVar2;
           *(undefined4 *)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m1c)) =
-               *(undefined4 *)((int)&local_42c * 4);
+               *(undefined4 *)((kd_iptr)&local_42c * 4);
           *(MeXMLOutput **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)) = op;
-          *(undefined4 *)((int)&local_440) = 0x10704;
+          *(undefined4 *)((kd_iptr)&local_440) = 0x10704;
           uVar5 = MeFAssetPartWriteXML_1_0
                             (*(MeXMLOutput **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)),
                              *(MeFAssetPart **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m1c)),
@@ -425,13 +425,13 @@ LAB_000102c6:
 LAB_00010303:
       do {
         MVar2 = asset;
-        *(MeFAsset **)((int)&pvStack_430) = pMVar15;
+        *(MeFAsset **)((kd_iptr)&pvStack_430) = pMVar15;
         iVar8 = i;
         *(MeXMLElementID *)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m18)) = MVar2;
         *(undefined4 *)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m1c)) =
-             *(undefined4 *)((int)&local_42c * 4);
+             *(undefined4 *)((kd_iptr)&local_42c * 4);
         *(MeXMLOutput **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)) = op;
-        *(undefined4 *)((int)&local_440) = 0x1031e;
+        *(undefined4 *)((kd_iptr)&local_440) = 0x1031e;
         MeFAssetPartWriteXML_1_0
                   (*(MeXMLOutput **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)),
                    *(MeFAssetPart **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m1c)),
@@ -439,9 +439,9 @@ LAB_00010303:
         iVar8 = i;
         *(MeXMLElementID *)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m18)) = asset;
         *(undefined4 *)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m1c)) =
-             *(undefined4 *)((int)&count * 4);
+             *(undefined4 *)((kd_iptr)&count * 4);
         *(MeXMLOutput **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)) = op;
-        *(undefined4 *)((int)&local_440) = 0x1033c;
+        *(undefined4 *)((kd_iptr)&local_440) = 0x1033c;
         MeFAssetPartWriteXML_1_0
                   (*(MeXMLOutput **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)),
                    *(MeFAssetPart **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m1c)),
@@ -449,9 +449,9 @@ LAB_00010303:
         iVar8 = i;
         *(MeXMLElementID *)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m18)) = asset;
         *(undefined4 *)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m1c)) =
-             *(undefined4 *)((int)&i * 4);
+             *(undefined4 *)((kd_iptr)&i * 4);
         *(MeXMLOutput **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)) = op;
-        *(undefined4 *)((int)&local_440) = 0x1035a;
+        *(undefined4 *)((kd_iptr)&local_440) = 0x1035a;
         MeFAssetPartWriteXML_1_0
                   (*(MeXMLOutput **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)),
                    *(MeFAssetPart **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m1c)),
@@ -461,7 +461,7 @@ LAB_00010303:
         pMVar15 = *(MeFAsset **)(buffer + iVar8 * 4 + iVar11 + iVar10 + iVar3 + -4);
         *(MeFAsset **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m1c)) = pMVar15;
         *(MeXMLOutput **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)) = op;
-        *(undefined4 *)((int)&local_440) = 0x10378;
+        *(undefined4 *)((kd_iptr)&local_440) = 0x10378;
         MeFAssetPartWriteXML_1_0
                   (*(MeXMLOutput **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)),
                    *(MeFAssetPart **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m1c)),
@@ -479,43 +479,43 @@ LAB_00010303:
         local_42c = iVar14;
         if (iVar14 < count) {
           if ((count <= i + 2) || (uVar9 = 0, (count - iVar14 & 1U) != 0)) {
-            *(int *)((int)&pvStack_430) = count;
+            *(int *)((kd_iptr)&pvStack_430) = count;
             *(int *)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m18)) = iVar8;
             iVar8 = i;
             *(undefined4 *)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m1c)) =
-                 *(undefined4 *)((int)&local_42c + local_42c * 4);
+                 *(undefined4 *)((kd_iptr)&local_42c + local_42c * 4);
             *(undefined4 *)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)) =
-                 *(undefined4 *)((int)&local_42c * 4);
-            *(undefined4 *)((int)&local_440) = 0x1040a;
+                 *(undefined4 *)((kd_iptr)&local_42c * 4);
+            *(undefined4 *)((kd_iptr)&local_440) = 0x1040a;
             iVar8 = MeFAssetPartIsCollisionEnabled
                               (*(void **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)),
                                *(void **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m1c)));
             uVar9 = extraout_EDX_02;
             if (iVar8 == 0) {
               *(undefined4 *)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)) =
-                   *(undefined4 *)((int)&local_42c + local_42c * 4);
-              *(undefined4 *)((int)&local_440) = 0x10680;
+                   *(undefined4 *)((kd_iptr)&local_42c + local_42c * 4);
+              *(undefined4 *)((kd_iptr)&local_440) = 0x10680;
               pvVar4 = MeFAssetPartGetName(*(void **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)));
               iVar8 = i;
-              *(void **)((int)&pvStack_430) = pvVar4;
+              *(void **)((kd_iptr)&pvStack_430) = pvVar4;
               *(void **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m18)) = pvVar4;
               *(void **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m1c)) = pvVar4;
               *(undefined4 *)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)) =
-                   *(undefined4 *)((int)&local_42c * 4);
-              *(undefined4 *)((int)&local_440) = 0x10695;
+                   *(undefined4 *)((kd_iptr)&local_42c * 4);
+              *(undefined4 *)((kd_iptr)&local_440) = 0x10695;
               pvVar4 = MeFAssetPartGetName(*(void **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)));
               *(void **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m18)) = pvVar4;
               *(char **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m1c)) =
                    "NO_COLLISION part1=\"%s\" part2=\"%s\"";
               *(char **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)) = buffer;
-              *(undefined4 *)((int)&local_440) = 0x106aa;
+              *(undefined4 *)((kd_iptr)&local_440) = 0x106aa;
               sprintf(*(char **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)),
                       *(char **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m1c)));
               MVar2 = asset;
               *(char **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m18)) = buffer;
               *(MeXMLElementID *)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m1c)) = MVar2;
               *(MeXMLOutput **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)) = op;
-              *(undefined4 *)((int)&local_440) = 0x106be;
+              *(undefined4 *)((kd_iptr)&local_440) = 0x106be;
               MeXMLWriteElement(*(void **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)),
                                 *(int *)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m1c)),
                                 *(void **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m18)));
@@ -525,85 +525,85 @@ LAB_00010303:
             if (count <= iVar14) goto LAB_0001046e;
           }
           do {
-            *(undefined4 *)((int)&pvStack_430) = uVar9;
+            *(undefined4 *)((kd_iptr)&pvStack_430) = uVar9;
             *(undefined4 *)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m18)) = uVar9;
             iVar8 = i;
             *(undefined4 *)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m1c)) =
-                 *(undefined4 *)((int)&local_42c + iVar14 * 4);
+                 *(undefined4 *)((kd_iptr)&local_42c + iVar14 * 4);
             *(undefined4 *)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)) =
-                 *(undefined4 *)((int)&local_42c * 4);
-            *(undefined4 *)((int)&local_440) = 0x10435;
+                 *(undefined4 *)((kd_iptr)&local_42c * 4);
+            *(undefined4 *)((kd_iptr)&local_440) = 0x10435;
             iVar8 = MeFAssetPartIsCollisionEnabled
                               (*(void **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)),
                                *(void **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m1c)));
             uVar9 = extraout_ECX_00;
             if (iVar8 == 0) {
               *(undefined4 *)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)) =
-                   *(undefined4 *)((int)&local_42c + iVar14 * 4);
-              *(undefined4 *)((int)&local_440) = 0x10622;
+                   *(undefined4 *)((kd_iptr)&local_42c + iVar14 * 4);
+              *(undefined4 *)((kd_iptr)&local_440) = 0x10622;
               pvVar4 = MeFAssetPartGetName(*(void **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)));
               iVar8 = i;
-              *(void **)((int)&pvStack_430) = pvVar4;
+              *(void **)((kd_iptr)&pvStack_430) = pvVar4;
               *(void **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m18)) = pvVar4;
               *(void **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m1c)) = pvVar4;
               *(undefined4 *)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)) =
-                   *(undefined4 *)((int)&local_42c * 4);
-              *(undefined4 *)((int)&local_440) = 0x10637;
+                   *(undefined4 *)((kd_iptr)&local_42c * 4);
+              *(undefined4 *)((kd_iptr)&local_440) = 0x10637;
               pvVar4 = MeFAssetPartGetName(*(void **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)));
               *(void **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m18)) = pvVar4;
               *(char **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m1c)) =
                    "NO_COLLISION part1=\"%s\" part2=\"%s\"";
               *(char **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)) = buffer;
-              *(undefined4 *)((int)&local_440) = 0x1064c;
+              *(undefined4 *)((kd_iptr)&local_440) = 0x1064c;
               sprintf(*(char **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)),
                       *(char **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m1c)));
               MVar2 = asset;
               *(char **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m18)) = buffer;
               *(MeXMLElementID *)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m1c)) = MVar2;
               *(MeXMLOutput **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)) = op;
-              *(undefined4 *)((int)&local_440) = 0x10660;
+              *(undefined4 *)((kd_iptr)&local_440) = 0x10660;
               MeXMLWriteElement(*(void **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)),
                                 *(int *)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m1c)),
                                 *(void **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m18)));
               uVar9 = extraout_ECX_02;
             }
-            *(undefined4 *)((int)&pvStack_430) = uVar9;
+            *(undefined4 *)((kd_iptr)&pvStack_430) = uVar9;
             iVar8 = i;
             *(undefined4 *)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m18)) = uVar9;
             *(undefined4 *)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m1c)) =
-                 *(undefined4 *)((int)&local_42c + (iVar14 + 1) * 4);
+                 *(undefined4 *)((kd_iptr)&local_42c + (iVar14 + 1) * 4);
             *(undefined4 *)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)) =
-                 *(undefined4 *)((int)&local_42c * 4);
-            *(undefined4 *)((int)&local_440) = 0x10458;
+                 *(undefined4 *)((kd_iptr)&local_42c * 4);
+            *(undefined4 *)((kd_iptr)&local_440) = 0x10458;
             iVar8 = MeFAssetPartIsCollisionEnabled
                               (*(void **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)),
                                *(void **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m1c)));
             uVar9 = extraout_EDX_03;
             if (iVar8 == 0) {
               *(undefined4 *)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)) =
-                   *(undefined4 *)((int)&local_42c + (iVar14 + 1) * 4);
-              *(undefined4 *)((int)&local_440) = 0x105bf;
+                   *(undefined4 *)((kd_iptr)&local_42c + (iVar14 + 1) * 4);
+              *(undefined4 *)((kd_iptr)&local_440) = 0x105bf;
               pvVar4 = MeFAssetPartGetName(*(void **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)));
               iVar8 = i;
-              *(void **)((int)&pvStack_430) = pvVar4;
+              *(void **)((kd_iptr)&pvStack_430) = pvVar4;
               *(void **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m18)) = pvVar4;
               *(void **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m1c)) = pvVar4;
               *(undefined4 *)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)) =
-                   *(undefined4 *)((int)&local_42c * 4);
-              *(undefined4 *)((int)&local_440) = 0x105d4;
+                   *(undefined4 *)((kd_iptr)&local_42c * 4);
+              *(undefined4 *)((kd_iptr)&local_440) = 0x105d4;
               pvVar4 = MeFAssetPartGetName(*(void **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)));
               *(void **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m18)) = pvVar4;
               *(char **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m1c)) =
                    "NO_COLLISION part1=\"%s\" part2=\"%s\"";
               *(char **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)) = buffer;
-              *(undefined4 *)((int)&local_440) = 0x105e9;
+              *(undefined4 *)((kd_iptr)&local_440) = 0x105e9;
               sprintf(*(char **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)),
                       *(char **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m1c)));
               MVar2 = asset;
               *(char **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m18)) = buffer;
               *(MeXMLElementID *)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m1c)) = MVar2;
               *(MeXMLOutput **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)) = op;
-              *(undefined4 *)((int)&local_440) = 0x10603;
+              *(undefined4 *)((kd_iptr)&local_440) = 0x10603;
               MeXMLWriteElement(*(void **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)),
                                 *(int *)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m1c)),
                                 *(void **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m18)));
@@ -619,16 +619,16 @@ LAB_0001046e:
   }
                     
   *(MeFAsset **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)) = fa;
-  *(undefined4 *)((int)&local_440) = 0x10494;
+  *(undefined4 *)((kd_iptr)&local_440) = 0x10494;
   uVar5 = MeFAssetGetJointCount(*(void **)((kd_frameslot_buffer_iVar11_iVar10_iVar3_m20)));
   iVar8 = -(uVar5 * 4 + 0xf & 0xfffffff0);
-  *(undefined4 *)((int)&pvStack_430) = extraout_ECX_01;
+  *(undefined4 *)((kd_iptr)&pvStack_430) = extraout_ECX_01;
   *(undefined4 *)((kd_frameslot_buffer_iVar8_iVar11_iVar10_iVar3_m18)) = extraout_ECX_01;
   *(int *)((kd_frameslot_buffer_iVar8_iVar11_iVar10_iVar3_m1c)) =
-       (int)&local_42c + iVar11 + iVar10 + iVar3;
+       (kd_iptr)&local_42c + iVar11 + iVar10 + iVar3;
   *(MeFAsset **)((kd_frameslot_buffer_iVar8_iVar11_iVar10_iVar3_m20)) = fa;
   iVar12 = 0;
-  *(undefined4 *)((int)&local_440) = 0x104b5;
+  *(undefined4 *)((kd_iptr)&local_440) = 0x104b5;
   MeFAssetGetJointsSortedByName
             (*(void **)((kd_frameslot_buffer_iVar8_iVar11_iVar10_iVar3_m20)),
              *(void **)((kd_frameslot_buffer_iVar8_iVar11_iVar10_iVar3_m1c)));
@@ -643,12 +643,12 @@ LAB_0001046e:
     if (1 < uVar6) {
       bVar1 = 2 < uVar6;
       if (bVar1) {
-        *(uint *)((int)&pvStack_430) = uVar6;
+        *(uint *)((kd_iptr)&pvStack_430) = uVar6;
         *(MeXMLElementID *)((kd_frameslot_buffer_iVar8_iVar11_iVar10_iVar3_m18)) = MVar2;
         *(undefined4 *)((kd_frameslot_buffer_iVar8_iVar11_iVar10_iVar3_m1c)) =
-             *(undefined4 *)((int)&local_42c);
+             *(undefined4 *)((kd_iptr)&local_42c);
         *(MeXMLOutput **)((kd_frameslot_buffer_iVar8_iVar11_iVar10_iVar3_m20)) = op;
-        *(undefined4 *)((int)&local_440) = 0x105ae;
+        *(undefined4 *)((kd_iptr)&local_440) = 0x105ae;
         uVar6 = MeFJointWriteXML_1_0
                           (*(MeXMLOutput **)((kd_frameslot_buffer_iVar8_iVar11_iVar10_iVar3_m20)),
                            *(MeFJoint **)((kd_frameslot_buffer_iVar8_iVar11_iVar10_iVar3_m1c)),
@@ -656,13 +656,13 @@ LAB_0001046e:
       }
       MVar2 = asset;
       uVar13 = (uint)bVar1;
-      *(uint *)((int)&pvStack_430) = uVar6;
+      *(uint *)((kd_iptr)&pvStack_430) = uVar6;
       *(MeXMLElementID *)((kd_frameslot_buffer_iVar8_iVar11_iVar10_iVar3_m18)) = MVar2;
       iVar12 = uVar13 + 1;
       *(undefined4 *)((kd_frameslot_buffer_iVar8_iVar11_iVar10_iVar3_m1c)) =
-           *(undefined4 *)((int)&local_42c + uVar13 * 4);
+           *(undefined4 *)((kd_iptr)&local_42c + uVar13 * 4);
       *(MeXMLOutput **)((kd_frameslot_buffer_iVar8_iVar11_iVar10_iVar3_m20)) = op;
-      *(undefined4 *)((int)&local_440) = 0x1058d;
+      *(undefined4 *)((kd_iptr)&local_440) = 0x1058d;
       uVar6 = MeFJointWriteXML_1_0
                         (*(MeXMLOutput **)((kd_frameslot_buffer_iVar8_iVar11_iVar10_iVar3_m20)),
                          *(MeFJoint **)((kd_frameslot_buffer_iVar8_iVar11_iVar10_iVar3_m1c)),
@@ -670,14 +670,14 @@ LAB_0001046e:
     }
   }
   MVar2 = asset;
-  *(uint *)((int)&pvStack_430) = uVar6;
+  *(uint *)((kd_iptr)&pvStack_430) = uVar6;
   *(MeXMLElementID *)((kd_frameslot_buffer_iVar8_iVar11_iVar10_iVar3_m18)) = MVar2;
   iVar14 = iVar12 * 4;
   iVar12 = iVar12 + 1;
   *(undefined4 *)((kd_frameslot_buffer_iVar8_iVar11_iVar10_iVar3_m1c)) =
-       *(undefined4 *)((int)&local_42c + iVar14);
+       *(undefined4 *)((kd_iptr)&local_42c + iVar14);
   *(MeXMLOutput **)((kd_frameslot_buffer_iVar8_iVar11_iVar10_iVar3_m20)) = op;
-  *(undefined4 *)((int)&local_440) = 0x104e4;
+  *(undefined4 *)((kd_iptr)&local_440) = 0x104e4;
   MVar7 = MeFJointWriteXML_1_0
                     (*(MeXMLOutput **)((kd_frameslot_buffer_iVar8_iVar11_iVar10_iVar3_m20)),
                      *(MeFJoint **)((kd_frameslot_buffer_iVar8_iVar11_iVar10_iVar3_m1c)),
@@ -688,30 +688,30 @@ LAB_0001046e:
 LAB_000104f0:
   do {
     MVar2 = asset;
-    *(MeXMLElementID *)((int)&pvStack_430) = MVar7;
+    *(MeXMLElementID *)((kd_iptr)&pvStack_430) = MVar7;
     *(MeXMLElementID *)((kd_frameslot_buffer_iVar8_iVar11_iVar10_iVar3_m18)) = MVar2;
     *(undefined4 *)((kd_frameslot_buffer_iVar8_iVar11_iVar10_iVar3_m1c)) =
-         *(undefined4 *)((int)&local_42c + iVar12 * 4);
+         *(undefined4 *)((kd_iptr)&local_42c + iVar12 * 4);
     *(MeXMLOutput **)((kd_frameslot_buffer_iVar8_iVar11_iVar10_iVar3_m20)) = op;
-    *(undefined4 *)((int)&local_440) = 0x10505;
+    *(undefined4 *)((kd_iptr)&local_440) = 0x10505;
     MeFJointWriteXML_1_0
               (*(MeXMLOutput **)((kd_frameslot_buffer_iVar8_iVar11_iVar10_iVar3_m20)),
                *(MeFJoint **)((kd_frameslot_buffer_iVar8_iVar11_iVar10_iVar3_m1c)),
                *(MeXMLElementID *)((kd_frameslot_buffer_iVar8_iVar11_iVar10_iVar3_m18)));
     *(MeXMLElementID *)((kd_frameslot_buffer_iVar8_iVar11_iVar10_iVar3_m18)) = asset;
     *(undefined4 *)((kd_frameslot_buffer_iVar8_iVar11_iVar10_iVar3_m1c)) =
-         *(undefined4 *)((int)&count + iVar12 * 4);
+         *(undefined4 *)((kd_iptr)&count + iVar12 * 4);
     *(MeXMLOutput **)((kd_frameslot_buffer_iVar8_iVar11_iVar10_iVar3_m20)) = op;
-    *(undefined4 *)((int)&local_440) = 0x1051d;
+    *(undefined4 *)((kd_iptr)&local_440) = 0x1051d;
     MeFJointWriteXML_1_0
               (*(MeXMLOutput **)((kd_frameslot_buffer_iVar8_iVar11_iVar10_iVar3_m20)),
                *(MeFJoint **)((kd_frameslot_buffer_iVar8_iVar11_iVar10_iVar3_m1c)),
                *(MeXMLElementID *)((kd_frameslot_buffer_iVar8_iVar11_iVar10_iVar3_m18)));
     *(MeXMLElementID *)((kd_frameslot_buffer_iVar8_iVar11_iVar10_iVar3_m18)) = asset;
     *(undefined4 *)((kd_frameslot_buffer_iVar8_iVar11_iVar10_iVar3_m1c)) =
-         *(undefined4 *)((int)&i + iVar12 * 4);
+         *(undefined4 *)((kd_iptr)&i + iVar12 * 4);
     *(MeXMLOutput **)((kd_frameslot_buffer_iVar8_iVar11_iVar10_iVar3_m20)) = op;
-    *(undefined4 *)((int)&local_440) = 0x10535;
+    *(undefined4 *)((kd_iptr)&local_440) = 0x10535;
     MeFJointWriteXML_1_0
               (*(MeXMLOutput **)((kd_frameslot_buffer_iVar8_iVar11_iVar10_iVar3_m20)),
                *(MeFJoint **)((kd_frameslot_buffer_iVar8_iVar11_iVar10_iVar3_m1c)),
@@ -722,7 +722,7 @@ LAB_000104f0:
     *(undefined4 *)((kd_frameslot_buffer_iVar8_iVar11_iVar10_iVar3_m1c)) =
          *(undefined4 *)(buffer + iVar14 + iVar8 + iVar11 + iVar10 + iVar3 + -4);
     *(MeXMLOutput **)((kd_frameslot_buffer_iVar8_iVar11_iVar10_iVar3_m20)) = op;
-    *(undefined4 *)((int)&local_440) = 0x10550;
+    *(undefined4 *)((kd_iptr)&local_440) = 0x10550;
     MVar7 = MeFJointWriteXML_1_0
                       (*(MeXMLOutput **)((kd_frameslot_buffer_iVar8_iVar11_iVar10_iVar3_m20)),
                        *(MeFJoint **)((kd_frameslot_buffer_iVar8_iVar11_iVar10_iVar3_m1c)),

@@ -103,9 +103,9 @@ void * kd_MePoolxGet(MePoolx *p)
 void kd_MePoolxPut(MePoolx *p,void *rec)
 
 {
-  int iVar1;
+  kd_iptr iVar1;
 
-  iVar1 = (int)rec - (int)p->mem >> 2;
+  iVar1 = (kd_iptr)rec - (kd_iptr)p->mem >> 2;
   p->mem[iVar1] = p->ifree;
   p->ifree = iVar1;
   p->numfree = p->numfree + 1;
@@ -128,18 +128,18 @@ static MeDictNode * MePoolxDictNodeAllocate(void *pool)
   MeDictNode *pMVar2;
 
   pMVar2 = (MeDictNode *)0x0;
-  if (*(int *)((int)pool + 0xc) != 0) {
-    iVar1 = *(int *)((int)pool + 0xc) + -1;
-    pMVar2 = (MeDictNode *)(*(int *)pool + *(int *)((int)pool + 0x10) * 4);
-    *(int *)((int)pool + 0xc) = iVar1;
+  if (*(int *)((kd_iptr)pool + 0xc) != 0) {
+    iVar1 = *(int *)((kd_iptr)pool + 0xc) + -1;
+    pMVar2 = (MeDictNode *)(*(int *)pool + *(int *)((kd_iptr)pool + 0x10) * 4);
+    *(int *)((kd_iptr)pool + 0xc) = iVar1;
     if (iVar1 != 0) {
       if (pMVar2->left == (MeDictNode *)0xffffffff) {
-        iVar1 = *(int *)((int)pool + 0x10) + *(int *)((int)pool + 4);
-        *(int *)((int)pool + 0x10) = iVar1;
+        iVar1 = *(int *)((kd_iptr)pool + 0x10) + *(int *)((kd_iptr)pool + 4);
+        *(int *)((kd_iptr)pool + 0x10) = iVar1;
         *(undefined4 *)(*(int *)pool + iVar1 * 4) = 0xffffffff;
       }
       else {
-        *(MeDictNode **)((int)pool + 0x10) = pMVar2->left;
+        *(MeDictNode **)((kd_iptr)pool + 0x10) = pMVar2->left;
       }
     }
   }
@@ -150,11 +150,11 @@ static MeDictNode * MePoolxDictNodeAllocate(void *pool)
 static void MePoolxDictNodeDeallocate(MeDictNode *node,void *pool)
 
 {
-  int iVar1;
+  kd_iptr iVar1;
 
-  iVar1 = (int)node - *(int *)pool >> 2;
-  *(undefined4 *)(*(int *)pool + iVar1 * 4) = *(undefined4 *)((int)pool + 0x10);
-  *(int *)((int)pool + 0x10) = iVar1;
-  *(int *)((int)pool + 0xc) = *(int *)((int)pool + 0xc) + 1;
+  iVar1 = (kd_iptr)node - *(int *)pool >> 2;
+  *(undefined4 *)(*(int *)pool + iVar1 * 4) = *(undefined4 *)((kd_iptr)pool + 0x10);
+  *(int *)((kd_iptr)pool + 0x10) = iVar1;
+  *(int *)((kd_iptr)pool + 0xc) = *(int *)((kd_iptr)pool + 0xc) + 1;
   return;
 }

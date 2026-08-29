@@ -84,7 +84,7 @@ MeFAssetPart * kd_MeFAssetPartCreate(char *name,MeFModel *model,MeMatrix4Ptr rel
 {
   MeFAssetPart *pMVar1;
 
-  pMVar1 = (MeMemoryAPI.createZeroed)(0x68);
+  pMVar1 = (MeMemoryAPI.createZeroed)((int)sizeof(*(MeFAssetPart *)0));
   pMVar1->id = (char *)0x0;
   pMVar1->asset = (MeFAsset *)0x0;
   pMVar1->graphicHint = (char *)0x0;
@@ -143,7 +143,7 @@ MeFAssetPart * kd_MeFAssetPartCreateCopy(MeFAssetPart *part,MeBool recurse)
   MeReal MVar2;
   MeFAssetPart *pMVar3;
 
-  pMVar3 = (MeMemoryAPI.createZeroed)(0x68);
+  pMVar3 = (MeMemoryAPI.createZeroed)((int)sizeof(*(MeFAssetPart *)0));
   _FSetStringProperty(pMVar3,part->id);
   _FSetStringProperty(&pMVar3->model,part->model);
   pMVar3->tm[0][0] = part->tm[0][0];
@@ -227,8 +227,8 @@ MeFGeometry * kd_MeFAssetPartGetGeometry(MeFAssetPart *p)
   }
   else {
     pvVar1 = MeFAssetLookupModel(p->asset,p->model);
-    if (*(void **)((int)pvVar1 + 0xc) != (void *)0x0) {
-      pMVar2 = MeFAssetLookupGeometry(p->asset,*(void **)((int)pvVar1 + 0xc));
+    if (*(void **)((kd_iptr)pvVar1 + ((int)((char *)&((struct MeFModel *)0)->geometry - (char *)0))) != (void *)0x0) {
+      pMVar2 = MeFAssetLookupGeometry(p->asset,*(void **)((kd_iptr)pvVar1 + ((int)((char *)&((struct MeFModel *)0)->geometry - (char *)0))));
     }
   }
   return pMVar2;

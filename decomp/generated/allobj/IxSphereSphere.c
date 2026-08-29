@@ -61,9 +61,9 @@ int kd_McdSphereSphereIntersect(McdModelPair *p,McdIntersectResult *result)
   fVar15 = McdSphereGetRadius(pvVar10);
   fVar16 = McdSphereGetRadius(pvVar11);
   fVar1 = fVar15 + fVar16;
-  fVar7 = *(float *)((int)pvVar8 + 0x30) - *(float *)((int)pvVar9 + 0x30);
-  fVar4 = *(float *)((int)pvVar8 + 0x34) - *(float *)((int)pvVar9 + 0x34);
-  fVar3 = *(float *)((int)pvVar8 + 0x38) - *(float *)((int)pvVar9 + 0x38);
+  fVar7 = *(float *)((kd_iptr)pvVar8 + 0x30) - *(float *)((kd_iptr)pvVar9 + 0x30);
+  fVar4 = *(float *)((kd_iptr)pvVar8 + 0x34) - *(float *)((kd_iptr)pvVar9 + 0x34);
+  fVar3 = *(float *)((kd_iptr)pvVar8 + 0x38) - *(float *)((kd_iptr)pvVar9 + 0x38);
   fVar2 = fVar7 * fVar7 + fVar4 * fVar4 + fVar3 * fVar3;
   fVar6 = 0.0;
   if (fVar2 == 0.0) {
@@ -100,12 +100,12 @@ int kd_McdSphereSphereIntersect(McdModelPair *p,McdIntersectResult *result)
       fVar16 = fVar16 * fVar6;
       pMVar5 = result->contacts;
       fVar6 = fVar6 * fVar15;
-      fVar1 = *(float *)((int)pvVar8 + 0x34);
-      fVar2 = *(float *)((int)pvVar8 + 0x38);
-      fVar3 = *(float *)((int)pvVar9 + 0x34);
-      fVar4 = *(float *)((int)pvVar9 + 0x38);
+      fVar1 = *(float *)((kd_iptr)pvVar8 + 0x34);
+      fVar2 = *(float *)((kd_iptr)pvVar8 + 0x38);
+      fVar3 = *(float *)((kd_iptr)pvVar9 + 0x34);
+      fVar4 = *(float *)((kd_iptr)pvVar9 + 0x38);
       pMVar5->position[0] =
-           fVar16 * *(float *)((int)pvVar8 + 0x30) + fVar6 * *(float *)((int)pvVar9 + 0x30);
+           fVar16 * *(float *)((kd_iptr)pvVar8 + 0x30) + fVar6 * *(float *)((kd_iptr)pvVar9 + 0x30);
       pMVar5->position[1] = fVar16 * fVar1 + fVar6 * fVar3;
       pMVar5->position[2] = fVar16 * fVar2 + fVar6 * fVar4;
       result->normal[0] = normal.v[0];
@@ -157,12 +157,12 @@ int kd_McdSphereSphereSafeTime(McdModelPair *p,MeReal maxTime,McdSafeTimeResult 
   pvVar14 = McdModelGetTransformPtr(p->model1);
   pfVar15 = McdModelGetLinearVelocityPtr(p->model2);
   pvVar16 = McdModelGetTransformPtr(p->model2);
-  fVar1 = *(float *)((int)pvVar14 + 0x30);
-  fVar2 = *(float *)((int)pvVar14 + 0x34);
-  fVar3 = *(float *)((int)pvVar14 + 0x38);
-  fVar4 = *(float *)((int)pvVar16 + 0x30);
-  fVar5 = *(float *)((int)pvVar16 + 0x34);
-  fVar6 = *(float *)((int)pvVar16 + 0x38);
+  fVar1 = *(float *)((kd_iptr)pvVar14 + 0x30);
+  fVar2 = *(float *)((kd_iptr)pvVar14 + 0x34);
+  fVar3 = *(float *)((kd_iptr)pvVar14 + 0x38);
+  fVar4 = *(float *)((kd_iptr)pvVar16 + 0x30);
+  fVar5 = *(float *)((kd_iptr)pvVar16 + 0x34);
+  fVar6 = *(float *)((kd_iptr)pvVar16 + 0x38);
   fVar7 = *pfVar13;
   fVar8 = pfVar13[1];
   fVar9 = pfVar13[2];

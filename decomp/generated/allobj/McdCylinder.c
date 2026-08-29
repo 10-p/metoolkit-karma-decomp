@@ -70,14 +70,14 @@ McdCylinderID kd_McdCylinderCreate(McdFramework *frame,MeReal inRadius,MeReal in
   McdGeometryID pMVar1;
   McdCylinderID pMVar2;
 
-  pMVar2 = (MeMemoryAPI.createAligned)(0x1c,0x10);
+  pMVar2 = (MeMemoryAPI.createAligned)((int)sizeof(*(McdCylinder *)0),0x10);
   if (pMVar2 != (McdCylinderID)0x0) {
     McdGeometryInit(pMVar2,frame,4);
                     
-    *(MeReal *)&pMVar2[1].mRefCtAndID = inRadius;
+    *(MeReal *)&((McdCylinder *)pMVar2)->mR = inRadius;
     pMVar1 = (McdGeometryID)KD_FBITS((inHeight * 0.5));
-    pMVar2[1].prev = pMVar1;
-    pMVar2[1].next = (McdGeometryID)KD_FBITS(SQRT((*(float *)&(pMVar1)) * (*(float *)&(pMVar1)) + inRadius * inRadius));
+    ((McdCylinder *)pMVar2)->mRz = *(__typeof__(((McdCylinder *)pMVar2)->mRz) *)&pMVar1;
+    ((McdCylinder *)pMVar2)->mSphereRadius = SQRT((*(float *)&(pMVar1)) * (*(float *)&(pMVar1)) + inRadius * inRadius);
   }
   return pMVar2;
 }
@@ -86,21 +86,21 @@ McdCylinderID kd_McdCylinderCreate(McdFramework *frame,MeReal inRadius,MeReal in
 MeReal kd_McdCylinderGetRadius(McdCylinderID g)
 
 {
-  return *(float *)&(g[1].mRefCtAndID);
+  return *(float *)&(((McdCylinder *)g)->mR);
 }
 
 /* ---- McdCylinderGetHeight (exported as kd_McdCylinderGetHeight, asm label "McdCylinderGetHeight") ---- */
 MeReal kd_McdCylinderGetHeight(McdCylinderID g)
 
 {
-  return *(float *)&(g[1].prev) + *(float *)&(g[1].prev);
+  return *(float *)&(((McdCylinder *)g)->mRz) + *(float *)&(((McdCylinder *)g)->mRz);
 }
 
 /* ---- McdCylinderGetHalfHeight (exported as kd_McdCylinderGetHalfHeight, asm label "McdCylinderGetHalfHeight") ---- */
 MeReal kd_McdCylinderGetHalfHeight(McdCylinderID g)
 
 {
-  return *(float *)&(g[1].prev);
+  return *(float *)&(((McdCylinder *)g)->mRz);
 }
 
 /* ---- McdCylinderSetRadius (exported as kd_McdCylinderSetRadius, asm label "McdCylinderSetRadius") ---- */
@@ -108,8 +108,8 @@ void kd_McdCylinderSetRadius(McdCylinderID g,MeReal r)
 
 {
                     
-  *(MeReal *)&g[1].mRefCtAndID = r;
-  g[1].next = (McdGeometryID)KD_FBITS(SQRT(r * r + *(float *)&(g[1].prev) * *(float *)&(g[1].prev)));
+  *(MeReal *)&((McdCylinder *)g)->mR = r;
+  g[1].next = (McdGeometryID)KD_FBITS(SQRT(r * r + *(float *)&(((McdCylinder *)g)->mRz) * *(float *)&(((McdCylinder *)g)->mRz)));
   return;
 }
 
@@ -120,9 +120,9 @@ void kd_McdCylinderSetHeight(McdCylinderID g,MeReal h)
   McdGeometryID pMVar1;
 
   pMVar1 = (McdGeometryID)KD_FBITS((h * 0.5));
-  g[1].prev = pMVar1;
+  ((McdCylinder *)g)->mRz = *(__typeof__(((McdCylinder *)g)->mRz) *)&pMVar1;
   g[1].next = (McdGeometryID)KD_FBITS(
-              SQRT((*(float *)&(pMVar1)) * (*(float *)&(pMVar1)) + *(float *)&(g[1].mRefCtAndID) * *(float *)&(g[1].mRefCtAndID)
+              SQRT((*(float *)&(pMVar1)) * (*(float *)&(pMVar1)) + *(float *)&(((McdCylinder *)g)->mR) * *(float *)&(((McdCylinder *)g)->mR)
                   ));
   return;
 }
@@ -134,10 +134,10 @@ void kd_McdCylinderSetGeometricalParameters(McdGeometry *g,MeReal inRadius,MeRea
   McdGeometryID pMVar1;
 
   pMVar1 = (McdGeometryID)KD_FBITS((inHeight * 0.5));
-  *(MeReal *)&g[1].mRefCtAndID = inRadius;
-  g[1].prev = pMVar1;
+  *(MeReal *)&((McdCylinder *)g)->mR = inRadius;
+  ((McdCylinder *)g)->mRz = *(__typeof__(((McdCylinder *)g)->mRz) *)&pMVar1;
                     
-  g[1].next = (McdGeometryID)KD_FBITS(SQRT((*(float *)&(pMVar1)) * (*(float *)&(pMVar1)) + inRadius * inRadius));
+  ((McdCylinder *)g)->mSphereRadius = SQRT((*(float *)&(pMVar1)) * (*(float *)&(pMVar1)) + inRadius * inRadius);
   return;
 }
 
@@ -171,9 +171,9 @@ void kd_McdCylinderUpdateAABB(McdGeometryInstanceID ins,MeMatrix4Ptr finalTM,MeB
 
   pvVar8 = McdGeometryInstanceGetGeometry(ins);
   pvVar9 = McdGeometryInstanceGetTransformPtr(ins);
-  fVar1 = *(float *)((int)pvVar9 + 0x20);
-  fVar2 = *(float *)((int)pvVar9 + 0x24);
-  fVar3 = *(float *)((int)pvVar9 + 0x28);
+  fVar1 = *(float *)((kd_iptr)pvVar9 + 0x20);
+  fVar2 = *(float *)((kd_iptr)pvVar9 + 0x24);
+  fVar3 = *(float *)((kd_iptr)pvVar9 + 0x28);
   fVar5 = 1.0 - fVar1 * fVar1;
   fVar6 = 1.0 - fVar2 * fVar2;
   fVar7 = 1.0 - fVar3 * fVar3;
@@ -189,15 +189,15 @@ void kd_McdCylinderUpdateAABB(McdGeometryInstanceID ins,MeMatrix4Ptr finalTM,MeB
   if (0.0 < fVar7) {
     sz = SQRT(fVar7);
   }
-  fVar1 = *(float *)((int)pvVar8 + 0x10) * fVar4 + ABS(fVar1) * *(float *)((int)pvVar8 + 0x14);
-  fVar2 = ABS(fVar2) * *(float *)((int)pvVar8 + 0x14) + fVar5 * *(float *)((int)pvVar8 + 0x10);
-  fVar3 = ABS(fVar3) * *(float *)((int)pvVar8 + 0x14) + sz * *(float *)((int)pvVar8 + 0x10);
-  ins->min[0] = *(float *)((int)pvVar9 + 0x30) - fVar1;
-  ins->min[1] = *(float *)((int)pvVar9 + 0x34) - fVar2;
-  ins->min[2] = *(float *)((int)pvVar9 + 0x38) - fVar3;
-  ins->max[0] = fVar1 + *(float *)((int)pvVar9 + 0x30);
-  ins->max[1] = fVar2 + *(float *)((int)pvVar9 + 0x34);
-  ins->max[2] = fVar3 + *(float *)((int)pvVar9 + 0x38);
+  fVar1 = *(float *)((kd_iptr)pvVar8 + ((int)((char *)&((McdCylinder *)0)->mR - (char *)0))) * fVar4 + ABS(fVar1) * *(float *)((kd_iptr)pvVar8 + ((int)((char *)&((McdCylinder *)0)->mRz - (char *)0)));
+  fVar2 = ABS(fVar2) * *(float *)((kd_iptr)pvVar8 + ((int)((char *)&((McdCylinder *)0)->mRz - (char *)0))) + fVar5 * *(float *)((kd_iptr)pvVar8 + ((int)((char *)&((McdCylinder *)0)->mR - (char *)0)));
+  fVar3 = ABS(fVar3) * *(float *)((kd_iptr)pvVar8 + ((int)((char *)&((McdCylinder *)0)->mRz - (char *)0))) + sz * *(float *)((kd_iptr)pvVar8 + ((int)((char *)&((McdCylinder *)0)->mR - (char *)0)));
+  ins->min[0] = *(float *)((kd_iptr)pvVar9 + 0x30) - fVar1;
+  ins->min[1] = *(float *)((kd_iptr)pvVar9 + 0x34) - fVar2;
+  ins->min[2] = *(float *)((kd_iptr)pvVar9 + 0x38) - fVar3;
+  ins->max[0] = fVar1 + *(float *)((kd_iptr)pvVar9 + 0x30);
+  ins->max[1] = fVar2 + *(float *)((kd_iptr)pvVar9 + 0x34);
+  ins->max[2] = fVar3 + *(float *)((kd_iptr)pvVar9 + 0x38);
   if (finalTM != (MeMatrix4Ptr)0x0) {
                     
     fVar1 = finalTM[2][0];
@@ -218,9 +218,9 @@ void kd_McdCylinderUpdateAABB(McdGeometryInstanceID ins,MeMatrix4Ptr finalTM,MeB
     if (0.0 < fVar4) {
       sz_1 = SQRT(fVar4);
     }
-    fVar6 = s2z * *(float *)((int)pvVar8 + 0x10) + ABS(fVar1) * *(float *)((int)pvVar8 + 0x14);
-    fVar4 = *(float *)((int)pvVar8 + 0x10) * fVar5 + ABS(fVar2) * *(float *)((int)pvVar8 + 0x14);
-    fVar1 = sz_1 * *(float *)((int)pvVar8 + 0x10) + ABS(fVar3) * *(float *)((int)pvVar8 + 0x14);
+    fVar6 = s2z * *(float *)((kd_iptr)pvVar8 + ((int)((char *)&((McdCylinder *)0)->mR - (char *)0))) + ABS(fVar1) * *(float *)((kd_iptr)pvVar8 + ((int)((char *)&((McdCylinder *)0)->mRz - (char *)0)));
+    fVar4 = *(float *)((kd_iptr)pvVar8 + ((int)((char *)&((McdCylinder *)0)->mR - (char *)0))) * fVar5 + ABS(fVar2) * *(float *)((kd_iptr)pvVar8 + ((int)((char *)&((McdCylinder *)0)->mRz - (char *)0)));
+    fVar1 = sz_1 * *(float *)((kd_iptr)pvVar8 + ((int)((char *)&((McdCylinder *)0)->mR - (char *)0))) + ABS(fVar3) * *(float *)((kd_iptr)pvVar8 + ((int)((char *)&((McdCylinder *)0)->mRz - (char *)0)));
     fVar5 = finalTM[3][0] + fVar6;
     fVar6 = finalTM[3][0] - fVar6;
     fVar3 = finalTM[3][1] + fVar4;
@@ -267,8 +267,8 @@ void kd_McdCylinderGetXYAABB(McdGeometry *g,MeVector4 *_tm,MeReal *bounds)
 
   fVar1 = _tm[2][0];
   fVar2 = _tm[2][1];
-  fVar3 = *(float *)&(g[1].mRefCtAndID);
-  pMVar4 = g[1].prev;
+  fVar3 = *(float *)&(((McdCylinder *)g)->mR);
+  pMVar4 = *(__typeof__(pMVar4) *)&((McdCylinder *)g)->mRz;
   fVar1 = SQRT(1.0 - fVar1 * fVar1) * fVar3 + ABS(fVar1) * (*(float *)&(pMVar4));
   *bounds = _tm[3][0] - fVar1;
   fVar2 = SQRT(1.0 - fVar2 * fVar2) * fVar3 + (*(float *)&(pMVar4)) * ABS(fVar2);
@@ -286,7 +286,7 @@ void kd_McdCylinderGetBSphere(McdGeometry *g,MeReal *center,MeReal *radius)
   *center = 0.0;
   center[2] = 0.0;
   center[1] = 0.0;
-  *radius = *(float *)&(g[1].next);
+  *radius = *(float *)&(((McdCylinder *)g)->mSphereRadius);
   return;
 }
 
@@ -294,7 +294,7 @@ void kd_McdCylinderGetBSphere(McdGeometry *g,MeReal *center,MeReal *radius)
 MeReal kd_McdCylinderGetBSphereRadius(McdGeometryID g)
 
 {
-  return *(float *)&(g[1].next);
+  return *(float *)&(((McdCylinder *)g)->mSphereRadius);
 }
 
 /* ---- McdCylinderMaximumPoint (exported as kd_McdCylinderMaximumPoint, asm label "McdCylinderMaximumPoint") ---- */
@@ -319,36 +319,36 @@ void kd_McdCylinderMaximumPoint(McdGeometryInstanceID ins,MeReal *inDir,MeReal *
   n.v[0] = *inDir;
   n.v[1] = inDir[1];
   n.v[2] = inDir[2];
-  fVar1 = *(float *)((int)pvVar10 + 0x30);
+  fVar1 = *(float *)((kd_iptr)pvVar10 + 0x30);
   *outPoint = fVar1;
-  fVar2 = *(float *)((int)pvVar10 + 0x34);
+  fVar2 = *(float *)((kd_iptr)pvVar10 + 0x34);
   outPoint[1] = fVar2;
-  fVar7 = *(float *)((int)pvVar10 + 0x38);
+  fVar7 = *(float *)((kd_iptr)pvVar10 + 0x38);
   outPoint[2] = fVar7;
-  fVar3 = *(float *)((int)pvVar10 + 0x20);
-  fVar8 = n.v[1] * *(float *)((int)pvVar10 + 0x24) + fVar3 * n.v[0] +
-          n.v[2] * *(float *)((int)pvVar10 + 0x28);
+  fVar3 = *(float *)((kd_iptr)pvVar10 + 0x20);
+  fVar8 = n.v[1] * *(float *)((kd_iptr)pvVar10 + 0x24) + fVar3 * n.v[0] +
+          n.v[2] * *(float *)((kd_iptr)pvVar10 + 0x28);
   if (0.0001 < ABS(fVar8)) {
                     
     if (fVar8 <= 0.0) {
-      fVar1 = *(float *)((int)pvVar9 + 0x14);
-      fVar2 = *(float *)((int)pvVar10 + 0x24);
-      fVar7 = *(float *)((int)pvVar10 + 0x28);
+      fVar1 = *(float *)((kd_iptr)pvVar9 + ((int)((char *)&((McdCylinder *)0)->mRz - (char *)0)));
+      fVar2 = *(float *)((kd_iptr)pvVar10 + 0x24);
+      fVar7 = *(float *)((kd_iptr)pvVar10 + 0x28);
       *outPoint = *outPoint - fVar1 * fVar3;
       outPoint[1] = outPoint[1] - fVar1 * fVar2;
       outPoint[2] = outPoint[2] - fVar1 * fVar7;
     }
     else {
-      fVar4 = *(float *)((int)pvVar9 + 0x14);
-      fVar5 = *(float *)((int)pvVar10 + 0x24);
-      fVar6 = *(float *)((int)pvVar10 + 0x28);
+      fVar4 = *(float *)((kd_iptr)pvVar9 + ((int)((char *)&((McdCylinder *)0)->mRz - (char *)0)));
+      fVar5 = *(float *)((kd_iptr)pvVar10 + 0x24);
+      fVar6 = *(float *)((kd_iptr)pvVar10 + 0x28);
       *outPoint = fVar1 + fVar4 * fVar3;
       outPoint[1] = fVar2 + fVar4 * fVar5;
       outPoint[2] = fVar7 + fVar4 * fVar6;
     }
-    n.v[0] = n.v[0] - fVar8 * *(float *)((int)pvVar10 + 0x20);
-    n.v[1] = n.v[1] - fVar8 * *(float *)((int)pvVar10 + 0x24);
-    n.v[2] = n.v[2] - fVar8 * *(float *)((int)pvVar10 + 0x28);
+    n.v[0] = n.v[0] - fVar8 * *(float *)((kd_iptr)pvVar10 + 0x20);
+    n.v[1] = n.v[1] - fVar8 * *(float *)((kd_iptr)pvVar10 + 0x24);
+    n.v[2] = n.v[2] - fVar8 * *(float *)((kd_iptr)pvVar10 + 0x28);
     fVar1 = n.v[1] * n.v[1] + n.v[0] * n.v[0] + n.v[2] * n.v[2];
     if (9.999999e-09 < fVar1) {
                     
@@ -358,7 +358,7 @@ void kd_McdCylinderMaximumPoint(McdGeometryInstanceID ins,MeReal *inDir,MeReal *
       n.v[2] = fVar1 * n.v[2];
     }
   }
-  fVar1 = *(float *)((int)pvVar9 + 0x10);
+  fVar1 = *(float *)((kd_iptr)pvVar9 + ((int)((char *)&((McdCylinder *)0)->mR - (char *)0)));
   *outPoint = fVar1 * n.v[0] + *outPoint;
   outPoint[1] = fVar1 * n.v[1] + outPoint[1];
   outPoint[2] = fVar1 * n.v[2] + outPoint[2];
@@ -379,10 +379,10 @@ void kd_McdCylinderMaximumPointLocal(McdGeometry *g,MeReal *inDir,MeReal *outPoi
   if (0.0001 < ABS(inDir[2])) {
                     
     if (inDir[2] <= 0.0001) {
-      fVar3 = outPoint[2] - *(float *)&(g[1].prev);
+      fVar3 = outPoint[2] - *(float *)&(((McdCylinder *)g)->mRz);
     }
     else {
-      fVar3 = *(float *)&(g[1].prev) + outPoint[2];
+      fVar3 = *(float *)&(((McdCylinder *)g)->mRz) + outPoint[2];
     }
     outPoint[2] = fVar3;
     fVar3 = fVar2 * fVar2 + fVar1 * fVar1;
@@ -393,8 +393,8 @@ void kd_McdCylinderMaximumPointLocal(McdGeometry *g,MeReal *inDir,MeReal *outPoi
       fVar2 = fVar3 * fVar2;
     }
   }
-  *outPoint = fVar1 * *(float *)&(g[1].mRefCtAndID) + *outPoint;
-  outPoint[1] = fVar2 * *(float *)&(g[1].mRefCtAndID) + outPoint[1];
+  *outPoint = fVar1 * *(float *)&(((McdCylinder *)g)->mR) + *outPoint;
+  outPoint[1] = fVar2 * *(float *)&(((McdCylinder *)g)->mR) + outPoint[1];
   return;
 }
 
@@ -406,8 +406,8 @@ MeI16 kd_McdCylinderGetMassProperties(McdGeometry *g,MeVector4 *relTM,MeVector3 
   float fVar2;
   float fVar3;
 
-  fVar1 = *(float *)&(g[1].mRefCtAndID);
-  fVar2 = *(float *)&(g[1].prev) + *(float *)&(g[1].prev);
+  fVar1 = *(float *)&(((McdCylinder *)g)->mR);
+  fVar2 = *(float *)&(((McdCylinder *)g)->mRz) + *(float *)&(((McdCylinder *)g)->mRz);
                     
   (*m)[1] = 0.0;
   (*m)[2] = 0.0;
@@ -458,20 +458,20 @@ void kd_McdCylinderDebugDraw(McdGeometryID geom,MeReal (*tm) [4],MeReal *colour)
   MeReal rads [3];
 
   if ((char)geom->mRefCtAndID == '\x04') {
-    fVar1 = *(float *)&(geom[1].mRefCtAndID);
+    fVar1 = *(float *)&(((McdCylinder *)geom)->mR);
     iVar9 = 0x13;
-    fVar2 = (*(float *)&(geom[1].prev) + *(float *)&(geom[1].prev)) * 0.5;
+    fVar2 = (*(float *)&(((McdCylinder *)geom)->mRz) + *(float *)&(((McdCylinder *)geom)->mRz)) * 0.5;
     iVar8 = 0;
     do {
-      fVar3 = fVar1 * *(float *)((int)McdCylinderDebugDraw__cylDraw[0][0] + iVar8 + 4);
-      fVar4 = fVar1 * *(float *)((int)McdCylinderDebugDraw__cylDraw[0][0] + iVar8);
-      fVar6 = fVar2 * *(float *)((int)McdCylinderDebugDraw__cylDraw[0][0] + iVar8 + 8);
+      fVar3 = fVar1 * *(float *)((kd_iptr)McdCylinderDebugDraw__cylDraw[0][0] + iVar8 + 4);
+      fVar4 = fVar1 * *(float *)((kd_iptr)McdCylinderDebugDraw__cylDraw[0][0] + iVar8);
+      fVar6 = fVar2 * *(float *)((kd_iptr)McdCylinderDebugDraw__cylDraw[0][0] + iVar8 + 8);
       wv1[0] = tm[2][0] * fVar6 + fVar4 * (*tm)[0] + fVar3 * tm[1][0] + tm[3][0];
       wv1[1] = fVar6 * tm[2][1] + fVar3 * tm[1][1] + fVar4 * (*tm)[1] + tm[3][1];
-      fVar7 = fVar1 * *(float *)((int)McdCylinderDebugDraw__cylDraw[0][1] + iVar8 + 4);
-      fVar5 = fVar1 * *(float *)((int)McdCylinderDebugDraw__cylDraw[0][1] + iVar8);
+      fVar7 = fVar1 * *(float *)((kd_iptr)McdCylinderDebugDraw__cylDraw[0][1] + iVar8 + 4);
+      fVar5 = fVar1 * *(float *)((kd_iptr)McdCylinderDebugDraw__cylDraw[0][1] + iVar8);
       wv1[2] = fVar4 * (*tm)[2] + fVar3 * tm[1][2] + fVar6 * tm[2][2] + tm[3][2];
-      fVar3 = fVar2 * *(float *)((int)McdCylinderDebugDraw__cylDraw[0][1] + iVar8 + 8);
+      fVar3 = fVar2 * *(float *)((kd_iptr)McdCylinderDebugDraw__cylDraw[0][1] + iVar8 + 8);
       iVar8 = iVar8 + 0x18;
       wv2[0] = (*tm)[0] * fVar5 + tm[1][0] * fVar7 + tm[2][0] * fVar3 + tm[3][0];
       wv2[1] = (*tm)[1] * fVar5 + tm[1][1] * fVar7 + tm[2][1] * fVar3 + tm[3][1];

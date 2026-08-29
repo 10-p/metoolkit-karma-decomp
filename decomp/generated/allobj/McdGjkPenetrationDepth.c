@@ -58,7 +58,7 @@ void kd_McdGjkFaceAddPoint(McdGjkFaceQueue *q,int i)
 int kd_McdGjkFaceCompare(void *f1,void *f2)
 
 {
-  return (uint)(*(float *)((int)f1 + 0xc) < *(float *)((int)f2 + 0xc));
+  return (uint)(*(float *)((kd_iptr)f1 + 0xc) < *(float *)((kd_iptr)f2 + 0xc));
 }
 
 /* ---- McdGjkFaceAdd (exported as kd_McdGjkFaceAdd, asm label "kd_McdGjkFaceAdd") ---- */
@@ -140,12 +140,12 @@ void kd_McdGjkFaceLoad(McdGjkFaceQueue *q,McdGjkFace *f)
         pMVar1 = q->s;
         iVar2 = f->fi[iVar6];
         pMVar3 = q->point;
-        *(MeReal *)((int)pMVar1->point[0].w + local_18) = pMVar3[iVar2].w[0];
-        *(MeReal *)((int)pMVar1->point[0].w + local_18 + 4) = pMVar3[iVar2].w[1];
-        *(MeReal *)((int)pMVar1->point[0].w + local_18 + 8) = pMVar3[iVar2].w[2];
-        *(MeReal *)((int)pMVar1->point[0].s2 + local_18) = pMVar3[iVar2].s2[0];
-        *(MeReal *)((int)pMVar1->point[0].s2 + local_18 + 4) = pMVar3[iVar2].s2[1];
-        *(MeReal *)((int)pMVar1->point[0].s2 + local_18 + 8) = pMVar3[iVar2].s2[2];
+        *(MeReal *)((kd_iptr)pMVar1->point[0].w + local_18) = pMVar3[iVar2].w[0];
+        *(MeReal *)((kd_iptr)pMVar1->point[0].w + local_18 + 4) = pMVar3[iVar2].w[1];
+        *(MeReal *)((kd_iptr)pMVar1->point[0].w + local_18 + 8) = pMVar3[iVar2].w[2];
+        *(MeReal *)((kd_iptr)pMVar1->point[0].s2 + local_18) = pMVar3[iVar2].s2[0];
+        *(MeReal *)((kd_iptr)pMVar1->point[0].s2 + local_18 + 4) = pMVar3[iVar2].s2[1];
+        *(MeReal *)((kd_iptr)pMVar1->point[0].s2 + local_18 + 8) = pMVar3[iVar2].s2[2];
         q->si[iVar6] = f->fi[iVar6];
         McdGjkUpdateDotCache(q->s);
         McdGjkUpdateDeltaCache(q->s);

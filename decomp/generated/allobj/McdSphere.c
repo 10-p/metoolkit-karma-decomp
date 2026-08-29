@@ -62,11 +62,11 @@ McdSphereID kd_McdSphereCreate(McdFramework *frame,MeReal inRadius)
 {
   McdSphereID pMVar1;
 
-  pMVar1 = (MeMemoryAPI.createAligned)(0x14,0x10);
+  pMVar1 = (MeMemoryAPI.createAligned)((int)sizeof(*(McdSphere *)0),0x10);
   if (pMVar1 != (McdSphereID)0x0) {
     McdGeometryInit(pMVar1,frame,1);
                     
-    *(MeReal *)&pMVar1[1].mRefCtAndID = inRadius;
+    *(MeReal *)&((McdSphere *)pMVar1)->mRadius = inRadius;
   }
   return pMVar1;
 }
@@ -76,7 +76,7 @@ void kd_McdSphereSetRadius(McdSphereID g,MeReal inRadius)
 
 {
                     
-  *(MeReal *)&g[1].mRefCtAndID = inRadius;
+  *(MeReal *)&((McdSphere *)g)->mRadius = inRadius;
   return;
 }
 
@@ -84,7 +84,7 @@ void kd_McdSphereSetRadius(McdSphereID g,MeReal inRadius)
 MeReal kd_McdSphereGetRadius(McdSphereID g)
 
 {
-  return *(float *)&(g[1].mRefCtAndID);
+  return *(float *)&(((McdSphere *)g)->mRadius);
 }
 
 /* ---- McdSphereDestroy (exported as kd_McdSphereDestroy, asm label "McdSphereDestroy") ---- */
@@ -107,13 +107,13 @@ void kd_McdSphereUpdateAABB(McdGeometryInstanceID ins,MeMatrix4Ptr finalTM,MeBoo
 
   pvVar3 = McdGeometryInstanceGetGeometry(ins);
   pvVar4 = McdGeometryInstanceGetTransformPtr(ins);
-  fVar2 = *(float *)((int)pvVar3 + 0x10);
-  ins->min[0] = *(MeReal *)((int)pvVar4 + 0x30);
-  ins->min[1] = *(MeReal *)((int)pvVar4 + 0x34);
-  ins->min[2] = *(MeReal *)((int)pvVar4 + 0x38);
-  ins->max[0] = *(MeReal *)((int)pvVar4 + 0x30);
-  ins->max[1] = *(MeReal *)((int)pvVar4 + 0x34);
-  ins->max[2] = *(MeReal *)((int)pvVar4 + 0x38);
+  fVar2 = *(float *)((kd_iptr)pvVar3 + ((int)((char *)&((McdSphere *)0)->mRadius - (char *)0)));
+  ins->min[0] = *(MeReal *)((kd_iptr)pvVar4 + 0x30);
+  ins->min[1] = *(MeReal *)((kd_iptr)pvVar4 + 0x34);
+  ins->min[2] = *(MeReal *)((kd_iptr)pvVar4 + 0x38);
+  ins->max[0] = *(MeReal *)((kd_iptr)pvVar4 + 0x30);
+  ins->max[1] = *(MeReal *)((kd_iptr)pvVar4 + 0x34);
+  ins->max[2] = *(MeReal *)((kd_iptr)pvVar4 + 0x38);
   if (finalTM != (MeMatrix4Ptr)0x0) {
     fVar1 = finalTM[3][0];
     if (ins->min[0] < fVar1) {
@@ -163,7 +163,7 @@ void kd_McdSphereGetBSphere(McdSphereID g,MeReal *center,MeReal *radius)
   *center = 0.0;
   center[2] = 0.0;
   center[1] = 0.0;
-  *radius = *(float *)&(g[1].mRefCtAndID);
+  *radius = *(float *)&(((McdSphere *)g)->mRadius);
   return;
 }
 
@@ -181,12 +181,12 @@ void kd_McdSphereMaximumPoint(McdGeometryInstanceID ins,MeReal *inDir,MeReal *ou
 
   pvVar6 = McdGeometryInstanceGetGeometry(ins);
   pvVar7 = McdGeometryInstanceGetTransformPtr(ins);
-  fVar1 = *(float *)((int)pvVar6 + 0x10);
+  fVar1 = *(float *)((kd_iptr)pvVar6 + ((int)((char *)&((McdSphere *)0)->mRadius - (char *)0)));
   fVar2 = inDir[1];
   fVar3 = inDir[2];
-  fVar4 = *(float *)((int)pvVar7 + 0x34);
-  fVar5 = *(float *)((int)pvVar7 + 0x38);
-  *outPoint = fVar1 * *inDir + *(float *)((int)pvVar7 + 0x30);
+  fVar4 = *(float *)((kd_iptr)pvVar7 + 0x34);
+  fVar5 = *(float *)((kd_iptr)pvVar7 + 0x38);
+  *outPoint = fVar1 * *inDir + *(float *)((kd_iptr)pvVar7 + 0x30);
   outPoint[1] = fVar1 * fVar2 + fVar4;
   outPoint[2] = fVar1 * fVar3 + fVar5;
   return;
@@ -208,9 +208,9 @@ MeI16 kd_McdSphereGetMassProperties(McdSphereID g,MeVector4 *relTM,MeVector3 *m,
   m[1][2] = 0.0;
   m[2][0] = 0.0;
   m[2][1] = 0.0;
-  (*m)[0] = *(float *)&(g[1].mRefCtAndID) * 0.4 * *(float *)&(g[1].mRefCtAndID);
-  m[1][1] = *(float *)&(g[1].mRefCtAndID) * 0.4 * *(float *)&(g[1].mRefCtAndID);
-  m[2][2] = *(float *)&(g[1].mRefCtAndID) * 0.4 * *(float *)&(g[1].mRefCtAndID);
+  (*m)[0] = *(float *)&(((McdSphere *)g)->mRadius) * 0.4 * *(float *)&(((McdSphere *)g)->mRadius);
+  m[1][1] = *(float *)&(((McdSphere *)g)->mRadius) * 0.4 * *(float *)&(((McdSphere *)g)->mRadius);
+  m[2][2] = *(float *)&(((McdSphere *)g)->mRadius) * 0.4 * *(float *)&(((McdSphere *)g)->mRadius);
   (*relTM)[0] = 1.0;
   (*relTM)[1] = 0.0;
   (*relTM)[2] = 0.0;
@@ -227,7 +227,7 @@ MeI16 kd_McdSphereGetMassProperties(McdSphereID g,MeVector4 *relTM,MeVector3 *m,
   relTM[3][1] = 0.0;
   relTM[3][2] = 0.0;
   relTM[3][3] = 1.0;
-  fVar1 = *(float *)&(g[1].mRefCtAndID);
+  fVar1 = *(float *)&(((McdSphere *)g)->mRadius);
   *volume = fVar1 * fVar1 * fVar1 * 4.1887903;
   return 0;
 }
@@ -250,19 +250,19 @@ void kd_McdSphereDebugDraw(McdGeometryID geom,MeReal (*tm) [4],MeReal *colour)
   MeReal lv [3];
 
   if ((char)geom->mRefCtAndID == '\x01') {
-    fVar1 = *(float *)&(geom[1].mRefCtAndID);
+    fVar1 = *(float *)&(((McdSphere *)geom)->mRadius);
     iVar8 = 0x17;
     iVar7 = 0;
     do {
-      fVar2 = fVar1 * *(float *)((int)McdSphereDebugDraw__sphereDraw[0][0] + iVar7 + 4);
-      fVar3 = fVar1 * *(float *)((int)McdSphereDebugDraw__sphereDraw[0][0] + iVar7);
-      fVar5 = fVar1 * *(float *)((int)McdSphereDebugDraw__sphereDraw[0][0] + iVar7 + 8);
+      fVar2 = fVar1 * *(float *)((kd_iptr)McdSphereDebugDraw__sphereDraw[0][0] + iVar7 + 4);
+      fVar3 = fVar1 * *(float *)((kd_iptr)McdSphereDebugDraw__sphereDraw[0][0] + iVar7);
+      fVar5 = fVar1 * *(float *)((kd_iptr)McdSphereDebugDraw__sphereDraw[0][0] + iVar7 + 8);
       wv1[0] = tm[2][0] * fVar5 + fVar3 * (*tm)[0] + fVar2 * tm[1][0] + tm[3][0];
       wv1[1] = fVar5 * tm[2][1] + fVar2 * tm[1][1] + fVar3 * (*tm)[1] + tm[3][1];
-      fVar6 = fVar1 * *(float *)((int)McdSphereDebugDraw__sphereDraw[0][1] + iVar7 + 4);
-      fVar4 = fVar1 * *(float *)((int)McdSphereDebugDraw__sphereDraw[0][1] + iVar7);
+      fVar6 = fVar1 * *(float *)((kd_iptr)McdSphereDebugDraw__sphereDraw[0][1] + iVar7 + 4);
+      fVar4 = fVar1 * *(float *)((kd_iptr)McdSphereDebugDraw__sphereDraw[0][1] + iVar7);
       wv1[2] = fVar3 * (*tm)[2] + fVar2 * tm[1][2] + fVar5 * tm[2][2] + tm[3][2];
-      fVar2 = fVar1 * *(float *)((int)McdSphereDebugDraw__sphereDraw[0][1] + iVar7 + 8);
+      fVar2 = fVar1 * *(float *)((kd_iptr)McdSphereDebugDraw__sphereDraw[0][1] + iVar7 + 8);
       iVar7 = iVar7 + 0x18;
       wv2[0] = (*tm)[0] * fVar4 + tm[1][0] * fVar6 + tm[2][0] * fVar2 + tm[3][0];
       wv2[1] = (*tm)[1] * fVar4 + tm[1][1] * fVar6 + tm[2][1] * fVar2 + tm[3][1];

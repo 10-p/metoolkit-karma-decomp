@@ -64,7 +64,7 @@ MeBool kd_McdBatchFlattenAggregate
   McdGeometryInstance *ins2_00;
   MeReal eps1_00;
   MeReal eps2_00;
-  int local_70;
+  kd_iptr local_70;
   McdBatchEntry *entry;
   int i;
   int type2;
@@ -79,11 +79,11 @@ MeBool kd_McdBatchFlattenAggregate
   iVar16 = 0;
   McdGeometryInstanceGetAABB(ins2,min2,max2);
   MVar7 = McdGeometryInstanceGetGeometryType(ins2);
-  iVar14 = *(int *)((int)pvVar8 + 0x18);
+  iVar14 = *(int *)((kd_iptr)pvVar8 + 0x18);
   if (0 < iVar14) {
     local_70 = 0;
     do {
-      if (*(int *)(*(int *)((int)pvVar8 + 0x10) + 0x40 + local_70) != 0) {
+      if (*(int *)(*(int *)((kd_iptr)pvVar8 + 0x10) + 0x40 + local_70) != 0) {
         McdGeometryInstanceGetAABB(pMVar15,min1,max1);
         if ((((min1[0] <= max2[0]) && (min1[1] <= max2[1])) && (min1[2] <= max2[2])) &&
            (((min2[0] <= max1[0] && (min2[1] <= max1[1])) && (min2[2] <= max1[2])))) {
@@ -94,7 +94,7 @@ MeBool kd_McdBatchFlattenAggregate
                     
             paMVar9 = pMVar15->mTM;
             paMVar6 = ins1->mTM;
-            pfVar12 = (float *)(local_70 + *(int *)((int)pvVar8 + 0x10));
+            pfVar12 = (float *)(local_70 + *(int *)((kd_iptr)pvVar8 + 0x10));
             i = 3;
             do {
               (*paMVar9)[0] =
@@ -121,7 +121,7 @@ MeBool kd_McdBatchFlattenAggregate
               i = i + -1;
             } while (-1 < i);
           }
-          bVar5 = **(byte **)(*(int *)((int)pvVar8 + 0x10) + 0x40 + local_70);
+          bVar5 = **(byte **)(*(int *)((kd_iptr)pvVar8 + 0x10) + 0x40 + local_70);
           flags_00 = flags;
           ins1_00 = pMVar15;
           ins2_00 = ins2;
@@ -135,7 +135,7 @@ MeBool kd_McdBatchFlattenAggregate
               }
               pMVar13 = context->entryArray + context->nextEntry;
               pvVar10 = McdFrameworkGetInteractions(context->frame,(uint)bVar5,(int)(short)MVar7);
-              if (*(int *)((int)pvVar10 + 0x10) == 0) {
+              if (*(int *)((kd_iptr)pvVar10 + ((int)((char *)&((struct _McdInteractions *)0)->swap - (char *)0))) == 0) {
                 (pMVar13->geometryData1).type = (ushort)bVar5;
                 (pMVar13->geometryData1).min = pMVar15->min;
                 (pMVar13->geometryData1).max = pMVar15->max;
@@ -188,7 +188,7 @@ MeBool kd_McdBatchFlattenAggregate
           }
         }
 LAB_00010300:
-        iVar14 = *(int *)((int)pvVar8 + 0x18);
+        iVar14 = *(int *)((kd_iptr)pvVar8 + 0x18);
       }
       iVar16 = iVar16 + 1;
       local_70 = local_70 + 0x44;
@@ -245,14 +245,14 @@ MeBool kd_McdBatchFlatten(McdBatchContext *context,McdModelPairContainer *pairs)
     } while (iVar10 < context->typeCount * context->typeCount);
   }
   context->pools->contactCount = 0;
-  iVar10 = 0xc;
+  iVar10 = 1 * (int)sizeof(McdBatchContactPool);
   iVar11 = 0xf;
   do {
-    *(undefined4 *)((int)&context->pools->contactCount + iVar10) = 0;
-    *(undefined4 *)((int)&context->pools[1].contactCount + iVar10) = 0;
-    *(undefined4 *)((int)&context->pools[2].contactCount + iVar10) = 0;
-    *(undefined4 *)((int)&context->pools[3].contactCount + iVar10) = 0;
-    iVar10 = iVar10 + 0x30;
+    *(undefined4 *)((kd_iptr)&context->pools->contactCount + iVar10) = 0;
+    *(undefined4 *)((kd_iptr)&context->pools[1].contactCount + iVar10) = 0;
+    *(undefined4 *)((kd_iptr)&context->pools[2].contactCount + iVar10) = 0;
+    *(undefined4 *)((kd_iptr)&context->pools[3].contactCount + iVar10) = 0;
+    iVar10 = iVar10 + 4 * (int)sizeof(McdBatchContactPool);
     iVar11 = iVar11 + -4;
   } while (-1 < iVar11);
   if (context->nextFlattenPair < pairs->stayingEnd) {
@@ -302,40 +302,40 @@ LAB_00010703:
                   pMVar13 = context->entryArray;
                   iVar14 = iVar14 + -1;
                   context->table
-                  [(uint)*(ushort *)((int)pMVar13->normal + local_40 + -0x1c) * context->typeCount +
-                   (uint)*(ushort *)((int)pMVar13->normal + local_40 + -4)] =
-                       *(McdBatchEntry **)((int)pMVar13->normal + local_40 + 0x28);
+                  [(uint)*(ushort *)((kd_iptr)pMVar13->normal + local_40 + -0x1c) * context->typeCount +
+                   (uint)*(ushort *)((kd_iptr)pMVar13->normal + local_40 + -4)] =
+                       *(McdBatchEntry **)((kd_iptr)pMVar13->normal + local_40 + 0x28);
                   local_40 = local_40 + -0x60;
                 }
               }
               pMVar13 = context->entryArray;
               context->table
-              [(uint)*(ushort *)((int)pMVar13->normal + local_40 + -0x1c) * context->typeCount +
-               (uint)*(ushort *)((int)pMVar13->normal + local_40 + -4)] =
-                   *(McdBatchEntry **)((int)pMVar13->normal + local_40 + 0x28);
+              [(uint)*(ushort *)((kd_iptr)pMVar13->normal + local_40 + -0x1c) * context->typeCount +
+               (uint)*(ushort *)((kd_iptr)pMVar13->normal + local_40 + -4)] =
+                   *(McdBatchEntry **)((kd_iptr)pMVar13->normal + local_40 + 0x28);
               local_40 = local_40 + -0x60;
               for (iVar14 = iVar14 + -1; iVar10 <= iVar14; iVar14 = iVar14 + -4) {
 LAB_00010772:
                 pMVar13 = context->entryArray;
                 context->table
-                [(uint)*(ushort *)((int)pMVar13->normal + local_40 + -0x1c) * context->typeCount +
-                 (uint)*(ushort *)((int)pMVar13->normal + local_40 + -4)] =
-                     *(McdBatchEntry **)((int)pMVar13->normal + local_40 + 0x28);
+                [(uint)*(ushort *)((kd_iptr)pMVar13->normal + local_40 + -0x1c) * context->typeCount +
+                 (uint)*(ushort *)((kd_iptr)pMVar13->normal + local_40 + -4)] =
+                     *(McdBatchEntry **)((kd_iptr)pMVar13->normal + local_40 + 0x28);
                 pMVar13 = context->entryArray;
                 context->table
-                [(uint)*(ushort *)((int)pMVar13[-1].normal + local_40 + -0x1c) * context->typeCount
-                 + (uint)*(ushort *)((int)pMVar13[-1].normal + local_40 + -4)] =
-                     *(McdBatchEntry **)((int)pMVar13[-1].normal + local_40 + 0x28);
+                [(uint)*(ushort *)((kd_iptr)pMVar13[-1].normal + local_40 + -0x1c) * context->typeCount
+                 + (uint)*(ushort *)((kd_iptr)pMVar13[-1].normal + local_40 + -4)] =
+                     *(McdBatchEntry **)((kd_iptr)pMVar13[-1].normal + local_40 + 0x28);
                 pMVar13 = context->entryArray;
                 context->table
-                [(uint)*(ushort *)((int)pMVar13[-2].normal + local_40 + -0x1c) * context->typeCount
-                 + (uint)*(ushort *)((int)pMVar13[-2].normal + local_40 + -4)] =
-                     *(McdBatchEntry **)((int)pMVar13[-2].normal + local_40 + 0x28);
+                [(uint)*(ushort *)((kd_iptr)pMVar13[-2].normal + local_40 + -0x1c) * context->typeCount
+                 + (uint)*(ushort *)((kd_iptr)pMVar13[-2].normal + local_40 + -4)] =
+                     *(McdBatchEntry **)((kd_iptr)pMVar13[-2].normal + local_40 + 0x28);
                 pMVar13 = context->entryArray;
                 context->table
-                [(uint)*(ushort *)((int)pMVar13[-3].normal + local_40 + -0x1c) * context->typeCount
-                 + (uint)*(ushort *)((int)pMVar13[-3].normal + local_40 + -4)] =
-                     *(McdBatchEntry **)((int)pMVar13[-3].normal + local_40 + 0x28);
+                [(uint)*(ushort *)((kd_iptr)pMVar13[-3].normal + local_40 + -0x1c) * context->typeCount
+                 + (uint)*(ushort *)((kd_iptr)pMVar13[-3].normal + local_40 + -4)] =
+                     *(McdBatchEntry **)((kd_iptr)pMVar13[-3].normal + local_40 + 0x28);
                 local_40 = local_40 + -0x180;
               }
             }
@@ -371,8 +371,8 @@ LAB_00010772:
             iVar12 = 0;
             do {
               iVar11 = iVar11 + 1;
-              *(McdBatchPairData **)((int)pMVar1->start->normal + iVar12 + 0x2c) = pMVar1;
-              *(int *)((int)pMVar1->start->normal + iVar12 + 0x20) = iVar10;
+              *(McdBatchPairData **)((kd_iptr)pMVar1->start->normal + iVar12 + 0x2c) = pMVar1;
+              *(int *)((kd_iptr)pMVar1->start->normal + iVar12 + 0x20) = iVar10;
               iVar12 = iVar12 + 0x60;
             } while (iVar11 < pMVar1->entries);
           }
@@ -444,7 +444,7 @@ MeBool kd_McdBatchIntersectBucket(McdBatchContext *context,int type1,int type2)
 
   iVar6 = type1 * context->typeCount + type2;
   pvVar5 = McdFrameworkGetInteractions(context->frame,type1,type2);
-  pcVar2 = *(code **)((int)pvVar5 + 8);
+  pcVar2 = *(code **)((kd_iptr)pvVar5 + ((int)((char *)&((struct _McdInteractions *)0)->intersectFn - (char *)0)));
   if ((pcVar2 == (code *)0x0) &&
      (iVar7 = McdFrameworkGetInteractionsWarned(context->frame,type1,type2), iVar7 == 0)) {
     McdFrameworkGetTypeName(context->frame,type2);
@@ -557,31 +557,31 @@ void kd_McdBatchUnflattenAggregate
             uVar4 = pMVar3->flags;
             if ((uVar4 & 1) == 0) {
               if ((uVar4 & 2) != 0) {
-                *(McdGeometryInstance **)((int)pMVar3->contacts->normal + iVar5 + 0x14) =
+                *(McdGeometryInstance **)((kd_iptr)pMVar3->contacts->normal + iVar5 + 0x14) =
                      pMVar3->ins1;
                 uVar4 = pMVar3->flags;
               }
               if ((uVar4 & 4) != 0) {
-                *(McdGeometryInstance **)((int)pMVar3->contacts->normal + iVar5 + 0x18) =
+                *(McdGeometryInstance **)((kd_iptr)pMVar3->contacts->normal + iVar5 + 0x18) =
                      pMVar3->ins2;
               }
             }
             else {
               pMVar1 = pMVar3->contacts;
-              *(float *)((int)pMVar1->normal + iVar5) =
-                   *(float *)((int)pMVar1->normal + iVar5) * -1.0;
-              *(float *)((int)pMVar1->normal + iVar5 + 4) =
-                   *(float *)((int)pMVar1->normal + iVar5 + 4) * -1.0;
-              *(float *)((int)pMVar1->normal + iVar5 + 8) =
-                   *(float *)((int)pMVar1->normal + iVar5 + 8) * -1.0;
+              *(float *)((kd_iptr)pMVar1->normal + iVar5) =
+                   *(float *)((kd_iptr)pMVar1->normal + iVar5) * -1.0;
+              *(float *)((kd_iptr)pMVar1->normal + iVar5 + 4) =
+                   *(float *)((kd_iptr)pMVar1->normal + iVar5 + 4) * -1.0;
+              *(float *)((kd_iptr)pMVar1->normal + iVar5 + 8) =
+                   *(float *)((kd_iptr)pMVar1->normal + iVar5 + 8) * -1.0;
               uVar4 = pMVar3->flags;
               if ((uVar4 & 2) != 0) {
-                *(McdGeometryInstance **)((int)pMVar3->contacts->normal + iVar5 + 0x18) =
+                *(McdGeometryInstance **)((kd_iptr)pMVar3->contacts->normal + iVar5 + 0x18) =
                      pMVar3->ins1;
                 uVar4 = pMVar3->flags;
               }
               if ((uVar4 & 4) != 0) {
-                *(McdGeometryInstance **)((int)pMVar3->contacts->normal + iVar5 + 0x14) =
+                *(McdGeometryInstance **)((kd_iptr)pMVar3->contacts->normal + iVar5 + 0x14) =
                      pMVar3->ins2;
               }
             }
@@ -655,7 +655,7 @@ MeBool kd_McdBatchUnflatten(McdBatchContext *context,McdIntersectResult *resultA
           pvVar6 = McdFrameworkGetInteractions
                              (context->frame,(uint)(pMVar3->geometryData1).type,
                               (uint)(pMVar3->geometryData2).type);
-          if (*(int *)((int)pvVar6 + 0x14) == 0) {
+          if (*(int *)((kd_iptr)pvVar6 + ((int)((char *)&((struct _McdInteractions *)0)->cull - (char *)0))) == 0) {
             iVar5 = pMVar3->contactCount;
             pMVar2->contactCount = iVar5;
             pMVar8 = pMVar3->contacts;
@@ -729,49 +729,49 @@ McdBatchContext * kd_McdBatchContextCreate(McdFramework *frame)
   int local_18;
   int i;
 
-  pMVar1 = (MeMemoryAPI.create)(0x50);
+  pMVar1 = (MeMemoryAPI.create)((int)sizeof(*(McdBatchContext *)0));
   pMVar1->frame = frame;
   pMVar1->typeCount = frame->geometryRegisteredCountMax;
   paaMVar2 = (MeMemoryAPI.createAligned)(64000,0x10);
   pMVar1->tmArray = paaMVar2;
-  pppaMVar3 = (MeMemoryAPI.create)(4000);
+  pppaMVar3 = (MeMemoryAPI.create)((1000) * (int)sizeof(*(MeMatrix4Ptr **)0));
   pMVar1->tmTrack = pppaMVar3;
   pMVar1->tmMaxCount = 1000;
-  ppMVar4 = (MeMemoryAPI.create)(pMVar1->typeCount * pMVar1->typeCount * 4);
+  ppMVar4 = (MeMemoryAPI.create)((pMVar1->typeCount * pMVar1->typeCount) * (int)sizeof(*(McdBatchEntry **)0));
   pMVar1->table = ppMVar4;
-  pMVar5 = (MeMemoryAPI.create)(96000);
+  pMVar5 = (MeMemoryAPI.create)((1000) * (int)sizeof(*(McdBatchEntry *)0));
   pMVar1->maxEntryCount = 1000;
   pMVar1->entryArray = pMVar5;
-  pMVar6 = (MeMemoryAPI.create)(20000);
+  pMVar6 = (MeMemoryAPI.create)((1000) * (int)sizeof(*(McdBatchPairData *)0));
   pMVar1->pairDataMaxCount = 1000;
   pMVar1->pairData = pMVar6;
-  pMVar7 = (MeMemoryAPI.create)(0xcc);
+  pMVar7 = (MeMemoryAPI.create)((17) * (int)sizeof(*(McdBatchContactPool *)0));
   pMVar1->poolMaxCount = 0x11;
   pMVar1->pools = pMVar7;
-  pMVar8 = (MeMemoryAPI.create)(0xa000);
+  pMVar8 = (MeMemoryAPI.create)((1024) * (int)sizeof(*(McdContact *)0));
   pMVar7->contacts = pMVar8;
   pMVar1->pools->contactMaxCount = 0x400;
-  local_18 = 0xc;
+  local_18 = 1 * (int)sizeof(McdBatchContactPool);
   i = 0xf;
   do {
     pMVar7 = pMVar1->pools;
     pvVar9 = (MeMemoryAPI.create)(0x1400);
-    *(void **)((int)&pMVar7->contacts + local_18) = pvVar9;
-    *(undefined4 *)((int)&pMVar1->pools->contactMaxCount + local_18) = 0x80;
+    *(void **)((kd_iptr)&pMVar7->contacts + local_18) = pvVar9;
+    *(undefined4 *)((kd_iptr)&pMVar1->pools->contactMaxCount + local_18) = 0x80;
     pMVar7 = pMVar1->pools;
     pvVar9 = (MeMemoryAPI.create)(0x1400);
-    *(void **)((int)&pMVar7[1].contacts + local_18) = pvVar9;
-    *(undefined4 *)((int)&pMVar1->pools[1].contactMaxCount + local_18) = 0x80;
+    *(void **)((kd_iptr)&pMVar7[1].contacts + local_18) = pvVar9;
+    *(undefined4 *)((kd_iptr)&pMVar1->pools[1].contactMaxCount + local_18) = 0x80;
     pMVar7 = pMVar1->pools;
     pvVar9 = (MeMemoryAPI.create)(0x1400);
-    *(void **)((int)&pMVar7[2].contacts + local_18) = pvVar9;
-    *(undefined4 *)((int)&pMVar1->pools[2].contactMaxCount + local_18) = 0x80;
+    *(void **)((kd_iptr)&pMVar7[2].contacts + local_18) = pvVar9;
+    *(undefined4 *)((kd_iptr)&pMVar1->pools[2].contactMaxCount + local_18) = 0x80;
     pMVar7 = pMVar1->pools;
     pvVar9 = (MeMemoryAPI.create)(0x1400);
-    *(void **)((int)&pMVar7[3].contacts + local_18) = pvVar9;
-    *(undefined4 *)((int)&pMVar1->pools[3].contactMaxCount + local_18) = 0x80;
+    *(void **)((kd_iptr)&pMVar7[3].contacts + local_18) = pvVar9;
+    *(undefined4 *)((kd_iptr)&pMVar1->pools[3].contactMaxCount + local_18) = 0x80;
     i = i + -4;
-    local_18 = local_18 + 0x30;
+    local_18 = local_18 + 4 * (int)sizeof(McdBatchContactPool);
   } while (-1 < i);
   return pMVar1;
 }
@@ -798,14 +798,14 @@ void kd_McdBatchContextDestroy(McdBatchContext *context)
   (MeMemoryAPI.destroy)(context->tmTrack);
   (MeMemoryAPI.destroy)(context->entryArray);
   (MeMemoryAPI.destroy)(context->pairData);
-  iVar2 = 0xc;
+  iVar2 = 1 * (int)sizeof(McdBatchContactPool);
   (MeMemoryAPI.destroy)(context->pools->contacts);
   do {
-    (MeMemoryAPI.destroy)(*(void **)((int)&context->pools->contacts + iVar2));
-    (MeMemoryAPI.destroy)(*(void **)((int)&context->pools[1].contacts + iVar2));
-    (MeMemoryAPI.destroy)(*(void **)((int)&context->pools[2].contacts + iVar2));
-    puVar1 = (undefined4 *)((int)&context->pools[3].contacts + iVar2);
-    iVar2 = iVar2 + 0x30;
+    (MeMemoryAPI.destroy)(*(void **)((kd_iptr)&context->pools->contacts + iVar2));
+    (MeMemoryAPI.destroy)(*(void **)((kd_iptr)&context->pools[1].contacts + iVar2));
+    (MeMemoryAPI.destroy)(*(void **)((kd_iptr)&context->pools[2].contacts + iVar2));
+    puVar1 = (undefined4 *)((kd_iptr)&context->pools[3].contacts + iVar2);
+    iVar2 = iVar2 + 4 * (int)sizeof(McdBatchContactPool);
     (MeMemoryAPI.destroy)((void *)*puVar1);
     iVar3 = iVar3 + -4;
   } while (-1 < iVar3);

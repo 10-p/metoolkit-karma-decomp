@@ -122,11 +122,11 @@ int kd_IxBoxLineSegment(McdModelID model,MeReal *inOrig,MeReal *inDest,
         info->normal[1] = pfVar12[1];
         info->normal[2] = pfVar12[2];
         if (faceId.minside != 0) {
-          pbVar1 = (byte *)((int)info->normal + 3);
+          pbVar1 = (byte *)((kd_iptr)info->normal + 3);
           *pbVar1 = *pbVar1 ^ 0x80;
-          pbVar1 = (byte *)((int)info->normal + 7);
+          pbVar1 = (byte *)((kd_iptr)info->normal + 7);
           *pbVar1 = *pbVar1 ^ 0x80;
-          pbVar1 = (byte *)((int)info->normal + 0xb);
+          pbVar1 = (byte *)((kd_iptr)info->normal + 0xb);
           *pbVar1 = *pbVar1 ^ 0x80;
         }
       }
@@ -296,9 +296,9 @@ int kd_IxSphereLineSegment(McdModelID model,MeReal *inOrig,MeReal *inDest,
 
   pvVar16 = McdModelGetGeometry(model);
   pvVar17 = McdModelGetTransformPtr(model);
-  fVar3 = *(float *)((int)pvVar17 + 0x30);
-  fVar4 = *(float *)((int)pvVar17 + 0x34);
-  fVar5 = *(float *)((int)pvVar17 + 0x38);
+  fVar3 = *(float *)((kd_iptr)pvVar17 + 0x30);
+  fVar4 = *(float *)((kd_iptr)pvVar17 + 0x34);
+  fVar5 = *(float *)((kd_iptr)pvVar17 + 0x38);
   fVar18 = McdSphereGetRadius(pvVar16);
   fVar6 = fVar18 * fVar18;
   fVar15 = *inDest - *inOrig;

@@ -73,21 +73,21 @@ MeBool kd_McdSphylConvexMeshIntersect(McdModelPair *p,McdIntersectResult *result
   pvVar4 = McdModelGetGeometry(p->model2);
   result->contactCount = 0;
   result->touch = 0;
-  axis[0] = pfVar2[2] * *(float *)((int)pvVar1 + 0x28) +
-            pfVar2[1] * *(float *)((int)pvVar1 + 0x24) + *pfVar2 * *(float *)((int)pvVar1 + 0x20);
-  axis[1] = pfVar2[6] * *(float *)((int)pvVar1 + 0x28) +
-            pfVar2[5] * *(float *)((int)pvVar1 + 0x24) + pfVar2[4] * *(float *)((int)pvVar1 + 0x20);
-  axis[2] = pfVar2[10] * *(float *)((int)pvVar1 + 0x28) +
-            pfVar2[9] * *(float *)((int)pvVar1 + 0x24) + pfVar2[8] * *(float *)((int)pvVar1 + 0x20);
-  cp[0] = *(float *)((int)pvVar1 + 0x30) - pfVar2[0xc];
-  cp[1] = *(float *)((int)pvVar1 + 0x34) - pfVar2[0xd];
-  cp[2] = *(float *)((int)pvVar1 + 0x38) - pfVar2[0xe];
+  axis[0] = pfVar2[2] * *(float *)((kd_iptr)pvVar1 + 0x28) +
+            pfVar2[1] * *(float *)((kd_iptr)pvVar1 + 0x24) + *pfVar2 * *(float *)((kd_iptr)pvVar1 + 0x20);
+  axis[1] = pfVar2[6] * *(float *)((kd_iptr)pvVar1 + 0x28) +
+            pfVar2[5] * *(float *)((kd_iptr)pvVar1 + 0x24) + pfVar2[4] * *(float *)((kd_iptr)pvVar1 + 0x20);
+  axis[2] = pfVar2[10] * *(float *)((kd_iptr)pvVar1 + 0x28) +
+            pfVar2[9] * *(float *)((kd_iptr)pvVar1 + 0x24) + pfVar2[8] * *(float *)((kd_iptr)pvVar1 + 0x20);
+  cp[0] = *(float *)((kd_iptr)pvVar1 + 0x30) - pfVar2[0xc];
+  cp[1] = *(float *)((kd_iptr)pvVar1 + 0x34) - pfVar2[0xd];
+  cp[2] = *(float *)((kd_iptr)pvVar1 + 0x38) - pfVar2[0xe];
   pos[0] = cp[2] * pfVar2[2] + cp[0] * *pfVar2 + cp[1] * pfVar2[1];
   pos[1] = cp[2] * pfVar2[6] + cp[0] * pfVar2[4] + cp[1] * pfVar2[5];
   pos[2] = cp[0] * pfVar2[8] + cp[1] * pfVar2[9] + cp[2] * pfVar2[10];
   lVar5 = (longdouble)
-          ConvexHullNSegment((McdConvexHull *)((int)pvVar4 + 0x10),pos,axis,
-                             -*(float *)((int)pvVar3 + 0x14),*(float *)((int)pvVar3 + 0x14),cp,&s,
+          ConvexHullNSegment((McdConvexHull *)((kd_iptr)pvVar4 + 0x10),pos,axis,
+                             -*(float *)((kd_iptr)pvVar3 + 0x14),*(float *)((kd_iptr)pvVar3 + 0x14),cp,&s,
                              &regionType);
   lVar6 = (longdouble)s;
   lVar7 = (lVar6 * (longdouble)axis[0] + (longdouble)pos[0]) - (longdouble)cp[0];
@@ -101,8 +101,8 @@ MeBool kd_McdSphylConvexMeshIntersect(McdModelPair *p,McdIntersectResult *result
   if (lVar10 <= lVar9 * lVar9) {
     lVar10 = (longdouble)
              SegmentConvexHullSep
-                       (pos,axis,-*(float *)((int)pvVar3 + 0x14),*(float *)((int)pvVar3 + 0x14),
-                        (McdConvexHull *)((int)pvVar4 + 0x10),n,&s,&regionType);
+                       (pos,axis,-*(float *)((kd_iptr)pvVar3 + 0x14),*(float *)((kd_iptr)pvVar3 + 0x14),
+                        (McdConvexHull *)((kd_iptr)pvVar4 + 0x10),n,&s,&regionType);
   }
   else {
                     
@@ -112,8 +112,8 @@ MeBool kd_McdSphylConvexMeshIntersect(McdModelPair *p,McdIntersectResult *result
     n[1] = (MeReal)(lVar8 * lVar9);
     n[2] = (MeReal)(lVar6 * lVar9);
   }
-  lVar6 = (longdouble)*(float *)((int)pvVar4 + 0x2c);
-  lVar10 = lVar10 - (lVar6 + (longdouble)*(float *)((int)pvVar3 + 0x10));
+  lVar6 = (longdouble)*(float *)((kd_iptr)pvVar4 + 0x2c);
+  lVar10 = lVar10 - (lVar6 + (longdouble)*(float *)((kd_iptr)pvVar3 + 0x10));
   if (lVar10 < (longdouble)(fVar12 + fVar11)) {
     cp[0] = (MeReal)(lVar6 * (longdouble)n[0] + (longdouble)cp[0]);
     cp[2] = (MeReal)(lVar6 * (longdouble)n[2] + (longdouble)cp[2]);
@@ -122,7 +122,7 @@ MeBool kd_McdSphylConvexMeshIntersect(McdModelPair *p,McdIntersectResult *result
     result->normal[1] = 0.0;
     result->normal[2] = 0.0;
     AccumulateSphylContacts
-              (cp,n,(float)lVar10,3,(undefined2)regionType,(float *)((int)pvVar1 + 0x20),
+              (cp,n,(float)lVar10,3,(undefined2)regionType,(float *)((kd_iptr)pvVar1 + 0x20),
                (float)lVar5,pfVar2,(_McdIntersectResult *)result);
   }
   return result->touch;

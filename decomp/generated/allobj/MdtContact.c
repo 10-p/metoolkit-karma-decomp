@@ -149,7 +149,7 @@ MdtConstraintID kd_MdtContactQuaConstraint(MdtContactID c)
 MdtContactID kd_MdtConstraintDCastContact(MdtConstraintID c)
 
 {
-  return (MdtContactID)(((c->head).tag != 4) - 1 & (uint)c);
+  return (MdtContactID)(((c->head).tag != 4) - 1 & (kd_uptr)c);
 }
 
 /* ---- MdtContactGetPosition (exported as kd_MdtContactGetPosition, asm label "MdtContactGetPosition") ---- */

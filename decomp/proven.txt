@@ -1152,6 +1152,57 @@ McdTriangleList       real: same run, same evidence. These two objects account f
 #                     a build that no longer existed. `cmake` will not rebuild what it thinks is
 #                     current, so the failure is silent. Check the newest `.c.o` against `git log`.
 
+# LP64-ANDROID-CRASH 2026-08-29 (thirteenth session, fifth leg): ★ THE OFFLINE LP64 WORK IS DONE
+#                     AND ANDROID STILL CRASHES WITH KARMA ON. Two different things, and this
+#                     entry exists so the second is not read as the first coming undone.
+#
+#                     WHAT IS DONE: `generated/allobj` now carries the LP64 post-passes — it used
+#                     to be the raw `recover.py` output — and `lp64_pipeline.sh` ends `-> PASS`.
+#                     All 145 objects still compile byte-identical at -m32, so wasm32, i686 and
+#                     armeabi-v7a get exactly the object code they had. The CMake UT_PTR_BYTES
+#                     hard-error is a STATUS line now.
+#
+#                     WHAT IS NOT: turning Karma on in the Android build produces an APK that
+#                     SIGSEGVs during startup. Measured on the API-34 x86_64 emulator, with BOTH
+#                     ARMS VERIFIED BY SYMBOL COUNT IN libUT2004.so rather than by which flag was
+#                     passed — which matters, because the first two attempts at this comparison
+#                     built the wrong thing (see below):
+#
+#                       Karma ON   SIGSEGV on the engine thread the moment
+#                                  "Initializing GL4ESDrv..." returns.   243 log lines
+#                       Karma OFF  same APK, same ini, same map: reaches
+#                                  UT2k4MainMenu.Opened().              1713 log lines
+#
+#                     ⚠ THE OBVIOUS SUSPECT IS IN BOTH LOGS AND IS NOT THE CAUSE. `Warning:
+#                     Package not found: SDL2Drv` / `GL4ESDrv` appears five times in the run that
+#                     REACHES THE MENU. I read the first failure as a renderer problem on that
+#                     evidence and was wrong; only the control said otherwise. `[GL4ES-DBG] Init:
+#                     complete, returning 1` is in the crashing log too — the render device
+#                     initialises fine and the fault is just after it.
+#
+#                     ⚠ AND IT IS NOT KNOWN WHETHER THIS IS LP64 OR ANDROID. Karma has never been
+#                     enabled on Android at ANY pointer width, so a 32-bit ABI separates the two
+#                     — and neither is reachable here: the API-34 system image refuses x86 ("ABI
+#                     x86 not supported on this device") and the x86_64 emulator cannot execute
+#                     ARM, so armeabi-v7a needs the real OnePlus 6, which was not attached.
+#                     THAT IS THE NEXT MEASUREMENT, and it is one command on a connected device.
+#
+#                     ⚠ THE ENGINE SWALLOWS ITS OWN BACKTRACE. UT2004 installs a SIGSEGV handler
+#                     that prints "Crash information will be saved to your logfile" and exits, so
+#                     there is no tombstone and no `DEBUG` frames in logcat. Getting a stack means
+#                     disabling that handler or attaching lldb-server first.
+#
+#                     ⚠⚠ AND THE GRADLE CACHE LIES ABOUT WHAT IT BUILT, TWICE. `option()` reads an
+#                     existing CMake cache before its default, so flipping USE_KARMA_DECOMP and
+#                     re-running gradle reported "BUILD SUCCESSFUL in 1s, 32 up-to-date" and
+#                     shipped the PREVIOUS physics. CMakeLists' own comment warns about exactly
+#                     this. Every arm of the comparison above was checked with
+#                     `llvm-nm libUT2004.so | grep -c McdBoxPlaneIntersect` before it was believed,
+#                     and `rm -rf app/build/intermediates/cxx` is what actually reconfigures.
+#
+#                     THE DEFAULT STAYS NO_KARMA, because an APK without vehicles beats an APK
+#                     that does not start. `./gradlew assembleDebug -PwithKarma` reproduces it.
+
 # LP64-THREE-CLEAN  2026-08-29 (thirteenth session, fourth leg): ★★★ THE LP64 PIPELINE PASSES.
 #                     All three scenes run clean on the plain build — 901 rows each, exit 0, five
 #                     runs of five — and every trajectory now first differs at the float floor.

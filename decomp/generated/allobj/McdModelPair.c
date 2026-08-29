@@ -37,7 +37,7 @@ McdModelPairID kd_McdModelPairCreate(McdModelID m1,McdModelID m2)
   McdModelPairID pMVar1;
   McdRequest *pMVar2;
 
-  pMVar1 = (MeMemoryAPI.create)(0x1c);
+  pMVar1 = (MeMemoryAPI.create)((int)sizeof(*(McdModelPairID)0));
   pMVar1->model1 = m1;
   pMVar1->model2 = m2;
   pMVar2 = McdFrameworkGetDefaultRequestPtr(m1->frame);

@@ -123,7 +123,7 @@ MdtConstraintID kd_MdtSpringQuaConstraint(MdtSpringID j)
 MdtSpringID kd_MdtConstraintDCastSpring(MdtConstraintID c)
 
 {
-  return (MdtSpringID)(((c->head).tag != 0xe) - 1 & (uint)c);
+  return (MdtSpringID)(((c->head).tag != 0xe) - 1 & (kd_uptr)c);
 }
 
 /* ---- MdtSpringGetPosition (exported as kd_MdtSpringGetPosition, asm label "MdtSpringGetPosition") ---- */

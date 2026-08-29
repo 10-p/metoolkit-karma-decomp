@@ -118,7 +118,7 @@ void * kd_MeSetPopFirst(MeSet *s)
   pvVar1 = MeDictFirst(s);
   pvVar2 = (void *)0x0;
   if (pvVar1 != (void *)0x0) {
-    pvVar2 = *(void **)((int)pvVar1 + 0x10);
+    pvVar2 = *(void **)((kd_iptr)pvVar1 + ((int)((char *)&((struct MeDictNode *)0)->key - (char *)0)));
     MeDictDeleteFree(s,pvVar1);
   }
   return pvVar2;
@@ -169,7 +169,7 @@ MeSet * kd_MeSetCreate(MeDictCompareFn cmp)
 {
   MeSet *pMVar1;
 
-  pMVar1 = (MeMemoryAPI.createZeroed)(0x50);
+  pMVar1 = (MeMemoryAPI.createZeroed)((int)sizeof(*(MeSet *)0));
   if (cmp == (MeDictCompareFn)0x0) {
     cmp = MeSetDefaultCompare;
   }
@@ -193,5 +193,5 @@ void kd_MeSetDestroy(MeSet *s)
 static int MeSetDefaultCompare(void *item1,void *item2)
 
 {
-  return (int)item1 - (int)item2;
+  return (kd_iptr)item1 - (kd_iptr)item2;
 }

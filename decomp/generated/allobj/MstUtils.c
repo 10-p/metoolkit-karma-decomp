@@ -65,9 +65,9 @@ void kd_MstHandleCollisions(McdModelPairContainer *pairs,McdSpaceID s,MdtWorldID
   undefined4 extraout_ECX_01;
   McdContact *pMVar15;
   McdContact *pMVar16;
-  int aiStack_9cb0 [6];
-  float fStack_9c98;
-  MeReal aMStack_9c94 [2];
+  int aiStack_9cb0 [6 * (int)(sizeof(void *) / 4)];
+  float fStack_9c98 [(int)(sizeof(void *) / 4)];
+  MeReal aMStack_9c94 [2 * (int)(sizeof(void *) / 4)];
   McdContact aMStack_9c8c [1000];
   McdIntersectResult *local_48;
   MstIntersectCBPtr intersectCB;
@@ -79,37 +79,37 @@ void kd_MstHandleCollisions(McdModelPairContainer *pairs,McdSpaceID s,MdtWorldID
   MeBool arrayFinished;
   McdContact *contacts;
   McdIntersectResult *results;
-  int j;
+  kd_iptr j;
   int i;
   int resultCount;
   int contactCount;
   
   iVar5 = -(pairs->size * 0x24 + 0xfU & 0xfffffff0);
-  results = (McdIntersectResult *)(kd_alloca_iVar5 = (char *)alloca((size_t)(pairs->size) * 0x24 + 0));
+  results = (McdIntersectResult *)(kd_alloca_iVar5 = (char *)alloca((size_t)(pairs->size) * (int)sizeof(*(McdIntersectResult *)0) + 0));
   contacts = (kd_alloca_iVar5 = (char *)alloca((size_t)(pairs->size) * 0x24 + 0));
   if (pairs->helloFirst != pairs->stayingEnd) {
-    *(McdBatchContext **)((int)aiStack_9cb0 + 0x14) = b->context;
-    *(undefined4 *)((int)aiStack_9cb0 + 0x10) = 0x10045;
-    McdBatchContextReset(*(void **)((int)aiStack_9cb0 + 0x14));
+    *(McdBatchContext **)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))) = b->context;
+    *(undefined4 *)((kd_iptr)aiStack_9cb0 + (4 * (int)sizeof(void *))) = 0x10045;
+    McdBatchContextReset(*(void **)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))));
     do {
-      *(undefined4 *)((int)aMStack_9c94 + 4) = 1000;
-      *(int **)((int)aMStack_9c94) = &contactCount;
-      *(McdContact **)((int)&fStack_9c98) = contacts;
-      *(int *)((int)aiStack_9cb0 + 0x14) = pairs->size;
-      *(int **)((int)aiStack_9cb0 + 0x10) = &resultCount;
-      *(McdIntersectResult **)((int)aiStack_9cb0 + 0xc) = results;
-      *(McdModelPairContainer **)((int)aiStack_9cb0 + 8) = pairs;
-      *(McdBatchContext **)((int)aiStack_9cb0 + 4) = b->context;
-      *(undefined4 *)((int)aiStack_9cb0) = 0x10071;
+      *(undefined4 *)((kd_iptr)aMStack_9c94 + (1 * (int)sizeof(void *))) = 1000;
+      *(int **)((kd_iptr)aMStack_9c94) = &contactCount;
+      *(McdContact **)((kd_iptr)&fStack_9c98) = contacts;
+      *(int *)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))) = pairs->size;
+      *(int **)((kd_iptr)aiStack_9cb0 + (4 * (int)sizeof(void *))) = &resultCount;
+      *(McdIntersectResult **)((kd_iptr)aiStack_9cb0 + (3 * (int)sizeof(void *))) = results;
+      *(McdModelPairContainer **)((kd_iptr)aiStack_9cb0 + (2 * (int)sizeof(void *))) = pairs;
+      *(McdBatchContext **)((kd_iptr)aiStack_9cb0 + (1 * (int)sizeof(void *))) = b->context;
+      *(undefined4 *)((kd_iptr)aiStack_9cb0) = 0x10071;
       arrayFinished =
            McdBatchIntersectEach
-                     (*(void **)((int)aiStack_9cb0 + 4),
-                      *(void **)((int)aiStack_9cb0 + 8),
-                      *(void **)((int)aiStack_9cb0 + 0xc),
-                      *(void **)((int)aiStack_9cb0 + 0x10),
-                      *(int *)((int)aiStack_9cb0 + 0x14),
-                      *(void **)((int)&fStack_9c98),*(void **)((int)aMStack_9c94),
-                      *(int *)((int)aMStack_9c94 + 4));
+                     (*(void **)((kd_iptr)aiStack_9cb0 + (1 * (int)sizeof(void *))),
+                      *(void **)((kd_iptr)aiStack_9cb0 + (2 * (int)sizeof(void *))),
+                      *(void **)((kd_iptr)aiStack_9cb0 + (3 * (int)sizeof(void *))),
+                      *(void **)((kd_iptr)aiStack_9cb0 + (4 * (int)sizeof(void *))),
+                      *(int *)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))),
+                      *(void **)((kd_iptr)&fStack_9c98),*(void **)((kd_iptr)aMStack_9c94),
+                      *(int *)((kd_iptr)aMStack_9c94 + (1 * (int)sizeof(void *))));
       i = 0;
       if (0 < resultCount) {
         local_48 = results;
@@ -118,254 +118,254 @@ void kd_MstHandleCollisions(McdModelPairContainer *pairs,McdSpaceID s,MdtWorldID
           pMVar1 = local_48->pair;
           pMVar2 = pMVar1->model1;
           pMVar3 = pMVar1->model2;
-          *(McdModelID *)((int)aiStack_9cb0 + 0x14) = pMVar2;
-          *(undefined4 *)((int)aiStack_9cb0 + 0x10) = 0x100a3;
-          material1 = McdModelGetMaterial(*(void **)((int)aiStack_9cb0 + 0x14));
-          *(McdModelID *)((int)aiStack_9cb0 + 0x14) = pMVar3;
-          *(undefined4 *)((int)aiStack_9cb0 + 0x10) = 0x100ae;
-          material2 = McdModelGetMaterial(*(void **)((int)aiStack_9cb0 + 0x14));
+          *(McdModelID *)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))) = pMVar2;
+          *(undefined4 *)((kd_iptr)aiStack_9cb0 + (4 * (int)sizeof(void *))) = 0x100a3;
+          material1 = McdModelGetMaterial(*(void **)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))));
+          *(McdModelID *)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))) = pMVar3;
+          *(undefined4 *)((kd_iptr)aiStack_9cb0 + (4 * (int)sizeof(void *))) = 0x100ae;
+          material2 = McdModelGetMaterial(*(void **)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))));
           if (local_48->touch != 0) {
-            *(MstMaterialID *)((int)aMStack_9c94 + 4) = material2;
-            *(MstMaterialID *)((int)aMStack_9c94) = material2;
-            *(MstMaterialID *)((int)&fStack_9c98) = material1;
-            *(MstBridgeID *)((int)aiStack_9cb0 + 0x14) = b;
-            *(undefined4 *)((int)aiStack_9cb0 + 0x10) = 0x103a4;
+            *(MstMaterialID *)((kd_iptr)aMStack_9c94 + (1 * (int)sizeof(void *))) = material2;
+            *(MstMaterialID *)((kd_iptr)aMStack_9c94) = material2;
+            *(MstMaterialID *)((kd_iptr)&fStack_9c98) = material1;
+            *(MstBridgeID *)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))) = b;
+            *(undefined4 *)((kd_iptr)aiStack_9cb0 + (4 * (int)sizeof(void *))) = 0x103a4;
             intersectCB = MstBridgeGetIntersectCB
-                                    (*(void **)((int)aiStack_9cb0 + 0x14),
-                                     *(uint *)((int)&fStack_9c98),
-                                     *(uint *)((int)aMStack_9c94));
+                                    (*(void **)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))),
+                                     *(uint *)((kd_iptr)&fStack_9c98),
+                                     *(uint *)((kd_iptr)aMStack_9c94));
             p_Var4 = pMVar2->mIntersectFn;
             if (p_Var4 != (McdModelIntersectFnPtr)0x0) {
-              *(McdIntersectResult **)((int)&fStack_9c98) = local_48;
-              *(McdModelID *)((int)aiStack_9cb0 + 0x14) = pMVar2;
-              *(undefined4 *)((int)aiStack_9cb0 + 0x10) = 0x103ec;
-              (*p_Var4)(*(McdModel **)((int)aiStack_9cb0 + 0x14),
-                        *(McdIntersectResult **)((int)&fStack_9c98));
+              *(McdIntersectResult **)((kd_iptr)&fStack_9c98) = local_48;
+              *(McdModelID *)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))) = pMVar2;
+              *(undefined4 *)((kd_iptr)aiStack_9cb0 + (4 * (int)sizeof(void *))) = 0x103ec;
+              (*p_Var4)(*(McdModel **)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))),
+                        *(McdIntersectResult **)((kd_iptr)&fStack_9c98));
             }
             p_Var4 = pMVar3->mIntersectFn;
             if (p_Var4 != (McdModelIntersectFnPtr)0x0) {
-              *(McdIntersectResult **)((int)&fStack_9c98) = local_48;
-              *(McdModelID *)((int)aiStack_9cb0 + 0x14) = pMVar3;
-              *(undefined4 *)((int)aiStack_9cb0 + 0x10) = 0x103de;
-              (*p_Var4)(*(McdModel **)((int)aiStack_9cb0 + 0x14),
-                        *(McdIntersectResult **)((int)&fStack_9c98));
+              *(McdIntersectResult **)((kd_iptr)&fStack_9c98) = local_48;
+              *(McdModelID *)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))) = pMVar3;
+              *(undefined4 *)((kd_iptr)aiStack_9cb0 + (4 * (int)sizeof(void *))) = 0x103de;
+              (*p_Var4)(*(McdModel **)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))),
+                        *(McdIntersectResult **)((kd_iptr)&fStack_9c98));
             }
             if (intersectCB != (MstIntersectCBPtr)0x0) {
-              *(McdIntersectResult **)((int)aiStack_9cb0 + 0x14) = local_48;
-              *(undefined4 *)((int)aiStack_9cb0 + 0x10) = 0x103cd;
-              (*intersectCB)(*(McdIntersectResult **)((int)aiStack_9cb0 + 0x14));
+              *(McdIntersectResult **)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))) = local_48;
+              *(undefined4 *)((kd_iptr)aiStack_9cb0 + (4 * (int)sizeof(void *))) = 0x103cd;
+              (*intersectCB)(*(McdIntersectResult **)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))));
             }
           }
           group = pMVar1->responseData;
           pMVar15 = local_48->contacts;
           if (group == (MdtContactGroupID)0x0) {
-            *(undefined4 *)((int)aMStack_9c94 + 4) = 0;
-            *(undefined4 *)((int)aMStack_9c94) = 0;
-            *(McdModelPair **)((int)&fStack_9c98) = pMVar1;
-            *(MdtWorldID *)((int)aiStack_9cb0 + 0x14) = w;
-            *(undefined4 *)((int)aiStack_9cb0 + 0x10) = 0x1037f;
-            group = createContactGroup(*(MdtWorldID *)((int)aiStack_9cb0 + 0x14),
-                                       *(McdModelPairID *)((int)&fStack_9c98));
+            *(undefined4 *)((kd_iptr)aMStack_9c94 + (1 * (int)sizeof(void *))) = 0;
+            *(undefined4 *)((kd_iptr)aMStack_9c94) = 0;
+            *(McdModelPair **)((kd_iptr)&fStack_9c98) = pMVar1;
+            *(MdtWorldID *)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))) = w;
+            *(undefined4 *)((kd_iptr)aiStack_9cb0 + (4 * (int)sizeof(void *))) = 0x1037f;
+            group = createContactGroup(*(MdtWorldID *)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))),
+                                       *(McdModelPairID *)((kd_iptr)&fStack_9c98));
             if (group != (MdtContactGroupID)0x0) goto LAB_000100d6;
           }
           else {
 LAB_000100d6:
-            *(MdtContactGroupID *)((int)aiStack_9cb0 + 0x14) = group;
-            *(undefined4 *)((int)aiStack_9cb0 + 0x10) = 0x100e2;
-            p_Var7 = MdtContactGroupGetFirstContact(*(void **)((int)aiStack_9cb0 + 0x14));
-            *(MstMaterialID *)((int)aMStack_9c94) = material2;
-            *(MstMaterialID *)((int)&fStack_9c98) = material1;
-            *(MstBridgeID *)((int)aiStack_9cb0 + 0x14) = b;
-            *(undefined4 *)((int)aiStack_9cb0 + 0x10) = 0x100f8;
+            *(MdtContactGroupID *)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))) = group;
+            *(undefined4 *)((kd_iptr)aiStack_9cb0 + (4 * (int)sizeof(void *))) = 0x100e2;
+            p_Var7 = MdtContactGroupGetFirstContact(*(void **)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))));
+            *(MstMaterialID *)((kd_iptr)aMStack_9c94) = material2;
+            *(MstMaterialID *)((kd_iptr)&fStack_9c98) = material1;
+            *(MstBridgeID *)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))) = b;
+            *(undefined4 *)((kd_iptr)aiStack_9cb0 + (4 * (int)sizeof(void *))) = 0x100f8;
             params = MstBridgeGetContactParams
-                               (*(void **)((int)aiStack_9cb0 + 0x14),
-                                *(uint *)((int)&fStack_9c98),
-                                *(uint *)((int)aMStack_9c94));
-            *(MstMaterialID *)((int)aMStack_9c94) = material2;
-            *(MstMaterialID *)((int)&fStack_9c98) = material1;
-            *(MstBridgeID *)((int)aiStack_9cb0 + 0x14) = b;
-            *(undefined4 *)((int)aiStack_9cb0 + 0x10) = 0x1010f;
+                               (*(void **)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))),
+                                *(uint *)((kd_iptr)&fStack_9c98),
+                                *(uint *)((kd_iptr)aMStack_9c94));
+            *(MstMaterialID *)((kd_iptr)aMStack_9c94) = material2;
+            *(MstMaterialID *)((kd_iptr)&fStack_9c98) = material1;
+            *(MstBridgeID *)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))) = b;
+            *(undefined4 *)((kd_iptr)aiStack_9cb0 + (4 * (int)sizeof(void *))) = 0x1010f;
             p_Var8 = MstBridgeGetPerContactCB
-                               (*(void **)((int)aiStack_9cb0 + 0x14),
-                                *(uint *)((int)&fStack_9c98),
-                                *(uint *)((int)aMStack_9c94));
+                               (*(void **)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))),
+                                *(uint *)((kd_iptr)&fStack_9c98),
+                                *(uint *)((kd_iptr)aMStack_9c94));
             j = 0;
             pMVar16 = pMVar15;
             contactCB = p_Var8;
             if (0 < local_48->contactCount) {
               do {
                 if (p_Var7 == MdtContactInvalidID) {
-                  *(MdtContactGroupID *)((int)aiStack_9cb0 + 0x14) = group;
-                  *(undefined4 *)((int)aiStack_9cb0 + 0x10) = 0x1035d;
+                  *(MdtContactGroupID *)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))) = group;
+                  *(undefined4 *)((kd_iptr)aiStack_9cb0 + (4 * (int)sizeof(void *))) = 0x1035d;
                   p_Var8 = MdtContactGroupCreateContact
-                                     (*(void **)((int)aiStack_9cb0 + 0x14));
+                                     (*(void **)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))));
                   p_Var7 = p_Var8;
                   if (p_Var8 != MdtContactInvalidID) goto LAB_0001013c;
                 }
                 else {
 LAB_0001013c:
-                  *(MdtContactGroupID *)((int)aiStack_9cb0 + 0x14) = group;
-                  *(undefined4 *)((int)aiStack_9cb0 + 0x10) = 0x1014a;
-                  iVar9 = MdtContactGroupIsSwapped(*(void **)((int)aiStack_9cb0 + 0x14));
+                  *(MdtContactGroupID *)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))) = group;
+                  *(undefined4 *)((kd_iptr)aiStack_9cb0 + (4 * (int)sizeof(void *))) = 0x1014a;
+                  iVar9 = MdtContactGroupIsSwapped(*(void **)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))));
                   if (iVar9 == 0) {
-                    *(MeReal *)((int)aMStack_9c94 + 4) = pMVar16->normal[2];
-                    *(MeReal *)((int)aMStack_9c94) = pMVar16->normal[1];
-                    *(MeReal *)((int)&fStack_9c98) = pMVar16->normal[0];
+                    *(MeReal *)((kd_iptr)aMStack_9c94 + (1 * (int)sizeof(void *))) = pMVar16->normal[2];
+                    *(MeReal *)((kd_iptr)aMStack_9c94) = pMVar16->normal[1];
+                    *(MeReal *)((kd_iptr)&fStack_9c98) = pMVar16->normal[0];
                   }
                   else {
-                    *(float *)((int)aMStack_9c94 + 4) = -pMVar16->normal[2];
-                    *(float *)((int)aMStack_9c94) = -pMVar16->normal[1];
-                    *(float *)((int)&fStack_9c98) = -pMVar16->normal[0];
+                    *(float *)((kd_iptr)aMStack_9c94 + (1 * (int)sizeof(void *))) = -pMVar16->normal[2];
+                    *(float *)((kd_iptr)aMStack_9c94) = -pMVar16->normal[1];
+                    *(float *)((kd_iptr)&fStack_9c98) = -pMVar16->normal[0];
                   }
-                  *(MstPerContactCBPtr *)((int)aiStack_9cb0 + 0x14) = p_Var7;
-                  *(undefined4 *)((int)aiStack_9cb0 + 0x10) = 0x10179;
-                  MdtContactSetNormal(*(void **)((int)aiStack_9cb0 + 0x14),
-                                      *(float *)((int)&fStack_9c98),
-                                      *(float *)((int)aMStack_9c94),
-                                      *(float *)((int)aMStack_9c94 + 4));
-                  *(MeReal *)((int)aMStack_9c94 + 4) = pMVar16->position[2];
-                  *(MeReal *)((int)aMStack_9c94) = pMVar16->position[1];
-                  *(MeReal *)((int)&fStack_9c98) = pMVar16->position[0];
-                  *(MstPerContactCBPtr *)((int)aiStack_9cb0 + 0x14) = p_Var7;
-                  *(undefined4 *)((int)aiStack_9cb0 + 0x10) = 0x1018d;
+                  *(MstPerContactCBPtr *)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))) = p_Var7;
+                  *(undefined4 *)((kd_iptr)aiStack_9cb0 + (4 * (int)sizeof(void *))) = 0x10179;
+                  MdtContactSetNormal(*(void **)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))),
+                                      *(float *)((kd_iptr)&fStack_9c98),
+                                      *(float *)((kd_iptr)aMStack_9c94),
+                                      *(float *)((kd_iptr)aMStack_9c94 + (1 * (int)sizeof(void *))));
+                  *(MeReal *)((kd_iptr)aMStack_9c94 + (1 * (int)sizeof(void *))) = pMVar16->position[2];
+                  *(MeReal *)((kd_iptr)aMStack_9c94) = pMVar16->position[1];
+                  *(MeReal *)((kd_iptr)&fStack_9c98) = pMVar16->position[0];
+                  *(MstPerContactCBPtr *)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))) = p_Var7;
+                  *(undefined4 *)((kd_iptr)aiStack_9cb0 + (4 * (int)sizeof(void *))) = 0x1018d;
                   MdtContactSetPosition
-                            (*(void **)((int)aiStack_9cb0 + 0x14),
-                             *(float *)((int)&fStack_9c98),
-                             *(float *)((int)aMStack_9c94),
-                             *(float *)((int)aMStack_9c94 + 4));
-                  *(float *)((int)&fStack_9c98) = -pMVar16->separation;
-                  *(MstPerContactCBPtr *)((int)aiStack_9cb0 + 0x14) = p_Var7;
-                  *(undefined4 *)((int)aiStack_9cb0 + 0x10) = 0x1019f;
+                            (*(void **)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))),
+                             *(float *)((kd_iptr)&fStack_9c98),
+                             *(float *)((kd_iptr)aMStack_9c94),
+                             *(float *)((kd_iptr)aMStack_9c94 + (1 * (int)sizeof(void *))));
+                  *(float *)((kd_iptr)&fStack_9c98) = -pMVar16->separation;
+                  *(MstPerContactCBPtr *)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))) = p_Var7;
+                  *(undefined4 *)((kd_iptr)aiStack_9cb0 + (4 * (int)sizeof(void *))) = 0x1019f;
                   MdtContactSetPenetration
-                            (*(void **)((int)aiStack_9cb0 + 0x14),
-                             *(float *)((int)&fStack_9c98));
-                  *(MdtContactParamsID *)((int)&fStack_9c98) = params;
-                  *(MstPerContactCBPtr *)((int)aiStack_9cb0 + 0x14) = p_Var7;
-                  *(undefined4 *)((int)aiStack_9cb0 + 0x10) = 0x101ab;
-                  MdtContactSetParams(*(void **)((int)aiStack_9cb0 + 0x14),
-                                      *(void **)((int)&fStack_9c98));
+                            (*(void **)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))),
+                             *(float *)((kd_iptr)&fStack_9c98));
+                  *(MdtContactParamsID *)((kd_iptr)&fStack_9c98) = params;
+                  *(MstPerContactCBPtr *)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))) = p_Var7;
+                  *(undefined4 *)((kd_iptr)aiStack_9cb0 + (4 * (int)sizeof(void *))) = 0x101ab;
+                  MdtContactSetParams(*(void **)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))),
+                                      *(void **)((kd_iptr)&fStack_9c98));
                   MVar10 = extraout_EAX;
                   if (contactCB != (MstPerContactCBPtr)0x0) {
-                    *(MstPerContactCBPtr *)((int)aMStack_9c94) = p_Var7;
-                    *(McdContact **)((int)&fStack_9c98) = pMVar16;
-                    *(McdIntersectResult **)((int)aiStack_9cb0 + 0x14) = local_48;
-                    *(undefined4 *)((int)aiStack_9cb0 + 0x10) = 0x101bf;
-                    MVar10 = (*contactCB)(*(McdIntersectResult **)((int)aiStack_9cb0 + 0x14)
-                                          ,*(McdContact **)((int)&fStack_9c98),
-                                          *(MdtContactID *)((int)aMStack_9c94));
+                    *(MstPerContactCBPtr *)((kd_iptr)aMStack_9c94) = p_Var7;
+                    *(McdContact **)((kd_iptr)&fStack_9c98) = pMVar16;
+                    *(McdIntersectResult **)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))) = local_48;
+                    *(undefined4 *)((kd_iptr)aiStack_9cb0 + (4 * (int)sizeof(void *))) = 0x101bf;
+                    MVar10 = (*contactCB)(*(McdIntersectResult **)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *)))
+                                          ,*(McdContact **)((kd_iptr)&fStack_9c98),
+                                          *(MdtContactID *)((kd_iptr)aMStack_9c94));
                     p_Var8 = (MstPerContactCBPtr)0x0;
                     if (MVar10 == 0) goto LAB_000101d7;
                   }
-                  *(MstPerContactCBPtr *)((int)&fStack_9c98) = p_Var7;
-                  *(MdtContactGroupID *)((int)aiStack_9cb0 + 0x14) = group;
-                  *(undefined4 *)((int)aiStack_9cb0 + 0x10) = 0x101d2;
+                  *(MstPerContactCBPtr *)((kd_iptr)&fStack_9c98) = p_Var7;
+                  *(MdtContactGroupID *)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))) = group;
+                  *(undefined4 *)((kd_iptr)aiStack_9cb0 + (4 * (int)sizeof(void *))) = 0x101d2;
                   p_Var8 = MdtContactGroupGetNextContact
-                                     (*(void **)((int)aiStack_9cb0 + 0x14),
-                                      *(void **)((int)&fStack_9c98));
+                                     (*(void **)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))),
+                                      *(void **)((kd_iptr)&fStack_9c98));
                   p_Var7 = p_Var8;
                 }
 LAB_000101d7:
                 pMVar15 = (McdContact *)(j + 1);
                 pMVar16 = pMVar16 + 1;
-                j = (int)pMVar15;
-              } while ((int)pMVar15 < local_48->contactCount);
+                j = (kd_iptr)pMVar15;
+              } while ((kd_iptr)pMVar15 < local_48->contactCount);
             }
             if (p_Var7 != MdtContactInvalidID) {
               do {
                     
-                *(McdContact **)((int)aMStack_9c94 + 4) = pMVar15;
-                *(McdContact **)((int)aMStack_9c94) = pMVar15;
-                *(MstPerContactCBPtr *)((int)&fStack_9c98) = p_Var7;
-                *(MdtContactGroupID *)((int)aiStack_9cb0 + 0x14) = group;
-                *(undefined4 *)((int)aiStack_9cb0 + 0x10) = 0x10204;
+                *(McdContact **)((kd_iptr)aMStack_9c94 + (1 * (int)sizeof(void *))) = pMVar15;
+                *(McdContact **)((kd_iptr)aMStack_9c94) = pMVar15;
+                *(MstPerContactCBPtr *)((kd_iptr)&fStack_9c98) = p_Var7;
+                *(MdtContactGroupID *)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))) = group;
+                *(undefined4 *)((kd_iptr)aiStack_9cb0 + (4 * (int)sizeof(void *))) = 0x10204;
                 p_Var11 = MdtContactGroupGetNextContact
-                                    (*(void **)((int)aiStack_9cb0 + 0x14),
-                                     *(void **)((int)&fStack_9c98));
-                *(MstPerContactCBPtr *)((int)&fStack_9c98) = p_Var7;
-                *(MdtContactGroupID *)((int)aiStack_9cb0 + 0x14) = group;
-                *(undefined4 *)((int)aiStack_9cb0 + 0x10) = 0x10214;
+                                    (*(void **)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))),
+                                     *(void **)((kd_iptr)&fStack_9c98));
+                *(MstPerContactCBPtr *)((kd_iptr)&fStack_9c98) = p_Var7;
+                *(MdtContactGroupID *)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))) = group;
+                *(undefined4 *)((kd_iptr)aiStack_9cb0 + (4 * (int)sizeof(void *))) = 0x10214;
                 MdtContactGroupDestroyContact
-                          (*(void **)((int)aiStack_9cb0 + 0x14),
-                           *(void **)((int)&fStack_9c98));
+                          (*(void **)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))),
+                           *(void **)((kd_iptr)&fStack_9c98));
                 p_Var8 = extraout_EAX_00;
                 p_Var7 = p_Var11;
               } while (p_Var11 != MdtContactInvalidID);
             }
             MVar6 = material2;
-            *(MstMaterialID *)((int)aMStack_9c94) = material2;
-            *(MstMaterialID *)((int)&fStack_9c98) = material1;
-            *(MstBridgeID *)((int)aiStack_9cb0 + 0x14) = b;
-            *(undefined4 *)((int)aiStack_9cb0 + 0x10) = 0x10231;
+            *(MstMaterialID *)((kd_iptr)aMStack_9c94) = material2;
+            *(MstMaterialID *)((kd_iptr)&fStack_9c98) = material1;
+            *(MstBridgeID *)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))) = b;
+            *(undefined4 *)((kd_iptr)aiStack_9cb0 + (4 * (int)sizeof(void *))) = 0x10231;
             pcVar12 = MstBridgeGetPerPairCB
-                                (*(void **)((int)aiStack_9cb0 + 0x14),
-                                 *(uint *)((int)&fStack_9c98),
-                                 *(uint *)((int)aMStack_9c94));
+                                (*(void **)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))),
+                                 *(uint *)((kd_iptr)&fStack_9c98),
+                                 *(uint *)((kd_iptr)aMStack_9c94));
             if (pcVar12 != (code *)0x0) {
-              *(MdtContactGroupID *)((int)&fStack_9c98) = group;
-              *(McdIntersectResult **)((int)aiStack_9cb0 + 0x14) = local_48;
-              *(undefined4 *)((int)aiStack_9cb0 + 0x10) = 0x10244;
-              iVar9 = (*(MstPerPairCBPtr)pcVar12)(*(McdIntersectResult **)((int)aiStack_9cb0 + 0x14),
-                 *(MdtContactGroupID *)((int)&fStack_9c98));
+              *(MdtContactGroupID *)((kd_iptr)&fStack_9c98) = group;
+              *(McdIntersectResult **)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))) = local_48;
+              *(undefined4 *)((kd_iptr)aiStack_9cb0 + (4 * (int)sizeof(void *))) = 0x10244;
+              iVar9 = (*(MstPerPairCBPtr)pcVar12)(*(McdIntersectResult **)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))),
+                 *(MdtContactGroupID *)((kd_iptr)&fStack_9c98));
               if (iVar9 == 0) {
                     
-                *(MdtContactGroupID *)((int)aiStack_9cb0 + 0x14) = group;
-                *(undefined4 *)((int)aiStack_9cb0 + 0x10) = 0x102f9;
+                *(MdtContactGroupID *)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))) = group;
+                *(undefined4 *)((kd_iptr)aiStack_9cb0 + (4 * (int)sizeof(void *))) = 0x102f9;
                 p_Var8 = MdtContactGroupGetFirstContact
-                                   (*(void **)((int)aiStack_9cb0 + 0x14));
+                                   (*(void **)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))));
                 if (p_Var8 != MdtContactInvalidID) {
                   do {
                     
-                    *(MstMaterialID *)((int)aMStack_9c94 + 4) = MVar6;
-                    *(MstMaterialID *)((int)aMStack_9c94) = MVar6;
-                    *(MstPerContactCBPtr *)((int)&fStack_9c98) = p_Var8;
-                    *(MdtContactGroupID *)((int)aiStack_9cb0 + 0x14) = group;
-                    *(undefined4 *)((int)aiStack_9cb0 + 0x10) = 0x1031c;
+                    *(MstMaterialID *)((kd_iptr)aMStack_9c94 + (1 * (int)sizeof(void *))) = MVar6;
+                    *(MstMaterialID *)((kd_iptr)aMStack_9c94) = MVar6;
+                    *(MstPerContactCBPtr *)((kd_iptr)&fStack_9c98) = p_Var8;
+                    *(MdtContactGroupID *)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))) = group;
+                    *(undefined4 *)((kd_iptr)aiStack_9cb0 + (4 * (int)sizeof(void *))) = 0x1031c;
                     p_Var7 = MdtContactGroupGetNextContact
-                                       (*(void **)((int)aiStack_9cb0 + 0x14),
-                                        *(void **)((int)&fStack_9c98));
-                    *(MstPerContactCBPtr *)((int)&fStack_9c98) = p_Var8;
-                    *(MdtContactGroupID *)((int)aiStack_9cb0 + 0x14) = group;
-                    *(undefined4 *)((int)aiStack_9cb0 + 0x10) = 0x1032c;
+                                       (*(void **)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))),
+                                        *(void **)((kd_iptr)&fStack_9c98));
+                    *(MstPerContactCBPtr *)((kd_iptr)&fStack_9c98) = p_Var8;
+                    *(MdtContactGroupID *)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))) = group;
+                    *(undefined4 *)((kd_iptr)aiStack_9cb0 + (4 * (int)sizeof(void *))) = 0x1032c;
                     MdtContactGroupDestroyContact
-                              (*(void **)((int)aiStack_9cb0 + 0x14),
-                               *(void **)((int)&fStack_9c98));
+                              (*(void **)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))),
+                               *(void **)((kd_iptr)&fStack_9c98));
                     p_Var8 = p_Var7;
                   } while (p_Var7 != MdtContactInvalidID);
                 }
               }
             }
             if (group->count < 1) {
-              *(MdtContactGroupID *)((int)aiStack_9cb0 + 0x14) = group;
-              *(undefined4 *)((int)aiStack_9cb0 + 0x10) = 0x102c8;
-              pvVar13 = MdtContactGroupQuaConstraint(*(void **)((int)aiStack_9cb0 + 0x14));
-              *(void **)((int)aiStack_9cb0 + 0x14) = pvVar13;
-              *(undefined4 *)((int)aiStack_9cb0 + 0x10) = 0x102d0;
-              iVar9 = MdtConstraintIsEnabled(*(void **)((int)aiStack_9cb0 + 0x14));
+              *(MdtContactGroupID *)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))) = group;
+              *(undefined4 *)((kd_iptr)aiStack_9cb0 + (4 * (int)sizeof(void *))) = 0x102c8;
+              pvVar13 = MdtContactGroupQuaConstraint(*(void **)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))));
+              *(void **)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))) = pvVar13;
+              *(undefined4 *)((kd_iptr)aiStack_9cb0 + (4 * (int)sizeof(void *))) = 0x102d0;
+              iVar9 = MdtConstraintIsEnabled(*(void **)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))));
               if (iVar9 != 0) {
-                *(MdtContactGroupID *)((int)aiStack_9cb0 + 0x14) = group;
-                *(undefined4 *)((int)aiStack_9cb0 + 0x10) = 0x102e3;
-                pvVar13 = MdtContactGroupQuaConstraint(*(void **)((int)aiStack_9cb0 + 0x14))
+                *(MdtContactGroupID *)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))) = group;
+                *(undefined4 *)((kd_iptr)aiStack_9cb0 + (4 * (int)sizeof(void *))) = 0x102e3;
+                pvVar13 = MdtContactGroupQuaConstraint(*(void **)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))))
                 ;
-                *(void **)((int)aiStack_9cb0 + 0x14) = pvVar13;
-                *(undefined4 *)((int)aiStack_9cb0 + 0x10) = 0x102eb;
-                MdtConstraintDisable(*(void **)((int)aiStack_9cb0 + 0x14));
+                *(void **)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))) = pvVar13;
+                *(undefined4 *)((kd_iptr)aiStack_9cb0 + (4 * (int)sizeof(void *))) = 0x102eb;
+                MdtConstraintDisable(*(void **)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))));
               }
             }
             else {
-              *(MdtContactGroupID *)((int)aiStack_9cb0 + 0x14) = group;
-              *(undefined4 *)((int)aiStack_9cb0 + 0x10) = 0x10265;
-              pvVar13 = MdtContactGroupQuaConstraint(*(void **)((int)aiStack_9cb0 + 0x14));
-              *(void **)((int)aiStack_9cb0 + 0x14) = pvVar13;
-              *(undefined4 *)((int)aiStack_9cb0 + 0x10) = 0x1026d;
-              iVar9 = MdtConstraintIsEnabled(*(void **)((int)aiStack_9cb0 + 0x14));
+              *(MdtContactGroupID *)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))) = group;
+              *(undefined4 *)((kd_iptr)aiStack_9cb0 + (4 * (int)sizeof(void *))) = 0x10265;
+              pvVar13 = MdtContactGroupQuaConstraint(*(void **)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))));
+              *(void **)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))) = pvVar13;
+              *(undefined4 *)((kd_iptr)aiStack_9cb0 + (4 * (int)sizeof(void *))) = 0x1026d;
+              iVar9 = MdtConstraintIsEnabled(*(void **)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))));
               if (iVar9 == 0) {
-                *(MdtContactGroupID *)((int)aiStack_9cb0 + 0x14) = group;
-                *(undefined4 *)((int)aiStack_9cb0 + 0x10) = 0x102af;
-                pvVar13 = MdtContactGroupQuaConstraint(*(void **)((int)aiStack_9cb0 + 0x14))
+                *(MdtContactGroupID *)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))) = group;
+                *(undefined4 *)((kd_iptr)aiStack_9cb0 + (4 * (int)sizeof(void *))) = 0x102af;
+                pvVar13 = MdtContactGroupQuaConstraint(*(void **)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))))
                 ;
-                *(void **)((int)aiStack_9cb0 + 0x14) = pvVar13;
-                *(undefined4 *)((int)aiStack_9cb0 + 0x10) = 0x102b7;
-                MdtConstraintEnable(*(void **)((int)aiStack_9cb0 + 0x14));
+                *(void **)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))) = pvVar13;
+                *(undefined4 *)((kd_iptr)aiStack_9cb0 + (4 * (int)sizeof(void *))) = 0x102b7;
+                MdtConstraintEnable(*(void **)((kd_iptr)aiStack_9cb0 + (5 * (int)sizeof(void *))));
               }
             }
           }
@@ -694,7 +694,7 @@ void kd_DestroyContactGroupReferences(MdtContactGroupID c)
 {
                     
   if (c->generator != (void *)0x0) {
-    *(undefined4 *)((int)c->generator + 0x18) = 0;
+    *(undefined4 *)((kd_iptr)c->generator + 0x18) = 0;
   }
   return;
 }

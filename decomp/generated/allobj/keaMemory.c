@@ -53,7 +53,7 @@ void kd_MdtInvalidDCache(void *a,void *b) KD_MANGLED("MdtInvalidDCache");
 void kd_keaPushPoolFrame(void)
 
 {
-  *(undefined4 *)((char *)poolstack + (0) + poolstack_ptr * 4) = pool_ptr;
+  *(kd_uptr*)((char *)poolstack + (0 * (int)sizeof(void *)) + poolstack_ptr * (int)sizeof(void *)) = pool_ptr;
   poolstack_ptr = poolstack_ptr + 1;
   return;
 }
@@ -62,7 +62,7 @@ void kd_keaPushPoolFrame(void)
 void kd_keaPopPoolFrame(void)
 
 {
-  pool_ptr = *(undefined4 *)((char *)poolstack + (-4) + poolstack_ptr * 4);
+  pool_ptr = *(kd_uptr*)((char *)poolstack + (-1 * (int)sizeof(void *)) + poolstack_ptr * (int)sizeof(void *));
   poolstack_ptr = poolstack_ptr + -1;
   return;
 }
@@ -73,7 +73,7 @@ void __thiscall kd_keaFunctions__initPool(keaFunctions *this,void *ptr,int size)
 {
   poolstack_ptr = 0;
   pool_ptr = ptr;
-  pool_max = (int)ptr + size;
+  pool_max = (kd_iptr)ptr + size;
   return;
 }
 
@@ -87,13 +87,13 @@ void * kd_keaPoolAlloc(int size,char *name)
     MeFatalError(3,"keaPoolAlloc: allocating %s of size %d. Size must be a multiple of 16 bytes.\n")
     ;
   }
-  if (pool_max < (uint)(size + (int)pool_ptr)) {
+  if (pool_max < (kd_uptr)(size + (kd_iptr)pool_ptr)) {
     MeFatalError(3,
                  "Kea error:Memory pool size exceeded when allocating %s of size %d\nPool ends at %08x\nIf memory were allocated, pool would end at %08x"
                 );
   }
   pvVar1 = pool_ptr;
-  pool_ptr = (void *)((int)pool_ptr + size);
+  pool_ptr = (void *)((kd_iptr)pool_ptr + size);
   return pvVar1;
 }
 
@@ -110,7 +110,7 @@ void kd_vanillaAllocateMemory(keaTempMemory *mem,MdtKeaConstraints constraints,i
   int iVar7;
   uint uVar8;
   uint uVar9;
-  int iVar10;
+  kd_iptr iVar10;
   int num_rows;
   int total_strips_exc_padding;
   int total_strips_inc_padding;
@@ -162,12 +162,12 @@ void kd_vanillaAllocateMemory(keaTempMemory *mem,MdtKeaConstraints constraints,i
   if ((uVar9 & 0x3f) != 0) {
     iVar10 = (uVar9 - (uVar9 & 0x3f)) + 0x80;
   }
-  if (pool_max < (undefined1 *)((int)pool_ptr + iVar10)) {
+  if (pool_max < (undefined1 *)((kd_iptr)pool_ptr + iVar10)) {
     MeFatalError(3,
                  "Kea error:Memory pool size exceeded when allocating %s of size %d\nPool ends at %08x\nIf memory were allocated, pool would end at %08x"
                 );
   }
-  pMVar1 = (MdtKeaVelocity *)((int)pool_ptr + iVar10);
+  pMVar1 = (MdtKeaVelocity *)((kd_iptr)pool_ptr + iVar10);
   mem->invIworld = pool_ptr;
   pool_ptr = (MdtKeaInverseMassMatrix *)pMVar1;
                     
@@ -176,22 +176,22 @@ void kd_vanillaAllocateMemory(keaTempMemory *mem,MdtKeaConstraints constraints,i
   if ((uVar9 & 0x3f) != 0) {
     iVar10 = (uVar9 - (uVar9 & 0x3f)) + 0x80;
   }
-  if (pool_max < (undefined1 *)((int)((MdtKeaVelocity *)pool_ptr)->velocity + iVar10)) {
+  if (pool_max < (undefined1 *)((kd_iptr)((MdtKeaVelocity *)pool_ptr)->velocity + iVar10)) {
     MeFatalError(3,
                  "Kea error:Memory pool size exceeded when allocating %s of size %d\nPool ends at %08x\nIf memory were allocated, pool would end at %08x"
                 );
   }
-  paMVar2 = (MdtKeaJBlockPair *)((int)((MdtKeaVelocity *)pool_ptr)->velocity + iVar10);
+  paMVar2 = (MdtKeaJBlockPair *)((kd_iptr)((MdtKeaVelocity *)pool_ptr)->velocity + iVar10);
   mem->vhmf = (MdtKeaVelocity *)pool_ptr;
   pool_ptr = (MdtKeaInverseMassMatrix *)paMVar2;
                     
   if (pool_max <
-      (*(MdtKeaJBlockPair *)((int)pool_ptr + total_strips_exc_padding * 5 * 0xc0))[0].col + 4) {
+      (*(MdtKeaJBlockPair *)((kd_iptr)pool_ptr + total_strips_exc_padding * 5 * 0xc0))[0].col + 4) {
     MeFatalError(3,
                  "Kea error:Memory pool size exceeded when allocating %s of size %d\nPool ends at %08x\nIf memory were allocated, pool would end at %08x"
                 );
   }
-  paMVar3 = (*(MdtKeaJBlockPair *)((int)pool_ptr + total_strips_exc_padding * 5 * 0xc0))[0].col + 4
+  paMVar3 = (*(MdtKeaJBlockPair *)((kd_iptr)pool_ptr + total_strips_exc_padding * 5 * 0xc0))[0].col + 4
   ;
   mem->jm = (MdtKeaJBlockPair *)pool_ptr;
   pool_ptr = (MdtKeaInverseMassMatrix *)paMVar3;
@@ -201,12 +201,12 @@ void kd_vanillaAllocateMemory(keaTempMemory *mem,MdtKeaConstraints constraints,i
   if ((uVar9 & 0x3f) != 0) {
     iVar10 = (uVar9 - (uVar9 & 0x3f)) + 0x80;
   }
-  if (pool_max < (undefined1 *)((int)pool_ptr + iVar10)) {
+  if (pool_max < (undefined1 *)((kd_iptr)pool_ptr + iVar10)) {
     MeFatalError(3,
                  "Kea error:Memory pool size exceeded when allocating %s of size %d\nPool ends at %08x\nIf memory were allocated, pool would end at %08x"
                 );
   }
-  piVar4 = (int *)((int)pool_ptr + iVar10);
+  piVar4 = (int *)((kd_iptr)pool_ptr + iVar10);
   mem->rhs = pool_ptr;
   pool_ptr = (MdtKeaInverseMassMatrix *)piVar4;
                     
@@ -219,12 +219,12 @@ void kd_vanillaAllocateMemory(keaTempMemory *mem,MdtKeaConstraints constraints,i
     MeFatalError(3,"keaPoolAlloc: allocating %s of size %d. Size must be a multiple of 16 bytes.\n")
     ;
   }
-  if (pool_max < (undefined1 *)(uVar9 + (int)pool_ptr)) {
+  if (pool_max < (undefined1 *)(uVar9 + (kd_iptr)pool_ptr)) {
     MeFatalError(3,
                  "Kea error:Memory pool size exceeded when allocating %s of size %d\nPool ends at %08x\nIf memory were allocated, pool would end at %08x"
                 );
   }
-  piVar4 = (int *)((int)pool_ptr + uVar9);
+  piVar4 = (int *)((kd_iptr)pool_ptr + uVar9);
   mem->jlen_12padded = (int *)pool_ptr;
   pool_ptr = (MdtKeaInverseMassMatrix *)piVar4;
                     
@@ -237,12 +237,12 @@ void kd_vanillaAllocateMemory(keaTempMemory *mem,MdtKeaConstraints constraints,i
     MeFatalError(3,"keaPoolAlloc: allocating %s of size %d. Size must be a multiple of 16 bytes.\n")
     ;
   }
-  if (pool_max < (undefined1 *)(uVar9 + (int)pool_ptr)) {
+  if (pool_max < (undefined1 *)(uVar9 + (kd_iptr)pool_ptr)) {
     MeFatalError(3,
                  "Kea error:Memory pool size exceeded when allocating %s of size %d\nPool ends at %08x\nIf memory were allocated, pool would end at %08x"
                 );
   }
-  paiVar5 = (MdtKeaBl2CBodyRow *)((int)pool_ptr + uVar9);
+  paiVar5 = (MdtKeaBl2CBodyRow *)((kd_iptr)pool_ptr + uVar9);
   mem->jlen = (int *)pool_ptr;
   pool_ptr = (MdtKeaInverseMassMatrix *)paiVar5;
                     
@@ -251,12 +251,12 @@ void kd_vanillaAllocateMemory(keaTempMemory *mem,MdtKeaConstraints constraints,i
   if ((uVar9 & 0x3f) != 0) {
     iVar10 = (uVar9 - (uVar9 & 0x3f)) + 0x80;
   }
-  if (pool_max < (undefined1 *)((int)*(MdtKeaBl2CBodyRow *)pool_ptr + iVar10)) {
+  if (pool_max < (undefined1 *)((kd_iptr)*(MdtKeaBl2CBodyRow *)pool_ptr + iVar10)) {
     MeFatalError(3,
                  "Kea error:Memory pool size exceeded when allocating %s of size %d\nPool ends at %08x\nIf memory were allocated, pool would end at %08x"
                 );
   }
-  paiVar6 = (MdtKeaBl2BodyRow *)((int)*(MdtKeaBl2CBodyRow *)pool_ptr + iVar10);
+  paiVar6 = (MdtKeaBl2BodyRow *)((kd_iptr)*(MdtKeaBl2CBodyRow *)pool_ptr + iVar10);
   mem->bl2cbody = (MdtKeaBl2CBodyRow *)pool_ptr;
   pool_ptr = (MdtKeaInverseMassMatrix *)paiVar6;
                     
@@ -265,12 +265,12 @@ void kd_vanillaAllocateMemory(keaTempMemory *mem,MdtKeaConstraints constraints,i
   if ((uVar9 & 0x3f) != 0) {
     iVar10 = (uVar9 - (uVar9 & 0x3f)) + 0x80;
   }
-  if (pool_max < (undefined1 *)((int)*(MdtKeaBl2BodyRow *)pool_ptr + iVar10)) {
+  if (pool_max < (undefined1 *)((kd_iptr)*(MdtKeaBl2BodyRow *)pool_ptr + iVar10)) {
     MeFatalError(3,
                  "Kea error:Memory pool size exceeded when allocating %s of size %d\nPool ends at %08x\nIf memory were allocated, pool would end at %08x"
                 );
   }
-  paiVar6 = (MdtKeaBl2BodyRow *)((int)*(MdtKeaBl2BodyRow *)pool_ptr + iVar10);
+  paiVar6 = (MdtKeaBl2BodyRow *)((kd_iptr)*(MdtKeaBl2BodyRow *)pool_ptr + iVar10);
   mem->bl2body_12padded = (MdtKeaBl2BodyRow *)pool_ptr;
   pool_ptr = (MdtKeaInverseMassMatrix *)paiVar6;
                     
@@ -279,12 +279,12 @@ void kd_vanillaAllocateMemory(keaTempMemory *mem,MdtKeaConstraints constraints,i
   if ((uVar9 & 0x3f) != 0) {
     iVar10 = (uVar9 - (uVar9 & 0x3f)) + 0x80;
   }
-  if (pool_max < (undefined1 *)((int)*(MdtKeaBl2BodyRow *)pool_ptr + iVar10)) {
+  if (pool_max < (undefined1 *)((kd_iptr)*(MdtKeaBl2BodyRow *)pool_ptr + iVar10)) {
     MeFatalError(3,
                  "Kea error:Memory pool size exceeded when allocating %s of size %d\nPool ends at %08x\nIf memory were allocated, pool would end at %08x"
                 );
   }
-  iVar10 = (int)*(MdtKeaBl2BodyRow *)pool_ptr + iVar10;
+  iVar10 = (kd_iptr)*(MdtKeaBl2BodyRow *)pool_ptr + iVar10;
   mem->bl2body = (MdtKeaBl2BodyRow *)pool_ptr;
   pool_ptr = (MdtKeaInverseMassMatrix *)iVar10;
   return;
@@ -585,13 +585,13 @@ LAB_000107e3:
   }
   uVar27 = iVar12 >> 4;
   if ((uVar27 & 0xf) == 0) {
-    ANAZ = uVar27 << 2;
+    ANAZ = (uVar27 << 2) + uVar27 * ((int)sizeof(void *) - 4);
   }
   else {
     if ((int)uVar27 < 0) {
       uVar27 = uVar27 + 0xf;
     }
-    ANAZ = (uVar27 & 0xfffffff0) * 4 + 0x40;
+    ANAZ = (uVar27 & 0xfffffff0) * (int)sizeof(void *) + 0x10 * (int)sizeof(void *);
   }
   iVar12 = c4size * c4size;
   if (iVar12 < 0) {
@@ -599,13 +599,13 @@ LAB_000107e3:
   }
   uVar27 = iVar12 >> 4;
   if ((uVar27 & 0xf) == 0) {
-    ANCZ = uVar27 << 2;
+    ANCZ = (uVar27 << 2) + uVar27 * ((int)sizeof(void *) - 4);
   }
   else {
     if ((int)uVar27 < 0) {
       uVar27 = uVar27 + 0xf;
     }
-    ANCZ = (uVar27 & 0xfffffff0) * 4 + 0x40;
+    ANCZ = (uVar27 & 0xfffffff0) * (int)sizeof(void *) + 0x10 * (int)sizeof(void *);
   }
   iVar12 = c4size;
   if (c4size < 0) {
@@ -712,13 +712,13 @@ LAB_000107e3:
   }
   uVar27 = iVar22 >> 4;
   if ((uVar27 & 0xf) == 0) {
-    iVar22 = uVar27 * 4;
+    iVar22 = uVar27 * 4 + uVar27 * ((int)sizeof(void *) - 4);
   }
   else {
     if ((int)uVar27 < 0) {
       uVar27 = uVar27 + 0xf;
     }
-    iVar22 = (uVar27 & 0xfffffff0) * 4 + 0x40;
+    iVar22 = (uVar27 & 0xfffffff0) * (int)sizeof(void *) + 0x10 * (int)sizeof(void *);
   }
   iVar23 = c4size * c4size;
   if (iVar23 < 0) {
@@ -726,13 +726,13 @@ LAB_000107e3:
   }
   uVar27 = iVar23 >> 4;
   if ((uVar27 & 0xf) == 0) {
-    iVar23 = uVar27 * 4;
+    iVar23 = uVar27 * 4 + uVar27 * ((int)sizeof(void *) - 4);
   }
   else {
     if ((int)uVar27 < 0) {
       uVar27 = uVar27 + 0xf;
     }
-    iVar23 = (uVar27 & 0xfffffff0) * 4 + 0x40;
+    iVar23 = (uVar27 & 0xfffffff0) * (int)sizeof(void *) + 0x10 * (int)sizeof(void *);
   }
   iVar24 = c4size;
   if (c4size < 0) {

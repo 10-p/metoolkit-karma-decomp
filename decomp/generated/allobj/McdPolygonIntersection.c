@@ -95,7 +95,7 @@ int kd_McdPolyPointCompare1(void *p1,void *p2)
   float fVar1;
   uint uVar2;
 
-  fVar1 = *(float *)((int)p1 + 4) - *(float *)((int)p2 + 4);
+  fVar1 = *(float *)((kd_iptr)p1 + 4) - *(float *)((kd_iptr)p2 + 4);
   if (fVar1 < 0.0) {
     uVar2 = 0xffffffff;
   }
@@ -112,7 +112,7 @@ int kd_McdPolyPointCompare2(void *p1,void *p2)
   float fVar1;
   uint uVar2;
 
-  fVar1 = *(float *)((int)p1 + 8) - *(float *)((int)p2 + 8);
+  fVar1 = *(float *)((kd_iptr)p1 + 8) - *(float *)((kd_iptr)p2 + 8);
   if (fVar1 < 0.0) {
     uVar2 = 0xffffffff;
   }
@@ -545,7 +545,7 @@ LAB_00010c9d:
           pMVar10 = *polyOut;
           for (; uVar12 != 0; uVar12 = uVar12 - 1) {
             *pMVar10 = (MeReal)(*poly1)[0];
-            poly1 = (MeVector3 *)((int)poly1 + 4);
+            poly1 = (MeVector3 *)((kd_iptr)poly1 + 4);
             pMVar10 = pMVar10 + 1;
           }
           goto LAB_00010c5d;

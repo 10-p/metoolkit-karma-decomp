@@ -62,32 +62,30 @@ McdFrameworkID kd_McdInit(int geoTypeMaxCount,int modelCount,int instanceCount,M
   int iVar6;
   uint uVar7;
 
-  pMVar1 = (MeMemoryAPI.create)(0x90);
+  pMVar1 = (MeMemoryAPI.create)((int)sizeof(*(McdFrameworkID)0));
   pMVar1->termActions = (McdTermActionLink *)0x0;
   pcVar2 = MeToolkitVersionString();
   pMVar1->toolkitVersionString = pcVar2;
   pMVar1->geometryRegisteredCountMax = geoTypeMaxCount + 9;
   pMVar1->geometryRegisteredCount = 0;
-  pMVar3 = (MeMemoryAPI.create)((geoTypeMaxCount + 9) * 0x28);
+  pMVar3 = (MeMemoryAPI.create)(((geoTypeMaxCount + 9)) * (int)sizeof(*(McdGeometryVTable *)0));
   pMVar1->geometryVTableTable = pMVar3;
   for (iVar6 = (pMVar1->geometryRegisteredCountMax * 5 & 0x1fffffffU) << 1; iVar6 != 0;
       iVar6 = iVar6 + -1) {
     pMVar3->destroy = (McdGeometryDestroyFnPtr)0x0;
     pMVar3 = (McdGeometryVTable *)&pMVar3->getAABB;
   }
-  (MePoolAPI.init)(&pMVar1->modelPool,modelCount,0x78,0);
-  (MePoolAPI.init)(&pMVar1->instancePool,instanceCount,0x34,0);
-  pMVar4 = (MeMemoryAPI.create)(pMVar1->geometryRegisteredCountMax * pMVar1->geometryRegisteredCountMax *
-                           0x1c);
+  (MePoolAPI.init)(&pMVar1->modelPool,modelCount,(int)sizeof(*(McdModelID)0),0);
+  (MePoolAPI.init)(&pMVar1->instancePool,instanceCount,(int)sizeof(*(McdGeometryInstance *)0),0);
+  pMVar4 = (MeMemoryAPI.create)((pMVar1->geometryRegisteredCountMax * pMVar1->geometryRegisteredCountMax) * (int)sizeof(*(McdInteractions *)0));
   pMVar1->interactionTable = pMVar4;
-  for (uVar7 = (uint)(pMVar1->geometryRegisteredCountMax * pMVar1->geometryRegisteredCountMax * 0x1c
-                     ) >> 2; uVar7 != 0; uVar7 = uVar7 - 1) {
+  for (uVar7 = (uint)((pMVar1->geometryRegisteredCountMax * pMVar1->geometryRegisteredCountMax) * (int)sizeof(*(McdInteractions *)0)) / (uint)((char *)&((McdInteractions *)0)->goodbyeFn - (char *)0); uVar7 != 0; uVar7 = uVar7 - 1) {
     pMVar4->helloFn = (McdHelloFn)0x0;
     pMVar4 = (McdInteractions *)&pMVar4->goodbyeFn;
   }
   pMVar1->mHelloCallbackFnPtr = (McdHelloCallbackFnPtr)0x0;
   (pMVar1->cachePool).t = MePoolNULL;
-  pMVar5 = (MeMemoryAPI.create)(8);
+  pMVar5 = (MeMemoryAPI.create)((int)sizeof(*(McdRequest *)0));
   pMVar1->request = pMVar5;
   pMVar5->contactMaxCount = 4;
   pMVar1->request->faceNormalsFirst = 0;
@@ -185,7 +183,7 @@ void kd_McdFrameworkRegisterTermAction(McdFrameworkID frame,McdTermAction action
 {
   McdTermActionLink *pMVar1;
 
-  pMVar1 = (MeMemoryAPI.create)(8);
+  pMVar1 = (MeMemoryAPI.create)((int)sizeof(*(McdTermActionLink *)0));
   pMVar1->action = action;
   pMVar1->next = frame->termActions;
   frame->termActions = pMVar1;

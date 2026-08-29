@@ -160,51 +160,51 @@ int kd_McdSphylPlaneIntersect(McdModelPair *p,McdIntersectResult *result)
   McdModelGetGeometry(p->model2);
   result->contactCount = 0;
   result->touch = 0;
-  fVar1 = *(float *)((int)pvVar7 + 0x20);
-  fVar3 = *(float *)((int)pvVar8 + 0x28) * *(float *)((int)pvVar7 + 0x28) +
-          fVar1 * *(float *)((int)pvVar8 + 0x20) +
-          *(float *)((int)pvVar8 + 0x24) * *(float *)((int)pvVar7 + 0x24);
+  fVar1 = *(float *)((kd_iptr)pvVar7 + 0x20);
+  fVar3 = *(float *)((kd_iptr)pvVar8 + 0x28) * *(float *)((kd_iptr)pvVar7 + 0x28) +
+          fVar1 * *(float *)((kd_iptr)pvVar8 + 0x20) +
+          *(float *)((kd_iptr)pvVar8 + 0x24) * *(float *)((kd_iptr)pvVar7 + 0x24);
   ds = 0.0;
   if (-0.001 <= fVar3) {
-    fVar2 = -*(float *)((int)pvVar9 + 0x14);
-    end[0] = fVar1 * fVar2 + *(float *)((int)pvVar7 + 0x30);
-    end[1] = fVar2 * *(float *)((int)pvVar7 + 0x24) + *(float *)((int)pvVar7 + 0x34);
-    end[2] = fVar2 * *(float *)((int)pvVar7 + 0x28) + *(float *)((int)pvVar7 + 0x38);
+    fVar2 = -*(float *)((kd_iptr)pvVar9 + 0x14);
+    end[0] = fVar1 * fVar2 + *(float *)((kd_iptr)pvVar7 + 0x30);
+    end[1] = fVar2 * *(float *)((kd_iptr)pvVar7 + 0x24) + *(float *)((kd_iptr)pvVar7 + 0x34);
+    end[2] = fVar2 * *(float *)((kd_iptr)pvVar7 + 0x28) + *(float *)((kd_iptr)pvVar7 + 0x38);
     if (fVar3 < 0.001) {
-      ds = *(float *)((int)pvVar9 + 0x14) + *(float *)((int)pvVar9 + 0x14);
+      ds = *(float *)((kd_iptr)pvVar9 + 0x14) + *(float *)((kd_iptr)pvVar9 + 0x14);
     }
   }
   else {
-    fVar2 = *(float *)((int)pvVar9 + 0x14);
-    end[0] = fVar1 * fVar2 + *(float *)((int)pvVar7 + 0x30);
-    end[1] = fVar2 * *(float *)((int)pvVar7 + 0x24) + *(float *)((int)pvVar7 + 0x34);
-    end[2] = fVar2 * *(float *)((int)pvVar7 + 0x28) + *(float *)((int)pvVar7 + 0x38);
+    fVar2 = *(float *)((kd_iptr)pvVar9 + 0x14);
+    end[0] = fVar1 * fVar2 + *(float *)((kd_iptr)pvVar7 + 0x30);
+    end[1] = fVar2 * *(float *)((kd_iptr)pvVar7 + 0x24) + *(float *)((kd_iptr)pvVar7 + 0x34);
+    end[2] = fVar2 * *(float *)((kd_iptr)pvVar7 + 0x28) + *(float *)((kd_iptr)pvVar7 + 0x38);
   }
-  fVar1 = ((end[2] - *(float *)((int)pvVar8 + 0x38)) * *(float *)((int)pvVar8 + 0x28) +
-          (end[1] - *(float *)((int)pvVar8 + 0x34)) * *(float *)((int)pvVar8 + 0x24) +
-          (end[0] - *(float *)((int)pvVar8 + 0x30)) * *(float *)((int)pvVar8 + 0x20)) -
-          *(float *)((int)pvVar9 + 0x10);
+  fVar1 = ((end[2] - *(float *)((kd_iptr)pvVar8 + 0x38)) * *(float *)((kd_iptr)pvVar8 + 0x28) +
+          (end[1] - *(float *)((kd_iptr)pvVar8 + 0x34)) * *(float *)((kd_iptr)pvVar8 + 0x24) +
+          (end[0] - *(float *)((kd_iptr)pvVar8 + 0x30)) * *(float *)((kd_iptr)pvVar8 + 0x20)) -
+          *(float *)((kd_iptr)pvVar9 + 0x10);
   if (fVar11 + fVar10 <= fVar1) goto LAB_000103ca;
-  fVar10 = -*(float *)((int)pvVar9 + 0x10) - fVar1;
-  pos[0] = end[0] + *(float *)((int)pvVar8 + 0x20) * fVar10;
-  pos[1] = fVar10 * *(float *)((int)pvVar8 + 0x24) + end[1];
-  pos[2] = fVar10 * *(float *)((int)pvVar8 + 0x28) + end[2];
+  fVar10 = -*(float *)((kd_iptr)pvVar9 + 0x10) - fVar1;
+  pos[0] = end[0] + *(float *)((kd_iptr)pvVar8 + 0x20) * fVar10;
+  pos[1] = fVar10 * *(float *)((kd_iptr)pvVar8 + 0x24) + end[1];
+  pos[2] = fVar10 * *(float *)((kd_iptr)pvVar8 + 0x28) + end[2];
   result->normal[0] = 0.0;
   result->normal[1] = 0.0;
   result->normal[2] = 0.0;
   kd_AccumulateSphylContacts
-            (pos,(MeReal *)((int)pvVar8 + 0x20),fVar1,3,2,(MeVector3Ptr)((int)pvVar7 + 0x20),ds,
+            (pos,(MeReal *)((kd_iptr)pvVar8 + 0x20),fVar1,3,2,(MeVector3Ptr)((kd_iptr)pvVar7 + 0x20),ds,
              (MeMatrix4Ptr)0x0,result);
   if (ds != 0.0) goto LAB_000103ca;
-  fVar10 = *(float *)((int)pvVar8 + 0x20);
-  fVar11 = *(float *)((int)pvVar9 + 0x10);
-  fVar6 = fVar11 - ((*(float *)((int)pvVar7 + 0x30) * fVar10 +
-                     *(float *)((int)pvVar7 + 0x34) * *(float *)((int)pvVar8 + 0x24) +
-                    *(float *)((int)pvVar7 + 0x38) * *(float *)((int)pvVar8 + 0x28)) -
-                   (*(float *)((int)pvVar8 + 0x30) * fVar10 +
-                    *(float *)((int)pvVar8 + 0x24) * *(float *)((int)pvVar8 + 0x34) +
-                   *(float *)((int)pvVar8 + 0x28) * *(float *)((int)pvVar8 + 0x38)));
-  fVar2 = *(float *)((int)pvVar9 + 0x14);
+  fVar10 = *(float *)((kd_iptr)pvVar8 + 0x20);
+  fVar11 = *(float *)((kd_iptr)pvVar9 + 0x10);
+  fVar6 = fVar11 - ((*(float *)((kd_iptr)pvVar7 + 0x30) * fVar10 +
+                     *(float *)((kd_iptr)pvVar7 + 0x34) * *(float *)((kd_iptr)pvVar8 + 0x24) +
+                    *(float *)((kd_iptr)pvVar7 + 0x38) * *(float *)((kd_iptr)pvVar8 + 0x28)) -
+                   (*(float *)((kd_iptr)pvVar8 + 0x30) * fVar10 +
+                    *(float *)((kd_iptr)pvVar8 + 0x24) * *(float *)((kd_iptr)pvVar8 + 0x34) +
+                   *(float *)((kd_iptr)pvVar8 + 0x28) * *(float *)((kd_iptr)pvVar8 + 0x38)));
+  fVar2 = *(float *)((kd_iptr)pvVar9 + 0x14);
   fVar5 = fVar2;
   if (0.0 < fVar3) {
     fVar5 = -fVar2;
@@ -223,16 +223,16 @@ LAB_000104fd:
   }
   if (s != fVar5) {
     fVar11 = -fVar11;
-    pos2[0] = s * *(float *)((int)pvVar7 + 0x20) + fVar11 * fVar10 + *(float *)((int)pvVar7 + 0x30);
-    pos2[1] = s * *(float *)((int)pvVar7 + 0x24) +
-              fVar11 * *(float *)((int)pvVar8 + 0x24) + *(float *)((int)pvVar7 + 0x34);
-    pos2[2] = s * *(float *)((int)pvVar7 + 0x28) +
-              fVar11 * *(float *)((int)pvVar8 + 0x28) + *(float *)((int)pvVar7 + 0x38);
+    pos2[0] = s * *(float *)((kd_iptr)pvVar7 + 0x20) + fVar11 * fVar10 + *(float *)((kd_iptr)pvVar7 + 0x30);
+    pos2[1] = s * *(float *)((kd_iptr)pvVar7 + 0x24) +
+              fVar11 * *(float *)((kd_iptr)pvVar8 + 0x24) + *(float *)((kd_iptr)pvVar7 + 0x34);
+    pos2[2] = s * *(float *)((kd_iptr)pvVar7 + 0x28) +
+              fVar11 * *(float *)((kd_iptr)pvVar8 + 0x28) + *(float *)((kd_iptr)pvVar7 + 0x38);
     result->normal[0] = 0.0;
     result->normal[1] = 0.0;
     result->normal[2] = 0.0;
     kd_AccumulateSphylContacts
-              (pos2,(MeReal *)((int)pvVar8 + 0x20),fVar1,3,2,(MeVector3Ptr)0x0,0.0,(MeMatrix4Ptr)0x0
+              (pos2,(MeReal *)((kd_iptr)pvVar8 + 0x20),fVar1,3,2,(MeVector3Ptr)0x0,0.0,(MeMatrix4Ptr)0x0
                ,result);
   }
 LAB_000103ca:
@@ -293,13 +293,13 @@ int kd_McdSphylSphereIntersect(McdModelPair *p,McdIntersectResult *result)
   pMVar1 = p->model1->frame;
   result->contactCount = 0;
   result->touch = 0;
-  fVar2 = *(float *)((int)pvVar12 + 0x14);
-  fVar3 = (*(float *)((int)pvVar11 + 0x30) - *(float *)((int)pvVar10 + 0x30)) *
-          *(float *)((int)pvVar10 + 0x20) +
-          (*(float *)((int)pvVar11 + 0x34) - *(float *)((int)pvVar10 + 0x34)) *
-          *(float *)((int)pvVar10 + 0x24) +
-          (*(float *)((int)pvVar11 + 0x38) - *(float *)((int)pvVar10 + 0x38)) *
-          *(float *)((int)pvVar10 + 0x28);
+  fVar2 = *(float *)((kd_iptr)pvVar12 + 0x14);
+  fVar3 = (*(float *)((kd_iptr)pvVar11 + 0x30) - *(float *)((kd_iptr)pvVar10 + 0x30)) *
+          *(float *)((kd_iptr)pvVar10 + 0x20) +
+          (*(float *)((kd_iptr)pvVar11 + 0x34) - *(float *)((kd_iptr)pvVar10 + 0x34)) *
+          *(float *)((kd_iptr)pvVar10 + 0x24) +
+          (*(float *)((kd_iptr)pvVar11 + 0x38) - *(float *)((kd_iptr)pvVar10 + 0x38)) *
+          *(float *)((kd_iptr)pvVar10 + 0x28);
   fVar4 = -fVar2;
   if (fVar3 < fVar2) {
     fVar2 = fVar3;
@@ -307,19 +307,19 @@ int kd_McdSphylSphereIntersect(McdModelPair *p,McdIntersectResult *result)
   if (fVar2 < fVar4) {
     fVar2 = fVar4;
   }
-  fVar9 = fVar2 * *(MeVector3Ptr)((int)pvVar10 + 0x20) + *(float *)((int)pvVar10 + 0x30);
-  fVar8 = fVar2 * *(float *)((int)pvVar10 + 0x24) + *(float *)((int)pvVar10 + 0x34);
-  fVar3 = fVar2 * *(float *)((int)pvVar10 + 0x28) + *(float *)((int)pvVar10 + 0x38);
-  fVar6 = fVar9 - *(float *)((int)pvVar11 + 0x30);
-  fVar7 = fVar8 - *(float *)((int)pvVar11 + 0x34);
-  fVar4 = fVar3 - *(float *)((int)pvVar11 + 0x38);
+  fVar9 = fVar2 * *(MeVector3Ptr)((kd_iptr)pvVar10 + 0x20) + *(float *)((kd_iptr)pvVar10 + 0x30);
+  fVar8 = fVar2 * *(float *)((kd_iptr)pvVar10 + 0x24) + *(float *)((kd_iptr)pvVar10 + 0x34);
+  fVar3 = fVar2 * *(float *)((kd_iptr)pvVar10 + 0x28) + *(float *)((kd_iptr)pvVar10 + 0x38);
+  fVar6 = fVar9 - *(float *)((kd_iptr)pvVar11 + 0x30);
+  fVar7 = fVar8 - *(float *)((kd_iptr)pvVar11 + 0x34);
+  fVar4 = fVar3 - *(float *)((kd_iptr)pvVar11 + 0x38);
   fVar5 = fVar4 * fVar4 + fVar6 * fVar6 + fVar7 * fVar7;
   fVar2 = pMVar1->mScale;
   if (fVar5 <= fVar2 * fVar2 * 6.250001e-08) {
                     
-    pos[0] = *(float *)((int)pvVar10 + 0x20) * *(float *)((int)pvVar10 + 0x20);
-    pos[1] = *(float *)((int)pvVar10 + 0x24) * *(float *)((int)pvVar10 + 0x24);
-    pos[2] = *(float *)((int)pvVar10 + 0x28) * *(float *)((int)pvVar10 + 0x28);
+    pos[0] = *(float *)((kd_iptr)pvVar10 + 0x20) * *(float *)((kd_iptr)pvVar10 + 0x20);
+    pos[1] = *(float *)((kd_iptr)pvVar10 + 0x24) * *(float *)((kd_iptr)pvVar10 + 0x24);
+    pos[2] = *(float *)((kd_iptr)pvVar10 + 0x28) * *(float *)((kd_iptr)pvVar10 + 0x28);
                     
     bVar14 = ((pos[1] < pos[0]) - 1U & 0xf0) + 0x10;
     if (pos[2] < pos[0]) {
@@ -332,9 +332,9 @@ int kd_McdSphylSphereIntersect(McdModelPair *p,McdIntersectResult *result)
     aa[1] = 0.0;
     aa[2] = 0.0;
     aa[0x21312300 >> (bVar14 & 0x1f) & 3] = 1.0;
-    n[0] = *(float *)((int)pvVar10 + 0x24) * aa[2] - *(float *)((int)pvVar10 + 0x28) * aa[1];
-    n[1] = *(float *)((int)pvVar10 + 0x28) * aa[0] - aa[2] * *(float *)((int)pvVar10 + 0x20);
-    n[2] = aa[1] * *(float *)((int)pvVar10 + 0x20) - aa[0] * *(float *)((int)pvVar10 + 0x24);
+    n[0] = *(float *)((kd_iptr)pvVar10 + 0x24) * aa[2] - *(float *)((kd_iptr)pvVar10 + 0x28) * aa[1];
+    n[1] = *(float *)((kd_iptr)pvVar10 + 0x28) * aa[0] - aa[2] * *(float *)((kd_iptr)pvVar10 + 0x20);
+    n[2] = aa[1] * *(float *)((kd_iptr)pvVar10 + 0x20) - aa[0] * *(float *)((kd_iptr)pvVar10 + 0x24);
     MeVector3Normalize(n);
     fVar2 = 0.0;
   }
@@ -346,9 +346,9 @@ int kd_McdSphylSphereIntersect(McdModelPair *p,McdIntersectResult *result)
     n[2] = fVar4 * fVar2;
     fVar2 = fVar2 * fVar5;
   }
-  fVar2 = fVar2 - (*(float *)((int)pvVar12 + 0x10) + *(float *)((int)pvVar13 + 0x10));
+  fVar2 = fVar2 - (*(float *)((kd_iptr)pvVar12 + 0x10) + *(float *)((kd_iptr)pvVar13 + 0x10));
   if (fVar2 < fVar16 + fVar15) {
-    fVar4 = -*(float *)((int)pvVar12 + 0x10) - fVar2;
+    fVar4 = -*(float *)((kd_iptr)pvVar12 + 0x10) - fVar2;
     pos[0] = fVar4 * n[0] + fVar9;
     pos[2] = fVar4 * n[2] + fVar3;
     pos[1] = fVar4 * n[1] + fVar8;
@@ -356,7 +356,7 @@ int kd_McdSphylSphereIntersect(McdModelPair *p,McdIntersectResult *result)
     result->normal[1] = 0.0;
     result->normal[2] = 0.0;
     kd_AccumulateSphylContacts
-              (pos,n,fVar2,3,3,(MeVector3Ptr)((int)pvVar10 + 0x20),0.0,(MeMatrix4Ptr)0x0,result);
+              (pos,n,fVar2,3,3,(MeVector3Ptr)((kd_iptr)pvVar10 + 0x20),0.0,(MeMatrix4Ptr)0x0,result);
   }
   return result->touch;
 }
@@ -419,24 +419,24 @@ int kd_McdSphylSphylIntersect(McdModelPair *p,McdIntersectResult *result)
   pvVar11 = McdModelGetGeometry(p->model2);
   result->contactCount = 0;
   result->touch = 0;
-  iVar12 = NSegmentNSegment((float *)((int)pvVar8 + 0x30),(float *)((int)pvVar8 + 0x20),
-                            -*(float *)((int)pvVar10 + 0x14),*(float *)((int)pvVar10 + 0x14),
-                            (float *)((int)pvVar9 + 0x30),(float *)((int)pvVar9 + 0x20),
-                            -*(float *)((int)pvVar11 + 0x14),*(float *)((int)pvVar11 + 0x14),&s,&t,
+  iVar12 = NSegmentNSegment((float *)((kd_iptr)pvVar8 + 0x30),(float *)((kd_iptr)pvVar8 + 0x20),
+                            -*(float *)((kd_iptr)pvVar10 + 0x14),*(float *)((kd_iptr)pvVar10 + 0x14),
+                            (float *)((kd_iptr)pvVar9 + 0x30),(float *)((kd_iptr)pvVar9 + 0x20),
+                            -*(float *)((kd_iptr)pvVar11 + 0x14),*(float *)((kd_iptr)pvVar11 + 0x14),&s,&t,
                             &ds);
-  fVar6 = t * *(float *)((int)pvVar9 + 0x20) + *(float *)((int)pvVar9 + 0x30);
-  fVar7 = (s * *(float *)((int)pvVar8 + 0x20) + *(float *)((int)pvVar8 + 0x30)) - fVar6;
-  fVar4 = t * *(float *)((int)pvVar9 + 0x24) + *(float *)((int)pvVar9 + 0x34);
-  fVar3 = (s * *(float *)((int)pvVar8 + 0x24) + *(float *)((int)pvVar8 + 0x34)) - fVar4;
-  fVar5 = t * *(float *)((int)pvVar9 + 0x28) + *(float *)((int)pvVar9 + 0x38);
-  fVar1 = (s * *(float *)((int)pvVar8 + 0x28) + *(float *)((int)pvVar8 + 0x38)) - fVar5;
+  fVar6 = t * *(float *)((kd_iptr)pvVar9 + 0x20) + *(float *)((kd_iptr)pvVar9 + 0x30);
+  fVar7 = (s * *(float *)((kd_iptr)pvVar8 + 0x20) + *(float *)((kd_iptr)pvVar8 + 0x30)) - fVar6;
+  fVar4 = t * *(float *)((kd_iptr)pvVar9 + 0x24) + *(float *)((kd_iptr)pvVar9 + 0x34);
+  fVar3 = (s * *(float *)((kd_iptr)pvVar8 + 0x24) + *(float *)((kd_iptr)pvVar8 + 0x34)) - fVar4;
+  fVar5 = t * *(float *)((kd_iptr)pvVar9 + 0x28) + *(float *)((kd_iptr)pvVar9 + 0x38);
+  fVar1 = (s * *(float *)((kd_iptr)pvVar8 + 0x28) + *(float *)((kd_iptr)pvVar8 + 0x38)) - fVar5;
   local_ac = fVar1 * fVar1 + fVar7 * fVar7 + fVar3 * fVar3;
   if (local_ac <= 6.250001e-08) {
     if (iVar12 == 0) {
                     
-      p_1[0] = *(float *)((int)pvVar8 + 0x20) * *(float *)((int)pvVar8 + 0x20);
-      p_1[1] = *(float *)((int)pvVar8 + 0x24) * *(float *)((int)pvVar8 + 0x24);
-      p_1[2] = *(float *)((int)pvVar8 + 0x28) * *(float *)((int)pvVar8 + 0x28);
+      p_1[0] = *(float *)((kd_iptr)pvVar8 + 0x20) * *(float *)((kd_iptr)pvVar8 + 0x20);
+      p_1[1] = *(float *)((kd_iptr)pvVar8 + 0x24) * *(float *)((kd_iptr)pvVar8 + 0x24);
+      p_1[2] = *(float *)((kd_iptr)pvVar8 + 0x28) * *(float *)((kd_iptr)pvVar8 + 0x28);
       bVar13 = ((p_1[1] < p_1[0]) - 1U & 0xf0) + 0x10;
       if (p_1[2] < p_1[0]) {
         bVar13 = bVar13 | 8;
@@ -448,17 +448,17 @@ int kd_McdSphylSphylIntersect(McdModelPair *p,McdIntersectResult *result)
       aa[1] = 0.0;
       aa[2] = 0.0;
       aa[0x21312300 >> (bVar13 & 0x1f) & 3] = 1.0;
-      n[0] = *(float *)((int)pvVar8 + 0x24) * aa[2] - *(float *)((int)pvVar8 + 0x28) * aa[1];
-      n[1] = *(float *)((int)pvVar8 + 0x28) * aa[0] - aa[2] * *(float *)((int)pvVar8 + 0x20);
-      n[2] = aa[1] * *(float *)((int)pvVar8 + 0x20) - aa[0] * *(float *)((int)pvVar8 + 0x24);
+      n[0] = *(float *)((kd_iptr)pvVar8 + 0x24) * aa[2] - *(float *)((kd_iptr)pvVar8 + 0x28) * aa[1];
+      n[1] = *(float *)((kd_iptr)pvVar8 + 0x28) * aa[0] - aa[2] * *(float *)((kd_iptr)pvVar8 + 0x20);
+      n[2] = aa[1] * *(float *)((kd_iptr)pvVar8 + 0x20) - aa[0] * *(float *)((kd_iptr)pvVar8 + 0x24);
     }
     else {
-      n[0] = *(float *)((int)pvVar9 + 0x28) * *(float *)((int)pvVar8 + 0x24) -
-             *(float *)((int)pvVar9 + 0x24) * *(float *)((int)pvVar8 + 0x28);
-      n[1] = *(float *)((int)pvVar9 + 0x20) * *(float *)((int)pvVar8 + 0x28) -
-             *(float *)((int)pvVar9 + 0x28) * *(float *)((int)pvVar8 + 0x20);
-      n[2] = *(float *)((int)pvVar9 + 0x24) * *(float *)((int)pvVar8 + 0x20) -
-             *(float *)((int)pvVar9 + 0x20) * *(float *)((int)pvVar8 + 0x24);
+      n[0] = *(float *)((kd_iptr)pvVar9 + 0x28) * *(float *)((kd_iptr)pvVar8 + 0x24) -
+             *(float *)((kd_iptr)pvVar9 + 0x24) * *(float *)((kd_iptr)pvVar8 + 0x28);
+      n[1] = *(float *)((kd_iptr)pvVar9 + 0x20) * *(float *)((kd_iptr)pvVar8 + 0x28) -
+             *(float *)((kd_iptr)pvVar9 + 0x28) * *(float *)((kd_iptr)pvVar8 + 0x20);
+      n[2] = *(float *)((kd_iptr)pvVar9 + 0x24) * *(float *)((kd_iptr)pvVar8 + 0x20) -
+             *(float *)((kd_iptr)pvVar9 + 0x20) * *(float *)((kd_iptr)pvVar8 + 0x24);
     }
     local_ac = 0.0;
     MeVector3Normalize(n);
@@ -471,8 +471,8 @@ int kd_McdSphylSphylIntersect(McdModelPair *p,McdIntersectResult *result)
     n[2] = fVar1 * fVar2;
     local_ac = local_ac * fVar2;
   }
-  fVar1 = *(float *)((int)pvVar11 + 0x10);
-  local_ac = local_ac - (*(float *)((int)pvVar10 + 0x10) + fVar1);
+  fVar1 = *(float *)((kd_iptr)pvVar11 + 0x10);
+  local_ac = local_ac - (*(float *)((kd_iptr)pvVar10 + 0x10) + fVar1);
   if (local_ac < fVar15 + fVar14) {
     p_1[0] = fVar1 * n[0] + fVar6;
     p_1[2] = fVar1 * n[2] + fVar5;
@@ -481,7 +481,7 @@ int kd_McdSphylSphylIntersect(McdModelPair *p,McdIntersectResult *result)
     result->normal[1] = 0.0;
     result->normal[2] = 0.0;
     kd_AccumulateSphylContacts
-              (p_1,n,local_ac,3,3,(float *)((int)pvVar8 + 0x20),ds,(MeMatrix4Ptr)0x0,result);
+              (p_1,n,local_ac,3,3,(float *)((kd_iptr)pvVar8 + 0x20),ds,(MeMatrix4Ptr)0x0,result);
   }
   return result->touch;
 }
@@ -556,23 +556,23 @@ int kd_McdSphylBoxIntersect(McdModelPair *p,McdIntersectResult *result)
   pvVar10 = McdModelGetGeometry(p->model2);
   result->contactCount = 0;
   result->touch = 0;
-  relAxis[0] = (*tm)[2] * *(float *)((int)pvVar8 + 0x28) +
-               (*tm)[1] * *(float *)((int)pvVar8 + 0x24) + (*tm)[0] * *(float *)((int)pvVar8 + 0x20)
+  relAxis[0] = (*tm)[2] * *(float *)((kd_iptr)pvVar8 + 0x28) +
+               (*tm)[1] * *(float *)((kd_iptr)pvVar8 + 0x24) + (*tm)[0] * *(float *)((kd_iptr)pvVar8 + 0x20)
   ;
-  relAxis[1] = tm[1][2] * *(float *)((int)pvVar8 + 0x28) +
-               tm[1][1] * *(float *)((int)pvVar8 + 0x24) + tm[1][0] * *(float *)((int)pvVar8 + 0x20)
+  relAxis[1] = tm[1][2] * *(float *)((kd_iptr)pvVar8 + 0x28) +
+               tm[1][1] * *(float *)((kd_iptr)pvVar8 + 0x24) + tm[1][0] * *(float *)((kd_iptr)pvVar8 + 0x20)
   ;
-  relAxis[2] = tm[2][2] * *(float *)((int)pvVar8 + 0x28) +
-               tm[2][1] * *(float *)((int)pvVar8 + 0x24) + tm[2][0] * *(float *)((int)pvVar8 + 0x20)
+  relAxis[2] = tm[2][2] * *(float *)((kd_iptr)pvVar8 + 0x28) +
+               tm[2][1] * *(float *)((kd_iptr)pvVar8 + 0x24) + tm[2][0] * *(float *)((kd_iptr)pvVar8 + 0x20)
   ;
-  fVar3 = *(float *)((int)pvVar8 + 0x30) - tm[3][0];
-  boxP[1] = *(float *)((int)pvVar8 + 0x34) - tm[3][1];
-  boxP[2] = *(float *)((int)pvVar8 + 0x38) - tm[3][2];
+  fVar3 = *(float *)((kd_iptr)pvVar8 + 0x30) - tm[3][0];
+  boxP[1] = *(float *)((kd_iptr)pvVar8 + 0x34) - tm[3][1];
+  boxP[2] = *(float *)((kd_iptr)pvVar8 + 0x38) - tm[3][2];
   relPos[0] = boxP[2] * (*tm)[2] + fVar3 * (*tm)[0] + boxP[1] * (*tm)[1];
   relPos[1] = boxP[2] * tm[1][2] + fVar3 * tm[1][0] + boxP[1] * tm[1][1];
   signN = 0;
   relPos[2] = boxP[2] * tm[2][2] + fVar3 * tm[2][0] + boxP[1] * tm[2][1];
-  fVar3 = -*(float *)((int)pvVar9 + 0x14);
+  fVar3 = -*(float *)((kd_iptr)pvVar9 + 0x14);
   pos[0] = relAxis[0] * fVar3 + relPos[0];
   pos[1] = relPos[1] + relAxis[1] * fVar3;
   pos[2] = relPos[2] + fVar3 * relAxis[2];
@@ -582,13 +582,13 @@ int kd_McdSphylBoxIntersect(McdModelPair *p,McdIntersectResult *result)
   }
   else {
                     
-    si[0] = (-*(float *)((int)pvVar10 + 0x10) - relPos[0]) * (1.0 / relAxis[0]);
-    si[1] = (1.0 / relAxis[0]) * (*(float *)((int)pvVar10 + 0x10) - relPos[0]);
+    si[0] = (-*(float *)((kd_iptr)pvVar10 + 0x10) - relPos[0]) * (1.0 / relAxis[0]);
+    si[1] = (1.0 / relAxis[0]) * (*(float *)((kd_iptr)pvVar10 + 0x10) - relPos[0]);
     if (relAxis[0] < 0.0) {
       signN = 1;
     }
   }
-  boxP[0] = *(float *)((int)pvVar10 + 0x10);
+  boxP[0] = *(float *)((kd_iptr)pvVar10 + 0x10);
   if (-boxP[0] <= pos[0]) {
     if (pos[0] <= boxP[0]) {
       uVar15 = 1;
@@ -610,13 +610,13 @@ int kd_McdSphylBoxIntersect(McdModelPair *p,McdIntersectResult *result)
     }
     else {
       fVar4 = relPos[iVar12];
-      si[iVar12 * 2] = (-*(float *)((int)pvVar10 + iVar12 * 4 + 0x10) - fVar4) * (1.0 / fVar3);
-      si[iVar12 * 2 + 1] = (*(float *)((int)pvVar10 + iVar12 * 4 + 0x10) - fVar4) * (1.0 / fVar3);
+      si[iVar12 * 2] = (-*(float *)((kd_iptr)pvVar10 + iVar12 * 4 + 0x10) - fVar4) * (1.0 / fVar3);
+      si[iVar12 * 2 + 1] = (*(float *)((kd_iptr)pvVar10 + iVar12 * 4 + 0x10) - fVar4) * (1.0 / fVar3);
       if (fVar3 < 0.0) {
         signN = signN | 1 << ((byte)iVar12 & 0x1f);
       }
     }
-    fVar3 = *(float *)((int)pvVar10 + iVar12 * 4 + 0x10);
+    fVar3 = *(float *)((kd_iptr)pvVar10 + iVar12 * 4 + 0x10);
     if (-fVar3 <= pos[iVar12]) {
       if (pos[iVar12] <= fVar3) {
         uVar15 = uVar15 + 1;
@@ -642,13 +642,13 @@ int kd_McdSphylBoxIntersect(McdModelPair *p,McdIntersectResult *result)
     }
     else {
       fVar4 = relPos[iVar1];
-      si[iVar1 * 2] = (-*(float *)((int)pvVar10 + iVar1 * 4 + 0x10) - fVar4) * (1.0 / fVar3);
-      si[iVar1 * 2 + 1] = (*(float *)((int)pvVar10 + iVar1 * 4 + 0x10) - fVar4) * (1.0 / fVar3);
+      si[iVar1 * 2] = (-*(float *)((kd_iptr)pvVar10 + iVar1 * 4 + 0x10) - fVar4) * (1.0 / fVar3);
+      si[iVar1 * 2 + 1] = (*(float *)((kd_iptr)pvVar10 + iVar1 * 4 + 0x10) - fVar4) * (1.0 / fVar3);
       if (fVar3 < 0.0) {
         signN = signN | 1 << ((byte)iVar1 & 0x1f);
       }
     }
-    fVar3 = *(float *)((int)pvVar10 + iVar1 * 4 + 0x10);
+    fVar3 = *(float *)((kd_iptr)pvVar10 + iVar1 * 4 + 0x10);
     if (-fVar3 <= pos[iVar1]) {
       if (pos[iVar1] <= fVar3) {
         uVar15 = uVar15 + 1;
@@ -697,7 +697,7 @@ int kd_McdSphylBoxIntersect(McdModelPair *p,McdIntersectResult *result)
     }
     sort[j] = uVar13;
     uVar14 = uVar14 ^ 1 << (sbyte)((int)uVar13 >> 1);
-    if (fVar4 <= -*(float *)((int)pvVar9 + 0x14)) {
+    if (fVar4 <= -*(float *)((kd_iptr)pvVar9 + 0x14)) {
       jMin = jMin + 1;
     }
     j = j + 1;
@@ -710,7 +710,7 @@ int kd_McdSphylBoxIntersect(McdModelPair *p,McdIntersectResult *result)
   n[2] = 0.0;
   boxDim = 0;
   ds1 = 0.0;
-  s = -*(MeReal *)((int)pvVar9 + 0x14);
+  s = -*(MeReal *)((kd_iptr)pvVar9 + 0x14);
   do {
     if (6 < jMin) {
 LAB_00011498:
@@ -726,7 +726,7 @@ LAB_00011498:
         boxP[0] = s * relAxis[0] + relPos[0];
         boxP[1] = s * relAxis[1] + relPos[1];
         boxP[2] = s * relAxis[2] + relPos[2];
-        fVar3 = *(float *)((int)pvVar9 + 0x14);
+        fVar3 = *(float *)((kd_iptr)pvVar9 + 0x14);
         if (si[uVar14] < fVar3) {
           fVar3 = si[uVar14];
         }
@@ -741,7 +741,7 @@ LAB_00011498:
           boxP[0] = (s * relAxis[0] + relPos[0]) - n[0];
           boxP[1] = (s * relAxis[1] + relPos[1]) - n[1];
           boxP[2] = (s * relAxis[2] + relPos[2]) - n[2];
-          fVar3 = *(float *)((int)pvVar9 + 0x14);
+          fVar3 = *(float *)((kd_iptr)pvVar9 + 0x14);
           if (si[uVar14] < fVar3) {
             fVar3 = si[uVar14];
           }
@@ -754,7 +754,7 @@ LAB_00011498:
           }
           else {
             fVar3 = si[uVar14];
-            s = *(float *)((int)pvVar9 + 0x14);
+            s = *(float *)((kd_iptr)pvVar9 + 0x14);
             if (fVar3 <= s) goto LAB_00011450;
                     
             n[0] = s * relAxis[0] + relPos[0];
@@ -780,13 +780,13 @@ LAB_00011567:
           sepSign = 1.0;
                     
           sepIndex = 0;
-          fVar3 = *(float *)((int)pvVar9 + 0x14);
+          fVar3 = *(float *)((kd_iptr)pvVar9 + 0x14);
           fVar4 = -3.4028235e+38;
-          fVar6 = ABS(relPos[0]) - (ABS(relAxis[0]) * fVar3 + *(float *)((int)pvVar10 + 0x10));
+          fVar6 = ABS(relPos[0]) - (ABS(relAxis[0]) * fVar3 + *(float *)((kd_iptr)pvVar10 + 0x10));
           if ((-3.4028235e+38 < fVar6) && (fVar4 = fVar6, relPos[0] <= 0.0)) {
             sepSign = -1.0;
           }
-          fVar6 = ABS(relPos[1]) - (ABS(relAxis[1]) * fVar3 + *(float *)((int)pvVar10 + 0x14));
+          fVar6 = ABS(relPos[1]) - (ABS(relAxis[1]) * fVar3 + *(float *)((kd_iptr)pvVar10 + 0x14));
           if (fVar4 < fVar6) {
             sepIndex = 1;
             sepSign = 1.0;
@@ -795,7 +795,7 @@ LAB_00011567:
               sepSign = -1.0;
             }
           }
-          fVar3 = ABS(relPos[2]) - (ABS(relAxis[2]) * fVar3 + *(float *)((int)pvVar10 + 0x18));
+          fVar3 = ABS(relPos[2]) - (ABS(relAxis[2]) * fVar3 + *(float *)((kd_iptr)pvVar10 + 0x18));
           if (fVar4 < fVar3) {
             sepIndex = 2;
             sepSign = 1.0;
@@ -822,9 +822,9 @@ LAB_00011567:
               d[2] = d[2] * fVar3;
               fVar6 = relPos[2] * d[2] + relPos[1] * d[1] + relPos[0] * d[0];
               fVar3 = ABS(fVar6) -
-                      (ABS(d[2]) * *(float *)((int)pvVar10 + 0x18) +
-                      ABS(d[0]) * *(float *)((int)pvVar10 + 0x10) +
-                      ABS(d[1]) * *(float *)((int)pvVar10 + 0x14));
+                      (ABS(d[2]) * *(float *)((kd_iptr)pvVar10 + 0x18) +
+                      ABS(d[0]) * *(float *)((kd_iptr)pvVar10 + 0x10) +
+                      ABS(d[1]) * *(float *)((kd_iptr)pvVar10 + 0x14));
               if (fVar4 < fVar3) {
                 sepIndex = iVar12 + 3;
                 n[0] = d[0];
@@ -843,7 +843,7 @@ LAB_00011567:
           if (sepIndex < 3) {
             n[sepIndex] = sepSign;
           }
-          fVar4 = fVar4 - *(float *)((int)pvVar9 + 0x10);
+          fVar4 = fVar4 - *(float *)((kd_iptr)pvVar9 + 0x10);
         }
         else {
                     
@@ -851,14 +851,14 @@ LAB_00011567:
           n[0] = n[0] * fVar4;
           n[1] = n[1] * fVar4;
           n[2] = n[2] * fVar4;
-          fVar4 = fVar3 * fVar4 - *(float *)((int)pvVar9 + 0x10);
+          fVar4 = fVar3 * fVar4 - *(float *)((kd_iptr)pvVar9 + 0x10);
         }
         if (fVar4 < fVar17 + fVar16) {
           result->normal[0] = 0.0;
           result->normal[1] = 0.0;
           result->normal[2] = 0.0;
           kd_AccumulateSphylContacts
-                    (boxP,n,fVar4,3,boxDim,(MeVector3Ptr)((int)pvVar8 + 0x20),ds1,tm,result);
+                    (boxP,n,fVar4,3,boxDim,(MeVector3Ptr)((kd_iptr)pvVar8 + 0x20),ds1,tm,result);
         }
       }
       goto LAB_00011498;
@@ -879,7 +879,7 @@ LAB_00011567:
         n[1] = n[1] - boxP[1];
         n[2] = n[2] - boxP[2];
         n[axis] = 0.0;
-        fVar3 = *(float *)((int)pvVar9 + 0x14);
+        fVar3 = *(float *)((kd_iptr)pvVar9 + 0x14);
         if (si[uVar14] < fVar3) {
           fVar3 = si[uVar14];
         }
@@ -887,7 +887,7 @@ LAB_00011567:
       }
       else {
                     
-        fVar5 = *(float *)((int)pvVar9 + 0x14);
+        fVar5 = *(float *)((kd_iptr)pvVar9 + 0x14);
         fVar4 = (fVar4 * d[axis] - fVar3) * (1.0 / fVar6);
         fVar3 = -fVar5;
         if (fVar4 < fVar5) {
@@ -911,7 +911,7 @@ LAB_00011567:
       goto LAB_00011567;
     }
     fVar3 = -fVar3;
-    fVar4 = *(float *)((int)pvVar9 + 0x14);
+    fVar4 = *(float *)((kd_iptr)pvVar9 + 0x14);
     fVar6 = -fVar4;
     if (fVar3 < fVar4) {
       fVar4 = fVar3;
@@ -941,7 +941,7 @@ LAB_000114d0:
     else {
       uVar15 = uVar15 - 1;
       boxP[iVar12] = (float)(int)((uVar14 & 1) * 2 + -1) *
-                     *(float *)((int)pvVar10 + iVar12 * 4 + 0x10);
+                     *(float *)((kd_iptr)pvVar10 + iVar12 * 4 + 0x10);
       if (uVar15 != 1) {
         if (uVar15 != 2) goto LAB_0001147f;
         goto LAB_000114d0;
@@ -1034,21 +1034,21 @@ int kd_McdSphylCylinderIntersect(McdModelPair *p,McdIntersectResult *result)
   pvVar15 = McdModelGetGeometry(p->model2);
   result->contactCount = 0;
   result->touch = 0;
-  fVar4 = (*tm)[2] * *(float *)((int)pvVar13 + 0x28) +
-          (*tm)[1] * *(float *)((int)pvVar13 + 0x24) + (*tm)[0] * *(float *)((int)pvVar13 + 0x20);
-  p_1[0] = tm[1][2] * *(float *)((int)pvVar13 + 0x28) +
-           tm[1][1] * *(float *)((int)pvVar13 + 0x24) + tm[1][0] * *(float *)((int)pvVar13 + 0x20);
-  fVar5 = tm[2][2] * *(float *)((int)pvVar13 + 0x28) +
-          tm[2][1] * *(float *)((int)pvVar13 + 0x24) + tm[2][0] * *(float *)((int)pvVar13 + 0x20);
-  fVar6 = *(float *)((int)pvVar13 + 0x30) - tm[3][0];
-  fVar3 = *(float *)((int)pvVar13 + 0x34) - tm[3][1];
-  fVar22 = *(float *)((int)pvVar13 + 0x38) - tm[3][2];
+  fVar4 = (*tm)[2] * *(float *)((kd_iptr)pvVar13 + 0x28) +
+          (*tm)[1] * *(float *)((kd_iptr)pvVar13 + 0x24) + (*tm)[0] * *(float *)((kd_iptr)pvVar13 + 0x20);
+  p_1[0] = tm[1][2] * *(float *)((kd_iptr)pvVar13 + 0x28) +
+           tm[1][1] * *(float *)((kd_iptr)pvVar13 + 0x24) + tm[1][0] * *(float *)((kd_iptr)pvVar13 + 0x20);
+  fVar5 = tm[2][2] * *(float *)((kd_iptr)pvVar13 + 0x28) +
+          tm[2][1] * *(float *)((kd_iptr)pvVar13 + 0x24) + tm[2][0] * *(float *)((kd_iptr)pvVar13 + 0x20);
+  fVar6 = *(float *)((kd_iptr)pvVar13 + 0x30) - tm[3][0];
+  fVar3 = *(float *)((kd_iptr)pvVar13 + 0x34) - tm[3][1];
+  fVar22 = *(float *)((kd_iptr)pvVar13 + 0x38) - tm[3][2];
   fVar8 = fVar22 * (*tm)[2] + fVar6 * (*tm)[0] + fVar3 * (*tm)[1];
   fVar7 = fVar22 * tm[1][2] + fVar6 * tm[1][0] + fVar3 * tm[1][1];
   fVar6 = fVar22 * tm[2][2] + fVar6 * tm[2][0] + fVar3 * tm[2][1];
   iVar1 = (uint)(0.0 <= fVar5) * 2 + -1;
   regionType = 0;
-  fVar3 = -*(float *)((int)pvVar14 + 0x14);
+  fVar3 = -*(float *)((kd_iptr)pvVar14 + 0x14);
   fVar20 = fVar8 + fVar4 * fVar3;
   fVar22 = fVar7 + p_1[0] * fVar3;
   fVar3 = fVar3 * fVar5 + fVar6;
@@ -1058,11 +1058,11 @@ int kd_McdSphylCylinderIntersect(McdModelPair *p,McdIntersectResult *result)
   }
   else {
                     
-    fVar2 = (float)iVar1 * *(float *)((int)pvVar15 + 0x14);
+    fVar2 = (float)iVar1 * *(float *)((kd_iptr)pvVar15 + 0x14);
     si[1] = (fVar2 - fVar6) * (1.0 / fVar5);
     si[0] = (-fVar2 - fVar6) * (1.0 / fVar5);
   }
-  fVar2 = *(float *)((int)pvVar15 + 0x14);
+  fVar2 = *(float *)((kd_iptr)pvVar15 + 0x14);
   cylZ = -fVar2;
   if ((cylZ <= fVar3) && (cylZ = fVar2, fVar3 <= fVar2)) {
     cylZ = 0.0;
@@ -1074,7 +1074,7 @@ int kd_McdSphylCylinderIntersect(McdModelPair *p,McdIntersectResult *result)
     fVar2 = fVar4 * fVar8 + p_1[0] * fVar7;
     fVar9 = fVar2 * fVar2 -
             ((fVar7 * fVar7 + fVar8 * fVar8) -
-            *(float *)((int)pvVar15 + 0x10) * *(float *)((int)pvVar15 + 0x10)) * fVar3;
+            *(float *)((kd_iptr)pvVar15 + 0x10) * *(float *)((kd_iptr)pvVar15 + 0x10)) * fVar3;
     if (0.0 <= fVar9) {
                     
       fVar9 = SQRT(fVar9);
@@ -1087,7 +1087,7 @@ int kd_McdSphylCylinderIntersect(McdModelPair *p,McdIntersectResult *result)
   si[3] = 3.4028235e+38;
 LAB_000122c2:
   if (fVar22 * fVar22 + fVar20 * fVar20 <=
-      *(float *)((int)pvVar15 + 0x10) * *(float *)((int)pvVar15 + 0x10)) {
+      *(float *)((kd_iptr)pvVar15 + 0x10) * *(float *)((kd_iptr)pvVar15 + 0x10)) {
     regionType = regionType | 2;
   }
                     
@@ -1114,7 +1114,7 @@ LAB_000122c2:
   n[0] = 0.0;
   n[1] = 0.0;
   n[2] = 0.0;
-  fVar3 = *(float *)((int)pvVar14 + 0x14);
+  fVar3 = *(float *)((kd_iptr)pvVar14 + 0x14);
                     
   uVar17 = 0;
   fVar20 = -0.00025 - fVar3;
@@ -1138,7 +1138,7 @@ LAB_000122c2:
           cylP[0] = fVar22 * fVar4 + fVar8;
           cylP[1] = fVar22 * p_1[0] + fVar7;
           cylP[2] = fVar22 * fVar5 + fVar6;
-          fVar3 = *(float *)((int)pvVar14 + 0x14);
+          fVar3 = *(float *)((kd_iptr)pvVar14 + 0x14);
           if (si[uVar16] < fVar3) {
             fVar3 = si[uVar16];
           }
@@ -1152,7 +1152,7 @@ LAB_000122c2:
             cylP[2] = (fVar6 + fVar5 * fVar22) - (fVar6 - cylZ);
             n[0] = 0.0;
             n[1] = 0.0;
-            fVar3 = *(float *)((int)pvVar14 + 0x14);
+            fVar3 = *(float *)((kd_iptr)pvVar14 + 0x14);
             if (si[uVar16] < fVar3) {
               fVar3 = si[uVar16];
             }
@@ -1182,7 +1182,7 @@ LAB_00012aea:
           if (fVar3 <= 6.250001e-08) {
                     
             maxSep = ABS(fVar6) -
-                     (ABS(fVar5) * *(float *)((int)pvVar14 + 0x14) + *(float *)((int)pvVar15 + 0x14)
+                     (ABS(fVar5) * *(float *)((kd_iptr)pvVar14 + 0x14) + *(float *)((kd_iptr)pvVar15 + 0x14)
                      );
             if (fVar6 <= 0.0) {
               n[2] = -1.0;
@@ -1205,14 +1205,14 @@ LAB_00012aea:
             fVar20 = p_1[1] * fVar3;
             fVar3 = fVar3 * 0.0;
             fVar4 = fVar6 * fVar3 + fVar8 * fVar22 + fVar7 * fVar20;
-            fVar5 = ABS(fVar4) - *(float *)((int)pvVar15 + 0x10);
+            fVar5 = ABS(fVar4) - *(float *)((kd_iptr)pvVar15 + 0x10);
             if ((maxSep < fVar5) &&
                (maxSep = fVar5, n[0] = fVar22, n[1] = fVar20, n[2] = fVar3, fVar4 < 0.0)) {
               n[0] = fVar22 * -1.0;
               n[1] = fVar20 * -1.0;
               n[2] = fVar3 * -1.0;
             }
-            fVar4 = maxSep - *(float *)((int)pvVar14 + 0x10);
+            fVar4 = maxSep - *(float *)((kd_iptr)pvVar14 + 0x10);
           }
           else {
                     
@@ -1220,14 +1220,14 @@ LAB_00012aea:
             n[0] = n[0] * fVar4;
             n[1] = n[1] * fVar4;
             n[2] = n[2] * fVar4;
-            fVar4 = fVar3 * fVar4 - *(float *)((int)pvVar14 + 0x10);
+            fVar4 = fVar3 * fVar4 - *(float *)((kd_iptr)pvVar14 + 0x10);
           }
           if (fVar4 < fVar25 + fVar24) {
             result->normal[0] = 0.0;
             result->normal[1] = 0.0;
             result->normal[2] = 0.0;
             kd_AccumulateSphylContacts
-                      (cylP,n,fVar4,3,cylDim,(MeVector3Ptr)((int)pvVar13 + 0x20),ds1,tm,result);
+                      (cylP,n,fVar4,3,cylDim,(MeVector3Ptr)((kd_iptr)pvVar13 + 0x20),ds1,tm,result);
           }
           return result->touch;
         }
@@ -1244,13 +1244,13 @@ LAB_00012aea:
           n[0] = cylP[0];
           n[1] = cylP[1];
           MeVector3Normalize(cylP);
-          cylP[0] = cylP[0] * *(float *)((int)pvVar15 + 0x10);
+          cylP[0] = cylP[0] * *(float *)((kd_iptr)pvVar15 + 0x10);
           cylP[2] = n[2];
-          cylP[1] = *(float *)((int)pvVar15 + 0x10) * cylP[1];
+          cylP[1] = *(float *)((kd_iptr)pvVar15 + 0x10) * cylP[1];
           n[2] = 0.0;
           n[0] = n[0] - cylP[0];
           n[1] = n[1] - cylP[1];
-          fVar3 = *(float *)((int)pvVar14 + 0x14);
+          fVar3 = *(float *)((kd_iptr)pvVar14 + 0x14);
           if (si[uVar16] < fVar3) {
             fVar3 = si[uVar16];
           }
@@ -1276,9 +1276,9 @@ LAB_00012aea:
           n[0] = cylP[0];
           n[1] = cylP[1];
           MeVector3Normalize(cylP);
-          cylP[0] = cylP[0] * *(float *)((int)pvVar15 + 0x10);
+          cylP[0] = cylP[0] * *(float *)((kd_iptr)pvVar15 + 0x10);
           cylP[2] = n[2];
-          cylP[1] = *(float *)((int)pvVar15 + 0x10) * cylP[1];
+          cylP[1] = *(float *)((kd_iptr)pvVar15 + 0x10) * cylP[1];
           n[0] = n[0] - cylP[0];
           n[1] = n[1] - cylP[1];
         }
@@ -1310,8 +1310,8 @@ LAB_00012a54:
           cylP[0] = n[0];
           n[1] = cylP[1];
           MeVector3Normalize(cylP);
-          cylP[0] = cylP[0] * *(float *)((int)pvVar15 + 0x10);
-          cylP[1] = *(float *)((int)pvVar15 + 0x10) * cylP[1];
+          cylP[0] = cylP[0] * *(float *)((kd_iptr)pvVar15 + 0x10);
+          cylP[1] = *(float *)((kd_iptr)pvVar15 + 0x10) * cylP[1];
           cylP[2] = cylZ;
           n[0] = n[0] - cylP[0];
           n[1] = n[1] - cylP[1];
@@ -1323,7 +1323,7 @@ LAB_00012a54:
       else {
         fVar2 = p_1[0] * p_1[0] + fVar4 * fVar4;
         if (fVar2 <= 6.250001e-08) {
-          fVar22 = (*(float *)((int)pvVar15 + 0x14) - fVar6) * fVar5;
+          fVar22 = (*(float *)((kd_iptr)pvVar15 + 0x14) - fVar6) * fVar5;
           if (fVar22 < fVar3) {
             fVar20 = fVar22;
           }
@@ -1337,7 +1337,7 @@ LAB_00012a54:
                     
           fVar3 = fVar4 * fVar8 + p_1[0] * fVar7;
           fVar12 = fVar7 * fVar7 + fVar8 * fVar8;
-          fVar10 = *(float *)((int)pvVar15 + 0x10) * *(float *)((int)pvVar15 + 0x10);
+          fVar10 = *(float *)((kd_iptr)pvVar15 + 0x10) * *(float *)((kd_iptr)pvVar15 + 0x10);
           fVar20 = (fVar6 - cylZ) * fVar5 + fVar3;
           fVar11 = fVar12 * fVar20;
           fVar9 = fVar10 * fVar3;
@@ -1349,7 +1349,7 @@ LAB_00012a54:
           coef[2] = (fVar12 + fVar20 * fVar3 * 4.0 + fVar20 * fVar20 * fVar2) -
                     fVar10 * fVar2 * fVar2;
           coef[3] = fVar9 + fVar9;
-          fVar3 = *(float *)((int)pvVar14 + 0x14);
+          fVar3 = *(float *)((kd_iptr)pvVar14 + 0x14);
           if (si[uVar16] < fVar3) {
             fVar3 = si[uVar16];
           }
@@ -1365,7 +1365,7 @@ LAB_00012a54:
               fVar3 = fVar4 * roots[0] + fVar8;
               fVar20 = p_1[0] * roots[0] + fVar7;
               fVar22 = (roots[0] * fVar5 + fVar6) - cylZ;
-              fVar3 = SQRT(fVar3 * fVar3 + fVar20 * fVar20) - *(float *)((int)pvVar15 + 0x10);
+              fVar3 = SQRT(fVar3 * fVar3 + fVar20 * fVar20) - *(float *)((kd_iptr)pvVar15 + 0x10);
               fVar3 = fVar3 * fVar3 + fVar22 * fVar22;
               if (fVar3 < 3.4028235e+38) {
                 rootN = 0;
@@ -1379,7 +1379,7 @@ LAB_00012a54:
               fVar2 = fVar4 * fVar3 + fVar8;
               fVar22 = p_1[0] * fVar3 + fVar7;
               fVar20 = (fVar3 * fVar5 + fVar6) - cylZ;
-              fVar3 = SQRT(fVar2 * fVar2 + fVar22 * fVar22) - *(float *)((int)pvVar15 + 0x10);
+              fVar3 = SQRT(fVar2 * fVar2 + fVar22 * fVar22) - *(float *)((kd_iptr)pvVar15 + 0x10);
               fVar3 = fVar3 * fVar3 + fVar20 * fVar20;
               if (fVar3 < rootDist2) {
                 rootDist2 = fVar3;
@@ -1389,7 +1389,7 @@ LAB_00012a54:
               fVar20 = fVar4 * fVar3 + fVar8;
               fVar22 = p_1[0] * fVar3 + fVar7;
               fVar3 = (fVar3 * fVar5 + fVar6) - cylZ;
-              fVar22 = SQRT(fVar20 * fVar20 + fVar22 * fVar22) - *(float *)((int)pvVar15 + 0x10);
+              fVar22 = SQRT(fVar20 * fVar20 + fVar22 * fVar22) - *(float *)((kd_iptr)pvVar15 + 0x10);
               fVar3 = fVar22 * fVar22 + fVar3 * fVar3;
               if (fVar3 < rootDist2) {
                 rootDist2 = fVar3;
@@ -1399,7 +1399,7 @@ LAB_00012a54:
             } while (iVar19 < (int)uVar18);
           }
 LAB_00012932:
-          fVar3 = *(float *)((int)pvVar14 + 0x14);
+          fVar3 = *(float *)((kd_iptr)pvVar14 + 0x14);
           fVar20 = fVar3;
           if (roots[rootN] < fVar3) {
             fVar20 = roots[rootN];
@@ -1423,7 +1423,7 @@ LAB_00012991:
       else {
         regionType = regionType & (uVar18 ^ 0xffffffff);
         if (iVar19 == 0) {
-          cylZ = (float)iVar1 * *(float *)((int)pvVar15 + 0x14);
+          cylZ = (float)iVar1 * *(float *)((kd_iptr)pvVar15 + 0x14);
         }
       }
       uVar17 = uVar17 + 1;
@@ -1472,9 +1472,9 @@ int kd_McdSphylTriangleListIntersect(McdModelPair *p,McdIntersectResult *result)
   undefined1 *puVar12;
   undefined1 *puVar13;
   float fVar14;
-  int aiStackY_80 [4];
+  int aiStackY_80 [4 * (int)(sizeof(void *) / 4)];
   float fStackY_70;
-  MeReal aMStack_64 [2];
+  MeReal aMStack_64 [2 * (int)(sizeof(void *) / 4)];
   int local_5c;
   MeReal *local_58;
   McdTriangleListID trilistGeom;
@@ -1499,37 +1499,37 @@ int kd_McdSphylTriangleListIntersect(McdModelPair *p,McdIntersectResult *result)
   trilistGeom = pMVar9;
   result->contactCount = 0;
   result->touch = 0;
-  relAxis[0] = pfVar7[2] * *(float *)((int)pvVar6 + 0x28) +
-               pfVar7[1] * *(float *)((int)pvVar6 + 0x24) + *pfVar7 * *(float *)((int)pvVar6 + 0x20)
+  relAxis[0] = pfVar7[2] * *(float *)((kd_iptr)pvVar6 + 0x28) +
+               pfVar7[1] * *(float *)((kd_iptr)pvVar6 + 0x24) + *pfVar7 * *(float *)((kd_iptr)pvVar6 + 0x20)
   ;
-  relAxis[1] = pfVar7[6] * *(float *)((int)pvVar6 + 0x28) +
-               pfVar7[5] * *(float *)((int)pvVar6 + 0x24) +
-               pfVar7[4] * *(float *)((int)pvVar6 + 0x20);
-  relAxis[2] = pfVar7[10] * *(float *)((int)pvVar6 + 0x28) +
-               pfVar7[9] * *(float *)((int)pvVar6 + 0x24) +
-               pfVar7[8] * *(float *)((int)pvVar6 + 0x20);
-  tmp[0] = *(float *)((int)pvVar6 + 0x30) - pfVar7[0xc];
-  tmp[1] = *(float *)((int)pvVar6 + 0x34) - pfVar7[0xd];
-  tmp[2] = *(float *)((int)pvVar6 + 0x38) - pfVar7[0xe];
+  relAxis[1] = pfVar7[6] * *(float *)((kd_iptr)pvVar6 + 0x28) +
+               pfVar7[5] * *(float *)((kd_iptr)pvVar6 + 0x24) +
+               pfVar7[4] * *(float *)((kd_iptr)pvVar6 + 0x20);
+  relAxis[2] = pfVar7[10] * *(float *)((kd_iptr)pvVar6 + 0x28) +
+               pfVar7[9] * *(float *)((kd_iptr)pvVar6 + 0x24) +
+               pfVar7[8] * *(float *)((kd_iptr)pvVar6 + 0x20);
+  tmp[0] = *(float *)((kd_iptr)pvVar6 + 0x30) - pfVar7[0xc];
+  tmp[1] = *(float *)((kd_iptr)pvVar6 + 0x34) - pfVar7[0xd];
+  tmp[2] = *(float *)((kd_iptr)pvVar6 + 0x38) - pfVar7[0xe];
   relPos[0] = tmp[2] * pfVar7[2] + tmp[1] * pfVar7[1] + tmp[0] * *pfVar7;
   relPos[1] = tmp[2] * pfVar7[6] + tmp[1] * pfVar7[5] + tmp[0] * pfVar7[4];
   relPos[2] = tmp[2] * pfVar7[10] + tmp[1] * pfVar7[9] + tmp[0] * pfVar7[8];
   pMVar1 = pMVar9[2].next;
-  iVar3 = -((int)pMVar1 * 0x18 + 0xfU & 0xfffffff0);
+  iVar3 = -((kd_iptr)pMVar1 * 0x18 + 0xfU & (0xfffffff0 | ~(kd_uptr)0xffffffffU));
   pMVar9[3].prev = (McdGeometryID)(kd_alloca_iVar3 = (char *)alloca((size_t)(pMVar1) * 0x18 + 0));
-  *(McdGeometryID *)((int)(kd_frameslot_tmp_iVar3_m20)) = pMVar1;
-  *(float *)((int)&fStackY_70) =
-       *(float *)((int)pvVar8 + 0x10) + *(float *)((int)pvVar8 + 0x14) + eps;
-  *(MeReal **)((int)aiStackY_80 + 0xc) = relPos;
-  *(McdGeometryID *)((int)aiStackY_80 + 8) = pMVar9[3].prev;
+  *(McdGeometryID *)((kd_iptr)(kd_frameslot_tmp_iVar3_m20)) = pMVar1;
+  *(float *)((kd_iptr)&fStackY_70) =
+       *(float *)((kd_iptr)pvVar8 + 0x10) + *(float *)((kd_iptr)pvVar8 + 0x14) + eps;
+  *(MeReal **)((kd_iptr)aiStackY_80 + (3 * (int)sizeof(void *))) = relPos;
+  *(McdGeometryID *)((kd_iptr)aiStackY_80 + (2 * (int)sizeof(void *))) = pMVar9[3].prev;
   pMVar9 = trilistGeom;
-  *(McdModelPair **)((int)aiStackY_80 + 4) = p;
+  *(McdModelPair **)((kd_iptr)aiStackY_80 + (1 * (int)sizeof(void *))) = p;
   pcVar2 = (code *)pMVar9[3].mRefCtAndID;
-  *(undefined4 *)((int)aiStackY_80) = 0x137af;
-  iVar10 = (*(int (*)(void *, void *, void *, float, int))pcVar2)(*(void **)((int)aiStackY_80 + 4),
-                     *(void **)((int)aiStackY_80 + 8),
-                     *(void **)((int)aiStackY_80 + 0xc),*(float *)((int)&fStackY_70)
-                     ,*(int *)((int)(kd_frameslot_tmp_iVar3_m20)));
+  *(undefined4 *)((kd_iptr)aiStackY_80) = 0x137af;
+  iVar10 = (*(int (*)(void *, void *, void *, float, int))pcVar2)(*(void **)((kd_iptr)aiStackY_80 + (1 * (int)sizeof(void *))),
+                     *(void **)((kd_iptr)aiStackY_80 + (2 * (int)sizeof(void *))),
+                     *(void **)((kd_iptr)aiStackY_80 + (3 * (int)sizeof(void *))),*(float *)((kd_iptr)&fStackY_70)
+                     ,*(int *)((kd_iptr)(kd_frameslot_tmp_iVar3_m20)));
   MVar5 = eps;
   puVar13 = (undefined1 *)kd_alloca_iVar3;
   puVar12 = (undefined1 *)kd_alloca_iVar3;
@@ -1548,24 +1548,24 @@ int kd_McdSphylTriangleListIntersect(McdModelPair *p,McdIntersectResult *result)
       puVar13 = (undefined1 *)kd_alloca_iVar3;
       if (uVar11 < 3) {
         if (uVar11 < 2) {
-          *(McdIntersectResult **)((int)aMStack_64 + 4) = result;
+          *(McdIntersectResult **)((kd_iptr)aMStack_64 + (1 * (int)sizeof(void *))) = result;
           iVar10 = iVar10 + -1;
-          *(MeReal *)((int)aMStack_64) = MVar5;
+          *(MeReal *)((kd_iptr)aMStack_64) = MVar5;
           *(float **)(&(*kd_argslot_ffffff98)) = pfVar7;
-          *(undefined4 *)((int)(kd_frameslot_tmp_iVar3_m20)) = *(undefined4 *)((int)pvVar8 + 0x10);
-          *(undefined4 *)((int)&fStackY_70) = *(undefined4 *)((int)pvVar8 + 0x14);
+          *(undefined4 *)((kd_iptr)(kd_frameslot_tmp_iVar3_m20)) = *(undefined4 *)((kd_iptr)pvVar8 + 0x10);
+          *(undefined4 *)((kd_iptr)&fStackY_70) = *(undefined4 *)((kd_iptr)pvVar8 + 0x14);
           pMVar9 = trilistGeom;
-          *(MeReal **)((int)aiStackY_80 + 0xc) = relAxis;
-          *(MeReal **)((int)aiStackY_80 + 8) = relPos;
-          *(McdGeometryID *)((int)aiStackY_80 + 4) = pMVar9[3].prev;
-          *(undefined4 *)((int)aiStackY_80) = 0x139dc;
+          *(MeReal **)((kd_iptr)aiStackY_80 + (3 * (int)sizeof(void *))) = relAxis;
+          *(MeReal **)((kd_iptr)aiStackY_80 + (2 * (int)sizeof(void *))) = relPos;
+          *(McdGeometryID *)((kd_iptr)aiStackY_80 + (1 * (int)sizeof(void *))) = pMVar9[3].prev;
+          *(undefined4 *)((kd_iptr)aiStackY_80) = 0x139dc;
           GenerateTriangleContact
-                    (*(McdUserTriangle **)((int)aiStackY_80 + 4),
-                     *(MeReal **)((int)aiStackY_80 + 8),
-                     *(MeReal **)((int)aiStackY_80 + 0xc),
-                     *(MeReal *)((int)&fStackY_70),*(MeReal *)((int)(kd_frameslot_tmp_iVar3_m20)),
-                     *(MeVector4 **)(&(*kd_argslot_ffffff98)),*(MeReal *)((int)aMStack_64),
-                     *(McdIntersectResult **)((int)aMStack_64 + 4));
+                    (*(McdUserTriangle **)((kd_iptr)aiStackY_80 + (1 * (int)sizeof(void *))),
+                     *(MeReal **)((kd_iptr)aiStackY_80 + (2 * (int)sizeof(void *))),
+                     *(MeReal **)((kd_iptr)aiStackY_80 + (3 * (int)sizeof(void *))),
+                     *(MeReal *)((kd_iptr)&fStackY_70),*(MeReal *)((kd_iptr)(kd_frameslot_tmp_iVar3_m20)),
+                     *(MeVector4 **)(&(*kd_argslot_ffffff98)),*(MeReal *)((kd_iptr)aMStack_64),
+                     *(McdIntersectResult **)((kd_iptr)aMStack_64 + (1 * (int)sizeof(void *))));
           puVar12 = (undefined1 *)kd_alloca_iVar3;
           local_5c = 0x18;
         }
@@ -1574,13 +1574,13 @@ int kd_McdSphylTriangleListIntersect(McdModelPair *p,McdIntersectResult *result)
         *(MeReal *)(puVar12 + -8) = MVar5;
         iVar10 = iVar10 + -1;
         *(float **)(puVar12 + -0xc) = pfVar7;
-        *(undefined4 *)(puVar12 + -0x10) = *(undefined4 *)((int)pvVar8 + 0x10);
-        *(undefined4 *)(puVar12 + -0x14) = *(undefined4 *)((int)pvVar8 + 0x14);
+        *(undefined4 *)(puVar12 + -0x10) = *(undefined4 *)((kd_iptr)pvVar8 + 0x10);
+        *(undefined4 *)(puVar12 + -0x14) = *(undefined4 *)((kd_iptr)pvVar8 + 0x14);
         pMVar9 = trilistGeom;
         *(MeReal **)(puVar12 + -0x18) = relAxis;
         iVar3 = local_5c;
         *(MeReal **)(puVar12 + -0x1c) = relPos;
-        *(int *)(puVar12 + -0x20) = (int)&(pMVar9[3].prev)->mRefCtAndID + iVar3;
+        *(int *)(puVar12 + -0x20) = (kd_iptr)&(pMVar9[3].prev)->mRefCtAndID + iVar3;
         *(undefined4 *)(puVar12 + -0x24) = 0x13835;
         GenerateTriangleContact
                   (*(McdUserTriangle **)(puVar12 + -0x20),*(MeReal **)(puVar12 + -0x1c),
@@ -1594,12 +1594,12 @@ int kd_McdSphylTriangleListIntersect(McdModelPair *p,McdIntersectResult *result)
       *(McdIntersectResult **)(puVar13 + -4) = result;
       *(MeReal *)(puVar13 + -8) = MVar5;
       *(float **)(puVar13 + -0xc) = pfVar7;
-      *(undefined4 *)(puVar13 + -0x10) = *(undefined4 *)((int)pvVar8 + 0x10);
-      *(undefined4 *)(puVar13 + -0x14) = *(undefined4 *)((int)pvVar8 + 0x14);
+      *(undefined4 *)(puVar13 + -0x10) = *(undefined4 *)((kd_iptr)pvVar8 + 0x10);
+      *(undefined4 *)(puVar13 + -0x14) = *(undefined4 *)((kd_iptr)pvVar8 + 0x14);
       pMVar9 = trilistGeom;
       *(MeReal **)(puVar13 + -0x18) = relAxis;
       *(MeReal **)(puVar13 + -0x1c) = relPos;
-      *(int *)(puVar13 + -0x20) = (int)&(pMVar9[3].prev)->mRefCtAndID + local_5c;
+      *(int *)(puVar13 + -0x20) = (kd_iptr)&(pMVar9[3].prev)->mRefCtAndID + local_5c;
       *(undefined4 *)(puVar13 + -0x24) = 0x1386b;
       GenerateTriangleContact
                 (*(McdUserTriangle **)(puVar13 + -0x20),*(MeReal **)(puVar13 + -0x1c),
@@ -1615,12 +1615,12 @@ int kd_McdSphylTriangleListIntersect(McdModelPair *p,McdIntersectResult *result)
       *(McdIntersectResult **)(puVar13 + -4) = result;
       *(MeReal *)(puVar13 + -8) = MVar5;
       *(float **)(puVar13 + -0xc) = pfVar7;
-      *(undefined4 *)(puVar13 + -0x10) = *(undefined4 *)((int)pvVar8 + 0x10);
-      *(undefined4 *)(puVar13 + -0x14) = *(undefined4 *)((int)pvVar8 + 0x14);
+      *(undefined4 *)(puVar13 + -0x10) = *(undefined4 *)((kd_iptr)pvVar8 + 0x10);
+      *(undefined4 *)(puVar13 + -0x14) = *(undefined4 *)((kd_iptr)pvVar8 + 0x14);
       pMVar9 = trilistGeom;
       *(MeReal **)(puVar13 + -0x18) = relAxis;
       *(MeReal **)(puVar13 + -0x1c) = relPos;
-      *(int *)(puVar13 + -0x20) = (int)&(pMVar9[3].prev)->mRefCtAndID + local_5c;
+      *(int *)(puVar13 + -0x20) = (kd_iptr)&(pMVar9[3].prev)->mRefCtAndID + local_5c;
       *(undefined4 *)(puVar13 + -0x24) = 0x138aa;
       GenerateTriangleContact
                 (*(McdUserTriangle **)(puVar13 + -0x20),*(MeReal **)(puVar13 + -0x1c),
@@ -1631,13 +1631,13 @@ int kd_McdSphylTriangleListIntersect(McdModelPair *p,McdIntersectResult *result)
       *(McdIntersectResult **)(puVar13 + -4) = result;
       *(MeReal *)(puVar13 + -8) = MVar5;
       *(float **)(puVar13 + -0xc) = pfVar7;
-      *(undefined4 *)(puVar13 + -0x10) = *(undefined4 *)((int)pvVar8 + 0x10);
-      *(undefined4 *)(puVar13 + -0x14) = *(undefined4 *)((int)pvVar8 + 0x14);
+      *(undefined4 *)(puVar13 + -0x10) = *(undefined4 *)((kd_iptr)pvVar8 + 0x10);
+      *(undefined4 *)(puVar13 + -0x14) = *(undefined4 *)((kd_iptr)pvVar8 + 0x14);
       pMVar9 = trilistGeom;
       *(MeReal **)(puVar13 + -0x18) = relAxis;
       iVar3 = local_5c;
       *(MeReal **)(puVar13 + -0x1c) = relPos;
-      *(int *)(puVar13 + -0x20) = (int)&pMVar9[3].prev[1].next + iVar3;
+      *(int *)(puVar13 + -0x20) = (kd_iptr)&pMVar9[3].prev[1].next + iVar3;
       *(undefined4 *)(puVar13 + -0x24) = 0x138d9;
       GenerateTriangleContact
                 (*(McdUserTriangle **)(puVar13 + -0x20),*(MeReal **)(puVar13 + -0x1c),
@@ -1648,13 +1648,13 @@ int kd_McdSphylTriangleListIntersect(McdModelPair *p,McdIntersectResult *result)
       *(McdIntersectResult **)(puVar13 + -4) = result;
       *(MeReal *)(puVar13 + -8) = MVar5;
       *(float **)(puVar13 + -0xc) = pfVar7;
-      *(undefined4 *)(puVar13 + -0x10) = *(undefined4 *)((int)pvVar8 + 0x10);
-      *(undefined4 *)(puVar13 + -0x14) = *(undefined4 *)((int)pvVar8 + 0x14);
+      *(undefined4 *)(puVar13 + -0x10) = *(undefined4 *)((kd_iptr)pvVar8 + 0x10);
+      *(undefined4 *)(puVar13 + -0x14) = *(undefined4 *)((kd_iptr)pvVar8 + 0x14);
       pMVar9 = trilistGeom;
       *(MeReal **)(puVar13 + -0x18) = relAxis;
       iVar3 = local_5c;
       *(MeReal **)(puVar13 + -0x1c) = relPos;
-      *(int *)(puVar13 + -0x20) = (int)&pMVar9[3].prev[3].mRefCtAndID + iVar3;
+      *(int *)(puVar13 + -0x20) = (kd_iptr)&pMVar9[3].prev[3].mRefCtAndID + iVar3;
       *(undefined4 *)(puVar13 + -0x24) = 0x13908;
       GenerateTriangleContact
                 (*(McdUserTriangle **)(puVar13 + -0x20),*(MeReal **)(puVar13 + -0x1c),
@@ -1665,13 +1665,13 @@ int kd_McdSphylTriangleListIntersect(McdModelPair *p,McdIntersectResult *result)
       *(McdIntersectResult **)(puVar13 + -4) = result;
       *(MeReal *)(puVar13 + -8) = MVar5;
       *(float **)(puVar13 + -0xc) = pfVar7;
-      *(undefined4 *)(puVar13 + -0x10) = *(undefined4 *)((int)pvVar8 + 0x10);
-      *(undefined4 *)(puVar13 + -0x14) = *(undefined4 *)((int)pvVar8 + 0x14);
+      *(undefined4 *)(puVar13 + -0x10) = *(undefined4 *)((kd_iptr)pvVar8 + 0x10);
+      *(undefined4 *)(puVar13 + -0x14) = *(undefined4 *)((kd_iptr)pvVar8 + 0x14);
       pMVar9 = trilistGeom;
       *(MeReal **)(puVar13 + -0x18) = relAxis;
       iVar3 = local_5c;
       *(MeReal **)(puVar13 + -0x1c) = relPos;
-      *(int *)(puVar13 + -0x20) = (int)&pMVar9[3].prev[4].next + iVar3;
+      *(int *)(puVar13 + -0x20) = (kd_iptr)&pMVar9[3].prev[4].next + iVar3;
       *(undefined4 *)(puVar13 + -0x24) = 0x13937;
       GenerateTriangleContact
                 (*(McdUserTriangle **)(puVar13 + -0x20),*(MeReal **)(puVar13 + -0x1c),
@@ -1805,25 +1805,25 @@ int kd_IxSphylLineSegment(McdModelID model,MeReal *inOrig,MeReal *inDest,
   bVar8 = false;
   fVar2 = fVar4 * pfVar10[8] + fVar6 * pfVar10[9] + fVar5 * pfVar10[10];
   bVar7 = false;
-  if (lOrig[2] < *(float *)((int)pvVar9 + 0x14)) {
-    if (-*(float *)((int)pvVar9 + 0x14) <= lOrig[2]) {
-      fVar1 = *(float *)((int)pvVar9 + 0x14);
+  if (lOrig[2] < *(float *)((kd_iptr)pvVar9 + 0x14)) {
+    if (-*(float *)((kd_iptr)pvVar9 + 0x14) <= lOrig[2]) {
+      fVar1 = *(float *)((kd_iptr)pvVar9 + 0x14);
       bVar3 = fVar1 <= fVar2;
       if (bVar3) {
-        fVar1 = *(float *)((int)pvVar9 + 0x14);
+        fVar1 = *(float *)((kd_iptr)pvVar9 + 0x14);
       }
       goto joined_r0x00014225;
     }
     bVar7 = true;
-    if ((-*(float *)((int)pvVar9 + 0x14) <= fVar2) &&
-       (bVar8 = true, *(float *)((int)pvVar9 + 0x14) <= fVar2)) {
+    if ((-*(float *)((kd_iptr)pvVar9 + 0x14) <= fVar2) &&
+       (bVar8 = true, *(float *)((kd_iptr)pvVar9 + 0x14) <= fVar2)) {
       bVar3 = true;
     }
   }
   else {
     bVar3 = true;
-    if (fVar2 < *(float *)((int)pvVar9 + 0x14)) {
-      fVar1 = *(float *)((int)pvVar9 + 0x14);
+    if (fVar2 < *(float *)((kd_iptr)pvVar9 + 0x14)) {
+      fVar1 = *(float *)((kd_iptr)pvVar9 + 0x14);
 joined_r0x00014225:
       bVar8 = true;
       if (fVar2 < -fVar1) {
@@ -1841,27 +1841,27 @@ joined_r0x00014225:
   mag = MeVector3Normalize(dir);
   uVar12 = 0;
   if (bVar3) {
-    sp[2] = *(MeReal *)((int)pvVar9 + 0x14);
-    uVar11 = kd_LineSphere(sp,*(MeReal *)((int)pvVar9 + 0x10),lOrig,dir,mag,&tmpInfo);
+    sp[2] = *(MeReal *)((kd_iptr)pvVar9 + 0x14);
+    uVar11 = kd_LineSphere(sp,*(MeReal *)((kd_iptr)pvVar9 + 0x10),lOrig,dir,mag,&tmpInfo);
     uVar12 = 0;
     if (uVar11 != 0) {
-      uVar12 = uVar11 & (tmpInfo.position[2] < *(float *)((int)pvVar9 + 0x14)) - 1;
+      uVar12 = uVar11 & (tmpInfo.position[2] < *(float *)((kd_iptr)pvVar9 + 0x14)) - 1;
     }
   }
   if ((bVar7) && (uVar12 == 0)) {
-    sp[2] = -*(MeReal *)((int)pvVar9 + 0x14);
-    uVar11 = kd_LineSphere(sp,*(MeReal *)((int)pvVar9 + 0x10),lOrig,dir,mag,&tmpInfo);
+    sp[2] = -*(MeReal *)((kd_iptr)pvVar9 + 0x14);
+    uVar11 = kd_LineSphere(sp,*(MeReal *)((kd_iptr)pvVar9 + 0x10),lOrig,dir,mag,&tmpInfo);
     uVar12 = 0;
     if (uVar11 != 0) {
-      uVar12 = uVar11 & (-*(float *)((int)pvVar9 + 0x14) < tmpInfo.position[2]) - 1;
+      uVar12 = uVar11 & (-*(float *)((kd_iptr)pvVar9 + 0x14) < tmpInfo.position[2]) - 1;
     }
   }
   if (bVar8) {
     if (uVar12 != 0) goto LAB_00013e7a;
                     
-    fVar2 = *(float *)((int)pvVar9 + 0x10);
+    fVar2 = *(float *)((kd_iptr)pvVar9 + 0x10);
     if (((fVar2 * fVar2 < lOrig[0] * lOrig[0] + lOrig[1] * lOrig[1]) ||
-        (*(float *)((int)pvVar9 + 0x14) < lOrig[2])) || (lOrig[2] < -*(float *)((int)pvVar9 + 0x14))
+        (*(float *)((kd_iptr)pvVar9 + 0x14) < lOrig[2])) || (lOrig[2] < -*(float *)((kd_iptr)pvVar9 + 0x14))
        ) {
                     
       fVar5 = dir[0] * dir[0] + dir[1] * dir[1];
@@ -1873,8 +1873,8 @@ joined_r0x00014225:
                     
         fVar2 = (-fVar4 - SQRT(fVar2)) / (fVar5 + fVar5);
         fVar4 = fVar2 * dir[2] + lOrig[2];
-        if (((0.0 < fVar2) && ((fVar2 < mag && (fVar4 <= *(float *)((int)pvVar9 + 0x14))))) &&
-           (-*(float *)((int)pvVar9 + 0x14) <= fVar4)) {
+        if (((0.0 < fVar2) && ((fVar2 < mag && (fVar4 <= *(float *)((kd_iptr)pvVar9 + 0x14))))) &&
+           (-*(float *)((kd_iptr)pvVar9 + 0x14) <= fVar4)) {
           tmpInfo.position[0] = dir[0] * fVar2 + lOrig[0];
           tmpInfo.position[1] = dir[1] * fVar2 + lOrig[1];
           tmpInfo.normal[2] = 0.0;
@@ -2269,7 +2269,7 @@ LAB_00015174:
     iVar31 = iVar32 * 0x28;
     do {
       iVar32 = iVar32 + 1;
-      *(__typeof__(tri->triangleData) *)((int)result->contacts->normal + iVar31 + 0x18) = tri->triangleData;
+      *(__typeof__(tri->triangleData) *)((kd_iptr)result->contacts->normal + iVar31 + 0x18) = tri->triangleData;
       iVar31 = iVar31 + 0x28;
     } while (iVar32 < result->contactCount);
   }

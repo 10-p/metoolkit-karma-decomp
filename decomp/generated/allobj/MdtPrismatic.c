@@ -47,7 +47,7 @@ void kd_PrismaticSetAxis(MdtConstraintID c,MeReal px,MeReal py,MeReal pz)
 
 {
   float fVar1;
-  uint uVar2;
+  kd_uptr uVar2;
   MeVector3 rel_pos;
   MeVector3 r_axis2;
   MeVector3 r_axis1;
@@ -55,7 +55,7 @@ void kd_PrismaticSetAxis(MdtConstraintID c,MeReal px,MeReal py,MeReal pz)
 
   axis[1] = py;
   axis[0] = px;
-  uVar2 = ((c->head).tag != 2) - 1 & (uint)c;
+  uVar2 = ((c->head).tag != 2) - 1 & (kd_uptr)c;
   axis[2] = pz;
   rel_pos[0] = *(float *)(*(int *)(uVar2 + 0x54) + 0x120);
   rel_pos[1] = *(float *)(*(int *)(uVar2 + 0x54) + 0x124);
@@ -164,7 +164,7 @@ MdtConstraintID kd_MdtPrismaticQuaConstraint(MdtPrismaticID j)
 MdtPrismaticID kd_MdtConstraintDCastPrismatic(MdtConstraintID c)
 
 {
-  return (MdtPrismaticID)(((c->head).tag != 2) - 1 & (uint)c);
+  return (MdtPrismaticID)(((c->head).tag != 2) - 1 & (kd_uptr)c);
 }
 
 /* ---- MdtPrismaticGetLimit (exported as kd_MdtPrismaticGetLimit, asm label "MdtPrismaticGetLimit") ---- */

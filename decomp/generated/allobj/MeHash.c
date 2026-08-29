@@ -64,7 +64,7 @@ void * kd_MeHashInsert(void *key,void *datum,MeHash *table)
   pMVar3 = table->table[iVar1];
   while( true ) {
     if (pMVar3 == (MeHashBucket *)0x0) {
-      pMVar3 = (MeMemoryAPI.create)(0xc);
+      pMVar3 = (MeMemoryAPI.create)((int)sizeof(*(MeHashBucket *)0));
       pvVar4 = (void *)0x0;
       if (pMVar3 != (MeHashBucket *)0x0) {
         pMVar3->key = key;
@@ -85,7 +85,7 @@ void * kd_MeHashInsert(void *key,void *datum,MeHash *table)
     if ((pMVar3->next == (MeHashBucket *)0x0) ||
        (iVar2 = (*table->compare)(key,pMVar3->next->key), iVar2 < 0)) {
                     
-      pMVar5 = (MeMemoryAPI.create)(0xc);
+      pMVar5 = (MeMemoryAPI.create)((int)sizeof(*(MeHashBucket *)0));
       if (pMVar5 == (MeHashBucket *)0x0) {
         return (void *)0x0;
       }
@@ -98,7 +98,7 @@ void * kd_MeHashInsert(void *key,void *datum,MeHash *table)
     pMVar3 = pMVar3->next;
   }
                     
-  pMVar5 = (MeMemoryAPI.create)(0xc);
+  pMVar5 = (MeMemoryAPI.create)((int)sizeof(*(MeHashBucket *)0));
   if (pMVar5 == (MeHashBucket *)0x0) {
     return (void *)0x0;
   }
@@ -209,7 +209,7 @@ int kd_MeHashString(void *string,int size)
   uVar2 = 0;
   cVar1 = *(char *)string;
   while (cVar1 != '\0') {
-    string = (void *)((int)string + 1);
+    string = (void *)((kd_iptr)string + 1);
     uVar2 = (int)cVar1 + uVar2 * 0x21;
     cVar1 = *(char *)string;
   }
@@ -220,7 +220,7 @@ int kd_MeHashString(void *string,int size)
 int kd_MeHashInt(void *i,int size)
 
 {
-  return (uint)i % (uint)size;
+  return (kd_uptr)i % (uint)size;
 }
 
 /* ---- MeHashIntCompare (exported as kd_MeHashIntCompare, asm label "MeHashIntCompare") ---- */
@@ -238,7 +238,7 @@ MeHash * kd_MeHashCreate(int size)
   MeHashBucket **ppMVar2;
   uint uVar3;
 
-  pMVar1 = (MeMemoryAPI.create)(0x20);
+  pMVar1 = (MeMemoryAPI.create)((int)sizeof(*(MeHash *)0));
   uVar3 = size - 1;
   pMVar1->population = 0;
   pMVar1->hash = kd_MeHashString;
@@ -247,7 +247,7 @@ MeHash * kd_MeHashCreate(int size)
   pMVar1->freeKey = (MeHashFreeFunc)0x0;
   pMVar1->collisions = 0;
   if (uVar3 < 0x3fffffff) {
-    ppMVar2 = (MeMemoryAPI.create)(size * 4);
+    ppMVar2 = (MeMemoryAPI.create)((size) * (int)sizeof(*(MeHashBucket **)0));
     pMVar1->table = ppMVar2;
     if (ppMVar2 != (MeHashBucket **)0x0) {
       pMVar1->size = size;

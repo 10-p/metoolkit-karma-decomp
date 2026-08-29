@@ -94,7 +94,7 @@ PElement * kd_PElementGetNext(PElementIt *it)
     it->stackHead = pPVar1->next;
     (MeMemoryAPI.destroy)(pPVar1);
     for (pPVar1 = pPVar2->childHead; pPVar1 != (PElementNode *)0x0; pPVar1 = pPVar1->next) {
-      pPVar4 = (MeMemoryAPI.create)(8);
+      pPVar4 = (MeMemoryAPI.create)((int)sizeof(*(PElementNode *)0));
       pPVar4->current = pPVar1->current;
       if (it->stackHead == (PElementNode *)0x0) {
         it->stackHead = pPVar4;
@@ -168,7 +168,7 @@ PElement * kd_PElementCreate(int type,char *name,void *data,CDataFreeFunc func,c
   char *val;
   char *a;
 
-  e = (MeMemoryAPI.create)(0x14);
+  e = (MeMemoryAPI.create)((int)sizeof(*(PElement *)0));
   e->type = type;
   e->childHead = (PElementNode *)0x0;
   e->cdata = data;
@@ -282,8 +282,8 @@ void kd_PElementAddAttribute(PElement *e,char *attr,char *val)
   size_t sVar3;
   char *pcVar4;
 
-  pAVar1 = (MeMemoryAPI.create)(8);
-  pAVar2 = (MeMemoryAPI.create)(8);
+  pAVar1 = (MeMemoryAPI.create)((int)sizeof(*(Attribute *)0));
+  pAVar2 = (MeMemoryAPI.create)((int)sizeof(*(AttributeNode *)0));
   sVar3 = strlen(attr);
   pcVar4 = (MeMemoryAPI.create)(sVar3 + 1);
   pAVar1->attr = pcVar4;
@@ -355,8 +355,8 @@ LAB_000104e0:
         return;
       }
                     
-      pAVar4 = (MeMemoryAPI.create)(8);
-      pAVar5 = (MeMemoryAPI.create)(8);
+      pAVar4 = (MeMemoryAPI.create)((int)sizeof(*(Attribute *)0));
+      pAVar5 = (MeMemoryAPI.create)((int)sizeof(*(AttributeNode *)0));
       sVar6 = strlen(pcVar7);
       pcVar8 = (MeMemoryAPI.create)(sVar6 + 1);
       pAVar4->attr = pcVar8;
@@ -386,7 +386,7 @@ void kd_PElementInsert(PElement *e,PElement *parent)
 {
   PElementNode *pPVar1;
 
-  pPVar1 = (MeMemoryAPI.create)(8);
+  pPVar1 = (MeMemoryAPI.create)((int)sizeof(*(PElementNode *)0));
   pPVar1->current = e;
   if (parent->childHead == (PElementNode *)0x0) {
     parent->childHead = pPVar1;
@@ -452,7 +452,7 @@ void kd_PElementInitIterator(PElement *root,PElementIt *it)
 {
   PElementNode *pPVar1;
 
-  pPVar1 = (MeMemoryAPI.create)(8);
+  pPVar1 = (MeMemoryAPI.create)((int)sizeof(*(PElementNode *)0));
   pPVar1->current = root;
   pPVar1->next = (PElementNode *)0x0;
   it->stackHead = pPVar1;

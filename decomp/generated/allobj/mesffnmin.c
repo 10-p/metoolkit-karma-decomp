@@ -81,14 +81,14 @@ MeReal kd_f1d(MeReal x)
   MeReal *pMVar4;
   MeReal *pMVar5;
   MeReal *pMVar6;
-  uint uVar7;
+  kd_uptr uVar7;
   longdouble lVar8;
   MeReal temp [4];
 
   pMVar5 = xicom;
   pMVar2 = temp + Ncom;
   if (temp < pMVar2) {
-    uVar7 = (int)pMVar2 - (int)temp & 0xf;
+    uVar7 = (kd_iptr)pMVar2 - (kd_iptr)temp & 0xf;
     pMVar4 = temp;
     if (temp + 1 < pMVar2) {
       pMVar6 = temp;
@@ -132,7 +132,7 @@ LAB_0001007a:
   pMVar5 = pcom;
   pMVar2 = temp + Ncom;
   if (pMVar2 <= temp) goto LAB_000100db;
-  uVar7 = (int)pMVar2 - (int)temp & 0xf;
+  uVar7 = (kd_iptr)pMVar2 - (kd_iptr)temp & 0xf;
   pMVar4 = temp;
   if (temp + 1 < pMVar2) {
     if (uVar7 != 0) {
@@ -190,14 +190,14 @@ MeReal kd_df1d(MeReal x)
   MeReal *pMVar10;
   MeReal *pMVar11;
   MeReal *pMVar12;
-  uint uVar13;
+  kd_uptr uVar13;
   MeReal temp2 [4];
   MeReal temp [4];
 
   pMVar9 = xicom;
   pMVar11 = temp + Ncom;
   if (temp < pMVar11) {
-    uVar13 = (int)pMVar11 - (int)temp & 0xf;
+    uVar13 = (kd_iptr)pMVar11 - (kd_iptr)temp & 0xf;
     pMVar10 = temp;
     if (temp + 1 < pMVar11) {
       pMVar12 = temp;
@@ -241,7 +241,7 @@ LAB_000101fa:
   pMVar9 = pcom;
   pMVar11 = temp + Ncom;
   if (temp < pMVar11) {
-    uVar13 = (int)pMVar11 - (int)temp & 0xf;
+    uVar13 = (kd_iptr)pMVar11 - (kd_iptr)temp & 0xf;
     pMVar10 = temp;
     if (temp + 1 < pMVar11) {
       if (uVar13 != 0) {
@@ -289,7 +289,7 @@ LAB_0001025b:
   if (pMVar9 <= pMVar11) {
     return 0.0;
   }
-  uVar13 = (int)pMVar9 - (int)pMVar11 & 0xf;
+  uVar13 = (kd_iptr)pMVar9 - (kd_iptr)pMVar11 & 0xf;
   if (temp2 + 1 < pMVar9) {
     if (uVar13 == 0) goto LAB_000102a0;
     if (4 < uVar13) {
@@ -632,7 +632,7 @@ MeReal kd_LineFnMinNd(int N,MeReal *p,MeReal *xi,MeReal tol,_func_MeReal_MeReal_
   float *pfVar1;
   float *pfVar2;
   float fVar3;
-  uint uVar4;
+  kd_uptr uVar4;
   MeReal *pMVar5;
   float *pfVar6;
   MeReal *pMVar7;
@@ -740,7 +740,7 @@ LAB_00010c54:
   if (pfVar2 <= p) {
     return MVar10;
   }
-  uVar4 = (int)pfVar2 - (int)p & 0xf;
+  uVar4 = (kd_iptr)pfVar2 - (kd_iptr)p & 0xf;
   if (p + 1 < pfVar2) {
     pfVar6 = p;
     if (uVar4 == 0) goto LAB_00010ce6;
@@ -824,7 +824,7 @@ MeReal kd_FnMinNd(int N,MeReal *p,MeReal tol,MeReal fTol,_func_MeReal_MeReal_ptr
   float *pfVar17;
   float *pfVar18;
   float *pfVar19;
-  uint uVar20;
+  kd_uptr uVar20;
   longdouble lVar21;
   MeReal MVar22;
   int its;
@@ -841,7 +841,7 @@ MeReal kd_FnMinNd(int N,MeReal *p,MeReal tol,MeReal fTol,_func_MeReal_MeReal_ptr
   pMVar16 = xi;
   pMVar14 = xi + N;
   if (pMVar16 < pMVar14) {
-    uVar20 = (int)pMVar14 - (int)pMVar16 & 0xf;
+    uVar20 = (kd_iptr)pMVar14 - (kd_iptr)pMVar16 & 0xf;
     if (xi + 1 < pMVar14) {
       if (uVar20 != 0) {
         if (4 < uVar20) {
@@ -851,7 +851,7 @@ MeReal kd_FnMinNd(int N,MeReal *p,MeReal tol,MeReal fTol,_func_MeReal_MeReal_ptr
             xi[0] = -xi[0];
             pMVar16 = xi + 1;
           }
-          *(byte *)((int)pMVar16 + 3U) = *(byte *)((int)pMVar16 + 3U) ^ 0x80;
+          *(byte *)((kd_iptr)pMVar16 + 3U) = *(byte *)((kd_iptr)pMVar16 + 3U) ^ 0x80;
           pMVar16 = pMVar16 + 1;
         }
         goto LAB_00010e93;
@@ -859,16 +859,16 @@ MeReal kd_FnMinNd(int N,MeReal *p,MeReal tol,MeReal fTol,_func_MeReal_MeReal_ptr
     }
     else {
 LAB_00010e93:
-      *(byte *)((int)pMVar16 + 3U) = *(byte *)((int)pMVar16 + 3U) ^ 0x80;
+      *(byte *)((kd_iptr)pMVar16 + 3U) = *(byte *)((kd_iptr)pMVar16 + 3U) ^ 0x80;
       pMVar16 = pMVar16 + 1;
       if (pMVar14 <= pMVar16) goto LAB_00010eb5;
     }
 LAB_00010e9e:
     do {
-      *(byte *)((int)pMVar16 + 3U) = *(byte *)((int)pMVar16 + 3U) ^ 0x80;
-      *(byte *)((int)pMVar16 + 7U) = *(byte *)((int)pMVar16 + 7U) ^ 0x80;
-      *(byte *)((int)pMVar16 + 0xbU) = *(byte *)((int)pMVar16 + 0xbU) ^ 0x80;
-      *(byte *)((int)pMVar16 + 0xfU) = *(byte *)((int)pMVar16 + 0xfU) ^ 0x80;
+      *(byte *)((kd_iptr)pMVar16 + 3U) = *(byte *)((kd_iptr)pMVar16 + 3U) ^ 0x80;
+      *(byte *)((kd_iptr)pMVar16 + 7U) = *(byte *)((kd_iptr)pMVar16 + 7U) ^ 0x80;
+      *(byte *)((kd_iptr)pMVar16 + 0xbU) = *(byte *)((kd_iptr)pMVar16 + 0xbU) ^ 0x80;
+      *(byte *)((kd_iptr)pMVar16 + 0xfU) = *(byte *)((kd_iptr)pMVar16 + 0xfU) ^ 0x80;
       pMVar16 = pMVar16 + 4;
     } while (pMVar16 < pMVar14);
   }
@@ -878,7 +878,7 @@ LAB_00010eb5:
   pMVar14 = xi;
   pMVar6 = g + N;
   if (pMVar16 < pMVar6) {
-    uVar20 = (int)pMVar6 - (int)pMVar16 & 0xf;
+    uVar20 = (kd_iptr)pMVar6 - (kd_iptr)pMVar16 & 0xf;
     if (g + 1 < pMVar6) {
       if (uVar20 != 0) {
         if (4 < uVar20) {
@@ -921,7 +921,7 @@ LAB_00010f06:
   pMVar14 = xi;
   pMVar6 = h + N;
   if (pMVar6 <= pMVar16) goto LAB_00010f57;
-  uVar20 = (int)pMVar6 - (int)pMVar16 & 0xf;
+  uVar20 = (kd_iptr)pMVar6 - (kd_iptr)pMVar16 & 0xf;
   if (h + 1 < pMVar6) {
     if (uVar20 != 0) {
       if (4 < uVar20) {
@@ -974,7 +974,7 @@ LAB_00010f57:
     pfVar15 = g + N;
     fVar8 = 0.0;
     if (pfVar13 < pfVar15) {
-      uVar20 = (int)pfVar15 - (int)pfVar13 & 0xf;
+      uVar20 = (kd_iptr)pfVar15 - (kd_iptr)pfVar13 & 0xf;
       fVar9 = fVar7;
       if (g + 1 < pfVar15) {
         if (uVar20 != 0) {
@@ -1025,7 +1025,7 @@ LAB_00011012:
     pfVar19 = temp + N;
     pfVar15 = g;
     if (pfVar13 < pfVar19) {
-      uVar20 = (int)pfVar19 - (int)pfVar13 & 0xf;
+      uVar20 = (kd_iptr)pfVar19 - (kd_iptr)pfVar13 & 0xf;
       if (temp + 1 < pfVar19) {
         if (uVar20 != 0) {
           if (4 < uVar20) {
@@ -1077,7 +1077,7 @@ LAB_000110ae:
     fVar8 = 0.0;
     fVar9 = 0.0;
     if (pfVar13 < pfVar19) {
-      uVar20 = (int)pfVar19 - (int)pfVar13 & 0xf;
+      uVar20 = (kd_iptr)pfVar19 - (kd_iptr)pfVar13 & 0xf;
       fVar10 = fVar8;
       if (temp + 1 < pfVar19) {
         if (uVar20 != 0) {
@@ -1131,7 +1131,7 @@ LAB_0001110a:
     pMVar14 = xi;
     pMVar6 = g + N;
     if (pMVar16 < pMVar6) {
-      uVar20 = (int)pMVar6 - (int)pMVar16 & 0xf;
+      uVar20 = (kd_iptr)pMVar6 - (kd_iptr)pMVar16 & 0xf;
       if (g + 1 < pMVar6) {
         if (uVar20 != 0) {
           if (4 < uVar20) {
@@ -1175,7 +1175,7 @@ LAB_0001117b:
     pfVar19 = h + N;
     pfVar15 = g;
     if (pfVar13 < pfVar19) {
-      uVar20 = (int)pfVar19 - (int)pfVar13 & 0xf;
+      uVar20 = (kd_iptr)pfVar19 - (kd_iptr)pfVar13 & 0xf;
       pfVar17 = pfVar13;
       if (h + 1 < pfVar19) {
         pfVar18 = pfVar13;
@@ -1223,7 +1223,7 @@ LAB_000111f8:
     pMVar14 = h;
     pMVar6 = pMVar16 + N;
     if (pMVar16 < pMVar6) {
-      uVar20 = (int)pMVar6 - (int)pMVar16 & 0xf;
+      uVar20 = (kd_iptr)pMVar6 - (kd_iptr)pMVar16 & 0xf;
       if (xi + 1 < pMVar6) {
         if (uVar20 != 0) {
           if (4 < uVar20) {

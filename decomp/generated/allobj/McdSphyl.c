@@ -58,19 +58,19 @@ McdSphylID kd_McdSphylCreate(McdFramework *frame,MeReal r,MeReal h)
 {
   McdSphylID pMVar1;
 
-  pMVar1 = (MeMemoryAPI.createAligned)(0x18,0x10);
+  pMVar1 = (MeMemoryAPI.createAligned)((int)sizeof(*(McdSphyl *)0),0x10);
   if (pMVar1 != (McdSphylID)0x0) {
     McdGeometryInit(pMVar1,frame,5);
                     
     if (r < 0.0) {
       r = 0.0;
     }
-    *(MeReal *)&pMVar1[1].mRefCtAndID = r;
+    *(MeReal *)&((McdSphyl *)pMVar1)->mRadius = r;
                     
     if (h < 0.0) {
       h = 0.0;
     }
-    pMVar1[1].prev = (McdGeometryID)KD_FBITS((h * 0.5));
+    ((McdSphyl *)pMVar1)->mHalfHeight = (h * 0.5);
   }
   return pMVar1;
 }
@@ -83,7 +83,7 @@ void kd_McdSphylSetRadius(McdSphylID s,MeReal r)
   if (r < 0.0) {
     r = 0.0;
   }
-  *(MeReal *)&s[1].mRefCtAndID = r;
+  *(MeReal *)&((McdSphyl *)s)->mRadius = r;
   return;
 }
 
@@ -91,7 +91,7 @@ void kd_McdSphylSetRadius(McdSphylID s,MeReal r)
 MeReal kd_McdSphylGetRadius(McdSphylID s)
 
 {
-  return *(float *)&(s[1].mRefCtAndID);
+  return *(float *)&(((McdSphyl *)s)->mRadius);
 }
 
 /* ---- McdSphylSetHeight (exported as kd_McdSphylSetHeight, asm label "McdSphylSetHeight") ---- */
@@ -102,7 +102,7 @@ void kd_McdSphylSetHeight(McdSphylID s,MeReal h)
   if (h < 0.0) {
     h = 0.0;
   }
-  s[1].prev = (McdGeometryID)KD_FBITS((h * 0.5));
+  ((McdSphyl *)s)->mHalfHeight = (h * 0.5);
   return;
 }
 
@@ -110,7 +110,7 @@ void kd_McdSphylSetHeight(McdSphylID s,MeReal h)
 MeReal kd_McdSphylGetHeight(McdSphylID s)
 
 {
-  return *(float *)&(s[1].prev) + *(float *)&(s[1].prev);
+  return *(float *)&(((McdSphyl *)s)->mHalfHeight) + *(float *)&(((McdSphyl *)s)->mHalfHeight);
 }
 
 /* ---- McdSphylDestroy (exported as kd_McdSphylDestroy, asm label "McdSphylDestroy") ---- */
@@ -140,23 +140,23 @@ void kd_McdSphylUpdateAABB(McdGeometryInstanceID ins,MeMatrix4Ptr finalTM,MeBool
 
   pvVar8 = McdGeometryInstanceGetGeometry(ins);
   pvVar9 = McdGeometryInstanceGetTransformPtr(ins);
-  fVar1 = ABS(*(float *)((int)pvVar9 + 0x20)) * *(float *)((int)pvVar8 + 0x14) +
-          *(float *)((int)pvVar8 + 0x10);
-  fVar3 = ABS(*(float *)((int)pvVar9 + 0x24)) * *(float *)((int)pvVar8 + 0x14) +
-          *(float *)((int)pvVar8 + 0x10);
-  fVar4 = ABS(*(float *)((int)pvVar9 + 0x28)) * *(float *)((int)pvVar8 + 0x14) +
-          *(float *)((int)pvVar8 + 0x10);
-  fVar2 = *(float *)((int)pvVar9 + 0x30) - fVar1;
+  fVar1 = ABS(*(float *)((kd_iptr)pvVar9 + 0x20)) * *(float *)((kd_iptr)pvVar8 + ((int)((char *)&((McdSphyl *)0)->mHalfHeight - (char *)0))) +
+          *(float *)((kd_iptr)pvVar8 + ((int)((char *)&((McdSphyl *)0)->mRadius - (char *)0)));
+  fVar3 = ABS(*(float *)((kd_iptr)pvVar9 + 0x24)) * *(float *)((kd_iptr)pvVar8 + ((int)((char *)&((McdSphyl *)0)->mHalfHeight - (char *)0))) +
+          *(float *)((kd_iptr)pvVar8 + ((int)((char *)&((McdSphyl *)0)->mRadius - (char *)0)));
+  fVar4 = ABS(*(float *)((kd_iptr)pvVar9 + 0x28)) * *(float *)((kd_iptr)pvVar8 + ((int)((char *)&((McdSphyl *)0)->mHalfHeight - (char *)0))) +
+          *(float *)((kd_iptr)pvVar8 + ((int)((char *)&((McdSphyl *)0)->mRadius - (char *)0)));
+  fVar2 = *(float *)((kd_iptr)pvVar9 + 0x30) - fVar1;
   ins->min[0] = fVar2;
-  ins->min[1] = *(float *)((int)pvVar9 + 0x34) - fVar3;
-  ins->min[2] = *(float *)((int)pvVar9 + 0x38) - fVar4;
-  ins->max[0] = fVar1 + *(float *)((int)pvVar9 + 0x30);
-  ins->max[1] = fVar3 + *(float *)((int)pvVar9 + 0x34);
-  ins->max[2] = fVar4 + *(float *)((int)pvVar9 + 0x38);
+  ins->min[1] = *(float *)((kd_iptr)pvVar9 + 0x34) - fVar3;
+  ins->min[2] = *(float *)((kd_iptr)pvVar9 + 0x38) - fVar4;
+  ins->max[0] = fVar1 + *(float *)((kd_iptr)pvVar9 + 0x30);
+  ins->max[1] = fVar3 + *(float *)((kd_iptr)pvVar9 + 0x34);
+  ins->max[2] = fVar4 + *(float *)((kd_iptr)pvVar9 + 0x38);
   if (finalTM != (MeMatrix4Ptr)0x0) {
-    fVar1 = ABS(finalTM[2][0]) * *(float *)((int)pvVar8 + 0x14) + *(float *)((int)pvVar8 + 0x10);
-    fVar4 = ABS(finalTM[2][1]) * *(float *)((int)pvVar8 + 0x14) + *(float *)((int)pvVar8 + 0x10);
-    fVar6 = ABS(finalTM[2][2]) * *(float *)((int)pvVar8 + 0x14) + *(float *)((int)pvVar8 + 0x10);
+    fVar1 = ABS(finalTM[2][0]) * *(float *)((kd_iptr)pvVar8 + ((int)((char *)&((McdSphyl *)0)->mHalfHeight - (char *)0))) + *(float *)((kd_iptr)pvVar8 + ((int)((char *)&((McdSphyl *)0)->mRadius - (char *)0)));
+    fVar4 = ABS(finalTM[2][1]) * *(float *)((kd_iptr)pvVar8 + ((int)((char *)&((McdSphyl *)0)->mHalfHeight - (char *)0))) + *(float *)((kd_iptr)pvVar8 + ((int)((char *)&((McdSphyl *)0)->mRadius - (char *)0)));
+    fVar6 = ABS(finalTM[2][2]) * *(float *)((kd_iptr)pvVar8 + ((int)((char *)&((McdSphyl *)0)->mHalfHeight - (char *)0))) + *(float *)((kd_iptr)pvVar8 + ((int)((char *)&((McdSphyl *)0)->mRadius - (char *)0)));
     fVar3 = finalTM[3][0] + fVar1;
     fVar1 = finalTM[3][0] - fVar1;
     fVar5 = finalTM[3][1] + fVar4;
@@ -199,7 +199,7 @@ void kd_McdSphylGetBSphere(McdSphylID s,MeReal *center,MeReal *radius)
   *center = 0.0;
   center[2] = 0.0;
   center[1] = 0.0;
-  *radius = *(float *)&(s[1].mRefCtAndID) + *(float *)&(s[1].prev);
+  *radius = *(float *)&(((McdSphyl *)s)->mRadius) + *(float *)&(((McdSphyl *)s)->mHalfHeight);
   return;
 }
 
@@ -223,32 +223,32 @@ void kd_McdSphylMaximumPoint(McdGeometryInstanceID ins,MeReal *inDir,MeReal *out
   pvVar10 = McdGeometryInstanceGetTransformPtr(ins);
   fVar1 = *inDir;
   fVar2 = inDir[1];
-  fVar3 = *(float *)((int)pvVar10 + 0x20);
-  fVar4 = *(float *)((int)pvVar10 + 0x30);
-  fVar5 = *(float *)((int)pvVar10 + 0x24);
+  fVar3 = *(float *)((kd_iptr)pvVar10 + 0x20);
+  fVar4 = *(float *)((kd_iptr)pvVar10 + 0x30);
+  fVar5 = *(float *)((kd_iptr)pvVar10 + 0x24);
   fVar6 = inDir[2];
-  fVar7 = *(float *)((int)pvVar10 + 0x28);
+  fVar7 = *(float *)((kd_iptr)pvVar10 + 0x28);
   *outPoint = fVar4;
-  fVar8 = *(float *)((int)pvVar10 + 0x34);
+  fVar8 = *(float *)((kd_iptr)pvVar10 + 0x34);
   fVar2 = fVar2 * fVar5 + fVar1 * fVar3 + fVar6 * fVar7;
   outPoint[1] = fVar8;
-  fVar1 = *(float *)((int)pvVar10 + 0x38);
+  fVar1 = *(float *)((kd_iptr)pvVar10 + 0x38);
   outPoint[2] = fVar1;
   if (fVar2 <= 0.0001) {
     if (fVar2 < -0.0001) {
-      fVar1 = -*(float *)((int)pvVar9 + 0x14);
-      *outPoint = fVar1 * *(float *)((int)pvVar10 + 0x20) + *outPoint;
-      outPoint[1] = fVar1 * *(float *)((int)pvVar10 + 0x24) + outPoint[1];
-      outPoint[2] = fVar1 * *(float *)((int)pvVar10 + 0x28) + outPoint[2];
+      fVar1 = -*(float *)((kd_iptr)pvVar9 + ((int)((char *)&((McdSphyl *)0)->mHalfHeight - (char *)0)));
+      *outPoint = fVar1 * *(float *)((kd_iptr)pvVar10 + 0x20) + *outPoint;
+      outPoint[1] = fVar1 * *(float *)((kd_iptr)pvVar10 + 0x24) + outPoint[1];
+      outPoint[2] = fVar1 * *(float *)((kd_iptr)pvVar10 + 0x28) + outPoint[2];
     }
   }
   else {
-    fVar2 = *(float *)((int)pvVar9 + 0x14);
-    *outPoint = fVar2 * *(float *)((int)pvVar10 + 0x20) + fVar4;
-    outPoint[1] = fVar2 * *(float *)((int)pvVar10 + 0x24) + fVar8;
-    outPoint[2] = fVar2 * *(float *)((int)pvVar10 + 0x28) + fVar1;
+    fVar2 = *(float *)((kd_iptr)pvVar9 + ((int)((char *)&((McdSphyl *)0)->mHalfHeight - (char *)0)));
+    *outPoint = fVar2 * *(float *)((kd_iptr)pvVar10 + 0x20) + fVar4;
+    outPoint[1] = fVar2 * *(float *)((kd_iptr)pvVar10 + 0x24) + fVar8;
+    outPoint[2] = fVar2 * *(float *)((kd_iptr)pvVar10 + 0x28) + fVar1;
   }
-  fVar1 = *(float *)((int)pvVar9 + 0x10);
+  fVar1 = *(float *)((kd_iptr)pvVar9 + ((int)((char *)&((McdSphyl *)0)->mRadius - (char *)0)));
   *outPoint = fVar1 * *inDir + *outPoint;
   outPoint[1] = fVar1 * inDir[1] + outPoint[1];
   outPoint[2] = fVar1 * inDir[2] + outPoint[2];
@@ -263,8 +263,8 @@ MeI16 kd_McdSphylGetMassProperties(McdSphylID s,MeVector4 *relTM,MeVector3 *m,Me
   float fVar2;
   float fVar3;
 
-  fVar1 = *(float *)&(s[1].mRefCtAndID);
-  fVar3 = fVar1 * 0.67082 + *(float *)&(s[1].prev);
+  fVar1 = *(float *)&(((McdSphyl *)s)->mRadius);
+  fVar3 = fVar1 * 0.67082 + *(float *)&(((McdSphyl *)s)->mHalfHeight);
   fVar3 = fVar3 + fVar3;
                     
   (*m)[1] = 0.0;

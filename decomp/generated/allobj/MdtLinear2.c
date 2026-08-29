@@ -187,7 +187,7 @@ MdtConstraintID kd_MdtLinear2QuaConstraint(MdtLinear2ID j)
 MdtLinear2ID kd_MdtConstraintDCastLinear2(MdtConstraintID c)
 
 {
-  return (MdtLinear2ID)(((c->head).tag != 0xb) - 1 & (uint)c);
+  return (MdtLinear2ID)(((c->head).tag != 0xb) - 1 & (kd_uptr)c);
 }
 
 /* ---- MdtLinear2GetPosition (exported as kd_MdtLinear2GetPosition, asm label "MdtLinear2GetPosition") ---- */
@@ -221,7 +221,7 @@ void kd_Linear2SetBodies(MdtConstraintID c,MdtBodyID b1,MdtBodyID b2)
 
   iVar1 = (c->head).tag;
   BaseConstraintSetBodies(c,b1,b2);
-  kd_MdtLinear2SetDirection((MdtLinear2ID)((iVar1 != 0xb) - 1 & (uint)c),1.0,0.0,0.0);
+  kd_MdtLinear2SetDirection((MdtLinear2ID)((iVar1 != 0xb) - 1 & (kd_uptr)c),1.0,0.0,0.0);
   return;
 }
 

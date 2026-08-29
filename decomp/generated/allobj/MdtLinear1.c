@@ -157,7 +157,7 @@ MdtConstraintID kd_MdtLinear1QuaConstraint(MdtLinear1ID j)
 MdtLinear1ID kd_MdtConstraintDCastLinear1(MdtConstraintID c)
 
 {
-  return (MdtLinear1ID)(((c->head).tag != 10) - 1 & (uint)c);
+  return (MdtLinear1ID)(((c->head).tag != 10) - 1 & (kd_uptr)c);
 }
 
 /* ---- MdtLinear1GetPosition (exported as kd_MdtLinear1GetPosition, asm label "MdtLinear1GetPosition") ---- */

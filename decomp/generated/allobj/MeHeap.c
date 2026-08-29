@@ -133,14 +133,14 @@ MeHeap * kd_MeHeapCreate(int capacity,MeHeapComparisonFnPtr cmp)
   MeHeap *pMVar1;
   void *pvVar2;
 
-  pMVar1 = (MeMemoryAPI.create)(0x10);
+  pMVar1 = (MeMemoryAPI.create)((int)sizeof(*(MeHeap *)0));
   pvVar2 = (MeMemoryAPI.create)(capacity * 4);
   pMVar1->capacity = capacity;
   if (cmp == (MeHeapComparisonFnPtr)0x0) {
     cmp = MeHeapDefaultCompare;
   }
   pMVar1->cmp = cmp;
-  pMVar1->mem = (void **)((int)pvVar2 + -4);
+  pMVar1->mem = (void **)((kd_iptr)pvVar2 + -4);
   pMVar1->used = 0;
   return pMVar1;
 }

@@ -150,7 +150,7 @@ void kd_MdtKeaAddConstraintForces
   MdtKeaConstraints constraints;
   keaTempMemory mem;
 
-  (*(char **)&vanillaFunctions) = (char *)((char *)&vtable_for_keaFunctions_Vanilla[0] + 8);
+  (*(char **)&vanillaFunctions) = (char *)((char *)&vtable_for_keaFunctions_Vanilla[0] + (2 * (int)sizeof(void *)));
   if (num_bodies != 0) {
     kd_gDebug = &parameters.debug;
     pMVar11 = &parameters;
@@ -160,12 +160,12 @@ void kd_MdtKeaAddConstraintForces
          keaFunctions__checkPrintDebugInput
                    (&vanillaFunctions,(pconstraints),(parameters),ppMVar17,iVar9);
     pkVar19 = &vanillaFunctions;
-    (**(void (**)(void *))((char *)(*(char **)&vanillaFunctions) + 16))(&vanillaFunctions);
+    (**(void (**)(void *))((char *)(*(char **)&vanillaFunctions) + (4 * (int)sizeof(void *))))(&vanillaFunctions);
     uVar18 = 0x100b3;
     keaFunctions__initPool(pkVar19,parameters.memory_pool,parameters.memory_pool_size);
     iVar9 = num_bodies;
-    (**(void (**)(void *, void *, __typeof__((pconstraints)), int))((char *)(*(char **)&vanillaFunctions) + 20))(&vanillaFunctions,&mem,(pconstraints),iVar9);
-    (**(void (**)(void *, void *, void *, void *, void *, int, float))((char *)(*(char **)&vanillaFunctions) + 4))
+    (**(void (**)(void *, void *, __typeof__((pconstraints)), int))((char *)(*(char **)&vanillaFunctions) + (5 * (int)sizeof(void *))))(&vanillaFunctions,&mem,(pconstraints),iVar9);
+    (**(void (**)(void *, void *, void *, void *, void *, int, float))((char *)(*(char **)&vanillaFunctions) + (1 * (int)sizeof(void *))))
               (&vanillaFunctions,mem.invIworld,mem.vhmf,blist,tlist,num_bodies,parameters.stepsize);
     keaFunctions__makejlenandbl2body
               (&vanillaFunctions,mem.jlen_12padded,mem.jlen,mem.bl2body_12padded,mem.bl2body,
@@ -181,7 +181,7 @@ void kd_MdtKeaAddConstraintForces
       }
       iVar9 = (uVar10 & 0xfffffffc) + 4;
     }
-    (**(void (**)(void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, int, int, int, float, float))((char *)(*(char **)&vanillaFunctions) + 0))
+    (**(void (**)(void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, int, int, int, float, float))((char *)(*(char **)&vanillaFunctions) + (0 * (int)sizeof(void *))))
               (&vanillaFunctions,mem.rhs,mem.jm,pconstraints.Jstore,pconstraints.xgamma,
                pconstraints.c,pconstraints.xi,mem.invIworld,mem.bl2body,mem.jlen,mem.vhmf,num_bodies
                ,iVar9,pconstraints.num_rows_inc_padding,parameters.stepsize,parameters.gamma);
@@ -221,15 +221,15 @@ void kd_MdtKeaAddConstraintForces
             uVar7 = uVar7 + 3;
           }
                     
-          (*(char **)&vanillaAMatrix) = (char *)((char *)&vtable_for_keaMatrix_pcSparse_vanilla[0] + 8);
-          (**(void (**)(void *, int))((char *)(*(char **)&vanillaAMatrix) + 0))
+          (*(char **)&vanillaAMatrix) = (char *)((char *)&vtable_for_keaMatrix_pcSparse_vanilla[0] + (2 * (int)sizeof(void *)));
+          (**(void (**)(void *, int))((char *)(*(char **)&vanillaAMatrix) + (0 * (int)sizeof(void *))))
                     (&vanillaAMatrix,uVar10);
           keaLCPSolver__allocate(&kSolver,uVar10);
-          (**(void (**)(void *, void *, void *, void *, void *, void *, float, float))((char *)(*(char **)&vanillaAMatrix) + 4))
+          (**(void (**)(void *, void *, void *, void *, void *, void *, float, float))((char *)(*(char **)&vanillaAMatrix) + (1 * (int)sizeof(void *))))
                     (&vanillaAMatrix,jm,constraints.Jstore,jlen_12padded,bl2body_12padded,
                      constraints.slipfactor,parameters.epsilon,1.0 / parameters.stepsize);
-          (**(void (**)(void *))((char *)(*(char **)&vanillaAMatrix) + 12))(&vanillaAMatrix);
-          (**(void (**)(void *))((char *)(*(char **)&vanillaAMatrix) + 28))(&vanillaAMatrix);
+          (**(void (**)(void *))((char *)(*(char **)&vanillaAMatrix) + (3 * (int)sizeof(void *))))(&vanillaAMatrix);
+          (**(void (**)(void *))((char *)(*(char **)&vanillaAMatrix) + (7 * (int)sizeof(void *))))(&vanillaAMatrix);
           uVar10 = 0;
           keaLCPSolver__solveLCP
                     (&kSolver,&vanillaAMatrix,rhs,constraints.lo,constraints.hi,
@@ -285,12 +285,12 @@ LAB_0001040f:
         kd_gPartition = kd_gPartition + 1;
       } while (kd_gPartition != iVar9);
     }
-    (**(void (**)(void *, void *, void *, void *, void *, void *, void *, void *, void *, int, int, int, int))((char *)(*(char **)&vanillaFunctions) + 8))
+    (**(void (**)(void *, void *, void *, void *, void *, void *, void *, void *, void *, int, int, int, int))((char *)(*(char **)&vanillaFunctions) + (2 * (int)sizeof(void *))))
               (&vanillaFunctions,blist,pconstraints.force,pconstraints.Jstore,pconstraints.Jbody,
                pconstraints.lambda,mem.bl2body,mem.bl2cbody,mem.jlen,
                pconstraints.num_rows_exc_padding,pconstraints.num_rows_inc_padding,
                pconstraints.num_constraints,num_bodies);
-    (**(void (**)(void *, void *, void *, int))((char *)(*(char **)&vanillaFunctions) + 12))(&vanillaFunctions,blist,mem.invIworld,num_bodies);
+    (**(void (**)(void *, void *, void *, int))((char *)(*(char **)&vanillaFunctions) + (3 * (int)sizeof(void *))))(&vanillaFunctions,blist,mem.invIworld,num_bodies);
     keaFunctions__keaCloseDebugDataFile(&vanillaFunctions,kd_gDebugDataFile);
   }
   return;

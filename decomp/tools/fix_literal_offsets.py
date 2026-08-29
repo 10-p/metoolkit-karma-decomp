@@ -273,11 +273,21 @@ def main():
             if '->' not in b:
                 return declared_type(region, b)
             fld = b.split('->')[1]
-            for r in FIELD_READ.finditer(region):
-                if r.group('f') == fld:
-                    t = declared_type(region, r.group('var'))
-                    if t and not OPAQUE.match(t):
-                        return t
+            # The function first — a local reading of the same field is the
+            # strongest evidence — then the whole FILE. What a container's
+            # member points at is a property of the CONTAINER, not of the
+            # function that happens to read it: MdtPartition.c:334 sits in a
+            # function with no typed read of `->data`, while the one three
+            # hundred lines above has `pMVar3 = rootNode->data;` and both walk
+            # the same body dict.
+            for scope in (region, text):
+                for r in FIELD_READ.finditer(scope):
+                    if r.group('f') == fld:
+                        t = declared_type(region_of(scope, r.start())
+                                          if scope is text else region,
+                                          r.group('var'))
+                        if t and not OPAQUE.match(t):
+                            return t
             return None
 
         used = {}

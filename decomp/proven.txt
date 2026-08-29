@@ -1283,12 +1283,42 @@ McdTriangleList       real: same run, same evidence. These two objects account f
 #                     DIFFERENT constraint type — so the inference has to be per function, and per
 #                     function it still finds nothing.
 #
-#                     ★ THE ORACLE CAN SEE IT AND THAT IS THE LEAD: `MdtBclAddBSJoint` is a plain C
-#                     name in MdtBcl/MdtBcl.obj and its LP64 displacements are right there
-#                     (0x134, 0x178, and a 60-entry displacement set). Mapping i386 offset -> LP64
-#                     offset means ALIGNING TWO COMPILERS' INSTRUCTION STREAMS, which is a
-#                     different technique from anything used so far and deserves its own design
-#                     rather than being bolted onto fix_literal_offsets.
+#                     ★ THE TYPE *IS* DERIVABLE, AND THE EVIDENCE IS THE INSTALLER — this is the
+#                     lead to pick up, not the disassembly alignment below. Each MdtBclAdd* is
+#                     installed as a callback on the very type it takes:
+#
+#                       MdtBSJoint.c:54   (pMVar1->head).bclFunction = MdtBclAddBSJoint;
+#
+#                     so `constraint` is an `MdtBSJoint *`. That resolves ALL SIXTEEN of them
+#                     mechanically — MdtBclAddContact <- MdtContact, MdtBclAddHinge <- MdtHinge,
+#                     and so on — with no guessing and no cross-compiler alignment.
+#
+#                     ⚠ WHAT BLOCKS IT IS THE OFFSET MAP, NOT THE TYPE. With the installer types
+#                     the offsets still do not all land: MdtBclAddContact maps 27 of 31,
+#                     MdtBclAddBSJoint only 4 of 18, and `0xb4`/`0xb8` miss for EVERY ONE of the
+#                     sixteen — a uniform miss on a shared `head` field, which is a nesting-depth
+#                     limit in `field_paths` rather than a wrong type. It recurses ONE level into a
+#                     nested struct; `MdtConstraintHeader` needs more. ⚠ Raising the limit naively
+#                     breaks the mapper outright (it returns ZERO offsets) because the cycle guard
+#                     caches an empty dict under `(tag, depth)` and a deeper walk re-enters it.
+#                     Fix the guard first, then raise the depth, then re-measure the sixteen.
+#
+#                     The disassembly route — `MdtBclAddBSJoint` is a plain C name in
+#                     MdtBcl/MdtBcl.obj with its LP64 displacements right there — is the FALLBACK,
+#                     and it is worse: aligning two compilers' instruction streams is guesswork
+#                     that fails silently. Prefer the installer.
+#
+#                     ⚠ AND MstUtils IS NOT A PASS-SIZED JOB — MEASURED, NOT ESTIMATED. Its slots
+#                     are the SINGLE-SHIFT case that ghidra_clean.py's AREA rule deliberately
+#                     excludes, and that exclusion is load-bearing: the rule's own note records
+#                     that extending it to one shift "changed five of those seven objects and
+#                     knocked MstUtils out of the build entirely." The shape is 124 sites across 8
+#                     objects, FIVE of them released and validated (IxConvexTriList,
+#                     IxCylinderTriList, IxSphylPrimitives, IxBoxTriList, IxSphereTriList). It is a
+#                     PIPELINE change, so `generated/allobj` moves and byte-identity CANNOT be the
+#                     gate — the repair gives the scratch its own storage, which is a different
+#                     stack layout by construction. Validating it means the nine gates plus the
+#                     behavioural harnesses on those five. Do not attempt it as an increment.
 #
 #                     2. MstUtils — GHIDRA'S INVENTED STACK FRAMES.
 #

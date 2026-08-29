@@ -1152,6 +1152,177 @@ McdTriangleList       real: same run, same evidence. These two objects account f
 #                     a build that no longer existed. `cmake` will not rebuild what it thinks is
 #                     current, so the failure is silent. Check the newest `.c.o` against `git log`.
 
+# LP64-THREE-CLEAN  2026-08-29 (thirteenth session, fourth leg): ★★ ALL THREE SCENES RUN CLEAN
+#                     AT 64-BIT POINTER WIDTH ON THE PLAIN BUILD — 901 rows each, exit 0, five
+#                     runs out of five. Where the leg started: chain clean, boxes SIGSEGV after
+#                     51 rows, ragdoll SIGSEGV at row 0. Six more defects, each invisible until
+#                     the one before it was repaired, which makes fifteen in the chain.
+#
+#                     THE HONEST READING, and it is still FAIL:
+#
+#                       plain LP64 vs plain i386, first difference / magnitude
+#                         scene_chain            step   4   9.0e-10   noise, amplifying
+#                         scene_ragdoll          step   0   2.2e-07   noise, amplifying
+#                         scene_boxes_on_plane   step  52   1.5e-03   A DEFECT
+#
+#                     ★ THE FIRST DIFFERING STEP IS THE DISCRIMINATOR, NOT THE MAXIMUM, and on
+#                     a contact scene the maximum is worthless — every one of these reaches
+#                     metres by step 900. chain and ragdoll first differ at 1e-9 and 1e-7, which
+#                     is last-bit float noise amplifying through a chaotic scene; boxes was
+#                     BIT-IDENTICAL for 44 steps and then jumped to 1.5e-01 in one step, which is
+#                     not amplification. Repairing that took it to step 52 at 1.5e-03 — 100x
+#                     smaller and seven steps later, and still five orders above the floor.
+#
+#                     ★★ AND THE REFERENCE HAD BEEN THE WRONG BUILD. `lp64_run.sh` diffed the
+#                     trajectory against an i386 control built WITH AddressSanitizer, then ran
+#                     the plain scenes against no reference at all. ASan's poison is 0xbe rather
+#                     than whatever the plain heap held, so an UNINITIALISED READ comes back as
+#                     garbage under it: the sanitized ragdoll fills with 8,100 non-finite samples
+#                     and reads BLOWN UP at BOTH widths, its LP64 and i386 traces agreeing to
+#                     0.00e+00, while the plain LP64 run of the same sources is clean. Diffing
+#                     plain against sanitized attributes an ASan artefact to pointer width. The
+#                     harness builds a PLAIN i386 control now and reports the first differing
+#                     step against it.
+#                     ⚠ AND `0.00e+00 over 901 rows` WAS PART OF THAT ARTEFACT: `nan > x` is
+#                     False, so every non-finite sample failed the divergence test AND left the
+#                     worst delta at zero. It read "matches the control over all 901 rows" on a
+#                     trace that was 8,100 NaNs. Non-finite samples are counted and reported now.
+#                     ⚠ The sanitized contact scenes also SPIN — state R with utime climbing and
+#                     RSS flat, so a loop in user code and not a stall, and data-dependent:
+#                     3 runs in 20 past 30 s on one build, both contact scenes every time on
+#                     the next.
+#                     Same cause: NaN into a convergence loop. The ASan timeout is 120 s and
+#                     says out loud that a timeout is not the pointer-width verdict.
+#
+#                     ★★★ THE BIGGEST SINGLE FINDING: AN ENTIRE TYPE FAMILY WAS INVISIBLE TO THE
+#                     OFFSET MAP. The SDK declares every concrete geometry as
+#                     `typedef struct { McdGeometry m_g; MeReal mR[3]; ... } McdBox;` — NO TAG
+#                     before the brace — and `fix_literal_offsets`' map is built by scanning for
+#                     `struct NAME {`. So McdBox, McdSphere, McdCylinder, McdSphyl,
+#                     McdConvexMesh, McdAggregate and McdNull all had EMPTY offset maps, every
+#                     site addressing one read as "out of scope, the base carries no structure",
+#                     and 412 sites across 16 objects sat in that bucket unexamined.
+#
+#                     What it cost: `McdBoxUpdateAABB` read the box half-extents at the i386
+#                     `+0x10/0x14/0x18`. `_McdGeometry` is 16 bytes here and 32 there, so at LP64
+#                     those land INSIDE the base and read zero — the box's AABB came back as a
+#                     POINT. The broadphase then never reported the box/plane pair until the box
+#                     CENTRE was through the plane, two steps late, and that is the whole of the
+#                     step-45 divergence. Measured, not inferred: the AABB reads
+#                     `-0.505,-0.405,z-0.305 .. +0.505,+0.405,z+0.305` at i386 and
+#                     `-0.005,-0.005,z-0.005 .. +0.005,+0.005,z+0.005` at LP64 — half-extents
+#                     exactly zero plus the 0.005 margin — and a call counter on
+#                     `McdBoxPlaneIntersect` reads 0,1,2,3,4 across steps 43-47 at i386 against
+#                     0,0,0,0,1 at LP64. The narrow phase was never wrong; it was never CALLED.
+#
+#                     WHICH CONCRETE TYPE IS NOT GUESSED EITHER: `McdBox.c` calls
+#                     `McdFrameworkRegisterGeometryType(frame, 2, "McdBox", ...)` and hands it
+#                     that file's own destroy/updateAABB/getBSphere, so the object under every
+#                     geometry pointer in that file IS an McdBox — the LP64-OPAQUE-API installer
+#                     rule one indirection shallower. Eight files register exactly one type; the
+#                     `Ix*` interaction objects register none and handle TWO geometries
+#                     (IxSphylPrimitives has 227 such sites), so they are reported and left to
+#                     per-site typing. 122 sites repaired, byte-identical.
+#
+#                     ⚠ AND A DECLINE IS ONLY A DECLINE IF NOTHING LATER TYPES THE VARIABLE. The
+#                     RETURNS rule declines `pvVar7` correctly — `_McdGeometry` genuinely has no
+#                     field at +0x10 — and the registration rule then types it. Printed as
+#                     written, the report claimed a decline on a site repaired in the same run.
+#                     Declines are keyed by variable and emitted only if still untyped.
+#
+#                     ★★ TWO OF THE OTHER FOUR WERE RULES THAT ALREADY EXISTED AND HAD SILENTLY
+#                     STOPPED MATCHING, both because they keyed on a SPELLING AN EARLIER PASS
+#                     REWRITES:
+#
+#                       fix_frame_slots     FRAME_OFF2 required a literal `(int)` cast;
+#                                           fix_ptrwidth writes `(kd_iptr)` four passes earlier.
+#                                           20 sites, no match, NO DECLINE PRINTED.
+#                       fix_vtable_offsets  VSLOT read `(*(char **)&obj)` while VPTR_STORE, its
+#                                           own partner, accepted `char|undefined4|void`.
+#
+#                     A pattern that does not fire has nothing to report, so both read as objects
+#                     with nothing to do. Both matchers are structural now and both REFUSE rather
+#                     than half-apply.
+#
+#                     10  `puVar9 = auStack_3c + -uVar6;` — LP64-COLLISION-CHAIN item 9 in a
+#                         second spelling. `NEG_MUL` matched `* -N` only; a unary minus on a
+#                         `uint` is the identical defect and so is `auStack_3c[iVar2 - uVar6]`.
+#                         27 sites. ⚠ AND IT ADDRESSES A DIFFERENT ARRAY FROM THE LINE ABOVE IT:
+#                         `+ -uVar6` is ELEMENT arithmetic on a `uint *` and lands at -4*uVar6;
+#                         `(kd_iptr)auStack_3c - uVar6`, five lines earlier, is BYTE arithmetic
+#                         and lands at -1*uVar6. MEASURED both ways — the shipped i386 `solveLCP`
+#                         does SIX successive `sub %edi,%esp`, one per block, so the frame is a
+#                         partition of six and reading the two spellings alike would have aliased
+#                         two live arrays. The cast goes on the FIRST IDENTIFIER of the chain:
+#                         `(kd_uptr)((uVar3 - 2) - order)` is the defect with a cast on it.
+#
+#                     11  `*(int **)((int)(kd_frame + 0) + 8) = clamped;` — the trailing argument
+#                         word, outside the base's own parentheses. `this` goes to word one and
+#                         `clamped` to word two, so at LP64 the write of `this` lands on top of
+#                         `clamped`'s low half and the read comes back `0x00007fff00007fff`, the
+#                         two pointers' high halves interleaved. ★ THE ARITHMETIC PREDICTS THE
+#                         REGISTER EXACTLY.
+#
+#                     12  the vtable SLOTS in `keaLCPSolver`, with the address point ALREADY
+#                         scaled — half-applied is worse than not applied. `+ 8` reached slot ONE,
+#                         so `makeFromColMajorPSM` (nine arguments, called with nine) dispatched
+#                         into `makeFromJMJT` (seven) and left `NAZ[0]` NULL for a SEGV two
+#                         functions later. The i386 slots are +0=allocate(1 arg),
+#                         +8=makeFromColMajorPSM(9), +12=factorize(0), +16=solve(2) and the four
+#                         call sites pass exactly 1, 9, 0 and 2 — which is what makes it a
+#                         measurement. ⚠ The same pass read ONE site of the `*(int *)A + K`
+#                         spelling where the corpus has twenty-two, because its object group
+#                         matched a bare identifier and every real one is `this->A`.
+#
+#                     13  `if (pool_max < (uint)(size + (kd_iptr)pool_ptr))` — a pointer compared
+#                         against a 32-bit-NARROWED ADDRESS, so the kea pool reads as exhausted
+#                         the moment it is handed memory above 4 GB. ⚠ NOTHING IN THE COMPILER
+#                         CAN SEE THIS: measured under `-Wall`, `-Wextra`, `-Wint-conversion` and
+#                         `-Weverything`, clang says nothing, which is why `fix_ptrwidth` — whose
+#                         site list IS clang's diagnostics — structurally cannot reach it. ⚠ And
+#                         it is an ADDRESS, not a DIFFERENCE: 31 sites share the shape and
+#                         `(int)((kd_iptr)p - uVar3)` is a COUNT, correct at every width. What
+#                         separates the one is that it is compared against a POINTER.
+#
+#                     14  and the pool was then genuinely too small: `MdtKeaMemoryRequired`
+#                         reserves the same arrays a second time at the i386 element size.
+#                         tools/fix_pool_reserve.py, 8 sites.
+#                         ★ THE ADDEND IS ELEMENTS TOO, AND SCALING ONLY THE STRIDE CHANGED THE
+#                         POOL BY NOT ONE BYTE. `(uVar27 & 0xfffffff0) * 4 + 0x40` is
+#                         `((n + 15) & ~15) * 4`, so the `0x40` is `16 * 4` — and with these
+#                         matrices `n` is under 16, `uVar27 & 0xfffffff0` is ZERO, and the addend
+#                         IS the whole reservation. The first patch read exactly like a wrong
+#                         diagnosis and was a half-right one.
+#                         ⚠ The discriminator reached for first over-matched: "the count is a
+#                         self-multiplication, so it is the blocks*blocks pointer array" also
+#                         fits `iVar2 = iVar12 * 4` in the same function — the A matrix, a
+#                         squared count holding FLOATS. What separates them is that a rounded
+#                         reservation is a PAIR of branches assigning the same local.
+#
+#                     15  and the geometry AABB family above, which is the one that moved the
+#                         boxes trajectory.
+#
+#                     WHAT IS LEFT, and it is localised to one thing: THE BROADPHASE PRESENTS A
+#                     PAIR IN THE OPPOSITE ORDER AT LP64. At step 52 both builds report the same
+#                     box pair with the same penetration to seven digits and an exactly NEGATED
+#                     normal. Identified by dumping each pair's own `mR[0]` from inside
+#                     `McdBoxBoxIntersect` — i386 reads `(0.5000, 0.5350)` and LP64 reads
+#                     `(0.5350, 0.5000)`, from the FIRST step the pair appears, so it is
+#                     systematic and not amplification. `McdModelPairManagerAddPair`'s hash key
+#                     sorts the two `mSpaceID`s branchlessly and is order-independent;
+#                     `McdModelPairReset` then stores the CALLER's order, and the caller is
+#                     CxSmallSort's sweep reporting `(mRepList[i].mModel, mRepList[j].mModel)`.
+#                     That object is the one census_report flags with 33 unvalidated functions.
+#
+#                     ⚠ A read of `p->model1->mSpaceID` came back as garbage at BOTH widths and
+#                     proved nothing; the box's own `mR[0]` is stable across widths and is what
+#                     made the swap legible. When an instrument disagrees with itself, change the
+#                     instrument, not the conclusion.
+#
+#                     WHAT THIS IS NOT. Necessary, not sufficient: x86-64 tolerates unaligned
+#                     access where arm64 FAULTS, these are OFFLINE SCENES, and nothing at 64-bit
+#                     has yet exercised a real match, the drop-in link or the .ka asset path.
+
 # LP64-COLLISION-CHAIN 2026-08-29 (thirteenth session, third leg): ★ THE COLLISION HALF WAS
 #                     DEAD AT LP64 — `McdIntersect` dispatched through a NULL — and unpicking
 #                     it turned into a CHAIN of nine defects, each hidden behind the last.

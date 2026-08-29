@@ -85,8 +85,24 @@ APOINT_ANY = re.compile(r'&\s*(?:vtable_for_|kd_ZTV|kd_ext__ZTV)\w+\s*\[0\]\s*\+
 # `(*(T **)&OBJ) = ... ` — a vptr store, which is what says OBJ is polymorphic.
 VPTR_STORE = re.compile(r'\(\*\((?:char|undefined4|void)\s*\*\*\)&(?P<obj>\w+)\)\s*=[^;]*'
                         r'&\s*(?:vtable_for_|kd_ZTV|kd_ext__ZTV)\w+\s*\[0\]')
-# `(char *)(*(char **)&OBJ) + K` — a SLOT lookup off that vptr.
-VSLOT = re.compile(r'\(char \*\)\(\*\(char \*\*\)&(?P<obj>\w+)\)\s*\+\s*(?P<off>\d+)')
+# `(char *)(*(T **)&OBJ) + K` — a SLOT lookup off that vptr.
+# ⚠ THE ALTERNATION MUST MATCH `VPTR_STORE`'s, AND FOR A SESSION IT DID NOT.
+# This read `char **` only while the store accepted `char|undefined4|void`, so on
+# `keaLCPSolver.c` — where Ghidra spells the store `(*(undefined4 **)&vanillaQMatrix)`
+# — the ADDRESS POINT was scaled and the eight SLOT reads were not. Half-applying
+# this repair is worse than not applying it: with the address point at `&vtable[2]`
+# and the slots still four bytes apart, `+ 8` reaches slot ONE instead of slot two,
+# so `makeFromColMajorPSM` (nine arguments, called with nine) dispatched into
+# `makeFromJMJT` (seven), and `+ 12` is not even a slot boundary at LP64. The
+# ragdoll scene segfaults at `keaMatrix_PcSparse_vanilla.c:303` writing through a
+# NAZ entry that the wrong callee never filled in. `paired_objs` below refuses the
+# case rather than leaving it half-done.
+VSLOT = re.compile(r'\(char \*\)\(\*\((?:char|undefined4|void)\s*\*\*\)&(?P<obj>\w+)\)'
+                   r'\s*\+\s*(?P<off>\d+)')
+# The same store, but only the ones whose address point this pass has scaled (or
+# will scale). A slot read off an object with no scaled store is not this defect.
+VSLOT_ANY = re.compile(r'\(\*\((?:char|undefined4|void)\s*\*\*\)&(?P<obj>\w+)\)'
+                       r'\s*\+\s*(?P<off>\d+)\b')
 
 # ★ AND A SECOND DISPATCH SPELLING, which `kd_types.h`'s own note warns about
 # and which this tool did not read for a session:
@@ -103,8 +119,14 @@ VSLOT = re.compile(r'\(char \*\)\(\*\(char \*\*\)&(?P<obj>\w+)\)\s*\+\s*(?P<off>
 # type resolves to begins with a `code **_vptr_...`. A struct that does not is
 # not dispatching, and `*(int *)contact2 + 0x178` — which has the identical
 # shape — is a field read and correctly left to fix_literal_offsets.
+# ⚠ THE OBJECT IS USUALLY A MEMBER, NOT A BARE LOCAL, and matching only a bare
+# identifier is why this read ONE site where the corpus has twenty-two. Every
+# other one is `this->A`, `this->suspect`, `this->correct` — the solver reaches
+# its matrix through a field, which is the ordinary case, not the exception.
+# The two MdtLOD sites that share the shape are excluded twice over: `contact2`
+# is not polymorphic, and they are not in callee position.
 VSLOT_PTR = re.compile(r'\(\*\((?P<cast>int|uint|unsigned int|undefined4|kd_[iu]ptr)'
-                       r'\s*\*\)\s*(?P<obj>[A-Za-z_]\w*)\s*\+\s*'
+                       r'\s*\*\)\s*(?P<obj>[A-Za-z_]\w*(?:(?:->|\.)[A-Za-z_]\w*)*)\s*\+\s*'
                        r'(?P<off>0x[0-9a-fA-F]+|\d+)\)(?=\)\s*\()')
 VPTR_FIRST = re.compile(r'^\s*code\s*\*\*\s*_vptr_')
 
@@ -230,10 +252,26 @@ def main():
                           '(%d * (int)sizeof(void *))' % (k // I386_PTR),
                           '%-26s %-42s slot %d (+%d)'
                           % (fn, m.group('obj'), k // I386_PTR, k)))
+        # ⚠ THE STORE AND THE SLOTS ARE ONE REPAIR. Every slot read off a
+        # polymorphic local must be scaled together with the address point that
+        # produced its vptr; scaling one and not the other moves every call by a
+        # slot. Refuse rather than half-apply — a spelling this pass cannot read
+        # is a rule that stopped matching, not an object with nothing to do.
+        missed = [m for m in VSLOT_ANY.finditer(text0)
+                  if m.group('obj') in objs and not any(
+                      v.start('off') == m.start('off')
+                      for v in VSLOT.finditer(text0))]
+        if missed:
+            sys.exit('fix_vtable_offsets: %s has %d slot read(s) off a polymorphic '
+                     'local (%s) in a spelling VSLOT does not match — e.g. %r. The '
+                     'address point would be scaled and these would not, which moves '
+                     'every one of those calls by a slot.'
+                     % (fn, len(missed), ', '.join(sorted({m.group('obj') for m in missed})),
+                        text0[missed[0].start():missed[0].end()]))
         for m in VSLOT_PTR.finditer(text0):
             k = int(m.group('off'), 0)
-            region = FNP.region_of(text0, m.start())
-            tag = FNP.tag_of(FNP.declared_type(region, m.group('obj')) or '', inc)
+            tag = FNP.tag_of(
+                FNP.lvalue_type(text0, m.start(), m.group('obj'), inc) or '', inc)
             body = FNP.headers(inc)[0].get(tag or '', '')
             if not VPTR_FIRST.match(body):
                 continue                     # not a polymorphic object: see VSLOT_PTR

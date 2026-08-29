@@ -195,10 +195,26 @@ MEMBER = re.compile(r'(?m)^[ \t]+(?P<ty>(?:const\s+|struct\s+|unsigned\s+)*[A-Za
                     r'[ \t]*\**)[ \t]*(?P<name>[A-Za-z_]\w*)[ \t]*(?:\[[^\]]*\])?[ \t]*;')
 
 _BODIES = {}
+_KW = {}
 
 
 def struct_bodies(inc):
-    """tag -> the text between its braces, for every struct with a body."""
+    """tag -> the text between its braces, for every struct with a body.
+
+    ★ ANONYMOUS TYPEDEFS COUNT, AND LEAVING THEM OUT MADE AN ENTIRE FAMILY
+    INVISIBLE. The SDK declares every concrete geometry as
+    `typedef struct { McdGeometry m_g; MeReal mR[3]; ... } McdBox;` — no tag
+    before the brace — so a scan for `struct NAME {` finds none of them, their
+    offset maps come back EMPTY, and every site addressing one reads as "out of
+    scope, the base carries no structure". That is 412 sites across 16 objects,
+    and it is why `McdBoxUpdateAABB` still read the box half-extents at the i386
+    `+0x10/0x14/0x18` — 32 bytes early at LP64, where `_McdGeometry` is 32 bytes
+    rather than 16. The AABB came back as a POINT, so the broadphase never
+    reported the box/plane pair until the box centre was already through the
+    plane and `scene_boxes_on_plane` diverged at the first contact.
+
+    `_KW` records how each name has to be spelled in a probe, because
+    `((struct McdBox *)0)` does not compile and `((McdBox *)0)` does."""
     if _BODIES:
         return _BODIES
     for root in (os.path.join(HERE, 'include'), inc):
@@ -207,18 +223,36 @@ def struct_bodies(inc):
                 if not fn.endswith('.h'):
                     continue
                 txt = open(os.path.join(dirpath, fn), errors='ignore').read()
-                for m in re.finditer(r'\bstruct\s+(\w+)\s*\{', txt):
-                    depth, i = 0, m.end() - 1
+
+                def body_at(brace):
+                    depth, i = 0, brace
                     while i < len(txt):
                         if txt[i] == '{':
                             depth += 1
                         elif txt[i] == '}':
                             depth -= 1
                             if depth == 0:
-                                break
+                                return i
                         i += 1
+                    return len(txt)
+
+                for m in re.finditer(r'\bstruct\s+(\w+)\s*\{', txt):
+                    i = body_at(m.end() - 1)
                     _BODIES.setdefault(m.group(1), txt[m.end():i])
+                    _KW.setdefault(m.group(1), 'struct ')
+                for m in re.finditer(r'\btypedef\s+struct\s*\{', txt):
+                    i = body_at(m.end() - 1)
+                    name = re.match(r'\s*(\w+)\s*;', txt[i + 1:])
+                    if not name:
+                        continue
+                    _BODIES.setdefault(name.group(1), txt[m.end():i])
+                    _KW.setdefault(name.group(1), '')
     return _BODIES
+
+
+def kw_of(tag):
+    """`struct ` or nothing, for spelling this tag in a probe."""
+    return _KW.get(tag, 'struct ')
 
 
 _PATHS = {}
@@ -274,17 +308,19 @@ def build_paths(inc, cache):
     while work:
         probes = []
         for t, e, _ty, _b in work:
-            probes += ['((char *)&((struct %s *)0)->%s - (char *)0) + 1' % (t, e),
-                       'sizeof(((struct %s *)0)->%s) + 1' % (t, e),
-                       'sizeof(((struct %s *)0)->%s[0]) + 1' % (t, e)]
+            k = kw_of(t)
+            probes += ['((char *)&((%s%s *)0)->%s - (char *)0) + 1' % (k, t, e),
+                       'sizeof(((%s%s *)0)->%s) + 1' % (k, t, e),
+                       'sizeof(((%s%s *)0)->%s[0]) + 1' % (k, t, e)]
         measure_many(probes, inc, cache)
         nxt = []
         for t, e, ty, b in work:
-            off = cache.get('((char *)&((struct %s *)0)->%s - (char *)0) + 1' % (t, e))
+            k = kw_of(t)
+            off = cache.get('((char *)&((%s%s *)0)->%s - (char *)0) + 1' % (k, t, e))
             if off is None:
                 continue
-            msz = cache.get('sizeof(((struct %s *)0)->%s) + 1' % (t, e)) or 1
-            esz = cache.get('sizeof(((struct %s *)0)->%s[0]) + 1' % (t, e)) or 1
+            msz = cache.get('sizeof(((%s%s *)0)->%s) + 1' % (k, t, e)) or 1
+            esz = cache.get('sizeof(((%s%s *)0)->%s[0]) + 1' % (k, t, e)) or 1
             off, msz, esz = off - 1, msz - 1, esz - 1
             if head:
                 _HEAD[t].setdefault(off, e)
@@ -386,6 +422,9 @@ def declared_type(region, var):
 # A base whose declared type carries no structure tells us nothing, and a
 # thousand of them reported as "declined" buries the sites that could be
 # repaired. They are out of scope, not refused.
+# The concrete geometry a file registers — the installer evidence for the
+# `void *` geometry bases. See the block that consumes it.
+GEOM_REG = re.compile(r'McdFrameworkRegisterGeometryType\s*\(\s*[^,]+,\s*[^,]+,\s*"(?P<name>\w+)"')
 OPAQUE = re.compile(r'^(void|undefined\d*|int|uint|char|float|double|code'
                     r'|MeReal|MeU\d+|MeI\d+)\b')
 
@@ -713,6 +752,15 @@ def main():
     opaque_var = {}                    # (file, function, var) -> tag
     param_of = {}                      # FUNCTION -> (arg index, tag)
     notes_early = []
+    # ⚠ A DECLINE IS ONLY A DECLINE IF NOTHING LATER TYPES THE VARIABLE.
+    # The rules run in order and a later one routinely answers what an earlier
+    # one could not: `McdBoxUpdateAABB`'s `pvVar7` is declined by the RETURNS
+    # rule (correctly — `_McdGeometry` has no field at +0x10) and then typed by
+    # the registration rule. Printed as written, the report claimed a decline on
+    # a site that had been repaired in the same run. These are keyed by the
+    # variable they are about and emitted at the end, only if it is still
+    # untyped.
+    pending = {}
     for fn, text in texts.items():
         for b in BANNER.finditer(text):
             func = b.group(1)
@@ -827,7 +875,7 @@ def main():
                 if all(o in paths for o in by_var[v]):
                     opaque_var[(fn, func, v)] = tag
                 else:
-                    notes_early.append(
+                    pending[(fn, func, v)] = (
                         '%-26s %s: %s reads %s::%s (%s) but %d of its %d offsets do '
                         'not land — declined'
                         % (fn, func, v, f.group('tag'), f.group('path'), tag,
@@ -853,7 +901,7 @@ def main():
                 named.discard(None)
                 if len(named) != 1:
                     if named:
-                        notes_early.append(
+                        pending[(fn, func, v)] = (
                             '%-26s %s: %s is assigned from calls returning %s — declined'
                             % (fn, func, v, ', '.join(sorted(named))))
                     continue
@@ -862,13 +910,68 @@ def main():
                 if all(o in paths for o in offs):
                     opaque_var[(fn, func, v)] = tag
                 else:
-                    notes_early.append(
+                    pending[(fn, func, v)] = (
                         '%-26s %s: %s reads as %s but %d of its %d offsets do not '
                         'land — declined' % (fn, func, v, tag,
                                              sum(1 for o in offs if o not in paths),
                                              len(offs)))
 
+    # ---- THE CONCRETE GEOMETRY THE FILE REGISTERS. See GEOM_REG.
+    #
+    # `McdBox.c` calls McdFrameworkRegisterGeometryType(frame, 2, "McdBox", ...)
+    # and hands it that file's own destroy/updateAABB/getBSphere/maximumPoint
+    # functions. So the object under every geometry pointer in that file IS an
+    # `McdBox` — the same installer evidence LP64-OPAQUE-API used for MdtBcl,
+    # one indirection shallower.
+    #
+    # It is needed because the DECLARED type is the base class and the base
+    # class is where the growth happens: `McdGeometryInstanceGetGeometry` is
+    # declared to return `McdGeometry *`, `_McdGeometry` is 16 bytes at i386 and
+    # 32 at LP64, and every concrete geometry's own fields sit immediately after
+    # it. The RETURNS rule above therefore reads `_McdGeometry`, finds that none
+    # of `+0x10/0x14/0x18` land on it, and declines — correctly, on the type it
+    # was given. The registration is what names the type it should have had.
+    #
+    # ⚠ ONE REGISTRATION PER FILE OR NOTHING. The `Ix*` interaction objects
+    # register no geometry and handle TWO of them — `IxSphylPrimitives` has 227
+    # of these sites across sphyl/box/sphere/plane — so a per-file answer there
+    # would be a guess. They are left to per-site typing and reported.
+    for fn, text in texts.items():
+        names = {m.group('name') for m in GEOM_REG.finditer(text)}
+        if len(names) != 1:
+            continue
+        tag = names.pop()
+        paths = offsets_of(tag, inc, cache)
+        if not paths:
+            notes_early.append('%-26s registers "%s" but that type has no offset '
+                               'map — declined' % (fn, tag))
+            continue
+        for b in BANNER.finditer(text):
+            func, region = b.group(1), region_of(text, b.start())
+            by_var = {}
+            for m in all_sites(region):
+                v = m.group('base')
+                if '->' in v or (fn, func, v) in opaque_var:
+                    continue
+                # The declared type must be opaque, or the geometry BASE that
+                # this rule exists to refine. Anything else already has an
+                # answer and is not ours to overrule.
+                dt = declared_type(region, v) or 'void *'
+                if not OPAQUE.match(dt) and tag_of(dt, inc) != '_McdGeometry':
+                    continue
+                by_var.setdefault(v, set()).add(int(m.group('off'), 0))
+            for v, offs in sorted(by_var.items()):
+                if all(o in paths for o in offs):
+                    opaque_var[(fn, func, v)] = tag
+                else:
+                    pending[(fn, func, v)] = (
+                        '%-26s %s: %s against the registered %s — %d of %d offsets '
+                        'do not land, declined'
+                        % (fn, func, v, tag,
+                           sum(1 for o in offs if o not in paths), len(offs)))
+
     fixed = declined = skipped = 0
+    notes_early += [m for k, m in sorted(pending.items()) if k not in opaque_var]
     notes = list(notes_early)
     for fn, text0 in texts.items():
         text = text0
@@ -966,8 +1069,8 @@ def main():
             # re-spelling the whole address as `&p->FIELD` changes what gcc
             # knows and is NOT byte-identical here.
             s, e = m.span('off')
-            edits.append((s, e, '((int)((char *)&((struct %s *)0)->%s - (char *)0))'
-                          % (tag, field),
+            edits.append((s, e, '((int)((char *)&((%s%s *)0)->%s - (char *)0))'
+                          % (kw_of(tag), tag, field),
                           '%-26s %-14s +0x%-4x -> %s->%s'
                           % (fn, tag, off, m.group('base'), field)))
 

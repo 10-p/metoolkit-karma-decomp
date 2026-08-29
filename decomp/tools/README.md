@@ -544,14 +544,17 @@ python3 tools/fix_ptrwidth.py        /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/fix_narrow_pointers.py /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/fix_align_masks.py     /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/fix_frame_slots.py     /tmp/kd_lp64/allobj /tmp/kd_build $MT
+python3 tools/fix_pool_reserve.py    /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/check_frame_bounds.py  /tmp/kd_lp64/allobj /tmp/kd_build   # must read 0
 KD_OUT=/tmp/kd_lp64 ./test/lp64_run.sh
 ```
 
-⚠ **The last three are ordered and not interchangeable.** `fix_ptrwidth` writes the `kd_iptr`
-that the other two key on; `fix_narrow_pointers` widens the locals whose alignment masks
+⚠ **The last four are ordered and not interchangeable.** `fix_ptrwidth` writes the `kd_iptr`
+that the next two key on; `fix_narrow_pointers` widens the locals whose alignment masks
 `fix_align_masks` then has to recognise, and a mask on a widened local has no cast in it to
-match. Getting that pair backwards silently costs five masks.
+match. `fix_pool_reserve` is last for a different reason: it **learns** the element size from
+the allocations `fix_narrow_pointers` repairs, and before that pass `NAZ` and `NR` are spelled
+identically, so running it early makes it print a clean, wrong zero. It refuses that case.
 
 `fix_ptrwidth.py` and `fix_narrow_pointers.py` need the Android NDK; they default to
 `/home/ion/Android/Sdk/ndk/30.0.14904198/...` and take `KD_NDK` to override.
@@ -712,7 +715,7 @@ landed. **Diff the source; do not read the summary.**
 
 ```bash
 python3 tools/fix_literal_offsets.py /tmp/kd_lp64/allobj /tmp/kd_build
-#   -> 643 rewritten, 13 declined, 1046 out of scope
+#   -> 765 rewritten, 13 declined, 924 out of scope
 ```
 
 `*(code **)((char *)p + 200)` is `CxSmallSort::mAABBUpdateFn` **on i386**; at LP64 it is 392.
@@ -781,6 +784,45 @@ those as refusals buries the ones that can be repaired.
 > on their line, and that silence is exactly the signal array-ness is read from. Cross-checked
 > against the one-process-per-probe version: 88 paths for `MdtBSJoint`, 123 for `MdtContact`,
 > both ways.
+
+★★ **AND AN ENTIRE TYPE FAMILY WAS MISSING FROM THAT MAP.** The SDK declares every concrete
+geometry as an **anonymous** struct typedef —
+
+```c
+typedef struct { McdGeometry m_g; MeReal mR[3]; MeReal mRadius; } McdBox;
+```
+
+— with no tag before the brace, and the map was built by scanning for `struct NAME {`. So
+`McdBox`, `McdSphere`, `McdCylinder`, `McdSphyl`, `McdConvexMesh`, `McdAggregate` and `McdNull`
+all had **empty** offset maps, every site addressing one read as "out of scope, the base carries
+no structure", and **412 sites across 16 objects** sat in that bucket unexamined.
+
+What it cost: `McdBoxUpdateAABB` read the box half-extents at the i386 `+0x10/0x14/0x18`.
+`_McdGeometry` is 16 bytes here and **32** there, so at LP64 those land inside the base and read
+**zero** — the box's AABB came back as a POINT, the broadphase never reported the box/plane pair
+until the box CENTRE was through the plane, and `scene_boxes_on_plane` diverged at first contact.
+Measured, not inferred: the AABB reads `-0.505,-0.405,z-0.305 .. +0.505,+0.405,z+0.305` at i386
+against `-0.005,-0.005,z-0.005 .. +0.005,+0.005,z+0.005` at LP64 — half-extents exactly zero plus
+the 0.005 margin — and a call counter on `McdBoxPlaneIntersect` reads `0,1,2,3,4` across steps
+43–47 at i386 against `0,0,0,0,1` at LP64. **The narrow phase was never wrong; it was never
+called.** `_KW` records how each name has to be spelled in a probe, because
+`((struct McdBox *)0)` does not compile and `((McdBox *)0)` does.
+
+**A fourth source of type, and it is the installer again one indirection shallower.** `McdBox.c`
+calls `McdFrameworkRegisterGeometryType(frame, 2, "McdBox", ...)` and hands it that file's own
+destroy/updateAABB/getBSphere, so the object under every geometry pointer in that file **is** an
+`McdBox`. It is needed because the DECLARED type is the base class and the base class is where
+the growth happens: `McdGeometryInstanceGetGeometry` returns `McdGeometry *`, so the callee-return
+rule reads `_McdGeometry`, finds that none of `+0x10/0x14/0x18` land on it, and declines —
+correctly, on the type it was given. ⚠ **One registration per file or nothing:** the `Ix*`
+interaction objects register none and handle **two** geometries (`IxSphylPrimitives` has 227 such
+sites), so a per-file answer there would be a guess and they are reported instead.
+
+⚠ **AND A DECLINE IS ONLY A DECLINE IF NOTHING LATER TYPES THE VARIABLE.** The rules run in order
+and a later one routinely answers what an earlier one could not — `pvVar7` is declined by the
+callee-return rule and then typed by the registration rule. Printed as written, the report claimed
+a decline on a site repaired in the same run. Declines are keyed by the variable they are about
+and emitted at the end, only if it is still untyped.
 
 ### `fix_derived_fields.py` — a derived struct's field addressed as an index past its base
 
@@ -857,7 +899,7 @@ all and would still pass byte-identity piece by piece.
 
 ```bash
 python3 tools/fix_vtable_offsets.py /tmp/kd_lp64/allobj /tmp/kd_build
-#   -> 26 rewritten, 0 declined
+#   -> 56 rewritten, 0 declined
 ```
 
 The address point is `2 * sizeof(void *)` and slot n is `n * sizeof(void *)`; Ghidra bakes both
@@ -886,11 +928,31 @@ having already rewritten every literal on the first. The count is taken before a
 written now, and it counts the repaired spelling too: **a search has to recognise its own
 output.**
 
+★★ **AND THE STORE AND THE SLOTS ARE ONE REPAIR — HALF-APPLIED IS WORSE THAN NOT APPLIED.**
+`VPTR_STORE` accepted `char|undefined4|void` while `VSLOT`, its own partner, read `char **`
+only. On `keaLCPSolver.c`, where Ghidra spells the store `(*(undefined4 **)&vanillaQMatrix)`,
+the ADDRESS POINT was scaled and the eight SLOT reads were not — so at LP64 the vptr sat
+correctly at `&vtable[2]` with the slots still four bytes apart, `+ 8` reached slot **one**, and
+`makeFromColMajorPSM` (nine arguments, called with nine) dispatched into `makeFromJMJT`
+(seven). It left `NAZ[0]` NULL and the SEGV landed two functions later at
+`keaMatrix_PcSparse_vanilla.c:303`. The measurement that pins it: the i386 slots are
+`+0`=allocate(1 arg), `+8`=makeFromColMajorPSM(9), `+12`=factorize(0), `+16`=solve(2), and the
+four call sites pass exactly 1, 9, 0 and 2 arguments. The alternations match now, and a slot
+read the pass cannot parse is a **refusal**, not a skip.
+
+⚠ **The object is usually a MEMBER, not a bare local.** `VSLOT_PTR` matched a bare identifier,
+which is why it read **one** site where the corpus has twenty-two — every real one is
+`this->A`, `this->suspect`, `this->correct`. The solver reaches its matrix through a field;
+that is the ordinary case, not the exception. The two MdtLOD sites that share the shape stay
+excluded twice over: `contact2` is not polymorphic, and they are not in callee position.
+
 ### `fix_narrow_pointers.py` — a pointer held in something four bytes wide
 
 ```bash
 python3 tools/fix_narrow_pointers.py /tmp/kd_lp64/allobj /tmp/kd_build
 #   -> 13 locals + 50 accesses + 29 values + 47 pointer-array walks, 0 declined
+#      + 8 negative offsets (I) + 27 negative offset CHAINS (I2) + 1 pointer
+#        compared against a narrowed address (J)
 ```
 
 **This is the class `fix_ptrwidth.py` has been reporting as "N diagnostic(s) remain".** That one
@@ -938,6 +1000,95 @@ masks.
 > `watch -l pool_ptr if ((unsigned long)pool_ptr) < 0x100000000`. Two rounds of reading the
 > allocator had not.
 
+**I2 — the same negative offset without the multiply.** `NEG_MUL` matched `* -N`, which was
+only the spelling that happened to be looked at first. `auStack_3c + -uVar6`,
+`auStack_3c[iVar2 - uVar6]` and `coef + (-1 - order)` are the identical defect: an additive
+chain evaluated in 32-bit unsigned arithmetic whose value is meant to be negative. 27 sites.
+
+★ **The cast goes on the FIRST IDENTIFIER, not around the result.**
+`(kd_uptr)((uVar3 - 2) - order)` is the defect with a cast on it — the subtraction still
+happens in 32 bits and the zero-extension still happens afterwards. `((kd_uptr)uVar3 - 2) - order`
+is the repair; a leading literal-only prefix (`-1 - order`) converts exactly at either width.
+
+⚠ **Byte-identity cannot gate this class** — `kd_uptr` IS `unsigned int` at i386, so a site
+chosen wrongly compiles to the same object. What makes it safe is that the repair reproduces
+the *i386 answer* at any width in **both** directions: where the chain is positive the widened
+arithmetic gives the same small value, and where it wraps the 64-bit wrap lands exactly where
+the 32-bit one did. So the discriminators are about not editing arithmetic that is not an
+offset at all — the base must resolve to a **pointer** (without that test the same shape
+matches `fVar9 * -fVar8` in IxBoxCylinder and `-lVar2 * lVar4` in MeMath), and one operand must
+be 32-bit **unsigned** (a signed chain sign-extends and is already right, which is also what
+keeps ordinary `arr[i - 1]` out).
+
+⚠ **It addresses a DIFFERENT ARRAY from the line above it, and that is the trap.** In
+`solveLCP`, `auStack_3c + -uVar6` is ELEMENT arithmetic on a `uint *` and lands at `-4*uVar6`,
+while `(kd_iptr)auStack_3c - uVar6` five lines earlier is BYTE arithmetic and lands at
+`-1*uVar6`. Measured both ways and confirmed against the shipped object: the i386 `solveLCP`
+does **six successive `sub %edi,%esp`**, one per block, so the frame is a partition of six and
+reading the two spellings as the same block would have aliased two live arrays. The self-check
+compiles that six-block frame at both widths and reads the byte deltas back.
+
+**J — a pointer compared against a 32-bit-narrowed address.**
+
+```c
+if (pool_max < (uint)(size + (kd_iptr)pool_ptr)) { ... }
+```
+
+Both are `void *`; the sum is an ADDRESS and the `(uint)` cuts its top half off, so the kea
+pool reads as exhausted the moment it is handed memory above 4 GB. `scene_boxes_on_plane` dies
+at step 60 with *"Memory pool size exceeded when allocating NCZ"* against a pool that has room.
+
+⚠ **Nothing in the compiler can see this** — measured under `-Wall`, `-Wextra`,
+`-Wint-conversion` and `-Weverything`, clang says nothing. `fix_ptrwidth`, whose site list IS
+clang's diagnostics, structurally cannot reach it.
+
+⚠ **It is an ADDRESS, not a DIFFERENCE**, and that is the whole discriminator.
+`(int)((kd_iptr)pLVar4 - uVar3)` in CxSmallSort and the nine
+`(int)((kd_iptr)p + (… - (kd_iptr)buffer))` in MeProfile/MeXMLOutput are COUNTS, correct at
+every width. 31 sites share the shape; one is compared against something that resolves to a
+pointer. ⚠ And its first run read **zero**, because a file-scope `extern void *pool_max;`
+resolves in no function region, so every candidate was dropped as "not a pointer" — a search
+that could not find anything, reporting nothing to find. The self-check asks the resolver for
+that exact shape now.
+
+### `fix_pool_reserve.py` — a pool reservation frozen at the i386 element size
+
+```bash
+python3 tools/fix_pool_reserve.py /tmp/kd_lp64/allobj /tmp/kd_build
+#   -> 8 reservations scaled, 0 declined
+```
+
+`fix_narrow_pointers` rule G repairs the ALLOCATION — `keaPoolAlloc(n << 2, "NAZ")` becomes
+`n * sizeof(void *)`. Nothing repaired the other half. The kea pool is one arena, sized up
+front by `MdtKeaMemoryRequired`, and that function computes the same sizes a **second time**,
+so at LP64 every allocation asks for twice what the arena reserved and the pool runs dry
+mid-step: a 5,664-byte pool, 32 bytes left, a 128-byte `NCZ` request at step 60.
+
+★ **The rounding ADDEND is elements too, and scaling only the stride fixes nothing.**
+`(uVar27 & 0xfffffff0) * 4 + 0x40` is Ghidra's rendering of `((n + 15) & ~15) * 4`: the `0x40`
+is `16 * 4`, the sixteen elements the round-up adds. With these matrices `n` is under 16, so
+`uVar27 & 0xfffffff0` is **zero** and the addend IS the whole reservation. The first patch
+scaled the `* 4` alone, changed the pool by not one byte, and read exactly like a wrong
+diagnosis. `McdContactSimplify`'s alloca taught the same lesson from the other end.
+
+**Which terms, and it is not a guess in either half.** The element size per pool NAME is read
+off the allocation itself; which reservation is which is anchored on the names Ghidra recovered
+from DWARF (`ANAZ`, `ANCZ`, `ANR`, `ANC`, `QNC` — each ends with a pool name); and the two the
+decompiler left unnamed are typed by their derivation, with the named five **confirming** that
+split rather than being assumed to fit it. A group with no anchor is refused.
+
+⚠ **The discriminator reached for first over-matched.** "The count is a self-multiplication, so
+it is the blocks×blocks pointer array" also fits `iVar2 = iVar12 * 4` in the same function —
+the A matrix, `c4size * c4size` MeReals, a squared count holding **floats**. What separates
+them is that a rounded reservation is a **pair of branches** assigning the same local; a lone
+`X = n * 4` is a plain array size.
+
+⚠ **And the repair is offered to the compiler, not derived.** `uVar27 << 2` →
+`uVar27 * (int)sizeof(void *)` is the obvious rewrite and is **not** byte-identical;
+`(uVar27 << 2) + uVar27 * ((int)sizeof(void *) - 4)` is. For the addend sites the direct
+rewrite *is* identical. Which one gcc schedules the same way is a property of the surrounding
+function, so each candidate is compiled and the first that reproduces the baseline is kept.
+
 ### `fix_align_masks.py` — an alignment mask frozen at 32 bits
 
 ```bash
@@ -982,6 +1133,24 @@ scan walks back from the `&` to its own enclosing parenthesis and asks about tha
 python3 tools/fix_frame_slots.py /tmp/kd_lp64/allobj /tmp/kd_build
 #   -> 22 areas scaled, 0 declined on byte-identity (7 declined as ambiguous)
 ```
+
+★★ **AND ITS TRAILING-ADDEND RULE HAD SILENTLY STOPPED MATCHING.** `FRAME_OFF2` required a
+literal `(int)` cast in front of the frame group:
+
+```c
+*(int **)((int)(kd_frame + 0) + 8) = clamped;      /* what the rule was written for */
+*(int **)((kd_iptr)(kd_frame + 0) + 8) = clamped;  /* what it actually sees */
+```
+
+`fix_ptrwidth` runs **four passes earlier** and rewrites that cast, so 20 sites never matched
+and **no decline was printed** — a pattern that does not fire has nothing to report. `this`
+goes to argument word one and `clamped` to word two, so at LP64 the write of `this` lands on
+top of `clamped`'s low half and the read comes back `0x00007fff00007fff`, the two pointers'
+high halves interleaved; that is the `rsi` in the `setClampedValues` SEGV, and the arithmetic
+predicts it exactly. The matcher is **structural** now — it walks out to the frame group's own
+closing parenthesis and asks what follows it — so no cast spelling can blind it, and its
+self-check runs it under `(int)`, `(kd_iptr)`, `(kd_uptr)` and no cast at all, plus once over
+its own output.
 
 The i386 code pushes its arguments, so Ghidra fabricates a local to hold the outgoing area and
 writes each word into it at a constant byte offset — then reads the same offsets back as the

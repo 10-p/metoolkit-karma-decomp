@@ -227,6 +227,75 @@ def declared_type(region, var):
     return None
 
 
+def any_declared_type(region, var):
+    """`declared_type`, plus the declaration-with-an-initialiser form.
+
+    That form is deliberately excluded there — `x = y;` would otherwise read as
+    a declaration of `y` — so this asks for it separately, requiring TWO tokens
+    before the `=`."""
+    ty = declared_type(region, var)
+    if ty:
+        return ty
+    m = re.search(DECL_INIT % re.escape(var), region)
+    if m:
+        ty = re.sub(r'\s+', ' ', m.group('ty')).strip()
+        if ty.split()[0] not in ('return', 'goto', 'break', 'continue',
+                                 'if', 'while', 'for', 'else'):
+            return ty
+    return None
+
+
+def neg_chain_sites(text, inc):
+    """Every pointer offset computed in 32-bit arithmetic that goes negative.
+
+    Yields `(start, end, replacement, note)` — the cast goes on the FIRST
+    identifier of the chain so the whole chain is evaluated at pointer width.
+    See NEG_CHAIN for why the base has to be a pointer and why one operand has
+    to be 32-bit unsigned."""
+    out = []
+    for m in NEG_CHAIN.finditer(text):
+        if m.group('i') is not None:
+            cs, ce = m.span('i')
+            probe = text[cs:ce]
+            shown = '%s[%s]' % (m.group('b'), probe.strip())
+        elif m.group('p') is not None:
+            cs, ce = m.span('p')
+            probe = text[cs:ce]
+            shown = '%s + (%s)' % (m.group('b'), probe.strip())
+        else:
+            cs, ce = m.span('u')
+            probe = '-' + text[cs:ce]           # the unary minus IS the chain
+            shown = '%s + %s' % (m.group('b'), probe.strip())
+        chain = text[cs:ce]
+        if not chain.strip() or not CHAIN_SAFE.match(chain):
+            continue
+        # ⚠ A SEARCH HAS TO RECOGNISE ITS OWN OUTPUT. Without this the repaired
+        # chain still matches — the first identifier is unchanged — and every
+        # round would cast it again.
+        if 'kd_uptr' in chain or 'kd_iptr' in chain:
+            continue
+        if not SUB_VAR.search(probe):
+            continue                            # nothing is being subtracted
+        region = region_of(text, m.start())
+        bt = any_declared_type(region, m.group('b'))
+        if not bt or not is_pointer(bt, inc):
+            continue                            # float arithmetic, not an offset
+        ids = list(IDENT.finditer(chain))
+        if not ids:
+            continue
+        types = {i.group(0): (any_declared_type(region, i.group(0)) or '')
+                 for i in ids}
+        if not any(types[i.group(0)] in UNSIGNED32 for i in ids):
+            continue                            # a signed chain sign-extends
+        first = ids[0]
+        if types[first.group(0)] not in UNSIGNED32 + ('int', 'MeI32'):
+            continue                            # not a 32-bit integer operand
+        out.append((cs + first.start(), cs + first.end(),
+                    '(kd_uptr)%s' % first.group(0),
+                    '%-44s -> (kd_uptr)%s' % (shown, first.group(0))))
+    return out
+
+
 def lvalue_type(text, pos, lv, inc):
     """The declared type of `a->b.c`, following each member in turn."""
     parts = re.split(r'->|\.', lv)
@@ -240,6 +309,47 @@ def lvalue_type(text, pos, lv, inc):
         if not ty:
             return None
     return ty
+
+
+def file_scope_type(text, var):
+    """The type of a FILE-SCOPE object — `extern void *pool_max;`.
+
+    ⚠ `region_of` splits the file at the per-function banners, so a global is
+    in NO function's region and `declared_type` cannot see it. That is not a
+    missing feature, it is a silent zero: the first run of rule J below read
+    "0 sites" corpus-wide with the one real site sitting in front of it,
+    because `pool_max` resolved to nothing and every candidate was dropped as
+    "not a pointer". Checked against a known positive, which is the only way a
+    zero from a search means anything."""
+    m = re.search(GLOBAL_DECL % re.escape(var), text)
+    if not m:
+        return None
+    ty = re.sub(r'\s+', ' ', m.group('ty')).strip()
+    return None if ty.split()[0] in ('return', 'goto', 'typedef') else ty
+
+
+def any_type(text, pos, lv, inc):
+    """`lvalue_type`, falling back to file scope for a bare global."""
+    ty = lvalue_type(text, pos, lv, inc)
+    if ty:
+        return ty
+    return None if re.search(r'->|\.', lv) else file_scope_type(text, lv)
+
+
+def pointer_compare_sites(text, inc):
+    """A POINTER COMPARED AGAINST A 32-BIT-NARROWED ADDRESS. See PTR_CMP_*."""
+    out = []
+    for rx, mirrored in ((PTR_CMP_L, False), (PTR_CMP_R, True)):
+        for m in rx.finditer(text):
+            ty = any_type(text, m.start(), m.group('lv'), inc)
+            if not ty or not is_pointer(ty, inc):
+                continue
+            out.append((m.start('ty'), m.end('ty'),
+                        fix_ptrwidth.WIDEN[m.group('ty')],
+                        'ptrcmp %s (%s) %s (%s)(...) -> (%s)'
+                        % (m.group('lv'), ty, m.group('op'), m.group('ty'),
+                           fix_ptrwidth.WIDEN[m.group('ty')])))
+    return out
 
 
 def compiles_identically(fn, text, build, inc):
@@ -374,6 +484,90 @@ I386_PTR = 4
 NEG_MUL = re.compile(r'\(kd_[iu]ptr\)[^;()]*?\+\s*(?P<v>[A-Za-z_]\w*)\s*\*\s*(?P<k>-\d+)')
 UNSIGNED32 = ('uint', 'unsigned int', 'undefined4', 'MeU32')
 
+# I2: THE SAME DEFECT WITHOUT THE MULTIPLY, and `* -N` was only the spelling
+# that happened to be looked at first. The offset chain is the defect; how it
+# is written is not:
+#
+#     puVar9 = auStack_3c + -uVar6;              /* keaLCP_new.c:268 */
+#     auStack_3c[iVar2 - uVar6] = ...;           /* :293, and eight more */
+#     coef_00 = coef + (-1 - order);             /* Polynomial.c:106  */
+#
+# Every one is an additive chain evaluated in 32-BIT UNSIGNED arithmetic whose
+# value is meant to be NEGATIVE. At i386 the pointer addition wraps in 32 bits
+# and lands where it should; at LP64 the 32-bit result is ZERO-EXTENDED and the
+# pointer moves four gigabytes. `-uVar6` on a `uint` is a huge unsigned exactly
+# as `uVar6 * -2` is — the unary minus is not a subtraction of the pointer.
+#
+# ★ THE CHAIN MUST BE EVALUATED AT POINTER WIDTH, so the cast goes on the FIRST
+# IDENTIFIER and not around the result. `(kd_uptr)((uVar3 - 2) - order)` is the
+# defect with a cast on it: the subtraction still happens in 32 bits and the
+# zero-extension still happens afterwards. `((kd_uptr)uVar3 - 2) - order` is the
+# repair. A leading literal-only prefix (`-1 - order`) is exact at either width,
+# which is why casting the first identifier is enough rather than the first
+# operand.
+#
+# ★ WHY IT IS RIGHT WHEREVER IT MATCHES, which matters because BYTE-IDENTITY
+# CANNOT GATE THIS CLASS — `kd_uptr` IS `unsigned int` at i386, so a site chosen
+# wrongly still compiles to the same object. The repair reproduces the i386
+# ANSWER at any pointer width, in both directions: where the chain is positive
+# the widened arithmetic gives the same small value, and where it wraps the
+# 64-bit wrap lands exactly where the 32-bit one did. So the discriminators are
+# about not editing arithmetic that is not an OFFSET at all, not about which
+# offsets are wrong.
+# ⚠ Hence the base must resolve to a POINTER. Without that test the same shape
+# matches float arithmetic — `fVar9 * -fVar8 + -fVar4 * fVar6` in IxBoxCylinder,
+# `-lVar2 * lVar4 * lVar6` in MeMath — where a `(kd_uptr)` cast is nonsense.
+# ⚠ And at least one identifier in the chain must be 32-bit UNSIGNED, because a
+# signed `int` chain sign-extends and is already right. That is the same caveat
+# rule I carries above, and it is what keeps ordinary `arr[i - 1]` out.
+NEG_CHAIN = re.compile(r'\b(?P<b>[A-Za-z_]\w*)\s*'
+                       r'(?:\[(?P<i>[^][]*)\]'
+                       r'|\+\s*\((?P<p>[^()]*)\)'
+                       r'|\+\s*-(?P<u>[A-Za-z_]\w*)\b)')
+# Only chains this can reason about: identifiers, integer literals, + - * and
+# parentheses. Anything else (a call, a cast, another subscript) is left alone.
+CHAIN_SAFE = re.compile(r'^[\sA-Za-z_0-9()+*\-]*$')
+SUB_VAR = re.compile(r'-\s*[A-Za-z_]')
+IDENT = re.compile(r'\b[A-Za-z_]\w*\b')
+# A declaration WITH an initialiser, which `declared_type` deliberately will not
+# match. The materialised frame base is written that way and is the pointer half
+# of every keaLCP site: `uint *auStack_3c = (uint *)(kd_frame + ...);`
+DECL_INIT = (r'(?m)^[ \t]*(?P<ty>(?:const |struct |unsigned )*[A-Za-z_]\w*'
+             r'[ \t]*\**)[ \t]*%s[ \t]*=[^=]')
+# A file-scope object, which lives in no function region at all. See file_scope_type.
+GLOBAL_DECL = (r'(?m)^(?:extern\s+|static\s+)?(?P<ty>(?:const\s+|struct\s+|unsigned\s+)*'
+               r'[A-Za-z_]\w*[ \t]*\**)\s*%s\s*(?:\[[^\]]*\])?\s*;')
+
+# J: A POINTER COMPARED AGAINST A 32-BIT-NARROWED ADDRESS.
+#
+#     if (pool_max < (uint)(size + (kd_iptr)pool_ptr)) { ... }
+#
+# `pool_max` and `pool_ptr` are both `void *`. The sum is an ADDRESS, and the
+# `(uint)` cuts its top half off before the comparison — so at LP64 the kea pool
+# reads as exhausted the moment it is handed memory above 4 GB, which is every
+# time. `scene_boxes_on_plane` dies at step 60 with "Memory pool size exceeded
+# when allocating NCZ of size 128" against a pool that has room.
+#
+# ⚠ NOTHING IN THE COMPILER CAN SEE THIS. `fix_ptrwidth` takes its site list
+# from clang's diagnostics, and clang says nothing here — not under `-Wall`,
+# `-Wextra`, `-Wint-conversion` or `-Weverything`, all four measured. Comparing
+# a pointer with an unsigned int is a constraint violation the front end simply
+# does not report, so this class needs a structural rule or it is invisible.
+#
+# ⚠ AND IT IS AN ADDRESS, NOT A DIFFERENCE, WHICH IS THE WHOLE DISCRIMINATOR.
+# `(int)((kd_iptr)pLVar4 - uVar3)` in CxSmallSort and the nine
+# `(int)((kd_iptr)p + (... - (kd_iptr)buffer))` in MeProfile/MeXMLOutput have
+# the identical shape and are COUNTS — a pointer difference narrowed to an int,
+# correct at every width. What separates this one is that the narrowed value is
+# compared against something that resolves to a POINTER. 31 sites share the
+# shape; one is compared with a pointer.
+PTR_CMP_L = re.compile(r'(?P<lv>[A-Za-z_]\w*(?:(?:->|\.)[A-Za-z_]\w*)*)\s*'
+                       r'(?P<op><=|>=|<|>|==|!=)\s*'
+                       r'\(\s*(?P<ty>' + NARROW + r')\s*\)\s*\(')
+PTR_CMP_R = re.compile(r'\(\s*(?P<ty>' + NARROW + r')\s*\)\s*\([^;]*?\)\s*'
+                       r'(?P<op><=|>=|<|>|==|!=)\s*'
+                       r'(?P<lv>[A-Za-z_]\w*(?:(?:->|\.)[A-Za-z_]\w*)*)')
+
 # H: the ACCESS type again, but with a computed address rather than `&lvalue`:
 #
 #     iVar1 = *(int *)(pvVar2 + KD_OFFSET(MdtContactGroup, first));
@@ -491,6 +685,67 @@ def pointer_array_sites(text, inc):
     return out
 
 
+def selftest_neg_chain(inc):
+    """ASK THE COMPILER what the three spellings address, at BOTH widths.
+
+    Rule I2's whole claim is that the repair is a no-op at i386 and moves the
+    pointer back where it belongs at LP64. Byte-identity can only check the
+    first half of that — `kd_uptr` IS `unsigned int` here — so the second half
+    has to be measured, and this measures it: the same six-block frame
+    `keaLCPSolver::solveLCP` carves, with the deltas printed in bytes.
+
+    ★ It also pins WHICH BLOCK each spelling means, which is the thing the
+    class is easiest to get wrong. `auStack_3c + -uVar6` is ELEMENT arithmetic
+    on a `uint *` and addresses block FOUR; `(kd_iptr)auStack_3c - uVar6` one
+    line above it is BYTE arithmetic and addresses block ONE. They read alike
+    and they are different arrays — the shipped i386 object does six separate
+    `sub %edi,%esp`, one per block, which is what says the frame is a partition
+    and not an aliasing."""
+    os.makedirs(WORK, exist_ok=True)
+    src = os.path.join(WORK, 'selftest_negchain.c')
+    open(src, 'w').write(
+        '#include "%s/include/kd_compat.h"\n#include <stdio.h>\n'
+        'typedef unsigned int uint;\n'
+        'static char blk[8192];\n'
+        'int main(void){ uint uVar6 = 48; int iVar2 = 3; int order = 5;\n'
+        '  uint *p = (uint *)(blk + 4096); char *B = (char *)p;\n'
+        '  printf("%%d %%ld %%ld %%ld %%ld %%ld\\n", (int)sizeof(void *),\n'
+        '    (long)((char *)(p + -uVar6) - B),\n'
+        '    (long)((char *)(p + -(kd_uptr)uVar6) - B),\n'
+        '    (long)((char *)&p[iVar2 - uVar6] - B),\n'
+        '    (long)((char *)&p[(kd_uptr)iVar2 - uVar6] - B),\n'
+        '    (long)((char *)((kd_iptr)p - uVar6) - B));\n'
+        '  return 0; }\n' % HERE)
+    got = {}
+    for bits in ('-m32', '-m64'):
+        exe = os.path.join(WORK, 'selftest_negchain' + bits)
+        if subprocess.run(['gcc', bits, '-O2', '-DLINUX', '-w',
+                           '-I' + os.path.join(HERE, 'include')] + includes(inc)
+                          + ['-o', exe, src], capture_output=True).returncode:
+            sys.exit('fix_narrow_pointers: SELF-CHECK could not build at %s' % bits)
+        got[bits] = subprocess.run([exe], capture_output=True,
+                                   text=True).stdout.split()
+    # i386: the repair changes nothing, and the two spellings address DIFFERENT
+    # blocks — -192 is block four, -48 is block one.
+    if got['-m32'] != ['4', '-192', '-192', '-180', '-180', '-48']:
+        sys.exit('fix_narrow_pointers: SELF-CHECK FAILED — at i386 the six-block '
+                 'frame reads %r, want [4, -192, -192, -180, -180, -48]. Either '
+                 'the repair is not a no-op on the shipped target or the frame '
+                 'this rule was written against is not the frame being measured.'
+                 % (got['-m32'],))
+    # LP64: unrepaired runs four gigabytes off; repaired lands on i386's answer.
+    if got['-m64'][:1] != ['8'] or got['-m64'][2] != '-192' \
+            or got['-m64'][4] != '-180' or got['-m64'][5] != '-48':
+        sys.exit('fix_narrow_pointers: SELF-CHECK FAILED — at LP64 the rewrite '
+                 'reads %r; the repaired columns must reproduce i386\'s -192 and '
+                 '-180.' % (got['-m64'],))
+    if got['-m64'][1] == '-192' or got['-m64'][3] == '-180':
+        sys.exit('fix_narrow_pointers: SELF-CHECK FAILED — at LP64 the UNREPAIRED '
+                 'spelling reads %r, which is already correct. This compiler does '
+                 'not reproduce the defect, so a clean run would prove nothing.'
+                 % (got['-m64'],))
+
+
 def main():
     srcdir, build = sys.argv[1], sys.argv[2]
     root = sys.argv[3] if len(sys.argv) > 3 else os.path.join(
@@ -514,6 +769,18 @@ def main():
             sys.exit('fix_narrow_pointers: SELF-CHECK FAILED — %s::%s reads as %s '
                      '(type %r), want %s. The type resolver is not resolving.'
                      % (tag, name, got, member_type(tag, name, inc), want))
+    selftest_neg_chain(inc)
+    # ⚠ RULE J'S RESOLVER, ASKED OF A KNOWN POSITIVE. Its first run read zero
+    # corpus-wide because a file-scope `extern void *` resolves in no function
+    # region, so every candidate was dropped as "not a pointer" — a search that
+    # cannot find anything, reporting nothing to find.
+    probe_text = ('extern void *pool_max;\n\n/* ---- f ---- */\nvoid f(void)\n{\n'
+                  '  if (pool_max < (uint)(size + (kd_iptr)pool_ptr)) { g(); }\n}\n')
+    got = pointer_compare_sites(probe_text, inc)
+    if len(got) != 1 or probe_text[got[0][0]:got[0][1]] != 'uint':
+        sys.exit('fix_narrow_pointers: SELF-CHECK FAILED — rule J reads %d site(s) '
+                 'in a probe that contains exactly one. A file-scope pointer that '
+                 'does not resolve makes this rule report a clean zero.' % len(got))
 
     fixed_a = fixed_b = fixed_c = fixed_f = declined = unnamed = 0
     notes = []
@@ -605,6 +872,12 @@ def main():
                 want(m.start('v'), m.end('v'), '(kd_uptr)%s' % m.group('v'),
                      '%-26s negoff %-14s * %s at pointer width'
                      % (fn, m.group('v'), m.group('k')), 'B')
+            # ---- I2: the same negative offset without the multiply. See NEG_CHAIN.
+            for s, e, rep, label in neg_chain_sites(text0, inc):
+                want(s, e, rep, '%-26s negoff %s' % (fn, label), 'B')
+            # ---- J: a pointer compared against a narrowed address. See PTR_CMP_L.
+            for s, e, rep, label in pointer_compare_sites(text0, inc):
+                want(s, e, rep, '%-26s %s' % (fn, label), 'B')
             # ---- H: a narrow read of a pointer FIELD at a computed address
             for m in ACCESS_AT.finditer(text0):
                 i, d = m.end() - 1, 0

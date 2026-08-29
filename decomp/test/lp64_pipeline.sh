@@ -39,6 +39,12 @@ python3 "$HERE/tools/fix_ptrwidth.py"    "$DST/allobj" "$BUILD" "$MT" || exit 2
 python3 "$HERE/tools/fix_narrow_pointers.py" "$DST/allobj" "$BUILD" "$MT" | head -4 || exit 2
 python3 "$HERE/tools/fix_align_masks.py" "$DST/allobj" "$BUILD" "$MT" | head -2 || exit 2
 python3 "$HERE/tools/fix_frame_slots.py" "$DST/allobj" "$BUILD" "$MT" | head -2 || exit 2
+# AFTER fix_narrow_pointers TOO, and for a different reason: this one LEARNS the
+# element size from the allocations that pass repairs. Run it earlier and every
+# pool name reads as a four-byte array — `NAZ` and `NR` are spelled identically
+# until rule G widens one of them — so it would print a clean, wrong zero. It
+# refuses that case rather than printing it.
+python3 "$HERE/tools/fix_pool_reserve.py" "$DST/allobj" "$BUILD" "$MT" | head -2 || exit 2
 
 # ---- THE DETECTOR THIS PASS COULD BLIND. check_frame_bounds reads CONSTANT
 # offsets and constant array bounds, and fix_frame_slots replaces both with

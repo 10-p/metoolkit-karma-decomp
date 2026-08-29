@@ -131,11 +131,27 @@ for s in "${SCENES[@]}"; do
         continue
     fi
     ASAN_OPTIONS=detect_leaks=0:halt_on_error=0:print_stacktrace=1 \
-        timeout 600 "$W/$name" > "$W/$name.csv" 2> "$W/$name.err"
+        timeout "${KD_ASAN_TIMEOUT:-120}" "$W/$name" > "$W/$name.csv" 2> "$W/$name.err"
     rc=$?
     errs=$(grep -c "ERROR: AddressSanitizer" "$W/$name.err")
     printf '  %-24s exit %-3d  %s\n' "$name" "$rc" \
         "$( [ "$errs" -eq 0 ] && echo 'no sanitizer error' || echo "$errs AddressSanitizer error(s)")"
+    # ⚠ A TIMEOUT HERE IS A RESULT AND IT IS NOT A POINTER-WIDTH ONE. These
+    # scenes finish in about a tenth of a second; the sanitized contact scenes
+    # intermittently spin instead — measured state R with utime climbing and RSS
+    # flat, so a loop in user code and not a stall. It is data-dependent: the
+    # same binary finished in 0.1 s on some runs and spun past 30 s on 3 of 20
+    # on one build, while on the next both contact scenes hit the cap every time.
+    # ASan's poison is 0xbe rather than whatever the plain heap held, so an
+    # UNINITIALISED read comes back as garbage, the trace fills with NaN, and a
+    # convergence loop never converges. The i386 ASan control reproduces it
+    # identically — 8,100 non-finite samples, LP64 and i386 agreeing to
+    # 0.00e+00 — which is what says the defect is an uninitialised read present
+    # at BOTH widths, not something 64-bit pointers did.
+    if [ "$rc" = 124 ]; then
+        echo "      TIMED OUT after ${KD_ASAN_TIMEOUT:-120}s having written $(wc -l < "$W/$name.csv") row(s)."
+        echo "      The plain rows below are the pointer-width verdict; see this file's header."
+    fi
     if [ "$errs" -gt 0 ]; then
         status=1
         # the DISTINCT sites, not every hit: one bad allocation reports thousands
@@ -158,7 +174,7 @@ for s in "${SCENES[@]}"; do
     # the collision side rather than to arithmetic.
     if [ -s "$W/ctl_$name.csv" ]; then
         python3 - "$W/ctl_$name.csv" "$W/$name.csv" <<'PY'
-import sys
+import sys, math
 a=[l.split(',') for l in open(sys.argv[1]) if l.strip()]
 b=[l.split(',') for l in open(sys.argv[2]) if l.strip()]
 # ⚠ A SHORTER RUN IS NOT A MATCHING RUN. Zipping two traces of different
@@ -168,17 +184,29 @@ b=[l.split(',') for l in open(sys.argv[2]) if l.strip()]
 if len(a)!=len(b):
     print('      TRAJECTORY INCOMPLETE: %d row(s) against the control\'s %d'%(len(b),len(a)))
     sys.exit(0)
-worst=0.0
+# ⚠ AND NaN COMPARES EQUAL TO NOTHING, WHICH THIS READ AS A MATCH. `nan > x` is
+# False, so a non-finite sample failed the divergence test AND left `worst` at
+# zero: scene_ragdoll reported "matches over all 901 rows (worst 0.00e+00)"
+# with 8,100 non-finite samples in the trace. Count them and say so.
+worst=0.0; nonfinite=0
 for x,y in zip(a,b):
     for p,q in zip(x[1:],y[1:]):
         try: fp,fq=float(p),float(q)
         except ValueError: continue
+        if not (math.isfinite(fp) and math.isfinite(fq)):
+            nonfinite+=1
+            continue
         if abs(fp-fq) > 1e-2*max(1.0,abs(fp)):
-            print('      TRAJECTORY diverges >1%% from the i386 control at step %s'%x[0])
+            print('      TRAJECTORY diverges >1%% from the control at step %s%s'
+                  %(x[0], '' if not nonfinite else ' (%d non-finite sample(s))'%nonfinite))
             sys.exit(0)
         worst=max(worst,abs(fp-fq))
-print('      trajectory matches the i386 control over all %d rows (worst |delta| %.2e)'
-      %(len(a),worst))
+if nonfinite:
+    print('      TRAJECTORY has %d NON-FINITE sample(s) — not a match, whatever the '
+          'deltas read'%nonfinite)
+else:
+    print('      trajectory matches the control over all %d rows (worst |delta| %.2e)'
+          %(len(a),worst))
 PY
     fi
 done
@@ -207,6 +235,26 @@ if [ "${KD_SKIP_PLAIN:-}" != 1 ]; then
     done
     gcc -m64 $PF $FPMATH -c -o "$W/plain/hull.o" \
         "$HERE/src/McdConvexCreateHull/kd_convexhull.c" 2>/dev/null || exit 2
+    # ---- ★ AND ITS OWN i386 CONTROL, BECAUSE THE ASan ONE IS THE WRONG
+    # REFERENCE FOR THESE ROWS. AddressSanitizer changes what an UNINITIALISED
+    # read returns — its poison is 0xbe, not whatever the plain heap happened to
+    # hold — so the sanitized scenes compute different numbers from the plain
+    # ones. Measured: the ASan ragdoll blows up with 8,100 non-finite samples at
+    # BOTH widths, its LP64 and i386 traces agreeing to 0.00e+00, while the
+    # plain LP64 run is clean. Diffing a plain LP64 trace against an ASan i386
+    # control compares like with unlike and attributes an ASan artefact to
+    # pointer width. This builds the matched reference: same sources, same
+    # flags, same -mfpmath, no sanitizer, 32-bit pointers.
+    if [ "${KD_SKIP_CONTROL:-}" != 1 ]; then
+        mkdir -p "$W/p32"
+        for c in "$SRCDIR"/*.c; do
+            b=$(basename "$c" .c); [ -f "$BUILD/$b.o" ] || continue
+            gcc -m32 $PF $FPMATH -c -o "$W/p32/$b.o" "$c" 2>/dev/null \
+                || { echo "  plain control: did not compile at m32: $b"; exit 2; }
+        done
+        gcc -m32 $PF $FPMATH -c -o "$W/p32/hull.o" \
+            "$HERE/src/McdConvexCreateHull/kd_convexhull.c" 2>/dev/null || exit 2
+    fi
     for s in "${SCENES[@]}"; do
         name=$(basename "$s" .c)
         gcc -m64 $PF $FPMATH -no-pie -o "$W/plain_$name" "$s" "$W/plain"/*.o \
@@ -222,6 +270,46 @@ if [ "${KD_SKIP_PLAIN:-}" != 1 ]; then
                    "$( [ "$rc" -ge 128 ] && echo "SIGNAL $((rc-128)) after $(wc -l < "$W/plain_$name.csv") row(s)" || echo "verdict failed" )"
             sed -n 's/^/      /p' "$W/plain_$name.err" | tail -3
         fi
+        [ -d "$W/p32" ] || continue
+        gcc -m32 $PF $FPMATH -no-pie -o "$W/p32_$name" "$s" "$W/p32"/*.o \
+            -lstdc++ -lm 2>/dev/null || { echo "      plain control: $name did not link"; continue; }
+        ( timeout 600 "$W/p32_$name" > "$W/p32_$name.csv" 2> "$W/p32_$name.err" ) 2>/dev/null
+        # ⚠ READ THE FIRST NONZERO STEP, NOT THE MAXIMUM. On a contact scene a
+        # last-bit difference amplifies without bound, so every object on the
+        # path reaches metres and the maximum stops discriminating. What tells a
+        # DEFECT from amplification is where the two traces first differ AT ALL
+        # and by how much: scene_chain first differs at 9e-10, scene_ragdoll at
+        # 2e-07 — noise — and the box/plane broadphase defect first differed at
+        # 1.5e-01, after 44 bit-identical steps.
+        python3 - "$W/p32_$name.csv" "$W/plain_$name.csv" <<'PY'
+import sys, math
+def load(p):
+    out=[]
+    for l in open(p):
+        f=l.strip().split(',')
+        try: int(f[0])
+        except Exception: continue
+        out.append(f)
+    return out
+a,b=load(sys.argv[1]),load(sys.argv[2])
+if not a:
+    print('      plain i386 control produced no rows — this row is unattributed'); sys.exit(0)
+if len(a)!=len(b):
+    print('      PLAIN TRAJECTORY INCOMPLETE: %d row(s) against the control\'s %d'
+          %(len(b),len(a))); sys.exit(0)
+first=None; mag=0.0; worst=0.0; nonfinite=0
+for x,y in zip(a,b):
+    for p,q in zip(x[1:],y[1:]):
+        try: fp,fq=float(p),float(q)
+        except ValueError: continue
+        if not (math.isfinite(fp) and math.isfinite(fq)):
+            nonfinite+=1; continue
+        d=abs(fp-fq); worst=max(worst,d)
+        if fp!=fq and first is None: first,mag=x[0],d
+print('      vs PLAIN i386: first difference at step %s (%.1e), worst %.2e%s'
+      %(first if first else 'never',mag,worst,
+        '' if not nonfinite else ', %d NON-FINITE'%nonfinite))
+PY
     done
 fi
 

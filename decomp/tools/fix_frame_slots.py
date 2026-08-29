@@ -135,7 +135,54 @@ MATBASE = re.compile(r'(?m)^[ \t]*[A-Za-z_][\w ]*\**\s*\w+\s*=\s*\([^()]*\)\s*\(
                      r'(?P<name>kd_frame\w*)\s*\+[^;]*?\+\s*(?P<n>\d+)\s*\)\s*;'
                      r'[ \t]*/\* KD_MATERIALISED_BASE')
 FRAME_OFF = re.compile(r'\bkd_frame\w*\s*\+\s*(?P<n>\d+)\b')
-FRAME_OFF2 = re.compile(r'\(int\)\(\s*kd_frame\w*\s*\+\s*\d+\s*\)\s*\+\s*(?P<n>\d+)\b')
+
+
+def frame_trailing_addends(body, name):
+    """Every `(<frame group>) + K` — the argument word written OUTSIDE the
+    base's own parentheses:
+
+        *(int **)((int)(kd_frame + 0) + 8) = clamped;
+        *(keaLCPSolver **)((int)(kd_frame + 0) + 4) = this;
+
+    ⚠ THIS IS STRUCTURAL BECAUSE THE CAST IN FRONT OF THE GROUP IS NOT STABLE,
+    AND KEYING ON ITS SPELLING MADE THE RULE FIND NOTHING. The predecessor
+    matched a literal `(int)`, and `fix_ptrwidth` — which runs FOUR passes
+    earlier — has already rewritten that to `(kd_iptr)` by the time this pass
+    sees the file. Twenty sites, no match, and NO DECLINE REPORTED, because a
+    pattern that does not fire has nothing to report.
+
+    What that cost, measured: `this` is written at `+ 4` and `clamped` at `+ 8`,
+    which are argument words ONE and TWO. At LP64 word one occupies +8..+15, so
+    the write of `this` lands on top of `clamped`'s low half and the read comes
+    back `0x00007fff00007fff` — the two pointers' high halves interleaved. That
+    is `setClampedValues` writing through `clamped` at keaLCPSolver.c:825, and
+    the value the arithmetic predicts is the value in `rsi`."""
+    out = []
+    for m in re.finditer(r'\b%s\s*\+' % re.escape(name), body):
+        i, depth = m.start(), 0             # walk back to the group's `(`
+        while i > 0:
+            i -= 1
+            if body[i] == ')':
+                depth += 1
+            elif body[i] == '(':
+                if depth == 0:
+                    break
+                depth -= 1
+        else:
+            continue
+        j, depth = i, 0                     # and forward to its `)`
+        while j < len(body):
+            if body[j] == '(':
+                depth += 1
+            elif body[j] == ')':
+                depth -= 1
+                if depth == 0:
+                    break
+            j += 1
+        t = re.match(r'\s*\+\s*(?P<n>\d+)\b', body[j + 1:])
+        if t:
+            out.append((j + 1 + t.start('n'), j + 1 + t.end('n'), t.group('n')))
+    return out
 
 
 def kdframe_edits(text, notes, fn, quiet=False):
@@ -151,7 +198,7 @@ def kdframe_edits(text, notes, fn, quiet=False):
             for m in rx.finditer(body):
                 edits.append((s + m.start(g), s + m.end(g),
                               '%s * (int)(sizeof(void *) / 4)' % m.group(g)))
-        for rx in (FRAME_OFF, FRAME_OFF2):
+        for rx in (FRAME_OFF,):
             for m in rx.finditer(body):
                 k = int(m.group('n'))
                 if k % I386_PTR:
@@ -159,6 +206,13 @@ def kdframe_edits(text, notes, fn, quiet=False):
                     continue
                 edits.append((s + m.start('n'), s + m.end('n'),
                               '(%d * (int)sizeof(void *))' % (k // I386_PTR)))
+        for st, en, n in frame_trailing_addends(body, d.group('name')):
+            k = int(n)
+            if k % I386_PTR:
+                bad.append(k)
+                continue
+            edits.append((s + st, s + en,
+                          '(%d * (int)sizeof(void *))' % (k // I386_PTR)))
         if bad:
             if not quiet:
                 notes.append('%-26s %s::%s has offsets that are not argument words '
@@ -327,11 +381,31 @@ def slot_edits(text, notes, fn, quiet=False):
     return groups
 
 
+def selftest_trailing():
+    """The matcher has to find the site under EVERY cast spelling, and not find
+    its own output. This exists because the predecessor did neither: it matched
+    a literal `(int)`, `fix_ptrwidth` rewrites that to `(kd_iptr)` four passes
+    earlier, and twenty sites went unrepaired with nothing printed."""
+    for cast in ('(int)', '(kd_iptr)', '(kd_uptr)', ''):
+        body = '  *(int **)(%s(kd_frame + 0) + 8) = c;\n' % cast
+        got = frame_trailing_addends(body, 'kd_frame')
+        if [g[2] for g in got] != ['8']:
+            sys.exit('fix_frame_slots: SELF-CHECK FAILED — the trailing addend is '
+                     'invisible under the cast %r (read %r). A rule that cannot '
+                     'see the site reports no decline either.' % (cast or 'none', got))
+    done = ('  *(int **)((kd_iptr)(kd_frame + (0 * (int)sizeof(void *)))'
+            ' + (2 * (int)sizeof(void *))) = c;\n')
+    if frame_trailing_addends(done, 'kd_frame'):
+        sys.exit('fix_frame_slots: SELF-CHECK FAILED — the matcher does not '
+                 'recognise its own output and would rescale a repaired site.')
+
+
 def main():
     srcdir, build = sys.argv[1], sys.argv[2]
     root = sys.argv[3] if len(sys.argv) > 3 else os.path.join(
         HERE, '..', 'Thirdparty', 'metoolkit')
     inc = os.path.join(root, 'include')
+    selftest_trailing()
 
     fixed = declined = 0
     notes = []

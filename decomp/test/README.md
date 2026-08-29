@@ -315,12 +315,13 @@ be done, and the premise ("nothing here can execute arm64") was true and irrelev
 ./test/lp64_run.sh test/scene_chain.c
 KD_OUT=/tmp/kd_lp64 ./test/lp64_run.sh               # after the tools/ post-passes
 KD_KEEP=1 ./test/lp64_run.sh                         # keep the objects and the ASan reports
+KD_ASAN_TIMEOUT=120 ./test/lp64_run.sh               # the sanitized scenes can SPIN; see below
 ```
 
-Builds all 145 objects for x86-64 and drives the scenes under AddressSanitizer, **with a
-built-in i386 control that must read zero**. It comes back with a file, a line, the allocation
-that was overflowed and a stack. Fix the top one, re-run, take the next; `tools/layout_check.py`
-is for knowing how big the job is, not for doing it.
+Builds all 145 objects for x86-64 and drives the scenes under AddressSanitizer, **with an i386
+control that must read zero** — and then builds and runs the same scenes with **no sanitizer**,
+against a **plain i386 control** of their own. Those last two are the pointer-width verdict; the
+sanitized rows are a memory-safety check and are the wrong reference for the numbers.
 
 ⚠ **`KD_KEEP=1` EXISTS BECAUSE THE SUMMARY IS A LIST OF SITES AND DIAGNOSING ONE NEEDS THE
 REPORT.** The work directory was deleted on exit, so the addresses, the allocation and the
@@ -358,24 +359,46 @@ It **stops before the harness** if the i386 acceptance test is not clean, becaus
 changed the shipped target is a bug in the post-pass, and every LP64 row after it would be measuring
 that instead of pointer width.
 
-Where it stands as of 2026-08-29, with the i386 control clean on all three scenes:
+Where it stands as of 2026-08-29, with both i386 controls clean:
 
 | | first thing it hits |
 |---|---|
 | start of the LP64 work | `MdtWorld.c:98` — the FIRST STATEMENT of the first scene |
 | start of this session | `MdtBcl.c:519` (chain, ragdoll) and `MstUtils` (boxes) |
-| now | **no memory error on any scene; a TRAJECTORY divergence on two** |
+| after the collision chain | no memory error on any scene; the PLAIN build still SIGSEGV on two |
+| now | **all three plain scenes clean, 901 rows, 5 runs of 5; one trajectory defect left** |
 
 ```
-scene_chain            0 ASan errors   trajectory MATCHES the i386 control (worst 4.9e-04)
-scene_boxes_on_plane   0 ASan errors   diverges >1% at step 33
-scene_ragdoll          0 ASan errors   diverges >1% at step 1, own verdict BLOWN UP
+== LP64, no sanitizer ==
+  scene_chain            exit 0  901 rows   vs PLAIN i386: first difference step 4  (9.0e-10)
+  scene_boxes_on_plane   exit 0  901 rows   vs PLAIN i386: first difference step 52 (1.5e-03)
+  scene_ragdoll          exit 0  901 rows   vs PLAIN i386: first difference step 0  (2.2e-07)
 ```
 
-**Still FAIL, and that is the honest reading** — but the whole memory-safety front is closed and
-what remains is *localised*: both divergences begin at the scene's FIRST CONTACT, and
-`scene_chain` is COLLISION-FREE and matches over all 900 steps. **The remaining defect is on the
-collision side**, not in the dynamics, the solver or the arithmetic.
+★ **READ THE FIRST DIFFERING STEP, NOT THE MAXIMUM** — on a contact scene a last-bit difference
+amplifies without bound and all three reach metres by step 900. chain and ragdoll first differ at
+1e-9 and 1e-7, which is float noise amplifying; boxes was **bit-identical for 44 steps** and then
+jumped to 1.5e-01 in one step, which is not. Repairing that (the geometry AABB family) took it to
+step 52 at 1.5e-03 — 100× smaller, seven steps later, and still five orders above the floor.
+**Still FAIL, and that is the honest reading.**
+
+★★ **THE REFERENCE HAD BEEN THE WRONG BUILD.** The control was built WITH AddressSanitizer and
+the plain scenes were run against no reference at all. ASan's poison is `0xbe` rather than
+whatever the plain heap held, so an **uninitialised read** comes back as garbage under it: the
+sanitized ragdoll fills with 8,100 non-finite samples and reads BLOWN UP at *both* widths — its
+LP64 and i386 traces agreeing to `0.00e+00` — while the plain LP64 run of the same sources is
+clean. Diffing plain against sanitized attributes an ASan artefact to pointer width. There is a
+**plain i386 control** now, and the plain rows are the pointer-width verdict.
+
+⚠ **`0.00e+00 over 901 rows` WAS PART OF THAT ARTEFACT.** `nan > x` is False, so every non-finite
+sample failed the divergence test *and* left the worst delta at zero: it read "matches the control
+over all 901 rows" on a trace that was 8,100 NaNs. Non-finite samples are counted and reported.
+
+⚠ **The sanitized contact scenes also SPIN** — state `R` with utime climbing and RSS flat, so a
+loop in user code and not a stall, and data-dependent: 3 runs in 20 past 30 s on one build, both
+contact scenes every time on the next. Same cause: NaN into a convergence
+loop. The ASan timeout is `KD_ASAN_TIMEOUT` (120 s) and the harness says out loud that a timeout
+there is not the pointer-width verdict.
 
 ⚠ **THE ERROR COUNT WAS ONLY HALF OF WHAT THIS COULD SAY.** A pointer that is wrong but still IN
 BOUNDS is invisible to the sanitizer and perfectly visible in the numbers. The control is now
@@ -388,6 +411,19 @@ every obstacle transform was dead stack for the whole run, at every pointer widt
 the scene has existed. 24 sanitizer reports, all in `McdSphylBoxIntersect`. It was missed because
 the control was built for the FIRST SCENE ONLY, and the first scene creates no collision models.
 See `../proven.txt` `SCENE-RAGDOLL-DANGLING`.
+
+★ **NECESSARY, NOT SUFFICIENT, and the header of `lp64_run.sh` says why.** x86-64 tolerates
+unaligned access where arm64 **faults**; these are OFFLINE SCENES; and nothing at 64-bit has yet
+exercised a real match, the drop-in link or the `.ka` asset path. A clean run here is the gate
+that had to be passed before an arm64 build was worth attempting, not evidence that one will work.
+
+★ **The six defects this leg closed were each invisible until the one before it was repaired**,
+and two of them were rules that already existed and had **stopped matching** because an earlier
+pass rewrites the spelling they keyed on — `fix_frame_slots`' trailing addend on `(int)` vs
+`(kd_iptr)`, and `fix_vtable_offsets`' slot read on `char **` vs `undefined4 **`. Neither printed
+a decline, because a pattern that does not fire has nothing to report. The largest was an entire
+type family missing from `fix_literal_offsets`' offset map — the SDK's geometries are *anonymous*
+struct typedefs. See `../proven.txt` `LP64-THREE-CLEAN`.
 
 ⚠ **FIVE RUNS IS THE MEASUREMENT, NOT ONE.** Three separate times this session a single run read
 "clean" and the next read three errors, on sources that had not changed: ASLR moves what an

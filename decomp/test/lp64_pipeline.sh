@@ -25,7 +25,13 @@ python3 "$HERE/tools/fix_strides.py"   "$DST/allobj" "$BUILD" "$MT" || exit 2
 python3 "$HERE/tools/fix_literal_offsets.py" "$DST/allobj" "$BUILD" "$MT" | tail -3 || exit 2
 python3 "$HERE/tools/fix_derived_fields.py" "$DST/allobj" "$BUILD" "$MT" | head -2 || exit 2
 python3 "$HERE/tools/fix_arena_carve.py" "$DST/allobj" "$BUILD" "$MT" | head -3 || exit 2
+python3 "$HERE/tools/fix_vtable_offsets.py" "$DST/allobj" "$BUILD" "$MT" | head -2 || exit 2
 python3 "$HERE/tools/fix_ptrwidth.py"    "$DST/allobj" "$BUILD" "$MT" || exit 2
+# AFTER fix_ptrwidth: it widens the CASTS, and these two key on what it wrote.
+# fix_narrow_pointers first — it widens the locals whose masks the next pass has
+# to recognise, and a mask on a widened local has no cast in it to match.
+python3 "$HERE/tools/fix_narrow_pointers.py" "$DST/allobj" "$BUILD" "$MT" | head -4 || exit 2
+python3 "$HERE/tools/fix_align_masks.py" "$DST/allobj" "$BUILD" "$MT" | head -2 || exit 2
 
 # ---- THE ACCEPTANCE TEST. `intptr_t` IS `int` at 32-bit pointer width and the
 # rewritten sizes ARE the constants they replaced, so both passes are no-ops

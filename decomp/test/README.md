@@ -314,12 +314,23 @@ be done, and the premise ("nothing here can execute arm64") was true and irrelev
 ./test/lp64_run.sh                                   # all three scenes
 ./test/lp64_run.sh test/scene_chain.c
 KD_OUT=/tmp/kd_lp64 ./test/lp64_run.sh               # after the tools/ post-passes
+KD_KEEP=1 ./test/lp64_run.sh                         # keep the objects and the ASan reports
 ```
 
-Builds all 145 objects for x86-64 and drives the scenes under AddressSanitizer, **with a built-in
-i386 control that must read zero**. It comes back with a file, a line, the allocation that was
-overflowed and a stack. Fix the top one, re-run, take the next; `tools/layout_check.py` is for
-knowing how big the job is, not for doing it.
+Builds all 145 objects for x86-64 and drives the scenes under AddressSanitizer, **with a
+built-in i386 control that must read zero**. It comes back with a file, a line, the allocation
+that was overflowed and a stack. Fix the top one, re-run, take the next; `tools/layout_check.py`
+is for knowing how big the job is, not for doing it.
+
+⚠ **`KD_KEEP=1` EXISTS BECAUSE THE SUMMARY IS A LIST OF SITES AND DIAGNOSING ONE NEEDS THE
+REPORT.** The work directory was deleted on exit, so the addresses, the allocation and the
+registers — the only things that identify a *truncated pointer* as opposed to a wrong offset —
+went with it.
+
+⚠ **A CLEAN SANITIZER IS NOT A PASS, AND THIS GATE USED TO SAY IT WAS.** Every scene returns
+non-zero when its OWN verdict fails: `scene_ragdoll` exits 1 on "BLOWN UP", bodies past 1e3.
+A pointer that is wrong but still IN BOUNDS is invisible to ASan and perfectly visible to the
+scene — measured, the identical sources at i386 read "plausible". The exit status now counts.
 
 First run, first statement of the first scene:
 
@@ -347,37 +358,36 @@ It **stops before the harness** if the i386 acceptance test is not clean, becaus
 changed the shipped target is a bug in the post-pass, and every LP64 row after it would be measuring
 that instead of pointer width.
 
-Where it stands as of 2026-08-28, with the baked-size class closed:
+Where it stands as of 2026-08-29, over **five consecutive runs of all three scenes**:
 
 | | first thing it hits |
 |---|---|
-| start of the session | `MdtWorld.c:98` — the FIRST STATEMENT of the first scene |
-| now | **two distinct defects across all three scenes** |
+| start of the LP64 work | `MdtWorld.c:98` — the FIRST STATEMENT of the first scene |
+| start of this session | `MdtBcl.c:519` (chain, ragdoll) and `MstUtils` (boxes) |
+| now | **chain is CLEAN; the other two fail in ONE class between them** |
 
 ```
-scene_chain            1   MdtBcl.c:519
-scene_boxes_on_plane   3   MstUtils.c:91,97 + McdBatch.c:829
-scene_ragdoll          1   MdtBcl.c:519
+scene_chain            exit 0   no sanitizer error                      5 of 5
+scene_boxes_on_plane   exit 1   MstUtils 91,97 + McdBatch 829           5 of 5
+scene_ragdoll          exit 1   the same three (3 of 5), or BLOWN UP
+                                with no sanitizer error at all (2 of 5)
 ```
 
-**Still FAIL, and that is the honest reading** — but what remains is two things, not a list.
-`McdBatch.c:829` is a *consequence* (`*resultCount = 0`, where `resultCount` arrived through one of
-MstUtils' frame slots), and ragdoll's MstUtils pair vanished when `McdBox`'s derived-field reads were
-repaired. Most of what looks like breadth is one defect seen from several call sites.
+**Still FAIL, and that is the honest reading** — but `scene_chain` is the first scene ever to run
+clean at 64-bit pointer width, and what remains is a single class seen from four call sites
+(`MstUtils.c:91,97,105`, `McdBatch.c:829`, `MstBridge.c:168`): **Ghidra's invented stack frames**.
+That is a *decompilation* defect, not a layout one. `recover.py` already converts the shape to
+named `kd_frameslot_` arrays that are in bounds at both widths — all 44 of `MdtPartition`'s — so
+the question is why the conversion declined here, not how to patch the output. It is 124 sites
+across 8 objects, five of those objects are RELEASED, and byte-identity cannot gate it because
+giving the scratch its own storage is a different stack layout by construction.
 
-1. **`MdtBcl`** — a genuinely `void *` API (`MdtBcl.h` declares `void *const constraint`), so no
-   header struct can type its offsets; measured per file *and* per function, with arrays and nested
-   members expanded, nothing fits. The amd64 build **does** have the LP64 displacements, but using
-   them means aligning two compilers' instruction streams — a different technique.
-2. **`MstUtils`** — Ghidra's invented stack frames. A *decompilation* defect: `recover.py` already
-   converts this shape to named `kd_frameslot_` arrays that are in bounds at both widths (all 44 of
-   `MdtPartition`'s were). The question is why the conversion declined here, not how to patch output.
+⚠ **FIVE RUNS IS THE MEASUREMENT, NOT ONE.** Three separate times this session a single run read
+"clean" and the next read three errors, on sources that had not changed: ASLR moves what an
+out-of-bounds write lands on, and `-fsanitize-recover` means how far a scene gets changes what it
+reports. A clean run is a sample. **Take five, and read the site list.**
 
-⚠ **The error COUNTS move between runs** — ASan uses `-fsanitize-recover`, so how far a scene gets
-changes what it reports; ragdoll has shown 1 and 3 on consecutive runs of the same binary. **Read
-the site list.**
-
-See `../proven.txt` `LP64-TWO-REMAIN` for the full accounting, and the `LP64-*` entries for each
+See `../proven.txt` `LP64-ONE-REMAIN` for the full accounting, and the `LP64-*` entries for each
 class closed.
 
 ---

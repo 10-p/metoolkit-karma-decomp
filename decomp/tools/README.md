@@ -527,21 +527,32 @@ XML-output and unused-constraint objects §3b retires.
 
 They need the NDK, they **edit in place**, and §4's output is not arm64-correct source until they
 have run. **Run them on a copy**, in this order — or just use `test/lp64_pipeline.sh`, which does
-the copy, both passes, the acceptance test and the harness in the right order.
+the copy, all nine passes, the acceptance test and the harness in the right order.
 
 ```bash
 ./test/lp64_pipeline.sh                      # all of the below, gated
 
-# or by hand:
+# or by hand — THE ORDER IS LOAD-BEARING, see each tool's block below:
 cp -a /tmp/kd_out /tmp/kd_lp64
-python3 tools/fix_baked_sizeof.py /tmp/kd_lp64/allobj /tmp/kd_build   # 102 allocs + 7 pool strides
-python3 tools/fix_ptrwidth.py    /tmp/kd_lp64/allobj /tmp/kd_build $MT
-#   -> 3864 narrow pointer cast(s) widened in 94 object(s)
+python3 tools/fix_baked_sizeof.py    /tmp/kd_lp64/allobj /tmp/kd_build $MT
+python3 tools/fix_strides.py         /tmp/kd_lp64/allobj /tmp/kd_build $MT
+python3 tools/fix_literal_offsets.py /tmp/kd_lp64/allobj /tmp/kd_build $MT
+python3 tools/fix_derived_fields.py  /tmp/kd_lp64/allobj /tmp/kd_build $MT
+python3 tools/fix_arena_carve.py     /tmp/kd_lp64/allobj /tmp/kd_build $MT
+python3 tools/fix_vtable_offsets.py  /tmp/kd_lp64/allobj /tmp/kd_build $MT
+python3 tools/fix_ptrwidth.py        /tmp/kd_lp64/allobj /tmp/kd_build $MT
+python3 tools/fix_narrow_pointers.py /tmp/kd_lp64/allobj /tmp/kd_build $MT
+python3 tools/fix_align_masks.py     /tmp/kd_lp64/allobj /tmp/kd_build $MT
 KD_OUT=/tmp/kd_lp64 ./test/lp64_run.sh
 ```
 
-`fix_ptrwidth.py` needs the Android NDK; it defaults to
-`/home/ion/Android/Sdk/ndk/30.0.14904198/...` and takes `KD_NDK` to override.
+⚠ **The last three are ordered and not interchangeable.** `fix_ptrwidth` writes the `kd_iptr`
+that the other two key on; `fix_narrow_pointers` widens the locals whose alignment masks
+`fix_align_masks` then has to recognise, and a mask on a widened local has no cast in it to
+match. Getting that pair backwards silently costs five masks.
+
+`fix_ptrwidth.py` and `fix_narrow_pointers.py` need the Android NDK; they default to
+`/home/ion/Android/Sdk/ndk/30.0.14904198/...` and take `KD_NDK` to override.
 
 **The acceptance test for each is that all 145 objects recompile BYTE-IDENTICAL at i386** —
 `intptr_t` *is* `int` at 32-bit pointer width, so both are no-ops there by construction. Run it:
@@ -699,44 +710,75 @@ landed. **Diff the source; do not read the summary.**
 
 ```bash
 python3 tools/fix_literal_offsets.py /tmp/kd_lp64/allobj /tmp/kd_build
-#   -> 22 rewritten, 0 declined, 1545 out of scope
+#   -> 643 rewritten, 13 declined, 1046 out of scope
 ```
 
-`*(code **)((char *)p + 200)` is `CxSmallSort::mAABBUpdateFn` **on i386**; at LP64 it is 392. The
-repair is a pure address re-spelling — `*(T *)&p->FIELD` — so the cast and the expression's type are
-untouched and only the address computation moves from a number to something the compiler recomputes.
+`*(code **)((char *)p + 200)` is `CxSmallSort::mAABBUpdateFn` **on i386**; at LP64 it is 392.
 
-⚠ **`layout_check.py`'s "OFFSET 128" is two classes added together.** Only **27** are struct-field
-offsets (21 in `McdSpace.c`, 6 in `ReadWriteKeaInputToFile.c`); the other ~100 are Ghidra's invented
-stack frames (`(int)&local + K`, MdtBcl 70 and MdtMainLoop 25), which are a decompilation defect
-rather than a layout one. Quoting 128 as LP64 exposure overstates it 4.7×.
+★ **THE REPAIR SUBSTITUTES THE LITERAL AND NOTHING ELSE**, and the `*(T *)&p->FIELD` this file
+used to prescribe is **not** byte-identical on the object that matters. Re-spelling the whole
+address lets gcc common the base pointer across the function — `MdtBcl` came back **268 bytes
+smaller**. What works is to leave the expression Ghidra wrote exactly where it is, including
+the `(int)` cast `fix_ptrwidth.py` will widen later, and put a target-computed `offsetof` where
+the number was. All 600 MdtBcl sites in **one** compile, byte-identical. It also means the cast
+never has to be parsed, so `(MeReal (*) [4])((int)p + K)` and the 52 bare address computations
+get the same repair as the 548 dereferences.
 
-⚠ **The declared type is the wrong one, for the fourth time.** `pMVar1` is `McdSpaceID` =
-`McdSpace *`, and `McdSpace` is opaque — the object is really a `CxSmallSort`. The concrete type is
-inferred from the offsets: the struct on which **every** offset used against that declared type in
-the file lands on a real field. Requiring all of them is what makes it a measurement; one offset
-alone fits dozens of structs, as the tool's own decline lines show. Confirmed against the shipped
-build — amd64 `McdSpaceAxisSortCreate` touches `0x50` and `0x188`, exactly `mManager` and
-`mAABBUpdateFn` at 64-bit.
+⚠ **`layout_check.py`'s "OFFSET 128" is two classes added together.** The other ~100 are
+Ghidra's invented stack frames (`(int)&local + K`), which are a decompilation defect rather
+than a layout one. Quoting 128 as LP64 exposure overstates it 4.7×.
 
-★ **The base is not always a variable, and the one that is not was the whole partitioner failure.**
-`if ((*(byte *)((int)pMVar9->data + 0x1ec) & 2) == 0)` — `0x1ec` is `offsetof(MdtBody, flags)` at
-i386 and **556** at LP64, so `MdtUpdatePartitions`'s VISITED test reads a byte 64 short of the flag,
-no body is ever seen as visited, and the root loop re-seeds one already placed. `scene_chain` went
-from 25 errors to **one** when this was fixed. `pMVar9->data` is a `void *` and carries no type; what
-names it is the same FIELD read into a typed local elsewhere in the function
-(`pMVar3 = rootNode->data;`). The field is the key, not the variable.
+⚠ **The declared type is often the wrong one**, and there are now three ways to get the right
+one, tried in this order:
 
-⚠ **The cast may not be elided for that shape.** The tool drops the cast when the base's type already
-*is* the concrete type — right for a bare variable, wrong here, because the inferred type belongs to
-what the member points at. Eliding it emits `(pMVar9->data)->flags`, which does not compile, and the
-site then declines in a way that reads like the repair being wrong rather than the spelling.
+1. **the offsets themselves** — the struct on which every offset used against that declared
+   type in this file lands on a real field. `pMVar1` is `McdSpaceID`; the object is really a
+   `CxSmallSort`. Confirmed against the shipped amd64 build, which touches `0x50` and `0x188`
+   — exactly `mManager` and `mAABBUpdateFn` at 64-bit.
+2. **the installer** — `MdtBcl.h` declares `void *const constraint`, so that is the ORIGINAL
+   API and no header can type it. Each of the sixteen `MdtBclAdd*` is registered as a callback
+   on the type it takes (`(pMVar1->head).bclFunction = MdtBclAddBSJoint;`), corpus-wide,
+   because the installer and the function it names are in different objects. Which PARAMETER
+   is the one whose every baked offset lands on that type — `constraint` reads 21 of 21,
+   `params` has no baked offsets at all. One hop further types `MdtBclAddContactGroup`'s list
+   walker from the call it hands each element to.
+3. **the callee's declared return type**, the only one that is not an inference at all —
+   `MeDictFirst` returns `MeDictNode *`, and `0x14` is `data`, at 20 here and **40** there.
+   ⚠ Per FUNCTION, not per variable: Ghidra assigns `pvVar5` from `MeChunkGetMem` at line 218
+   and from `MeDictFirst` at 284, and a function whose known assignments name different
+   structs is declined.
 
-⚠ **Parameters are not declarations**, and missing that repaired 2 of 21 sites. Ghidra writes locals
-as `T x;` at the top of a body and parameters in the signature; the other 19 were reported as
-"declined" for want of a type written down three lines above them. And **1,545 sites are out of
-scope, not declined** — a `void *` base carries no structure, and reporting those as refusals buries
-the ones that can be repaired.
+★ **The base is not always a variable, and the one that is not was the whole partitioner
+failure.** `if ((*(byte *)((int)pMVar9->data + 0x1ec) & 2) == 0)` — `0x1ec` is
+`offsetof(MdtBody, flags)` at i386 and **556** at LP64, so `MdtUpdatePartitions`'s VISITED test
+reads a byte 64 short of the flag. `pMVar9->data` is a `void *` and carries no type; what names
+it is the same FIELD read into a typed local elsewhere in the function. The field is the key,
+not the variable.
+
+⚠ **THE OFFSET MAP IS NESTED NOW, AND TWO THINGS HAD TO BE FIXED BEFORE IT WORKED.**
+`MdtBSJoint` is *nothing but* `MdtConstraintHeader head`, so a flat map of its own members has
+one entry. And `int bodyindex[MdtKeaMAXBODYCONSTRAINT];` did not match `\[\d*\]` at all, so
+`+0xb4` — the field every one of the sixteen reads FIRST — was simply not in the map, which
+read as "nothing fits" rather than as a missing member.
+
+⚠ **AND RAISING THE DEPTH ALONE COSTS TWENTY REPAIRS.** Three levels of nesting means almost
+anything covers almost any offset: `McdSpace.c`'s six went from fitting ONE type to fitting
+**twenty-two**, declined as ambiguous, and the output fell from 22 rewrites to 2 — a silent
+regression the byte-identity gate cannot see, because **a decline compiles perfectly**. The fit
+is asked in three tiers, narrowest first: direct member starts, then array elements, then the
+nested map. Expanding arrays *alone* brought the ambiguity back (three types fit), which is why
+the narrowest tier is members' own offsets and nothing else.
+
+⚠ **Parameters are not declarations**, and missing that repaired 2 of 21 sites. And **1,046
+sites are out of scope, not declined** — a `void *` base carries no structure, and reporting
+those as refusals buries the ones that can be repaired.
+
+> The map is built for **all 191 struct tags at once**, in five gcc runs rather than 13,744, by
+> putting thousands of probes in one file and reading the line numbers back out of the
+> diagnostics. Expressions that do not compile — `flags[0]` on a scalar — simply have no answer
+> on their line, and that silence is exactly the signal array-ness is read from. Cross-checked
+> against the one-process-per-probe version: 88 paths for `MdtBSJoint`, 123 for `MdtContact`,
+> both ways.
 
 ### `fix_derived_fields.py` — a derived struct's field addressed as an index past its base
 
@@ -807,6 +849,129 @@ branches — and need a static analysis, not a pattern match. Edits are keyed to
 applied **all or nothing**, because a half-carved arena overlaps *differently* rather than not at
 all and would still pass byte-identity piece by piece.
 
+---
+
+### `fix_vtable_offsets.py` — an Itanium vtable addressed in 4-byte words
+
+```bash
+python3 tools/fix_vtable_offsets.py /tmp/kd_lp64/allobj /tmp/kd_build
+#   -> 26 rewritten, 0 declined
+```
+
+The address point is `2 * sizeof(void *)` and slot n is `n * sizeof(void *)`; Ghidra bakes both
+at the i386 build's four. At LP64 `+ 8` leaves the vptr at `&vtable[1]` and `+ 16` from there is
+`&vtable[3]`, so the call meant for `platformInit` — which takes no arguments — enters
+`calcIworldandNonInertialForceandVhmf`, which takes seven, and it reads `blist` out of a
+register nobody set. ★ **The arithmetic predicts the observed callee exactly**, which is what
+makes it a measurement rather than a suspicion.
+
+⚠ **No gate here can see it.** No truncation, no struct changes size, and `code_call_check.py`
+reads 0 because the dispatch goes through a concrete `void (**)(...)` prototype rather than
+through `code` — the exact case that tool's own docstring records it cannot catch.
+
+⚠ **Two spellings, and the second was found a day after the first**, by which time both scenes
+had been chased through three downstream functions. `kd_types.h`'s own note warns about
+`(**(...)(*(int *)A + 0x10))(A, x, b)`: the object arrives as a POINTER, so there is no vptr
+store to key on, and the vptr is read as an `int` — truncating — before the slot arithmetic.
+`0x10` is slot 4, `solve`; the code was reaching slot 2, `makeFromColMajorPSM`, a nine-argument
+function called with three. What says `A` is polymorphic is its own struct: the first member is
+`code **_vptr_`. `*(int *)contact2 + 0x178` has the identical shape, is a field read, and is
+correctly left alone.
+
+⚠ **Its refusal used to run after the edits.** "Not one address point in the corpus" is what
+this prints instead of a zero — and it printed it on the *second* run over the same tree,
+having already rewritten every literal on the first. The count is taken before anything is
+written now, and it counts the repaired spelling too: **a search has to recognise its own
+output.**
+
+### `fix_narrow_pointers.py` — a pointer held in something four bytes wide
+
+```bash
+python3 tools/fix_narrow_pointers.py /tmp/kd_lp64/allobj /tmp/kd_build
+#   -> 13 locals + 50 accesses + 29 values + 47 pointer-array walks, 0 declined
+```
+
+**This is the class `fix_ptrwidth.py` has been reporting as "N diagnostic(s) remain".** That one
+widens the punned CASTS at the columns clang names; here there is no cast to rewrite, or the
+cast is already as wide as it can be and what is narrow is the VARIABLE. Six shapes, each with
+its own evidence and none of them a pattern:
+
+| | shape | what says it is a pointer |
+|---|---|---|
+| A | `int iVar3; iVar3 = keaPoolAlloc(...)` | `-Wint-conversion` |
+| B | `*(undefined4 *)&this->mLP = ...` | the member is a `MeReal *` |
+| C | the value stored into a widened pointer | it is stored into one |
+| D | `(T *)iVar10` with `iVar10` an `int` | `-Wint-to-pointer-cast` |
+| E | `iVar2 = *(kd_iptr *)&this->NAZ;` | the RHS is a pointer-width read |
+| F/G | `NCZ[z]` walked — and allocated — at 4 | `NCZ` is a `MeReal **` |
+
+The repair is a type substitution and nothing else, which is what keeps it byte-identical:
+`kd_iptr` **is** `int` at 32-bit pointer width, not merely the same size.
+
+⚠ **B is decided by measuring the target, not by its name.** `*(int *)&this->m_blocks` has the
+identical shape and is correct — `m_blocks` is an `int` on every target. 153 sites have the
+shape; 50 have a target that grows.
+
+⚠ **F without G is worse than neither.** Repairing the stride while the block is still allocated
+at four bytes an element makes the walk correct and runs it off the end; what comes back is a
+NULL where a matrix block should be, and the SEGV is at `*AcholMatrix = ...` three hundred lines
+from the allocation.
+
+★ **The rules feed each other, so the pass runs in rounds.** Widening an access (B) is what
+reveals that the value stored through it is a narrow local (C), and widening that reveals the
+next. A single pass leaves `*(kd_uptr *)&this->matrixChol = uVar1;` with `uVar1` four bytes wide
+— the same defect one step back, reading as a clean run.
+
+⚠ **Order.** After `fix_ptrwidth.py`, which writes the `kd_iptr` this keys on, and **before**
+`fix_align_masks.py`, because a mask on a *widened local* has no cast in it to recognise:
+`iVar3 + 0xf & 0xfffffff0` with `iVar3` declared `kd_iptr`. That ordering is worth five more
+masks.
+
+> **The site that proves the class**, and how it was found.
+> `pool_ptr = *(undefined4 *)((char *)poolstack + (-4) + poolstack_ptr * 4);` —
+> `void *poolstack[3]`, with the element size, the element *offset* and the access width all
+> frozen at four. Every allocation after the first `keaPopPoolFrame` comes back with its top
+> half gone, on the **second** simulation step, which is why the first one looked clean. A
+> conditional hardware watchpoint named the line in one command:
+> `watch -l pool_ptr if ((unsigned long)pool_ptr) < 0x100000000`. Two rounds of reading the
+> allocator had not.
+
+### `fix_align_masks.py` — an alignment mask frozen at 32 bits
+
+```bash
+python3 tools/fix_align_masks.py /tmp/kd_lp64/allobj /tmp/kd_build
+#   -> 36 widened, 0 declined
+```
+
+`(kd_iptr)cursor + 0x3f & 0xffffffc0` rounds an allocation up to a cache line. `0xffffffc0` is
+`~63` **in 32 bits** and its type is `unsigned int`, so at LP64 it widens with ZEROS and the AND
+does not round the pointer down — it **cuts the top half off it**. Nothing else here can see
+that: the expression's type is already `intptr_t` and stays `intptr_t`, so `fix_ptrwidth.py` has
+nothing to report, and no struct changes size.
+
+★ **The first evidence was a register dump, and that is the reusable part:**
+
+```
+SEGV on unknown address 0x00004c1e01c0 ... WRITE
+rbx = 0x000000004c1e01c0   rdi = 0x000072b84c1e0134
+```
+
+the faulting address IS the low half of a live pointer. ⚠ The report landed **two files away**
+on the first statement of `MdtBclAddBSJoint` — correct code writing through a pointer
+`MdtKeaConstraintsCreateFromChunk` had computed. Every baked offset in that statement was
+repaired first, on the strength of the file and line in the report, and the scene failed in
+exactly the same place afterwards. **Read the registers.**
+
+The repair is **anchor-and-correct**: `0xffffffc0` → `(0xffffffc0 | ~(kd_uptr)0xffffffffU)`,
+zero at 32-bit pointer width and `0xffffffff00000000` at LP64. The self-check compiles it at
+both widths and reads the two values back rather than asserting the claim.
+
+⚠ **Which masks — the discriminator is narrower than it looks.** The literal must have the shape
+of `~(align - 1)` (`flags & 0xfffffffd` is a bit being cleared in an integer and is correct
+everywhere) **and** the `&`'s own operand must be pointer-derived.
+`(void *)((kd_iptr)p + (uVar8 & 0xfffffffc))` has a pointer in the statement, a mask of the
+right shape and a pointer cast around the result, and is CORRECT — the mask is on a count. The
+scan walks back from the `&` to its own enclosing parenthesis and asks about that span alone.
 ---
 
 ## The investigative tools — reach for these when something is wrong

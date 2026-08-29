@@ -1152,6 +1152,246 @@ McdTriangleList       real: same run, same evidence. These two objects account f
 #                     a build that no longer existed. `cmake` will not rebuild what it thinks is
 #                     current, so the failure is silent. Check the newest `.c.o` against `git log`.
 
+# LP64-ONE-REMAIN    2026-08-29 (thirteenth session): ★ scene_chain RUNS CLEAN AT 64-BIT
+#                     POINTER WIDTH, and the other two scenes fail in ONE class between them —
+#                     the invented stack frames, which is a DECOMPILATION defect and not a
+#                     layout one. Measured over five consecutive runs of all three scenes:
+#
+#                       scene_chain            exit 0   no sanitizer error       5 of 5
+#                       scene_boxes_on_plane   exit 1   MstUtils 91,97 + McdBatch 829   5 of 5
+#                       scene_ragdoll          exit 1   the same three (3 of 5) or
+#                                                       BLOWN UP with no ASan error (2 of 5)
+#
+#                     Where this started the session: `MdtBcl.c:519` on chain and ragdoll,
+#                     `MstUtils` + `McdBatch` on boxes. Where the LP64 work started twelve
+#                     sessions ago: the FIRST STATEMENT of the first scene.
+#
+#                     ⚠ AND FIVE RUNS IS THE MEASUREMENT, NOT ONE. Three separate times this
+#                     session a single run read "clean" and the next read three errors, on
+#                     sources that had not changed — ASLR moves what an out-of-bounds write
+#                     lands on, and `-fsanitize-recover` means how far a scene gets changes
+#                     what it reports. A clean run is a sample. Take five.
+#
+#                     ⚠ ragdoll's `exit 1` with NO sanitizer error is a REAL FAILURE and the
+#                     harness used to call it PASS. Every scene returns non-zero when its own
+#                     verdict fails — ragdoll's is "BLOWN UP", bodies past 1e3 — and at i386
+#                     the identical sources read "plausible" (measured: link scene_ragdoll.c
+#                     against /tmp/kd_build at -m32, exit 0, 0 escaped). A wrong pointer that
+#                     stays IN BOUNDS is invisible to the sanitizer and visible to the scene.
+#                     `lp64_run.sh` now fails on a non-zero exit as well as on an ASan count.
+#
+#                     WHAT IS LEFT, and it is one thing seen from four call sites:
+#                     `MstUtils.c:91,97,105`, `McdBatch.c:829`, `MstBridge.c:168` — all of
+#                     them Ghidra's fabricated `aiStack_N + K` frames. LP64-TWO-REMAIN's
+#                     reading of that class still stands: it belongs upstream in recover.py's
+#                     frame conversion, it is 124 sites across 8 objects, five of those
+#                     objects are RELEASED, and byte-identity cannot gate it because giving
+#                     the scratch its own storage is a different stack layout by construction.
+
+# LP64-OPAQUE-API    2026-08-29 (thirteenth session): ★ A `void *` API IS TYPED BY ITS
+#                     INSTALLER, and that closed MdtBcl — 600 sites in one object, every one
+#                     of them a baked byte offset, all of them repaired and byte-identical.
+#
+#                     `MdtBcl.h` declares `void *const constraint`, so this is the ORIGINAL
+#                     API and no header can type it. Each of the sixteen `MdtBclAdd*` is
+#                     registered as a callback on the very type it takes —
+#
+#                       MdtBSJoint.c:54   (pMVar1->head).bclFunction = MdtBclAddBSJoint;
+#
+#                     — and `pMVar1` is an `MdtBSJointID`. Corpus-wide, because the installer
+#                     and the function it names are in different objects.
+#
+#                     WHICH PARAMETER is not guessed either: the one every one of whose baked
+#                     offsets lands on a real field of that type. `constraint` reads 21 of 21
+#                     in MdtBclAddBSJoint and `params` has no baked offsets at all. ONE HOP
+#                     further does MdtBclAddContactGroup, which walks the group's contact list
+#                     and hands each element to MdtBclAddContact — so the local it walks with
+#                     is an `MdtContact`, named by the call.
+#
+#                     ⚠ LP64-TWO-REMAIN SAID THE BLOCKER WAS THE OFFSET MAP AND IT WAS RIGHT,
+#                     but for two reasons rather than one. The nesting depth was the second:
+#                     `MdtBSJoint` is NOTHING but `MdtConstraintHeader head`, so a flat map of
+#                     its own members has one entry. The first was a MEASUREMENT BUG —
+#                     `int bodyindex[MdtKeaMAXBODYCONSTRAINT];` did not match `\[\d*\]`, so
+#                     +0xb4, the field every one of the sixteen reads FIRST, was not in the map
+#                     at all. With both fixed the sixteen read 339 of 346 offsets landing, and
+#                     the seven that do not are `constraint_00`'s, which the one-hop rule types.
+#
+#                     ⚠ AND RAISING THE DEPTH IS NOT ENOUGH ON ITS OWN — IT COSTS TWENTY
+#                     REPAIRS. The concrete-type inference asks which struct every offset lands
+#                     on; three levels of nesting means almost anything covers almost anything.
+#                     `McdSpace.c`'s six offsets went from fitting ONE type to fitting
+#                     TWENTY-TWO, declined as ambiguous, and the tool fell from 22 rewrites to
+#                     2 — a silent regression the byte-identity gate cannot see, because a
+#                     DECLINE COMPILES PERFECTLY. The fit is now asked in three tiers, narrowest
+#                     first: direct member starts, then array elements, then the nested map.
+#                     Expanding arrays ALONE was enough to bring the ambiguity back (three
+#                     types fit), which is why the narrowest tier is members' own offsets.
+#
+#                     ★ THE REPAIR CHANGED SHAPE, AND THE OLD ONE WAS NOT BYTE-IDENTICAL.
+#                     `*(T *)&p->FIELD` — this tool's documented rewrite — re-spells the whole
+#                     address, and on MdtBcl gcc then commons the base pointer across the
+#                     function: the object came back 268 bytes SMALLER. What works is to
+#                     substitute THE LITERAL AND NOTHING ELSE,
+#
+#                       *(int *)((int)constraint + ((int)((char *)&((struct MdtBSJoint *)0)
+#                                                          ->head.bodyindex[0] - (char *)0)))
+#
+#                     leaving the expression Ghidra wrote — including the `(int)` cast that
+#                     fix_ptrwidth will widen later — exactly where it was. All 600 sites in
+#                     one compile, byte-identical. It also removes the need to parse the cast
+#                     at all, so `(MeReal (*) [4])((int)p + K)` and the 52 bare address
+#                     computations get the same repair as the 548 dereferences.
+#
+#                     A THIRD SOURCE OF TYPE fell out of the same machinery and is the only
+#                     one that is not an inference: the vendor's own declaration.
+#                     `MeDictFirst` returns `MeDictNode *`, and `MdtWorldStep` reads
+#                     `*(void **)((kd_iptr)pvVar5 + 0x14)` — `data`, at 20 here and FORTY at
+#                     LP64. ⚠ Per FUNCTION, not per variable: Ghidra assigns `pvVar5` from
+#                     `MeChunkGetMem` at line 218 and from `MeDictFirst` at 284, and a function
+#                     where two known assignments name different structs is declined.
+#
+#                     RESULT: 643 rewritten, 13 declined and reported, up from 22.
+
+# LP64-VTABLE-WORDS  2026-08-29 (thirteenth session): AN ITANIUM VTABLE ADDRESSED IN 4-BYTE
+#                     WORDS. 26 sites, tools/fix_vtable_offsets.py.
+#
+#                       (*(char **)&vanillaFunctions) = (char *)((char *)&vtable_for_...[0] + 8);
+#                       (**(void (**)(void *))((char *)(*(char **)&vanillaFunctions) + 16))(...);
+#
+#                     The address point is `2 * sizeof(void *)` and slot n is `n * sizeof(void *)`.
+#                     At LP64 `+ 8` leaves the vptr at `&vtable[1]`, and `+ 16` from there is
+#                     `&vtable[3]` — so the call meant for `platformInit`, which takes NO
+#                     arguments, enters `calcIworldandNonInertialForceandVhmf`, which takes
+#                     seven. It reads `blist` out of a register nobody set:
+#
+#                       #0 keaFunctions_Vanilla::calcIworldandNonInertialForceandVhmf ...:52
+#                       #1 MdtKeaAddConstraintForces  keaRbdCore_unified.c:163
+#
+#                     and line 163 is the platformInit call. ★ THE ARITHMETIC PREDICTS THE
+#                     OBSERVED CALLEE EXACTLY, which is what makes it a measurement.
+#
+#                     ⚠ NOTHING IN THE GATE SET CAN SEE THIS. No truncation, no struct changes
+#                     size, and `code_call_check.py` reads 0 because the dispatch goes through
+#                     a concrete `void (**)(...)` prototype rather than through `code` — the
+#                     exact case that tool's own docstring records it cannot catch.
+#
+#                     ⚠ THERE ARE TWO SPELLINGS AND THE SECOND WAS FOUND A DAY LATER, by
+#                     which time both chain and ragdoll had been chased through three
+#                     downstream functions. `kd_types.h`'s own note warns about it:
+#
+#                       (**(...)(*(int *)A + 0x10))(A,this->x,b)
+#
+#                     — the object arrives as a POINTER, so there is no vptr store to key on,
+#                     and the vptr is read as an `int` (truncating) before the slot arithmetic.
+#                     `0x10` is slot 4, which is `solve`; the code was reaching slot 2,
+#                     `makeFromColMajorPSM`, a NINE-argument function called with three. What
+#                     says `A` is polymorphic is its own struct: the first member is
+#                     `code **_vptr_`. `*(int *)contact2 + 0x178` has the identical shape, is
+#                     a field read, and is correctly left alone.
+#
+#                     ⚠ AND THE REFUSAL RAN AFTER THE EDITS. "Not one address point in the
+#                     corpus" is what this tool prints rather than a zero — and it printed it
+#                     on the SECOND run over the same tree, having already rewritten every
+#                     literal on the first, leaving a half-edited tree behind each refusal.
+#                     The count is now taken before any file is written, and it counts the
+#                     repaired spelling too. A search has to recognise its own output.
+
+# LP64-ALIGN-MASK    2026-08-29 (thirteenth session): AN ALIGNMENT MASK FROZEN AT 32 BITS.
+#                     36 sites, tools/fix_align_masks.py.
+#
+#                       paiVar7 = (MdtKeaBodyIndexPair *)
+#                                 (maxPartitions * 4 + 0x3f + (kd_iptr)(piVar8 + maxPartitions)
+#                                  & 0xffffffc0);
+#
+#                     `0xffffffc0` is `~63` IN 32 BITS and its type is `unsigned int`, so at
+#                     LP64 the usual arithmetic conversions widen it with ZEROS and the AND
+#                     does not round the pointer down — it CUTS THE TOP HALF OFF IT.
+#
+#                     ★ THE FIRST EVIDENCE WAS A REGISTER DUMP, AND THAT IS THE LESSON:
+#
+#                       SEGV on unknown address 0x00004c1e01c0 ... WRITE
+#                       rbx = 0x000000004c1e01c0   rdi = 0x000072b84c1e0134
+#
+#                     the faulting address IS the low half of a live pointer. ⚠ THE REPORT
+#                     LANDED TWO FILES AWAY on `clist->Jbody[...] = ...`, the first statement
+#                     of `MdtBclAddBSJoint` — correct code writing through a pointer
+#                     `MdtKeaConstraintsCreateFromChunk` had computed. Every baked offset in
+#                     that statement was repaired first, on the strength of the file and line
+#                     in the report, and the scene failed at exactly the same place afterwards.
+#                     READ THE REGISTERS, not the line number.
+#
+#                     THE REPAIR IS ANCHOR-AND-CORRECT in its simplest form yet:
+#
+#                       0xffffffc0   ->   (0xffffffc0 | ~(kd_uptr)0xffffffffU)
+#
+#                     zero at 32-bit pointer width, `0xffffffff00000000` at LP64. The
+#                     self-check COMPILES IT BOTH WAYS and reads the two values back rather
+#                     than asserting the claim.
+#
+#                     ⚠ WHICH MASKS, and the discriminator is narrower than it looks. The
+#                     literal must have the shape of `~(align - 1)` — `flags & 0xfffffffd` is
+#                     a bit being cleared in an integer and is correct everywhere — AND the
+#                     `&`'s own operand must be pointer-derived. `(void *)((kd_iptr)pMVar5 +
+#                     (uVar8 & 0xfffffffc))` has a pointer in the statement, a mask of the
+#                     right shape and a pointer cast around the result, and is CORRECT: the
+#                     mask is on a count. The scan walks back from the `&` to its own
+#                     enclosing parenthesis and asks about that span alone.
+
+# LP64-NARROW-PTR    2026-08-29 (thirteenth session): A POINTER HELD IN SOMETHING FOUR BYTES
+#                     WIDE. 139 sites, tools/fix_narrow_pointers.py — and this is the class
+#                     `fix_ptrwidth.py` has been reporting as "N diagnostic(s) remain" all
+#                     along. It widens the punned CASTS at the columns clang names; here there
+#                     is no cast to rewrite, or the cast is already as wide as it can be and
+#                     what is narrow is the VARIABLE.
+#
+#                     SIX SHAPES, each with its own evidence and none of them a pattern:
+#
+#                       A  int iVar3; iVar3 = keaPoolAlloc(...);   -Wint-conversion names it
+#                       B  *(undefined4 *)&this->mLP = ...         the member is a MeReal *
+#                       C  the value stored into a widened pointer must be pointer-wide
+#                       D  (T *)iVar10 where iVar10 is an int      -Wint-to-pointer-cast
+#                       E  iVar2 = *(kd_iptr *)&this->NAZ;         reading one truncates too
+#                       F  *(MeReal **)(NCZ + z * 4)               an array OF POINTERS at 4
+#                       G  keaPoolAlloc((n + 0xf & ...) << 2)      ... allocated at 4 as well
+#
+#                     ⚠ B IS DECIDED BY MEASURING THE TARGET, NOT BY ITS NAME.
+#                     `*(int *)&this->m_blocks` has the identical shape and is CORRECT.
+#                     153 sites have the shape; 50 have a target that grows.
+#
+#                     ⚠ AND F WITHOUT G IS WORSE THAN NEITHER. Repairing the stride while the
+#                     block is still allocated at four bytes an element makes the walk correct
+#                     and runs it off the end; what it reads back is a NULL where a matrix
+#                     block should be, and the SEGV is at `*AcholMatrix = ...` three hundred
+#                     lines from the allocation. Both halves or neither.
+#
+#                     ★ THE RULES FEED EACH OTHER, SO THE PASS RUNS IN ROUNDS. Widening an
+#                     access (B) is what reveals that the value stored through it is a narrow
+#                     local (C); widening that local reveals the next. A single pass leaves
+#                     `*(kd_uptr *)&this->matrixChol = uVar1;` with `uVar1` four bytes wide,
+#                     which is the same defect one step back and reads as a clean run.
+#
+#                     ⚠ ORDER AGAINST fix_align_masks: AFTER fix_ptrwidth (which writes the
+#                     `kd_iptr` both key on) and BEFORE the mask pass, because a mask on a
+#                     WIDENED LOCAL has no cast in it to recognise — `iVar3 + 0xf & 0xfffffff0`
+#                     with `iVar3` declared `kd_iptr`. That ordering is worth five more masks.
+#
+#                     THE SITE THAT PROVES THE CLASS IS `keaPopPoolFrame`:
+#
+#                       pool_ptr = *(undefined4 *)((char *)poolstack + (-4) + poolstack_ptr * 4);
+#
+#                     `void *poolstack[3]` — the element size, the element OFFSET and the
+#                     access width all frozen at four. So every allocation after the first
+#                     pool-frame restore comes back with its top half gone, on the SECOND
+#                     simulation step, which is why the first one looked clean and why a gdb
+#                     watchpoint on `pool_ptr` found in one command what reading could not.
+#
+#                     ⚠ HOW IT WAS ACTUALLY FOUND, because it is the reusable part: a
+#                     conditional hardware watchpoint. `watch -l pool_ptr if
+#                     ((unsigned long)pool_ptr) < 0x100000000` names the exact line that
+#                     truncates, first try, on a defect whose symptom is three files away.
+#                     Two rounds of reading the allocator had not.
+
 # LP64-STRIDE-AS-ADDR 2026-08-28 (twelfth session, later): A POINTER STRIDE SPELLED AS AN ADDRESS
 #                     INSIDE THE STRUCT — one line, and it was the last thing between the collision
 #                     side and a clean LP64 run.

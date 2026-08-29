@@ -60,7 +60,12 @@ SCENES=("$@")
                                    "$HERE/test/scene_boxes_on_plane.c"
                                    "$HERE/test/scene_ragdoll.c")
 
-W=$(mktemp -d); trap 'rm -rf "$W"' EXIT
+W=$(mktemp -d)
+# KD_KEEP=1 leaves the objects, the scene binaries and — the reason it exists —
+# each scene's stderr, which is the only place the ASan report with its
+# addresses, its allocation and its stack actually lives. The summary printed
+# below is a list of SITES; diagnosing one needs the report.
+[ "${KD_KEEP:-0}" = 1 ] || trap 'rm -rf "$W"' EXIT
 # -fsanitize-recover so ONE run reports many defects rather than the first.
 CF="-O1 -g -fsanitize=address -fsanitize-recover=address -fno-omit-frame-pointer"
 CF="$CF -fno-pic -fno-strict-aliasing -std=gnu99 -w -Wno-int-conversion"
@@ -119,15 +124,24 @@ for s in "${SCENES[@]}"; do
     rc=$?
     errs=$(grep -c "ERROR: AddressSanitizer" "$W/$name.err")
     printf '  %-24s exit %-3d  %s\n' "$name" "$rc" \
-        "$( [ "$errs" -eq 0 ] && echo 'clean' || echo "$errs AddressSanitizer error(s)")"
+        "$( [ "$errs" -eq 0 ] && echo 'no sanitizer error' || echo "$errs AddressSanitizer error(s)")"
     if [ "$errs" -gt 0 ]; then
         status=1
         # the DISTINCT sites, not every hit: one bad allocation reports thousands
         grep -A2 "ERROR: AddressSanitizer" "$W/$name.err" \
             | grep -oE "in [A-Za-z_][A-Za-z0-9_]* [^ ]+\.c:[0-9]+" | sort -u \
             | head -12 | sed 's/^/      /'
+    elif [ "$rc" != 0 ]; then
+        # ⚠ A CLEAN SANITIZER IS NOT A PASS. Every scene returns non-zero when
+        # its OWN verdict fails — `scene_ragdoll` exits 1 on "BLOWN UP", bodies
+        # past 1e3 — and that is a pointer-width defect the sanitizer cannot
+        # see, because the wrong pointer was still in bounds. Counting only
+        # ASan errors reported exactly that case as PASS.
+        status=1
+        sed -n 's/^/      /p' "$W/$name.err" | tail -4
     fi
 done
 [ "$status" = 0 ] && echo "  -> PASS (necessary, NOT sufficient: arm64 also faults on unaligned access)" \
                   || echo "  -> FAIL — 64-bit pointer width breaks this. See the header of this file."
+[ "${KD_KEEP:-0}" = 1 ] && echo "  (KD_KEEP: reports and binaries kept in $W)"
 exit $status

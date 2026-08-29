@@ -54,11 +54,13 @@ import sys
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WORK = '/tmp/kd_offsets'
 
-# `*(T *)((char *)BASE + K)` — and the `(int)`/`(kd_iptr)` spellings of the same.
-SITE = re.compile(
-    r'\*\((?P<ty>[A-Za-z_]\w*(?:\s+\w+)*\s*\**)\s*\*\)'
-    r'\(\((?:char|int|kd_iptr)\s*\*?\)(?P<base>[A-Za-z_]\w*(?:->[A-Za-z_]\w*)?)'
-    r'\s*\+\s*(?P<off>0x[0-9a-f]+|\d+)\)')
+# THE SITE, in every spelling: an address computed as `BASE + K` with K frozen
+# at its i386 value. The deref is not part of it and neither is the cast —
+# `*(int *)((int)p + 0xb4)`, `(float *)((int)p + 0xbc)` and
+# `(MeReal (*) [4])((int)p + 0xfc)` are the same defect and get the same repair.
+SITE = re.compile(r'\(\((?:char|int|kd_iptr)\s*\*?\)'
+                  r'(?P<base>[A-Za-z_]\w*(?:->[A-Za-z_]\w*)?)'
+                  r'\s*\+\s*(?P<off>0x[0-9a-f]+|\d+)\)')
 
 # ★ THE BASE IS NOT ALWAYS A VARIABLE, and the one that is not was the defect
 # that kept scene_chain failing after everything else was repaired:
@@ -81,6 +83,12 @@ FIELD_READ = re.compile(r'(?m)^[ \t]*(?P<var>[A-Za-z_]\w*)\s*=\s*'
                         r'[A-Za-z_]\w*->(?P<f>[A-Za-z_]\w*)\s*;')
 
 BANNER = re.compile(r'(?m)^/\* ---- (\S+)')
+
+
+def all_sites(text):
+    """Every baked-offset site, in source order."""
+    return list(SITE.finditer(text))
+
 CFLAGS = ['-m32', '-O2', '-fno-pic', '-fno-strict-aliasing', '-std=gnu99',
           '-w', '-Wno-int-conversion', '-Wno-incompatible-pointer-types', '-DLINUX']
 _SZ = re.compile(r'char \(\*\)\[(\d+)\]')
@@ -98,25 +106,69 @@ HEAD = ('#include "%s/include/kd_compat.h"\n#include "%s/include/kd_karma.h"\n'
         '#include "%s/include/kd_types.h"\n' % (HERE, HERE, HERE))
 
 
+# gcc's report for `int x = &probe;` names the array type, and it carries the
+# LINE, which is what lets one file answer thousands of probes at once. Matched
+# loosely on error-or-warning because which one it is has moved between gcc
+# versions and the number is in the text either way.
+_BSZ = re.compile(r'batch\.c:(\d+):\d+: (?:error|warning): initialization of .int. '
+                  r'from .char \(\*\)\[(\d+)\]')
+
+
+def measure_many(exprs, inc, cache):
+    """Compile-time constants for MANY expressions in ONE gcc run.
+
+    ⚠ ONE PROCESS PER PROBE STOPS SCALING THE MOMENT THE MAP IS NESTED. The flat
+    map asked 1,229 questions and paid 1,229 gcc startups; expanding arrays and
+    recursing into nested structs asks about 9,000, which is twenty minutes of
+    `fork`. gcc reports every line of a file it is given, so one file answers
+    all of them.
+
+    AND THE FAILURES ARE THE POINT, not an accident tolerated: `flags[0]` on a
+    scalar member simply has no answer on its line, and that silence is exactly
+    the signal array-ness is read from. An expression whose type is incomplete
+    behaves the same way, so a probe this cannot answer is a member the map
+    does not claim to cover."""
+    todo = sorted({e for e in exprs if e not in cache})
+    if not todo:
+        return
+    os.makedirs(WORK, exist_ok=True)
+    src = os.path.join(WORK, 'batch.c')
+    line_of, n = {}, HEAD.count('\n')
+    with open(src, 'w') as f:
+        f.write(HEAD)
+        for i, e in enumerate(todo):
+            f.write('char kd_p%d[%s];\nint kd_f%d = &kd_p%d;\n' % (i, e, i, i))
+            n += 2
+            line_of[n] = e
+    r = subprocess.run(['gcc', '-m32', '-DLINUX', '-fmax-errors=0',
+                        '-I' + os.path.join(HERE, 'include')] + includes(inc)
+                       + ['-c', '-o', os.devnull, src], capture_output=True, text=True)
+    for e in todo:
+        cache[e] = None
+    for m in _BSZ.finditer(r.stderr):
+        e = line_of.get(int(m.group(1)))
+        if e is not None:
+            cache[e] = int(m.group(2))
+
+
 def measure(expr, inc, cache):
     """A compile-time constant, read out of gcc's own type printer."""
-    if expr in cache:
-        return cache[expr]
-    os.makedirs(WORK, exist_ok=True)
-    src = os.path.join(WORK, 'p.c')
-    open(src, 'w').write(HEAD + 'char kd_probe[%s];\nint kd_force = &kd_probe;\n' % expr)
-    r = subprocess.run(['gcc', '-m32', '-DLINUX'] + includes(inc)
-                       + ['-c', '-o', os.devnull, src], capture_output=True, text=True)
-    m = _SZ.search(r.stderr)
-    cache[expr] = int(m.group(1)) if m else None
+    if expr not in cache:
+        measure_many([expr], inc, cache)
     return cache[expr]
 
 
 # `TYPE NAME;` / `TYPE NAME[3];` inside a struct body. Bit-fields, function
 # pointers and anonymous members are deliberately NOT matched — a member this
 # cannot name is a member the offset map must not claim to cover.
-MEMBER = re.compile(r'(?m)^[ \t]+(?:const\s+|struct\s+|unsigned\s+)*[A-Za-z_]\w*'
-                    r'[ \t]*\**[ \t]*(?P<name>[A-Za-z_]\w*)[ \t]*(?:\[\d*\])?[ \t]*;')
+#
+# ⚠ THE ARRAY BOUND IS NOT ALWAYS A NUMBER, and requiring one dropped members
+# silently. `int bodyindex[MdtKeaMAXBODYCONSTRAINT];` did not match `\[\d*\]` at
+# all, so `MdtConstraintHeader+0xb4` — the field every one of the sixteen
+# MdtBclAdd* functions reads first — was simply not in the map, and the type
+# inference then read as "nothing fits" rather than "a member is missing".
+MEMBER = re.compile(r'(?m)^[ \t]+(?P<ty>(?:const\s+|struct\s+|unsigned\s+)*[A-Za-z_]\w*'
+                    r'[ \t]*\**)[ \t]*(?P<name>[A-Za-z_]\w*)[ \t]*(?:\[[^\]]*\])?[ \t]*;')
 
 _BODIES = {}
 
@@ -145,24 +197,124 @@ def struct_bodies(inc):
     return _BODIES
 
 
-_OFFSETS = {}
+_PATHS = {}
+_FLAT = {}
+_HEAD = {}
+ELEM_CAP = 512          # an array wider than this is registered at its base only
+DEPTH = 3
+
+
+def build_paths(inc, cache):
+    """Every struct tag's i386 byte offset -> the C path naming the field at it.
+
+    NESTED, AND THE NESTING IS THE WHOLE POINT FOR THE `void *` APIs.
+    `MdtBSJoint` is *nothing but* `MdtConstraintHeader head;`, so a flat map of
+    its top-level members has exactly one entry and every offset MdtBcl uses
+    reads as "does not land". One level of nesting is not enough either —
+    `head.ref1[0][0]` is a member, of an array, of an array, of a nested struct.
+
+    ⚠ AND THE OBVIOUS RECURSIVE SPELLING HAS A GUARD BUG THAT RETURNS ZERO. A
+    memoising `field_paths(tag, depth)` has to publish its (empty) result before
+    it walks, or a cyclic type recurses forever; a deeper walk then re-enters
+    that key and gets the empty dict, and the whole map comes back empty — which
+    reads as "nothing fits" rather than as a bug. This is written as an
+    ITERATIVE expansion with a hard budget instead, so there is no in-progress
+    entry to re-enter and no guard to get wrong.
+
+    Every offset is measured from the ROOT tag, so nothing is composed by
+    addition and a nested path cannot drift.
+
+    ⚠ ARRAY-NESS IS MEASURED, NOT READ OFF THE DECLARATION. `MeVector3 center;`
+    is a `MeReal[3]` behind a typedef and `MeMatrix4 ref1;` is a `MeReal[4][4]`,
+    so a scan for brackets records only the first element and the map has holes
+    where a repair would have to land. `sizeof(f)` over `sizeof(f[0])` gets it
+    right wherever the brackets are, and the `esz >= 2` floor is load-bearing:
+    GNU C gives `sizeof(void)` and `sizeof(function)` as 1, so a `void *`-ish
+    member would otherwise read as an array of its own byte count.
+
+    ⚠ A POINTER MEMBER CAN STILL BE AN ARRAY. `MdtBody *mdtbody[2]` has a `*` in
+    its type and two elements; skipping the expansion on that ground registered
+    `mdtbody` at +0x54 and left +0x58 missing, which is one of the two offsets
+    every MdtBclAdd* reads. The `*` only decides whether to recurse INTO the
+    type, never whether to expand it."""
+    if _PATHS:
+        return _PATHS
+    bodies = struct_bodies(inc)
+    for t in bodies:
+        _PATHS[t] = {}
+        _FLAT[t] = {}
+        _HEAD[t] = {}
+    work = [(t, m.group('name'), re.sub(r'\s+', ' ', m.group('ty')).strip(), DEPTH)
+            for t, body in bodies.items() for m in MEMBER.finditer(body)]
+    head = True
+    while work:
+        probes = []
+        for t, e, _ty, _b in work:
+            probes += ['((char *)&((struct %s *)0)->%s - (char *)0) + 1' % (t, e),
+                       'sizeof(((struct %s *)0)->%s) + 1' % (t, e),
+                       'sizeof(((struct %s *)0)->%s[0]) + 1' % (t, e)]
+        measure_many(probes, inc, cache)
+        nxt = []
+        for t, e, ty, b in work:
+            off = cache.get('((char *)&((struct %s *)0)->%s - (char *)0) + 1' % (t, e))
+            if off is None:
+                continue
+            msz = cache.get('sizeof(((struct %s *)0)->%s) + 1' % (t, e)) or 1
+            esz = cache.get('sizeof(((struct %s *)0)->%s[0]) + 1' % (t, e)) or 1
+            off, msz, esz = off - 1, msz - 1, esz - 1
+            if head:
+                _HEAD[t].setdefault(off, e)
+            if esz >= 2 and msz % esz == 0 and 2 <= msz // esz <= ELEM_CAP:
+                nxt += [(t, '%s[%d]' % (e, i), ty, b) for i in range(msz // esz)]
+                continue
+            _PATHS[t].setdefault(off, e)
+            if '.' not in e:
+                _FLAT[t].setdefault(off, e)
+            base = re.sub(r'^(?:const|struct|unsigned)\s+', '', ty).strip()
+            if b > 0 and '*' not in ty and base in bodies and base != t:
+                nxt += [(t, '%s.%s' % (e, m.group('name')),
+                         re.sub(r'\s+', ' ', m.group('ty')).strip(), b - 1)
+                        for m in MEMBER.finditer(bodies[base])]
+        work, head = nxt, False
+    return _PATHS
 
 
 def offsets_of(tag, inc, cache):
-    """i386 byte offset -> member name, for one struct tag."""
-    if tag in _OFFSETS:
-        return _OFFSETS[tag]
-    body = struct_bodies(inc).get(tag)
-    out = {}
-    if body:
-        for m in MEMBER.finditer(body):
-            name = m.group('name')
-            off = measure('((char *)&((struct %s *)0)->%s - (char *)0) + 1'
-                          % (tag, name), inc, cache)
-            if off is not None:
-                out[off - 1] = name
-    _OFFSETS[tag] = out
-    return out
+    """i386 byte offset -> the field path at it, for one struct tag."""
+    return build_paths(inc, cache).get(tag, {})
+
+
+def flat_offsets_of(tag, inc, cache):
+    """The same map restricted to TOP-LEVEL members — the stronger measurement.
+
+    ⚠ A NESTED MAP IS A WEAKER DISCRIMINATOR AND IT COST TWENTY REPAIRS. The
+    concrete-type inference asks which struct every offset lands on, and
+    requiring all of them is what made it a measurement rather than a guess.
+    Recursing three levels means almost anything covers almost any offset:
+    `McdSpace.c`'s six offsets went from fitting ONE type (`CxSmallSort`) to
+    fitting TWENTY-TWO, the site declined as ambiguous, and the tool's output
+    fell from 22 rewrites to 2 — a silent regression the byte-identity gate
+    cannot see, because a decline compiles perfectly.
+
+    So the fit is asked in THREE tiers, narrowest first:
+
+      _HEAD   every offset is the START of a direct member
+      _FLAT   ... or an element of one of its arrays
+      _PATHS  ... or anywhere at all, three levels deep
+
+    Expanding arrays alone was enough to reintroduce the ambiguity — the same
+    six offsets fit three types at the `_FLAT` tier — which is why the narrowest
+    tier is the members' own offsets and nothing else. `CxSmallSort` is unique
+    there; `MdtBSJoint`, which is *nothing but* a nested header, can only ever
+    be answered at the third."""
+    build_paths(inc, cache)
+    return _FLAT.get(tag, {})
+
+
+def head_offsets_of(tag, inc, cache):
+    """Narrower still: the offset each direct member STARTS at. See above."""
+    build_paths(inc, cache)
+    return _HEAD.get(tag, {})
 
 
 def region_of(text, pos):
@@ -214,6 +366,186 @@ OPAQUE = re.compile(r'^(void|undefined\d*|int|uint|char|float|double|code'
                     r'|MeReal|MeU\d+|MeI\d+)\b')
 
 
+# ---------------------------------------------------------------- the `void *` API
+#
+# ★ SOME OF THIS IS NOT GHIDRA LOSING A TYPE — IT IS THE ORIGINAL API, and no
+# header can be made to type it. `MdtBcl.h` declares
+#
+#     void (*MdtBclAddConstraintFn)(MdtKeaConstraints *const, void *const constraint, ...)
+#
+# so MathEngine hands the Bcl layer an opaque pointer and the Bcl layer knows
+# the layout by offset. Every one of the sixteen `MdtBclAdd*` functions takes a
+# DIFFERENT constraint type through that same `void *`, which is also why the
+# per-file inference above cannot work here: pooling MdtBcl.c's offsets asks one
+# question of sixteen answers.
+#
+# ★ BUT THE TYPE IS WRITTEN DOWN, IN THE INSTALLER. Each of the sixteen is
+# registered as a callback on the very type it takes:
+#
+#     MdtBSJoint.c:54    (pMVar1->head).bclFunction = MdtBclAddBSJoint;
+#
+# and `pMVar1` is an `MdtBSJointID`. That resolves all sixteen mechanically,
+# with no guessing and no aligning of two compilers' instruction streams.
+INSTALL = re.compile(r'\(?\s*(?P<var>[A-Za-z_]\w*)\s*->\s*[A-Za-z_]\w*\s*\)?\s*\.\s*'
+                     r'[A-Za-z_]\w*\s*=\s*(?P<fn>[A-Za-z_]\w*)\s*;')
+INSTALL_FLAT = re.compile(r'(?P<var>[A-Za-z_]\w*)\s*->\s*[A-Za-z_]\w*\s*=\s*'
+                          r'(?P<fn>[A-Za-z_]\w*)\s*;')
+
+_TD = {}
+
+
+def typedefs(inc):
+    """name -> the spelling it is a typedef for, over every header."""
+    if _TD:
+        return _TD
+    for root in (os.path.join(HERE, 'include'), inc):
+        for dirpath, _d, files in os.walk(root):
+            for fn in sorted(files):
+                if not fn.endswith('.h'):
+                    continue
+                txt = open(os.path.join(dirpath, fn), errors='ignore').read()
+                for m in re.finditer(r'(?m)^\s*typedef\s+([A-Za-z_][\w \t*]*?)'
+                                     r'\s*\**\s*(\w+)\s*;', txt):
+                    _TD.setdefault(m.group(2), re.sub(r'\s+', ' ', m.group(1)).strip())
+    return _TD
+
+
+def tag_of(ty, inc):
+    """A declared type spelling -> the struct TAG it ultimately names.
+
+    The offsets live on the tag, and what Ghidra writes is the handle:
+    `MdtBSJointID` is `MdtBSJoint *` is `struct MdtBSJoint`."""
+    t = re.sub(r'\s+', ' ', ty or '').replace('*', '').replace('const ', '')
+    t = t.replace('struct ', '').strip()
+    for _ in range(8):
+        if t in struct_bodies(inc):
+            return t
+        nxt = typedefs(inc).get(t)
+        if not nxt:
+            return None
+        nxt = nxt.replace('struct ', '').strip()
+        if nxt == t:
+            return None
+        t = nxt
+    return None
+
+
+def corpus_callbacks(texts, inc):
+    """FUNCTION -> the struct tag of the object it is installed as a callback on.
+
+    Corpus-wide on purpose: the installer and the function it names are in
+    different objects (`MdtBSJoint.c` and `MdtBcl.c`), which is the whole reason
+    a per-file rule cannot see this.
+
+    A function installed on two different types is dropped rather than
+    arbitrated — there is no evidence here that could choose between them."""
+    names = set()
+    for t in texts.values():
+        names |= {m.group(1) for m in BANNER.finditer(t)}
+    out = {}
+    for t in texts.values():
+        for rx in (INSTALL, INSTALL_FLAT):
+            for m in rx.finditer(t):
+                f = m.group('fn')
+                if f not in names:
+                    continue
+                tag = tag_of(declared_type(region_of(t, m.start()), m.group('var')), inc)
+                if not tag:
+                    continue
+                out[f] = tag if out.get(f, tag) == tag else None
+    return {k: v for k, v in out.items() if v}
+
+
+def signature_params(region):
+    """The parameter NAMES of the function this region holds, in order."""
+    sig = re.search(r'(?s)^/\* ---- .*?\*/\s*\n(.*?)\{', region)
+    if not sig:
+        return []
+    sig = sig.group(1)
+    i = sig.find('(')
+    if i < 0:
+        return []
+    out, depth, cur = [], 0, ''
+    for ch in sig[i:]:
+        if ch in '([':
+            depth += 1
+            if depth == 1:
+                continue
+        elif ch in ')]':
+            depth -= 1
+            if depth == 0:
+                break
+        if ch == ',' and depth == 1:
+            out.append(cur)
+            cur = ''
+        else:
+            cur += ch
+    out.append(cur)
+    return [(re.findall(r'[A-Za-z_]\w*', p) or [''])[-1] for p in out]
+
+
+def call_args(text, pos):
+    """The argument expressions of the call whose `(` is at `pos`."""
+    out, depth, cur = [], 0, ''
+    for ch in text[pos:]:
+        if ch in '([':
+            depth += 1
+            if depth == 1:
+                continue
+        elif ch in ')]':
+            depth -= 1
+            if depth == 0:
+                break
+        if ch == ',' and depth == 1:
+            out.append(cur.strip())
+            cur = ''
+        else:
+            cur += ch
+    out.append(cur.strip())
+    return out
+
+
+CALL = re.compile(r'\b(?P<fn>[A-Za-z_]\w*)\s*\(')
+
+# ★ A THIRD SOURCE OF TYPE, AND THE ONLY ONE THAT IS NOT AN INFERENCE AT ALL:
+# the vendor declared what the function returns.
+#
+#     for (pvVar5 = MeDictFirst(pMVar4); ...)
+#         MdtBodyResetForces(*(void **)((kd_iptr)pvVar5 + 0x14));
+#
+# `MeDict.h` says `extern MeDictNode *MeDictFirst(MeDict *);`, and 0x14 is
+# `MeDictNode::data` at i386 and **40** at LP64 — so `MdtWorldStep` hands
+# `MdtBodyResetForces` a pointer read out of the middle of a tree node.
+#
+# ⚠ IT HAS TO BE PER FUNCTION AND NOT PER VARIABLE. Ghidra reuses `pvVar5` for
+# everything: in `MdtWorldStep` it is assigned from `MeChunkGetMem` at line 218
+# and from `MeDictFirst` at 284. `MeChunkGetMem` returns `void *`, which names
+# nothing, so the KNOWN assignments still agree — and a function where two of
+# them name different structs is declined and reported rather than resolved by
+# picking the nearer one.
+RETURNS = re.compile(r'(?m)^\s*(?:extern\s+)?(?P<ty>[A-Za-z_]\w*(?:\s+\w+)*\s*\*+)\s*'
+                     r'(?:MEAPI\s+)?(?P<fn>\w+)\s*\(')
+CALL_ASSIGN = re.compile(r'(?m)(?P<var>[A-Za-z_]\w*)\s*=\s*(?P<fn>[A-Za-z_]\w*)\s*\(')
+
+_RET = {}
+
+
+def header_returns(inc):
+    """FUNCTION -> its declared return type, from the vendor's own headers."""
+    if _RET:
+        return _RET
+    for root in (os.path.join(HERE, 'include'), inc):
+        for dirpath, _d, files in os.walk(root):
+            for fn in sorted(files):
+                if not fn.endswith('.h'):
+                    continue
+                txt = open(os.path.join(dirpath, fn), errors='ignore').read()
+                for m in RETURNS.finditer(txt):
+                    _RET.setdefault(m.group('fn'),
+                                    re.sub(r'\s+', ' ', m.group('ty')).strip())
+    return _RET
+
+
 def compiles_identically(fn, text, build, inc):
     ref = os.path.join(build, fn[:-2] + '.o')
     if not os.path.exists(ref):
@@ -230,6 +562,35 @@ def compiles_identically(fn, text, build, inc):
     return open(ref, 'rb').read() == open(obj, 'rb').read()
 
 
+def accept_edits(fn, text, edits, build, inc):
+    """Apply as many edits as keep the i386 object byte-identical, cheaply.
+
+    ⚠ ONE COMPILE PER EDIT DOES NOT SURVIVE MdtBcl. That file has 600 sites and
+    takes a second to build at -O2, so the site-at-a-time loop this replaced is
+    twenty minutes for one object. The whole set is tried first and the answer
+    is almost always yes; only a set that changes the object gets bisected, and
+    then only far enough to find which edits did it.
+
+    ⚠ AND BISECTING IS NOT AN OPTIMISATION HERE, IT IS THE POINT. Edits are not
+    independent: `fix_arena_carve` measured five of six composing and the sixth
+    breaking them, because two statements shared a subexpression gcc had
+    common-subexpression-eliminated. Accepting a subset one half at a time keeps
+    that property observable instead of assuming it away."""
+    if not edits:
+        return text, []
+    cand = text
+    for start, end, rep, _n in edits:            # descending by position
+        cand = cand[:start] + rep + cand[end:]
+    if compiles_identically(fn, cand, build, inc):
+        return cand, edits
+    if len(edits) == 1:
+        return text, []
+    mid = len(edits) // 2
+    text, a = accept_edits(fn, text, edits[:mid], build, inc)
+    text, b = accept_edits(fn, text, edits[mid:], build, inc)
+    return text, a + b
+
+
 def main():
     srcdir, build = sys.argv[1], sys.argv[2]
     root = sys.argv[3] if len(sys.argv) > 3 else os.path.join(
@@ -239,26 +600,151 @@ def main():
 
     # ---- THE SELF-CHECK. If the offset probe cannot compile it returns None
     # for everything, every site declines, and "0 repaired" reads exactly like
-    # "there was nothing to repair".
+    # "there was nothing to repair". Three facts, one per tier of the map: a
+    # direct member, an element of an array whose bound is a MACRO, and a
+    # member of a member of a nested struct.
     probe = offsets_of('CxSmallSort', inc, cache)
-    if probe.get(0x2c) != 'mManager' or probe.get(200) != 'mAABBUpdateFn':
-        sys.exit('fix_literal_offsets: SELF-CHECK FAILED — CxSmallSort+0x2c read %r '
-                 '(want mManager) and +200 read %r (want mAABBUpdateFn). The offset '
-                 'map is not measuring anything.'
-                 % (probe.get(0x2c), probe.get(200)))
+    want = [('CxSmallSort', 0x2c, 'mManager'), ('CxSmallSort', 200, 'mAABBUpdateFn'),
+            ('MdtConstraintHeader', 0xb8, 'bodyindex[1]'),
+            ('MdtBSJoint', 0xbc, 'head.ref1[0][0]')]
+    bad = [(t, o, w, offsets_of(t, inc, cache).get(o))
+           for t, o, w in want if offsets_of(t, inc, cache).get(o) != w]
+    if bad:
+        sys.exit('fix_literal_offsets: SELF-CHECK FAILED — '
+                 + '; '.join('%s+0x%x read %r (want %r)' % (t, o, g, w)
+                             for t, o, w, g in bad)
+                 + '. The offset map is not measuring anything.')
+
+    texts = {}
+    for fn in sorted(os.listdir(srcdir)):
+        if fn.endswith('.c') and os.path.exists(os.path.join(build, fn[:-2] + '.o')):
+            texts[fn] = open(os.path.join(srcdir, fn), errors='ignore').read()
+    installed = corpus_callbacks(texts, inc)
+
+    # ---- WHICH `void *` IS THE OBJECT, AND WHICH PARAMETER IS IT?
+    #
+    # The installer says an `MdtBclAdd*` takes an `MdtBSJoint`; it does not say
+    # through which of the function's TWO `void *` parameters. That is not
+    # guessed either: the answer is the parameter every one of whose baked
+    # offsets lands on a real field of that type, and requiring ALL of them is
+    # the same measurement the per-file inference uses. `constraint` reads 21 of
+    # 21 in MdtBclAddBSJoint; `params` has no baked offsets at all. A function
+    # where two parameters both fit is declined and reported.
+    opaque_var = {}                    # (file, function, var) -> tag
+    param_of = {}                      # FUNCTION -> (arg index, tag)
+    notes_early = []
+    for fn, text in texts.items():
+        for b in BANNER.finditer(text):
+            func = b.group(1)
+            tag = installed.get(func)
+            if not tag:
+                continue
+            region = region_of(text, b.start())
+            paths = offsets_of(tag, inc, cache)
+            by_var = {}
+            for m in all_sites(region):
+                v = m.group('base')
+                if '->' in v or not OPAQUE.match(declared_type(region, v) or 'void *'):
+                    continue
+                by_var.setdefault(v, set()).add(int(m.group('off'), 0))
+            fits = [v for v, offs in sorted(by_var.items())
+                    if all(o in paths for o in offs)]
+            if len(fits) != 1:
+                if by_var:
+                    notes_early.append(
+                        '%-26s %s: installed on %s but %d of its opaque bases fit '
+                        '(%s) — declined' % (fn, func, tag, len(fits),
+                                             ', '.join(fits) or 'none'))
+                continue
+            v = fits[0]
+            opaque_var[(fn, func, v)] = tag
+            params = signature_params(region)
+            if v in params:
+                param_of[func] = (params.index(v), tag)
+
+    # ---- ONE HOP. `MdtBclAddContactGroup` walks the group's contact list and
+    # hands each one to `MdtBclAddContact`, so the local it walks with is an
+    # `MdtContact` — named by the call, not by any declaration. The same
+    # all-offsets-land test confirms it.
+    for fn, text in texts.items():
+        for b in BANNER.finditer(text):
+            func, region = b.group(1), region_of(text, b.start())
+            by_var = {}
+            for m in all_sites(region):
+                v = m.group('base')
+                if '->' in v or (fn, func, v) in opaque_var:
+                    continue
+                if not OPAQUE.match(declared_type(region, v) or 'void *'):
+                    continue
+                by_var.setdefault(v, set()).add(int(m.group('off'), 0))
+            if not by_var:
+                continue
+            for c in CALL.finditer(region):
+                callee = re.sub(r'^kd_', '', c.group('fn'))
+                if callee not in param_of:
+                    continue
+                idx, tag = param_of[callee]
+                args = call_args(region, c.end() - 1)
+                if idx >= len(args):
+                    continue
+                a = args[idx].strip()
+                if not re.fullmatch(r'[A-Za-z_]\w*', a) or a not in by_var:
+                    continue
+                paths = offsets_of(tag, inc, cache)
+                if all(o in paths for o in by_var[a]):
+                    opaque_var[(fn, func, a)] = tag
+                else:
+                    notes_early.append(
+                        '%-26s %s: %s is handed to %s as an %s but %d of its %d '
+                        'offsets do not land — declined'
+                        % (fn, func, a, callee, tag,
+                           sum(1 for o in by_var[a] if o not in paths), len(by_var[a])))
 
     tags = [t for t in struct_bodies(inc) if t not in ('_IO_FILE',)]
+
+    # ---- WHAT THE FUNCTION SAID IT RETURNS. See RETURNS above: no inference,
+    # just the vendor's declaration, gated by the same all-offsets-land test.
+    for fn, text in texts.items():
+        for b in BANNER.finditer(text):
+            func, region = b.group(1), region_of(text, b.start())
+            by_var = {}
+            for m in all_sites(region):
+                v = m.group('base')
+                if '->' in v or (fn, func, v) in opaque_var:
+                    continue
+                if not OPAQUE.match(declared_type(region, v) or 'void *'):
+                    continue
+                by_var.setdefault(v, set()).add(int(m.group('off'), 0))
+            for v, offs in sorted(by_var.items()):
+                named = {tag_of(header_returns(inc).get(
+                    re.sub(r'^kd_', '', a.group('fn')), ''), inc)
+                    for a in CALL_ASSIGN.finditer(region) if a.group('var') == v}
+                named.discard(None)
+                if len(named) != 1:
+                    if named:
+                        notes_early.append(
+                            '%-26s %s: %s is assigned from calls returning %s — declined'
+                            % (fn, func, v, ', '.join(sorted(named))))
+                    continue
+                tag = named.pop()
+                paths = offsets_of(tag, inc, cache)
+                if all(o in paths for o in offs):
+                    opaque_var[(fn, func, v)] = tag
+                else:
+                    notes_early.append(
+                        '%-26s %s: %s reads as %s but %d of its %d offsets do not '
+                        'land — declined' % (fn, func, v, tag,
+                                             sum(1 for o in offs if o not in paths),
+                                             len(offs)))
+
     fixed = declined = skipped = 0
-    notes = []
-    for fn in sorted(os.listdir(srcdir)):
-        if not fn.endswith('.c') or not os.path.exists(
-                os.path.join(build, fn[:-2] + '.o')):
-            continue
-        path = os.path.join(srcdir, fn)
-        text = open(path, errors='ignore').read()
-        sites = list(SITE.finditer(text))
+    notes = list(notes_early)
+    for fn, text0 in texts.items():
+        text = text0
+        sites = all_sites(text)
         if not sites:
             continue
+        path = os.path.join(srcdir, fn)
 
         # ---- Which concrete struct is each declared type, in THIS file?
         # The declared type is frequently an opaque handle, so the offsets it is
@@ -290,15 +776,34 @@ def main():
                             return t
             return None
 
+        def site_tag(m):
+            """(tag, declared type). The installer wins over the declaration —
+            for a `void *const` there IS no declaration to lose to."""
+            v = opaque_var.get((fn, enclosing(text, m.start()), m.group('base')))
+            if v:
+                return v, None
+            ty = base_type(m)
+            return (concrete.get(ty) if ty and not OPAQUE.match(ty) else None), ty
+
         used = {}
         for m in sites:
+            if opaque_var.get((fn, enclosing(text, m.start()), m.group('base'))):
+                continue
             ty = base_type(m)
             if ty and not OPAQUE.match(ty):
                 used.setdefault(ty, set()).add(int(m.group('off'), 0))
         concrete = {}
         for ty, offs in used.items():
-            fits = [t for t in tags
-                    if all(o in offsets_of(t, inc, cache) for o in offs)]
+            # THREE TIERS, narrowest first. A tag whose own members explain
+            # every offset is a stronger answer than one that needs array
+            # elements, which is stronger than one that needs three levels of
+            # nesting; asking the widest map first makes almost every site
+            # ambiguous — see flat_offsets_of.
+            for lookup in (head_offsets_of, flat_offsets_of, offsets_of):
+                fits = [t for t in tags
+                        if all(o in lookup(t, inc, cache) for o in offs)]
+                if fits:
+                    break
             # A declared type that IS the concrete type wins outright.
             direct = ty.replace('struct ', '').replace('*', '').strip()
             if direct in fits:
@@ -311,45 +816,38 @@ def main():
 
         edits = []
         for m in sites:
-            ty = base_type(m)
-            tag = concrete.get(ty)
+            tag, ty = site_tag(m)
             off = int(m.group('off'), 0)
-            if not ty or OPAQUE.match(ty):
-                skipped += 1
-                continue
             if not tag:
-                declined += 1
+                if ty is None or OPAQUE.match(ty):
+                    skipped += 1
+                else:
+                    declined += 1
                 continue
             field = offsets_of(tag, inc, cache).get(off)
             if not field:
                 declined += 1
                 notes.append('%-26s %s+0x%x is not a field start of %s'
-                             % (fn, ty, off, tag))
+                             % (fn, ty or 'void *', off, tag))
                 continue
-            # ⚠ THE CAST MAY ONLY BE ELIDED FOR A BARE VARIABLE. For a `X->F`
-            # base the type was INFERRED — the member itself is a `void *` — so
-            # dropping the cast emits `(pMVar9->data)->flags`, which does not
-            # compile, and the site declines for a reason that looks like the
-            # repair being wrong rather than the spelling.
-            cast = '(struct %s *)' % tag
-            if '->' not in m.group('base') and \
-                    ty.replace('struct ', '').replace('*', '').strip() == tag:
-                cast = ''
-            rep = '*(%s*)&(%s%s)->%s' % (m.group('ty'), cast, m.group('base'), field)
-            edits.append((m.start(), m.end(), rep,
+            # ★ SUBSTITUTE THE LITERAL AND NOTHING ELSE. See REPAIR at the top:
+            # re-spelling the whole address as `&p->FIELD` changes what gcc
+            # knows and is NOT byte-identical here.
+            s, e = m.span('off')
+            edits.append((s, e, '((int)((char *)&((struct %s *)0)->%s - (char *)0))'
+                          % (tag, field),
                           '%-26s %-14s +0x%-4x -> %s->%s'
                           % (fn, tag, off, m.group('base'), field)))
 
-        for start, end, rep, note in sorted(edits, key=lambda e: -e[0]):
-            cand = text[:start] + rep + text[end:]
-            if compiles_identically(fn, cand, build, inc):
-                text = cand
-                fixed += 1
-                notes.append(note)
-            else:
-                declined += 1
-                notes.append(note + '   DECLINED: not byte-identical at i386')
-        if edits:
+        edits.sort(key=lambda e: -e[0])
+        text, ok = accept_edits(fn, text, edits, build, inc)
+        fixed += len(ok)
+        keep = {id(e) for e in ok}
+        for e in edits:
+            notes.append(e[3] if id(e) in keep
+                         else e[3] + '   DECLINED: not byte-identical at i386')
+        declined += len(edits) - len(ok)
+        if text != text0:
             open(path, 'w').write(text)
 
     print('  baked field offsets rewritten as named fields : %d' % fixed)

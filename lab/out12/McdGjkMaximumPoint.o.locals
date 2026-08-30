@@ -1,0 +1,32 @@
+# function,name,stackoff,hexoff,size,type
+McdGjkFatness,ins,4,00000004,4,McdGeometryInstanceID
+McdBoxMaximumPointNew,ins,4,00000004,4,McdGeometryInstanceID
+McdBoxMaximumPointNew,inDir,8,00000008,4,MeReal *
+McdBoxMaximumPointNew,outPoint,12,0000000c,4,MeReal *
+McdBoxMaximumPointNew,n,-44,ffffffd4,12,MeReal[3]
+McdBoxMaximumPointNew,c,-60,ffffffc4,12,MeReal[3]
+McdConvexMeshMaximumPointLocal,n,-40,ffffffd8,4,int
+McdConvexMeshMaximumPointLocal,vert,-44,ffffffd4,4,McdCnvVertex *
+McdConvexMeshMaximumPointLocal,d1,-48,ffffffd0,4,MeReal
+McdConvexMeshMaximumPointLocal,conv,4,00000004,4,McdConvexMesh *
+McdConvexMeshMaximumPointLocal,inDir,8,00000008,4,MeReal *
+McdConvexMeshMaximumPointLocal,hint,12,0000000c,4,int
+McdConvexMeshMaximumPointLocal,minDist,16,00000010,4,MeReal
+McdConvexMeshMaximumPointLocal,outIndex,20,00000014,4,int *
+McdConvexMeshMaximumPointLocal,i,-20,ffffffec,4,int
+McdConvexMeshMaximumPointLocal,t,-24,ffffffe8,4,int
+McdConvexMeshMaximumPointLocal,m,-28,ffffffe4,4,int
+McdConvexMeshMaximumPointLocal,next,-32,ffffffe0,4,int
+McdConvexMeshMaximumPointLocal,prev,-36,ffffffdc,4,int
+McdConvexMeshMaximumPointNew,temp,-44,ffffffd4,12,MeReal[3]
+McdConvexMeshMaximumPointNew,i,-48,ffffffd0,4,int
+McdConvexMeshMaximumPointNew,ins,4,00000004,4,McdGeometryInstanceID
+McdConvexMeshMaximumPointNew,inDir,8,00000008,4,MeReal *
+McdConvexMeshMaximumPointNew,outPoint,12,0000000c,4,MeReal *
+McdGjkMaximumPoint,temp,-76,ffffffb4,12,MeReal[3]
+McdGjkMaximumPoint,i,-80,ffffffb0,4,int
+McdGjkMaximumPoint,n,-44,ffffffd4,12,MeReal[3]
+McdGjkMaximumPoint,c,-60,ffffffc4,12,MeReal[3]
+McdGjkMaximumPoint,ins,4,00000004,4,McdGeometryInstanceID
+McdGjkMaximumPoint,v,8,00000008,4,MeReal *
+McdGjkMaximumPoint,out,12,0000000c,4,MeReal *

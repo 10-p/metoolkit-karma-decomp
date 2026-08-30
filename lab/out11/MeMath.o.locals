@@ -1,0 +1,126 @@
+# function,name,stackoff,hexoff,size,type
+MeQuaternionFromTM,q,4,00000004,4,MeReal *
+MeQuaternionFromTM,qt,-44,ffffffd4,16,MeReal[4]
+MeQuaternionFromTM,i,-48,ffffffd0,4,int
+MeQuaternionFromTM,tm,8,00000008,4,MeReal[4] *
+MeQuaternionFromTM,k,-52,ffffffcc,4,int
+MeQuaternionSlerp,q,4,00000004,4,MeReal *
+MeQuaternionSlerp,from,8,00000008,4,MeReal *
+MeQuaternionSlerp,to,12,0000000c,4,MeReal *
+MeQuaternionSlerp,howFar,16,00000010,4,MeReal
+MeQuaternionSlerp,temp,-28,ffffffe4,16,MeVector4
+MeMatrix3SymmetricInvert,a,4,00000004,4,MeVector3 *
+MeMatrix3LUDecompose,L,4,00000004,4,MeVector3 *
+MeMatrix3LUDecompose,U,8,00000008,4,MeVector3 *
+MeMatrix3LUDecompose,a,12,0000000c,4,MeReal[3] *
+MeMatrix3LUDecompose,SwappedRow,16,00000010,4,uint *
+MeMatrix3LUDecompose,scale,20,00000014,4,MeReal *
+MeMatrix3LUDecompose,b,-76,ffffffb4,36,MeMatrix3
+MeMatrix3LUDecompose,temp,-92,ffffffa4,12,MeVector3
+MeMatrix3LUDecompose,temp_1,-108,ffffff94,12,MeVector3
+MeMatrix3Invert,a,4,00000004,4,MeVector3 *
+MeMatrix3Invert,swap,-144,ffffff70,4,uint
+MeMatrix3Invert,scale,-44,ffffffd4,12,MeVector3
+MeMatrix3Invert,L,-92,ffffffa4,36,MeMatrix3
+MeMatrix3Invert,U,-140,ffffff74,36,MeMatrix3
+MeMatrix4TMUpdateFromVelocities,aTransformReturn,4,00000004,4,MeVector4 *
+MeMatrix4TMUpdateFromVelocities,aEpsilon,8,00000008,4,MeReal
+MeMatrix4TMUpdateFromVelocities,aTimeStep,12,0000000c,4,MeReal
+MeMatrix4TMUpdateFromVelocities,aVelocity,16,00000010,4,MeReal *
+MeMatrix4TMUpdateFromVelocities,aAngularVelocity,20,00000014,4,MeReal *
+MeMatrix4TMUpdateFromVelocities,aTransform,24,00000018,4,MeReal[4] *
+MeMatrix4TMUpdateFromVelocities,eR,-60,ffffffc4,36,MeReal[3][3]
+MeMatrix4TMUpdateFromVelocitiesAndAcceler,eAngular,-92,ffffffa4,12,MeVector3
+MeMatrix4TMUpdateFromVelocitiesAndAcceler,local_1c,-28,ffffffe4,12,undefined1[12]
+MeMatrix4TMUpdateFromVelocitiesAndAcceler,aTransformReturn,4,00000004,4,MeVector4 *
+MeMatrix4TMUpdateFromVelocitiesAndAcceler,aEpsilon,8,00000008,4,MeReal
+MeMatrix4TMUpdateFromVelocitiesAndAcceler,aTimeStep,12,0000000c,4,MeReal
+MeMatrix4TMUpdateFromVelocitiesAndAcceler,aVelocity,16,00000010,4,MeReal *
+MeMatrix4TMUpdateFromVelocitiesAndAcceler,aAcceler,20,00000014,4,MeReal *
+MeMatrix4TMUpdateFromVelocitiesAndAcceler,aAngularVelocity,24,00000018,4,MeReal *
+MeMatrix4TMUpdateFromVelocitiesAndAcceler,aAngularAcceler,28,0000001c,4,MeReal *
+MeMatrix4TMUpdateFromVelocitiesAndAcceler,aTransform,32,00000020,4,MeReal[4] *
+MeMatrix4TMUpdateFromVelocitiesAndAcceler,eR,-76,ffffffb4,36,MeReal[3][3]
+MeMatrix4TMUpdateFromVelocitiesAndAcceler,h,-96,ffffffa0,4,MeReal
+MeVector3AreaOfTriangle,v1,4,00000004,4,MeReal *
+MeVector3AreaOfTriangle,v2,8,00000008,4,MeReal *
+MeVector3Swap,temp,-44,ffffffd4,12,MeVector3
+MeVector3Swap,a,4,00000004,4,MeReal *
+MeVector3Swap,b,8,00000008,4,MeReal *
+MeQuaternionFiniteRotation,w,8,00000008,4,MeReal *
+MeQuaternionFiniteRotation,h,12,0000000c,4,MeReal
+MeQuaternionFiniteRotation,tmp,-28,ffffffe4,12,MeVector3
+MeQuaternionFiniteRotation,nw,-44,ffffffd4,12,MeVector3
+MeQuaternionFiniteRotation,newq0,-48,ffffffd0,4,MeReal
+MeQuaternionFiniteRotation,__result,-56,ffffffc8,4,float
+MeQuaternionFiniteRotation,q,4,00000004,4,MeReal *
+MeQuaternionForRotation,q,4,00000004,4,MeReal *
+MeQuaternionForRotation,v1,8,00000008,4,MeReal *
+MeQuaternionForRotation,v2,12,0000000c,4,MeReal *
+MeQuaternionForRotation,rotationAxis,-28,ffffffe4,12,MeVector3
+MeQuaternionForRotation,cosRotationAngle,-48,ffffffd0,4,MeReal
+MeQuaternionForRotation,normalized,-44,ffffffd4,12,MeVector3
+MeMatrixFPrint,file,4,00000004,4,FILE *
+MeMatrixFPrint,A,8,00000008,4,MeReal *
+MeMatrixFPrint,n,12,0000000c,4,int
+MeMatrixFPrint,m,16,00000010,4,int
+MeMatrixFPrint,format,20,00000014,4,char *
+MeMatrixFPrint,i,-144,ffffff70,4,int
+MeMatrixFPrint,width,-148,ffffff6c,4,int
+MeMatrixFPrint,s,-140,ffffff74,100,char[100]
+MeMatrixFPrint,pcVar6,-168,ffffff58,4,char *
+MeMatrixFPrint,dVar7,-164,ffffff5c,8,double
+MeMatrixPrint,A,4,00000004,4,MeReal *
+MeMatrixPrint,n,8,00000008,4,int
+MeMatrixPrint,i,-148,ffffff6c,4,int
+MeMatrixPrint,m,12,0000000c,4,int
+MeMatrixPrint,format,16,00000010,4,char *
+MeMatrixPrint,width,-152,ffffff68,4,int
+MeMatrixPrint,s,-140,ffffff74,100,char[100]
+MeMatrixPrint,pcVar6,-168,ffffff58,4,char *
+MeMatrixPrint,dVar7,-164,ffffff5c,8,double
+MeMatrix3IsIdentity,a,4,00000004,4,MeReal[3] *
+MeMatrix3IsIdentity,Test,-28,ffffffe4,12,MeVector3
+MeMatrix3IsIdentity,tolerance,8,00000008,4,MeReal
+MeMatrix3SwapColumns,a,4,00000004,4,MeVector3 *
+MeMatrix3SwapColumns,col1,8,00000008,4,uint
+MeMatrix3SwapColumns,col2,12,0000000c,4,uint
+MeMatrix3MakeRotationX,m,4,00000004,4,MeMatrix3Ptr
+MeMatrix3MakeRotationX,a,8,00000008,4,MeReal
+MeMatrix3MakeRotationY,m,4,00000004,4,MeVector3 *
+MeMatrix3MakeRotationY,a,8,00000008,4,MeReal
+MeMatrix3Trace,m,4,00000004,4,MeVector3 *
+MeMatrix3MakeRotationZ,m,4,00000004,4,MeVector3 *
+MeMatrix3MakeRotationZ,a,8,00000008,4,MeReal
+MeMatrix3IsValidOrientationMatrix,Product,-60,ffffffc4,36,MeMatrix3
+MeMatrix3IsValidOrientationMatrix,rotT1,-108,ffffff94,36,MeMatrix3
+MeMatrix3IsValidOrientationMatrix,tmp,-156,ffffff64,36,MeMatrix3
+MeMatrix3IsValidOrientationMatrix,rot,4,00000004,4,MeReal[3] *
+MeMatrix3IsValidOrientationMatrix,tolerance,8,00000008,4,MeReal
+MeMatrix3FromEulerAngles,__result,-8,fffffff8,4,float
+MeMatrix3FromEulerAngles,m,4,00000004,4,MeVector3 *
+MeMatrix3FromEulerAngles,xangle,8,00000008,4,MeReal
+MeMatrix3FromEulerAngles,yangle,12,0000000c,4,MeReal
+MeMatrix3FromEulerAngles,zangle,16,00000010,4,MeReal
+MeMatrix4TMFromEulerAnglesAndPosition,tm,4,00000004,4,MeVector4 *
+MeMatrix4TMFromEulerAnglesAndPosition,xangle,8,00000008,4,MeReal
+MeMatrix4TMFromEulerAnglesAndPosition,yangle,12,0000000c,4,MeReal
+MeMatrix4TMFromEulerAnglesAndPosition,zangle,16,00000010,4,MeReal
+MeMatrix4TMFromEulerAnglesAndPosition,x,20,00000014,4,MeReal
+MeMatrix4TMFromEulerAnglesAndPosition,y,24,00000018,4,MeReal
+MeMatrix4TMFromEulerAnglesAndPosition,z,28,0000001c,4,MeReal
+MeMatrix4TMFromEulerAnglesAndPosition,__result,-8,fffffff8,4,float
+MeMatrix4IsIdentity,Test,-28,ffffffe4,16,MeVector4
+MeMatrix4IsIdentity,a,4,00000004,4,MeReal[4] *
+MeMatrix4IsIdentity,tolerance,8,00000008,4,MeReal
+MeMatrix4IsTM,rot,-60,ffffffc4,36,MeMatrix3
+MeMatrix4IsTM,tm,4,00000004,4,MeReal[4] *
+MeMatrix4IsTM,tolerance,8,00000008,4,MeReal
+MeMatrix4TMOrthoNormalize,tm,4,00000004,4,MeVector4 *
+MeMatrix4TMInvert,tm,4,00000004,4,MeVector4 *
+MeMatrix4TMInvert,pos,-28,ffffffe4,12,MeVector3
+MeMatrix4TMCompound,A,4,00000004,4,MeVector4 *
+MeMatrix4TMCompound,B,8,00000008,4,MeReal[4] *
+MeMatrix4TMCompound,C,12,0000000c,4,MeReal[4] *
+MeVector3Normalize,local_8,-8,fffffff8,4,float
+MeVector3Normalize,v,4,00000004,4,MeReal *

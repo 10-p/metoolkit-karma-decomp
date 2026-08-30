@@ -1,0 +1,16 @@
+# function,name,stackoff,hexoff,size,type
+MdtLinear1SetPosition,position,-44,ffffffd4,12,MeVector3
+MdtLinear1SetPosition,normal,-60,ffffffc4,12,MeVector3
+MdtLinear1SetPosition,p1p2,-76,ffffffb4,12,MeVector3
+MdtLinear1SetPosition,j,4,00000004,4,MdtLinear1ID
+MdtLinear1SetPosition,p2,-108,ffffff94,12,MeVector3
+MdtLinear1SetPosition,Body2Pos,-92,ffffffa4,12,MeVector3
+MdtLinear1SetPosition,x,8,00000008,4,MeReal
+MdtLinear1SetPosition,y,12,0000000c,4,MeReal
+MdtLinear1SetPosition,z,16,00000010,4,MeReal
+MdtLinear1Create,w,4,00000004,4,MdtWorldID
+MdtLinear1Reset,j,4,00000004,4,MdtLinear1ID
+MdtLinear1QuaConstraint,j,4,00000004,4,MdtLinear1ID
+MdtConstraintDCastLinear1,c,4,00000004,4,MdtConstraintID
+MdtLinear1GetPosition,j,4,00000004,4,MdtLinear1ID
+MdtLinear1GetPosition,position,8,00000008,4,MeReal *

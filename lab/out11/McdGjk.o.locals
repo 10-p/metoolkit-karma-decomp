@@ -1,0 +1,102 @@
+# function,name,stackoff,hexoff,size,type
+McdGjkRandomVector,v,4,00000004,4,MeReal *
+McdCacheInit,c,4,00000004,4,McdCache *
+McdCacheInit,p,8,00000008,4,McdModelPair *
+McdCacheHello,p,4,00000004,4,McdModelPair *
+McdCacheGoodbye,p,4,00000004,4,McdModelPair *
+McdGjkNextIsDuplicate,s,4,00000004,4,McdGjkSimplex *
+McdGjkComputeVector,s,16,00000010,4,McdGjkSimplex *
+McdGjkComputeVector,iVar8,-24,ffffffe8,4,int
+McdGjkComputeVector,v,4,00000004,4,MeReal *
+McdGjkComputeVector,bits,8,00000008,4,int
+McdGjkComputeVector,sup,12,0000000c,4,int
+McdGjkComputeNextVector,s,16,00000010,4,McdGjkSimplex *
+McdGjkComputeNextVector,v,4,00000004,4,MeReal *
+McdGjkComputeNextVector,bits,8,00000008,4,int
+McdGjkComputeNextVector,sup,12,0000000c,4,int
+McdGjkNextAvailablePoint,s,4,00000004,4,McdGjkSimplex *
+McdGjkCrossProd,v,4,00000004,4,MeReal *
+McdGjkCrossProd,s,8,00000008,4,McdGjkSimplex *
+McdGjkCrossProd,p1,-80,ffffffb0,4,McdGjkPoint *
+McdGjkCrossProd,p3,-84,ffffffac,4,McdGjkPoint *
+McdGjkCrossProd,v1,-44,ffffffd4,12,MeReal[3]
+McdGjkCrossProd,v2,-60,ffffffc4,12,MeReal[3]
+McdGjkCrossProd,normalized,-76,ffffffb4,12,MeReal[3]
+McdGjkAdjustPerpendicular,v,4,00000004,4,MeReal *
+McdGjkAdjustPerpendicular,v_len,8,00000008,4,MeReal
+McdGjkAdjustPerpendicular,s,12,0000000c,4,McdGjkSimplex *
+McdGjkAdjustPerpendicular,v2,-44,ffffffd4,12,MeReal[3]
+McdGjkAdjustPerpendicular,k,-64,ffffffc0,4,int
+McdGjkAdjustPerpendicular,normalized,-60,ffffffc4,12,MeReal[3]
+McdGjkComputeSupport,p,4,00000004,4,McdGjkPoint *
+McdGjkComputeSupport,v,8,00000008,4,MeReal *
+McdGjkComputeSupport,neg_v,-44,ffffffd4,12,MeReal[3]
+McdGjkComputeSupport,sign,12,0000000c,4,int
+McdGjkComputeSupport,c,16,00000010,4,McdCache *
+McdGjkComputeSupport,s1,-60,ffffffc4,12,MeReal[3]
+McdGjkComputeSupport,pMVar4,-72,ffffffb8,4,MeReal *
+McdGjkFindNextSupportPoint,c_local,-20,ffffffec,4,McdCache *
+McdGjkFindNextSupportPoint,v,4,00000004,4,MeReal *
+McdGjkFindNextSupportPoint,v_len,8,00000008,4,MeReal
+McdGjkFindNextSupportPoint,c,12,0000000c,4,McdCache *
+McdGjkFindNextSupportPoint,s,16,00000010,4,McdGjkSimplex *
+McdGjkFindNextSupportPoint,i,20,00000014,4,int
+McdGjkUpdateDotCache,s,4,00000004,4,McdGjkSimplex *
+McdGjkUpdateDotCache,i,-20,ffffffec,4,int
+McdGjkUpdateDeltaCache,bi,-32,ffffffe0,4,int
+McdGjkUpdateDeltaCache,bj,-36,ffffffdc,4,int
+McdGjkUpdateDeltaCache,dot,-40,ffffffd8,4,MeReal[4] *
+McdGjkUpdateDeltaCache,delta,-44,ffffffd4,4,MeReal[4] *
+McdGjkUpdateDeltaCache,local_64,-100,ffffff9c,4,MeReal[4] *
+McdGjkUpdateDeltaCache,local_60,-96,ffffffa0,4,int
+McdGjkUpdateDeltaCache,local_5c,-92,ffffffa4,4,int
+McdGjkUpdateDeltaCache,local_58,-88,ffffffa8,4,int
+McdGjkUpdateDeltaCache,s,4,00000004,4,McdGjkSimplex *
+McdGjkUpdateDeltaCache,i,-20,ffffffec,4,int
+McdGjkUpdateDeltaCache,j,-24,ffffffe8,4,int
+McdGjkUpdateDeltaCache,k,-28,ffffffe4,4,int
+McdGjkMain,c,4,00000004,4,McdCache *
+McdGjkMain,s,8,00000008,4,McdGjkSimplex *
+McdGjkMain,counter,-64,ffffffc0,4,int
+McdGjkMain,d,-68,ffffffbc,4,MeReal
+McdGjkMain,maxd,-72,ffffffb8,4,MeReal
+McdGjkMain,fatness,-76,ffffffb4,4,MeReal
+McdGjkMain,v,-44,ffffffd4,12,MeReal[3]
+McdGjkMain,v_len,-80,ffffffb0,4,MeReal
+McdGjkMain,v_bits,-88,ffffffa8,4,int
+McdGjkMain,u,-60,ffffffc4,12,MeReal[3]
+McdGjkTest,c,4,00000004,4,McdCache *
+McdGjkTest,s,8,00000008,4,McdGjkSimplex *
+McdGjkTest,axis,-44,ffffffd4,12,MeReal[3]
+McdGjkTest,axisLen,-128,ffffff80,4,MeReal
+McdGjkTest,c1,-60,ffffffc4,12,MeReal[3]
+McdGjkTest,c2,-76,ffffffb4,12,MeReal[3]
+McdGjkTest,r1,-132,ffffff7c,4,MeReal
+McdGjkTest,r2,-136,ffffff78,4,MeReal
+McdGjkTest,originalPadding,-140,ffffff74,4,MeReal
+McdGjkTest,minv,-92,ffffffa4,12,MeReal[3]
+McdGjkTest,maxv,-108,ffffff94,12,MeReal[3]
+McdGjkTest,diff,-124,ffffff84,12,MeReal[3]
+McdWitnessPlaneTest,p,4,00000004,4,McdModelPair *
+McdWitnessPlaneTest,result,8,00000008,4,McdIntersectResult *
+McdWitnessPlaneTest,point,-44,ffffffd4,24,McdGjkPoint
+McdContactGen,vspace,-1228,fffffb34,1200,MeReal[100][3]
+McdContactGen,size1,-1232,fffffb30,4,int
+McdContactGen,size2,-1236,fffffb2c,4,int
+McdContactGen,dist,-1244,fffffb24,4,MeReal
+McdContactGen,d,-1248,fffffb20,4,MeReal
+McdContactGen,i,-1252,fffffb1c,4,int
+McdContactGen,j0,-1256,fffffb18,4,int
+McdContactGen,numIntersect,-1240,fffffb28,4,int
+McdContactGen,c,4,00000004,4,McdCache *
+McdContactGen,result,8,00000008,4,McdIntersectResult *
+McdGjkCgIntersect2,s,-556,fffffdd4,460,McdGjkSimplex
+McdGjkCgIntersect2,pMVar6,-572,fffffdc4,4,McdModelID.conflict
+McdGjkCgIntersect2,pMVar7,-568,fffffdc8,4,McdModelID.conflict
+McdGjkCgIntersect2,p,4,00000004,4,McdModelPair *
+McdGjkCgIntersect2,result,8,00000008,4,McdIntersectResult *
+McdGjkCgIntersect2,cmem,-92,ffffffa4,60,McdCache
+McdGjkCgIntersect,p,4,00000004,4,McdModelPair *
+McdGjkCgIntersect,result,8,00000008,4,McdIntersectResult *
+MeVector3Normalize,v,4,00000004,4,MeReal *
+MeVector3Normalize,local_8,-8,fffffff8,4,float

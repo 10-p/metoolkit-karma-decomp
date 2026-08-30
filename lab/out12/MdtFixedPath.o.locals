@@ -1,0 +1,21 @@
+# function,name,stackoff,hexoff,size,type
+MdtFixedPathCreate,w,4,00000004,4,MdtWorldID
+MdtFixedPathReset,j,4,00000004,4,MdtFixedPathID
+MdtFixedPathQuaConstraint,j,4,00000004,4,MdtFixedPathID
+MdtConstraintDCastFixedPath,c,4,00000004,4,MdtConstraintID
+MdtFixedPathGetPosition,position,12,0000000c,4,MeReal *
+MdtFixedPathGetPosition,j,4,00000004,4,MdtFixedPathID
+MdtFixedPathGetPosition,bodyindex,8,00000008,4,uint
+MdtFixedPathGetVelocity,j,4,00000004,4,MdtFixedPathID
+MdtFixedPathGetVelocity,bodyindex,8,00000008,4,uint
+MdtFixedPathGetVelocity,velocity,12,0000000c,4,MeReal *
+MdtFixedPathSetPosition,j,4,00000004,4,MdtFixedPathID
+MdtFixedPathSetPosition,bodyindex,8,00000008,4,uint
+MdtFixedPathSetPosition,x,12,0000000c,4,MeReal
+MdtFixedPathSetPosition,y,16,00000010,4,MeReal
+MdtFixedPathSetPosition,z,20,00000014,4,MeReal
+MdtFixedPathSetVelocity,j,4,00000004,4,MdtFixedPathID
+MdtFixedPathSetVelocity,bodyindex,8,00000008,4,uint
+MdtFixedPathSetVelocity,dx,12,0000000c,4,MeReal
+MdtFixedPathSetVelocity,dy,16,00000010,4,MeReal
+MdtFixedPathSetVelocity,dz,20,00000014,4,MeReal

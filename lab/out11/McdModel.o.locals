@@ -1,0 +1,71 @@
+# function,name,stackoff,hexoff,size,type
+McdModelCreate,g,4,00000004,4,McdGeometryID
+McdModelDestroy,cm,4,00000004,4,McdModelID.conflict
+McdModelReset,obj,4,00000004,4,McdModelID.conflict
+McdModelGetGeometryType,cm,4,00000004,4,McdModelID.conflict
+McdModelGetSpace,cm,4,00000004,4,McdModelID.conflict
+McdModelSetContactTolerance,m,4,00000004,4,McdModelID.conflict
+McdModelSetContactTolerance,tol,8,00000008,4,MeReal
+McdModelGetContactTolerance,m,4,00000004,4,McdModelID.conflict
+McdModelGetBSphere,m,4,00000004,4,McdModelID.conflict
+McdModelGetBSphere,center,8,00000008,4,MeReal *
+McdModelGetBSphere,radius,12,0000000c,4,MeReal *
+McdModelUpdate,cm,4,00000004,4,McdModelID.conflict
+McdModelUpdatePath,cm,4,00000004,4,McdModelID.conflict
+McdModelUpdatePath,motionDuration,8,00000008,4,MeReal
+McdModelUpdatePath,tmEnd,-76,ffffffb4,64,MeReal[4][4]
+McdModelUpdatePathCompatible,cm,4,00000004,4,McdModelID.conflict
+McdModelUpdatePathCompatible,param_2,8,00000008,4,MeReal
+McdModelGetAABB,cm,4,00000004,4,McdModelID.conflict
+McdModelGetAABB,minCorner,8,00000008,4,MeReal *
+McdModelGetAABB,maxCorner,12,0000000c,4,MeReal *
+McdModelGetGeometryInstance,cm,4,00000004,4,McdModelID.conflict
+McdModelGetTransformPtr,cm,4,00000004,4,McdModelID.conflict
+McdModelSetTransformPtr,cm,4,00000004,4,McdModelID.conflict
+McdModelSetTransformPtr,geometryTM,8,00000008,4,MeMatrix4Ptr
+McdModelSetLinearVelocityPtr,cm,4,00000004,4,McdModelID.conflict
+McdModelSetLinearVelocityPtr,linVelocity,8,00000008,4,MeReal *
+McdModelGetLinearVelocityPtr,cm,4,00000004,4,McdModelID.conflict
+McdModelSetAngularVelocityPtr,angVelocity,8,00000008,4,MeReal *
+McdModelSetAngularVelocityPtr,cm,4,00000004,4,McdModelID.conflict
+McdModelGetAngularVelocityPtr,cm,4,00000004,4,McdModelID.conflict
+McdModelSetUserData,cm,4,00000004,4,McdModelID.conflict
+McdModelSetUserData,data,8,00000008,4,void *
+McdModelGetUserData,cm,4,00000004,4,McdModelID.conflict
+McdModelSetGeometry,cm,4,00000004,4,McdModelID.conflict
+McdModelSetGeometry,g,8,00000008,4,McdGeometryID
+McdModelGetGeometry,cm,4,00000004,4,McdModelID.conflict
+McdModelGetBodyData,cm,4,00000004,4,McdModelID.conflict
+McdModelSetBodyData,cm,4,00000004,4,McdModelID.conflict
+McdModelSetBodyData,body,8,00000008,4,void *
+McdModelSetRelativeTransformPtrs,referenceTM_local,-20,ffffffec,4,MeVector4 *
+McdModelSetRelativeTransformPtrs,compoundTM_local,-24,ffffffe8,4,MeVector4 *
+McdModelSetRelativeTransformPtrs,cm,4,00000004,4,McdModelID.conflict
+McdModelSetRelativeTransformPtrs,own_local,-28,ffffffe4,4,MeBool
+McdModelSetRelativeTransformPtrs,relativeTM,8,00000008,4,MeVector4 *
+McdModelSetRelativeTransformPtrs,referenceTM,12,0000000c,4,MeVector4 *
+McdModelSetRelativeTransformPtrs,compoundTM,16,00000010,4,MeVector4 *
+McdModelSetRelativeTransformPtrs,own,20,00000014,4,MeBool
+McdModelGetRelativeTransformPtrs,cm,4,00000004,4,McdModelID.conflict
+McdModelGetRelativeTransformPtrs,relativeTM,8,00000008,4,MeMatrix4Ptr *
+McdModelGetRelativeTransformPtrs,referenceTM,12,0000000c,4,MeMatrix4Ptr *
+McdModelSetRelativeTransform,refTM,12,0000000c,4,MeMatrix4Ptr
+McdModelSetRelativeTransform,cm,4,00000004,4,McdModelID.conflict
+McdModelSetRelativeTransform,relTM,8,00000008,4,MeMatrix4Ptr
+McdModelGetRelativeTransform,cm,4,00000004,4,McdModelID.conflict
+McdModelCompoundTransforms,cm,4,00000004,4,McdModelID.conflict
+McdModelSetMaterial,cm,4,00000004,4,McdModelID.conflict
+McdModelSetMaterial,material,8,00000008,4,int
+McdModelGetMaterial,cm,4,00000004,4,McdModelID.conflict
+McdModelSetRequestID,cm,4,00000004,4,McdModelID.conflict
+McdModelSetRequestID,requestId,8,00000008,4,int
+McdModelGetRequestID,cm,4,00000004,4,McdModelID.conflict
+McdModelSetUpdateCallback,cm,4,00000004,4,McdModelID.conflict
+McdModelSetUpdateCallback,f,8,00000008,4,McdModelUpdateFnPtr
+McdModelGetUpdateCallback,cm,4,00000004,4,McdModelID.conflict
+McdModelSetIntersectCallback,cm,4,00000004,4,McdModelID.conflict
+McdModelSetIntersectCallback,fn,8,00000008,4,McdModelIntersectFnPtr
+McdModelGetIntersectCallback,cm,4,00000004,4,McdModelID.conflict
+McdModelGetSortKey,cm,4,00000004,4,McdModelID.conflict
+McdModelSetSortKey,cm,4,00000004,4,McdModelID.conflict
+McdModelSetSortKey,key,8,00000008,2,MeI16

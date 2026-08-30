@@ -1,0 +1,13 @@
+# function,name,stackoff,hexoff,size,type
+MeOpenRaw,filename,4,00000004,4,char *
+MeOpenRaw,mode,8,00000008,4,MeOpenMode_enum
+MeLseek,file,4,00000004,4,int
+MeLseek,offset,8,00000008,4,int
+MeLseek,origin,12,0000000c,4,MeSeekOrigin_enum
+MeRead,file,4,00000004,4,int
+MeRead,buf,8,00000008,4,void *
+MeRead,count,12,0000000c,4,int
+MeWrite,file,4,00000004,4,int
+MeWrite,buf,8,00000008,4,void *
+MeWrite,count,12,0000000c,4,int
+MeClose,file,4,00000004,4,int

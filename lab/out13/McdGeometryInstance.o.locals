@@ -1,0 +1,33 @@
+# function,name,stackoff,hexoff,size,type
+McdGeometryInstanceReset,ins,4,00000004,4,McdGeometryInstanceID
+McdGeometryInstanceGetBSphere,c,-44,ffffffd4,12,MeReal[3]
+McdGeometryInstanceGetBSphere,ins,4,00000004,4,McdGeometryInstanceID
+McdGeometryInstanceGetBSphere,center,8,00000008,4,MeReal *
+McdGeometryInstanceGetBSphere,radius,12,0000000c,4,MeReal *
+McdGeometryInstanceSetGeometry,ins,4,00000004,4,McdGeometryInstanceID
+McdGeometryInstanceSetGeometry,geom,8,00000008,4,McdGeometryID
+McdGeometryInstanceSetGeometry,max,-24,ffffffe8,4,int
+McdGeometryInstanceSetGeometry,nextChild,-20,ffffffec,4,McdGeometryInstanceID
+McdGeometryInstanceGetGeometry,ins,4,00000004,4,McdGeometryInstanceID
+McdGeometryInstanceUpdateAABB,finalTM,8,00000008,4,MeMatrix4Ptr
+McdGeometryInstanceUpdateAABB,tight,12,0000000c,4,MeBool
+McdGeometryInstanceUpdateAABB,ins,4,00000004,4,McdGeometryInstanceID
+McdGeometryInstanceMaximumPoint,ins,4,00000004,4,McdGeometryInstanceID
+McdGeometryInstanceMaximumPoint,inDir,8,00000008,4,MeReal *
+McdGeometryInstanceMaximumPoint,outPoint,12,0000000c,4,MeReal *
+McdGeometryInstanceGetAABB,ins,4,00000004,4,McdGeometryInstanceID
+McdGeometryInstanceGetAABB,minCorner,8,00000008,4,MeReal *
+McdGeometryInstanceGetAABB,maxCorner,12,0000000c,4,MeReal *
+McdGeometryInstanceGetTransformPtr,ins,4,00000004,4,McdGeometryInstanceID
+McdGeometryInstanceSetTransformPtr,ins,4,00000004,4,McdGeometryInstanceID
+McdGeometryInstanceSetTransformPtr,tm,8,00000008,4,MeMatrix4Ptr
+McdGeometryInstanceSetMaterial,ins,4,00000004,4,McdGeometryInstanceID
+McdGeometryInstanceSetMaterial,material,8,00000008,4,int
+McdGeometryInstanceGetMaterial,ins,4,00000004,4,McdGeometryInstanceID
+McdGeometryInstanceGetChild,ins,4,00000004,4,McdGeometryInstanceID
+McdGeometryInstanceGetChild,num,8,00000008,4,int
+McdGeometryInstanceOverlap,ins1,4,00000004,4,McdGeometryInstanceID
+McdGeometryInstanceOverlap,ins2,8,00000008,4,McdGeometryInstanceID
+McdGeometryInstanceGetGeometryType,ins,4,00000004,4,McdGeometryInstanceID
+McdGeometryInstanceDestroy,frame,4,00000004,4,McdFrameworkID
+McdGeometryInstanceDestroy,ins,8,00000008,4,McdGeometryInstanceID

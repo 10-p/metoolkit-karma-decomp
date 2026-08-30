@@ -1,0 +1,46 @@
+# function,name,stackoff,hexoff,size,type
+MdtDictCompare,v1,4,00000004,4,void *
+MdtDictCompare,v2,8,00000008,4,void *
+MdtConvertVector,from_body,4,00000004,4,MdtBodyID
+MdtConvertVector,f,8,00000008,4,MeReal *
+MdtConvertVector,to_body,12,0000000c,4,MdtBodyID
+MdtConvertVector,t,16,00000010,4,MeReal *
+MdtConvertVector,tmp,-28,ffffffe4,12,MeVector3
+MdtConvertPositionVector,from_body,4,00000004,4,MdtBodyID
+MdtConvertPositionVector,f,8,00000008,4,MeReal *
+MdtConvertPositionVector,to_body,12,0000000c,4,MdtBodyID
+MdtConvertPositionVector,t,16,00000010,4,MeReal *
+MdtConvertPositionVector,tmp,-28,ffffffe4,12,MeVector3
+MdtConvertPositionVector,tmp_1,-44,ffffffd4,12,MeVector3
+ConvertCOMVector,from_body,4,00000004,4,MdtBodyID
+ConvertCOMVector,f,8,00000008,4,MeReal *
+ConvertCOMVector,to_body,12,0000000c,4,MdtBodyID
+ConvertCOMVector,t,16,00000010,4,MeReal *
+ConvertCOMPositionVector,tmp,-28,ffffffe4,12,MeVector3
+ConvertCOMPositionVector,from_body,4,00000004,4,MdtBodyID
+ConvertCOMPositionVector,f,8,00000008,4,MeReal *
+ConvertCOMPositionVector,to_body,12,0000000c,4,MdtBodyID
+ConvertCOMPositionVector,t,16,00000010,4,MeReal *
+MdtMakeInertiaTensorSphere,mass,4,00000004,4,MeReal
+MdtMakeInertiaTensorSphere,radius,8,00000008,4,MeReal
+MdtMakeInertiaTensorSphere,i,12,0000000c,4,MeVector3 *
+MdtMakeInertiaTensorBox,mass,4,00000004,4,MeReal
+MdtMakeInertiaTensorBox,lx,8,00000008,4,MeReal
+MdtMakeInertiaTensorBox,ly,12,0000000c,4,MeReal
+MdtMakeInertiaTensorBox,lz,16,00000010,4,MeReal
+MdtMakeInertiaTensorBox,i,20,00000014,4,MeVector3 *
+MdtLimitController,limit,4,00000004,4,MdtLimitID
+MdtLimitController,desiredPosition,8,00000008,4,MeReal
+MdtLimitController,error,-28,ffffffe4,4,MeReal
+MdtLimitController,gap,12,0000000c,4,MeReal
+MdtLimitController,desiredPosition_local,-16,fffffff0,4,MeReal
+MdtLimitController,maxSpeed,16,00000010,4,MeReal
+MdtLimitController,gap_local,-20,ffffffec,4,MeReal
+MdtLimitController,maxForce,20,00000014,4,MeReal
+MdtLimitController,maxSpeed_local,-24,ffffffe8,4,MeReal
+UpdateBodyTransform,b,4,00000004,4,MdtBodyID
+UpdateBodyTransform,keaTM,8,00000008,4,MeReal[4] *
+UpdateBodyTransform,tmp,-44,ffffffd4,12,MeVector3
+UpdateCOMTransform,b,4,00000004,4,MdtBodyID
+GetCOMTransform,b,4,00000004,4,MdtBodyID
+GetCOMTransform,keaTM,8,00000008,4,MeVector4 *

@@ -1,0 +1,20 @@
+# function,name,stackoff,hexoff,size,type
+MeAssetDBLookupAssetByName,db,4,00000004,4,MeAssetDB *
+MeAssetDBLookupAssetByName,name,8,00000008,4,char *
+MeAssetDBInsertAsset,db,4,00000004,4,MeAssetDB *
+MeAssetDBInsertAsset,asset,8,00000008,4,MeFAsset *
+MeAssetDBRemoveAsset,asset,4,00000004,4,MeFAsset *
+MeAssetDBDestroy,db,4,00000004,4,MeAssetDB *
+MeAssetDBDeleteContents,db,4,00000004,4,MeAssetDB *
+MeAssetDBCreateCopy,db,4,00000004,4,MeAssetDB *
+MeAssetDBInsertCopy,to,4,00000004,4,MeAssetDB *
+MeAssetDBInsertCopy,from,8,00000008,4,MeAssetDB *
+MeAssetDBIsEmpty,db,4,00000004,4,MeAssetDB *
+MeAssetDBGetAssetCount,db,4,00000004,4,MeAssetDB *
+MeAssetDBInitAssetIterator,db,4,00000004,4,MeAssetDB *
+MeAssetDBInitAssetIterator,it,8,00000008,4,MeFAssetIt *
+MeAssetDBGetAsset,it,4,00000004,4,MeFAssetIt *
+MeAssetDBLookupAsset,db,4,00000004,4,MeAssetDB *
+MeAssetDBLookupAsset,id,8,00000008,4,int
+_FSetStringProperty,data,4,00000004,4,char * *
+_FSetStringProperty,newVal,8,00000008,4,char *

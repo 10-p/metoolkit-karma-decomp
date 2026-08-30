@@ -1,0 +1,22 @@
+# function,name,stackoff,hexoff,size,type
+calculateConstraintAndResultantForces,this,4,00000004,4,keaFunctions_Vanilla *
+calculateConstraintAndResultantForces,blist,8,00000008,4,MdtKeaBody * *
+calculateConstraintAndResultantForces,cforcePairs,12,0000000c,4,MdtKeaForcePair *
+calculateConstraintAndResultantForces,Jstore,16,00000010,4,MdtKeaJBlock[2] *
+calculateConstraintAndResultantForces,Jbody,20,00000014,4,int[2] *
+calculateConstraintAndResultantForces,lambda,24,00000018,4,MeReal *
+calculateConstraintAndResultantForces,bl2body,28,0000001c,4,int[8] *
+calculateConstraintAndResultantForces,bl2cbody,32,00000020,4,int[8] *
+calculateConstraintAndResultantForces,jlen,36,00000024,4,int *
+calculateConstraintAndResultantForces,num_rows_exc_padding,40,00000028,4,int
+calculateConstraintAndResultantForces,num_rows_inc_padding,44,0000002c,4,int
+calculateConstraintAndResultantForces,num_constraints,48,00000030,4,int
+calculateConstraintAndResultantForces,num_bodies,52,00000034,4,int
+calculateConstraintAndResultantForces,strip,-20,ffffffec,4,int
+calculateConstraintAndResultantForces,block,-24,ffffffe8,4,int
+calculateConstraintAndResultantForces,Lambda,-28,ffffffe4,4,MeReal *
+calculateConstraintAndResultantForces,J,-32,ffffffe0,4,MdtKeaJBlock *
+Multiply4VectorWith46Matrix,lambda,12,0000000c,4,MeReal *
+Multiply4VectorWith46Matrix,jstrip,16,00000010,4,MdtKeaJBlock *
+Multiply4VectorWith46Matrix,bodyforce,4,00000004,4,MeReal *
+Multiply4VectorWith46Matrix,conyforce,8,00000008,4,MdtKeaForce *

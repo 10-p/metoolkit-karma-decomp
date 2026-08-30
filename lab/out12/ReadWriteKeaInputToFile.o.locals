@@ -1,0 +1,95 @@
+# function,name,stackoff,hexoff,size,type
+writeIntArrayToFile,file,4,00000004,4,int
+writeIntArrayToFile,desc,8,00000008,4,char *
+writeIntArrayToFile,num_elts,12,0000000c,4,int
+writeIntArrayToFile,array,16,00000010,4,int *
+writeIntArrayToFile,buf,-284,fffffee4,256,char[256]
+writeMdtKeaBodyIndexPairArrayToFile,file,4,00000004,4,int
+writeMdtKeaBodyIndexPairArrayToFile,desc,8,00000008,4,char *
+writeMdtKeaBodyIndexPairArrayToFile,num_elts,12,0000000c,4,int
+writeMdtKeaBodyIndexPairArrayToFile,array,16,00000010,4,int[2] *
+writeMdtKeaBodyIndexPairArrayToFile,buf,-284,fffffee4,256,char[256]
+writeFloatArrayToFile,buf,-284,fffffee4,256,char[256]
+writeFloatArrayToFile,file,4,00000004,4,int
+writeFloatArrayToFile,desc,8,00000008,4,char *
+writeFloatArrayToFile,num_elts,12,0000000c,4,int
+writeFloatArrayToFile,array,16,00000010,4,MeReal *
+writeFloatVec4ToFile,file,4,00000004,4,int
+writeFloatVec4ToFile,desc,8,00000008,4,char *
+writeFloatVec4ToFile,array,12,0000000c,4,MeReal *
+writeFloatVec4ToFile,buf,-284,fffffee4,256,char[256]
+writeFloatToFile,buf,-268,fffffef4,256,char[256]
+writeFloatToFile,file,4,00000004,4,int
+writeFloatToFile,desc,8,00000008,4,char *
+writeFloatToFile,value,12,0000000c,4,MeReal
+writeIntToFile,buf,-268,fffffef4,256,char[256]
+writeIntToFile,file,4,00000004,4,int
+writeIntToFile,desc,8,00000008,4,char *
+writeIntToFile,value,12,0000000c,4,int
+readIntArrayFromFile,stream,4,00000004,4,MeStream
+readIntArrayFromFile,desc,8,00000008,4,char *
+readIntArrayFromFile,num_elts,12,0000000c,4,int
+readIntArrayFromFile,array,16,00000010,4,int *
+readIntArrayFromFile,buf,-284,fffffee4,256,char[256]
+readIntArrayFromFile,i,-288,fffffee0,4,int
+readMdtKeaBodyIndexPairArrayFromFile,stream,4,00000004,4,MeStream
+readMdtKeaBodyIndexPairArrayFromFile,desc,8,00000008,4,char *
+readMdtKeaBodyIndexPairArrayFromFile,num_elts,12,0000000c,4,int
+readMdtKeaBodyIndexPairArrayFromFile,array,16,00000010,4,MdtKeaBodyIndexPair *
+readMdtKeaBodyIndexPairArrayFromFile,buf,-284,fffffee4,256,char[256]
+readMdtKeaBodyIndexPairArrayFromFile,i,-292,fffffedc,4,int
+readFloatArrayFromFile,uVar5,-304,fffffed0,4,undefined4
+readFloatArrayFromFile,stream,4,00000004,4,MeStream
+readFloatArrayFromFile,desc,8,00000008,4,char *
+readFloatArrayFromFile,num_elts,12,0000000c,4,int
+readFloatArrayFromFile,array,16,00000010,4,MeReal *
+readFloatArrayFromFile,buf,-284,fffffee4,256,char[256]
+readFloatArrayFromFile,i,-288,fffffee0,4,int
+readFloatVec4FromFile,stream,4,00000004,4,MeStream
+readFloatVec4FromFile,desc,8,00000008,4,char *
+readFloatVec4FromFile,array,12,0000000c,4,MeReal *
+readFloatVec4FromFile,buf,-284,fffffee4,256,char[256]
+readFloatFromFile,stream,4,00000004,4,MeStream
+readFloatFromFile,desc,8,00000008,4,char *
+readFloatFromFile,value,12,0000000c,4,MeReal *
+readFloatFromFile,buf,-268,fffffef4,256,char[256]
+readIntFromFile,stream,4,00000004,4,MeStream
+readIntFromFile,desc,8,00000008,4,char *
+readIntFromFile,value,12,0000000c,4,int *
+readIntFromFile,buf,-268,fffffef4,256,char[256]
+writeKeaInputToFile,local_23c,-572,fffffdc4,4,int
+writeKeaInputToFile,local_238,-568,fffffdc8,4,int
+writeKeaInputToFile,local_230,-560,fffffdd0,4,MdtKeaBody * *
+writeKeaInputToFile,i,-544,fffffde0,4,int
+writeKeaInputToFile,j,-548,fffffddc,4,int
+writeKeaInputToFile,file,-552,fffffdd8,4,int
+writeKeaInputToFile,buf,-284,fffffee4,256,char[256]
+writeKeaInputToFile,buf_1,-540,fffffde4,256,char[256]
+writeKeaInputToFile,constraints,4,00000004,92,MdtKeaConstraints
+writeKeaInputToFile,parameters,96,00000060,76,MdtKeaParameters
+writeKeaInputToFile,blist,172,000000ac,4,MdtKeaBody * *
+writeKeaInputToFile,num_bodies,176,000000b0,4,int
+readKeaInputFromFile,i,-544,fffffde0,4,int
+readKeaInputFromFile,buf,-284,fffffee4,256,char[256]
+readKeaInputFromFile,stream,-548,fffffddc,4,MeStream
+readKeaInputFromFile,buf_1,-540,fffffde4,256,char[256]
+readKeaInputFromFile,constraints,4,00000004,4,MdtKeaConstraints *
+readKeaInputFromFile,parameters,8,00000008,4,MdtKeaParameters *
+readKeaInputFromFile,blist,12,0000000c,4,MdtKeaBody * *
+readKeaInputFromFile,num_bodies,16,00000010,4,int *
+readKeaInputFromFile,uVar18,-608,fffffda0,4,undefined4
+readKeaInputFromFile,local_25c,-604,fffffda4,4,int
+readKeaInputFromFile,local_258,-600,fffffda8,4,MdtKeaBody * *
+writeLambdaToFile,filename,4,00000004,4,char *
+writeLambdaToFile,lambda,8,00000008,4,MeReal *
+writeLambdaToFile,num_elts,12,0000000c,4,int
+writeLambdaToFile,buf,-284,fffffee4,256,char[256]
+keaCloseDebugDataFile,this,4,00000004,4,keaFunctions *
+keaCloseDebugDataFile,file,8,00000008,4,int
+checkPrintDebugInput,in_stack_ffffffa0,-96,ffffffa0,76,MdtKeaParameters
+checkPrintDebugInput,this,4,00000004,4,keaFunctions *
+checkPrintDebugInput,constraints,8,00000008,92,MdtKeaConstraints
+checkPrintDebugInput,parameters,100,00000064,76,MdtKeaParameters
+checkPrintDebugInput,blist,176,000000b0,4,MdtKeaBody * *
+checkPrintDebugInput,num_bodies,180,000000b4,4,int
+checkPrintDebugInput,in_stack_ffffff44,-188,ffffff44,92,MdtKeaConstraints

@@ -1,0 +1,58 @@
+# function,name,stackoff,hexoff,size,type
+McdModelCreateFromMeFAssetPart,fmodel,-160,ffffff60,4,MeFModel *
+McdModelCreateFromMeFAssetPart,type,-164,ffffff5c,4,MeFModelType
+McdModelCreateFromMeFAssetPart,model,-168,ffffff58,4,McdModelID.conflict
+McdModelCreateFromMeFAssetPart,body,-172,ffffff54,4,MdtBodyID
+McdModelCreateFromMeFAssetPart,pos,-44,ffffffd4,12,MeVector3
+McdModelCreateFromMeFAssetPart,I,-92,ffffffa4,36,MeMatrix3
+McdModelCreateFromMeFAssetPart,clamped,-140,ffffff74,36,MeMatrix3
+McdModelCreateFromMeFAssetPart,axis,-156,ffffff64,12,MeVector3
+McdModelCreateFromMeFAssetPart,part,4,00000004,4,MeFAssetPart *
+McdModelCreateFromMeFAssetPart,g,8,00000008,4,McdGeometryID
+McdModelCreateFromMeFAssetPart,world,12,0000000c,4,MdtWorldID
+McdModelCreateFromMeFAssetPart,assetTM,16,00000010,4,MeMatrix4Ptr
+MdtConstraintCreateFromMeFJoint,b1,-396,fffffe74,4,MdtBodyID
+MdtConstraintCreateFromMeFJoint,b2,-400,fffffe70,4,MdtBodyID
+MdtConstraintCreateFromMeFJoint,con,-404,fffffe6c,4,MdtConstraintID
+MdtConstraintCreateFromMeFJoint,pos,-44,ffffffd4,12,MeVector3
+MdtConstraintCreateFromMeFJoint,pax,-60,ffffffc4,12,MeVector3
+MdtConstraintCreateFromMeFJoint,oax,-76,ffffffb4,12,MeVector3
+MdtConstraintCreateFromMeFJoint,pcVar17,-456,fffffe38,4,char *
+MdtConstraintCreateFromMeFJoint,MVar18,-456,fffffe38,4,MeBool
+MdtConstraintCreateFromMeFJoint,body1_index,-408,fffffe68,4,int
+MdtConstraintCreateFromMeFJoint,body2_index,-412,fffffe64,4,int
+MdtConstraintCreateFromMeFJoint,p1,-384,fffffe80,4,MeReal
+MdtConstraintCreateFromMeFJoint,p2,-388,fffffe7c,4,MeReal
+MdtConstraintCreateFromMeFJoint,p3,-392,fffffe78,4,MeReal
+MdtConstraintCreateFromMeFJoint,b,-380,fffffe84,4,MeBool
+MdtConstraintCreateFromMeFJoint,p,-376,fffffe88,4,MeReal
+MdtConstraintCreateFromMeFJoint,co,-432,fffffe50,4,MdtSkeletalConeOption
+MdtConstraintCreateFromMeFJoint,to,-436,fffffe4c,4,MdtSkeletalTwistOption
+MdtConstraintCreateFromMeFJoint,i,-372,fffffe8c,4,int
+MdtConstraintCreateFromMeFJoint,p_1,-368,fffffe90,4,MeReal
+MdtConstraintCreateFromMeFJoint,I,-332,fffffeb4,36,MeMatrix3
+MdtConstraintCreateFromMeFJoint,lower,-428,fffffe54,4,MdtSingleLimitID
+MdtConstraintCreateFromMeFJoint,p_2,-356,fffffe9c,4,MeReal
+MdtConstraintCreateFromMeFJoint,p2_1,-360,fffffe98,4,MeReal
+MdtConstraintCreateFromMeFJoint,b_1,-364,fffffe94,4,MeBool
+MdtConstraintCreateFromMeFJoint,p_3,-352,fffffea0,4,MeReal
+MdtConstraintCreateFromMeFJoint,b_2,-348,fffffea4,4,MeBool
+MdtConstraintCreateFromMeFJoint,p_4,-284,fffffee4,24,MeReal[6]
+MdtConstraintCreateFromMeFJoint,lower_1,-424,fffffe58,4,MdtSingleLimitID
+MdtConstraintCreateFromMeFJoint,p_5,-336,fffffeb0,4,MeReal
+MdtConstraintCreateFromMeFJoint,p2_2,-340,fffffeac,4,MeReal
+MdtConstraintCreateFromMeFJoint,b_3,-344,fffffea8,4,MeBool
+MdtConstraintCreateFromMeFJoint,r,-420,fffffe5c,4,MdtRPROJointID
+MdtConstraintCreateFromMeFJoint,p_6,-252,ffffff04,12,MeReal[3]
+MdtConstraintCreateFromMeFJoint,vec,-236,ffffff14,12,MeVector3
+MdtConstraintCreateFromMeFJoint,prim,-108,ffffff94,12,MeVector3
+MdtConstraintCreateFromMeFJoint,orth,-124,ffffff84,12,MeVector3
+MdtConstraintCreateFromMeFJoint,pos2,-140,ffffff74,12,MeVector3
+MdtConstraintCreateFromMeFJoint,outpos,-156,ffffff64,12,MeVector3
+MdtConstraintCreateFromMeFJoint,temp,-220,ffffff24,64,MeMatrix4
+MdtConstraintCreateFromMeFJoint,vec_1,-92,ffffffa4,12,MeVector3
+MdtConstraintCreateFromMeFJoint,joint,4,00000004,4,MeFJoint *
+MdtConstraintCreateFromMeFJoint,world,8,00000008,4,MdtWorldID
+MdtConstraintCreateFromMeFJoint,m1,12,0000000c,4,McdModelID.conflict
+MdtConstraintCreateFromMeFJoint,m2,16,00000010,4,McdModelID.conflict
+MdtConstraintCreateFromMeFJoint,assetTM,20,00000014,4,MeMatrix4Ptr

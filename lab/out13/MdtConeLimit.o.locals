@@ -1,0 +1,14 @@
+# function,name,stackoff,hexoff,size,type
+MdtConeLimitCreate,w,4,00000004,4,MdtWorldID
+MdtConeLimitReset,j,4,00000004,4,MdtConeLimitID
+MdtConeLimitQuaConstraint,j,4,00000004,4,MdtConeLimitID
+MdtConstraintDCastConeLimit,c,4,00000004,4,MdtConstraintID
+MdtConeLimitSetConeHalfAngle,c,4,00000004,4,MdtConeLimitID
+MdtConeLimitSetConeHalfAngle,theta,8,00000008,4,MeReal
+MdtConeLimitGetConeHalfAngle,c,4,00000004,4,MdtConeLimitID
+MdtConeLimitSetStiffness,c,4,00000004,4,MdtConeLimitID
+MdtConeLimitSetStiffness,kp,8,00000008,4,MeReal
+MdtConeLimitGetStiffness,c,4,00000004,4,MdtConeLimitID
+MdtConeLimitSetDamping,c,4,00000004,4,MdtConeLimitID
+MdtConeLimitSetDamping,kd,8,00000008,4,MeReal
+MdtConeLimitGetDamping,c,4,00000004,4,MdtConeLimitID

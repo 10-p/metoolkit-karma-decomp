@@ -1,0 +1,45 @@
+# function,name,stackoff,hexoff,size,type
+PElementGetAttributeValue,elem,4,00000004,4,PElement *
+PElementGetAttributeValue,attr,8,00000008,4,char *
+PElementCompareAttributes,e,4,00000004,4,PElement *
+PElementCompareAttributes,attr,8,00000008,4,void *
+PElementCompareAttributes,attrVal,12,0000000c,4,void *
+PElementGetNext,it,4,00000004,4,PElementIt *
+PElementLookup,it,-20,ffffffec,4,PElementIt
+PElementLookup,root,4,00000004,4,PElement *
+PElementLookup,attr,8,00000008,4,char *
+PElementLookup,val,12,0000000c,4,char *
+PElementCreate,a,-20,ffffffec,4,char *
+PElementCreate,val,-24,ffffffe8,4,char *
+PElementCreate,next,-28,ffffffe4,4,char *
+PElementCreate,type,4,00000004,4,int
+PElementCreate,name,8,00000008,4,char *
+PElementCreate,data,12,0000000c,4,void *
+PElementCreate,func,16,00000010,4,CDataFreeFunc
+PElementCreate,attrs,20,00000014,4,char *
+PElementDestroy,e,4,00000004,4,PElement *
+PElementDestroyChildren,e,4,00000004,4,PElement *
+PElementDestroyChildren,parent,8,00000008,4,PElement *
+PElementDestroyChildren,userdata,12,0000000c,4,void *
+PElementDestroyChildren,node,-20,ffffffec,4,PElementNode *
+PElementAddAttribute,e,4,00000004,4,PElement *
+PElementAddAttribute,attr,8,00000008,4,char *
+PElementAddAttribute,val,12,0000000c,4,char *
+PElementParseAttributes,a,-20,ffffffec,4,char *
+PElementParseAttributes,val,-24,ffffffe8,4,char *
+PElementParseAttributes,next,-28,ffffffe4,4,char *
+PElementParseAttributes,e,4,00000004,4,PElement *
+PElementParseAttributes,attrs,8,00000008,4,char *
+PElementInsert,e,4,00000004,4,PElement *
+PElementInsert,parent,8,00000008,4,PElement *
+PElementFind,k1,12,0000000c,4,void *
+PElementFind,k2,16,00000010,4,void *
+PElementFind,root,4,00000004,4,PElement *
+PElementFind,cb,8,00000008,4,PElementCompareCB
+PElementTraverseAll,root,4,00000004,4,PElement *
+PElementTraverseAll,cb,8,00000008,4,PElementCB
+PElementTraverseAll,rootFirst,12,0000000c,4,MeBool
+PElementTraverseAll,userdata,16,00000010,4,void *
+PElementInitIterator,root,4,00000004,4,PElement *
+PElementInitIterator,it,8,00000008,4,PElementIt *
+PElementIteratorDestroy,it,4,00000004,4,PElementIt *

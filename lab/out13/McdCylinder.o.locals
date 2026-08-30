@@ -1,0 +1,53 @@
+# function,name,stackoff,hexoff,size,type
+McdCylinderRegisterType,frame,4,00000004,4,McdFramework *
+McdCylinderCreate,frame,4,00000004,4,McdFramework *
+McdCylinderCreate,inRadius,8,00000008,4,MeReal
+McdCylinderCreate,inHeight,12,0000000c,4,MeReal
+McdCylinderGetRadius,g,4,00000004,4,McdCylinderID
+McdCylinderGetHeight,g,4,00000004,4,McdCylinderID
+McdCylinderGetHalfHeight,g,4,00000004,4,McdCylinderID
+McdCylinderSetRadius,g,4,00000004,4,McdCylinderID
+McdCylinderSetRadius,r,8,00000008,4,MeReal
+McdCylinderSetHeight,g,4,00000004,4,McdCylinderID
+McdCylinderSetHeight,h,8,00000008,4,MeReal
+McdCylinderSetGeometricalParameters,g,4,00000004,4,McdGeometry *
+McdCylinderSetGeometricalParameters,inRadius,8,00000008,4,MeReal
+McdCylinderSetGeometricalParameters,inHeight,12,0000000c,4,MeReal
+McdCylinderDestroy,g,4,00000004,4,McdGeometry *
+McdCylinderUpdateAABB,finalTM,8,00000008,4,MeMatrix4Ptr
+McdCylinderUpdateAABB,tight,12,0000000c,4,MeBool
+McdCylinderUpdateAABB,rFit,-44,ffffffd4,12,MeReal[3]
+McdCylinderUpdateAABB,s2z,-96,ffffffa0,4,MeReal
+McdCylinderUpdateAABB,sz,-80,ffffffb0,4,MeReal
+McdCylinderUpdateAABB,min,-60,ffffffc4,12,MeReal[3]
+McdCylinderUpdateAABB,max,-76,ffffffb4,12,MeReal[3]
+McdCylinderUpdateAABB,sz_1,-84,ffffffac,4,MeReal
+McdCylinderUpdateAABB,ins,4,00000004,4,McdGeometryInstanceID
+McdCylinderGetXYAABB,g,4,00000004,4,McdGeometry *
+McdCylinderGetXYAABB,_tm,8,00000008,4,MeVector4 *
+McdCylinderGetXYAABB,bounds,12,0000000c,4,MeReal *
+McdCylinderGetXYAABB,rFit,-28,ffffffe4,12,MeReal[3]
+McdCylinderGetBSphere,g,4,00000004,4,McdGeometry *
+McdCylinderGetBSphere,center,8,00000008,4,MeReal *
+McdCylinderGetBSphere,radius,12,0000000c,4,MeReal *
+McdCylinderGetBSphereRadius,g,4,00000004,4,McdGeometryID
+McdCylinderMaximumPoint,ins,4,00000004,4,McdGeometryInstanceID
+McdCylinderMaximumPoint,inDir,8,00000008,4,MeReal *
+McdCylinderMaximumPoint,outPoint,12,0000000c,4,MeReal *
+McdCylinderMaximumPoint,c,-64,ffffffc0,4,McdCylinder *
+McdCylinderMaximumPoint,n,-44,ffffffd4,12,lsVec3
+McdCylinderMaximumPointLocal,g,4,00000004,4,McdGeometry *
+McdCylinderMaximumPointLocal,n,-28,ffffffe4,12,lsVec3
+McdCylinderMaximumPointLocal,inDir,8,00000008,4,MeReal *
+McdCylinderMaximumPointLocal,outPoint,12,0000000c,4,MeReal *
+McdCylinderGetMassProperties,m,12,0000000c,4,MeVector3 *
+McdCylinderGetMassProperties,volume,16,00000010,4,MeReal *
+McdCylinderGetMassProperties,g,4,00000004,4,McdGeometry *
+McdCylinderGetMassProperties,relTM,8,00000008,4,MeVector4 *
+McdCylinderDebugDraw,wv2,-76,ffffffb4,12,MeReal[3]
+McdCylinderDebugDraw,lv,-92,ffffffa4,12,MeReal[3]
+McdCylinderDebugDraw,geom,4,00000004,4,McdGeometryID
+McdCylinderDebugDraw,tm,8,00000008,4,MeReal[4] *
+McdCylinderDebugDraw,colour,12,0000000c,4,MeReal *
+McdCylinderDebugDraw,rads,-44,ffffffd4,12,MeReal[3]
+McdCylinderDebugDraw,wv1,-60,ffffffc4,12,MeReal[3]

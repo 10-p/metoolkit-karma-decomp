@@ -1,0 +1,26 @@
+# function,name,stackoff,hexoff,size,type
+McdModelPairContainerCreate,size,4,00000004,4,int
+McdModelPairContainerInit,a,4,00000004,4,McdModelPairContainer *
+McdModelPairContainerInit,array,8,00000008,4,McdModelPair * *
+McdModelPairContainerInit,size,12,0000000c,4,int
+McdModelPairContainerReset,a,4,00000004,4,McdModelPairContainer *
+McdModelPairContainerDestroy,a,4,00000004,4,McdModelPairContainer *
+McdModelPairContainerGetGoodbyeCount,a,4,00000004,4,McdModelPairContainer *
+McdModelPairContainerGetHelloCount,a,4,00000004,4,McdModelPairContainer *
+McdModelPairContainerGetStayingCount,a,4,00000004,4,McdModelPairContainer *
+McdModelPairContainerInsertHelloPair,m,4,00000004,4,McdModelPairContainer *
+McdModelPairContainerInsertHelloPair,p,8,00000008,4,McdModelPairID
+McdModelPairContainerInsertGoodbyePair,m,4,00000004,4,McdModelPairContainer *
+McdModelPairContainerInsertGoodbyePair,p,8,00000008,4,McdModelPairID
+McdModelPairContainerInsertStayingPair,m,4,00000004,4,McdModelPairContainer *
+McdModelPairContainerInsertStayingPair,p,8,00000008,4,McdModelPairID
+McdModelPairContainerRemovePair,m,4,00000004,4,McdModelPairContainer *
+McdModelPairContainerRemovePair,p,8,00000008,4,McdModelPairID *
+McdModelPairContainerGetGoodbyeArray,a,4,00000004,4,McdModelPairContainer *
+McdModelPairContainerGetGoodbyeArray,count,8,00000008,4,int *
+McdModelPairContainerGetHelloArray,a,4,00000004,4,McdModelPairContainer *
+McdModelPairContainerGetHelloArray,count,8,00000008,4,int *
+McdModelPairContainerGetStayingArray,a,4,00000004,4,McdModelPairContainer *
+McdModelPairContainerGetStayingArray,count,8,00000008,4,int *
+McdModelPairContainerIteratorInit,iter,4,00000004,4,McdModelPairContainerIterator *
+McdModelPairContainerIteratorInit,pairs,8,00000008,4,McdModelPairContainer *

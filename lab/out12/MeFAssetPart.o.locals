@@ -1,0 +1,54 @@
+# function,name,stackoff,hexoff,size,type
+MeFAssetPartRename,part,4,00000004,4,MeFAssetPart *
+MeFAssetPartRename,newName,8,00000008,4,char *
+MeFAssetPartCreate,name,4,00000004,4,char *
+MeFAssetPartCreate,model,8,00000008,4,MeFModel *
+MeFAssetPartCreate,relTM,12,0000000c,4,MeMatrix4Ptr
+MeFAssetPartCreateCopy,recurse,8,00000008,4,MeBool
+MeFAssetPartCreateCopy,part,4,00000004,4,MeFAssetPart *
+MeFAssetPartDestroy,p,4,00000004,4,MeFAssetPart *
+MeFAssetPartGetName,p,4,00000004,4,MeFAssetPart *
+MeFAssetPartGetModelName,p,4,00000004,4,MeFAssetPart *
+MeFAssetPartGetModel,p,4,00000004,4,MeFAssetPart *
+MeFAssetPartGetGeometry,p,4,00000004,4,MeFAssetPart *
+MeFAssetPartGetTransformPtr,p,4,00000004,4,MeFAssetPart *
+MeFAssetPartGetPosition,part,4,00000004,4,MeFAssetPart *
+MeFAssetPartGetPosition,pos,8,00000008,4,MeReal *
+MeFAssetPartGetGraphicHint,p,4,00000004,4,MeFAssetPart *
+MeFAssetPartGetGraphicScale,p,4,00000004,4,MeFAssetPart *
+MeFAssetPartGetGraphicOffset,p,4,00000004,4,MeFAssetPart *
+MeFAssetPartGetGraphicOffset,v,8,00000008,4,MeReal *
+MeFAssetPartGetParentPart,part,4,00000004,4,MeFAssetPart *
+MeFAssetPartGetParentPartName,part,4,00000004,4,MeFAssetPart *
+MeFAssetPartIsCollisionEnabled,p2,8,00000008,4,MeFAssetPart *
+MeFAssetPartIsCollisionEnabled,p1,4,00000004,4,MeFAssetPart *
+MeFAssetPartGetDisabledCollisionIndex,part,4,00000004,4,MeFAssetPart *
+MeFAssetPartSetGraphicHint,part,4,00000004,4,MeFAssetPart *
+MeFAssetPartSetGraphicHint,hint,8,00000008,4,char *
+MeFAssetPartSetGraphicScale,part,4,00000004,4,MeFAssetPart *
+MeFAssetPartSetGraphicScale,scale,8,00000008,4,MeReal
+MeFAssetPartScale,part,4,00000004,4,MeFAssetPart *
+MeFAssetPartScale,scale,8,00000008,4,MeReal
+MeFAssetPartSetGraphicOffset,part,4,00000004,4,MeFAssetPart *
+MeFAssetPartSetGraphicOffset,dx,8,00000008,4,MeReal
+MeFAssetPartSetGraphicOffset,dy,12,0000000c,4,MeReal
+MeFAssetPartSetGraphicOffset,dz,16,00000010,4,MeReal
+MeFAssetPartSetTransform,part,4,00000004,4,MeFAssetPart *
+MeFAssetPartSetTransform,tm,8,00000008,4,MeMatrix4Ptr
+MeFAssetPartSetPosition,y,12,0000000c,4,MeReal
+MeFAssetPartSetPosition,z,16,00000010,4,MeReal
+MeFAssetPartSetPosition,part,4,00000004,4,MeFAssetPart *
+MeFAssetPartSetPosition,x,8,00000008,4,MeReal
+MeFAssetPartSetParentPart,part,4,00000004,4,MeFAssetPart *
+MeFAssetPartSetParentPart,parent,8,00000008,4,MeFAssetPart *
+MeFAssetPartSetParentPartByName,part,4,00000004,4,MeFAssetPart *
+MeFAssetPartSetParentPartByName,name,8,00000008,4,char *
+MeFAssetPartSetModel,part,4,00000004,4,MeFAssetPart *
+MeFAssetPartSetModel,model,8,00000008,4,MeFModel *
+MeFAssetPartSetModelByName,part,4,00000004,4,MeFAssetPart *
+MeFAssetPartSetModelByName,name,8,00000008,4,char *
+MeFAssetPartEnableCollision,p1,4,00000004,4,MeFAssetPart *
+MeFAssetPartEnableCollision,p2,8,00000008,4,MeFAssetPart *
+MeFAssetPartEnableCollision,enable,12,0000000c,4,MeBool
+MeFAssetPartEnableAllCollisions,it,-16,fffffff0,4,MeFAssetPartIt
+MeFAssetPartEnableAllCollisions,part,4,00000004,4,MeFAssetPart *

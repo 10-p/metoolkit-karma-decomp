@@ -1,0 +1,10 @@
+# function,name,stackoff,hexoff,size,type
+MdtUserConstraintCreate,w,4,00000004,4,MdtWorldID
+MdtUserConstraintQuaConstraint,j,4,00000004,4,MdtUserConstraintID
+MdtConstraintDCastUserConstraint,c,4,00000004,4,MdtConstraintID
+MdtUserConstraintGetFunction,j,4,00000004,4,MdtUserConstraintID
+MdtUserConstraintGetConstraintData,j,4,00000004,4,MdtUserConstraintID
+MdtUserConstraintSetFunction,j,4,00000004,4,MdtUserConstraintID
+MdtUserConstraintSetFunction,f,8,00000008,4,MdtBclAddConstraintFn
+MdtUserConstraintSetConstraintData,j,4,00000004,4,MdtUserConstraintID
+MdtUserConstraintSetConstraintData,d,8,00000008,4,void *

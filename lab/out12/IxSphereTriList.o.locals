@@ -1,0 +1,46 @@
+# function,name,stackoff,hexoff,size,type
+McdSphereTriangleListIntersect,p,4,00000004,4,McdModelPair *
+McdSphereTriangleListIntersect,result,8,00000008,4,McdIntersectResult *
+McdSphereTriangleListIntersect,ct,-60,ffffffc4,24,McdUserTriangle
+McdSphereTriangleListIntersect,dims,-286,fffffee2,2,MeI16
+McdSphereTriangleListIntersect,pos,-76,ffffffb4,12,lsVec3
+McdSphereTriangleListIntersect,separation,-292,fffffedc,4,MeReal
+McdSphereTriangleListIntersect,normal,-92,ffffffa4,12,lsVec3
+McdSphereTriangleListIntersect,i,-296,fffffed8,4,int
+McdSphereTriangleListIntersect,transPos,-108,ffffff94,12,lsVec3
+McdSphereTriangleListIntersect,vector,-156,ffffff64,48,lsVec3[4]
+McdSphereTriangleListIntersect,sphereRadius,-300,fffffed4,4,MeReal
+McdSphereTriangleListIntersect,edge,-204,ffffff34,36,MeReal[3][3]
+McdSphereTriangleListIntersect,count,-304,fffffed0,4,int
+McdSphereTriangleListIntersect,triToSphere,-268,fffffef4,64,lsTransform
+McdSphereTriangleListIntersect,trilistgeom,-308,fffffecc,4,McdTriangleListID
+McdSphereTriangleListIntersect,fwk,-312,fffffec8,4,McdFramework *
+McdSphereTriangleListIntersect,eps,-320,fffffec0,4,MeReal
+McdSphereTriangleListIntersect,diff,-284,fffffee4,12,lsVec3
+McdSphereTriangleListIntersect,aiStackY_180,-384,fffffe80,20,int[5]
+McdSphereTriangleListIntersect,aMStackY_16c,-364,fffffe94,8,MeReal[2]
+McdSphereTriangleListIntersect,iStackY_164,-356,fffffe9c,4,int
+McdSphereTriangleListIntersect,fStackY_160,-352,fffffea0,4,float
+McdSphereTriangleListIntersect,local_144,-324,fffffebc,4,int
+McdSphereTriangleListIntersect,local_13c,-316,fffffec4,4,float *
+McdSphereTriangleListRegisterInteraction,frame,4,00000004,4,McdFramework *
+McdSphereTriangleListRegisterInteraction,interactions,-44,ffffffd4,28,McdInteractions
+MeVector3Normalize,local_8,-8,fffffff8,4,float
+MeVector3Normalize,v,4,00000004,4,MeReal *
+McdVanillaOverlapSphereTri,outPos,12,0000000c,4,lsVec3 *
+McdVanillaOverlapSphereTri,outDims,16,00000010,4,MeI16 *
+McdVanillaOverlapSphereTri,inEps,20,00000014,4,MeReal
+McdVanillaOverlapSphereTri,inR,24,00000018,4,MeReal
+McdVanillaOverlapSphereTri,inTri,28,0000001c,4,McdUserTriangle *
+McdVanillaOverlapSphereTri,edge,32,00000020,4,MeReal[3] *
+McdVanillaOverlapSphereTri,scale,36,00000024,4,MeReal
+McdVanillaOverlapSphereTri,eps,-128,ffffff80,4,MeReal
+McdVanillaOverlapSphereTri,normD,-132,ffffff7c,4,MeReal
+McdVanillaOverlapSphereTri,maxSeparation,-156,ffffff64,4,MeReal
+McdVanillaOverlapSphereTri,d0,-160,ffffff60,4,MeReal
+McdVanillaOverlapSphereTri,d1,-172,ffffff54,4,MeReal
+McdVanillaOverlapSphereTri,origin,-44,ffffffd4,12,lsVec3
+McdVanillaOverlapSphereTri,point,-60,ffffffc4,12,lsVec3
+McdVanillaOverlapSphereTri,vertex,-76,ffffffb4,12,lsVec3
+McdVanillaOverlapSphereTri,outSep,4,00000004,4,MeReal *
+McdVanillaOverlapSphereTri,outN,8,00000008,4,lsVec3 *

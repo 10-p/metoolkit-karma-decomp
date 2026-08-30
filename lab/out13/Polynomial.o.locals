@@ -1,0 +1,19 @@
+# function,name,stackoff,hexoff,size,type
+PolynomialRoots,roots,4,00000004,4,MeReal *
+PolynomialRoots,xmin,8,00000008,4,MeReal
+PolynomialRoots,xmax,12,0000000c,4,MeReal
+PolynomialRoots,order,16,00000010,4,MeU32
+PolynomialRoots,coef,20,00000014,4,MeReal *
+PolynomialRoots,presentOrder,-40,ffffffd8,4,MeU32
+PolynomialRoots,rootsFound,-44,ffffffd4,4,MeU32
+PolynomialRoots,d,-32,ffffffe0,4,MeU32
+PolynomialRoots,d_1,-48,ffffffd0,4,MeReal *
+PolynomialRoots,newRootsFound,-52,ffffffcc,4,MeU32
+BracketedRootN,xmin,4,00000004,4,MeReal
+BracketedRootN,xmax,8,00000008,4,MeReal
+BracketedRootN,f_xmin,12,0000000c,4,MeReal
+BracketedRootN,f_xmax,16,00000010,4,MeReal
+BracketedRootN,order,20,00000014,4,MeU32
+BracketedRootN,coef,24,00000018,4,MeReal *
+BracketedRootN,derivativeCoef,28,0000001c,4,MeReal *
+BracketedRootN,maxIterations,-20,ffffffec,4,MeI32

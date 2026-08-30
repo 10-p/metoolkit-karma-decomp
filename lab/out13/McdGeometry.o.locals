@@ -1,0 +1,35 @@
+# function,name,stackoff,hexoff,size,type
+McdGeometryIsValid,g,4,00000004,4,McdGeometryID
+McdGeometryInit,g,4,00000004,4,McdGeometry *
+McdGeometryInit,frame,8,00000008,4,McdFramework *
+McdGeometryInit,typeId,12,0000000c,2,MeI16
+McdGeometryDeinit,g,4,00000004,4,McdGeometry *
+McdGeometryGetTypeName,g,4,00000004,4,McdGeometryID
+McdGeometryGetReferenceCount,g,4,00000004,4,McdGeometryID
+McdGeometryIncrementReferenceCount,g,4,00000004,4,McdGeometryID
+McdGeometryDecrementReferenceCount,g,4,00000004,4,McdGeometryID
+McdGeometrySetReferenceCount,g,4,00000004,4,McdGeometryID
+McdGeometrySetReferenceCount,refCount,8,00000008,4,int
+McdGeometryDestroy,g,4,00000004,4,McdGeometryID
+McdGeometryGetFramework,g,4,00000004,4,McdGeometryID
+McdGeometryGetLineSegIntersectFnPtr,g,4,00000004,4,McdGeometryID
+McdGeometryGetAABB,g,4,00000004,4,McdGeometryID
+McdGeometryGetAABB,tm,8,00000008,4,MeVector4 *
+McdGeometryGetAABB,minCorner,12,0000000c,4,MeReal *
+McdGeometryGetAABB,maxCorner,16,00000010,4,MeReal *
+McdGeometryGetAABB,ins,-76,ffffffb4,52,McdGeometryInstance
+McdGeometryGetBSphere,g,4,00000004,4,McdGeometryID
+McdGeometryGetBSphere,center,8,00000008,4,MeReal *
+McdGeometryGetBSphere,radius,12,0000000c,4,MeReal *
+McdGeometryMaximumPoint,inDir,12,0000000c,4,MeReal *
+McdGeometryMaximumPoint,outPoint,16,00000010,4,MeReal *
+McdGeometryMaximumPoint,ins,-76,ffffffb4,52,McdGeometryInstance
+McdGeometryMaximumPoint,g,4,00000004,4,McdGeometryID
+McdGeometryMaximumPoint,tm,8,00000008,4,MeVector4 *
+McdGeometryGetMassProperties,g,4,00000004,4,McdGeometryID
+McdGeometryGetMassProperties,relTM,8,00000008,4,MeVector4 *
+McdGeometryGetMassProperties,m,12,0000000c,4,MeVector3 *
+McdGeometryGetMassProperties,volume,16,00000010,4,MeReal *
+McdGeometryDebugDraw,g,4,00000004,4,McdGeometryID
+McdGeometryDebugDraw,tm,8,00000008,4,MeMatrix4Ptr
+McdGeometryDebugDraw,colour,12,0000000c,4,MeReal *

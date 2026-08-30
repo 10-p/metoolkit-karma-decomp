@@ -1,0 +1,95 @@
+# function,name,stackoff,hexoff,size,type
+McdBoxTriangleListIntersect,p,4,00000004,4,McdModelPair *
+McdBoxTriangleListIntersect,result,8,00000008,4,McdIntersectResult *
+McdBoxTriangleListIntersect,boxRadii,-548,fffffddc,4,lsVec3 *
+McdBoxTriangleListIntersect,boxCentre,-44,ffffffd4,12,MeReal[3]
+McdBoxTriangleListIntersect,triToBox,-108,ffffff94,64,lsTransform
+McdBoxTriangleListIntersect,boxPosTrans,-124,ffffff84,12,lsVec3
+McdBoxTriangleListIntersect,vector,-172,ffffff54,48,lsVec3[4]
+McdBoxTriangleListIntersect,ct,-204,ffffff34,24,McdUserTriangle
+McdBoxTriangleListIntersect,edge,-252,ffffff04,36,MeReal[3][3]
+McdBoxTriangleListIntersect,dims,-530,fffffdee,2,MeI16
+McdBoxTriangleListIntersect,footprint,-476,fffffe24,216,lsVec3[18]
+McdBoxTriangleListIntersect,verts,-536,fffffde8,4,lsVec3 *
+McdBoxTriangleListIntersect,normal,-492,fffffe14,12,lsVec3
+McdBoxTriangleListIntersect,v,-508,fffffe04,12,lsVec3
+McdBoxTriangleListIntersect,separation,-544,fffffde0,4,MeReal
+McdBoxTriangleListIntersect,PN,-540,fffffde4,4,MeReal
+McdBoxTriangleListIntersect,boxRadius,-528,fffffdf0,4,MeReal
+McdBoxTriangleListIntersect,count,-552,fffffdd8,4,int
+McdBoxTriangleListIntersect,j,-556,fffffdd4,4,int
+McdBoxTriangleListIntersect,boxgeom,-560,fffffdd0,4,McdBoxID
+McdBoxTriangleListIntersect,trilistgeom,-564,fffffdcc,4,McdTriangleListID
+McdBoxTriangleListIntersect,eps,-568,fffffdc8,4,MeReal
+McdBoxTriangleListIntersect,fwk,-572,fffffdc4,4,McdFramework *
+McdBoxTriangleListIntersect,diff,-524,fffffdf4,12,lsVec3
+McdBoxTriangleListIntersect,aiStackY_280,-640,fffffd80,24,int[6]
+McdBoxTriangleListIntersect,MStackY_268,-616,fffffd98,4,MeReal
+McdBoxTriangleListIntersect,iStackY_264,-612,fffffd9c,4,int
+McdBoxTriangleListIntersect,fStackY_260,-608,fffffda0,4,float
+McdBoxTriangleListIntersect,uStack_250,-592,fffffdb0,4,undefined4
+McdBoxTriangleListIntersect,MStack_24c,-588,fffffdb4,16,McdGeometry
+McdBoxTriangleListRegisterInteraction,frame,4,00000004,4,McdFramework *
+McdBoxTriangleListRegisterInteraction,interactions,-44,ffffffd4,28,McdInteractions
+MeVector3Normalize,local_8,-8,fffffff8,4,float
+MeVector3Normalize,v,4,00000004,4,MeReal *
+McdVanillaOverlapOBBTri,outSep,4,00000004,4,MeReal *
+McdVanillaOverlapOBBTri,outN,8,00000008,4,lsVec3 *
+McdVanillaOverlapOBBTri,outPN,12,0000000c,4,MeReal *
+McdVanillaOverlapOBBTri,outPos,16,00000010,4,lsVec3 * *
+McdVanillaOverlapOBBTri,outDims,20,00000014,4,MeI16 *
+McdVanillaOverlapOBBTri,inEps,24,00000018,4,MeReal
+McdVanillaOverlapOBBTri,inR,28,0000001c,4,lsVec3 *
+McdVanillaOverlapOBBTri,inTri,32,00000020,4,McdUserTriangle *
+McdVanillaOverlapOBBTri,edge,36,00000024,4,MeReal[3] *
+McdVanillaOverlapOBBTri,scale,40,00000028,4,MeReal
+McdVanillaOverlapOBBTri,i,-144,ffffff70,4,int
+McdVanillaOverlapOBBTri,eps,-148,ffffff6c,4,MeReal
+McdVanillaOverlapOBBTri,eps2,-152,ffffff68,4,MeReal
+McdVanillaOverlapOBBTri,maxSeparation,-156,ffffff64,4,MeReal
+McdVanillaOverlapOBBTri,normalSign,-160,ffffff60,4,MeReal
+McdVanillaOverlapOBBTri,normInfo,-188,ffffff44,1,MeU8
+McdVanillaOverlapOBBTri,nRLen,-192,ffffff40,4,MeReal
+McdVanillaOverlapOBBTri,aE,-76,ffffffb4,36,lsVec3[3]
+McdVanillaOverlapOBBTri,sqE,-92,ffffffa4,12,MeReal[3]
+McdVanillaOverlapOBBTri,PN,-196,ffffff3c,4,MeReal
+McdVanillaOverlapOBBTri,minCoord,-108,ffffff94,12,lsVec3
+McdVanillaOverlapOBBTri,aNorm,-124,ffffff84,12,lsVec3
+McdVanillaOverlapOBBTri,outVec,-140,ffffff74,12,lsVec3
+McdVanillaOverlapOBBTri,local_f8,-248,ffffff08,1,sbyte
+McdVanillaOverlapOBBTri,local_ec,-236,ffffff14,4,lsVec3 *
+McdVanillaOverlapOBBTri,local_e8,-232,ffffff18,4,int
+McdVanillaOverlapOBBTri,local_e4,-228,ffffff1c,4,int
+McdVanillaBoxTriIntersect,outList,4,00000004,4,lsVec3 * *
+McdVanillaBoxTriIntersect,inRBox,8,00000008,4,lsVec3 *
+McdVanillaBoxTriIntersect,inTri,12,0000000c,4,McdUserTriangle *
+McdVanillaBoxTriIntersect,edge,16,00000010,4,MeReal[3] *
+McdVanillaBoxTriIntersect,scale,20,00000014,4,MeReal
+McdVanillaBoxTriIntersect,axb,-76,ffffffb4,36,lsVec3[3]
+McdVanillaBoxTriIntersect,triD,-120,ffffff88,4,MeReal
+McdVanillaBoxTriIntersect,tIn,-96,ffffffa0,4,MeReal
+McdVanillaBoxTriIntersect,tOut,-100,ffffff9c,4,MeReal
+McdVanillaBoxTriIntersect,tIn_1,-104,ffffff98,4,MeReal
+McdVanillaBoxTriIntersect,tOut_1,-108,ffffff94,4,MeReal
+McdVanillaBoxTriIntersect,tIn_2,-112,ffffff90,4,MeReal
+McdVanillaBoxTriIntersect,tOut_2,-116,ffffff8c,4,MeReal
+McdVanillaBoxTriIntersect,vCross,-92,ffffffa4,12,lsVec3
+McdVanillaSegmentCubeIntersect,tInMax,4,00000004,4,MeReal *
+McdVanillaSegmentCubeIntersect,tOutMin,8,00000008,4,MeReal *
+McdVanillaSegmentCubeIntersect,orig,12,0000000c,4,lsVec3 *
+McdVanillaSegmentCubeIntersect,disp,16,00000010,4,lsVec3 *
+McdVanillaSegmentCubeIntersect,invDisp,20,00000014,4,lsVec3 *
+McdVanillaSegmentCubeIntersect,inR,24,00000018,4,lsVec3 *
+McdVanillaSegmentCubeIntersect,eps,28,0000001c,4,MeReal
+McdVanillaAddTriBoxSegmentPoints,outList,4,00000004,4,lsVec3 * *
+McdVanillaAddTriBoxSegmentPoints,inRBox,8,00000008,4,lsVec3 *
+McdVanillaAddTriBoxSegmentPoints,i0,12,0000000c,4,int
+McdVanillaAddTriBoxSegmentPoints,i1,16,00000010,4,int
+McdVanillaAddTriBoxSegmentPoints,i2,20,00000014,4,int
+McdVanillaAddTriBoxSegmentPoints,inTri,24,00000018,4,McdUserTriangle *
+McdVanillaAddTriBoxSegmentPoints,edge,28,0000001c,4,MeReal[3] *
+McdVanillaAddTriBoxSegmentPoints,axb,32,00000020,4,lsVec3 *
+McdVanillaAddTriBoxSegmentPoints,inTriD,36,00000024,4,MeReal
+McdVanillaAddTriBoxSegmentPoints,ccw,-97,ffffff9f,1,bool
+McdVanillaAddTriBoxSegmentPoints,x,-76,ffffffb4,36,lsVec3[3]
+McdVanillaAddTriBoxSegmentPoints,dn,-92,ffffffa4,12,lsVec3

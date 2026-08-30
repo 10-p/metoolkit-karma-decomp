@@ -1,0 +1,20 @@
+# function,name,stackoff,hexoff,size,type
+MeAssetDBXMLInputRead,i,4,00000004,4,MeAssetDBXMLInput *
+MeAssetDBXMLInputRead,stream,8,00000008,4,MeStream
+MeAssetDBXMLInputRead,handlers,-92,ffffffa4,64,MeXMLHandler[2]
+MeAssetDBXMLInputReadFirst,asset,-96,ffffffa0,4,MeFAsset *
+MeAssetDBXMLInputReadFirst,handlers,-92,ffffffa4,64,MeXMLHandler[2]
+MeAssetDBXMLInputReadFirst,i,4,00000004,4,MeAssetDBXMLInput *
+MeAssetDBXMLInputReadFirst,stream,8,00000008,4,MeStream
+MeAssetDBXMLOutputSetFileHeader,buf,-4124,ffffefe4,4096,char[4096]
+MeAssetDBXMLOutputSetFileHeader,output,4,00000004,4,MeAssetDBXMLOutput *
+MeAssetDBXMLOutputSetFileHeader,header,8,00000008,4,char *
+MeAssetDBXMLInputCreate,db,4,00000004,4,MeAssetDB *
+MeAssetDBXMLInputCreate,IDPool,8,00000008,4,MeIDPool *
+MeAssetDBXMLInputDestroy,input,4,00000004,4,MeAssetDBXMLInput *
+MeAssetDBXMLOutputCreate,db,4,00000004,4,MeAssetDB *
+MeAssetDBXMLOutputDestroy,output,4,00000004,4,MeAssetDBXMLOutput *
+MeAssetDBXMLOutputWrite,asset_it,-1056,fffffbe0,4,MeFAssetIt
+MeAssetDBXMLOutputWrite,buffer,-1052,fffffbe4,1024,char[1024]
+MeAssetDBXMLOutputWrite,output,4,00000004,4,MeAssetDBXMLOutput *
+MeAssetDBXMLOutputWrite,stream,8,00000008,4,MeStream

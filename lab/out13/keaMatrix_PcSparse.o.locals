@@ -1,0 +1,35 @@
+# function,name,stackoff,hexoff,size,type
+makeFromPcSparsePSM,local_40,-64,ffffffc0,4,int
+makeFromPcSparsePSM,local_3c,-60,ffffffc4,4,MeReal *
+makeFromPcSparsePSM,this,4,00000004,4,keaMatrix_pcSparse *
+makeFromPcSparsePSM,Qrhs,8,00000008,4,MeReal *
+makeFromPcSparsePSM,A,12,0000000c,4,keaMatrix_pcSparse *
+makeFromPcSparsePSM,b,16,00000010,4,MeReal *
+makeFromPcSparsePSM,clampedValues,20,00000014,4,MeReal *
+makeFromPcSparsePSM,unclamped,24,00000018,4,int *
+makeFromPcSparsePSM,clamped,28,0000001c,4,int *
+makeFromPcSparsePSM,numUnclamped,32,00000020,4,int
+makeFromPcSparsePSM,numClamped,36,00000024,4,int
+makeFromPcSparsePSM,n_blocks,40,00000028,4,int
+makeFromPcSparsePSM,i,-20,ffffffec,4,int
+makeFromPcSparsePSM,r,-24,ffffffe8,4,int
+makeFromPcSparsePSM,k,-28,ffffffe4,4,int
+makeFromPcSparsePSM,mb,-32,ffffffe0,4,int
+makeFromPcSparsePSM,mp,-36,ffffffdc,4,int
+makeFromPcSparsePSM,ri,-40,ffffffd8,4,MeReal *
+makeFromColMajorPSM,local_2c,-44,ffffffd4,4,int
+makeFromColMajorPSM,this,4,00000004,4,keaMatrix_pcSparse *
+makeFromColMajorPSM,Qrhs,8,00000008,4,MeReal *
+makeFromColMajorPSM,Ainv,12,0000000c,4,MeReal *
+makeFromColMajorPSM,clampedValues,16,00000010,4,MeReal *
+makeFromColMajorPSM,initialSolve,20,00000014,4,MeReal *
+makeFromColMajorPSM,unclamped,24,00000018,4,int *
+makeFromColMajorPSM,clamped,28,0000001c,4,int *
+makeFromColMajorPSM,numUnclamped,32,00000020,4,int
+makeFromColMajorPSM,numClamped,36,00000024,4,int
+makeFromColMajorPSM,AinvStride,40,00000028,4,int
+makeFromColMajorPSM,i,-20,ffffffec,4,int
+makeFromColMajorPSM,k,-24,ffffffe8,4,int
+makeFromColMajorPSM,mb,-28,ffffffe4,4,int
+makeFromColMajorPSM,mp,-32,ffffffe0,4,int
+makeFromColMajorPSM,ri,-36,ffffffdc,4,MeReal *

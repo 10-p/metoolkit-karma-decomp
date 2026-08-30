@@ -1,0 +1,38 @@
+# function,name,stackoff,hexoff,size,type
+MeFPrimitiveRename,p,4,00000004,4,MeFPrimitive *
+MeFPrimitiveRename,newName,8,00000008,4,char *
+MeFPrimitiveCreate,name,4,00000004,4,char *
+MeFPrimitiveCreate,type,8,00000008,4,MeFPrimitiveType
+MeFPrimitiveCreateCopy,p,4,00000004,4,MeFPrimitive *
+MeFPrimitiveCreateCopy,recurse,8,00000008,4,MeBool
+MeFPrimitiveDestroy,p,4,00000004,4,MeFPrimitive *
+MeFPrimitiveGetType,p,4,00000004,4,MeFPrimitive *
+MeFPrimitiveGetName,p,4,00000004,4,MeFPrimitive *
+MeFPrimitiveGetRadius,p,4,00000004,4,MeFPrimitive *
+MeFPrimitiveGetDimensions,p,4,00000004,4,MeFPrimitive *
+MeFPrimitiveGetDimensions,dims,8,00000008,4,MeReal *
+MeFPrimitiveGetHeight,p,4,00000004,4,MeFPrimitive *
+MeFPrimitiveInitVertexIterator,p,4,00000004,4,MeFPrimitive *
+MeFPrimitiveInitVertexIterator,it,8,00000008,4,MeFVertexIt *
+MeFPrimitiveGetVertex,it,4,00000004,4,MeFVertexIt *
+MeFPrimitiveGetVertexCount,p,4,00000004,4,MeFPrimitive *
+MeFPrimitiveGetVertexArray,p,4,00000004,4,MeFPrimitive *
+MeFPrimitiveGetTransformPtr,p,4,00000004,4,MeFPrimitive *
+MeFPrimitiveSetRadius,p,4,00000004,4,MeFPrimitive *
+MeFPrimitiveSetRadius,r,8,00000008,4,MeReal
+MeFPrimitiveSetDimensions,p,4,00000004,4,MeFPrimitive *
+MeFPrimitiveSetDimensions,dx,8,00000008,4,MeReal
+MeFPrimitiveSetDimensions,dy,12,0000000c,4,MeReal
+MeFPrimitiveSetDimensions,dz,16,00000010,4,MeReal
+MeFPrimitiveSetHeight,p,4,00000004,4,MeFPrimitive *
+MeFPrimitiveSetHeight,height,8,00000008,4,MeReal
+MeFPrimitiveAddVertex,p,4,00000004,4,MeFPrimitive *
+MeFPrimitiveAddVertex,pos,8,00000008,4,MeReal *
+MeFPrimitiveSetVertexArray,p,4,00000004,4,MeFPrimitive *
+MeFPrimitiveSetVertexArray,vertices,8,00000008,4,MeVector3 *
+MeFPrimitiveSetVertexArray,nVertices,12,0000000c,4,int
+MeFPrimitiveSetTransform,p,4,00000004,4,MeFPrimitive *
+MeFPrimitiveSetTransform,tm,8,00000008,4,MeMatrix4Ptr
+MeFPrimitiveScale,p,4,00000004,4,MeFPrimitive *
+MeFPrimitiveScale,scale,8,00000008,4,MeReal
+MeFPrimitiveScale,it,-20,ffffffec,8,MeFVertexIt

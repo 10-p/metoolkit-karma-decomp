@@ -1,0 +1,2429 @@
+/* ==== AccumulateSphylContacts ==== */
+
+void AccumulateSphylContacts
+               (MeReal *cp,MeReal *normal,MeReal sep,MeI16 segDim,MeI16 otherDim,MeVector3Ptr axis,
+               MeReal ds,MeMatrix4Ptr tm,McdIntersectResult *result)
+
+{
+  float fVar1;
+  float fVar2;
+  float fVar3;
+  McdContact *pMVar4;
+  int iVar5;
+  ushort uVar6;
+  MeI16 dims;
+  MeReal globalNormal [3];
+  
+  uVar6 = segDim | otherDim << 8;
+  result->touch = 1;
+  if (tm == (MeMatrix4Ptr)0x0) {
+    globalNormal[0] = *normal;
+    globalNormal[1] = normal[1];
+    globalNormal[2] = normal[2];
+  }
+  else {
+    fVar1 = *normal;
+    fVar2 = normal[1];
+    fVar3 = normal[2];
+    globalNormal[0] = fVar3 * tm[2][0] + fVar2 * tm[1][0] + fVar1 * (*tm)[0];
+    globalNormal[1] = fVar3 * tm[2][1] + fVar1 * (*tm)[1] + fVar2 * tm[1][1];
+    globalNormal[2] = fVar3 * tm[2][2] + fVar1 * (*tm)[2] + fVar2 * tm[1][2];
+  }
+  result->normal[0] = globalNormal[0] + result->normal[0];
+  result->normal[1] = globalNormal[1] + result->normal[1];
+  result->normal[2] = globalNormal[2] + result->normal[2];
+  iVar5 = result->contactCount;
+  if (iVar5 < result->contactMaxCount) {
+    if (tm == (MeMatrix4Ptr)0x0) {
+      pMVar4 = result->contacts + iVar5;
+      pMVar4->position[0] = *cp;
+      pMVar4->position[1] = cp[1];
+      pMVar4->position[2] = cp[2];
+    }
+    else {
+      pMVar4 = result->contacts + iVar5;
+      pMVar4->position[0] = tm[2][0] * cp[2] + tm[1][0] * cp[1] + (*tm)[0] * *cp + tm[3][0];
+      pMVar4->position[1] = tm[2][1] * cp[2] + tm[1][1] * cp[1] + (*tm)[1] * *cp + tm[3][1];
+      pMVar4->position[2] = tm[2][2] * cp[2] + tm[1][2] * cp[1] + (*tm)[2] * *cp + tm[3][2];
+    }
+    iVar5 = result->contactCount;
+    pMVar4 = result->contacts;
+    pMVar4[iVar5].normal[0] = globalNormal[0];
+    pMVar4[iVar5].normal[1] = globalNormal[1];
+    pMVar4[iVar5].normal[2] = globalNormal[2];
+    result->contacts[result->contactCount].separation = sep;
+    result->contacts[result->contactCount].dims = uVar6;
+    iVar5 = result->contactCount + 1;
+    result->contactCount = iVar5;
+    if (((ds != 0.0) && (axis != (MeVector3Ptr)0x0)) && (iVar5 < result->contactMaxCount)) {
+      pMVar4 = result->contacts + iVar5;
+      pMVar4->position[0] = ds * *axis + pMVar4[-1].position[0];
+      pMVar4->position[1] = ds * axis[1] + pMVar4[-1].position[1];
+      pMVar4->position[2] = ds * axis[2] + pMVar4[-1].position[2];
+      iVar5 = result->contactCount;
+      pMVar4 = result->contacts;
+      pMVar4[iVar5].normal[0] = pMVar4[iVar5 + -1].normal[0];
+      pMVar4[iVar5].normal[1] = pMVar4[iVar5 + -1].normal[1];
+      pMVar4[iVar5].normal[2] = pMVar4[iVar5 + -1].normal[2];
+      result->contacts[result->contactCount].separation = sep;
+      result->contacts[result->contactCount].dims = uVar6;
+      result->contactCount = result->contactCount + 1;
+    }
+  }
+  return;
+}
+
+
+/* ==== McdSphylPlaneIntersect ==== */
+
+int McdSphylPlaneIntersect(McdModelPair *p,McdIntersectResult *result)
+
+{
+  float fVar1;
+  float fVar2;
+  float fVar3;
+  float fVar4;
+  float fVar5;
+  float fVar6;
+  void *pvVar7;
+  void *pvVar8;
+  void *pvVar9;
+  float fVar10;
+  float fVar11;
+  MeReal s;
+  MeReal sep;
+  MeReal ds;
+  McdSphyl *sphyl;
+  MeReal eps;
+  MeMatrix4Ptr tm1;
+  MeReal pos2 [3];
+  MeReal pos [3];
+  MeReal disp [3];
+  MeReal end [3];
+  
+                    /* Unresolved local var: MeMatrix4Ptr tm2@[DW_OP_reg6(ESI)]
+                       Unresolved local var: MeReal delta@[???]
+                       Unresolved local var: McdPlane * plane@[???]
+                       Unresolved local var: MeReal zz@[DW_OP_reg18(ST7)] */
+  pvVar7 = McdModelGetTransformPtr(p->model1);
+  pvVar8 = McdModelGetTransformPtr(p->model2);
+  fVar10 = McdModelGetContactTolerance(p->model1);
+  fVar11 = McdModelGetContactTolerance(p->model2);
+  pvVar9 = McdModelGetGeometry(p->model1);
+  McdModelGetGeometry(p->model2);
+  result->contactCount = 0;
+  result->touch = 0;
+  fVar1 = *(float *)((int)pvVar7 + 0x20);
+  fVar3 = *(float *)((int)pvVar8 + 0x28) * *(float *)((int)pvVar7 + 0x28) +
+          fVar1 * *(float *)((int)pvVar8 + 0x20) +
+          *(float *)((int)pvVar8 + 0x24) * *(float *)((int)pvVar7 + 0x24);
+  ds = 0.0;
+  if (-0.001 <= fVar3) {
+    fVar2 = -*(float *)((int)pvVar9 + 0x14);
+    end[0] = fVar1 * fVar2 + *(float *)((int)pvVar7 + 0x30);
+    end[1] = fVar2 * *(float *)((int)pvVar7 + 0x24) + *(float *)((int)pvVar7 + 0x34);
+    end[2] = fVar2 * *(float *)((int)pvVar7 + 0x28) + *(float *)((int)pvVar7 + 0x38);
+    if (fVar3 < 0.001) {
+      ds = *(float *)((int)pvVar9 + 0x14) + *(float *)((int)pvVar9 + 0x14);
+    }
+  }
+  else {
+    fVar2 = *(float *)((int)pvVar9 + 0x14);
+    end[0] = fVar1 * fVar2 + *(float *)((int)pvVar7 + 0x30);
+    end[1] = fVar2 * *(float *)((int)pvVar7 + 0x24) + *(float *)((int)pvVar7 + 0x34);
+    end[2] = fVar2 * *(float *)((int)pvVar7 + 0x28) + *(float *)((int)pvVar7 + 0x38);
+  }
+  fVar1 = ((end[2] - *(float *)((int)pvVar8 + 0x38)) * *(float *)((int)pvVar8 + 0x28) +
+          (end[1] - *(float *)((int)pvVar8 + 0x34)) * *(float *)((int)pvVar8 + 0x24) +
+          (end[0] - *(float *)((int)pvVar8 + 0x30)) * *(float *)((int)pvVar8 + 0x20)) -
+          *(float *)((int)pvVar9 + 0x10);
+  if (fVar11 + fVar10 <= fVar1) goto LAB_000103ca;
+  fVar10 = -*(float *)((int)pvVar9 + 0x10) - fVar1;
+  pos[0] = end[0] + *(float *)((int)pvVar8 + 0x20) * fVar10;
+  pos[1] = fVar10 * *(float *)((int)pvVar8 + 0x24) + end[1];
+  pos[2] = fVar10 * *(float *)((int)pvVar8 + 0x28) + end[2];
+  result->normal[0] = 0.0;
+  result->normal[1] = 0.0;
+  result->normal[2] = 0.0;
+  AccumulateSphylContacts
+            (pos,(MeReal *)((int)pvVar8 + 0x20),fVar1,3,2,(MeVector3Ptr)((int)pvVar7 + 0x20),ds,
+             (MeMatrix4Ptr)0x0,result);
+  if (ds != 0.0) goto LAB_000103ca;
+  fVar10 = *(float *)((int)pvVar8 + 0x20);
+  fVar11 = *(float *)((int)pvVar9 + 0x10);
+  fVar6 = fVar11 - ((*(float *)((int)pvVar7 + 0x30) * fVar10 +
+                     *(float *)((int)pvVar7 + 0x34) * *(float *)((int)pvVar8 + 0x24) +
+                    *(float *)((int)pvVar7 + 0x38) * *(float *)((int)pvVar8 + 0x28)) -
+                   (*(float *)((int)pvVar8 + 0x30) * fVar10 +
+                    *(float *)((int)pvVar8 + 0x24) * *(float *)((int)pvVar8 + 0x34) +
+                   *(float *)((int)pvVar8 + 0x28) * *(float *)((int)pvVar8 + 0x38)));
+  fVar2 = *(float *)((int)pvVar9 + 0x14);
+  fVar5 = fVar2;
+  if (0.0 < fVar3) {
+    fVar5 = -fVar2;
+  }
+  fVar4 = fVar3;
+  if (0.00025 < fVar3) {
+LAB_000104fd:
+    s = fVar2;
+    if ((fVar6 < fVar4 * fVar2) && (s = fVar5, fVar11 * fVar3 * fVar3 <= fVar6 - fVar5 * fVar3)) {
+      s = fVar6 / fVar3;
+    }
+  }
+  else if (fVar3 < 0.00025) {
+    fVar4 = -fVar3;
+    goto LAB_000104fd;
+  }
+  if (s != fVar5) {
+    fVar11 = -fVar11;
+    pos2[0] = s * *(float *)((int)pvVar7 + 0x20) + fVar11 * fVar10 + *(float *)((int)pvVar7 + 0x30);
+    pos2[1] = s * *(float *)((int)pvVar7 + 0x24) +
+              fVar11 * *(float *)((int)pvVar8 + 0x24) + *(float *)((int)pvVar7 + 0x34);
+    pos2[2] = s * *(float *)((int)pvVar7 + 0x28) +
+              fVar11 * *(float *)((int)pvVar8 + 0x28) + *(float *)((int)pvVar7 + 0x38);
+    result->normal[0] = 0.0;
+    result->normal[1] = 0.0;
+    result->normal[2] = 0.0;
+    AccumulateSphylContacts
+              (pos2,(MeReal *)((int)pvVar8 + 0x20),fVar1,3,2,(MeVector3Ptr)0x0,0.0,(MeMatrix4Ptr)0x0
+               ,result);
+  }
+LAB_000103ca:
+  return result->touch;
+}
+
+
+/* ==== McdSphylPlaneRegisterInteraction ==== */
+
+/* WARNING: Unknown calling convention */
+
+MeBool McdSphylPlaneRegisterInteraction(McdFramework *frame)
+
+{
+  McdInteractions interactions;
+  
+  interactions.helloFn = (McdHelloFn)0x0;
+  interactions.goodbyeFn = (McdGoodbyeFn)0x0;
+  interactions.intersectFn = McdSphylPlaneIntersect;
+  interactions.safetimeFn = (McdSafeTimeFn)0x0;
+  interactions.cull = 1;
+  interactions.warned = 0;
+  McdFrameworkSetInteractions(frame,5,3,&interactions);
+  return 1;
+}
+
+
+/* ==== McdSphylSphereIntersect ==== */
+
+int McdSphylSphereIntersect(McdModelPair *p,McdIntersectResult *result)
+
+{
+  McdFramework *pMVar1;
+  float fVar2;
+  float fVar3;
+  float fVar4;
+  float fVar5;
+  float fVar6;
+  float fVar7;
+  float fVar8;
+  float fVar9;
+  void *pvVar10;
+  void *pvVar11;
+  void *pvVar12;
+  void *pvVar13;
+  byte bVar14;
+  float fVar15;
+  float fVar16;
+  McdFramework *fwk;
+  McdSphere *sphere;
+  McdSphyl *sphyl;
+  MeReal eps;
+  MeReal pos [3];
+  MeReal aa [3];
+  MeReal n [3];
+  MeReal cp [3];
+  
+                    /* Unresolved local var: MeMatrix4Ptr tm1@[DW_OP_reg6(ESI)]
+                       Unresolved local var: MeMatrix4Ptr tm2@[DW_OP_reg7(EDI)]
+                       Unresolved local var: MeReal n2@[???]
+                       Unresolved local var: MeReal sep@[DW_OP_reg16(ST5)]
+                       Unresolved local var: MeReal t@[DW_OP_reg13(ST2)] */
+  pvVar10 = McdModelGetTransformPtr(p->model1);
+  pvVar11 = McdModelGetTransformPtr(p->model2);
+  fVar15 = McdModelGetContactTolerance(p->model1);
+  fVar16 = McdModelGetContactTolerance(p->model2);
+  pvVar12 = McdModelGetGeometry(p->model1);
+  pvVar13 = McdModelGetGeometry(p->model2);
+  pMVar1 = p->model1->frame;
+  result->contactCount = 0;
+  result->touch = 0;
+  fVar2 = *(float *)((int)pvVar12 + 0x14);
+  fVar3 = (*(float *)((int)pvVar11 + 0x30) - *(float *)((int)pvVar10 + 0x30)) *
+          *(float *)((int)pvVar10 + 0x20) +
+          (*(float *)((int)pvVar11 + 0x34) - *(float *)((int)pvVar10 + 0x34)) *
+          *(float *)((int)pvVar10 + 0x24) +
+          (*(float *)((int)pvVar11 + 0x38) - *(float *)((int)pvVar10 + 0x38)) *
+          *(float *)((int)pvVar10 + 0x28);
+  fVar4 = -fVar2;
+  if (fVar3 < fVar2) {
+    fVar2 = fVar3;
+  }
+  if (fVar2 < fVar4) {
+    fVar2 = fVar4;
+  }
+  fVar9 = fVar2 * *(MeVector3Ptr)((int)pvVar10 + 0x20) + *(float *)((int)pvVar10 + 0x30);
+  fVar8 = fVar2 * *(float *)((int)pvVar10 + 0x24) + *(float *)((int)pvVar10 + 0x34);
+  fVar3 = fVar2 * *(float *)((int)pvVar10 + 0x28) + *(float *)((int)pvVar10 + 0x38);
+  fVar6 = fVar9 - *(float *)((int)pvVar11 + 0x30);
+  fVar7 = fVar8 - *(float *)((int)pvVar11 + 0x34);
+  fVar4 = fVar3 - *(float *)((int)pvVar11 + 0x38);
+  fVar5 = fVar4 * fVar4 + fVar6 * fVar6 + fVar7 * fVar7;
+  fVar2 = pMVar1->mScale;
+  if (fVar5 <= fVar2 * fVar2 * 6.250001e-08) {
+                    /* Unresolved local var: MeI32 i@[???] */
+    pos[0] = *(float *)((int)pvVar10 + 0x20) * *(float *)((int)pvVar10 + 0x20);
+    pos[1] = *(float *)((int)pvVar10 + 0x24) * *(float *)((int)pvVar10 + 0x24);
+    pos[2] = *(float *)((int)pvVar10 + 0x28) * *(float *)((int)pvVar10 + 0x28);
+                    /* Unresolved local var: MeI32 index@[DW_OP_reg0(EAX)] */
+    bVar14 = ((pos[1] < pos[0]) - 1U & 0xf0) + 0x10;
+    if (pos[2] < pos[0]) {
+      bVar14 = bVar14 | 8;
+    }
+    if (pos[2] < pos[1]) {
+      bVar14 = bVar14 | 4;
+    }
+    aa[0] = 0.0;
+    aa[1] = 0.0;
+    aa[2] = 0.0;
+    aa[0x21312300 >> (bVar14 & 0x1f) & 3] = 1.0;
+    n[0] = *(float *)((int)pvVar10 + 0x24) * aa[2] - *(float *)((int)pvVar10 + 0x28) * aa[1];
+    n[1] = *(float *)((int)pvVar10 + 0x28) * aa[0] - aa[2] * *(float *)((int)pvVar10 + 0x20);
+    n[2] = aa[1] * *(float *)((int)pvVar10 + 0x20) - aa[0] * *(float *)((int)pvVar10 + 0x24);
+    MeVector3Normalize(n);
+    fVar2 = 0.0;
+  }
+  else {
+                    /* Unresolved local var: MeReal invN@[DW_OP_reg11(ST0)]
+                       Unresolved local var: float __result@[DW_OP_reg11(ST0)] */
+    fVar2 = 1.0 / SQRT(fVar5);
+    n[0] = fVar6 * fVar2;
+    n[1] = fVar7 * fVar2;
+    n[2] = fVar4 * fVar2;
+    fVar2 = fVar2 * fVar5;
+  }
+  fVar2 = fVar2 - (*(float *)((int)pvVar12 + 0x10) + *(float *)((int)pvVar13 + 0x10));
+  if (fVar2 < fVar16 + fVar15) {
+    fVar4 = -*(float *)((int)pvVar12 + 0x10) - fVar2;
+    pos[0] = fVar4 * n[0] + fVar9;
+    pos[2] = fVar4 * n[2] + fVar3;
+    pos[1] = fVar4 * n[1] + fVar8;
+    result->normal[0] = 0.0;
+    result->normal[1] = 0.0;
+    result->normal[2] = 0.0;
+    AccumulateSphylContacts
+              (pos,n,fVar2,3,3,(MeVector3Ptr)((int)pvVar10 + 0x20),0.0,(MeMatrix4Ptr)0x0,result);
+  }
+  return result->touch;
+}
+
+
+/* ==== McdSphylSphereRegisterInteraction ==== */
+
+/* WARNING: Unknown calling convention */
+
+MeBool McdSphylSphereRegisterInteraction(McdFramework *frame)
+
+{
+  McdInteractions interactions;
+  
+  interactions.helloFn = (McdHelloFn)0x0;
+  interactions.goodbyeFn = (McdGoodbyeFn)0x0;
+  interactions.intersectFn = McdSphylSphereIntersect;
+  interactions.safetimeFn = (McdSafeTimeFn)0x0;
+  interactions.cull = 1;
+  interactions.warned = 0;
+  McdFrameworkSetInteractions(frame,5,1,&interactions);
+  return 1;
+}
+
+
+/* ==== McdSphylSphylIntersect ==== */
+
+int McdSphylSphylIntersect(McdModelPair *p,McdIntersectResult *result)
+
+{
+  float fVar1;
+  float fVar2;
+  float fVar3;
+  float fVar4;
+  float fVar5;
+  float fVar6;
+  float fVar7;
+  void *pvVar8;
+  void *pvVar9;
+  void *pvVar10;
+  void *pvVar11;
+  int iVar12;
+  byte bVar13;
+  float fVar14;
+  float fVar15;
+  float local_ac;
+  McdSphyl *sphyl2;
+  McdSphyl *sphyl1;
+  MeReal eps;
+  MeMatrix4Ptr tm2;
+  MeMatrix4Ptr tm1;
+  MeReal s;
+  MeReal t;
+  MeReal ds;
+  MeReal p_1 [3];
+  MeReal aa [3];
+  MeReal n [3];
+  MeReal cp2 [3];
+  MeReal cp1 [3];
+  
+                    /* Unresolved local var: MeBool askew@[DW_OP_reg1(ECX)]
+                       Unresolved local var: MeReal n2@[???]
+                       Unresolved local var: MeReal sep@[DW_OP_reg17(ST6)] */
+  pvVar8 = McdModelGetTransformPtr(p->model1);
+  pvVar9 = McdModelGetTransformPtr(p->model2);
+  fVar14 = McdModelGetContactTolerance(p->model1);
+  fVar15 = McdModelGetContactTolerance(p->model2);
+  pvVar10 = McdModelGetGeometry(p->model1);
+  pvVar11 = McdModelGetGeometry(p->model2);
+  result->contactCount = 0;
+  result->touch = 0;
+  iVar12 = NSegmentNSegment((float *)((int)pvVar8 + 0x30),(float *)((int)pvVar8 + 0x20),
+                            -*(float *)((int)pvVar10 + 0x14),*(float *)((int)pvVar10 + 0x14),
+                            (float *)((int)pvVar9 + 0x30),(float *)((int)pvVar9 + 0x20),
+                            -*(float *)((int)pvVar11 + 0x14),*(float *)((int)pvVar11 + 0x14),&s,&t,
+                            &ds);
+  fVar6 = t * *(float *)((int)pvVar9 + 0x20) + *(float *)((int)pvVar9 + 0x30);
+  fVar7 = (s * *(float *)((int)pvVar8 + 0x20) + *(float *)((int)pvVar8 + 0x30)) - fVar6;
+  fVar4 = t * *(float *)((int)pvVar9 + 0x24) + *(float *)((int)pvVar9 + 0x34);
+  fVar3 = (s * *(float *)((int)pvVar8 + 0x24) + *(float *)((int)pvVar8 + 0x34)) - fVar4;
+  fVar5 = t * *(float *)((int)pvVar9 + 0x28) + *(float *)((int)pvVar9 + 0x38);
+  fVar1 = (s * *(float *)((int)pvVar8 + 0x28) + *(float *)((int)pvVar8 + 0x38)) - fVar5;
+  local_ac = fVar1 * fVar1 + fVar7 * fVar7 + fVar3 * fVar3;
+  if (local_ac <= 6.250001e-08) {
+    if (iVar12 == 0) {
+                    /* Unresolved local var: MeI32 i@[???]
+                       Unresolved local var: MeI32 index@[DW_OP_reg0(EAX)] */
+      p_1[0] = *(float *)((int)pvVar8 + 0x20) * *(float *)((int)pvVar8 + 0x20);
+      p_1[1] = *(float *)((int)pvVar8 + 0x24) * *(float *)((int)pvVar8 + 0x24);
+      p_1[2] = *(float *)((int)pvVar8 + 0x28) * *(float *)((int)pvVar8 + 0x28);
+      bVar13 = ((p_1[1] < p_1[0]) - 1U & 0xf0) + 0x10;
+      if (p_1[2] < p_1[0]) {
+        bVar13 = bVar13 | 8;
+      }
+      if (p_1[2] < p_1[1]) {
+        bVar13 = bVar13 | 4;
+      }
+      aa[0] = 0.0;
+      aa[1] = 0.0;
+      aa[2] = 0.0;
+      aa[0x21312300 >> (bVar13 & 0x1f) & 3] = 1.0;
+      n[0] = *(float *)((int)pvVar8 + 0x24) * aa[2] - *(float *)((int)pvVar8 + 0x28) * aa[1];
+      n[1] = *(float *)((int)pvVar8 + 0x28) * aa[0] - aa[2] * *(float *)((int)pvVar8 + 0x20);
+      n[2] = aa[1] * *(float *)((int)pvVar8 + 0x20) - aa[0] * *(float *)((int)pvVar8 + 0x24);
+    }
+    else {
+      n[0] = *(float *)((int)pvVar9 + 0x28) * *(float *)((int)pvVar8 + 0x24) -
+             *(float *)((int)pvVar9 + 0x24) * *(float *)((int)pvVar8 + 0x28);
+      n[1] = *(float *)((int)pvVar9 + 0x20) * *(float *)((int)pvVar8 + 0x28) -
+             *(float *)((int)pvVar9 + 0x28) * *(float *)((int)pvVar8 + 0x20);
+      n[2] = *(float *)((int)pvVar9 + 0x24) * *(float *)((int)pvVar8 + 0x20) -
+             *(float *)((int)pvVar9 + 0x20) * *(float *)((int)pvVar8 + 0x24);
+    }
+    local_ac = 0.0;
+    MeVector3Normalize(n);
+  }
+  else {
+                    /* Unresolved local var: MeReal nInv@[DW_OP_reg11(ST0)]
+                       Unresolved local var: float __result@[DW_OP_reg11(ST0)] */
+    fVar2 = 1.0 / SQRT(local_ac);
+    n[0] = fVar7 * fVar2;
+    n[1] = fVar3 * fVar2;
+    n[2] = fVar1 * fVar2;
+    local_ac = local_ac * fVar2;
+  }
+  fVar1 = *(float *)((int)pvVar11 + 0x10);
+  local_ac = local_ac - (*(float *)((int)pvVar10 + 0x10) + fVar1);
+  if (local_ac < fVar15 + fVar14) {
+    p_1[0] = fVar1 * n[0] + fVar6;
+    p_1[2] = fVar1 * n[2] + fVar5;
+    p_1[1] = fVar1 * n[1] + fVar4;
+    result->normal[0] = 0.0;
+    result->normal[1] = 0.0;
+    result->normal[2] = 0.0;
+    AccumulateSphylContacts
+              (p_1,n,local_ac,3,3,(float *)((int)pvVar8 + 0x20),ds,(MeMatrix4Ptr)0x0,result);
+  }
+  return result->touch;
+}
+
+
+/* ==== McdSphylSphylRegisterInteraction ==== */
+
+/* WARNING: Unknown calling convention */
+
+MeBool McdSphylSphylRegisterInteraction(McdFramework *frame)
+
+{
+  McdInteractions interactions;
+  
+  interactions.helloFn = (McdHelloFn)0x0;
+  interactions.goodbyeFn = (McdGoodbyeFn)0x0;
+  interactions.intersectFn = McdSphylSphylIntersect;
+  interactions.safetimeFn = (McdSafeTimeFn)0x0;
+  interactions.cull = 1;
+  interactions.warned = 0;
+  McdFrameworkSetInteractions(frame,5,5,&interactions);
+  return 1;
+}
+
+
+/* ==== McdSphylBoxIntersect ==== */
+
+/* WARNING: Removing unreachable block (ram,0x00011f20) */
+/* WARNING: Removing unreachable block (ram,0x00011f0e) */
+/* WARNING: Removing unreachable block (ram,0x00011ee7) */
+
+int McdSphylBoxIntersect(McdModelPair *p,McdIntersectResult *result)
+
+{
+  int iVar1;
+  uint uVar2;
+  float fVar3;
+  float fVar4;
+  float fVar5;
+  float fVar6;
+  MeI32 MVar7;
+  void *pvVar8;
+  MeMatrix4Ptr tm;
+  void *pvVar9;
+  void *pvVar10;
+  uint uVar11;
+  int iVar12;
+  uint uVar13;
+  uint uVar14;
+  uint uVar15;
+  float fVar16;
+  float fVar17;
+  sbyte local_114;
+  MeReal sepSign;
+  MeI32 sepIndex;
+  MeReal ds1;
+  MeI16 boxDim;
+  MeI32 jMin;
+  MeReal s;
+  MeI32 signN;
+  MeI32 axis;
+  McdBox *box;
+  McdSphyl *sphyl;
+  MeReal eps;
+  MeMatrix4Ptr tm2;
+  int j;
+  MeReal d [3];
+  MeReal n [3];
+  MeI32 sort [7];
+  MeReal pos [3];
+  MeReal si [7];
+  MeReal boxP [3];
+  MeReal relPos [3];
+  MeReal relAxis [3];
+  
+                    /* Unresolved local var: int i@[DW_OP_reg3(EBX)]
+                       Unresolved local var: MeMatrix4Ptr tm1@[DW_OP_reg6(ESI)]
+                       Unresolved local var: McdFramework * fwk@[???]
+                       Unresolved local var: MeI32 regionType@[DW_OP_reg7(EDI)]
+                       Unresolved local var: MeI32 aSigns@[DW_OP_reg6(ESI)]
+                       Unresolved local var: MeI32 jStop@[DW_OP_reg3(EBX)]
+                       Unresolved local var: MeReal s0@[DW_OP_reg15(ST4)]
+                       Unresolved local var: MeReal n2@[???]
+                       Unresolved local var: MeReal sep@[DW_OP_reg11(ST0)] */
+  pvVar8 = McdModelGetTransformPtr(p->model1);
+  tm = McdModelGetTransformPtr(p->model2);
+  fVar16 = McdModelGetContactTolerance(p->model1);
+  fVar17 = McdModelGetContactTolerance(p->model2);
+  uVar15 = 0;
+  pvVar9 = McdModelGetGeometry(p->model1);
+  pvVar10 = McdModelGetGeometry(p->model2);
+  result->contactCount = 0;
+  result->touch = 0;
+  relAxis[0] = (*tm)[2] * *(float *)((int)pvVar8 + 0x28) +
+               (*tm)[1] * *(float *)((int)pvVar8 + 0x24) + (*tm)[0] * *(float *)((int)pvVar8 + 0x20)
+  ;
+  relAxis[1] = tm[1][2] * *(float *)((int)pvVar8 + 0x28) +
+               tm[1][1] * *(float *)((int)pvVar8 + 0x24) + tm[1][0] * *(float *)((int)pvVar8 + 0x20)
+  ;
+  relAxis[2] = tm[2][2] * *(float *)((int)pvVar8 + 0x28) +
+               tm[2][1] * *(float *)((int)pvVar8 + 0x24) + tm[2][0] * *(float *)((int)pvVar8 + 0x20)
+  ;
+  fVar3 = *(float *)((int)pvVar8 + 0x30) - tm[3][0];
+  boxP[1] = *(float *)((int)pvVar8 + 0x34) - tm[3][1];
+  boxP[2] = *(float *)((int)pvVar8 + 0x38) - tm[3][2];
+  relPos[0] = boxP[2] * (*tm)[2] + fVar3 * (*tm)[0] + boxP[1] * (*tm)[1];
+  relPos[1] = boxP[2] * tm[1][2] + fVar3 * tm[1][0] + boxP[1] * tm[1][1];
+  signN = 0;
+  relPos[2] = boxP[2] * tm[2][2] + fVar3 * tm[2][0] + boxP[1] * tm[2][1];
+  fVar3 = -*(float *)((int)pvVar9 + 0x14);
+  pos[0] = relAxis[0] * fVar3 + relPos[0];
+  pos[1] = relPos[1] + relAxis[1] * fVar3;
+  pos[2] = relPos[2] + fVar3 * relAxis[2];
+  if (ABS(relAxis[0]) <= 0.00025) {
+    si[0] = -3.4028235e+38;
+    si[1] = 3.4028235e+38;
+  }
+  else {
+                    /* Unresolved local var: MeReal recipN@[???] */
+    si[0] = (-*(float *)((int)pvVar10 + 0x10) - relPos[0]) * (1.0 / relAxis[0]);
+    si[1] = (1.0 / relAxis[0]) * (*(float *)((int)pvVar10 + 0x10) - relPos[0]);
+    if (relAxis[0] < 0.0) {
+      signN = 1;
+    }
+  }
+  boxP[0] = *(float *)((int)pvVar10 + 0x10);
+  if (-boxP[0] <= pos[0]) {
+    if (pos[0] <= boxP[0]) {
+      uVar15 = 1;
+      boxP[0] = 0.0;
+    }
+    else {
+    }
+  }
+  else {
+    boxP[0] = -boxP[0];
+  }
+  axis = 0;
+  iVar12 = 1;
+  do {
+    fVar3 = relAxis[iVar12];
+    if (ABS(fVar3) <= 0.00025) {
+      si[iVar12 * 2] = -3.4028235e+38;
+      si[iVar12 * 2 + 1] = 3.4028235e+38;
+    }
+    else {
+      fVar4 = relPos[iVar12];
+      si[iVar12 * 2] = (-*(float *)((int)pvVar10 + iVar12 * 4 + 0x10) - fVar4) * (1.0 / fVar3);
+      si[iVar12 * 2 + 1] = (*(float *)((int)pvVar10 + iVar12 * 4 + 0x10) - fVar4) * (1.0 / fVar3);
+      if (fVar3 < 0.0) {
+        signN = signN | 1 << ((byte)iVar12 & 0x1f);
+      }
+    }
+    fVar3 = *(float *)((int)pvVar10 + iVar12 * 4 + 0x10);
+    if (-fVar3 <= pos[iVar12]) {
+      if (pos[iVar12] <= fVar3) {
+        uVar15 = uVar15 + 1;
+        MVar7 = iVar12;
+        if ((uVar15 != 1) && (MVar7 = axis, uVar15 == 2)) {
+          MVar7 = 3 - (axis + iVar12);
+        }
+        axis = MVar7;
+        boxP[iVar12] = 0.0;
+      }
+      else {
+        boxP[iVar12] = fVar3;
+      }
+    }
+    else {
+      boxP[iVar12] = -fVar3;
+    }
+    iVar1 = iVar12 + 1;
+    fVar3 = relAxis[iVar1];
+    if (ABS(fVar3) <= 0.00025) {
+      si[iVar1 * 2] = -3.4028235e+38;
+      si[iVar1 * 2 + 1] = 3.4028235e+38;
+    }
+    else {
+      fVar4 = relPos[iVar1];
+      si[iVar1 * 2] = (-*(float *)((int)pvVar10 + iVar1 * 4 + 0x10) - fVar4) * (1.0 / fVar3);
+      si[iVar1 * 2 + 1] = (*(float *)((int)pvVar10 + iVar1 * 4 + 0x10) - fVar4) * (1.0 / fVar3);
+      if (fVar3 < 0.0) {
+        signN = signN | 1 << ((byte)iVar1 & 0x1f);
+      }
+    }
+    fVar3 = *(float *)((int)pvVar10 + iVar1 * 4 + 0x10);
+    if (-fVar3 <= pos[iVar1]) {
+      if (pos[iVar1] <= fVar3) {
+        uVar15 = uVar15 + 1;
+        MVar7 = iVar1;
+        if ((uVar15 != 1) && (MVar7 = axis, uVar15 == 2)) {
+          MVar7 = 3 - (axis + iVar1);
+        }
+        axis = MVar7;
+        boxP[iVar1] = 0.0;
+      }
+      else {
+        boxP[iVar1] = fVar3;
+      }
+    }
+    else {
+      boxP[iVar1] = -fVar3;
+    }
+    iVar12 = iVar12 + 2;
+  } while (iVar12 < 3);
+  uVar14 = 0;
+  s = -3.4028235e+38;
+  jMin = 0;
+  j = 0;
+  do {
+                    /* Unresolved local var: MeReal minS@[DW_OP_reg12(ST1)]
+                       Unresolved local var: MeI32 nextIndex@[DW_OP_reg3(EBX)] */
+    uVar13 = 0;
+    uVar11 = signN ^ uVar14;
+                    /* Unresolved local var: MeI32 b@[???]
+                       Unresolved local var: MeI32 index@[???] */
+    uVar2 = ((int)uVar11 >> 2 & 1U) + 4;
+    fVar3 = si[uVar2];
+    fVar4 = 3.4028235e+38;
+    if ((fVar3 <= 3.4028235e+38) && (s <= fVar3)) {
+      uVar13 = uVar2;
+      fVar4 = fVar3;
+    }
+    uVar2 = ((int)uVar11 >> 1 & 1U) + 2;
+    fVar3 = si[uVar2];
+    if ((fVar3 <= fVar4) && (s <= fVar3)) {
+      uVar13 = uVar2;
+      fVar4 = fVar3;
+    }
+    fVar3 = si[uVar11 & 1];
+    if ((fVar3 <= fVar4) && (s <= fVar3)) {
+      uVar13 = uVar11 & 1;
+      fVar4 = fVar3;
+    }
+    sort[j] = uVar13;
+    uVar14 = uVar14 ^ 1 << (sbyte)((int)uVar13 >> 1);
+    if (fVar4 <= -*(float *)((int)pvVar9 + 0x14)) {
+      jMin = jMin + 1;
+    }
+    j = j + 1;
+    s = fVar4;
+  } while (j < 6);
+  sort[6] = 6;
+  si[6] = 3.4028235e+38;
+  n[0] = 0.0;
+  n[1] = 0.0;
+  n[2] = 0.0;
+  boxDim = 0;
+  ds1 = 0.0;
+  s = -*(MeReal *)((int)pvVar9 + 0x14);
+  do {
+    if (6 < jMin) {
+LAB_00011498:
+      return result->touch;
+    }
+                    /* Unresolved local var: MeI32 index@[DW_OP_reg2(EDX)]
+                       Unresolved local var: MeI32 plane@[DW_OP_reg1(ECX)]
+                       Unresolved local var: MeI32 side@[DW_OP_reg2(EDX)]
+                       Unresolved local var: MeBool entrance@[???] */
+    uVar14 = sort[jMin];
+    d[0] = relPos[0] - boxP[0];
+    d[1] = relPos[1] - boxP[1];
+    d[2] = relPos[2] - boxP[2];
+    if ((uVar15 & 2) != 0) {
+      if ((((byte)uVar15 ^ 1) & 1) == 0) {
+        boxP[0] = s * relAxis[0] + relPos[0];
+        boxP[1] = s * relAxis[1] + relPos[1];
+        boxP[2] = s * relAxis[2] + relPos[2];
+        fVar3 = *(float *)((int)pvVar9 + 0x14);
+        if (si[uVar14] < fVar3) {
+          fVar3 = si[uVar14];
+        }
+        ds1 = fVar3 - s;
+      }
+      else {
+        if (ABS(relAxis[axis] * boxP[axis]) < 0.00025) {
+          n[0] = 0.0;
+          n[1] = 0.0;
+          n[2] = 0.0;
+          n[axis] = relPos[axis] - boxP[axis];
+          boxP[0] = (s * relAxis[0] + relPos[0]) - n[0];
+          boxP[1] = (s * relAxis[1] + relPos[1]) - n[1];
+          boxP[2] = (s * relAxis[2] + relPos[2]) - n[2];
+          fVar3 = *(float *)((int)pvVar9 + 0x14);
+          if (si[uVar14] < fVar3) {
+            fVar3 = si[uVar14];
+          }
+          ds1 = fVar3 - s;
+        }
+        else {
+          if (0.0 < boxP[axis] * relAxis[axis]) {
+            n[0] = s * relAxis[0] + relPos[0];
+            n[1] = s * relAxis[1] + relPos[1];
+          }
+          else {
+            fVar3 = si[uVar14];
+            s = *(float *)((int)pvVar9 + 0x14);
+            if (fVar3 <= s) goto LAB_00011450;
+                    /* Unresolved local var: MeReal ba@[DW_OP_reg0(EAX)] */
+            n[0] = s * relAxis[0] + relPos[0];
+            n[1] = s * relAxis[1] + relPos[1];
+          }
+          n[2] = s * relAxis[2] + relPos[2];
+          boxP[0] = n[0];
+          boxP[2] = n[2];
+          boxP[1] = n[1];
+          boxP[axis] = boxP[axis];
+          n[0] = n[0] - boxP[0];
+          n[1] = n[1] - boxP[1];
+          n[2] = n[2] - boxP[2];
+        }
+        boxDim = 2;
+      }
+LAB_00011567:
+      if (jMin < 7) {
+        fVar3 = n[2] * n[2] + n[1] * n[1] + n[0] * n[0];
+        if (fVar3 <= 6.250001e-08) {
+                    /* Unresolved local var: MeReal maxSep@[DW_OP_reg17(ST6)] */
+          sepSign = 1.0;
+                    /* Unresolved local var: MeReal sumR@[???]
+                       Unresolved local var: MeReal sepI@[???] */
+          sepIndex = 0;
+          fVar3 = *(float *)((int)pvVar9 + 0x14);
+          fVar4 = -3.4028235e+38;
+          fVar6 = ABS(relPos[0]) - (ABS(relAxis[0]) * fVar3 + *(float *)((int)pvVar10 + 0x10));
+          if ((-3.4028235e+38 < fVar6) && (fVar4 = fVar6, relPos[0] <= 0.0)) {
+            sepSign = -1.0;
+          }
+          fVar6 = ABS(relPos[1]) - (ABS(relAxis[1]) * fVar3 + *(float *)((int)pvVar10 + 0x14));
+          if (fVar4 < fVar6) {
+            sepIndex = 1;
+            sepSign = 1.0;
+            fVar4 = fVar6;
+            if (relPos[1] <= 0.0) {
+              sepSign = -1.0;
+            }
+          }
+          fVar3 = ABS(relPos[2]) - (ABS(relAxis[2]) * fVar3 + *(float *)((int)pvVar10 + 0x18));
+          if (fVar4 < fVar3) {
+            sepIndex = 2;
+            sepSign = 1.0;
+            fVar4 = fVar3;
+            if (relPos[2] <= 0.0) {
+              sepSign = -1.0;
+            }
+          }
+          iVar12 = 0;
+          do {
+                    /* Unresolved local var: MeReal a2@[???]
+                       Unresolved local var: int axisN1@[???]
+                       Unresolved local var: int axisN2@[???] */
+            uVar15 = 1 << ((byte)iVar12 & 0x1f) & 3;
+            local_114 = (sbyte)uVar15;
+            d[iVar12] = 0.0;
+            uVar14 = 1 << local_114 & 3;
+            d[uVar15] = relAxis[uVar14];
+            d[uVar14] = -relAxis[uVar15];
+            fVar3 = d[2] * d[2] + d[1] * d[1] + d[0] * d[0];
+            if (6.250001e-08 < fVar3) {
+                    /* Unresolved local var: MeReal invA@[DW_OP_reg11(ST0)]
+                       Unresolved local var: MeReal sumR@[???]
+                       Unresolved local var: MeReal disp@[???]
+                       Unresolved local var: MeReal sepI@[DW_OP_reg11(ST0)]
+                       Unresolved local var: float __result@[???] */
+              fVar3 = 1.0 / SQRT(fVar3);
+              d[0] = d[0] * fVar3;
+              d[1] = d[1] * fVar3;
+              d[2] = d[2] * fVar3;
+              fVar6 = relPos[2] * d[2] + relPos[1] * d[1] + relPos[0] * d[0];
+              fVar3 = ABS(fVar6) -
+                      (ABS(d[2]) * *(float *)((int)pvVar10 + 0x18) +
+                      ABS(d[0]) * *(float *)((int)pvVar10 + 0x10) +
+                      ABS(d[1]) * *(float *)((int)pvVar10 + 0x14));
+              if (fVar4 < fVar3) {
+                sepIndex = iVar12 + 3;
+                n[0] = d[0];
+                n[1] = d[1];
+                n[2] = d[2];
+                fVar4 = fVar3;
+                if (fVar6 < 0.0) {
+                  n[0] = d[0] * -1.0;
+                  n[1] = d[1] * -1.0;
+                  n[2] = d[2] * -1.0;
+                }
+              }
+            }
+            iVar12 = iVar12 + 1;
+          } while (iVar12 < 3);
+          if (sepIndex < 3) {
+            n[sepIndex] = sepSign;
+          }
+          fVar4 = fVar4 - *(float *)((int)pvVar9 + 0x10);
+        }
+        else {
+                    /* Unresolved local var: MeReal invN@[DW_OP_reg11(ST0)]
+                       Unresolved local var: float __result@[DW_OP_reg11(ST0)] */
+          fVar4 = 1.0 / SQRT(fVar3);
+          n[0] = n[0] * fVar4;
+          n[1] = n[1] * fVar4;
+          n[2] = n[2] * fVar4;
+          fVar4 = fVar3 * fVar4 - *(float *)((int)pvVar9 + 0x10);
+        }
+        if (fVar4 < fVar17 + fVar16) {
+          result->normal[0] = 0.0;
+          result->normal[1] = 0.0;
+          result->normal[2] = 0.0;
+          AccumulateSphylContacts
+                    (boxP,n,fVar4,3,boxDim,(MeVector3Ptr)((int)pvVar8 + 0x20),ds1,tm,result);
+        }
+      }
+      goto LAB_00011498;
+    }
+                    /* Unresolved local var: MeReal dl@[DW_OP_reg16(ST5)] */
+    fVar3 = (relPos[2] - boxP[2]) * relAxis[2] +
+            (relPos[0] - boxP[0]) * relAxis[0] + (relPos[1] - boxP[1]) * relAxis[1];
+    if (uVar15 != 0) {
+                    /* Unresolved local var: MeReal det@[DW_OP_reg13(ST2)] */
+      fVar4 = relAxis[axis];
+      fVar6 = 1.0 - fVar4 * fVar4;
+      if (fVar6 <= 0.00025) {
+        n[1] = relPos[1] + s * relAxis[1];
+        n[0] = relPos[0] + relAxis[0] * s;
+        n[2] = s * relAxis[2] + relPos[2];
+        boxP[axis] = n[axis];
+        n[0] = n[0] - boxP[0];
+        n[1] = n[1] - boxP[1];
+        n[2] = n[2] - boxP[2];
+        n[axis] = 0.0;
+        fVar3 = *(float *)((int)pvVar9 + 0x14);
+        if (si[uVar14] < fVar3) {
+          fVar3 = si[uVar14];
+        }
+        ds1 = fVar3 - s;
+      }
+      else {
+                    /* Unresolved local var: MeReal invDet@[DW_OP_reg11(ST0)] */
+        fVar5 = *(float *)((int)pvVar9 + 0x14);
+        fVar4 = (fVar4 * d[axis] - fVar3) * (1.0 / fVar6);
+        fVar3 = -fVar5;
+        if (fVar4 < fVar5) {
+          fVar5 = fVar4;
+        }
+        if (fVar5 < fVar3) {
+          fVar5 = fVar3;
+        }
+        fVar3 = si[uVar14];
+        if (fVar3 - 0.00025 <= fVar5) goto LAB_00011450;
+        n[1] = relPos[1] + relAxis[1] * fVar5;
+        n[0] = relPos[0] + relAxis[0] * fVar5;
+        n[2] = fVar5 * relAxis[2] + relPos[2];
+        boxP[axis] = n[axis];
+        n[0] = n[0] - boxP[0];
+        n[1] = n[1] - boxP[1];
+        n[2] = n[2] - boxP[2];
+        n[axis] = 0.0;
+      }
+      boxDim = 1;
+      goto LAB_00011567;
+    }
+    fVar3 = -fVar3;
+    fVar4 = *(float *)((int)pvVar9 + 0x14);
+    fVar6 = -fVar4;
+    if (fVar3 < fVar4) {
+      fVar4 = fVar3;
+    }
+    if (fVar4 < fVar6) {
+      fVar4 = fVar6;
+    }
+    fVar3 = si[uVar14];
+    if (fVar4 < fVar3 - 0.00025) {
+      boxDim = 0;
+      n[0] = (relPos[0] + relAxis[0] * fVar4) - boxP[0];
+      n[1] = (relPos[1] + relAxis[1] * fVar4) - boxP[1];
+      n[2] = (fVar4 * relAxis[2] + relPos[2]) - boxP[2];
+      goto LAB_00011567;
+    }
+LAB_00011450:
+    iVar12 = (int)uVar14 >> 1;
+    if ((uVar14 & 1) == (signN >> ((byte)iVar12 & 0x1f) & 1U)) {
+      uVar15 = uVar15 + 1;
+      boxP[iVar12] = 0.0;
+      if (uVar15 == 1) {
+LAB_000114d0:
+        axis = iVar12;
+      }
+      else if (uVar15 == 2) goto LAB_000114a6;
+    }
+    else {
+      uVar15 = uVar15 - 1;
+      boxP[iVar12] = (float)(int)((uVar14 & 1) * 2 + -1) *
+                     *(float *)((int)pvVar10 + iVar12 * 4 + 0x10);
+      if (uVar15 != 1) {
+        if (uVar15 != 2) goto LAB_0001147f;
+        goto LAB_000114d0;
+      }
+LAB_000114a6:
+      axis = 3 - (axis + iVar12);
+    }
+LAB_0001147f:
+    jMin = jMin + 1;
+    s = fVar3;
+  } while( true );
+}
+
+
+/* ==== McdSphylBoxRegisterInteraction ==== */
+
+/* WARNING: Unknown calling convention */
+
+MeBool McdSphylBoxRegisterInteraction(McdFramework *frame)
+
+{
+  McdInteractions interactions;
+  
+  interactions.helloFn = (McdHelloFn)0x0;
+  interactions.goodbyeFn = (McdGoodbyeFn)0x0;
+  interactions.intersectFn = McdSphylBoxIntersect;
+  interactions.safetimeFn = (McdSafeTimeFn)0x0;
+  interactions.cull = 1;
+  interactions.warned = 0;
+  McdFrameworkSetInteractions(frame,5,2,&interactions);
+  return 1;
+}
+
+
+/* ==== McdSphylCylinderIntersect ==== */
+
+int McdSphylCylinderIntersect(McdModelPair *p,McdIntersectResult *result)
+
+{
+  int iVar1;
+  float fVar2;
+  float fVar3;
+  float fVar4;
+  float fVar5;
+  float fVar6;
+  float fVar7;
+  float fVar8;
+  float fVar9;
+  float fVar10;
+  float fVar11;
+  float fVar12;
+  void *pvVar13;
+  MeMatrix4Ptr tm;
+  void *pvVar14;
+  void *pvVar15;
+  uint uVar16;
+  uint uVar17;
+  uint uVar18;
+  int iVar19;
+  float fVar20;
+  uint uVar21;
+  float fVar22;
+  uint uVar23;
+  float fVar24;
+  float fVar25;
+  MeI32 rootCount;
+  MeReal maxSep;
+  MeReal rootDist2;
+  MeI32 rootN;
+  MeReal c;
+  MeReal ds1;
+  MeI16 cylDim;
+  MeReal cylZ;
+  MeI32 signZ;
+  MeI32 regionType;
+  McdCylinder *cyl;
+  McdSphyl *sphyl;
+  MeReal eps;
+  MeMatrix4Ptr tm2;
+  MeReal p_1 [3];
+  MeReal roots [6];
+  MeReal coef [20];
+  MeReal cylP [3];
+  MeReal n [3];
+  MeI32 sort [5];
+  MeReal si [5];
+  MeReal pos [3];
+  MeReal relPos [3];
+  MeReal relAxis [3];
+  
+                    /* Unresolved local var: int i@[DW_OP_reg2(EDX)]
+                       Unresolved local var: int j@[DW_OP_reg7(EDI)]
+                       Unresolved local var: MeMatrix4Ptr tm1@[DW_OP_reg6(ESI)]
+                       Unresolved local var: MeReal aXY2@[DW_OP_reg17(ST6)]
+                       Unresolved local var: MeReal s@[DW_OP_reg6(ESI)]
+                       Unresolved local var: MeReal s0@[DW_OP_reg15(ST4)]
+                       Unresolved local var: MeI32 jMin@[???]
+                       Unresolved local var: MeI32 jMax@[???]
+                       Unresolved local var: MeReal n2@[???]
+                       Unresolved local var: MeReal sep@[DW_OP_reg11(ST0)] */
+  pvVar13 = McdModelGetTransformPtr(p->model1);
+  tm = McdModelGetTransformPtr(p->model2);
+  fVar24 = McdModelGetContactTolerance(p->model1);
+  fVar25 = McdModelGetContactTolerance(p->model2);
+  pvVar14 = McdModelGetGeometry(p->model1);
+  pvVar15 = McdModelGetGeometry(p->model2);
+  result->contactCount = 0;
+  result->touch = 0;
+  fVar4 = (*tm)[2] * *(float *)((int)pvVar13 + 0x28) +
+          (*tm)[1] * *(float *)((int)pvVar13 + 0x24) + (*tm)[0] * *(float *)((int)pvVar13 + 0x20);
+  p_1[0] = tm[1][2] * *(float *)((int)pvVar13 + 0x28) +
+           tm[1][1] * *(float *)((int)pvVar13 + 0x24) + tm[1][0] * *(float *)((int)pvVar13 + 0x20);
+  fVar5 = tm[2][2] * *(float *)((int)pvVar13 + 0x28) +
+          tm[2][1] * *(float *)((int)pvVar13 + 0x24) + tm[2][0] * *(float *)((int)pvVar13 + 0x20);
+  fVar6 = *(float *)((int)pvVar13 + 0x30) - tm[3][0];
+  fVar3 = *(float *)((int)pvVar13 + 0x34) - tm[3][1];
+  fVar22 = *(float *)((int)pvVar13 + 0x38) - tm[3][2];
+  fVar8 = fVar22 * (*tm)[2] + fVar6 * (*tm)[0] + fVar3 * (*tm)[1];
+  fVar7 = fVar22 * tm[1][2] + fVar6 * tm[1][0] + fVar3 * tm[1][1];
+  fVar6 = fVar22 * tm[2][2] + fVar6 * tm[2][0] + fVar3 * tm[2][1];
+  iVar1 = (uint)(0.0 <= fVar5) * 2 + -1;
+  regionType = 0;
+  fVar3 = -*(float *)((int)pvVar14 + 0x14);
+  fVar20 = fVar8 + fVar4 * fVar3;
+  fVar22 = fVar7 + p_1[0] * fVar3;
+  fVar3 = fVar3 * fVar5 + fVar6;
+  if (ABS(fVar5) <= 0.00025) {
+    si[0] = -3.4028235e+38;
+    si[1] = 3.4028235e+38;
+  }
+  else {
+                    /* Unresolved local var: MeReal recipN@[DW_OP_reg13(ST2)]
+                       Unresolved local var: MeReal szrz@[DW_OP_reg12(ST1)] */
+    fVar2 = (float)iVar1 * *(float *)((int)pvVar15 + 0x14);
+    si[1] = (fVar2 - fVar6) * (1.0 / fVar5);
+    si[0] = (-fVar2 - fVar6) * (1.0 / fVar5);
+  }
+  fVar2 = *(float *)((int)pvVar15 + 0x14);
+  cylZ = -fVar2;
+  if ((cylZ <= fVar3) && (cylZ = fVar2, fVar3 <= fVar2)) {
+    cylZ = 0.0;
+    regionType = 1;
+  }
+  fVar3 = p_1[0] * p_1[0] + fVar4 * fVar4;
+  if (6.250001e-08 < fVar3) {
+                    /* Unresolved local var: MeReal cXY2@[???]
+                       Unresolved local var: MeReal acXY@[DW_OP_reg16(ST5)]
+                       Unresolved local var: MeReal arg@[DW_OP_reg12(ST1)] */
+    fVar2 = fVar4 * fVar8 + p_1[0] * fVar7;
+    fVar9 = fVar2 * fVar2 -
+            ((fVar7 * fVar7 + fVar8 * fVar8) -
+            *(float *)((int)pvVar15 + 0x10) * *(float *)((int)pvVar15 + 0x10)) * fVar3;
+    if (0.0 <= fVar9) {
+                    /* Unresolved local var: MeReal rad@[???]
+                       Unresolved local var: MeReal den@[DW_OP_reg13(ST2)]
+                       Unresolved local var: float __result@[DW_OP_reg11(ST0)] */
+      fVar9 = SQRT(fVar9);
+      si[3] = (fVar9 - fVar2) * (1.0 / fVar3);
+      si[2] = -(fVar2 + fVar9) * (1.0 / fVar3);
+      goto LAB_000122c2;
+    }
+  }
+  si[2] = 3.4028235e+38;
+  si[3] = 3.4028235e+38;
+LAB_000122c2:
+  if (fVar22 * fVar22 + fVar20 * fVar20 <=
+      *(float *)((int)pvVar15 + 0x10) * *(float *)((int)pvVar15 + 0x10)) {
+    regionType = regionType | 2;
+  }
+                    /* Unresolved local var: MeI32 o@[DW_OP_reg2(EDX)]
+                       Unresolved local var: MeI32 d@[???]
+                       Unresolved local var: MeI32 l@[???] */
+  uVar17 = (si[0] <= si[2]) - 1;
+  uVar18 = (uVar17 ^ 0xffffffff) & 2;
+  sort[0] = uVar17 & 2;
+  sort[2] = uVar18;
+  sort[1] = sort[0] + 1;
+  sort[3] = uVar18 + 1;
+                    /* Unresolved local var: MeI32 o@[DW_OP_reg1(ECX)]
+                       Unresolved local var: MeI32 d@[DW_OP_reg3(EBX)]
+                       Unresolved local var: MeI32 l@[???] */
+  uVar16 = (si[sort[1]] <= si[uVar18]) - 1;
+  uVar21 = (uVar16 ^ 0xffffffff) & sort[1];
+  sort[2] = uVar16 & sort[1] | (uVar16 ^ 0xffffffff) & uVar18;
+  sort[1] = uVar21 | uVar16 & uVar18;
+                    /* Unresolved local var: MeI32 o@[DW_OP_reg0(EAX)]
+                       Unresolved local var: MeI32 d@[DW_OP_reg3(EBX)]
+                       Unresolved local var: MeI32 l@[???] */
+  si[4] = 3.4028235e+38;
+  uVar17 = (si[sort[2]] <= si[sort[3]]) - 1;
+  uVar23 = (uVar17 ^ 0xffffffff) & sort[2] | sort[3] & uVar17;
+  sort[3] = uVar17 & sort[2] | (uVar17 ^ 0xffffffff) & sort[3];
+  sort[2] = uVar23;
+  cylDim = 0;
+  ds1 = 0.0;
+  sort[4] = 4;
+  n[0] = 0.0;
+  n[1] = 0.0;
+  n[2] = 0.0;
+  fVar3 = *(float *)((int)pvVar14 + 0x14);
+                    /* Unresolved local var: MeI32 index@[???]
+                       Unresolved local var: MeI32 crossingMask@[???]
+                       Unresolved local var: MeBool inside@[???]
+                       Unresolved local var: MeBool exiting@[???] */
+  uVar17 = 0;
+  fVar20 = -0.00025 - fVar3;
+  fVar22 = -fVar3;
+  if (((((si[sort[0]] < fVar20) || ((regionType & (sort[0] != 0) + 1) != 0)) &&
+       ((uVar17 = 1, si[sort[1]] < fVar20 ||
+        ((uint)((regionType & ((uVar21 & 2) != 0 || (uVar16 & uVar18) != 0) + 1) != 0) !=
+         (uVar21 & 1))))) &&
+      ((uVar17 = 2, si[uVar23] < fVar20 ||
+       ((uint)((regionType & ((uVar23 & 2) != 0) + 1) != 0) != (uVar23 & 1))))) &&
+     ((uVar17 = 3, si[sort[3]] < fVar20 ||
+      ((uint)((regionType & ((sort[3] & 2U) != 0) + 1) != 0) != (sort[3] & 1U))))) {
+    uVar17 = 4;
+  }
+  if (uVar17 < 5) {
+    do {
+                    /* Unresolved local var: MeI32 index@[DW_OP_reg3(EBX)]
+                       Unresolved local var: MeI32 boundaryType@[DW_OP_reg1(ECX)]
+                       Unresolved local var: MeI32 side@[???]
+                       Unresolved local var: MeBool entrance@[???]
+                       Unresolved local var: MeI32 boundaryBit@[DW_OP_reg2(EDX)] */
+      uVar16 = sort[uVar17];
+      if ((regionType & 2U) != 0) {
+        if ((((byte)regionType ^ 1) & 1) == 0) {
+          cylP[0] = fVar22 * fVar4 + fVar8;
+          cylP[1] = fVar22 * p_1[0] + fVar7;
+          cylP[2] = fVar22 * fVar5 + fVar6;
+          fVar3 = *(float *)((int)pvVar14 + 0x14);
+          if (si[uVar16] < fVar3) {
+            fVar3 = si[uVar16];
+          }
+          ds1 = fVar3 - fVar22;
+        }
+        else {
+          if (ABS(fVar5) < 0.00025) {
+            n[2] = fVar6 - cylZ;
+            cylP[0] = fVar22 * fVar4 + fVar8;
+            cylP[1] = fVar22 * p_1[0] + fVar7;
+            cylP[2] = (fVar6 + fVar5 * fVar22) - (fVar6 - cylZ);
+            n[0] = 0.0;
+            n[1] = 0.0;
+            fVar3 = *(float *)((int)pvVar14 + 0x14);
+            if (si[uVar16] < fVar3) {
+              fVar3 = si[uVar16];
+            }
+            ds1 = fVar3 - fVar22;
+          }
+          else if (0.0 < cylZ * fVar5) {
+            cylP[2] = cylZ;
+            n[2] = (fVar22 * fVar5 + fVar6) - cylZ;
+            cylP[0] = fVar22 * fVar4 + fVar8;
+            cylP[1] = fVar22 * p_1[0] + fVar7;
+          }
+          else {
+            fVar22 = si[uVar16];
+            if (fVar22 <= fVar3) goto LAB_00012991;
+            cylP[1] = fVar3 * p_1[0] + fVar7;
+            cylP[0] = fVar3 * fVar4 + fVar8;
+            n[2] = (fVar3 * fVar5 + fVar6) - cylZ;
+            cylP[2] = cylZ;
+          }
+          n[1] = 0.0;
+          n[0] = 0.0;
+          cylDim = 2;
+        }
+LAB_00012aea:
+        if ((int)uVar17 < 5) {
+          fVar3 = n[2] * n[2] + n[1] * n[1] + n[0] * n[0];
+          if (fVar3 <= 6.250001e-08) {
+                    /* Unresolved local var: MeReal a2@[DW_OP_reg12(ST1)]
+                       Unresolved local var: MeReal invA@[DW_OP_reg11(ST0)]
+                       Unresolved local var: MeReal disp@[???]
+                       Unresolved local var: MeReal sepI@[DW_OP_reg11(ST0)] */
+            maxSep = ABS(fVar6) -
+                     (ABS(fVar5) * *(float *)((int)pvVar14 + 0x14) + *(float *)((int)pvVar15 + 0x14)
+                     );
+            if (fVar6 <= 0.0) {
+              n[2] = -1.0;
+            }
+            else {
+              n[2] = 1.0;
+            }
+            p_1[1] = -fVar4;
+            fVar4 = p_1[0] * p_1[0] + p_1[1] * p_1[1];
+            if ((fVar4 < 6.250001e-08) &&
+               (fVar4 = fVar8 * fVar8 + fVar7 * fVar7, p_1[0] = fVar8, p_1[1] = fVar7,
+               fVar4 < 6.250001e-08)) {
+              p_1[0] = 1.0;
+              p_1[1] = 0.0;
+              fVar4 = 1.0;
+            }
+                    /* Unresolved local var: float __result@[???] */
+            fVar3 = 1.0 / SQRT(fVar4);
+            fVar22 = p_1[0] * fVar3;
+            fVar20 = p_1[1] * fVar3;
+            fVar3 = fVar3 * 0.0;
+            fVar4 = fVar6 * fVar3 + fVar8 * fVar22 + fVar7 * fVar20;
+            fVar5 = ABS(fVar4) - *(float *)((int)pvVar15 + 0x10);
+            if ((maxSep < fVar5) &&
+               (maxSep = fVar5, n[0] = fVar22, n[1] = fVar20, n[2] = fVar3, fVar4 < 0.0)) {
+              n[0] = fVar22 * -1.0;
+              n[1] = fVar20 * -1.0;
+              n[2] = fVar3 * -1.0;
+            }
+            fVar4 = maxSep - *(float *)((int)pvVar14 + 0x10);
+          }
+          else {
+                    /* Unresolved local var: MeReal invN@[DW_OP_reg11(ST0)]
+                       Unresolved local var: float __result@[DW_OP_reg11(ST0)] */
+            fVar4 = 1.0 / SQRT(fVar3);
+            n[0] = n[0] * fVar4;
+            n[1] = n[1] * fVar4;
+            n[2] = n[2] * fVar4;
+            fVar4 = fVar3 * fVar4 - *(float *)((int)pvVar14 + 0x10);
+          }
+          if (fVar4 < fVar25 + fVar24) {
+            result->normal[0] = 0.0;
+            result->normal[1] = 0.0;
+            result->normal[2] = 0.0;
+            AccumulateSphylContacts
+                      (cylP,n,fVar4,3,cylDim,(MeVector3Ptr)((int)pvVar13 + 0x20),ds1,tm,result);
+          }
+          return result->touch;
+        }
+        break;
+      }
+      if (regionType != 0) {
+                    /* Unresolved local var: MeReal det@[DW_OP_reg15(ST4)]
+                       Unresolved local var: MeReal dl@[???] */
+        fVar20 = 1.0 - fVar5 * fVar5;
+        if (fVar20 <= 0.00025) {
+          cylP[0] = fVar22 * fVar4 + fVar8;
+          cylP[1] = fVar22 * p_1[0] + fVar7;
+          n[2] = fVar6 + fVar5 * fVar22;
+          cylP[2] = 0.0;
+          n[0] = cylP[0];
+          n[1] = cylP[1];
+          MeVector3Normalize(cylP);
+          cylP[0] = cylP[0] * *(float *)((int)pvVar15 + 0x10);
+          cylP[2] = n[2];
+          cylP[1] = *(float *)((int)pvVar15 + 0x10) * cylP[1];
+          n[2] = 0.0;
+          n[0] = n[0] - cylP[0];
+          n[1] = n[1] - cylP[1];
+          fVar3 = *(float *)((int)pvVar14 + 0x14);
+          if (si[uVar16] < fVar3) {
+            fVar3 = si[uVar16];
+          }
+          ds1 = fVar3 - fVar22;
+        }
+        else {
+                    /* Unresolved local var: MeReal invDet@[???] */
+          fVar22 = (fVar6 * fVar5 - (fVar8 * fVar4 + fVar7 * p_1[0] + fVar6 * fVar5)) *
+                   (1.0 / fVar20);
+          fVar20 = fVar3;
+          if (fVar22 < fVar3) {
+            fVar20 = fVar22;
+          }
+          if (fVar20 < -fVar3) {
+            fVar20 = -fVar3;
+          }
+          fVar22 = si[uVar16];
+          if (fVar22 - 0.00025 <= fVar20) goto LAB_00012991;
+          cylP[0] = fVar20 * fVar4 + fVar8;
+          cylP[1] = fVar20 * p_1[0] + fVar7;
+          n[2] = fVar6 + fVar20 * fVar5;
+          cylP[2] = 0.0;
+          n[0] = cylP[0];
+          n[1] = cylP[1];
+          MeVector3Normalize(cylP);
+          cylP[0] = cylP[0] * *(float *)((int)pvVar15 + 0x10);
+          cylP[2] = n[2];
+          cylP[1] = *(float *)((int)pvVar15 + 0x10) * cylP[1];
+          n[0] = n[0] - cylP[0];
+          n[1] = n[1] - cylP[1];
+        }
+        n[2] = 0.0;
+        cylDim = 3;
+        goto LAB_00012aea;
+      }
+      fVar20 = fVar3;
+      if (ABS(fVar5) <= 0.00025) {
+        fVar22 = si[uVar16];
+        fVar2 = -(fVar5 * fVar6 + fVar8 * fVar4 + fVar7 * p_1[0]);
+        fVar9 = fVar22;
+        if (fVar2 < fVar22) {
+          fVar9 = fVar2;
+        }
+        if (fVar9 < fVar3) {
+          fVar20 = fVar9;
+        }
+        if (fVar20 < -fVar3) {
+          fVar20 = -fVar3;
+        }
+        if (fVar20 < fVar22 - 0.00025) {
+LAB_00012a54:
+                    /* Unresolved local var: MeReal dl@[???] */
+          n[0] = fVar20 * fVar4 + fVar8;
+          n[2] = fVar20 * fVar5 + fVar6;
+          cylP[1] = fVar20 * p_1[0] + fVar7;
+          cylP[2] = 0.0;
+          cylP[0] = n[0];
+          n[1] = cylP[1];
+          MeVector3Normalize(cylP);
+          cylP[0] = cylP[0] * *(float *)((int)pvVar15 + 0x10);
+          cylP[1] = *(float *)((int)pvVar15 + 0x10) * cylP[1];
+          cylP[2] = cylZ;
+          n[0] = n[0] - cylP[0];
+          n[1] = n[1] - cylP[1];
+          n[2] = n[2] - cylZ;
+          cylDim = 1;
+          goto LAB_00012aea;
+        }
+      }
+      else {
+        fVar2 = p_1[0] * p_1[0] + fVar4 * fVar4;
+        if (fVar2 <= 6.250001e-08) {
+          fVar22 = (*(float *)((int)pvVar15 + 0x14) - fVar6) * fVar5;
+          if (fVar22 < fVar3) {
+            fVar20 = fVar22;
+          }
+          if (fVar20 < -fVar3) {
+            fVar20 = -fVar3;
+          }
+          fVar22 = si[uVar16];
+          if (fVar20 < fVar22 - 0.00025) goto LAB_00012a54;
+        }
+        else {
+                    /* Unresolved local var: MeReal a@[DW_OP_reg18(ST7)]
+                       Unresolved local var: MeReal b@[DW_OP_reg17(ST6)]
+                       Unresolved local var: MeReal d@[DW_OP_reg14(ST3)]
+                       Unresolved local var: MeReal e@[DW_OP_reg15(ST4)]
+                       Unresolved local var: MeReal maxS@[DW_OP_reg13(ST2)] */
+          fVar3 = fVar4 * fVar8 + p_1[0] * fVar7;
+          fVar12 = fVar7 * fVar7 + fVar8 * fVar8;
+          fVar10 = *(float *)((int)pvVar15 + 0x10) * *(float *)((int)pvVar15 + 0x10);
+          fVar20 = (fVar6 - cylZ) * fVar5 + fVar3;
+          fVar11 = fVar12 * fVar20;
+          fVar9 = fVar10 * fVar3;
+          coef[0] = fVar11 * fVar20 - fVar9 * fVar3;
+          fVar11 = (fVar20 * fVar20 * fVar3 + fVar11) - fVar9 * fVar2;
+          fVar9 = fVar3 + fVar20 * fVar2;
+          coef[1] = fVar11 + fVar11;
+          coef[4] = fVar2;
+          coef[2] = (fVar12 + fVar20 * fVar3 * 4.0 + fVar20 * fVar20 * fVar2) -
+                    fVar10 * fVar2 * fVar2;
+          coef[3] = fVar9 + fVar9;
+          fVar3 = *(float *)((int)pvVar14 + 0x14);
+          if (si[uVar16] < fVar3) {
+            fVar3 = si[uVar16];
+          }
+          rootN = PolynomialRoots(roots,fVar22 - 0.00025,fVar3 + 0.00025,4,coef);
+          roots[rootN] = fVar3;
+          roots[rootN + 1] = fVar22;
+          iVar19 = 0;
+          uVar18 = rootN + 2;
+          rootDist2 = 3.4028235e+38;
+          if (0 < (int)uVar18) {
+            if (((int)uVar18 < 2) || ((uVar18 & 1) != 0)) {
+                    /* Unresolved local var: MeReal dR@[???]
+                       Unresolved local var: MeReal dZ@[???]
+                       Unresolved local var: MeReal d2@[???]
+                       Unresolved local var: float __result@[???] */
+              fVar3 = fVar4 * roots[0] + fVar8;
+              fVar20 = p_1[0] * roots[0] + fVar7;
+              fVar22 = (roots[0] * fVar5 + fVar6) - cylZ;
+              fVar3 = SQRT(fVar3 * fVar3 + fVar20 * fVar20) - *(float *)((int)pvVar15 + 0x10);
+              fVar3 = fVar3 * fVar3 + fVar22 * fVar22;
+              if (fVar3 < 3.4028235e+38) {
+                rootN = 0;
+                rootDist2 = fVar3;
+              }
+              iVar19 = 1;
+              if ((int)uVar18 < 2) goto LAB_00012932;
+            }
+            do {
+              fVar3 = roots[iVar19];
+              fVar2 = fVar4 * fVar3 + fVar8;
+              fVar22 = p_1[0] * fVar3 + fVar7;
+              fVar20 = (fVar3 * fVar5 + fVar6) - cylZ;
+              fVar3 = SQRT(fVar2 * fVar2 + fVar22 * fVar22) - *(float *)((int)pvVar15 + 0x10);
+              fVar3 = fVar3 * fVar3 + fVar20 * fVar20;
+              if (fVar3 < rootDist2) {
+                rootDist2 = fVar3;
+                rootN = iVar19;
+              }
+              fVar3 = roots[iVar19 + 1];
+              fVar20 = fVar4 * fVar3 + fVar8;
+              fVar22 = p_1[0] * fVar3 + fVar7;
+              fVar3 = (fVar3 * fVar5 + fVar6) - cylZ;
+              fVar22 = SQRT(fVar20 * fVar20 + fVar22 * fVar22) - *(float *)((int)pvVar15 + 0x10);
+              fVar3 = fVar22 * fVar22 + fVar3 * fVar3;
+              if (fVar3 < rootDist2) {
+                rootDist2 = fVar3;
+                rootN = iVar19 + 1;
+              }
+              iVar19 = iVar19 + 2;
+            } while (iVar19 < (int)uVar18);
+          }
+LAB_00012932:
+          fVar3 = *(float *)((int)pvVar14 + 0x14);
+          fVar20 = fVar3;
+          if (roots[rootN] < fVar3) {
+            fVar20 = roots[rootN];
+          }
+          if (fVar20 < -fVar3) {
+            fVar20 = -fVar3;
+          }
+          fVar22 = si[uVar16];
+          if (fVar20 < fVar22 - 0.00025) goto LAB_00012a54;
+        }
+      }
+LAB_00012991:
+      iVar19 = (int)uVar16 >> 1;
+      uVar18 = 1 << ((byte)iVar19 & 0x1f);
+      if ((uVar16 & 1) == 0) {
+        regionType = regionType | uVar18;
+        if (iVar19 == 0) {
+          cylZ = 0.0;
+        }
+      }
+      else {
+        regionType = regionType & (uVar18 ^ 0xffffffff);
+        if (iVar19 == 0) {
+          cylZ = (float)iVar1 * *(float *)((int)pvVar15 + 0x14);
+        }
+      }
+      uVar17 = uVar17 + 1;
+    } while ((int)uVar17 < 5);
+  }
+  return result->touch;
+}
+
+
+/* ==== McdSphylCylinderRegisterInteraction ==== */
+
+/* WARNING: Unknown calling convention */
+
+MeBool McdSphylCylinderRegisterInteraction(McdFramework *frame)
+
+{
+  McdInteractions interactions;
+  
+  interactions.helloFn = (McdHelloFn)0x0;
+  interactions.goodbyeFn = (McdGoodbyeFn)0x0;
+  interactions.intersectFn = McdSphylCylinderIntersect;
+  interactions.safetimeFn = (McdSafeTimeFn)0x0;
+  interactions.cull = 1;
+  interactions.warned = 0;
+  McdFrameworkSetInteractions(frame,5,4,&interactions);
+  return 1;
+}
+
+
+/* ==== McdSphylTriangleListIntersect ==== */
+
+/* WARNING: Unknown calling convention */
+
+int McdSphylTriangleListIntersect(McdModelPair *p,McdIntersectResult *result)
+
+{
+  McdGeometryID pMVar1;
+  code *pcVar2;
+  int iVar3;
+  float fVar4;
+  MeReal MVar5;
+  void *pvVar6;
+  float *pfVar7;
+  void *pvVar8;
+  McdTriangleListID pMVar9;
+  int iVar10;
+  uint uVar11;
+  undefined1 *puVar12;
+  undefined1 *puVar13;
+  float fVar14;
+  int aiStackY_80 [4];
+  float fStackY_70;
+  MeReal aMStack_64 [2];
+  int local_5c;
+  MeReal *local_58;
+  McdTriangleListID trilistGeom;
+  MeReal eps;
+  MeReal tmp [3];
+  MeReal relPos [3];
+  MeReal relAxis [3];
+  
+                    /* Unresolved local var: MeMatrix4Ptr tm1@[DW_OP_reg3(EBX)]
+                       Unresolved local var: MeMatrix4Ptr tm2@[DW_OP_reg7(EDI)]
+                       Unresolved local var: McdSphylID sphylGeom@[DW_OP_reg6(ESI)]
+                       Unresolved local var: McdSphyl * sphyl@[???]
+                       Unresolved local var: McdTriangleList * triList@[???]
+                       Unresolved local var: MeI32 count@[DW_OP_reg0(EAX)]
+                       Unresolved local var: MeReal n2@[???] */
+  fStackY_70 = 1.11302e-40;
+  pvVar6 = McdModelGetTransformPtr(p->model1);
+  fStackY_70 = 1.11323e-40;
+  pfVar7 = McdModelGetTransformPtr(p->model2);
+  fStackY_70 = 1.11343e-40;
+  eps = McdModelGetContactTolerance(p->model1);
+  fStackY_70 = 1.11365e-40;
+  fVar14 = McdModelGetContactTolerance(p->model2);
+  eps = fVar14 + eps;
+  fStackY_70 = 1.11391e-40;
+  pvVar8 = McdModelGetGeometry(p->model1);
+  fStackY_70 = 1.11412e-40;
+  pMVar9 = McdModelGetGeometry(p->model2);
+  trilistGeom = pMVar9;
+  result->contactCount = 0;
+  result->touch = 0;
+  relAxis[0] = pfVar7[2] * *(float *)((int)pvVar6 + 0x28) +
+               pfVar7[1] * *(float *)((int)pvVar6 + 0x24) + *pfVar7 * *(float *)((int)pvVar6 + 0x20)
+  ;
+  relAxis[1] = pfVar7[6] * *(float *)((int)pvVar6 + 0x28) +
+               pfVar7[5] * *(float *)((int)pvVar6 + 0x24) +
+               pfVar7[4] * *(float *)((int)pvVar6 + 0x20);
+  relAxis[2] = pfVar7[10] * *(float *)((int)pvVar6 + 0x28) +
+               pfVar7[9] * *(float *)((int)pvVar6 + 0x24) +
+               pfVar7[8] * *(float *)((int)pvVar6 + 0x20);
+  tmp[0] = *(float *)((int)pvVar6 + 0x30) - pfVar7[0xc];
+  tmp[1] = *(float *)((int)pvVar6 + 0x34) - pfVar7[0xd];
+  tmp[2] = *(float *)((int)pvVar6 + 0x38) - pfVar7[0xe];
+  relPos[0] = tmp[2] * pfVar7[2] + tmp[0] * *pfVar7 + tmp[1] * pfVar7[1];
+  relPos[1] = tmp[2] * pfVar7[6] + tmp[0] * pfVar7[4] + tmp[1] * pfVar7[5];
+  relPos[2] = tmp[0] * pfVar7[8] + tmp[1] * pfVar7[9] + tmp[2] * pfVar7[10];
+  pMVar1 = pMVar9[2].next;
+  iVar3 = -((int)pMVar1 * 0x18 + 0xfU & 0xfffffff0);
+  pMVar9[3].prev = (McdGeometryID)((int)&stack0xffffffa4 + iVar3);
+  *(McdGeometryID *)((int)tmp + iVar3 + -0x20) = pMVar1;
+  *(float *)((int)&fStackY_70 + iVar3) =
+       *(float *)((int)pvVar8 + 0x10) + *(float *)((int)pvVar8 + 0x14) + eps;
+  *(MeReal **)((int)aiStackY_80 + iVar3 + 0xc) = relPos;
+  *(McdGeometryID *)((int)aiStackY_80 + iVar3 + 8) = pMVar9[3].prev;
+  pMVar9 = trilistGeom;
+  *(McdModelPair **)((int)aiStackY_80 + iVar3 + 4) = p;
+  pcVar2 = (code *)pMVar9[3].mRefCtAndID;
+  *(undefined4 *)((int)aiStackY_80 + iVar3) = 0x137af;
+  iVar10 = (*pcVar2)(*(void **)((int)aiStackY_80 + iVar3 + 4),
+                     *(void **)((int)aiStackY_80 + iVar3 + 8),
+                     *(void **)((int)aiStackY_80 + iVar3 + 0xc),*(float *)((int)&fStackY_70 + iVar3)
+                     ,*(int *)((int)tmp + iVar3 + -0x20));
+  MVar5 = eps;
+  puVar13 = (undefined1 *)((int)&stack0xffffffa4 + iVar3);
+  puVar12 = (undefined1 *)((int)&stack0xffffffa4 + iVar3);
+  if (iVar10 == 0) {
+    return 0;
+  }
+                    /* Unresolved local var: MeI32 i@[DW_OP_reg3(EBX)] */
+  local_58 = result->normal;
+  result->normal[0] = 0.0;
+  result->normal[1] = 0.0;
+  result->normal[2] = 0.0;
+  if (0 < iVar10) {
+    uVar11 = -iVar10 & 3;
+    local_5c = 0;
+    if (uVar11 != 0) {
+      puVar13 = (undefined1 *)((int)&stack0xffffffa4 + iVar3);
+      if (uVar11 < 3) {
+        if (uVar11 < 2) {
+          *(McdIntersectResult **)((int)aMStack_64 + iVar3 + 4) = result;
+          iVar10 = iVar10 + -1;
+          *(MeReal *)((int)aMStack_64 + iVar3) = MVar5;
+          *(float **)(&stack0xffffff98 + iVar3) = pfVar7;
+          *(undefined4 *)((int)tmp + iVar3 + -0x20) = *(undefined4 *)((int)pvVar8 + 0x10);
+          *(undefined4 *)((int)&fStackY_70 + iVar3) = *(undefined4 *)((int)pvVar8 + 0x14);
+          pMVar9 = trilistGeom;
+          *(MeReal **)((int)aiStackY_80 + iVar3 + 0xc) = relAxis;
+          *(MeReal **)((int)aiStackY_80 + iVar3 + 8) = relPos;
+          *(McdGeometryID *)((int)aiStackY_80 + iVar3 + 4) = pMVar9[3].prev;
+          *(undefined4 *)((int)aiStackY_80 + iVar3) = 0x139dc;
+          GenerateTriangleContact
+                    (*(McdUserTriangle **)((int)aiStackY_80 + iVar3 + 4),
+                     *(MeReal **)((int)aiStackY_80 + iVar3 + 8),
+                     *(MeReal **)((int)aiStackY_80 + iVar3 + 0xc),
+                     *(MeReal *)((int)&fStackY_70 + iVar3),*(MeReal *)((int)tmp + iVar3 + -0x20),
+                     *(MeVector4 **)(&stack0xffffff98 + iVar3),*(MeReal *)((int)aMStack_64 + iVar3),
+                     *(McdIntersectResult **)((int)aMStack_64 + iVar3 + 4));
+          puVar12 = (undefined1 *)((int)&stack0xffffffa4 + iVar3);
+          local_5c = 0x18;
+        }
+        MVar5 = eps;
+        *(McdIntersectResult **)(puVar12 + -4) = result;
+        *(MeReal *)(puVar12 + -8) = MVar5;
+        iVar10 = iVar10 + -1;
+        *(float **)(puVar12 + -0xc) = pfVar7;
+        *(undefined4 *)(puVar12 + -0x10) = *(undefined4 *)((int)pvVar8 + 0x10);
+        *(undefined4 *)(puVar12 + -0x14) = *(undefined4 *)((int)pvVar8 + 0x14);
+        pMVar9 = trilistGeom;
+        *(MeReal **)(puVar12 + -0x18) = relAxis;
+        iVar3 = local_5c;
+        *(MeReal **)(puVar12 + -0x1c) = relPos;
+        *(int *)(puVar12 + -0x20) = (int)&(pMVar9[3].prev)->mRefCtAndID + iVar3;
+        *(undefined4 *)(puVar12 + -0x24) = 0x13835;
+        GenerateTriangleContact
+                  (*(McdUserTriangle **)(puVar12 + -0x20),*(MeReal **)(puVar12 + -0x1c),
+                   *(MeReal **)(puVar12 + -0x18),*(MeReal *)(puVar12 + -0x14),
+                   *(MeReal *)(puVar12 + -0x10),*(MeVector4 **)(puVar12 + -0xc),
+                   *(MeReal *)(puVar12 + -8),*(McdIntersectResult **)(puVar12 + -4));
+        local_5c = local_5c + 0x18;
+        puVar13 = puVar12;
+      }
+      MVar5 = eps;
+      *(McdIntersectResult **)(puVar13 + -4) = result;
+      *(MeReal *)(puVar13 + -8) = MVar5;
+      *(float **)(puVar13 + -0xc) = pfVar7;
+      *(undefined4 *)(puVar13 + -0x10) = *(undefined4 *)((int)pvVar8 + 0x10);
+      *(undefined4 *)(puVar13 + -0x14) = *(undefined4 *)((int)pvVar8 + 0x14);
+      pMVar9 = trilistGeom;
+      *(MeReal **)(puVar13 + -0x18) = relAxis;
+      *(MeReal **)(puVar13 + -0x1c) = relPos;
+      *(int *)(puVar13 + -0x20) = (int)&(pMVar9[3].prev)->mRefCtAndID + local_5c;
+      *(undefined4 *)(puVar13 + -0x24) = 0x1386b;
+      GenerateTriangleContact
+                (*(McdUserTriangle **)(puVar13 + -0x20),*(MeReal **)(puVar13 + -0x1c),
+                 *(MeReal **)(puVar13 + -0x18),*(MeReal *)(puVar13 + -0x14),
+                 *(MeReal *)(puVar13 + -0x10),*(MeVector4 **)(puVar13 + -0xc),
+                 *(MeReal *)(puVar13 + -8),*(McdIntersectResult **)(puVar13 + -4));
+      iVar10 = iVar10 + -1;
+      local_5c = local_5c + 0x18;
+      if (iVar10 == 0) goto LAB_0001394c;
+    }
+    do {
+      MVar5 = eps;
+      *(McdIntersectResult **)(puVar13 + -4) = result;
+      *(MeReal *)(puVar13 + -8) = MVar5;
+      *(float **)(puVar13 + -0xc) = pfVar7;
+      *(undefined4 *)(puVar13 + -0x10) = *(undefined4 *)((int)pvVar8 + 0x10);
+      *(undefined4 *)(puVar13 + -0x14) = *(undefined4 *)((int)pvVar8 + 0x14);
+      pMVar9 = trilistGeom;
+      *(MeReal **)(puVar13 + -0x18) = relAxis;
+      *(MeReal **)(puVar13 + -0x1c) = relPos;
+      *(int *)(puVar13 + -0x20) = (int)&(pMVar9[3].prev)->mRefCtAndID + local_5c;
+      *(undefined4 *)(puVar13 + -0x24) = 0x138aa;
+      GenerateTriangleContact
+                (*(McdUserTriangle **)(puVar13 + -0x20),*(MeReal **)(puVar13 + -0x1c),
+                 *(MeReal **)(puVar13 + -0x18),*(MeReal *)(puVar13 + -0x14),
+                 *(MeReal *)(puVar13 + -0x10),*(MeVector4 **)(puVar13 + -0xc),
+                 *(MeReal *)(puVar13 + -8),*(McdIntersectResult **)(puVar13 + -4));
+      MVar5 = eps;
+      *(McdIntersectResult **)(puVar13 + -4) = result;
+      *(MeReal *)(puVar13 + -8) = MVar5;
+      *(float **)(puVar13 + -0xc) = pfVar7;
+      *(undefined4 *)(puVar13 + -0x10) = *(undefined4 *)((int)pvVar8 + 0x10);
+      *(undefined4 *)(puVar13 + -0x14) = *(undefined4 *)((int)pvVar8 + 0x14);
+      pMVar9 = trilistGeom;
+      *(MeReal **)(puVar13 + -0x18) = relAxis;
+      iVar3 = local_5c;
+      *(MeReal **)(puVar13 + -0x1c) = relPos;
+      *(int *)(puVar13 + -0x20) = (int)&pMVar9[3].prev[1].next + iVar3;
+      *(undefined4 *)(puVar13 + -0x24) = 0x138d9;
+      GenerateTriangleContact
+                (*(McdUserTriangle **)(puVar13 + -0x20),*(MeReal **)(puVar13 + -0x1c),
+                 *(MeReal **)(puVar13 + -0x18),*(MeReal *)(puVar13 + -0x14),
+                 *(MeReal *)(puVar13 + -0x10),*(MeVector4 **)(puVar13 + -0xc),
+                 *(MeReal *)(puVar13 + -8),*(McdIntersectResult **)(puVar13 + -4));
+      MVar5 = eps;
+      *(McdIntersectResult **)(puVar13 + -4) = result;
+      *(MeReal *)(puVar13 + -8) = MVar5;
+      *(float **)(puVar13 + -0xc) = pfVar7;
+      *(undefined4 *)(puVar13 + -0x10) = *(undefined4 *)((int)pvVar8 + 0x10);
+      *(undefined4 *)(puVar13 + -0x14) = *(undefined4 *)((int)pvVar8 + 0x14);
+      pMVar9 = trilistGeom;
+      *(MeReal **)(puVar13 + -0x18) = relAxis;
+      iVar3 = local_5c;
+      *(MeReal **)(puVar13 + -0x1c) = relPos;
+      *(int *)(puVar13 + -0x20) = (int)&pMVar9[3].prev[3].mRefCtAndID + iVar3;
+      *(undefined4 *)(puVar13 + -0x24) = 0x13908;
+      GenerateTriangleContact
+                (*(McdUserTriangle **)(puVar13 + -0x20),*(MeReal **)(puVar13 + -0x1c),
+                 *(MeReal **)(puVar13 + -0x18),*(MeReal *)(puVar13 + -0x14),
+                 *(MeReal *)(puVar13 + -0x10),*(MeVector4 **)(puVar13 + -0xc),
+                 *(MeReal *)(puVar13 + -8),*(McdIntersectResult **)(puVar13 + -4));
+      MVar5 = eps;
+      *(McdIntersectResult **)(puVar13 + -4) = result;
+      *(MeReal *)(puVar13 + -8) = MVar5;
+      *(float **)(puVar13 + -0xc) = pfVar7;
+      *(undefined4 *)(puVar13 + -0x10) = *(undefined4 *)((int)pvVar8 + 0x10);
+      *(undefined4 *)(puVar13 + -0x14) = *(undefined4 *)((int)pvVar8 + 0x14);
+      pMVar9 = trilistGeom;
+      *(MeReal **)(puVar13 + -0x18) = relAxis;
+      iVar3 = local_5c;
+      *(MeReal **)(puVar13 + -0x1c) = relPos;
+      *(int *)(puVar13 + -0x20) = (int)&pMVar9[3].prev[4].next + iVar3;
+      *(undefined4 *)(puVar13 + -0x24) = 0x13937;
+      GenerateTriangleContact
+                (*(McdUserTriangle **)(puVar13 + -0x20),*(MeReal **)(puVar13 + -0x1c),
+                 *(MeReal **)(puVar13 + -0x18),*(MeReal *)(puVar13 + -0x14),
+                 *(MeReal *)(puVar13 + -0x10),*(MeVector4 **)(puVar13 + -0xc),
+                 *(MeReal *)(puVar13 + -8),*(McdIntersectResult **)(puVar13 + -4));
+      iVar10 = iVar10 + -4;
+      local_5c = local_5c + 0x60;
+    } while (iVar10 != 0);
+  }
+LAB_0001394c:
+  fVar14 = result->normal[0];
+  fVar4 = local_58[2] * local_58[2] + fVar14 * fVar14 + local_58[1] * local_58[1];
+  if (1.4399999e-14 < fVar4) {
+                    /* Unresolved local var: float __result@[???] */
+    fVar4 = 1.0 / SQRT(fVar4);
+    result->normal[0] = fVar14 * fVar4;
+    local_58[1] = local_58[1] * fVar4;
+    local_58[2] = fVar4 * local_58[2];
+  }
+  return result->touch;
+}
+
+
+/* ==== McdSphylTriangleListRegisterInteraction ==== */
+
+/* WARNING: Unknown calling convention */
+
+MeBool McdSphylTriangleListRegisterInteraction(McdFramework *frame)
+
+{
+  McdInteractions interactions;
+  
+  interactions.helloFn = (McdHelloFn)0x0;
+  interactions.goodbyeFn = (McdGoodbyeFn)0x0;
+  interactions.intersectFn = McdSphylTriangleListIntersect;
+  interactions.safetimeFn = (McdSafeTimeFn)0x0;
+  interactions.cull = 1;
+  interactions.warned = 0;
+  McdFrameworkSetInteractions(frame,5,6,&interactions);
+  return 1;
+}
+
+
+/* ==== LineSphere ==== */
+
+int LineSphere(MeReal *sp,MeReal r,MeReal *inOrig,MeReal *dir,MeReal mag,
+              McdLineSegIntersectResult *info)
+
+{
+  float fVar1;
+  float fVar2;
+  float fVar3;
+  float fVar4;
+  float fVar5;
+  MeReal origToCentre [3];
+  
+                    /* Unresolved local var: MeReal r2@[DW_OP_reg16(ST5)]
+                       Unresolved local var: MeReal L2@[DW_OP_reg15(ST4)]
+                       Unresolved local var: MeReal D@[DW_OP_reg12(ST1)]
+                       Unresolved local var: MeReal D2@[DW_OP_reg11(ST0)]
+                       Unresolved local var: MeReal M2@[DW_OP_reg14(ST3)]
+                       Unresolved local var: MeReal DminusMag@[DW_OP_reg11(ST0)]
+                       Unresolved local var: MeReal t@[DW_OP_reg12(ST1)]
+                       Unresolved local var: MeReal invR@[DW_OP_reg12(ST1)] */
+  fVar2 = *sp - *inOrig;
+  fVar3 = sp[1] - inOrig[1];
+  fVar1 = r * r;
+  fVar5 = sp[2] - inOrig[2];
+  fVar4 = fVar2 * fVar2 + fVar3 * fVar3 + fVar5 * fVar5;
+  fVar2 = fVar2 * *dir + fVar3 * dir[1] + fVar5 * dir[2];
+  if (fVar1 <= fVar4) {
+    if ((fVar2 < 0.0) && (fVar1 < fVar4)) {
+      return 0;
+    }
+    fVar4 = fVar4 - fVar2 * fVar2;
+    if (fVar1 < fVar4) {
+      return 0;
+    }
+    fVar3 = fVar2 - mag;
+    if ((0.0 < fVar3) && (fVar1 - fVar4 < fVar3 * fVar3)) {
+      return 0;
+    }
+                    /* Unresolved local var: float __result@[???] */
+    fVar2 = fVar2 - SQRT(fVar1 - fVar4);
+    info->distance = fVar2;
+    info->position[0] = fVar2 * *dir + *inOrig;
+    info->position[1] = fVar2 * dir[1] + inOrig[1];
+    info->position[2] = fVar2 * dir[2] + inOrig[2];
+    fVar1 = 1.0 / r;
+    info->normal[0] = (info->position[0] - *sp) * fVar1;
+    info->normal[1] = (info->position[1] - sp[1]) * fVar1;
+    info->normal[2] = (info->position[2] - sp[2]) * fVar1;
+  }
+  else {
+    info->distance = 0.0;
+    info->position[0] = *inOrig;
+    info->position[1] = inOrig[1];
+    info->position[2] = inOrig[2];
+  }
+  return 1;
+}
+
+
+/* ==== IxSphylLineSegment ==== */
+
+int IxSphylLineSegment(McdModelID_conflict model,MeReal *inOrig,MeReal *inDest,
+                      McdLineSegIntersectResult *info)
+
+{
+  float fVar1;
+  float fVar2;
+  bool bVar3;
+  float fVar4;
+  float fVar5;
+  float fVar6;
+  bool bVar7;
+  bool bVar8;
+  void *pvVar9;
+  float *pfVar10;
+  uint uVar11;
+  uint uVar12;
+  MeReal mag;
+  MeReal z0;
+  MeReal dy;
+  MeReal dx;
+  McdSphyl *sphyl;
+  McdLineSegIntersectResult tmpInfo;
+  MeReal dir [3];
+  MeReal sp [3];
+  MeBool doTest [3];
+  MeReal lDest [3];
+  MeReal lOrig [3];
+  
+                    /* Unresolved local var: MeMatrix4Ptr tm@[DW_OP_reg6(ESI)]
+                       Unresolved local var: MeReal mag@[DW_OP_reg7(EDI)]
+                       Unresolved local var: MeBool hit@[DW_OP_reg2(EDX)] */
+  pvVar9 = McdModelGetGeometry(model);
+  pfVar10 = McdModelGetTransformPtr(model);
+  fVar2 = *inOrig - pfVar10[0xc];
+  fVar4 = inOrig[1] - pfVar10[0xd];
+  fVar5 = inOrig[2] - pfVar10[0xe];
+  lOrig[0] = fVar5 * pfVar10[2] + fVar2 * *pfVar10 + fVar4 * pfVar10[1];
+  lOrig[1] = fVar5 * pfVar10[6] + fVar2 * pfVar10[4] + fVar4 * pfVar10[5];
+  lOrig[2] = fVar5 * pfVar10[10] + fVar2 * pfVar10[8] + fVar4 * pfVar10[9];
+  fVar4 = *inDest - pfVar10[0xc];
+  fVar6 = inDest[1] - pfVar10[0xd];
+  fVar5 = inDest[2] - pfVar10[0xe];
+  bVar3 = false;
+  bVar8 = false;
+  fVar2 = fVar4 * pfVar10[8] + fVar6 * pfVar10[9] + fVar5 * pfVar10[10];
+  bVar7 = false;
+  if (lOrig[2] < *(float *)((int)pvVar9 + 0x14)) {
+    if (-*(float *)((int)pvVar9 + 0x14) <= lOrig[2]) {
+      fVar1 = *(float *)((int)pvVar9 + 0x14);
+      bVar3 = fVar1 <= fVar2;
+      if (bVar3) {
+        fVar1 = *(float *)((int)pvVar9 + 0x14);
+      }
+      goto joined_r0x00014225;
+    }
+    bVar7 = true;
+    if ((-*(float *)((int)pvVar9 + 0x14) <= fVar2) &&
+       (bVar8 = true, *(float *)((int)pvVar9 + 0x14) <= fVar2)) {
+      bVar3 = true;
+    }
+  }
+  else {
+    bVar3 = true;
+    if (fVar2 < *(float *)((int)pvVar9 + 0x14)) {
+      fVar1 = *(float *)((int)pvVar9 + 0x14);
+joined_r0x00014225:
+      bVar8 = true;
+      if (fVar2 < -fVar1) {
+        bVar8 = true;
+        bVar7 = true;
+      }
+    }
+  }
+  dir[2] = fVar2 - lOrig[2];
+  dir[0] = (fVar5 * pfVar10[2] + fVar4 * *pfVar10 + fVar6 * pfVar10[1]) - lOrig[0];
+  sp[0] = 0.0;
+  sp[1] = 0.0;
+  dir[1] = (fVar5 * pfVar10[6] + fVar4 * pfVar10[4] + fVar6 * pfVar10[5]) - lOrig[1];
+  sp[2] = 0.0;
+  mag = MeVector3Normalize(dir);
+  uVar12 = 0;
+  if (bVar3) {
+    sp[2] = *(MeReal *)((int)pvVar9 + 0x14);
+    uVar11 = LineSphere(sp,*(MeReal *)((int)pvVar9 + 0x10),lOrig,dir,mag,&tmpInfo);
+    uVar12 = 0;
+    if (uVar11 != 0) {
+      uVar12 = uVar11 & (tmpInfo.position[2] < *(float *)((int)pvVar9 + 0x14)) - 1;
+    }
+  }
+  if ((bVar7) && (uVar12 == 0)) {
+    sp[2] = -*(MeReal *)((int)pvVar9 + 0x14);
+    uVar11 = LineSphere(sp,*(MeReal *)((int)pvVar9 + 0x10),lOrig,dir,mag,&tmpInfo);
+    uVar12 = 0;
+    if (uVar11 != 0) {
+      uVar12 = uVar11 & (-*(float *)((int)pvVar9 + 0x14) < tmpInfo.position[2]) - 1;
+    }
+  }
+  if (bVar8) {
+    if (uVar12 != 0) goto LAB_00013e7a;
+                    /* Unresolved local var: MeReal dz@[???]
+                       Unresolved local var: MeReal x0@[DW_OP_reg17(ST6)]
+                       Unresolved local var: MeReal y0@[DW_OP_reg18(ST7)] */
+    fVar2 = *(float *)((int)pvVar9 + 0x10);
+    if (((fVar2 * fVar2 < lOrig[0] * lOrig[0] + lOrig[1] * lOrig[1]) ||
+        (*(float *)((int)pvVar9 + 0x14) < lOrig[2])) || (lOrig[2] < -*(float *)((int)pvVar9 + 0x14))
+       ) {
+                    /* Unresolved local var: MeReal A@[DW_OP_reg15(ST4)]
+                       Unresolved local var: MeReal B@[DW_OP_reg12(ST1)]
+                       Unresolved local var: MeReal C@[???]
+                       Unresolved local var: MeReal root@[DW_OP_reg13(ST2)] */
+      fVar5 = dir[0] * dir[0] + dir[1] * dir[1];
+      fVar4 = dir[0] * lOrig[0] + dir[1] * lOrig[1];
+      fVar4 = fVar4 + fVar4;
+      fVar2 = fVar4 * fVar4 -
+              ((lOrig[0] * lOrig[0] + lOrig[1] * lOrig[1]) - fVar2 * fVar2) * fVar5 * 4.0;
+      if ((0.0 <= fVar2) && (1e-12 < ABS(fVar5))) {
+                    /* Unresolved local var: MeReal s@[DW_OP_reg14(ST3)]
+                       Unresolved local var: MeReal z1@[DW_OP_reg13(ST2)]
+                       Unresolved local var: float __result@[???] */
+        fVar2 = (-fVar4 - SQRT(fVar2)) / (fVar5 + fVar5);
+        fVar4 = fVar2 * dir[2] + lOrig[2];
+        if (((0.0 < fVar2) && ((fVar2 < mag && (fVar4 <= *(float *)((int)pvVar9 + 0x14))))) &&
+           (-*(float *)((int)pvVar9 + 0x14) <= fVar4)) {
+          tmpInfo.position[0] = dir[0] * fVar2 + lOrig[0];
+          tmpInfo.position[1] = dir[1] * fVar2 + lOrig[1];
+          tmpInfo.normal[2] = 0.0;
+          tmpInfo.position[2] = fVar4;
+          tmpInfo.normal[0] = tmpInfo.position[0];
+          tmpInfo.normal[1] = tmpInfo.position[1];
+          tmpInfo.distance = fVar2;
+          MeVector3Normalize(tmpInfo.normal);
+          uVar12 = 1;
+        }
+      }
+    }
+    else {
+      tmpInfo.position[0] = lOrig[0];
+      tmpInfo.position[1] = lOrig[1];
+      tmpInfo.position[2] = lOrig[2];
+      uVar12 = 1;
+    }
+  }
+  if (uVar12 == 0) {
+    return 0;
+  }
+LAB_00013e7a:
+  info->position[0] =
+       tmpInfo.position[2] * pfVar10[8] +
+       tmpInfo.position[1] * pfVar10[4] + tmpInfo.position[0] * *pfVar10 + pfVar10[0xc];
+  info->position[1] =
+       tmpInfo.position[2] * pfVar10[9] +
+       tmpInfo.position[1] * pfVar10[5] + tmpInfo.position[0] * pfVar10[1] + pfVar10[0xd];
+  info->position[2] =
+       tmpInfo.position[2] * pfVar10[10] +
+       tmpInfo.position[0] * pfVar10[2] + tmpInfo.position[1] * pfVar10[6] + pfVar10[0xe];
+  info->normal[0] =
+       tmpInfo.normal[2] * pfVar10[8] +
+       tmpInfo.normal[1] * pfVar10[4] + tmpInfo.normal[0] * *pfVar10;
+  info->normal[1] =
+       tmpInfo.normal[2] * pfVar10[9] +
+       tmpInfo.normal[0] * pfVar10[1] + tmpInfo.normal[1] * pfVar10[5];
+  info->normal[2] =
+       tmpInfo.normal[2] * pfVar10[10] +
+       tmpInfo.normal[0] * pfVar10[2] + tmpInfo.normal[1] * pfVar10[6];
+  info->distance = tmpInfo.distance;
+  return uVar12;
+}
+
+
+/* ==== McdSphylLineSegmentRegisterInteraction ==== */
+
+/* WARNING: Unknown calling convention */
+
+void McdSphylLineSegmentRegisterInteraction(McdFramework *frame)
+
+{
+  McdFrameworkSetLineSegInteraction(frame,5,IxSphylLineSegment);
+  return;
+}
+
+
+/* ==== MeVector3Normalize ==== */
+
+MeReal MeVector3Normalize(MeReal *v)
+
+{
+  float fVar1;
+  float fVar2;
+  float fVar3;
+  float fVar4;
+  float local_8;
+  
+                    /* Unresolved local var: int j@[???]
+                       Unresolved local var: MeReal mag@[DW_OP_reg16(ST5)]
+                       Unresolved local var: MeReal k@[DW_OP_reg12(ST1)] */
+  fVar1 = *v;
+  fVar2 = v[1];
+  fVar3 = v[2];
+  local_8 = fVar3 * fVar3 + fVar2 * fVar2 + fVar1 * fVar1;
+  if (local_8 <= 0.0) {
+    *v = 1.0;
+    v[1] = 0.0;
+    v[2] = 0.0;
+    local_8 = 0.0;
+  }
+  else {
+    local_8 = SQRT(local_8);
+    fVar4 = 1.0 / local_8;
+    *v = fVar1 * fVar4;
+    v[1] = fVar2 * fVar4;
+    v[2] = fVar4 * fVar3;
+  }
+  return local_8;
+}
+
+
+/* ==== GenerateTriangleContact ==== */
+
+/* WARNING: Unknown calling convention */
+
+void GenerateTriangleContact
+               (McdUserTriangle *tri,MeReal *center,MeReal *axis,MeReal hh,MeReal R,MeVector4 *tm,
+               MeReal eps,McdIntersectResult *result)
+
+{
+  MeVector3 *paMVar1;
+  MeVector3 *paMVar2;
+  MeVector3 *paMVar3;
+  float fVar4;
+  float fVar5;
+  float fVar6;
+  bool bVar7;
+  bool bVar8;
+  bool bVar9;
+  float fVar10;
+  float fVar11;
+  float fVar12;
+  float fVar13;
+  float fVar14;
+  float fVar15;
+  float fVar16;
+  float fVar17;
+  float fVar18;
+  float fVar19;
+  float fVar20;
+  float fVar21;
+  float fVar22;
+  float fVar23;
+  float fVar24;
+  float fVar25;
+  float fVar26;
+  float fVar27;
+  bool bVar28;
+  MeBool MVar29;
+  MeReal (*paMVar30) [3];
+  int iVar31;
+  int iVar32;
+  float local_1dc;
+  float local_1c4;
+  float local_1bc;
+  float local_1b8;
+  float local_1b4;
+  MeReal s;
+  MeBool askew;
+  MeBool parallel;
+  MeI32 bothInside;
+  MeI16 triDim;
+  MeReal ds0;
+  MeReal s0;
+  MeBool centerUnderFace;
+  MeReal mFace;
+  MeReal bFace;
+  MeReal faceN2;
+  MeReal s0i;
+  MeReal s1i;
+  MeReal ds0i;
+  MeReal r1 [3];
+  MeReal r [3];
+  MeReal hhm [3];
+  MeReal p [3];
+  MeReal n [3];
+  MeReal m [3];
+  MeReal b [3];
+  MeReal eN2 [3];
+  MeReal eN [3] [3];
+  MeReal faceN [3];
+  MeReal edge [3] [3];
+  
+                    /* Unresolved local var: MeReal r2min@[DW_OP_reg17(ST6)]
+                       Unresolved local var: MeI32 e@[DW_OP_reg7(EDI)]
+                       Unresolved local var: MeI32 minInside@[DW_OP_reg1(ECX)]
+                       Unresolved local var: MeI32 maxInside@[DW_OP_reg6(ESI)]
+                       Unresolved local var: MeI32 someInside@[???]
+                       Unresolved local var: MeReal mFace2@[???]
+                       Unresolved local var: MeReal segmentSep@[DW_OP_reg15(ST4)]
+                       Unresolved local var: MeReal n2@[???]
+                       Unresolved local var: MeReal sep@[???] */
+  paMVar1 = tri->vertices[0];
+  paMVar2 = tri->vertices[1];
+  edge[0][0] = (*paMVar2)[0] - (*paMVar1)[0];
+  edge[0][1] = (*paMVar2)[1] - (*paMVar1)[1];
+  edge[0][2] = (*paMVar2)[2] - (*paMVar1)[2];
+  paMVar3 = tri->vertices[2];
+  edge[1][0] = (*paMVar3)[0] - (*paMVar2)[0];
+  edge[1][1] = (*paMVar3)[1] - (*paMVar2)[1];
+  edge[1][2] = (*paMVar3)[2] - (*paMVar2)[2];
+  edge[2][0] = (*paMVar1)[0] - (*paMVar3)[0];
+  edge[2][1] = (*paMVar1)[1] - (*paMVar3)[1];
+  edge[2][2] = (*paMVar1)[2] - (*paMVar3)[2];
+  fVar13 = edge[0][1] * edge[1][2] - edge[0][2] * edge[1][1];
+  fVar14 = edge[0][2] * edge[1][0] - edge[0][0] * edge[1][2];
+  fVar10 = edge[0][0] * edge[1][1] - edge[0][1] * edge[1][0];
+  fVar16 = fVar10 * fVar10 + fVar14 * fVar14 + fVar13 * fVar13;
+  eN[0][0] = fVar10 * edge[0][1] - edge[0][2] * fVar14;
+  eN[0][1] = edge[0][2] * fVar13 - edge[0][0] * fVar10;
+  eN[0][2] = edge[0][0] * fVar14 - edge[0][1] * fVar13;
+  eN[1][0] = fVar10 * edge[1][1] - fVar14 * edge[1][2];
+  eN[1][1] = edge[1][2] * fVar13 - fVar10 * edge[1][0];
+  eN[1][2] = edge[1][0] * fVar14 - edge[1][1] * fVar13;
+  eN[2][0] = edge[2][1] * fVar10 - edge[2][2] * fVar14;
+  eN[2][1] = edge[2][2] * fVar13 - edge[2][0] * fVar10;
+  eN[2][2] = edge[2][0] * fVar14 - edge[2][1] * fVar13;
+  fVar4 = *center;
+  fVar5 = center[1];
+  fVar6 = center[2];
+  fVar17 = (fVar6 * eN[0][2] + fVar4 * eN[0][0] + fVar5 * eN[0][1]) -
+           (eN[0][2] * (*paMVar1)[2] + eN[0][1] * (*paMVar1)[1] + eN[0][0] * (*paMVar1)[0]);
+  fVar12 = (fVar6 * eN[1][2] + fVar4 * eN[1][0] + fVar5 * eN[1][1]) -
+           ((*paMVar2)[2] * eN[1][2] + (*paMVar2)[1] * eN[1][1] + eN[1][0] * (*paMVar2)[0]);
+  fVar18 = (fVar6 * eN[2][2] + fVar4 * eN[2][0] + fVar5 * eN[2][1]) -
+           (eN[2][2] * (*paMVar3)[2] + eN[2][1] * (*paMVar3)[1] + eN[2][0] * (*paMVar3)[0]);
+  fVar19 = (fVar6 * fVar10 + fVar5 * fVar14 + fVar4 * fVar13) -
+           (fVar10 * (*paMVar1)[2] + fVar14 * (*paMVar1)[1] + fVar13 * (*paMVar1)[0]);
+  local_1c4 = *axis;
+  local_1b8 = axis[1];
+  local_1bc = axis[2];
+  fVar15 = local_1c4 * eN[0][0] + local_1b8 * eN[0][1] + local_1bc * eN[0][2];
+  fVar11 = eN[1][1] * local_1b8 + local_1c4 * eN[1][0] + local_1bc * eN[1][2];
+  fVar20 = local_1bc * eN[2][2] + local_1c4 * eN[2][0] + local_1b8 * eN[2][1];
+  fVar21 = local_1bc * fVar10 + local_1c4 * fVar13 + local_1b8 * fVar14;
+  bVar9 = false;
+  if (((tri->flags & kMcdTriangleTwoSided) == 0) && (fVar19 < 0.0)) {
+    bVar9 = true;
+  }
+  fVar22 = hh * fVar15;
+  fVar24 = hh * fVar11;
+  ds0 = 0.0;
+  iVar32 = -1;
+  fVar26 = hh * fVar20;
+  fVar23 = -fVar22;
+  fVar25 = -fVar24;
+  bVar7 = -fVar26 <= fVar18;
+  n[0] = 0.0;
+  n[1] = 0.0;
+  n[2] = 0.0;
+  s0 = 0.0;
+  triDim = 2;
+  if (((fVar25 < fVar12 || fVar23 < fVar17) || bVar7) &&
+      ((fVar24 < fVar12 || fVar22 < fVar17) || fVar26 < fVar18)) {
+    fVar27 = 3.4028235e+38;
+  }
+  else {
+                    /* Unresolved local var: MeReal d@[???]
+                       Unresolved local var: MeReal recipFaceN2@[???]
+                       Unresolved local var: MeReal d_N2@[DW_OP_reg11(ST0)] */
+    if (((fVar24 < fVar12 || fVar22 < fVar17) || fVar26 < fVar18) ||
+        ((fVar25 < fVar12 || fVar23 < fVar17) || bVar7)) {
+      s0 = hh;
+      if ((fVar12 <= fVar24 && fVar17 <= fVar22) && fVar18 <= fVar26) {
+        s0 = -hh;
+      }
+    }
+    else {
+                    /* Unresolved local var: MeReal hhmFace@[DW_OP_reg13(ST2)] */
+      fVar27 = hh * fVar21;
+      if (fVar16 * 6.250001e-08 <= fVar21 * fVar21) {
+                    /* Unresolved local var: MeReal faceDMin@[???]
+                       Unresolved local var: MeReal faceDMax@[???] */
+        s0 = hh;
+        if ((fVar19 - fVar27) * (fVar19 - fVar27) < (fVar19 + fVar27) * (fVar19 + fVar27)) {
+          s0 = -hh;
+        }
+      }
+      else if (fVar27 * fVar27 <= fVar19 * fVar19) {
+        ds0 = hh + hh;
+        s0 = -hh;
+      }
+    }
+    fVar4 = s0 * local_1c4 + fVar4;
+    fVar5 = s0 * local_1b8 + fVar5;
+    fVar6 = s0 * local_1bc + fVar6;
+    fVar27 = (fVar6 - (*paMVar1)[2]) * fVar10 +
+             (fVar5 - (*paMVar1)[1]) * fVar14 + (fVar4 - (*paMVar1)[0]) * fVar13;
+    fVar16 = fVar27 / fVar16;
+    n[1] = fVar14 * fVar16;
+    n[0] = fVar13 * fVar16;
+    p[1] = fVar5 - n[1];
+    n[2] = fVar10 * fVar16;
+    p[0] = fVar4 - n[0];
+    p[2] = fVar6 - n[2];
+    fVar27 = fVar27 * fVar16;
+  }
+  local_1b4 = fVar21 * fVar21;
+  bVar28 = false;
+  if ((local_1b4 < 6.250001e-08) || (hh * hh * local_1b4 < fVar19 * fVar19)) {
+    bVar28 = true;
+  }
+  askew = 0;
+  if (((fVar24 < fVar12 || fVar22 < fVar17) || fVar26 < fVar18) ||
+      ((fVar25 < fVar12 || fVar23 < fVar17) || bVar7)) {
+                    /* Unresolved local var: MeI32 i@[DW_OP_reg6(ESI)] */
+    iVar31 = 0;
+    paMVar30 = edge;
+    do {
+                    /* Unresolved local var: MeBool askewi@[DW_OP_reg2(EDX)]
+                       Unresolved local var: MeReal r2@[DW_OP_reg16(ST5)]
+                       Unresolved local var: MeReal sqDiff@[DW_OP_reg12(ST1)]
+                       Unresolved local var: MeBool withinTolerance@[DW_OP_reg1(ECX)] */
+      MVar29 = NSegmentSegment(center,axis,-hh,hh,*tri->vertices[iVar31],*paMVar30,0.0,1.0,&s0i,&s1i
+                               ,&ds0i);
+      local_1c4 = *axis;
+      local_1b8 = axis[1];
+      local_1bc = axis[2];
+      paMVar1 = tri->vertices[iVar31];
+      r1[0] = s1i * (*paMVar30)[0] + (*paMVar1)[0];
+      r1[1] = s1i * (*paMVar30)[1] + (*paMVar1)[1];
+      r[1] = (s0i * local_1b8 + center[1]) - r1[1];
+      r1[2] = s1i * (*paMVar30)[2] + (*paMVar1)[2];
+      r[2] = (s0i * local_1bc + center[2]) - r1[2];
+      r[0] = (s0i * local_1c4 + *center) - r1[0];
+      fVar5 = r[0] * r[0] + r[1] * r[1] + r[2] * r[2];
+      fVar4 = fVar5 - fVar27;
+      bVar8 = fVar4 * fVar4 < fVar5 * fVar5 * 2.5000003e-07;
+      if (0.0 <= fVar4) {
+        if (bVar8) goto LAB_00014d50;
+LAB_00014d6b:
+        if (fVar27 == 3.4028235e+38) goto LAB_00014d86;
+        if ((((bVar8) && (ds0 == 0.0)) && (bVar28)) && (ds0 = s0i - s0, 6.250001e-08 < ds0 * ds0)) {
+          triDim = 2;
+          iVar32 = -1;
+        }
+      }
+      else {
+        if (bVar8) {
+LAB_00014d50:
+          if (ds0i == 0.0) goto LAB_00014d6b;
+        }
+LAB_00014d86:
+        ds0 = ds0i;
+        s0 = s0i;
+        triDim = 0;
+        iVar32 = iVar31;
+        fVar27 = fVar5;
+        askew = MVar29;
+        p[0] = r1[0];
+        p[1] = r1[1];
+        p[2] = r1[2];
+        n[0] = r[0];
+        n[1] = r[1];
+        n[2] = r[2];
+        if ((s1i * s1i != s1i) || (ds0i != 0.0)) {
+          triDim = 1;
+        }
+      }
+      iVar31 = iVar31 + 1;
+      paMVar30 = paMVar30 + 1;
+    } while (iVar31 < 3);
+  }
+  if ((-1 < iVar32) && (((int)tri->flags >> ((char)iVar32 + 2U & 0x1f) & 1U) == 0)) {
+    return;
+  }
+  local_1dc = n[2] * n[2] + n[1] * n[1] + n[0] * n[0];
+  if (local_1dc <= 6.250001e-08) {
+    n[2] = fVar10;
+    n[0] = fVar13;
+    n[1] = fVar14;
+    if (iVar32 < 0) {
+joined_r0x000154d1:
+      if (fVar19 < 0.0) {
+        n[0] = n[0] * -1.0;
+        n[1] = n[1] * -1.0;
+        n[2] = n[2] * -1.0;
+      }
+    }
+    else {
+      if (askew != 0) {
+        n[2] = local_1b8 * edge[iVar32][0] - local_1c4 * edge[iVar32][1];
+        n[0] = local_1bc * edge[iVar32][1] - local_1b8 * edge[iVar32][2];
+        n[1] = local_1c4 * edge[iVar32][2] - local_1bc * edge[iVar32][0];
+        fVar19 = fVar21;
+        goto joined_r0x000154d1;
+      }
+      n[0] = eN[iVar32][0];
+      n[1] = eN[iVar32][1];
+      n[2] = eN[iVar32][2];
+    }
+    local_1dc = 0.0;
+    MeVector3Normalize(n);
+  }
+  else {
+                    /* Unresolved local var: MeReal invN@[DW_OP_reg11(ST0)]
+                       Unresolved local var: float __result@[DW_OP_reg11(ST0)] */
+    fVar4 = 1.0 / SQRT(local_1dc);
+    n[0] = n[0] * fVar4;
+    n[1] = n[1] * fVar4;
+    n[2] = n[2] * fVar4;
+    local_1dc = local_1dc * fVar4;
+                    /* Unresolved local var: MeReal nsFace@[DW_OP_reg12(ST1)]
+                       Unresolved local var: MeI32 segmentIntersect@[???] */
+    if ((!bVar28) &&
+       (fVar19 = (1.0 / fVar21) * fVar19,
+       (fVar12 <= fVar19 * fVar11 && fVar17 <= fVar19 * fVar15) && fVar18 <= fVar19 * fVar20)) {
+      n[1] = n[1] * -1.0;
+      n[0] = n[0] * -1.0;
+      n[2] = n[2] * -1.0;
+      local_1dc = local_1dc * -1.0;
+    }
+    if ((bVar9) && (iVar32 < 0)) {
+      if (eps <= local_1dc - R) {
+        return;
+      }
+      n[0] = n[0] * -1.0;
+      n[1] = n[1] * -1.0;
+      mFace = ABS(fVar21);
+      n[2] = n[2] * -1.0;
+      local_1dc = -local_1dc - (hh + hh) * mFace;
+    }
+  }
+  local_1dc = local_1dc - R;
+  if (eps <= local_1dc) {
+    return;
+  }
+  fVar4 = *axis;
+  fVar5 = axis[1];
+  fVar6 = axis[2];
+  r1[0] = fVar6 * tm[2][0] + fVar5 * tm[1][0] + fVar4 * (*tm)[0];
+  r1[1] = fVar6 * tm[2][1] + fVar4 * (*tm)[1] + fVar5 * tm[1][1];
+  r1[2] = fVar6 * tm[2][2] + fVar4 * (*tm)[2] + fVar5 * tm[1][2];
+  iVar32 = result->contactCount;
+  AccumulateSphylContacts(p,n,local_1dc,3,triDim,r1,ds0,tm,result);
+  if ((ds0 != 0.0) ||
+     (((fVar24 < fVar12 || fVar22 < fVar17) || fVar26 < fVar18) ||
+      ((fVar25 < fVar12 || fVar23 < fVar17) || bVar7))) goto LAB_00015174;
+                    /* Unresolved local var: MeReal num@[DW_OP_reg13(ST2)]
+                       Unresolved local var: MeReal den@[DW_OP_reg14(ST3)] */
+  paMVar1 = tri->vertices[0];
+  fVar5 = R - ((*center * n[0] + center[1] * n[1] + center[2] * n[2]) -
+              ((*paMVar1)[2] * n[2] + (*paMVar1)[0] * n[0] + (*paMVar1)[1] * n[1]));
+  fVar4 = axis[2] * n[2] + *axis * n[0] + axis[1] * n[1];
+  if (fVar4 <= 0.00025) {
+    if ((fVar4 < 0.00025) && (s = hh, fVar5 < -fVar4 * hh)) {
+      bVar9 = fVar5 - s0 * fVar4 < hh * fVar4 * fVar4;
+      goto LAB_00015146;
+    }
+  }
+  else {
+    s = hh;
+    if (fVar5 < hh * fVar4) {
+      bVar9 = fVar5 - s0 * fVar4 < hh * fVar4 * fVar4;
+LAB_00015146:
+      s = s0;
+      if (!bVar9) {
+        s = fVar5 / fVar4;
+      }
+    }
+  }
+  if (s != s0) {
+    fVar4 = -R;
+    r[0] = s * r1[0] + n[0] * fVar4 + *center;
+    r[2] = fVar4 * n[2] + center[2] + s * r1[2];
+    r[1] = s * r1[1] + n[1] * fVar4 + center[1];
+    AccumulateSphylContacts(r,n,local_1dc,3,2,(MeVector3Ptr)0x0,0.0,tm,result);
+  }
+LAB_00015174:
+  if (iVar32 < result->contactCount) {
+    iVar31 = iVar32 * 0x28;
+    do {
+      iVar32 = iVar32 + 1;
+      *(anon_union_4_2_43add64d_for_triangleData *)((int)result->contacts->normal + iVar31 + 0x18) =
+           tri->triangleData;
+      iVar31 = iVar31 + 0x28;
+    } while (iVar32 < result->contactCount);
+  }
+  return;
+}
+
+

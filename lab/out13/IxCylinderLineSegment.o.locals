@@ -1,0 +1,14 @@
+# function,name,stackoff,hexoff,size,type
+IxCylinderLineSegment,model,4,00000004,4,McdModelID.conflict
+IxCylinderLineSegment,inOrig,8,00000008,4,MeReal *
+IxCylinderLineSegment,inDest,12,0000000c,4,MeReal *
+IxCylinderLineSegment,info,16,00000010,4,McdLineSegIntersectResult *
+IxCylinderLineSegment,r,-128,ffffff80,4,MeReal
+IxCylinderLineSegment,hh,-132,ffffff7c,4,MeReal
+IxCylinderLineSegment,p0,-44,ffffffd4,12,lsVec3
+IxCylinderLineSegment,p1,-60,ffffffc4,12,lsVec3
+IxCylinderLineSegment,dir,-76,ffffffb4,12,lsVec3
+IxCylinderLineSegment,s,-144,ffffff70,4,MeReal
+IxCylinderLineSegment,normal,-92,ffffffa4,12,lsVec3
+IxCylinderLineSegment,ip,-108,ffffff94,12,lsVec3
+McdCylinderLineSegmentRegisterInteraction,frame,4,00000004,4,McdFramework *

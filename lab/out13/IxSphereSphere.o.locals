@@ -1,0 +1,20 @@
+# function,name,stackoff,hexoff,size,type
+McdSphereSphereIntersect,tA,-96,ffffffa0,4,lsTransform *
+McdSphereSphereIntersect,eps,-100,ffffff9c,4,MeReal
+McdSphereSphereIntersect,rA,-104,ffffff98,4,MeReal
+McdSphereSphereIntersect,normal,-44,ffffffd4,12,lsVec3
+McdSphereSphereIntersect,p,4,00000004,4,McdModelPair *
+McdSphereSphereIntersect,result,8,00000008,4,McdIntersectResult *
+McdSphereSphereSafeTime,p,4,00000004,4,McdModelPair *
+McdSphereSphereSafeTime,maxTime,8,00000008,4,MeReal
+McdSphereSphereSafeTime,result,12,0000000c,4,McdSafeTimeResult *
+McdSphereSphereSafeTime,velS1,-44,ffffffd4,12,lsVec3
+McdSphereSphereSafeTime,velS2,-60,ffffffc4,12,lsVec3
+McdSphereSphereSafeTime,posS1,-76,ffffffb4,12,lsVec3
+McdSphereSphereSafeTime,posS2,-92,ffffffa4,12,lsVec3
+McdSphereSphereSafeTime,geometry2,-128,ffffff80,4,McdSphereID
+McdSphereSphereSafeTime,radS1,-132,ffffff7c,4,MeReal
+McdSphereSphereSafeTime,pose,-108,ffffff94,12,lsVec3
+McdSphereSphereSafeTime,velocity,-124,ffffff84,12,lsVec3
+McdSphereSphereRegisterInteraction,frame,4,00000004,4,McdFramework *
+McdSphereSphereRegisterInteraction,interactions,-44,ffffffd4,28,McdInteractions

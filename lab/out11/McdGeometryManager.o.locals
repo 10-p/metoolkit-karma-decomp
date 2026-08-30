@@ -1,0 +1,19 @@
+# function,name,stackoff,hexoff,size,type
+McdGMCreateGeometry,agGeom,-52,ffffffcc,4,McdGeometryID
+McdGMCreateGeometry,it,-48,ffffffd0,4,MeFPrimitiveIt
+McdGMCreateGeometry,agHashName,-56,ffffffc8,4,char *
+McdGMCreateGeometry,agName,-60,ffffffc4,4,char *
+McdGMCreateGeometry,fVar10,-64,ffffffc0,4,float
+McdGMCreateGeometry,dims,-44,ffffffd4,12,MeVector3
+McdGMCreateGeometry,gm,4,00000004,4,McdGeomMan *
+McdGMCreateGeometry,fg,8,00000008,4,MeFGeometry *
+McdGMCreateGeometry,assetName,12,0000000c,4,char *
+McdGMDestroyGeometry,g,-20,ffffffec,4,int
+McdGMDestroyGeometry,gCount,-24,ffffffe8,4,int
+McdGMDestroyGeometry,gm,4,00000004,4,McdGeomMan *
+McdGMDestroyGeometry,geom,8,00000008,4,McdGeometryID
+McdGMCreate,fwk,4,00000004,4,McdFrameworkID
+McdGMDestroy,gm,4,00000004,4,McdGeomMan *
+McdGMGetGeomCount,gm,4,00000004,4,McdGeomMan *
+McdGMGetFramework,gm,4,00000004,4,McdGeomMan *
+McdGMGetNullGeometry,gm,4,00000004,4,McdGeomMan *

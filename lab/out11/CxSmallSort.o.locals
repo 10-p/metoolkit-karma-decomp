@@ -1,0 +1,118 @@
+# function,name,stackoff,hexoff,size,type
+lsda_exception_table_00010000,this,4,00000004,4,CxSmallSort *
+lsda_exception_table_00010000,inNObjects,8,00000008,4,int
+lsda_exception_table_00010000,inNPairs,12,0000000c,4,int
+CxSmallSort,this,4,00000004,4,CxSmallSort *
+CxSmallSort,inNObjects,8,00000008,4,int
+CxSmallSort,inNPairs,12,0000000c,4,int
+~CxSmallSort,this,4,00000004,4,CxSmallSort *
+~CxSmallSort,__in_chrg,8,00000008,4,int
+~CxSmallSort,this,4,00000004,4,CxSmallSort *
+~CxSmallSort,__in_chrg,8,00000008,4,int
+~CxSmallSort,this,4,00000004,4,CxSmallSort *
+~CxSmallSort,__in_chrg,8,00000008,4,int
+Delete,this,4,00000004,4,CxSmallSort *
+New,fwk,4,00000004,4,McdFramework *
+New,inAxes,8,00000008,1,MeU8
+New,inNObjects,12,0000000c,4,int
+New,inNPairs,16,00000010,4,int
+Insert,this,4,00000004,4,CxSmallSort *
+Insert,id,-20,ffffffec,4,MeI32
+Insert,rep,-24,ffffffe8,4,CxSmallSortRep *
+Insert,inData,8,00000008,4,McdModelID.conflict
+Insert,cullingTable,12,0000000c,4,McdCullingTable *
+Insert,cullingIndex,16,00000010,4,MeU32
+Insert,cullingID,20,00000014,4,MeU32
+Remove,this,4,00000004,4,CxSmallSort *
+Remove,inID,8,00000008,4,MeI32
+Remove,rep,-20,ffffffec,4,CxSmallSortRep *
+Remove,local_30,-48,ffffffd0,4,int
+SetDynamic,this,4,00000004,4,CxSmallSort *
+SetDynamic,inID,8,00000008,4,MeI32
+SetDynamic,inIsDynamic,12,0000000c,1,bool
+GetDynamic,this,4,00000004,4,CxSmallSort *
+GetDynamic,inID,8,00000008,4,MeI32
+SetData,this,4,00000004,4,CxSmallSort *
+SetData,inData,8,00000008,4,void *
+GetData,this,4,00000004,4,CxSmallSort *
+ValidID,this,4,00000004,4,CxSmallSort *
+ValidID,inID,8,00000008,4,MeI32
+GetPairOverlapEnabled,inID1,8,00000008,4,MeI32
+GetPairOverlapEnabled,this,4,00000004,4,CxSmallSort *
+GetPairOverlapEnabled,inID2,12,0000000c,4,MeI32
+SetPairOverlapEnabled,this,4,00000004,4,CxSmallSort *
+SetPairOverlapEnabled,inID1,8,00000008,4,MeI32
+SetPairOverlapEnabled,inID2,12,0000000c,4,MeI32
+SetPairOverlapEnabled,enable,16,00000010,1,bool
+SetPairOverlapEnabled,l,-20,ffffffec,4,MeI32
+getPairs,this,4,00000004,4,CxSmallSort *
+getPairs,iter,8,00000008,4,McdSpacePairIterator *
+getPairs,a,12,0000000c,4,McdModelPairContainer *
+getTransitions,this,4,00000004,4,CxSmallSort *
+getTransitions,iter,8,00000008,4,McdSpacePairIterator *
+getTransitions,a,12,0000000c,4,McdModelPairContainer *
+MoveStartMarkerUp,inID,-20,ffffffec,4,MeI32
+MoveStartMarkerUp,inOrdinate,-28,ffffffe4,4,MeReal
+MoveStartMarkerUp,rep,-32,ffffffe0,4,CxSmallSortRep *
+MoveStartMarkerUp,state,-65,ffffffbf,1,MeU8
+MoveStartMarkerUp,l,-36,ffffffdc,4,MeI32
+MoveStartMarkerUp,mem,-44,ffffffd4,4,MeU8 *
+MoveStartMarkerUp,o,-52,ffffffcc,4,MeU32
+MoveStartMarkerUp,this,4,00000004,4,CxSmallSort *
+MoveStartMarkerUp,inMarker,8,00000008,4,CxSmallSortMarker *
+MoveStartMarkerDown,inID,-20,ffffffec,4,MeI32
+MoveStartMarkerDown,inOrdinate,-28,ffffffe4,4,MeReal
+MoveStartMarkerDown,rep,-32,ffffffe0,4,CxSmallSortRep *
+MoveStartMarkerDown,state,-49,ffffffcf,1,MeU8
+MoveStartMarkerDown,l,-36,ffffffdc,4,MeI32
+MoveStartMarkerDown,this,4,00000004,4,CxSmallSort *
+MoveStartMarkerDown,inMarker,8,00000008,4,CxSmallSortMarker *
+MoveEndMarkerUp,inID,-20,ffffffec,4,MeI32
+MoveEndMarkerUp,inOrdinate,-28,ffffffe4,4,MeReal
+MoveEndMarkerUp,rep,-32,ffffffe0,4,CxSmallSortRep *
+MoveEndMarkerUp,state,-49,ffffffcf,1,MeU8
+MoveEndMarkerUp,this,4,00000004,4,CxSmallSort *
+MoveEndMarkerUp,inMarker,8,00000008,4,CxSmallSortMarker *
+MoveEndMarkerUp,l,-36,ffffffdc,4,MeI32
+MoveEndMarkerDown,this,4,00000004,4,CxSmallSort *
+MoveEndMarkerDown,inMarker,8,00000008,4,CxSmallSortMarker *
+MoveEndMarkerDown,marker,-20,ffffffec,4,CxSmallSortMarker *
+MoveEndMarkerDown,inID,-24,ffffffe8,4,MeI32
+MoveEndMarkerDown,inOrdinate,-32,ffffffe0,4,MeReal
+MoveEndMarkerDown,rep,-36,ffffffdc,4,CxSmallSortRep *
+MoveEndMarkerDown,state,-49,ffffffcf,1,MeU8
+MoveEndMarkerDown,l,-40,ffffffd8,4,MeI32
+_Update,oldmin,-32,ffffffe0,4,MeReal
+_Update,this,4,00000004,4,CxSmallSort *
+_Update,oldmax,-36,ffffffdc,4,MeReal
+_Update,inID,8,00000008,4,MeI32
+_Update,min,12,0000000c,4,MeVector3Ptr
+_Update,max,16,00000010,4,MeVector3Ptr
+_Update,maxDone,-20,ffffffec,4,int
+_Update,startm,-24,ffffffe8,4,CxSmallSortMarker *
+_Update,endm,-28,ffffffe4,4,CxSmallSortMarker *
+UpdateSingle,this,4,00000004,4,CxSmallSort *
+UpdateSingle,min,-44,ffffffd4,12,MeReal[3]
+UpdateSingle,max,-60,ffffffc4,12,MeReal[3]
+UpdateSingle,inID,8,00000008,4,MeI32
+UpdateSingle,duration,12,0000000c,4,MeReal
+UpdateAll,this,4,00000004,4,CxSmallSort *
+UpdateAll,min,-44,ffffffd4,12,MeReal[3]
+UpdateAll,max,-60,ffffffc4,12,MeReal[3]
+UpdateAll,duration,8,00000008,4,MeReal
+UpdateBegin,this,4,00000004,4,CxSmallSort *
+UpdateEnd,this,4,00000004,4,CxSmallSort *
+SetCullingParameters,this,4,00000004,4,CxSmallSort *
+SetCullingParameters,inID,8,00000008,4,MeI32
+SetCullingParameters,table,12,0000000c,4,McdCullingTable *
+SetCullingParameters,cullingIndex,16,00000010,4,MeU32
+SetCullingParameters,cullingID,20,00000014,4,MeU32
+SetCullingParameters,local_34,-52,ffffffcc,4,int
+SetCullingParameters,local_30,-48,ffffffd0,4,CxSmallSortRep *
+SetCullingParameters,local_2c,-44,ffffffd4,4,int
+SetCullingParameters,local_28,-40,ffffffd8,4,int
+SetCullingParameters,oldTable,-20,ffffffec,4,McdCullingTable *
+SetCullingParameters,oldCullingIndex,-24,ffffffe8,4,MeU32
+SetCullingParameters,oldCullingID,-28,ffffffe4,4,MeU32
+SetCullingParameters,i,-30,ffffffe2,2,MeI16
+SetCullingParameters,inRep,-36,ffffffdc,4,CxSmallSortRep *

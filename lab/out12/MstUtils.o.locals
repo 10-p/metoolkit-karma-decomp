@@ -1,0 +1,65 @@
+# function,name,stackoff,hexoff,size,type
+MstHandleCollisions,contacts,-40,ffffffd8,4,McdContact *
+MstHandleCollisions,contactCount,-20,ffffffec,4,int
+MstHandleCollisions,resultCount,-24,ffffffe8,4,int
+MstHandleCollisions,arrayFinished,-44,ffffffd4,4,MeBool
+MstHandleCollisions,group,-48,ffffffd0,4,MdtContactGroupID.conflict
+MstHandleCollisions,params,-52,ffffffcc,4,MdtContactParamsID
+MstHandleCollisions,contactCB,-56,ffffffc8,4,MstPerContactCBPtr
+MstHandleCollisions,aiStack_9cb0,-40112,ffff6350,24,int[6]
+MstHandleCollisions,material1,-60,ffffffc4,4,MstMaterialID
+MstHandleCollisions,fStack_9c98,-40088,ffff6368,4,float
+MstHandleCollisions,material2,-64,ffffffc0,4,MstMaterialID
+MstHandleCollisions,aMStack_9c94,-40084,ffff636c,8,MeReal[2]
+MstHandleCollisions,intersectCB,-68,ffffffbc,4,MstIntersectCBPtr
+MstHandleCollisions,aMStack_9c8c,-40076,ffff6374,40000,McdContact[1000]
+MstHandleCollisions,pairs,4,00000004,4,McdModelPairContainer *
+MstHandleCollisions,s,8,00000008,4,McdSpaceID
+MstHandleCollisions,w,12,0000000c,4,MdtWorldID
+MstHandleCollisions,b,16,00000010,4,MstBridgeID
+MstHandleCollisions,i,-28,ffffffe4,4,int
+MstHandleCollisions,j,-32,ffffffe0,4,int
+MstHandleCollisions,local_48,-72,ffffffb8,4,McdIntersectResult *
+MstHandleCollisions,results,-36,ffffffdc,4,McdIntersectResult *
+MstHandleTransitions,b,16,00000010,4,MstBridgeID
+MstHandleTransitions,key1,-20,ffffffec,4,MeI32
+MstHandleTransitions,key2,-24,ffffffe8,4,MeI32
+MstHandleTransitions,pairs,4,00000004,4,McdModelPairContainer *
+MstHandleTransitions,s,8,00000008,4,McdSpaceID
+MstHandleTransitions,w,12,0000000c,4,MdtWorldID
+MstAutoSetInertialTensor,model,4,00000004,4,McdModelID.conflict
+MstAutoSetInertialTensor,I,-76,ffffffb4,36,MeMatrix3
+MstAutoSetInertialTensor,com_tm,-140,ffffff74,64,MeMatrix4
+MstAutoSetInertialTensor,vol,-144,ffffff70,4,MeReal
+MstModelAndBodyCreate,com_tm,-140,ffffff74,64,MeMatrix4
+MstModelAndBodyCreate,vol,-144,ffffff70,4,MeReal
+MstModelAndBodyCreate,u,4,00000004,4,MstUniverseID
+MstModelAndBodyCreate,g,8,00000008,4,McdGeometryID
+MstModelAndBodyCreate,density,12,0000000c,4,MeReal
+MstModelAndBodyCreate,I,-76,ffffffb4,36,MeMatrix3
+MstModelAndBodyDestroy,m,4,00000004,4,McdModelID.conflict
+MstFixedModelCreate,u,4,00000004,4,MstUniverseID
+MstFixedModelCreate,g,8,00000008,4,McdGeometryID
+MstFixedModelCreate,transformation,12,0000000c,4,MeMatrix4Ptr
+MstFixedModelCreate,pMVar3,-24,ffffffe8,4,McdModelID.conflict
+MstFixedModelDestroy,m,4,00000004,4,McdModelID.conflict
+ConvertCollisionContact,params,4,00000004,4,MdtBclContactParams *
+ConvertCollisionContact,colC,8,00000008,4,McdContact *
+ConvertCollisionContact,dynC,12,0000000c,4,MdtContactID.conflict
+ConvertCollisionContact,swap,16,00000010,4,int
+DebugOutputContact,contact,4,00000004,4,McdContact *
+DebugOutputIntersectResult,result,4,00000004,4,McdIntersectResult *
+MstAutoSetMassProperties,body,4,00000004,4,MdtBodyID
+MstAutoSetMassProperties,model,8,00000008,4,McdModelID.conflict
+MstAutoSetMassProperties,density,12,0000000c,4,MeReal
+MstAutoSetMassProperties,I,-60,ffffffc4,36,MeMatrix3
+MstAutoSetMassProperties,com_tm,-124,ffffff84,64,MeMatrix4
+MstAutoSetMassProperties,vol,-128,ffffff80,4,MeReal
+FreezeModelFromBody,b,4,00000004,4,MdtBodyID
+UnfreezeModelFromBody,b,4,00000004,4,MdtBodyID
+DestroyContactGroupReferences,c,4,00000004,4,MdtContactGroupID.conflict
+MstSetWorldHandlers,world,4,00000004,4,MdtWorldID
+createContactGroup,w,4,00000004,4,MdtWorldID
+createContactGroup,pair,8,00000008,4,McdModelPairID
+createContactGroup,key1,-20,ffffffec,4,MeI32
+createContactGroup,key2,-24,ffffffe8,4,MeI32

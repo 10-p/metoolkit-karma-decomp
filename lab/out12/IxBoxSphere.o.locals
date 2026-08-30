@@ -1,0 +1,30 @@
+# function,name,stackoff,hexoff,size,type
+McdBoxSphereIntersect,p,4,00000004,4,McdModelPair *
+McdBoxSphereIntersect,result,8,00000008,4,McdIntersectResult *
+McdBoxSphereIntersect,tB,-136,ffffff78,4,lsTransform *
+McdBoxSphereIntersect,rA,-144,ffffff70,4,lsVec3 *
+McdBoxSphereIntersect,tAB,-92,ffffffa4,64,lsTransform
+McdBoxSphereIntersect,dims,-126,ffffff82,2,MeI16
+McdBoxSphereIntersect,pos,-108,ffffff94,12,lsVec3
+McdBoxSphereIntersect,separation,-132,ffffff7c,4,MeReal
+McdBoxSphereIntersect,normal,-124,ffffff84,12,lsVec3
+McdBoxSphereSafeTime,T,-64,ffffffc0,4,MeReal
+McdBoxSphereSafeTime,P,-60,ffffffc4,12,lsVec3
+McdBoxSphereSafeTime,p,4,00000004,4,McdModelPair *
+McdBoxSphereSafeTime,maxTime,8,00000008,4,MeReal
+McdBoxSphereSafeTime,result,12,0000000c,4,McdSafeTimeResult *
+McdBoxSphereSafeTime,V0,-68,ffffffbc,4,lsVec3 *
+McdBoxSphereSafeTime,V1,-72,ffffffb8,4,lsVec3 *
+McdBoxSphereSafeTime,tm0,-76,ffffffb4,4,lsTransform *
+McdBoxSphereSafeTime,ext1,-44,ffffffd4,12,MeReal[3]
+McdBoxSphereRegisterInteraction,frame,4,00000004,4,McdFramework *
+McdBoxSphereRegisterInteraction,interactions,-44,ffffffd4,28,McdInteractions
+McdVanillaOverlapOBBSphere,outSep,4,00000004,4,MeReal *
+McdVanillaOverlapOBBSphere,outN,8,00000008,4,lsVec3 *
+McdVanillaOverlapOBBSphere,outPos,12,0000000c,4,lsVec3 *
+McdVanillaOverlapOBBSphere,outDims,16,00000010,4,MeI16 *
+McdVanillaOverlapOBBSphere,inEps,20,00000014,4,MeReal
+McdVanillaOverlapOBBSphere,inROBB,24,00000018,4,lsVec3 *
+McdVanillaOverlapOBBSphere,inRSphere,28,0000001c,4,MeReal
+McdVanillaOverlapOBBSphere,inPos,32,00000020,4,lsVec3 *
+McdVanillaOverlapOBBSphere,best,-64,ffffffc0,4,int

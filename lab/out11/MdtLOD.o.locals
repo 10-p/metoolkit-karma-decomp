@@ -1,0 +1,44 @@
+# function,name,stackoff,hexoff,size,type
+MdtLODLastPartition,i,-48,ffffffd0,4,int
+MdtLODLastPartition,p,-52,ffffffcc,4,int
+MdtLODLastPartition,nCon,-56,ffffffc8,4,int
+MdtLODLastPartition,clist,-60,ffffffc4,4,MdtBaseConstraint * *
+MdtLODLastPartition,partitionCount,-64,ffffffc0,4,int
+MdtLODLastPartition,pdataArray,-68,ffffffbc,4,MdtLODPartitionData *
+MdtLODLastPartition,currentCon,-72,ffffffb8,4,MdtBaseConstraint *
+MdtLODLastPartition,q,-44,ffffffd4,16,MeHeap
+MdtLODLastPartition,group,-76,ffffffb4,4,MdtContactGroupID.conflict
+MdtLODLastPartition,b0,-80,ffffffb0,4,MdtBody *
+MdtLODLastPartition,b1,-84,ffffffac,4,MdtBody *
+MdtLODLastPartition,b0PIx,-88,ffffffa8,4,int
+MdtLODLastPartition,aiStack_90,-144,ffffff70,24,int[6]
+MdtLODLastPartition,auStack_78,-120,ffffff88,12,uint[3]
+MdtLODLastPartition,po,4,00000004,4,MdtPartitionOutput *
+MdtLODLastPartition,params,8,00000008,4,MdtPartitionParams *
+MdtLODLastPartition,local_6c,-108,ffffff94,20,MdtLODPartitionData
+ComparePenetration,contact2,8,00000008,4,void *
+ComparePenetration,contact1,4,00000004,4,void *
+ConstraintCalcImportance,con,4,00000004,4,MdtBaseConstraint *
+ConstraintCalcImportance,params,8,00000008,4,MdtPartitionParams *
+ConstraintCalcImportance,pen,-48,ffffffd0,4,MeReal
+ConstraintCalcImportance,normVel,-52,ffffffcc,4,MeReal
+ConstraintCalcImportance,vel,-44,ffffffd4,12,MeVector3
+CompareImportance,elem1,4,00000004,4,void *
+CompareImportance,elem2,8,00000008,4,void *
+ResizeConstraint,nFrictionContacts,-32,ffffffe0,4,int
+ResizeConstraint,nRows,-36,ffffffdc,4,int
+ResizeConstraint,sStackY_40,-64,ffffffc0,4,size_t
+ResizeConstraint,aiStack_2c,-44,ffffffd4,8,int[2]
+ResizeConstraint,con,4,00000004,4,MdtBaseConstraint *
+ResizeConstraint,params,8,00000008,4,MdtPartitionParams *
+ResizeConstraint,group,-20,ffffffec,4,MdtContactGroupID.conflict
+ResizeConstraint,initialNContacts,-24,ffffffe8,4,int
+ResizeConstraint,nContacts,-28,ffffffe4,4,int
+MergePartitions,pdataArray,4,00000004,4,MdtLODPartitionData *
+MergePartitions,p1Ix,8,00000008,4,int
+MergePartitions,p2Ix,12,0000000c,4,int
+IncrementConstraintRowBudget,con,4,00000004,4,MdtBaseConstraint *
+IncrementConstraintRowBudget,pdataArray,8,00000008,4,MdtLODPartitionData *
+IncrementConstraintRowBudget,LODpartIx,12,0000000c,4,int
+IncrementConstraintRowBudget,params,16,00000010,4,MdtPartitionParams *
+IncrementConstraintRowBudget,q,20,00000014,4,MeHeap *

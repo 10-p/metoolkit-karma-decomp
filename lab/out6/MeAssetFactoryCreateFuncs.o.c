@@ -1,0 +1,633 @@
+/* ==== McdModelCreateFromMeFAssetPart ==== */
+
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+McdModelID_conflict
+McdModelCreateFromMeFAssetPart
+          (MeFAssetPart *part,McdGeometryID g,MdtWorldID world,MeMatrix4Ptr assetTM)
+
+{
+  float *pfVar1;
+  float *pfVar2;
+  float *pfVar3;
+  float fVar4;
+  float fVar5;
+  float fVar6;
+  void *pvVar7;
+  uint uVar8;
+  McdModelID_conflict pMVar9;
+  float *pfVar10;
+  float *pfVar11;
+  float *pfVar12;
+  undefined4 extraout_ECX;
+  int iVar13;
+  float fVar14;
+  MdtBodyID body;
+  McdModelID_conflict model;
+  MeFModelType type;
+  MeFModel *fmodel;
+  MeVector3 axis;
+  MeMatrix3 clamped;
+  MeMatrix3 I;
+  MeVector3 pos;
+  
+                    /* Unresolved local var: MeMatrix4Ptr modelTM@[DW_OP_reg7(EDI)] */
+  pvVar7 = MeFAssetPartGetModel(part);
+  uVar8 = MeFModelGetType(pvVar7);
+  pMVar9 = McdModelCreate(g);
+  body = (MdtBodyID)0x0;
+  if (uVar8 == 2) {
+    pfVar10 = (float *)(*_MeFJointGetType)(0x40,0x10,extraout_ECX,extraout_ECX);
+    McdModelSetTransformPtr(pMVar9,pfVar10);
+  }
+  else {
+    body = MdtBodyCreate(world);
+    pfVar10 = MdtBodyGetTransformPtr(body);
+  }
+  if (assetTM == (MeMatrix4Ptr)0x0) {
+    pfVar12 = MeFAssetPartGetTransformPtr(part);
+    *pfVar10 = *pfVar12;
+    pfVar10[1] = pfVar12[1];
+    pfVar10[2] = pfVar12[2];
+    pfVar10[3] = pfVar12[3];
+    pfVar10[4] = pfVar12[4];
+    pfVar10[5] = pfVar12[5];
+    pfVar10[6] = pfVar12[6];
+    pfVar10[7] = pfVar12[7];
+    pfVar10[8] = pfVar12[8];
+    pfVar10[9] = pfVar12[9];
+    pfVar10[10] = pfVar12[10];
+    pfVar10[0xb] = pfVar12[0xb];
+    pfVar10[0xc] = pfVar12[0xc];
+    pfVar10[0xd] = pfVar12[0xd];
+    pfVar10[0xe] = pfVar12[0xe];
+    pfVar10[0xf] = pfVar12[0xf];
+  }
+  else {
+                    /* Unresolved local var: MeReal * a@[DW_OP_reg1(ECX)]
+                       Unresolved local var: int i@[DW_OP_reg6(ESI)]
+                       Unresolved local var: int j@[???] */
+    iVar13 = 0;
+    pfVar11 = MeFAssetPartGetTransformPtr(part);
+    pfVar12 = pfVar10;
+    do {
+      iVar13 = iVar13 + 1;
+      *pfVar12 = assetTM[3][0] * pfVar11[3] +
+                 assetTM[2][0] * pfVar11[2] + assetTM[1][0] * pfVar11[1] + (*assetTM)[0] * *pfVar11;
+      pfVar12[1] = assetTM[3][1] * pfVar11[3] +
+                   assetTM[2][1] * pfVar11[2] +
+                   assetTM[1][1] * pfVar11[1] + (*assetTM)[1] * *pfVar11;
+      pfVar12[2] = assetTM[3][2] * pfVar11[3] +
+                   assetTM[2][2] * pfVar11[2] +
+                   assetTM[1][2] * pfVar11[1] + (*assetTM)[2] * *pfVar11;
+      fVar14 = *pfVar11;
+      pfVar1 = pfVar11 + 1;
+      pfVar2 = pfVar11 + 2;
+      pfVar3 = pfVar11 + 3;
+      pfVar11 = pfVar11 + 4;
+      pfVar12[3] = assetTM[3][3] * *pfVar3 +
+                   assetTM[2][3] * *pfVar2 + assetTM[1][3] * *pfVar1 + (*assetTM)[3] * fVar14;
+      pfVar12 = pfVar12 + 4;
+    } while (iVar13 < 4);
+  }
+  if (uVar8 < 2) {
+    MdtBodyEnable(body);
+    MdtBodySetTransform(body,pfVar10);
+    fVar14 = MeFModelGetMass(pvVar7);
+    MdtBodySetMass(body,fVar14);
+    MeFModelGetMassOffset(pvVar7,pos);
+    MdtBodySetCenterOfMassRelativePosition(body,pos);
+    MdtBodyEnableNonSphericalInertia(body);
+    MdtBodyEnableCoriolisForce(body);
+    MeFModelGetInertiaTensor(pvVar7,I);
+                    /* Unresolved local var: MeReal iMag@[DW_OP_reg14(ST3)] */
+    fVar14 = (world->params).lengthScale;
+    fVar14 = (world->params).massScale * fVar14 * fVar14;
+    fVar4 = fVar14 * 100.0;
+    if (I[0][0] < fVar4) {
+      fVar4 = I[0][0];
+    }
+    if (fVar4 < fVar14 * 0.01) {
+      fVar4 = fVar14 * 0.01;
+    }
+    fVar5 = fVar14 * 100.0;
+    if (I[1][1] < fVar5) {
+      fVar5 = I[1][1];
+    }
+    if (fVar5 < fVar14 * 0.01) {
+      fVar5 = fVar14 * 0.01;
+    }
+    fVar6 = fVar14 * 100.0;
+    if (I[2][2] < fVar6) {
+      fVar6 = I[2][2];
+    }
+    if (fVar6 < fVar14 * 0.01) {
+      fVar6 = fVar14 * 0.01;
+    }
+    I[0][0] = fVar4;
+    I[1][1] = fVar5;
+    I[2][2] = fVar6;
+    MdtBodySetInertiaTensor(body,I);
+    fVar14 = MeFModelGetLinearVelocityDamping(pvVar7);
+    MdtBodySetLinearVelocityDamping(body,fVar14);
+    fVar14 = MeFModelGetAngularVelocityDamping(pvVar7);
+    MdtBodySetAngularVelocityDamping(body,fVar14);
+    iVar13 = MeFModelIsFastSpinAxisEnabled(pvVar7);
+    if (iVar13 != 0) {
+      MeFModelGetFastSpinAxis(pvVar7,axis);
+      MdtBodySetFastSpinAxis(body,axis[0],axis[1],axis[2]);
+    }
+    McdModelSetBody(pMVar9,body);
+  }
+  return pMVar9;
+}
+
+
+/* ==== MdtConstraintCreateFromMeFJoint ==== */
+
+MdtConstraintID
+MdtConstraintCreateFromMeFJoint
+          (MeFJoint *joint,MdtWorldID world,McdModelID_conflict m1,McdModelID_conflict m2,
+          MeMatrix4Ptr assetTM)
+
+{
+  MdtBodyID pMVar1;
+  float fVar2;
+  float fVar3;
+  float fVar4;
+  MeReal *pMVar5;
+  MeReal *pMVar6;
+  MeReal *pMVar7;
+  MeReal *pMVar8;
+  int iVar9;
+  void *pvVar10;
+  void *pvVar11;
+  void *pvVar12;
+  MeReal (*paMVar13) [4];
+  MeReal (*paMVar14) [4];
+  int iVar15;
+  MeReal (*paMVar16) [4];
+  char *pcVar17;
+  MeBool MVar18;
+  MdtSkeletalTwistOption to;
+  MdtSkeletalConeOption co;
+  MdtSingleLimitID lower;
+  MdtSingleLimitID lower_1;
+  MdtRPROJointID r;
+  int body2_index;
+  int body1_index;
+  MdtConstraintID con;
+  MdtBodyID b2;
+  MdtBodyID b1;
+  MeReal p3;
+  MeReal p2;
+  MeReal p1;
+  MeBool b;
+  MeReal p;
+  int i;
+  MeReal p_1;
+  MeBool b_1;
+  MeReal p2_1;
+  MeReal p_2;
+  MeReal p_3;
+  MeBool b_2;
+  MeBool b_3;
+  MeReal p2_2;
+  MeReal p_5;
+  MeMatrix3 I;
+  MeReal p_4 [6];
+  MeReal p_6 [3];
+  MeVector3 vec;
+  MeMatrix4 temp;
+  MeVector3 outpos;
+  MeVector3 pos2;
+  MeVector3 orth;
+  MeVector3 prim;
+  MeVector3 vec_1;
+  MeVector3 oax;
+  MeVector3 pax;
+  MeVector3 pos;
+  
+                    /* Unresolved local var: MeBool swap@[???]
+                       Unresolved local var: MdtSkeletalID limb@[???]
+                       Unresolved local var: MeFJointType type@[DW_OP_reg6(ESI)] */
+  b1 = (MdtBodyID)0x0;
+  b2 = (MdtBodyID)0x0;
+  body1_index = 0;
+  body2_index = 1;
+  iVar9 = MeFJointGetType(joint);
+  if (m1 != (McdModelID_conflict)0x0) {
+    b1 = McdModelGetBody(m1);
+  }
+  if (m2 != (McdModelID_conflict)0x0) {
+    b2 = McdModelGetBody(m2);
+  }
+  if ((b1 == (MdtBodyID)0x0) && (b2 == (MdtBodyID)0x0)) {
+    pcVar17 = "MdtConstraintCreateFromMeFJoint: Both bodies cannot be NULL.";
+  }
+  else {
+    if (b1 != b2) {
+      if ((b1 == (MdtBodyID)0x0) && (b2 != (MdtBodyID)0x0)) {
+        b1 = b2;
+        b2 = (MdtBodyID)0x0;
+        body1_index = 1;
+        body2_index = 0;
+      }
+      if (iVar9 == 3) {
+                    /* Unresolved local var: MdtBSJointID bs@[DW_OP_reg0(EAX)] */
+        pvVar10 = MdtBSJointCreate(world);
+        con = MdtBSJointQuaConstraint(pvVar10);
+      }
+      else if (iVar9 == 5) {
+                    /* Unresolved local var: MdtUniversalID u@[DW_OP_reg0(EAX)] */
+        pvVar10 = MdtUniversalCreate(world);
+        con = MdtUniversalQuaConstraint(pvVar10);
+      }
+      else if (iVar9 == 6) {
+                    /* Unresolved local var: MdtRPROJointID rp@[DW_OP_reg0(EAX)] */
+        pvVar10 = MdtRPROJointCreate(world);
+        con = MdtRPROJointQuaConstraint(pvVar10);
+      }
+      else if (iVar9 == 2) {
+                    /* Unresolved local var: MdtHingeID h@[DW_OP_reg0(EAX)] */
+        pvVar10 = MdtHingeCreate(world);
+        con = MdtHingeQuaConstraint(pvVar10);
+      }
+      else if (iVar9 == 1) {
+                    /* Unresolved local var: MdtBodyID temp@[DW_OP_reg0(EAX)]
+                       Unresolved local var: MdtCarWheelID cw@[DW_OP_reg0(EAX)] */
+        pvVar10 = MdtCarWheelCreate(world);
+        con = MdtCarWheelQuaConstraint(pvVar10);
+        if (b2 != (MdtBodyID)0x0) {
+          pMVar1 = b2;
+          body1_index = (int)(body1_index == 0);
+          body2_index = (int)(body2_index == 0);
+          b2 = b1;
+          b1 = pMVar1;
+        }
+      }
+      else if (iVar9 == 4) {
+                    /* Unresolved local var: MdtConeLimitID cl@[DW_OP_reg0(EAX)] */
+        pvVar10 = MdtConeLimitCreate(world);
+        con = MdtConeLimitQuaConstraint(pvVar10);
+      }
+      else if (iVar9 == 7) {
+                    /* Unresolved local var: MdtPrismaticID h@[DW_OP_reg0(EAX)] */
+        pvVar10 = MdtPrismaticCreate(world);
+        con = MdtPrismaticQuaConstraint(pvVar10);
+      }
+      else if (iVar9 == 8) {
+                    /* Unresolved local var: MdtSkeletalID h@[DW_OP_reg0(EAX)] */
+        pvVar10 = MdtSkeletalCreate(world);
+        con = MdtSkeletalQuaConstraint(pvVar10);
+      }
+      else if (iVar9 == 9) {
+                    /* Unresolved local var: MdtAngular3ID a@[DW_OP_reg0(EAX)] */
+        pvVar10 = MdtAngular3Create(world);
+        con = MdtAngular3QuaConstraint(pvVar10);
+      }
+      else {
+        if (iVar9 != 10) {
+          pcVar17 = "MdtConstraintCreateFromMeFJoint: Unknown joint type.";
+          goto LAB_0001056f;
+        }
+                    /* Unresolved local var: MdtSpring6ID a@[DW_OP_reg0(EAX)] */
+        pvVar10 = MdtSpring6Create(world);
+        con = MdtSpring6QuaConstraint(pvVar10);
+      }
+      MdtConstraintSetBodies(con,b1,b2);
+      MeFJointGetPosition(joint,body1_index,pos);
+      MeFJointGetPrimaryAxis(joint,body1_index,pax);
+      MeFJointGetOrthogonalAxis(joint,body1_index,oax);
+      if (iVar9 == 1) {
+        MeFJointGetPrimaryAxis(joint,body1_index,oax);
+        MeFJointGetOrthogonalAxis(joint,body1_index,pax);
+        fVar4 = pax[1] * oax[2];
+        fVar3 = pax[2] * oax[1];
+        fVar2 = pax[1] * oax[0];
+        pax[1] = pax[2] * oax[0] - oax[2] * pax[0];
+        pax[2] = pax[0] * oax[1] - fVar2;
+        pax[0] = fVar4 - fVar3;
+      }
+      MdtConstraintBodySetPositionRel(con,0,pos[0],pos[1],pos[2]);
+      MdtConstraintBodySetAxesRel(con,0,pax[0],pax[1],pax[2],oax[0],oax[1],oax[2]);
+      if (b2 == (MdtBodyID)0x0) {
+                    /* Unresolved local var: MeMatrix4Ptr tm@[DW_OP_reg3(EBX)]
+                       Unresolved local var: MeFAssetPart * part@[DW_OP_reg3(EBX)] */
+        pvVar10 = MeFJointGetPart(joint,body2_index);
+        if (pvVar10 == (void *)0x0) {
+          MeFJointGetPosition(joint,body1_index,pos2);
+          pvVar10 = MeFJointGetPart(joint,body1_index);
+          paMVar13 = MeFAssetPartGetTransformPtr(pvVar10);
+          MeFJointGetPrimaryAxis(joint,body1_index,prim);
+          body2_index = body1_index;
+        }
+        else {
+          MeFJointGetPosition(joint,body2_index,pos2);
+          paMVar13 = MeFAssetPartGetTransformPtr(pvVar10);
+          MeFJointGetPrimaryAxis(joint,body2_index,prim);
+        }
+        MeFJointGetOrthogonalAxis(joint,body2_index,orth);
+        paMVar16 = paMVar13;
+        if (assetTM != (MeMatrix4Ptr)0x0) {
+                    /* Unresolved local var: MeReal * a@[DW_OP_reg0(EAX)]
+                       Unresolved local var: int i@[DW_OP_reg1(ECX)]
+                       Unresolved local var: int j@[???] */
+          paMVar16 = temp;
+          iVar15 = 3;
+          paMVar14 = paMVar16;
+          do {
+            (*paMVar14)[0] =
+                 assetTM[3][0] * (*paMVar13)[3] +
+                 assetTM[2][0] * (*paMVar13)[2] +
+                 assetTM[1][0] * (*paMVar13)[1] + (*assetTM)[0] * (*paMVar13)[0];
+            (*paMVar14)[1] =
+                 assetTM[3][1] * (*paMVar13)[3] +
+                 assetTM[2][1] * (*paMVar13)[2] +
+                 assetTM[1][1] * (*paMVar13)[1] + (*assetTM)[1] * (*paMVar13)[0];
+            (*paMVar14)[2] =
+                 assetTM[3][2] * (*paMVar13)[3] +
+                 assetTM[2][2] * (*paMVar13)[2] +
+                 assetTM[1][2] * (*paMVar13)[1] + (*assetTM)[2] * (*paMVar13)[0];
+            pMVar5 = *paMVar13;
+            pMVar6 = *paMVar13;
+            pMVar7 = *paMVar13;
+            pMVar8 = *paMVar13;
+            paMVar13 = paMVar13 + 1;
+            (*paMVar14)[3] =
+                 assetTM[3][3] * pMVar8[3] +
+                 assetTM[2][3] * pMVar7[2] + assetTM[1][3] * pMVar6[1] + (*assetTM)[3] * *pMVar5;
+            paMVar14 = paMVar14 + 1;
+            iVar15 = iVar15 + -1;
+          } while (-1 < iVar15);
+        }
+        MdtConstraintBodySetPosition
+                  (con,1,pos2[2] * paMVar16[2][0] +
+                         pos2[0] * (*paMVar16)[0] + pos2[1] * paMVar16[1][0] + paMVar16[3][0],
+                   pos2[2] * paMVar16[2][1] + pos2[0] * (*paMVar16)[1] + pos2[1] * paMVar16[1][1] +
+                   paMVar16[3][1],
+                   pos2[0] * (*paMVar16)[2] + pos2[1] * paMVar16[1][2] + pos2[2] * paMVar16[2][2] +
+                   paMVar16[3][2]);
+        pax[0] = prim[2] * paMVar16[2][0] + prim[1] * paMVar16[1][0] + prim[0] * (*paMVar16)[0];
+        pax[1] = prim[2] * paMVar16[2][1] + prim[1] * paMVar16[1][1] + prim[0] * (*paMVar16)[1];
+        pax[2] = prim[0] * (*paMVar16)[2] + prim[1] * paMVar16[1][2] + prim[2] * paMVar16[2][2];
+        oax[0] = orth[2] * paMVar16[2][0] + orth[0] * (*paMVar16)[0] + orth[1] * paMVar16[1][0];
+        oax[1] = orth[2] * paMVar16[2][1] + orth[0] * (*paMVar16)[1] + orth[1] * paMVar16[1][1];
+        oax[2] = orth[0] * (*paMVar16)[2] + orth[1] * paMVar16[1][2] + orth[2] * paMVar16[2][2];
+        MdtConstraintBodySetAxes(con,1,pax[0],pax[1],pax[2],oax[0],oax[1],oax[2]);
+      }
+      else {
+        MeFJointGetPosition(joint,body2_index,pos);
+        MeFJointGetPrimaryAxis(joint,body2_index,pax);
+        MeFJointGetOrthogonalAxis(joint,body2_index,oax);
+        if (iVar9 == 1) {
+          MeFJointGetPrimaryAxis(joint,body2_index,oax);
+          MeFJointGetOrthogonalAxis(joint,body2_index,pax);
+          fVar4 = pax[1] * oax[2];
+          fVar3 = pax[2] * oax[1];
+          fVar2 = pax[1] * oax[0];
+          pax[1] = pax[2] * oax[0] - oax[2] * pax[0];
+          pax[2] = pax[0] * oax[1] - fVar2;
+          pax[0] = fVar4 - fVar3;
+        }
+        MdtConstraintBodySetPositionRel(con,1,pos[0],pos[1],pos[2]);
+        MdtConstraintBodySetAxesRel(con,1,pax[0],pax[1],pax[2],oax[0],oax[1],oax[2]);
+      }
+      if (iVar9 == 3) {
+                    /* Unresolved local var: MdtBSJointID bs@[???] */
+        MdtConstraintDCastBSJoint(con);
+        return con;
+      }
+      if (iVar9 == 5) {
+                    /* Unresolved local var: MdtUniversalID u@[???] */
+        MdtConstraintDCastUniversal(con);
+        return con;
+      }
+      if (iVar9 == 6) {
+        pvVar10 = MdtConstraintDCastRPROJoint(con);
+        p_6[0] = 0.0;
+        p_6[1] = 0.0;
+        p_6[2] = 0.0;
+        MeFJointGetProperty1f(joint,0x11,p_6);
+        MeFJointGetProperty1f(joint,0x12,p_6 + 1);
+        MeFJointGetProperty1f(joint,0x13,p_6 + 2);
+        MdtRPROJointSetLinearStrength(pvVar10,p_6[0],p_6[1],p_6[2]);
+        MeFJointGetProperty1f(joint,0x14,p_6);
+        MeFJointGetProperty1f(joint,0x15,p_6 + 1);
+        MeFJointGetProperty1f(joint,0x16,p_6 + 2);
+        MdtRPROJointSetAngularStrength(pvVar10,p_6[0],p_6[1],p_6[2]);
+        return con;
+      }
+      if (iVar9 == 2) {
+                    /* Unresolved local var: MdtHingeID h@[DW_OP_reg0(EAX)]
+                       Unresolved local var: MdtLimitID l@[DW_OP_reg6(ESI)]
+                       Unresolved local var: MdtSingleLimitID upper@[DW_OP_reg7(EDI)] */
+        pvVar10 = MdtConstraintDCastHinge(con);
+        pvVar10 = MdtHingeGetLimit(pvVar10);
+        pvVar11 = MdtLimitGetUpperLimit(pvVar10);
+        pvVar12 = MdtLimitGetLowerLimit(pvVar10);
+        p_5 = 0.0;
+        p2_2 = 0.0;
+        b_3 = 0;
+        MeFJointGetProperty1f(joint,0,&p_5);
+        MdtSingleLimitSetStop(pvVar11,p_5);
+        MeFJointGetProperty1f(joint,1,&p_5);
+        MdtSingleLimitSetStop(pvVar12,p_5);
+        MeFJointGetProperty1f(joint,3,&p_5);
+        MdtSingleLimitSetStiffness(pvVar11,p_5);
+        MeFJointGetProperty1f(joint,4,&p_5);
+        MdtSingleLimitSetStiffness(pvVar12,p_5);
+        MeFJointGetProperty1b(joint,0xf,&b_3);
+        MdtLimitActivateLimits(pvVar10,b_3);
+        MeFJointGetProperty1f(joint,0x17,&p_5);
+        MeFJointGetProperty1f(joint,0x11,&p2_2);
+        MdtLimitSetLimitedForceMotor(pvVar10,p_5,p2_2);
+        MeFJointGetProperty1b(joint,0x10,&b_3);
+        MVar18 = b_3;
+      }
+      else {
+        if (iVar9 == 1) {
+                    /* Unresolved local var: MdtCarWheelID cw@[DW_OP_reg3(EBX)] */
+          pvVar10 = MdtConstraintDCastCarWheel(con);
+          b_2 = 0;
+          p_4[0] = 0.0;
+          p_4[1] = 0.0;
+          p_4[2] = 0.0;
+          p_4[3] = 0.0;
+          p_4[4] = 0.0;
+          p_4[5] = 0.0;
+          MeFJointGetProperty1b(joint,0x1c,&b_2);
+          MdtCarWheelSetSteeringLock(pvVar10,b_2);
+          MeFJointGetProperty1f(joint,3,p_4);
+          MeFJointGetProperty1f(joint,9,p_4 + 1);
+          MeFJointGetProperty1f(joint,4,p_4 + 2);
+          MeFJointGetProperty1f(joint,1,p_4 + 3);
+          MeFJointGetProperty1f(joint,0,p_4 + 4);
+          MeFJointGetProperty1f(joint,0x19,p_4 + 5);
+          MdtCarWheelSetSuspension(pvVar10,p_4[0],p_4[1],p_4[2],p_4[3],p_4[4],p_4[5]);
+          return con;
+        }
+        if (iVar9 == 4) {
+                    /* Unresolved local var: MdtConeLimitID cl@[DW_OP_reg6(ESI)] */
+          pvVar10 = MdtConstraintDCastConeLimit(con);
+          p_3 = 0.0;
+          MeFJointGetProperty1f(joint,0,&p_3);
+          MdtConeLimitSetConeHalfAngle(pvVar10,p_3);
+          MeFJointGetProperty1f(joint,3,&p_3);
+          MdtConeLimitSetStiffness(pvVar10,p_3);
+          return con;
+        }
+        if (iVar9 != 7) {
+          if (iVar9 != 8) {
+            if (iVar9 == 9) {
+                    /* Unresolved local var: MdtAngular3ID j@[DW_OP_reg3(EBX)] */
+              pvVar10 = MdtConstraintDCastAngular3(con);
+              b = 0;
+              p = 0.0;
+              MeFJointGetProperty1b(joint,0x1c,&b);
+              MdtAngular3EnableRotation(pvVar10,b);
+              MeFJointGetProperty1f(joint,3,&p);
+              MdtAngular3SetStiffness(pvVar10,p);
+              MeFJointGetProperty1f(joint,9,&p);
+              MdtAngular3SetDamping(pvVar10,p);
+              return con;
+            }
+            if (iVar9 != 10) {
+              return con;
+            }
+                    /* Unresolved local var: MdtSpring6ID j@[DW_OP_reg3(EBX)] */
+            pvVar10 = MdtConstraintDCastSpring6(con);
+            p1 = 0.0;
+            p2 = 0.0;
+            p3 = 0.0;
+            MeFJointGetProperty1f(joint,3,&p1);
+            MeFJointGetProperty1f(joint,4,&p2);
+            MeFJointGetProperty1f(joint,5,&p3);
+            MdtSpring6SetLinearStiffness(pvVar10,0,p1);
+            MdtSpring6SetLinearStiffness(pvVar10,1,p2);
+            MdtSpring6SetLinearStiffness(pvVar10,2,p3);
+            MeFJointGetProperty1f(joint,6,&p1);
+            MeFJointGetProperty1f(joint,7,&p2);
+            MeFJointGetProperty1f(joint,8,&p3);
+            MdtSpring6SetAngularStiffness(pvVar10,0,p1);
+            MdtSpring6SetAngularStiffness(pvVar10,1,p2);
+            MdtSpring6SetAngularStiffness(pvVar10,2,p3);
+            MeFJointGetProperty1f(joint,9,&p1);
+            MeFJointGetProperty1f(joint,10,&p2);
+            MeFJointGetProperty1f(joint,0xb,&p3);
+            MdtSpring6SetLinearDamping(pvVar10,0,p1);
+            MdtSpring6SetLinearDamping(pvVar10,1,p2);
+            MdtSpring6SetLinearDamping(pvVar10,2,p3);
+            MeFJointGetProperty1f(joint,0xc,&p1);
+            MeFJointGetProperty1f(joint,0xd,&p2);
+            MeFJointGetProperty1f(joint,0xe,&p3);
+            MdtSpring6SetAngularDamping(pvVar10,0,p1);
+            MdtSpring6SetAngularDamping(pvVar10,1,p2);
+            MdtSpring6SetAngularDamping(pvVar10,2,p3);
+            return con;
+          }
+                    /* Unresolved local var: MdtSkeletalID j@[DW_OP_reg6(ESI)] */
+          pvVar10 = MdtConstraintDCastSkeletal(con);
+          i = 0;
+          p_1 = 0.0;
+          MeFJointGetProperty1i(joint,0x1a,&i);
+          if (i == 1) {
+            co = MdtSkeletalConeOptionSlot;
+          }
+          else if (i < 2) {
+            if (i == 0) {
+              co = MdtSkeletalConeOptionFree;
+            }
+          }
+          else if (i == 2) {
+            co = MdtSkeletalConeOptionCone;
+          }
+          else if (i == 3) {
+            co = MdtSkeletalConeOptionFixed;
+          }
+          MdtSkeletalSetConeOption(pvVar10,co);
+          MeFJointGetProperty1f(joint,0,&p_1);
+          MdtSkeletalSetConePrimaryLimitAngle(pvVar10,p_1);
+          MeFJointGetProperty1f(joint,1,&p_1);
+          MdtSkeletalSetConeSecondaryLimitAngle(pvVar10,p_1);
+          MeFJointGetProperty1f(joint,3,&p_1);
+          MdtSkeletalSetConeStiffness(pvVar10,p_1);
+          MeFJointGetProperty1f(joint,9,&p_1);
+          MdtSkeletalSetConeDamping(pvVar10,p_1);
+          MeFJointGetProperty1i(joint,0x1b,&i);
+          if (i == 1) {
+            to = MdtSkeletalTwistOptionLimited;
+          }
+          else if (i < 2) {
+            if (i == 0) {
+              to = MdtSkeletalTwistOptionFree;
+            }
+          }
+          else if (i == 2) {
+            to = MdtSkeletalTwistOptionFixed;
+          }
+          MdtSkeletalSetTwistOption(pvVar10,to);
+          MeFJointGetProperty1f(joint,2,&p_1);
+          MdtSkeletalSetTwistLimitAngle(pvVar10,p_1);
+          MeFJointGetProperty1f(joint,4,&p_1);
+          MdtSkeletalSetTwistStiffness(pvVar10,p_1);
+          MeFJointGetProperty1f(joint,10,&p_1);
+          MdtSkeletalSetTwistDamping(pvVar10,p_1);
+          if (b2 != (MdtBodyID)0x0) {
+            return con;
+          }
+                    /* Unresolved local var: MeReal fudgeFactor@[???]
+                       Unresolved local var: MdtBodyID bID@[DW_OP_reg3(EBX)] */
+          pvVar10 = MdtConstraintGetBody(con,0);
+          MdtBodyGetInertiaTensor(pvVar10,I);
+          if (I[1][1] <= I[0][0]) {
+            return con;
+          }
+          if (I[2][2] <= I[0][0]) {
+            return con;
+          }
+          if (I[1][1] < I[2][2]) {
+            I[2][2] = I[1][1];
+          }
+          I[0][0] = I[2][2] * 1.1;
+          MdtBodySetInertiaTensor(pvVar10,I);
+          MeWarning(0,"AF: Modified Inertia for Skeletal to World");
+          return con;
+        }
+                    /* Unresolved local var: MdtPrismaticID h@[DW_OP_reg0(EAX)]
+                       Unresolved local var: MdtLimitID l@[DW_OP_reg6(ESI)]
+                       Unresolved local var: MdtSingleLimitID upper@[DW_OP_reg7(EDI)] */
+        pvVar10 = MdtConstraintDCastPrismatic(con);
+        pvVar10 = MdtPrismaticGetLimit(pvVar10);
+        pvVar11 = MdtLimitGetUpperLimit(pvVar10);
+        pvVar12 = MdtLimitGetLowerLimit(pvVar10);
+        p_2 = 0.0;
+        p2_1 = 0.0;
+        b_1 = 0;
+        MeFJointGetProperty1f(joint,0,&p_2);
+        MdtSingleLimitSetStop(pvVar11,p_2);
+        MeFJointGetProperty1f(joint,1,&p_2);
+        MdtSingleLimitSetStop(pvVar12,p_2);
+        MeFJointGetProperty1f(joint,3,&p_2);
+        MdtSingleLimitSetStiffness(pvVar11,p_2);
+        MeFJointGetProperty1f(joint,4,&p_2);
+        MdtSingleLimitSetStiffness(pvVar12,p_2);
+        MeFJointGetProperty1b(joint,0xf,&b_1);
+        MdtLimitActivateLimits(pvVar10,b_1);
+        MeFJointGetProperty1f(joint,0x17,&p_2);
+        MeFJointGetProperty1f(joint,0x11,&p2_1);
+        MdtLimitSetLimitedForceMotor(pvVar10,p_2,p2_1);
+        MeFJointGetProperty1b(joint,0x10,&b_1);
+        MVar18 = b_1;
+      }
+      MdtLimitActivateMotor(pvVar10,MVar18);
+      return con;
+    }
+    pcVar17 = "MdtConstraintCreateFromMeFJoint: Both bodies the same.";
+  }
+LAB_0001056f:
+  MeWarning(0,pcVar17);
+  return (MdtConstraintID)0x0;
+}
+
+

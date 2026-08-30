@@ -1,0 +1,14 @@
+# function,name,stackoff,hexoff,size,type
+MePoolxGetZeroed,p,4,00000004,4,MePoolx *
+MePoolxInit,p,4,00000004,4,MePoolx *
+MePoolxInit,memory,8,00000008,4,void *
+MePoolxInit,recsize,12,0000000c,4,int
+MePoolxInit,numrec,16,00000010,4,int
+MePoolxGet,p,4,00000004,4,MePoolx *
+MePoolxPut,p,4,00000004,4,MePoolx *
+MePoolxPut,rec,8,00000008,4,void *
+MePoolxUseWithDict,p,4,00000004,4,MePoolx *
+MePoolxUseWithDict,d,8,00000008,4,MeDict *
+MePoolxDictNodeAllocate,pool,4,00000004,4,void *
+MePoolxDictNodeDeallocate,node,4,00000004,4,MeDictNode *
+MePoolxDictNodeDeallocate,pool,8,00000008,4,void *

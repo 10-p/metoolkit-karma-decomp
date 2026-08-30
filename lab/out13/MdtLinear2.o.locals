@@ -1,0 +1,25 @@
+# function,name,stackoff,hexoff,size,type
+MdtLinear2SetDirection,j,4,00000004,4,MdtLinear2ID
+MdtLinear2SetDirection,x,8,00000008,4,MeReal
+MdtLinear2SetDirection,y,12,0000000c,4,MeReal
+MdtLinear2SetDirection,z,16,00000010,4,MeReal
+MdtLinear2SetDirection,direction,-44,ffffffd4,12,MeVector3
+MdtLinear2SetDirection,vector1,-60,ffffffc4,12,MeVector3
+MdtLinear2SetDirection,vector2,-76,ffffffb4,12,MeVector3
+MdtLinear2Create,w,4,00000004,4,MdtWorldID
+MdtLinear2Reset,j,4,00000004,4,MdtLinear2ID
+MdtLinear2QuaConstraint,j,4,00000004,4,MdtLinear2ID
+MdtConstraintDCastLinear2,c,4,00000004,4,MdtConstraintID
+MdtLinear2GetPosition,j,4,00000004,4,MdtLinear2ID
+MdtLinear2GetPosition,position,8,00000008,4,MeReal *
+MdtLinear2GetDirection,j,4,00000004,4,MdtLinear2ID
+MdtLinear2GetDirection,direction,8,00000008,4,MeReal *
+Linear2SetBodies,c,4,00000004,4,MdtConstraintID
+Linear2SetBodies,b1,8,00000008,4,MdtBodyID
+Linear2SetBodies,b2,12,0000000c,4,MdtBodyID
+MdtLinear2SetPosition,x,8,00000008,4,MeReal
+MdtLinear2SetPosition,y,12,0000000c,4,MeReal
+MdtLinear2SetPosition,z,16,00000010,4,MeReal
+MdtLinear2SetPosition,x_local,-20,ffffffec,4,MeReal
+MdtLinear2SetPosition,j,4,00000004,4,MdtLinear2ID
+MdtLinear2SetPosition,y_local,-24,ffffffe8,4,MeReal

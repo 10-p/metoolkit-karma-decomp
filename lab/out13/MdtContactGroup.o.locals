@@ -1,0 +1,24 @@
+# function,name,stackoff,hexoff,size,type
+MdtContactGroupCreate,w,4,00000004,4,MdtWorldID
+MdtContactGroupDestroy,g,4,00000004,4,MdtContactGroupID.conflict
+MdtContactGroupReset,c,4,00000004,4,MdtContactGroupID.conflict
+MdtContactGroupSetGenerator,c,4,00000004,4,MdtContactGroupID.conflict
+MdtContactGroupSetGenerator,generator,8,00000008,4,void *
+MdtContactGroupQuaConstraint,c,4,00000004,4,MdtContactGroupID.conflict
+MdtConstraintDCastContactGroup,c,4,00000004,4,MdtConstraintID
+MdtContactGroupGetFirstContact,c,4,00000004,4,MdtContactGroupID.conflict
+MdtContactGroupGetGenerator,c,4,00000004,4,MdtContactGroupID.conflict
+MdtContactGroupIsSwapped,g,4,00000004,4,MdtContactGroupID.conflict
+MdtContactGroupGetCount,g,4,00000004,4,MdtContactGroupID.conflict
+MdtContactGroupGetNextContact,g,4,00000004,4,MdtContactGroupID.conflict
+MdtContactGroupGetNextContact,c,8,00000008,4,MdtContactID.conflict
+MdtContactGroupGetNormalForce,g,4,00000004,4,MdtContactGroupID.conflict
+MdtContactGroupAppendContact,g,4,00000004,4,MdtContactGroupID.conflict
+MdtContactGroupAppendContact,c,8,00000008,4,MdtContactID.conflict
+MdtContactGroupRemoveContact,g,4,00000004,4,MdtContactGroupID.conflict
+MdtContactGroupRemoveContact,c,8,00000008,4,MdtContactID.conflict
+MdtContactGroupCreateContact,g,4,00000004,4,MdtContactGroupID.conflict
+MdtContactGroupCreateContact,pMVar4,-24,ffffffe8,4,MdtBody *
+MdtContactGroupCreateContact,pMVar5,-20,ffffffec,4,MdtBody *
+MdtContactGroupDestroyContact,g,4,00000004,4,MdtContactGroupID.conflict
+MdtContactGroupDestroyContact,c,8,00000008,4,MdtContactID.conflict

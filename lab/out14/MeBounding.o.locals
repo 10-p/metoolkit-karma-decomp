@@ -1,0 +1,13 @@
+# function,name,stackoff,hexoff,size,type
+MeBoundingSphereCalc,points,4,00000004,4,MeVector3 *
+MeBoundingSphereCalc,numPoints,8,00000008,4,int
+MeBoundingSphereCalc,centre,12,0000000c,4,MeReal *
+MeBoundingSphereCalc,radius,16,00000010,4,MeReal *
+MeBoundingSphereCalc,r2,-128,ffffff80,4,MeReal
+MeBoundingSphereCalc,min,-44,ffffffd4,12,MeVector3
+MeBoundingSphereCalc,max,-60,ffffffc4,12,MeVector3
+MeBoundingSphereCalc,minIx,-76,ffffffb4,12,int[3]
+MeBoundingSphereCalc,maxIx,-92,ffffffa4,12,int[3]
+MeBoundingSphereCalc,diff,-108,ffffff94,12,MeVector3
+MeBoundingSphereCalc,cToP,-124,ffffff84,12,MeVector3
+MeBoundingSphereCalc,__result,-144,ffffff70,4,float

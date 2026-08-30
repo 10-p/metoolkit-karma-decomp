@@ -1,0 +1,43 @@
+# function,name,stackoff,hexoff,size,type
+Degenerate,p0,4,00000004,4,McdContact *
+Degenerate,p1,8,00000008,4,McdContact *
+Degenerate,scale,12,0000000c,4,MeReal
+Degenerate,diff,-28,ffffffe4,12,MeReal[3]
+initList,list,4,00000004,4,McdContactList *
+initList,size,8,00000008,4,int
+newElt,list,4,00000004,4,McdContactList *
+newElt,contact,8,00000008,4,McdContact *
+insAfter,here,4,00000004,4,McdContactLink *
+insAfter,addMe,8,00000008,4,McdContactLink *
+rmvElt,list,4,00000004,4,McdContactList *
+rmvElt,elt,8,00000008,4,McdContactLink *
+UpdateHull,list,4,00000004,4,McdContactList *
+UpdateHull,contact,8,00000008,4,McdContact *
+UpdateHull,normal,12,0000000c,4,MeReal *
+UpdateHull,pKeepLast,-20,ffffffec,4,McdContactLink *
+UpdateHull,pKeepFirst,-24,ffffffe8,4,McdContactLink *
+McdContactSimplify,aiStack_b0,-176,ffffff50,20,int[5]
+McdContactSimplify,MStack_9c,-156,ffffff64,16,McdContactLink
+McdContactSimplify,auStack_8c,-140,ffffff74,12,undefined1[12]
+McdContactSimplify,normal,4,00000004,4,MeReal *
+McdContactSimplify,inContacts,8,00000008,4,McdContact *
+McdContactSimplify,inNumContacts,12,0000000c,4,int
+McdContactSimplify,outContacts,16,00000010,4,McdContact *
+McdContactSimplify,inMaxContactPointCount,20,00000014,4,int
+McdContactSimplify,inFaceNormalsFirst,24,00000018,4,int
+McdContactSimplify,scale,28,0000001c,4,MeReal
+McdContactSimplify,eps,-80,ffffffb0,4,MeReal
+McdContactSimplify,p1,-84,ffffffac,4,McdContactLink *
+McdContactSimplify,list,-76,ffffffb4,16,McdContactList
+McdContactSimplify,cNum,-88,ffffffa8,4,int
+McdContactSimplify,count,-108,ffffff94,4,int
+McdContactSimplify,diff,-60,ffffffc4,12,MeReal[3]
+McdContactSimplify,local_80,-128,ffffff80,4,McdContact *
+McdContactSimplify,local_7c,-124,ffffff84,4,float
+McdContactSimplify,local_78,-120,ffffff88,4,float
+McdContactSimplify,local_74,-116,ffffff8c,4,float
+McdContactSimplify,local_70,-112,ffffff90,4,uint
+McdContactSimplify,local_68,-104,ffffff98,4,float
+McdContactSimplify,local_64,-100,ffffff9c,4,float
+McdContactSimplify,local_60,-96,ffffffa0,4,float
+McdContactSimplify,local_5c,-92,ffffffa4,4,float

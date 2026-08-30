@@ -1,0 +1,54 @@
+# function,name,stackoff,hexoff,size,type
+McdInit,modelCount,8,00000008,4,int
+McdInit,instanceCount,12,0000000c,4,int
+McdInit,scale,16,00000010,4,MeReal
+McdInit,geoTypeMaxCount,4,00000004,4,int
+McdFrameworkDestroyAllModelsAndGeometries,f,4,00000004,4,McdFrameworkID
+McdFrameworkDestroyAllModelsAndGeometries,guard,-20,ffffffec,4,int
+McdFrameworkGetModelCount,f,4,00000004,4,McdFrameworkID
+McdFrameworkGetGeometryCount,f,4,00000004,4,McdFrameworkID
+McdTerm,frame,4,00000004,4,McdFrameworkID
+McdFrameworkRegisterTermAction,frame,4,00000004,4,McdFrameworkID
+McdFrameworkRegisterTermAction,action,8,00000008,4,McdTermAction
+McdFrameworkSetDefaultContactTolerance,frame,4,00000004,4,McdFrameworkID
+McdFrameworkSetDefaultContactTolerance,inPadding,8,00000008,4,MeReal
+McdFrameworkGetDefaultContactTolerance,frame,4,00000004,4,McdFrameworkID
+McdFrameworkResetTypes,frame,4,00000004,4,McdFrameworkID
+McdFrameworkTypeIsValid,frame,4,00000004,4,McdFrameworkID
+McdFrameworkTypeIsValid,id,8,00000008,4,int
+McdFrameworkGetTypeName,frame,4,00000004,4,McdFrameworkID
+McdFrameworkGetTypeName,id,8,00000008,4,int
+McdFrameworkShowTypes,frame,4,00000004,4,McdFrameworkID
+McdFrameworkTypeIsRegistered,typeId,8,00000008,4,int
+McdFrameworkTypeIsRegistered,frame,4,00000004,4,McdFrameworkID
+McdFrameworkGetRegisteredTypeCount,frame,4,00000004,4,McdFrameworkID
+McdFrameworkGetDefaultRequestPtr,frame,4,00000004,4,McdFrameworkID
+McdFrameworkSetDefaultRequestPtr,frame,4,00000004,4,McdFrameworkID
+McdFrameworkSetDefaultRequestPtr,r,8,00000008,4,McdRequest *
+McdFrameworkRegisterGeometryType,frame,4,00000004,4,McdFramework *
+McdFrameworkRegisterGeometryType,typeId,8,00000008,2,McdGeometryType
+McdFrameworkRegisterGeometryType,typeName,12,0000000c,4,char *
+McdFrameworkRegisterGeometryType,f_destroy,16,00000010,4,McdGeometryDestroyFnPtr
+McdFrameworkRegisterGeometryType,f_getAABB,20,00000014,4,McdGeometryGetAABBFnPtr
+McdFrameworkRegisterGeometryType,f_getBSphere,24,00000018,4,McdGeometryGetBSphereFnPtr
+McdFrameworkRegisterGeometryType,f_maximumPoint,28,0000001c,4,McdGeometryMaximumPointFnPtr
+McdFrameworkRegisterGeometryType,f_getInertiaMatrix,32,00000020,4,McdGeometryGetMassPropertiesFnPtr
+McdFrameworkRegisterGeometryType,f_debugDraw,36,00000024,4,McdGeometryDebugDrawFnPtr
+McdFrameworkSetInteractions,geoType2,12,0000000c,4,int
+McdFrameworkSetInteractions,interactions,16,00000010,4,McdInteractions *
+McdFrameworkSetInteractions,frame,4,00000004,4,McdFramework *
+McdFrameworkSetInteractions,geoType1,8,00000008,4,int
+McdFrameworkGetInteractions,frame,4,00000004,4,McdFramework *
+McdFrameworkGetInteractions,geoType1,8,00000008,4,int
+McdFrameworkGetInteractions,geoType2,12,0000000c,4,int
+McdFrameworkGetInteractionsWarned,framework,4,00000004,4,McdFramework *
+McdFrameworkGetInteractionsWarned,geoType1,8,00000008,4,int
+McdFrameworkGetInteractionsWarned,geoType2,12,0000000c,4,int
+McdFrameworkSetInteractionsWarned,framework,4,00000004,4,McdFramework *
+McdFrameworkSetInteractionsWarned,geoType1,8,00000008,4,int
+McdFrameworkSetInteractionsWarned,geoType2,12,0000000c,4,int
+McdFrameworkSetInteractionsWarned,warned,16,00000010,4,MeBool
+McdFrameworkSetLineSegInteraction,frame,4,00000004,4,McdFramework *
+McdFrameworkSetLineSegInteraction,geoType,8,00000008,4,int
+McdFrameworkSetLineSegInteraction,isectfn,12,0000000c,4,McdLineSegIntersectFnPtr
+McdFrameworkGetLineSegInteraction,geometry,4,00000004,4,McdGeometryID

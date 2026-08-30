@@ -1,0 +1,67 @@
+# function,name,stackoff,hexoff,size,type
+f1d,x,4,00000004,4,MeReal
+f1d,temp,-44,ffffffd4,16,MeReal[4]
+df1d,temp2,-60,ffffffc4,16,MeReal[4]
+df1d,x,4,00000004,4,MeReal
+df1d,temp,-44,ffffffd4,16,MeReal[4]
+mnbrak,ax,4,00000004,4,MeReal *
+mnbrak,bx,8,00000008,4,MeReal *
+mnbrak,cx,12,0000000c,4,MeReal *
+mnbrak,fa,16,00000010,4,MeReal *
+mnbrak,fb,20,00000014,4,MeReal *
+mnbrak,fc,24,00000018,4,MeReal *
+mnbrak,f,28,0000001c,4,_func_MeReal_float *
+dbrent,xmin,4,00000004,4,MeReal *
+dbrent,ax,8,00000008,4,MeReal
+dbrent,bx,12,0000000c,4,MeReal
+dbrent,cx,16,00000010,4,MeReal
+dbrent,f,20,00000014,4,_func_MeReal_float *
+dbrent,df,24,00000018,4,_func_MeReal_float *
+dbrent,tol,28,0000001c,4,MeReal
+dbrent,a,-32,ffffffe0,4,MeReal
+dbrent,b,-36,ffffffdc,4,MeReal
+dbrent,w,-40,ffffffd8,4,MeReal
+dbrent,fx,-44,ffffffd4,4,MeReal
+dbrent,fw,-48,ffffffd0,4,MeReal
+dbrent,dx,-52,ffffffcc,4,MeReal
+dbrent,dv,-56,ffffffc8,4,MeReal
+dbrent,dw,-60,ffffffc4,4,MeReal
+dbrent,d,-64,ffffffc0,4,MeReal
+dbrent,e,-68,ffffffbc,4,MeReal
+dbrent,tol2,-72,ffffffb8,4,MeReal
+LineFnMinNd,N,4,00000004,4,int
+LineFnMinNd,p,8,00000008,4,MeReal *
+LineFnMinNd,xi,12,0000000c,4,MeReal *
+LineFnMinNd,tol,16,00000010,4,MeReal
+LineFnMinNd,f,20,00000014,4,_func_MeReal_MeReal_ptr *
+LineFnMinNd,grad,24,00000018,4,_func_void_MeReal_ptr_MeReal_ptr *
+LineFnMinNd,ax,-20,ffffffec,4,MeReal
+LineFnMinNd,xx,-24,ffffffe8,4,MeReal
+LineFnMinNd,bx,-40,ffffffd8,4,MeReal
+LineFnMinNd,fa,-36,ffffffdc,4,MeReal
+LineFnMinNd,fx,-32,ffffffe0,4,MeReal
+LineFnMinNd,fb,-28,ffffffe4,4,MeReal
+LineFnMinNd,xmin,-44,ffffffd4,4,MeReal
+FnMin1d,fTol,8,00000008,4,MeReal
+FnMin1d,f,12,0000000c,4,_func_MeReal_float *
+FnMin1d,df,16,00000010,4,_func_MeReal_float *
+FnMin1d,ax,-12,fffffff4,4,MeReal
+FnMin1d,xx,-16,fffffff0,4,MeReal
+FnMin1d,bx,-32,ffffffe0,4,MeReal
+FnMin1d,fa,-28,ffffffe4,4,MeReal
+FnMin1d,fx,-24,ffffffe8,4,MeReal
+FnMin1d,fb,-20,ffffffec,4,MeReal
+FnMin1d,p,4,00000004,4,MeReal *
+FnMinNd,N,4,00000004,4,int
+FnMinNd,p,8,00000008,4,MeReal *
+FnMinNd,tol,12,0000000c,4,MeReal
+FnMinNd,fTol,16,00000010,4,MeReal
+FnMinNd,f,20,00000014,4,_func_MeReal_MeReal_ptr *
+FnMinNd,grad,24,00000018,4,_func_void_MeReal_ptr_MeReal_ptr *
+FnMinNd,fp,-96,ffffffa0,4,MeReal
+FnMinNd,xi,-44,ffffffd4,16,MeReal[4]
+FnMinNd,g,-60,ffffffc4,16,MeReal[4]
+FnMinNd,h,-76,ffffffb4,16,MeReal[4]
+FnMinNd,fMin,-100,ffffff9c,4,MeReal
+FnMinNd,its,-104,ffffff98,4,int
+FnMinNd,temp,-92,ffffffa4,16,MeReal[4]

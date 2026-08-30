@@ -1,0 +1,6 @@
+# function,name,stackoff,hexoff,size,type
+LineDraw,g,16,00000010,4,MeReal
+LineDraw,b,20,00000014,4,MeReal
+LineDraw,start,4,00000004,4,MeReal *
+LineDraw,end,8,00000008,4,MeReal *
+LineDraw,r,12,0000000c,4,MeReal

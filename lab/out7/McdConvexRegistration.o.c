@@ -1,0 +1,17 @@
+/* ==== McdConvexMeshPrimitivesRegisterInteractions ==== */
+
+MeBool McdConvexMeshPrimitivesRegisterInteractions(McdFramework *frame)
+
+{
+  McdConvexMeshConvexMeshRegisterInteraction(frame);
+  McdBoxConvexMeshRegisterInteraction(frame);
+  McdSphereConvexMeshRegisterInteraction(frame);
+  McdCylinderConvexMeshRegisterInteraction(frame);
+  McdConvexMeshTriangleListRegisterInteraction(frame);
+  McdConvexMeshPlaneRegisterInteraction(frame);
+  McdConvexMeshLineSegmentRegisterInteraction(frame);
+  McdSphylConvexMeshRegisterInteraction(frame);
+  return 1;
+}
+
+

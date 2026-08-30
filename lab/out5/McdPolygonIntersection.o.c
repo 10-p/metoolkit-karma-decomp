@@ -1,0 +1,594 @@
+/* ==== McdEqual2D ==== */
+
+int McdEqual2D(MeReal *a,MeReal xv,MeReal yv,int x,int y)
+
+{
+  int iVar1;
+  
+                    /* Unresolved local var: MeReal u@[DW_OP_reg11(ST0)]
+                       Unresolved local var: MeReal v@[DW_OP_reg12(ST1)] */
+  iVar1 = 0;
+  if ((((a[x] - xv < 0.001) && (-0.001 < a[x] - xv)) && (a[y] - yv < 0.001)) && (-0.001 < a[y] - yv)
+     ) {
+    iVar1 = 1;
+  }
+  return iVar1;
+}
+
+
+/* ==== McdSubtract2D ==== */
+
+void McdSubtract2D(MeReal *r,MeReal *a,MeReal *b,int x,int y)
+
+{
+  r[x] = a[x] - b[x];
+  r[y] = a[y] - b[y];
+  return;
+}
+
+
+/* ==== McdAdd2D ==== */
+
+void McdAdd2D(MeReal *r,MeReal *a,MeReal *b,int x,int y)
+
+{
+  r[x] = b[x] + a[x];
+  r[y] = b[y] + a[y];
+  return;
+}
+
+
+/* ==== McdCross2D ==== */
+
+MeReal McdCross2D(MeReal *a,MeReal *b,int x,int y)
+
+{
+  return b[y] * a[x] - a[y] * b[x];
+}
+
+
+/* ==== McdPolyPointCompare0 ==== */
+
+int McdPolyPointCompare0(void *p1,void *p2)
+
+{
+  uint uVar1;
+  
+                    /* Unresolved local var: MeReal t@[DW_OP_reg11(ST0)] */
+  if (*(float *)p1 - *(float *)p2 < 0.0) {
+    uVar1 = 0xffffffff;
+  }
+  else {
+    uVar1 = (uint)(0.0 < *(float *)p1 - *(float *)p2);
+  }
+  return uVar1;
+}
+
+
+/* ==== McdPolyPointCompare1 ==== */
+
+int McdPolyPointCompare1(void *p1,void *p2)
+
+{
+  float fVar1;
+  uint uVar2;
+  
+                    /* Unresolved local var: MeReal t@[DW_OP_reg11(ST0)] */
+  fVar1 = *(float *)((int)p1 + 4) - *(float *)((int)p2 + 4);
+  if (fVar1 < 0.0) {
+    uVar2 = 0xffffffff;
+  }
+  else {
+    uVar2 = (uint)(0.0 < fVar1);
+  }
+  return uVar2;
+}
+
+
+/* ==== McdPolyPointCompare2 ==== */
+
+int McdPolyPointCompare2(void *p1,void *p2)
+
+{
+  float fVar1;
+  uint uVar2;
+  
+                    /* Unresolved local var: MeReal t@[DW_OP_reg11(ST0)] */
+  fVar1 = *(float *)((int)p1 + 8) - *(float *)((int)p2 + 8);
+  if (fVar1 < 0.0) {
+    uVar2 = 0xffffffff;
+  }
+  else {
+    uVar2 = (uint)(0.0 < fVar1);
+  }
+  return uVar2;
+}
+
+
+/* ==== McdPolygonBestAxis ==== */
+
+int McdPolygonBestAxis(MeReal *normal)
+
+{
+  int iVar1;
+  MeReal temp [3];
+  
+                    /* Unresolved local var: int axis@[DW_OP_reg0(EAX)] */
+  if (ABS(*normal) <= ABS(normal[1])) {
+    iVar1 = (ABS(normal[1]) <= ABS(normal[2])) + 1;
+  }
+  else {
+    iVar1 = (uint)(ABS(*normal) <= ABS(normal[2])) * 2;
+  }
+  return iVar1;
+}
+
+
+/* ==== McdPolygonSort ==== */
+
+/* WARNING: Unknown calling convention */
+
+void McdPolygonSort(int numpoly,MeVector3 *poly,int axis)
+
+{
+  uint uVar1;
+  uint uVar2;
+  uint uVar3;
+  MeVector3 *paMVar4;
+  MeVector3 *paMVar5;
+  int iVar6;
+  longdouble lVar7;
+  sbyte local_60;
+  McdPolyPointCompareFn cmp [3];
+  MeReal mid [3];
+  MeReal v [3];
+  
+                    /* Unresolved local var: int i@[DW_OP_reg6(ESI)]
+                       Unresolved local var: int x@[???]
+                       Unresolved local var: int y@[???]
+                       Unresolved local var: longdouble __value@[DW_OP_reg11(ST0)] */
+  mid[0] = 0.0;
+  mid[1] = 0.0;
+  mid[2] = 0.0;
+  if (numpoly < 3) {
+    return;
+  }
+  uVar1 = 1 << ((byte)axis & 0x1f) & 3;
+  local_60 = (sbyte)uVar1;
+  uVar3 = 1 << local_60 & 3;
+  if (0 < numpoly) {
+    uVar2 = -numpoly & 3;
+    paMVar5 = poly;
+    iVar6 = numpoly;
+    if (uVar2 != 0) {
+      paMVar4 = poly;
+      if (uVar2 < 3) {
+        if (uVar2 < 2) {
+          mid[uVar1] = (*poly)[uVar1] + mid[uVar1];
+          paMVar5 = poly + 1;
+          mid[uVar3] = (*poly)[uVar3] + mid[uVar3];
+          iVar6 = numpoly + -1;
+        }
+        iVar6 = iVar6 + -1;
+        mid[uVar1] = (*paMVar5)[uVar1] + mid[uVar1];
+        paMVar4 = paMVar5 + 1;
+        mid[uVar3] = (*paMVar5)[uVar3] + mid[uVar3];
+      }
+      mid[uVar1] = (*paMVar4)[uVar1] + mid[uVar1];
+      paMVar5 = paMVar4 + 1;
+      iVar6 = iVar6 + -1;
+      mid[uVar3] = (*paMVar4)[uVar3] + mid[uVar3];
+      if (iVar6 == 0) goto LAB_0001034c;
+    }
+    do {
+      mid[uVar1] = (*paMVar5)[uVar1] + mid[uVar1];
+      mid[uVar3] = (*paMVar5)[uVar3] + mid[uVar3];
+      mid[uVar1] = paMVar5[1][uVar1] + mid[uVar1];
+      mid[uVar3] = paMVar5[1][uVar3] + mid[uVar3];
+      mid[uVar1] = paMVar5[2][uVar1] + mid[uVar1];
+      mid[uVar3] = paMVar5[2][uVar3] + mid[uVar3];
+      mid[uVar1] = paMVar5[3][uVar1] + mid[uVar1];
+      paMVar4 = paMVar5 + 3;
+      paMVar5 = paMVar5 + 4;
+      iVar6 = iVar6 + -4;
+      mid[uVar3] = (*paMVar4)[uVar3] + mid[uVar3];
+    } while (iVar6 != 0);
+  }
+LAB_0001034c:
+  mid[uVar1] = mid[uVar1] * (1.0 / (float)numpoly);
+  mid[uVar3] = (1.0 / (float)numpoly) * mid[uVar3];
+  if (0 < numpoly) {
+    uVar2 = -numpoly & 3;
+    paMVar5 = poly;
+    iVar6 = numpoly;
+    if (uVar2 != 0) {
+      if (uVar2 < 3) {
+        if (uVar2 < 2) {
+          v[uVar1] = (*poly)[uVar1] - mid[uVar1];
+          lVar7 = (longdouble)(*poly)[uVar3] - (longdouble)mid[uVar3];
+          v[uVar3] = (float)lVar7;
+          lVar7 = (longdouble)fpatan(lVar7,(longdouble)v[uVar1]);
+          (*poly)[axis] = (float)lVar7;
+          paMVar5 = poly + 1;
+          iVar6 = numpoly + -1;
+        }
+        v[uVar1] = (*paMVar5)[uVar1] - mid[uVar1];
+        lVar7 = (longdouble)(*paMVar5)[uVar3] - (longdouble)mid[uVar3];
+        v[uVar3] = (float)lVar7;
+        lVar7 = (longdouble)fpatan(lVar7,(longdouble)v[uVar1]);
+        iVar6 = iVar6 + -1;
+        (*paMVar5)[axis] = (float)lVar7;
+        paMVar5 = paMVar5 + 1;
+      }
+      v[uVar1] = (*paMVar5)[uVar1] - mid[uVar1];
+      lVar7 = (longdouble)(*paMVar5)[uVar3] - (longdouble)mid[uVar3];
+      v[uVar3] = (float)lVar7;
+      lVar7 = (longdouble)fpatan(lVar7,(longdouble)v[uVar1]);
+      (*paMVar5)[axis] = (float)lVar7;
+      paMVar5 = paMVar5 + 1;
+      iVar6 = iVar6 + -1;
+      if (iVar6 == 0) goto LAB_00010487;
+    }
+    do {
+      v[uVar1] = (*paMVar5)[uVar1] - mid[uVar1];
+      lVar7 = (longdouble)(*paMVar5)[uVar3] - (longdouble)mid[uVar3];
+      v[uVar3] = (float)lVar7;
+      lVar7 = (longdouble)fpatan(lVar7,(longdouble)v[uVar1]);
+      (*paMVar5)[axis] = (float)lVar7;
+      v[uVar1] = paMVar5[1][uVar1] - mid[uVar1];
+      lVar7 = (longdouble)paMVar5[1][uVar3] - (longdouble)mid[uVar3];
+      v[uVar3] = (float)lVar7;
+      lVar7 = (longdouble)fpatan(lVar7,(longdouble)v[uVar1]);
+      paMVar5[1][axis] = (float)lVar7;
+      v[uVar1] = paMVar5[2][uVar1] - mid[uVar1];
+      lVar7 = (longdouble)paMVar5[2][uVar3] - (longdouble)mid[uVar3];
+      v[uVar3] = (float)lVar7;
+      lVar7 = (longdouble)fpatan(lVar7,(longdouble)v[uVar1]);
+      paMVar5[2][axis] = (float)lVar7;
+      v[uVar1] = paMVar5[3][uVar1] - mid[uVar1];
+      lVar7 = (longdouble)paMVar5[3][uVar3] - (longdouble)mid[uVar3];
+      v[uVar3] = (float)lVar7;
+      lVar7 = (longdouble)fpatan(lVar7,(longdouble)v[uVar1]);
+      paMVar5[3][axis] = (float)lVar7;
+      paMVar5 = paMVar5 + 4;
+      iVar6 = iVar6 + -4;
+    } while (iVar6 != 0);
+  }
+LAB_00010487:
+  cmp[0] = McdPolyPointCompare0;
+  cmp[1] = McdPolyPointCompare1;
+  cmp[2] = McdPolyPointCompare2;
+  qsort(poly,numpoly,0xc,(__compar_fn_t)cmp[axis]);
+  return;
+}
+
+
+/* ==== McdAddPoint ==== */
+
+int McdAddPoint(int *numOut,MeVector3 *polyOut,MeReal xv,MeReal yv,int x,int y)
+
+{
+  int iVar1;
+  float fVar2;
+  float fVar3;
+  bool bVar4;
+  
+                    /* Unresolved local var: int i@[DW_OP_reg2(EDX)] */
+  iVar1 = *numOut;
+  if (0 < iVar1) {
+                    /* Unresolved local var: MeReal u@[DW_OP_reg11(ST0)]
+                       Unresolved local var: MeReal v@[DW_OP_reg12(ST1)] */
+    fVar2 = polyOut[iVar1 + -1][x] - xv;
+    bVar4 = false;
+    fVar3 = polyOut[iVar1 + -1][y] - yv;
+    if ((((fVar2 < 0.001) && (-0.001 < fVar2)) && (fVar3 < 0.001)) && (-0.001 < fVar3)) {
+      bVar4 = true;
+    }
+    if (bVar4) {
+      return 0;
+    }
+  }
+  if (1 < iVar1) {
+                    /* Unresolved local var: MeReal u@[DW_OP_reg11(ST0)]
+                       Unresolved local var: MeReal v@[DW_OP_reg12(ST1)] */
+    fVar2 = (*polyOut)[x] - xv;
+    bVar4 = false;
+    fVar3 = (*polyOut)[y] - yv;
+    if (((fVar2 < 0.001) && (-0.001 < fVar2)) && ((fVar3 < 0.001 && (-0.001 < fVar3)))) {
+      bVar4 = true;
+    }
+    if (bVar4) {
+      return 1;
+    }
+  }
+  polyOut[iVar1][x] = xv;
+  polyOut[iVar1][y] = yv;
+  *numOut = *numOut + 1;
+  return 0;
+}
+
+
+/* ==== McdPolygonContainsPoint ==== */
+
+int McdPolygonContainsPoint(int numpoly,MeVector3 *poly,MeReal *pt,int axis)
+
+{
+  uint uVar1;
+  float fVar2;
+  float fVar3;
+  float fVar4;
+  float fVar5;
+  uint uVar6;
+  uint uVar7;
+  uint uVar8;
+  uint uVar9;
+  int i1;
+  MeReal b [3];
+  MeReal a [3];
+  
+                    /* Unresolved local var: int x@[???]
+                       Unresolved local var: int y@[???]
+                       Unresolved local var: int i@[DW_OP_reg0(EAX)]
+                       Unresolved local var: int j@[???] */
+  uVar7 = 1 << ((byte)axis & 0x1f) & 3;
+  uVar9 = 1 << (sbyte)uVar7 & 3;
+  if (0 < numpoly) {
+    fVar2 = pt[uVar7];
+    fVar3 = pt[uVar9];
+    uVar6 = 0;
+    do {
+      uVar1 = uVar6 + 1;
+      uVar8 = (int)(uVar1 - numpoly) >> 0x1f & uVar1;
+      fVar4 = poly[uVar6][uVar7];
+      a[uVar7] = fVar2 - fVar4;
+      fVar5 = poly[uVar6][uVar9];
+      a[uVar9] = fVar3 - fVar5;
+      b[uVar7] = poly[uVar8][uVar7] - fVar4;
+      fVar5 = poly[uVar8][uVar9] - fVar5;
+      b[uVar9] = fVar5;
+      if (0.0 < fVar5 * a[uVar7] - a[uVar9] * b[uVar7]) {
+        return 0;
+      }
+      uVar6 = uVar1;
+    } while ((int)uVar1 < numpoly);
+  }
+  return 1;
+}
+
+
+/* ==== McdPolygonIntersection ==== */
+
+/* WARNING: Unknown calling convention */
+
+void McdPolygonIntersection
+               (MeReal *normal,MeReal dist,int numpoly1,MeVector3 *poly1,int numpoly2,
+               MeVector3 *poly2,int *numOut,MeVector3 *polyOut)
+
+{
+  float fVar1;
+  float fVar2;
+  float fVar3;
+  float fVar4;
+  float fVar5;
+  bool bVar6;
+  bool bVar7;
+  int axis_00;
+  MeReal *pMVar8;
+  int iVar9;
+  uint y;
+  MeReal *pMVar10;
+  MeVector3 *paMVar11;
+  uint uVar12;
+  uint uVar13;
+  MeReal *pMVar14;
+  MeVector3 *paMVar15;
+  uint x;
+  int iVar16;
+  uint uVar17;
+  bool bVar18;
+  MeReal ps2;
+  MeReal ps1;
+  MeReal sign2;
+  MeReal sign1;
+  int numboth;
+  int i;
+  int inside;
+  int neg2;
+  int neg1;
+  int e2;
+  int e1;
+  int s2;
+  int s1;
+  int axis;
+  MeReal b3 [3];
+  MeReal b2 [3];
+  MeReal b1 [3];
+  MeReal a2 [3];
+  MeReal a1 [3];
+  
+                    /* Unresolved local var: int x@[???]
+                       Unresolved local var: int y@[???]
+                       Unresolved local var: int change@[DW_OP_reg6(ESI)]
+                       Unresolved local var: MeReal cross@[DW_OP_reg17(ST6)] */
+  *numOut = 0;
+  axis_00 = McdPolygonBestAxis(normal);
+  McdPolygonSort(numpoly1,poly1,axis_00);
+  McdPolygonSort(numpoly2,poly2,axis_00);
+  if ((numpoly1 == 1) &&
+     (iVar16 = McdPolygonContainsPoint(numpoly2,poly2,*poly1,axis_00), iVar16 != 0)) {
+    iVar16 = *numOut;
+    *numOut = iVar16 + 1;
+    paMVar11 = poly1;
+  }
+  else {
+    if ((numpoly2 != 1) ||
+       (iVar16 = McdPolygonContainsPoint(numpoly1,poly1,*poly2,axis_00), iVar16 == 0))
+    goto LAB_0001077d;
+    iVar16 = *numOut;
+    *numOut = iVar16 + 1;
+    paMVar11 = poly2;
+  }
+  paMVar15 = polyOut + iVar16;
+  (*paMVar15)[0] = (*paMVar11)[0];
+  (*paMVar15)[1] = (*paMVar11)[1];
+  (*paMVar15)[2] = (*paMVar11)[2];
+LAB_0001077d:
+  if ((1 < numpoly1) && (1 < numpoly2)) {
+    axis._0_1_ = (byte)axis_00;
+    x = 1 << ((byte)axis & 0x1f) & 3;
+    uVar12 = numpoly1 + numpoly2;
+    y = 1 << (sbyte)x & 3;
+    iVar16 = 0;
+    s2 = 0;
+    s1 = 0;
+    e2 = 1;
+    e1 = 1;
+    inside = 0;
+    ps2 = 0.0;
+    ps1 = 0.0;
+    bVar6 = false;
+    bVar7 = false;
+    i = 0;
+    if ((uVar12 & 0x40000000) == 0) {
+      do {
+        if (iVar16 != 2) {
+          a1[x] = poly1[e1][x] - poly1[s1][x];
+          a1[y] = poly1[e1][y] - poly1[s1][y];
+        }
+        if (iVar16 != 1) {
+          a2[x] = poly2[e2][x] - poly2[s2][x];
+          a2[y] = poly2[e2][y] - poly2[s2][y];
+        }
+        b1[x] = poly2[e2][x] - poly1[s1][x];
+        b1[y] = poly2[e2][y] - poly1[s1][y];
+        b2[x] = poly1[e1][x] - poly2[s2][x];
+        fVar3 = poly1[e1][y] - poly2[s2][y];
+        b2[y] = fVar3;
+        fVar2 = a1[x] * b1[y] - a1[y] * b1[x];
+        fVar1 = a1[x] * a2[y] - a2[x] * a1[y];
+        fVar3 = a2[x] * fVar3 - a2[y] * b2[x];
+        if ((iVar16 != 0) &&
+           (((ps1 * fVar2 <= 0.0 || (ps2 * fVar3 <= 0.0)) && (1e-06 <= ABS(fVar1))))) {
+                    /* Unresolved local var: MeReal k1@[DW_OP_reg14(ST3)]
+                       Unresolved local var: MeReal k2@[DW_OP_reg12(ST1)] */
+          b3[x] = poly1[s1][x] - poly2[s2][x];
+          fVar5 = poly1[s1][y] - poly2[s2][y];
+          b3[y] = fVar5;
+          fVar4 = (a2[x] * fVar5 - b3[x] * a2[y]) * (1.0 / fVar1);
+          fVar5 = (fVar5 * a1[x] - b3[x] * a1[y]) * (1.0 / fVar1);
+          if ((((-1e-06 < fVar4) && (fVar4 < 1.000001)) && (-1e-06 < fVar5)) && (fVar5 < 1.000001))
+          {
+            iVar16 = McdAddPoint(numOut,polyOut,fVar4 * a1[x] + poly1[s1][x],
+                                 fVar4 * a1[y] + poly1[s1][y],x,y);
+            if (iVar16 != 0) {
+              iVar9 = *numOut;
+              break;
+            }
+            inside = (0.0 <= fVar1) + 1;
+          }
+        }
+        if (((inside == 1) && (fVar3 < 0.0)) && (0.0 < fVar2)) {
+          inside = 2;
+        }
+        if (((inside == 2) && (fVar2 < 0.0)) && (0.0 < fVar3)) {
+          inside = 1;
+        }
+        if ((inside != 0) && (fVar2 < 0.0)) {
+          inside = inside & (fVar3 < 0.0) - 1;
+        }
+        if (fVar1 <= 0.0) {
+          bVar18 = 0.0 < fVar3;
+        }
+        else {
+          bVar18 = fVar2 <= 0.0;
+        }
+        iVar16 = bVar18 + 1;
+        if ((fVar2 == 0.0) && (fVar3 == 0.0)) {
+          iVar16 = (inside == 1) + 1;
+        }
+        if (iVar16 == 1) {
+          s1 = e1;
+                    /* Unresolved local var: int i1@[DW_OP_reg0(EAX)] */
+          uVar17 = (int)((e1 + 1U) - numpoly1) >> 0x1f & e1 + 1U;
+          paMVar11 = poly1;
+          uVar13 = e2;
+          iVar9 = e1;
+          if (inside == 1) goto LAB_00010c9d;
+        }
+        else {
+                    /* Unresolved local var: int i1@[DW_OP_reg0(EAX)] */
+          s2 = e2;
+          uVar13 = (int)((e2 + 1U) - numpoly2) >> 0x1f & e2 + 1U;
+          paMVar11 = poly2;
+          uVar17 = e1;
+          iVar9 = e2;
+          if (inside == iVar16) {
+LAB_00010c9d:
+            e1 = uVar17;
+            e2 = uVar13;
+            iVar9 = McdAddPoint(numOut,polyOut,paMVar11[iVar9][x],paMVar11[iVar9][y],x,y);
+            uVar13 = e2;
+            uVar17 = e1;
+            if (iVar9 != 0) {
+              iVar9 = *numOut;
+              break;
+            }
+          }
+        }
+        e1 = uVar17;
+        e2 = uVar13;
+        if (fVar2 < 0.0) {
+          bVar7 = true;
+        }
+        if (fVar3 < 0.0) {
+          bVar6 = true;
+        }
+        iVar9 = *numOut;
+        if ((iVar9 == 0) && ((int)uVar12 < i)) {
+          if (bVar6) {
+            if (bVar7) break;
+            *numOut = numpoly2;
+            poly1 = poly2;
+            numpoly1 = numpoly2;
+          }
+          else {
+            *numOut = numpoly1;
+          }
+          uVar12 = numpoly1 * 3 & 0x3fffffff;
+          pMVar10 = *polyOut;
+          for (; uVar12 != 0; uVar12 = uVar12 - 1) {
+            *pMVar10 = (MeReal)(*poly1)[0];
+            poly1 = (MeVector3 *)((int)poly1 + 4);
+            pMVar10 = pMVar10 + 1;
+          }
+          goto LAB_00010c5d;
+        }
+        i = i + 1;
+        ps2 = fVar3;
+        ps1 = fVar2;
+      } while (i <= (int)(uVar12 * 2));
+    }
+    else {
+LAB_00010c5d:
+      iVar9 = *numOut;
+    }
+    i = 0;
+    if (0 < iVar9) {
+      pMVar10 = *polyOut + axis_00;
+      pMVar14 = *polyOut + y;
+      pMVar8 = *polyOut + x;
+      do {
+        fVar1 = *pMVar8;
+        fVar2 = *pMVar14;
+        pMVar14 = pMVar14 + 3;
+        pMVar8 = pMVar8 + 3;
+        *pMVar10 = (1.0 / normal[axis_00]) * ((dist - fVar1 * normal[x]) - fVar2 * normal[y]);
+        i = i + 1;
+        pMVar10 = pMVar10 + 3;
+      } while (i < *numOut);
+    }
+  }
+  return;
+}
+
+

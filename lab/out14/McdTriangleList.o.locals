@@ -1,0 +1,51 @@
+# function,name,stackoff,hexoff,size,type
+McdTriangleListRegisterType,frame,4,00000004,4,McdFramework *
+McdTriangleListCreate,frame,4,00000004,4,McdFramework *
+McdTriangleListCreate,min,8,00000008,4,MeReal *
+McdTriangleListCreate,max,12,0000000c,4,MeReal *
+McdTriangleListCreate,maxCount,16,00000010,4,int
+McdTriangleListCreate,f,20,00000014,4,McdTriangleListFnPtr
+McdTriangleListSetBoundingBox,g,4,00000004,4,McdTriangleListID
+McdTriangleListSetBoundingBox,min,8,00000008,4,MeReal *
+McdTriangleListSetBoundingBox,max,12,0000000c,4,MeReal *
+McdTriangleListGetBoundingBox,g,4,00000004,4,McdTriangleListID
+McdTriangleListGetBoundingBox,min,8,00000008,4,MeReal *
+McdTriangleListGetBoundingBox,max,12,0000000c,4,MeReal *
+McdTriangleListSetMaxTriangles,g,4,00000004,4,McdTriangleListID
+McdTriangleListSetMaxTriangles,max,8,00000008,4,int
+McdTriangleListGetMaxTriangles,g,4,00000004,4,McdTriangleListID
+McdTriangleListSetGenerator,g,4,00000004,4,McdTriangleListID
+McdTriangleListSetGenerator,f,8,00000008,4,McdTriangleListFnPtr
+McdTriangleListGetBoundingBox,g,4,00000004,4,McdTriangleListID
+McdTriangleListDestroy,g,4,00000004,4,McdGeometry *
+McdTriangleListUpdateAABB,ins,4,00000004,4,McdGeometryInstanceID
+McdTriangleListUpdateAABB,finalTM,8,00000008,4,MeMatrix4Ptr
+McdTriangleListUpdateAABB,tight,12,0000000c,4,MeBool
+McdTriangleListUpdateAABB,local_74,-116,ffffff8c,4,float
+McdTriangleListUpdateAABB,local_6c,-108,ffffff94,4,float
+McdTriangleListUpdateAABB,local_68,-104,ffffff98,4,float
+McdTriangleListUpdateAABB,local_64,-100,ffffff9c,4,float
+McdTriangleListUpdateAABB,local_60,-96,ffffffa0,4,float
+McdTriangleListUpdateAABB,rFit,-44,ffffffd4,12,MeReal[3]
+McdTriangleListUpdateAABB,tCentre,-60,ffffffc4,12,MeReal[3]
+McdTriangleListUpdateAABB,min,-76,ffffffb4,12,MeReal[3]
+McdTriangleListUpdateAABB,max,-92,ffffffa4,12,MeReal[3]
+McdTriangleListGetXYAABB,bounds,12,0000000c,4,MeReal *
+McdTriangleListGetXYAABB,g,4,00000004,4,McdGeometry *
+McdTriangleListGetXYAABB,tm,8,00000008,4,lsTransform *
+McdTriangleListGetBSphere,g,4,00000004,4,McdGeometry *
+McdTriangleListGetBSphere,center,8,00000008,4,MeReal *
+McdTriangleListGetBSphere,radius,12,0000000c,4,MeReal *
+McdTriangleListMaximumPoint,ins,4,00000004,4,McdGeometryInstanceID
+McdTriangleListMaximumPoint,inDir,8,00000008,4,MeReal *
+McdTriangleListMaximumPoint,outPoint,12,0000000c,4,MeReal *
+McdTriangleListGetMassProperties,g,4,00000004,4,McdGeometry *
+McdTriangleListGetMassProperties,relTM,8,00000008,4,MeVector4 *
+McdTriangleListGetMassProperties,m,12,0000000c,4,MeVector3 *
+McdTriangleListGetMassProperties,volume,16,00000010,4,MeReal *
+McdTriangleListGetUserData,g,4,00000004,4,McdTriangleListID
+McdTriangleListSetUserData,g,4,00000004,4,McdTriangleListID
+McdTriangleListSetUserData,data,8,00000008,4,void *
+McdTriangleListDebugDraw,geom,4,00000004,4,McdGeometryID
+McdTriangleListDebugDraw,tm,8,00000008,4,MeReal[4] *
+McdTriangleListDebugDraw,colour,12,0000000c,4,MeReal *

@@ -1,0 +1,12 @@
+# function,name,stackoff,hexoff,size,type
+MeIDPoolRequestID,pool,4,00000004,4,MeIDPool *
+MeIDPoolRequestID,found,-20,ffffffec,4,uint
+MeIDPoolRequestID,mask,-24,ffffffe8,4,MeU32
+MeIDPoolRequestID,p,-28,ffffffe4,4,uint *
+MeIDPoolReset,pool,4,00000004,4,MeIDPool *
+MeIDPoolCopy,to,4,00000004,4,MeIDPool *
+MeIDPoolCopy,from,8,00000008,4,MeIDPool *
+MeIDPoolIsEmpty,pool,4,00000004,4,MeIDPool *
+MeIDPoolReturnID,pool,4,00000004,4,MeIDPool *
+MeIDPoolReturnID,id,8,00000008,4,int
+MeIDPoolDestroy,pool,4,00000004,4,MeIDPool *

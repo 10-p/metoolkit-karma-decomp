@@ -1,0 +1,38 @@
+# function,name,stackoff,hexoff,size,type
+OverlapCylSphere,inHHCyl,32,00000020,4,MeReal
+OverlapCylSphere,inRSphere,36,00000024,4,MeReal
+OverlapCylSphere,inPos,40,00000028,4,lsVec3 *
+OverlapCylSphere,edgePoint,-44,ffffffd4,12,lsVec3
+OverlapCylSphere,n,-60,ffffffc4,12,lsVec3
+OverlapCylSphere,outSep,4,00000004,4,MeReal *
+OverlapCylSphere,outN,8,00000008,4,lsVec3 *
+OverlapCylSphere,outPos,12,0000000c,4,lsVec3 *
+OverlapCylSphere,outDims,16,00000010,4,MeI16 *
+OverlapCylSphere,outCylRoC,20,00000014,4,MeReal *
+OverlapCylSphere,inEps,24,00000018,4,MeReal
+OverlapCylSphere,inRCyl,28,0000001c,4,MeReal
+McdCylinderSphereIntersect,p,4,00000004,4,McdModelPair *
+McdCylinderSphereIntersect,result,8,00000008,4,McdIntersectResult *
+McdCylinderSphereIntersect,geometry2,-144,ffffff70,4,McdSphereID
+McdCylinderSphereIntersect,rCyl,-148,ffffff6c,4,MeReal
+McdCylinderSphereIntersect,hhCyl,-152,ffffff68,4,MeReal
+McdCylinderSphereIntersect,tAB,-92,ffffffa4,64,lsTransform
+McdCylinderSphereIntersect,dims,-130,ffffff7e,2,MeI16
+McdCylinderSphereIntersect,pos,-108,ffffff94,12,lsVec3
+McdCylinderSphereIntersect,separation,-136,ffffff78,4,MeReal
+McdCylinderSphereIntersect,normal,-124,ffffff84,12,lsVec3
+McdCylinderSphereIntersect,cylRoC,-128,ffffff80,4,MeReal
+McdCylinderSphereSafeTime,V0,-84,ffffffac,4,lsVec3 *
+McdCylinderSphereSafeTime,V1,-88,ffffffa8,4,lsVec3 *
+McdCylinderSphereSafeTime,radCyl,-92,ffffffa4,4,MeReal
+McdCylinderSphereSafeTime,hheightCyl,-96,ffffffa0,4,MeReal
+McdCylinderSphereSafeTime,radS,-100,ffffff9c,4,MeReal
+McdCylinderSphereSafeTime,ext1,-44,ffffffd4,12,MeReal[3]
+McdCylinderSphereSafeTime,ext2,-60,ffffffc4,12,MeReal[3]
+McdCylinderSphereSafeTime,T,-80,ffffffb0,4,MeReal
+McdCylinderSphereSafeTime,p,4,00000004,4,McdModelPair *
+McdCylinderSphereSafeTime,P,-76,ffffffb4,12,lsVec3
+McdCylinderSphereSafeTime,maxTime,8,00000008,4,MeReal
+McdCylinderSphereSafeTime,result,12,0000000c,4,McdSafeTimeResult *
+McdCylinderSphereRegisterInteraction,frame,4,00000004,4,McdFramework *
+McdCylinderSphereRegisterInteraction,interactions,-44,ffffffd4,28,McdInteractions

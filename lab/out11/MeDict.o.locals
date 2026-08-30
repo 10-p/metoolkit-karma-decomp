@@ -1,0 +1,89 @@
+# function,name,stackoff,hexoff,size,type
+MeDictLookup,dict,4,00000004,4,MeDict *
+MeDictLookup,key,8,00000008,4,void *
+MeDictLookup,saved,-20,ffffffec,4,MeDictNode *
+MeDictLowerBound,dict,4,00000004,4,MeDict *
+MeDictLowerBound,key,8,00000008,4,void *
+MeDictUpperBound,dict,4,00000004,4,MeDict *
+MeDictUpperBound,key,8,00000008,4,void *
+MeDictInsert,dict,4,00000004,4,MeDict *
+MeDictInsert,node,8,00000008,4,MeDictNode *
+MeDictInsert,key,12,0000000c,4,void *
+MeDictDelete,dict,4,00000004,4,MeDict *
+MeDictDelete,delete,8,00000008,4,MeDictNode *
+MeDictDelete,child,-20,ffffffec,4,MeDictNode *
+MeDictNext,dict,4,00000004,4,MeDict *
+MeDictNext,curr,8,00000008,4,MeDictNode *
+MeDictLoadEnd,tree,-284,fffffee4,256,MeDictNode *[64]
+MeDictLoadEnd,botrowcount,-292,fffffedc,4,ulong
+MeDictLoadEnd,baselevel,-296,fffffed8,4,uint
+MeDictLoadEnd,load,4,00000004,4,MeDictLoad *
+MeDictLoadEnd,dict,-288,fffffee0,4,MeDict *
+MeDictMerge,load,-60,ffffffc4,28,MeDictLoad
+MeDictMerge,dest,4,00000004,4,MeDict *
+MeDictMerge,source,8,00000008,4,MeDict *
+MeDictCreate,maxcount,4,00000004,4,ulong
+MeDictCreate,comp,8,00000008,4,MeDictCompareFn
+MeDictSetAllocator,fr,12,0000000c,4,MeDictFreeFn
+MeDictSetAllocator,context,16,00000010,4,void *
+MeDictSetAllocator,dict,4,00000004,4,MeDict *
+MeDictSetAllocator,al,8,00000008,4,MeDictAllocFn
+MeDictDestroy,dict,4,00000004,4,MeDict *
+MeDictFreeNodes,dict,4,00000004,4,MeDict *
+MeDictFree,dict,4,00000004,4,MeDict *
+MeDictInit,dict,4,00000004,4,MeDict *
+MeDictInit,maxcount,8,00000008,4,ulong
+MeDictInit,comp,12,0000000c,4,MeDictCompareFn
+MeDictInitLike,dict,4,00000004,4,MeDict *
+MeDictInitLike,template,8,00000008,4,MeDict *
+MeDictVerify,dict,4,00000004,4,MeDict *
+MeDictSimilar,left,4,00000004,4,MeDict *
+MeDictSimilar,right,8,00000008,4,MeDict *
+MeDictAllocInsert,dict,4,00000004,4,MeDict *
+MeDictAllocInsert,key,8,00000008,4,void *
+MeDictAllocInsert,data,12,0000000c,4,void *
+MeDictDeleteFree,dict,4,00000004,4,MeDict *
+MeDictDeleteFree,node,8,00000008,4,MeDictNode *
+MeDictFirst,dict,4,00000004,4,MeDict *
+MeDictLast,dict,4,00000004,4,MeDict *
+MeDictPrev,dict,4,00000004,4,MeDict *
+MeDictPrev,curr,8,00000008,4,MeDictNode *
+MeDictAllowDupes,dict,4,00000004,4,MeDict *
+MeDictCount,dict,4,00000004,4,MeDict *
+MeDictIsEmpty,dict,4,00000004,4,MeDict *
+MeDictIsFull,dict,4,00000004,4,MeDict *
+MeDictContains,local_14,-20,ffffffec,4,int
+MeDictContains,dict,4,00000004,4,MeDict *
+MeDictContains,node,8,00000008,4,MeDictNode *
+MeDictNodeCreate,data,4,00000004,4,void *
+MeDictNodeInit,dnode,4,00000004,4,MeDictNode *
+MeDictNodeInit,data,8,00000008,4,void *
+MeDictNodeDestroy,dnode,4,00000004,4,MeDictNode *
+MeDictNodeGet,dnode,4,00000004,4,MeDictNode *
+MeDictNodeGetkey,dnode,4,00000004,4,MeDictNode *
+MeDictNodePut,dnode,4,00000004,4,MeDictNode *
+MeDictNodePut,data,8,00000008,4,void *
+MeDictNodeIsInADict,dnode,4,00000004,4,MeDictNode *
+MeDictProcess,dict,4,00000004,4,MeDict *
+MeDictProcess,context,8,00000008,4,void *
+MeDictProcess,function,12,0000000c,4,MeDictProcessFn
+MeDictLoadBegin,load,4,00000004,4,MeDictLoad *
+MeDictLoadBegin,dict,8,00000008,4,MeDict *
+MeDictLoadNext,load,4,00000004,4,MeDictLoad *
+MeDictLoadNext,newnode,8,00000008,4,MeDictNode *
+MeDictLoadNext,key,12,0000000c,4,void *
+dnode_alloc,context,4,00000004,4,void *
+dnode_free,node,4,00000004,4,MeDictNode *
+dnode_free,context,8,00000008,4,void *
+free_nodes,dict,4,00000004,4,MeDict *
+free_nodes,node,8,00000008,4,MeDictNode *
+free_nodes,nil,12,0000000c,4,MeDictNode *
+verify_bintree,dict,4,00000004,4,MeDict *
+verify_redblack,nil,4,00000004,4,MeDictNode *
+verify_redblack,root,8,00000008,4,MeDictNode *
+verify_node_count,nil,4,00000004,4,MeDictNode *
+verify_node_count,root,8,00000008,4,MeDictNode *
+verify_dict_has_node,local_14,-20,ffffffec,4,int
+verify_dict_has_node,root,8,00000008,4,MeDictNode *
+verify_dict_has_node,node,12,0000000c,4,MeDictNode *
+verify_dict_has_node,nil,4,00000004,4,MeDictNode *

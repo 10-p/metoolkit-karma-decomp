@@ -1,0 +1,15 @@
+# function,name,stackoff,hexoff,size,type
+MeHeapPop,h,4,00000004,4,MeHeap *
+MeHeapPop,result,-20,ffffffec,4,void *
+MeHeapPop,p,-24,ffffffe8,4,int
+MeHeapInit,h,4,00000004,4,MeHeap *
+MeHeapInit,memory,8,00000008,4,void * *
+MeHeapInit,capacity,12,0000000c,4,int
+MeHeapInit,cmp,16,00000010,4,MeHeapComparisonFnPtr
+MeHeapPush,h,4,00000004,4,MeHeap *
+MeHeapPush,item,8,00000008,4,void *
+MeHeapCreate,capacity,4,00000004,4,int
+MeHeapCreate,cmp,8,00000008,4,MeHeapComparisonFnPtr
+MeHeapDestroy,h,4,00000004,4,MeHeap *
+MeHeapDefaultCompare,item1,4,00000004,4,void *
+MeHeapDefaultCompare,item2,8,00000008,4,void *

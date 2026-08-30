@@ -1,0 +1,163 @@
+/* ==== IxConvexMeshLineSegment ==== */
+
+int IxConvexMeshLineSegment
+              (McdModelID_conflict model,MeReal *inOrig,MeReal *inDest,
+              McdLineSegIntersectResult *info)
+
+{
+  float fVar1;
+  float fVar2;
+  float fVar3;
+  float fVar4;
+  float fVar5;
+  float fVar6;
+  float fVar7;
+  float fVar8;
+  float fVar9;
+  float fVar10;
+  float fVar11;
+  float fVar12;
+  void *pvVar13;
+  float *pfVar14;
+  float *pfVar15;
+  float *pfVar16;
+  int iVar17;
+  int bnorm_num;
+  int fnorm_num;
+  MeReal tnear;
+  McdConvexHull *poly;
+  float __result;
+  lsVec3 normalW;
+  lsVec3 dir;
+  lsVec3 p1;
+  lsVec3 p0;
+  
+                    /* Unresolved local var: McdConvexMeshID convex@[DW_OP_reg3(EBX)]
+                       Unresolved local var: lsTransform * gtm@[DW_OP_reg6(ESI)]
+                       Unresolved local var: lsVec3 * v0@[???]
+                       Unresolved local var: lsVec3 * v1@[???]
+                       Unresolved local var: lsVec3 * normalOut@[DW_OP_reg2(EDX)]
+                       Unresolved local var: MeReal len@[???]
+                       Unresolved local var: MeReal tfar@[DW_OP_reg17(ST6)]
+                       Unresolved local var: MeReal t@[DW_OP_reg18(ST7)]
+                       Unresolved local var: MeReal vn@[DW_OP_reg15(ST4)]
+                       Unresolved local var: MeReal vd@[DW_OP_reg16(ST5)] */
+  pvVar13 = McdModelGetGeometry(model);
+  pfVar14 = McdModelGetTransformPtr(model);
+  fVar1 = *inOrig - pfVar14[0xc];
+  fVar5 = inOrig[1] - pfVar14[0xd];
+  fVar6 = inOrig[2] - pfVar14[0xe];
+  fVar3 = fVar6 * pfVar14[2] + fVar5 * pfVar14[1] + fVar1 * *pfVar14;
+  fVar2 = fVar6 * pfVar14[6] + fVar5 * pfVar14[5] + fVar1 * pfVar14[4];
+  fVar1 = fVar1 * pfVar14[8] + fVar5 * pfVar14[9] + fVar6 * pfVar14[10];
+  fVar5 = inDest[1] - pfVar14[0xd];
+  fVar4 = inDest[2] - pfVar14[0xe];
+  fVar6 = *inDest - pfVar14[0xc];
+  dir.v[0] = (fVar4 * pfVar14[2] + fVar6 * *pfVar14 + fVar5 * pfVar14[1]) - fVar3;
+                    /* Unresolved local var: MeReal t@[???] */
+  dir.v[1] = (fVar4 * pfVar14[6] + fVar6 * pfVar14[4] + fVar5 * pfVar14[5]) - fVar2;
+  dir.v[2] = (fVar6 * pfVar14[8] + fVar5 * pfVar14[9] + fVar4 * pfVar14[10]) - fVar1;
+  fVar5 = SQRT(dir.v[2] * dir.v[2] + dir.v[1] * dir.v[1] + dir.v[0] * dir.v[0]);
+  if (fVar5 != 0.0) {
+                    /* Unresolved local var: MeReal recipX@[DW_OP_reg11(ST0)] */
+    fVar6 = 1.0 / fVar5;
+    dir.v[0] = dir.v[0] * fVar6;
+    dir.v[1] = dir.v[1] * fVar6;
+    dir.v[2] = fVar6 * dir.v[2];
+  }
+                    /* Unresolved local var: int i@[DW_OP_reg7(EDI)] */
+  iVar17 = 0;
+  pvVar13 = McdConvexMeshGetPolyhedron(pvVar13);
+  tnear = -1e+20;
+  fVar6 = fVar5;
+  if (0 < *(int *)((int)pvVar13 + 0x14)) {
+    do {
+                    /* Unresolved local var: lsVec3 * normal@[DW_OP_reg3(EBX)]
+                       Unresolved local var: lsVec3 * pointInPlane@[DW_OP_reg0(EAX)] */
+      pfVar16 = (float *)(iVar17 * 0x10 + *(int *)((int)pvVar13 + 4));
+      pfVar15 = McdCnvFaceGetVertexPosition(pvVar13,iVar17,0);
+      fVar4 = *pfVar16;
+      fVar7 = pfVar16[1];
+      fVar8 = pfVar16[2];
+      fVar9 = fVar8 * dir.v[2] + fVar4 * dir.v[0] + fVar7 * dir.v[1];
+      fVar4 = (fVar4 * fVar3 + fVar7 * fVar2 + fVar8 * fVar1) -
+              (fVar4 * *pfVar15 + fVar7 * pfVar15[1] + fVar8 * pfVar15[2]);
+      if (fVar6 < tnear) {
+        return 0;
+      }
+      if (1e-06 <= ABS(fVar9)) {
+        fVar4 = -fVar4 / fVar9;
+        if (0.0 <= fVar9) {
+          if (fVar4 < 0.0) {
+            return 0;
+          }
+          if (fVar4 < fVar6) {
+            fVar6 = fVar4;
+            bnorm_num = iVar17;
+          }
+        }
+        else {
+          if (fVar6 < fVar4) {
+            return 0;
+          }
+          if (tnear < fVar4) {
+            fnorm_num = iVar17;
+            tnear = fVar4;
+          }
+        }
+      }
+      else if (0.0 < fVar4) {
+        return 0;
+      }
+      iVar17 = iVar17 + 1;
+    } while (iVar17 < *(int *)((int)pvVar13 + 0x14));
+  }
+  if (tnear < 0.0) {
+    if (fVar5 <= fVar6) {
+      return 0;
+    }
+    pfVar15 = (float *)(bnorm_num * 0x10 + *(int *)((int)pvVar13 + 4));
+  }
+  else {
+    pfVar15 = (float *)(fnorm_num * 0x10 + *(int *)((int)pvVar13 + 4));
+    fVar6 = tnear;
+  }
+  fVar5 = fVar6 / fVar5;
+  fVar1 = inOrig[1];
+  fVar2 = inDest[1];
+  fVar3 = inOrig[2];
+  fVar4 = inDest[2];
+  info->position[0] = *inOrig + (*inDest - *inOrig) * fVar5;
+  info->position[2] = fVar3 + fVar5 * (fVar4 - fVar3);
+  info->position[1] = fVar1 + (fVar2 - fVar1) * fVar5;
+  info->distance = fVar6;
+  fVar1 = pfVar14[1];
+  fVar2 = pfVar14[5];
+  fVar5 = *pfVar15;
+  fVar3 = pfVar15[1];
+  fVar6 = pfVar14[9];
+  fVar4 = pfVar15[2];
+  fVar7 = pfVar14[2];
+  fVar8 = pfVar14[6];
+  fVar9 = *pfVar15;
+  fVar10 = pfVar15[1];
+  fVar11 = pfVar14[10];
+  fVar12 = pfVar15[2];
+  info->normal[0] = pfVar14[8] * pfVar15[2] + pfVar14[4] * pfVar15[1] + *pfVar14 * *pfVar15;
+  info->normal[1] = fVar6 * fVar4 + fVar2 * fVar3 + fVar1 * fVar5;
+  info->normal[2] = fVar11 * fVar12 + fVar8 * fVar10 + fVar7 * fVar9;
+  info->model = model;
+  return 1;
+}
+
+
+/* ==== McdConvexMeshLineSegmentRegisterInteraction ==== */
+
+void McdConvexMeshLineSegmentRegisterInteraction(McdFramework *frame)
+
+{
+  McdFrameworkSetLineSegInteraction(frame,7,IxConvexMeshLineSegment);
+  return;
+}
+
+

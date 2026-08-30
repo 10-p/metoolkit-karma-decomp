@@ -1,0 +1,29 @@
+# function,name,stackoff,hexoff,size,type
+McdSphereRegisterType,frame,4,00000004,4,McdFramework *
+McdSphereCreate,frame,4,00000004,4,McdFramework *
+McdSphereCreate,inRadius,8,00000008,4,MeReal
+McdSphereSetRadius,g,4,00000004,4,McdSphereID
+McdSphereSetRadius,inRadius,8,00000008,4,MeReal
+McdSphereGetRadius,g,4,00000004,4,McdSphereID
+McdSphereDestroy,g,4,00000004,4,McdSphereID
+McdSphereUpdateAABB,r,-44,ffffffd4,12,MeReal[3]
+McdSphereUpdateAABB,ins,4,00000004,4,McdGeometryInstanceID
+McdSphereUpdateAABB,finalTM,8,00000008,4,MeMatrix4Ptr
+McdSphereUpdateAABB,tight,12,0000000c,4,MeBool
+McdSphereGetBSphere,g,4,00000004,4,McdSphereID
+McdSphereGetBSphere,center,8,00000008,4,MeReal *
+McdSphereGetBSphere,radius,12,0000000c,4,MeReal *
+McdSphereMaximumPoint,inDir,8,00000008,4,MeReal *
+McdSphereMaximumPoint,outPoint,12,0000000c,4,MeReal *
+McdSphereMaximumPoint,ins,4,00000004,4,McdGeometryInstanceID
+McdSphereGetMassProperties,g,4,00000004,4,McdSphereID
+McdSphereGetMassProperties,relTM,8,00000008,4,MeVector4 *
+McdSphereGetMassProperties,m,12,0000000c,4,MeVector3 *
+McdSphereGetMassProperties,volume,16,00000010,4,MeReal *
+McdSphereDebugDraw,geom,4,00000004,4,McdGeometryID
+McdSphereDebugDraw,radius,-80,ffffffb0,4,MeReal
+McdSphereDebugDraw,lv,-44,ffffffd4,12,MeReal[3]
+McdSphereDebugDraw,tm,8,00000008,4,MeReal[4] *
+McdSphereDebugDraw,colour,12,0000000c,4,MeReal *
+McdSphereDebugDraw,wv1,-60,ffffffc4,12,MeReal[3]
+McdSphereDebugDraw,wv2,-76,ffffffb4,12,MeReal[3]

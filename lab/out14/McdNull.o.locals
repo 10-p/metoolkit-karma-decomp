@@ -1,0 +1,20 @@
+# function,name,stackoff,hexoff,size,type
+McdNullRegisterType,frame,4,00000004,4,McdFramework *
+McdNullCreate,frame,4,00000004,4,McdFramework *
+McdNullDestroy,g,4,00000004,4,McdGeometry *
+McdNullUpdateAABB,ins,4,00000004,4,McdGeometryInstanceID
+McdNullUpdateAABB,finalTM,8,00000008,4,MeMatrix4Ptr
+McdNullUpdateAABB,tight,12,0000000c,4,MeBool
+McdNullGetBSphere,g,4,00000004,4,McdGeometryID
+McdNullGetBSphere,center,8,00000008,4,MeReal *
+McdNullGetBSphere,radius,12,0000000c,4,MeReal *
+McdNullMaximumPoint,ins,4,00000004,4,McdGeometryInstanceID
+McdNullMaximumPoint,inDir,8,00000008,4,MeReal *
+McdNullMaximumPoint,outPoint,12,0000000c,4,MeReal *
+McdNullGetMassProperties,volume,16,00000010,4,MeReal *
+McdNullGetMassProperties,g,4,00000004,4,McdGeometry *
+McdNullGetMassProperties,relTM,8,00000008,4,MeVector4 *
+McdNullGetMassProperties,m,12,0000000c,4,MeVector3 *
+McdNullDebugDraw,geom,4,00000004,4,McdGeometryID
+McdNullDebugDraw,tm,8,00000008,4,MeReal[4] *
+McdNullDebugDraw,colour,12,0000000c,4,MeReal *

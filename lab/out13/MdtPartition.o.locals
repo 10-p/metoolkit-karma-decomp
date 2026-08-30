@@ -1,0 +1,25 @@
+# function,name,stackoff,hexoff,size,type
+MdtUpdatePartitions,node,-52,ffffffcc,4,MeDictNode *
+MdtUpdatePartitions,currentBody,-56,ffffffc8,4,MdtBody *
+MdtUpdatePartitions,aiStack_50,-80,ffffffb0,20,int[5]
+MdtUpdatePartitions,local_3c,-60,ffffffc4,4,MdtBody *
+MdtUpdatePartitions,enabledBodyDict,4,00000004,4,MeDict *
+MdtUpdatePartitions,po,8,00000008,4,MdtPartitionOutput *
+MdtUpdatePartitions,pcb,12,0000000c,4,MdtPartitionEndCB
+MdtUpdatePartitions,pcbdata,16,00000010,4,void *
+MdtUpdatePartitions,rootNode,-20,ffffffec,4,MeDictNode *
+MdtUpdatePartitions,addedBodies,-24,ffffffe8,4,MdtBody * *
+MdtUpdatePartitions,numAddedBodies,-28,ffffffe4,4,int
+MdtUpdatePartitions,addedConstraints,-32,ffffffe0,4,MdtBaseConstraint * *
+MdtUpdatePartitions,numAddedConstraints,-36,ffffffdc,4,int
+MdtUpdatePartitions,exploreNext,-40,ffffffd8,4,int
+MdtUpdatePartitions,addNext,-44,ffffffd4,4,int
+MdtUpdatePartitions,dict,-48,ffffffd0,4,MeDict *
+FindNextUnadded,dict,4,00000004,4,MeDict *
+FindNextUnadded,node,8,00000008,4,MeDictNode *
+MdtPartOutCreateFromChunk,chunk,4,00000004,4,MeChunk *
+MdtPartOutCreateFromChunk,maxBodies,8,00000008,4,int
+MdtPartOutCreateFromChunk,maxConstraints,12,0000000c,4,int
+MdtPartInfoReset,info,4,00000004,4,MdtPartitionInfo *
+MdtPartInfoAddConstraint,info,4,00000004,4,MdtPartitionInfo *
+MdtPartInfoAddConstraint,c,8,00000008,4,MdtBaseConstraint *

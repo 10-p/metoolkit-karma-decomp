@@ -1,0 +1,41 @@
+# function,name,stackoff,hexoff,size,type
+LineDistance,p0,4,00000004,4,MeReal *
+LineDistance,d0,8,00000008,4,MeReal *
+LineDistance,p1,12,0000000c,4,MeReal *
+LineDistance,d1,16,00000010,4,MeReal *
+LineDistance,s,20,00000014,4,MeReal *
+LineDistance,t,24,00000018,4,MeReal *
+LineDistance,eps,28,0000001c,4,MeReal
+LineDistance,diff,-44,ffffffd4,12,MeReal[3]
+LineDistance,det,-48,ffffffd0,4,MeReal
+NSegmentSegment,p0,4,00000004,4,MeReal *
+NSegmentSegment,d0,8,00000008,4,MeReal *
+NSegmentSegment,s0min,12,0000000c,4,MeReal
+NSegmentSegment,s0max,16,00000010,4,MeReal
+NSegmentSegment,p1,20,00000014,4,MeReal *
+NSegmentSegment,d1,24,00000018,4,MeReal *
+NSegmentSegment,s1min,28,0000001c,4,MeReal
+NSegmentSegment,s1max,32,00000020,4,MeReal
+NSegmentSegment,s0,36,00000024,4,MeReal *
+NSegmentSegment,s1,40,00000028,4,MeReal *
+NSegmentSegment,ds0,44,0000002c,4,MeReal *
+NSegmentSegment,r,-44,ffffffd4,12,MeReal[3]
+NSegmentSegment,d1d1,-56,ffffffc8,4,MeReal
+NSegmentSegment,d0d1,-60,ffffffc4,4,MeReal
+NSegmentSegment,det,-64,ffffffc0,4,MeReal
+NSegmentSegment,d0r,-68,ffffffbc,4,MeReal
+NSegmentNSegment,p0,4,00000004,4,MeReal *
+NSegmentNSegment,d0,8,00000008,4,MeReal *
+NSegmentNSegment,s0min,12,0000000c,4,MeReal
+NSegmentNSegment,s0max,16,00000010,4,MeReal
+NSegmentNSegment,p1,20,00000014,4,MeReal *
+NSegmentNSegment,d1,24,00000018,4,MeReal *
+NSegmentNSegment,s1min,28,0000001c,4,MeReal
+NSegmentNSegment,s1max,32,00000020,4,MeReal
+NSegmentNSegment,s0,36,00000024,4,MeReal *
+NSegmentNSegment,s1,40,00000028,4,MeReal *
+NSegmentNSegment,ds0,44,0000002c,4,MeReal *
+NSegmentNSegment,r,-44,ffffffd4,12,MeReal[3]
+NSegmentNSegment,d0d1,-48,ffffffd0,4,MeReal
+NSegmentNSegment,det,-60,ffffffc4,4,MeReal
+NSegmentNSegment,d0r,-64,ffffffc0,4,MeReal

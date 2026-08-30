@@ -1,0 +1,108 @@
+# function,name,stackoff,hexoff,size,type
+McdAggregateRegisterType,frame,4,00000004,4,McdFramework *
+McdAggregateCreate,frame,4,00000004,4,McdFramework *
+McdAggregateCreate,maxChildren,8,00000008,4,int
+McdAggregateAddElement,g,4,00000004,4,McdAggregateID
+McdAggregateAddElement,element,8,00000008,4,McdGeometryID
+McdAggregateAddElement,relTM,12,0000000c,4,MeMatrix4Ptr
+McdAggregateRemoveElement,g,4,00000004,4,McdAggregateID
+McdAggregateRemoveElement,element,8,00000008,4,int
+McdAggregateGetElementCount,g,4,00000004,4,McdAggregateID
+McdAggregateGetElementCountMax,g,4,00000004,4,McdAggregateID
+McdAggregateGetElementGeometry,i,8,00000008,4,int
+McdAggregateGetElementGeometry,g,4,00000004,4,McdAggregateID
+McdAggregateGetElementTransformPtr,g,4,00000004,4,McdAggregateID
+McdAggregateGetElementTransformPtr,i,8,00000008,4,int
+McdAggregateDestroy,g,4,00000004,4,McdGeometry *
+McdAggregateDestroy,i,-20,ffffffec,4,int
+McdAggregateUpdateAABB,a,-160,ffffff60,4,McdAggregate *
+McdAggregateUpdateAABB,elementTM,-92,ffffffa4,64,MeReal[4][4]
+McdAggregateUpdateAABB,elementFinalTM,-156,ffffff64,64,MeReal[4][4]
+McdAggregateUpdateAABB,elementFinalTMPtr,-164,ffffff5c,4,MeMatrix4Ptr
+McdAggregateUpdateAABB,i,-168,ffffff58,4,int
+McdAggregateUpdateAABB,ins,4,00000004,4,McdGeometryInstanceID
+McdAggregateUpdateAABB,local_b4,-180,ffffff4c,4,int
+McdAggregateUpdateAABB,finalTM,8,00000008,4,MeMatrix4Ptr
+McdAggregateUpdateAABB,tight,12,0000000c,4,MeBool
+McdAggregateGetBSphere,g,4,00000004,4,McdGeometryID
+McdAggregateGetBSphere,center,8,00000008,4,MeReal *
+McdAggregateGetBSphere,radius,12,0000000c,4,MeReal *
+McdAggregateMaximumPoint,ins,4,00000004,4,McdGeometryInstanceID
+McdAggregateMaximumPoint,inDir,8,00000008,4,MeReal *
+McdAggregateMaximumPoint,outPoint,12,0000000c,4,MeReal *
+McdAggregateGetMassProperties,i,-348,fffffea4,4,int
+McdAggregateGetMassProperties,density,-352,fffffea0,4,MeReal
+McdAggregateGetMassProperties,massSoFar,-336,fffffeb0,4,MeReal
+McdAggregateGetMassProperties,subVol,-340,fffffeac,4,MeReal
+McdAggregateGetMassProperties,subI,-76,ffffffb4,36,MeReal[3][3]
+McdAggregateGetMassProperties,subTM,-140,ffffff74,64,MeReal[4][4]
+McdAggregateGetMassProperties,subTM_1,-204,ffffff34,64,MeReal[4][4]
+McdAggregateGetMassProperties,totalSubTM,-268,fffffef4,64,MeReal[4][4]
+McdAggregateGetMassProperties,newTM,-332,fffffeb4,64,MeReal[4][4]
+McdAggregateGetMassProperties,subVol_1,-344,fffffea8,4,MeReal
+McdAggregateGetMassProperties,g,4,00000004,4,McdGeometry *
+McdAggregateGetMassProperties,relTM,8,00000008,4,MeVector4 *
+McdAggregateGetMassProperties,m,12,0000000c,4,MeVector3 *
+McdAggregateGetMassProperties,volume,16,00000010,4,MeReal *
+McdAggregateGetMassProperties,local_164,-356,fffffe9c,4,int
+McdAggregateGenericIntersect,local_3fd4,-16340,ffffc02c,4,int
+McdAggregateGenericIntersect,p,4,00000004,4,McdModelPairID
+McdAggregateGenericIntersect,result,8,00000008,4,McdIntersectResult *
+McdAggregateGenericIntersect,dummyPair,-60,ffffffc4,28,McdModelPair
+McdAggregateGenericIntersect,dummyModel,-188,ffffff44,120,McdModel.conflict
+McdAggregateGenericIntersect,dummyResult,-236,ffffff14,36,McdIntersectResult
+McdAggregateGenericIntersect,elementTM,-300,fffffed4,64,MeReal[4][4]
+McdAggregateGenericIntersect,avgNormal,-316,fffffec4,12,MeReal[3]
+McdAggregateGenericIntersect,i,-16320,ffffc040,4,int
+McdAggregateGenericIntersect,instance2,-16324,ffffc03c,4,McdGeometryInstanceID
+McdAggregateGenericIntersect,ins,-16328,ffffc038,4,McdGeometryInstanceID
+McdAggregateGenericIntersect,g,-16332,ffffc034,4,McdAggregate *
+McdAggregateGenericIntersect,contactBuffer,-16316,ffffc044,16000,McdContact[400]
+McdAggregateGenericIntersect,contactCount,-16336,ffffc030,4,int
+IxAggregateLineSegment,model,4,00000004,4,McdModelID.conflict
+IxAggregateLineSegment,inOrig,8,00000008,4,MeReal *
+IxAggregateLineSegment,inDest,12,0000000c,4,MeReal *
+IxAggregateLineSegment,overlap,16,00000010,4,McdLineSegIntersectResult *
+IxAggregateLineSegment,a,-256,ffffff00,4,McdAggregate *
+IxAggregateLineSegment,elementTM,-92,ffffffa4,64,MeReal[4][4]
+IxAggregateLineSegment,ins,-260,fffffefc,4,McdGeometryInstanceID
+IxAggregateLineSegment,i,-264,fffffef8,4,int
+IxAggregateLineSegment,dummyOverlap,-124,ffffff84,32,McdLineSegIntersectResult
+IxAggregateLineSegment,dummyModel,-252,ffffff04,120,McdModel.conflict
+IxAggregateLineSegment,local_10c,-268,fffffef4,4,int
+McdAggregateGenericRegisterInteractions,frame,4,00000004,4,McdFrameworkID
+McdAggregateGenericRegisterInteractions,interactions,-60,ffffffc4,28,McdInteractions
+McdAggregateDebugDraw,geom,4,00000004,4,McdGeometryID
+McdAggregateDebugDraw,tm,8,00000008,4,MeReal[4] *
+McdAggregateDebugDraw,colour,12,0000000c,4,MeReal *
+McdAggregateDebugDraw,totaltm,-92,ffffffa4,64,MeReal[4][4]
+McdAggregateDebugDraw,local_68,-104,ffffff98,4,int
+McdAggregateDebugDraw,local_64,-100,ffffff9c,4,int
+McdAggregateDebugDraw,local_60,-96,ffffffa0,4,void *
+McdAggregateLineSegmentRegisterInteraction,frame,4,00000004,4,McdFramework *
+McdAggregateRegisterInteractions,frame,4,00000004,4,McdFrameworkID
+McdAggregateRegisterInteractions,interactions,-60,ffffffc4,28,McdInteractions
+MeVector3Normalize,v,4,00000004,4,MeReal *
+MeVector3Normalize,local_8,-8,fffffff8,4,float
+CombineInertiaTensors,R2,-220,ffffff24,36,MeReal[3][3]
+CombineInertiaTensors,rotI1,-268,fffffef4,36,MeReal[3][3]
+CombineInertiaTensors,rotI2,-316,fffffec4,36,MeReal[3][3]
+CombineInertiaTensors,massSkew1,-364,fffffe94,36,MeReal[3][3]
+CombineInertiaTensors,massSkew2,-412,fffffe64,36,MeReal[3][3]
+CombineInertiaTensors,comRel1,-428,fffffe54,12,MeReal[3]
+CombineInertiaTensors,comRel2,-444,fffffe44,12,MeReal[3]
+CombineInertiaTensors,tmp,-492,fffffe14,36,MeReal[3][3]
+CombineInertiaTensors,tmpI,-540,fffffde4,36,MeReal[3][3]
+CombineInertiaTensors,tmp_1,-588,fffffdb4,36,MeReal[3][3]
+CombineInertiaTensors,TM1,4,00000004,4,MeVector4 *
+CombineInertiaTensors,I1,8,00000008,4,MeVector3 *
+CombineInertiaTensors,mass1,12,0000000c,4,MeReal
+CombineInertiaTensors,TM2,16,00000010,4,MeVector4 *
+CombineInertiaTensors,I2,20,00000014,4,MeVector3 *
+CombineInertiaTensors,mass2,24,00000018,4,MeReal
+CombineInertiaTensors,outTM,28,0000001c,4,MeVector4 *
+CombineInertiaTensors,outI,32,00000020,4,MeVector3 *
+CombineInertiaTensors,outMass,36,00000024,4,MeReal *
+CombineInertiaTensors,skew1,-76,ffffffb4,36,MeReal[3][3]
+CombineInertiaTensors,skew2,-124,ffffff84,36,MeReal[3][3]
+CombineInertiaTensors,R1,-172,ffffff54,36,MeReal[3][3]

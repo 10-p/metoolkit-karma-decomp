@@ -1,0 +1,16 @@
+# function,name,stackoff,hexoff,size,type
+PrismaticSetAxis,c,4,00000004,4,MdtConstraintID
+PrismaticSetAxis,px,8,00000008,4,MeReal
+PrismaticSetAxis,py,12,0000000c,4,MeReal
+PrismaticSetAxis,pz,16,00000010,4,MeReal
+PrismaticSetAxis,axis,-44,ffffffd4,12,MeVector3
+PrismaticSetAxis,r_axis1,-60,ffffffc4,12,MeVector3
+PrismaticSetAxis,r_axis2,-76,ffffffb4,12,MeVector3
+PrismaticSetAxis,rel_pos,-92,ffffffa4,12,MeVector3
+MdtPrismaticCreate,w,4,00000004,4,MdtWorldID
+MdtPrismaticReset,j,4,00000004,4,MdtPrismaticID
+MdtPrismaticQuaConstraint,j,4,00000004,4,MdtPrismaticID
+MdtConstraintDCastPrismatic,c,4,00000004,4,MdtConstraintID
+MdtPrismaticGetLimit,j,4,00000004,4,MdtPrismaticID
+MdtPrismaticSetLimit,j,4,00000004,4,MdtPrismaticID
+MdtPrismaticSetLimit,NewLimit,8,00000008,4,MdtLimitID

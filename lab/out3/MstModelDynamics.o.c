@@ -1,0 +1,190 @@
+/* ==== McdModelSetBody ==== */
+
+void McdModelSetBody(McdModelID_conflict model,MdtBodyID body)
+
+{
+  MdtBodyID pMVar1;
+  void *pvVar2;
+  int iVar3;
+  void *pvVar4;
+  BodyData bp;
+  
+                    /* Unresolved local var: MdtBodyID oldBody@[DW_OP_reg6(ESI)] */
+  pMVar1 = model->mBody;
+  if (body == pMVar1) {
+    if (body == (MdtBodyID)0x0) {
+      return;
+    }
+    if (body->model == model) {
+      return;
+    }
+  }
+  if (pMVar1 != (MdtBodyID)0x0) {
+    bp.newBody = body;
+    bp.model = model;
+    bp.oldBody = pMVar1;
+    bp.space = McdModelGetSpace(model);
+    MdtBodyForAllConstraints(pMVar1,transferContactGroups,&bp);
+    if (pMVar1->model == model) {
+      pMVar1->model = (void *)0x0;
+    }
+  }
+  if (body == (MdtBodyID)0x0) {
+    if (pMVar1 != (MdtBodyID)0x0) {
+      pvVar2 = McdModelGetTransformPtr(model);
+      pvVar4 = MdtBodyGetTransformPtr(pMVar1);
+      if (pvVar2 == pvVar4) {
+        McdModelSetTransformPtr(model,(void *)0x0);
+      }
+      pvVar2 = McdModelGetLinearVelocityPtr(model);
+      pvVar4 = MdtBodyGetLinearVelocityPtr(pMVar1);
+      if (pvVar2 == pvVar4) {
+        McdModelSetLinearVelocityPtr(model,(void *)0x0);
+      }
+      pvVar2 = McdModelGetAngularVelocityPtr(model);
+      pvVar4 = MdtBodyGetAngularVelocityPtr(pMVar1);
+      if (pvVar2 == pvVar4) {
+        McdModelSetAngularVelocityPtr(model,(void *)0x0);
+      }
+    }
+    pvVar2 = McdModelGetSpace(model);
+    if (pvVar2 == (void *)0x0) goto LAB_000100b0;
+  }
+  else {
+    body->model = model;
+    pvVar2 = MdtBodyGetTransformPtr(body);
+    McdModelSetTransformPtr(model,pvVar2);
+    pvVar2 = MdtBodyGetLinearVelocityPtr(body);
+    McdModelSetLinearVelocityPtr(model,pvVar2);
+    pvVar2 = MdtBodyGetAngularVelocityPtr(body);
+    McdModelSetAngularVelocityPtr(model,pvVar2);
+    pvVar2 = McdModelGetSpace(model);
+    if (pvVar2 == (void *)0x0) goto LAB_000100b0;
+    iVar3 = MdtBodyIsEnabled(body);
+    if (iVar3 != 0) {
+      McdSpaceUnfreezeModel(model);
+      goto LAB_000100b0;
+    }
+  }
+  McdSpaceFreezeModel(model);
+LAB_000100b0:
+  model->mBody = body;
+  return;
+}
+
+
+/* ==== McdModelGetBody ==== */
+
+MdtBodyID McdModelGetBody(McdModelID_conflict m)
+
+{
+  return m->mBody;
+}
+
+
+/* ==== McdModelDynamicsReset ==== */
+
+void McdModelDynamicsReset(McdModelID_conflict m)
+
+{
+  if (m->mBody == (void *)0x0) {
+    MeWarning(0,"Resetting dynamics on McdModel with no dynamics.");
+  }
+  else {
+    MdtBodySetPosition(m->mBody,0.0,0.0,0.0);
+    MdtBodySetQuaternion(m->mBody,1.0,0.0,0.0,0.0);
+    MdtBodySetLinearVelocity(m->mBody,0.0,0.0,0.0);
+    MdtBodySetAngularVelocity(m->mBody,0.0,0.0,0.0);
+  }
+  return;
+}
+
+
+/* ==== transferContactGroups ==== */
+
+void transferContactGroups(MdtConstraintID c,void *ccbdata)
+
+{
+  McdModelID_conflict pMVar1;
+  bool bVar2;
+  void *pvVar3;
+  int *piVar4;
+  void *pvVar5;
+  void *pvVar6;
+  void *pvVar7;
+  MdtBodyID pMVar8;
+  int iVar9;
+  uint uVar10;
+  MdtBodyID body0;
+  McdModelID_conflict otherModel;
+  
+                    /* Unresolved local var: MdtContactGroupID.conflict group@[DW_OP_reg3(EBX)]
+                       Unresolved local var: BodyData * data@[???]
+                       Unresolved local var: McdModelPairID pair@[DW_OP_reg0(EAX)]
+                       Unresolved local var: int deleteGroup@[DW_OP_reg7(EDI)] */
+  bVar2 = false;
+  pvVar3 = MdtConstraintDCastContactGroup(c);
+  if (pvVar3 == (void *)0x0) {
+    return;
+  }
+  piVar4 = MdtContactGroupGetGenerator(pvVar3);
+  if (piVar4 == (int *)0x0) {
+    return;
+  }
+  otherModel = (McdModelID_conflict)*piVar4;
+  pMVar1 = *(McdModelID_conflict *)((int)ccbdata + 8);
+  if ((otherModel != pMVar1) && ((McdModelID_conflict)piVar4[1] != pMVar1)) {
+    return;
+  }
+  if ((*(int *)((int)ccbdata + 4) != 0) && (*(int *)((int)ccbdata + 0xc) != 0)) {
+    if (otherModel == pMVar1) {
+      otherModel = (McdModelID_conflict)piVar4[1];
+    }
+    pvVar5 = McdModelGetSpace(otherModel);
+    if (pvVar5 == *(void **)((int)ccbdata + 0xc)) {
+      pMVar8 = McdModelGetBody(otherModel);
+      if (pMVar8 != *(MdtBodyID *)((int)ccbdata + 4)) goto LAB_000102ca;
+      iVar9 = McdSpacePairIsEnabled(*(void **)((int)ccbdata + 8),otherModel);
+      if (iVar9 != 0) {
+        MeFatalError(1,
+                     "McdModelSetBody: Attempt to assign model A to a body\nwhich has an associated model B which is not pairwise disabled with A"
+                    );
+        goto LAB_000102ca;
+      }
+    }
+  }
+                    /* Unresolved local var: MdtBodyID otherBody@[DW_OP_reg0(EAX)] */
+  bVar2 = true;
+LAB_000102ca:
+  if (bVar2) {
+    pvVar5 = MdtContactGroupQuaConstraint(pvVar3);
+    MdtConstraintDisable(pvVar5);
+    MdtContactGroupDestroy(pvVar3);
+    return;
+  }
+                    /* Unresolved local var: MdtBodyID body1@[DW_OP_reg7(EDI)] */
+  uVar10 = 0;
+  pvVar5 = MdtContactGroupQuaConstraint(pvVar3);
+  pvVar6 = MdtConstraintGetBody(pvVar5,uVar10);
+  uVar10 = 1;
+  pvVar5 = MdtContactGroupQuaConstraint(pvVar3);
+  pvVar5 = MdtConstraintGetBody(pvVar5,uVar10);
+  pvVar7 = MdtContactGroupQuaConstraint(pvVar3);
+  MdtConstraintDisable(pvVar7);
+  uVar10 = 0;
+  pvVar7 = MdtContactGroupQuaConstraint(pvVar3);
+  pvVar7 = MdtConstraintGetBody(pvVar7,uVar10);
+  if (pvVar7 == *(void **)ccbdata) {
+    pvVar6 = *(void **)((int)ccbdata + 4);
+  }
+  else {
+    pvVar5 = *(void **)((int)ccbdata + 4);
+  }
+  pvVar7 = MdtContactGroupQuaConstraint(pvVar3);
+  MdtConstraintSetBodies(pvVar7,pvVar6,pvVar5);
+  pvVar3 = MdtContactGroupQuaConstraint(pvVar3);
+  MdtConstraintEnable(pvVar3);
+  return;
+}
+
+

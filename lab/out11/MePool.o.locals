@@ -1,0 +1,23 @@
+# function,name,stackoff,hexoff,size,type
+MePoolFixedInit,structSize,12,0000000c,4,int
+MePoolFixedInit,alignment,16,00000010,4,int
+MePoolFixedInit,u,4,00000004,4,MePool *
+MePoolFixedInit,poolSize,8,00000008,4,int
+MePoolFixedDestroy,u,4,00000004,4,MePool *
+MePoolFixedReset,u,4,00000004,4,MePool *
+MePoolFixedGetStruct,u,4,00000004,4,MePool *
+MePoolFixedPutStruct,u,4,00000004,4,MePool *
+MePoolFixedPutStruct,s,8,00000008,4,void *
+MePoolFixedGetUsed,u,4,00000004,4,MePool *
+MePoolFixedGetUnused,u,4,00000004,4,MePool *
+MePoolMallocInit,u,4,00000004,4,MePool *
+MePoolMallocInit,poolSize,8,00000008,4,int
+MePoolMallocInit,structSize,12,0000000c,4,int
+MePoolMallocInit,alignment,16,00000010,4,int
+MePoolMallocDestroy,u,4,00000004,4,MePool *
+MePoolMallocReset,u,4,00000004,4,MePool *
+MePoolMallocGetStruct,u,4,00000004,4,MePool *
+MePoolMallocPutStruct,u,4,00000004,4,MePool *
+MePoolMallocPutStruct,s,8,00000008,4,void *
+MePoolMallocGetUsed,u,4,00000004,4,MePool *
+MePoolMallocGetUnused,u,4,00000004,4,MePool *

@@ -1,0 +1,67 @@
+# function,name,stackoff,hexoff,size,type
+McdBoxGetSlice,ins,4,00000004,4,McdGeometryInstanceID
+McdBoxGetSlice,normal,8,00000008,4,MeReal *
+McdBoxGetSlice,dist,12,0000000c,4,MeReal
+McdBoxGetSlice,maxVert,16,00000010,4,int
+McdBoxGetSlice,numVert,20,00000014,4,int *
+McdBoxGetSlice,outVert,24,00000018,4,MeVector3 *
+McdBoxGetSlice,dpp,-60,ffffffc4,32,MeReal[8]
+McdBoxGetSlice,v,-156,ffffff64,96,MeReal[8][3]
+McdBoxGetSlice,temp,-172,ffffff54,12,MeReal[3]
+McdBoxGetSlice,norm,-188,ffffff44,12,MeReal[3]
+McdBoxGetSlice,local_c0,-192,ffffff40,4,MeReal[3] *
+McdConvexMeshPlaneCut,conv,4,00000004,4,McdConvexMesh *
+McdConvexMeshPlaneCut,norm,8,00000008,4,MeReal *
+McdConvexMeshPlaneCut,dp,12,0000000c,4,MeReal
+McdConvexMeshPlaneCut,flags,16,00000010,4,int
+McdConvexMeshPlaneCut,tm,20,00000014,4,MeReal[4] *
+McdConvexMeshPlaneCut,maxVert,24,00000018,4,int
+McdConvexMeshPlaneCut,numVert,28,0000001c,4,int *
+McdConvexMeshPlaneCut,outVert,32,00000020,4,MeVector3 *
+McdConvexMeshPlaneCut,vert,-4932,ffffecbc,4,McdCnvVertex *
+McdConvexMeshPlaneCut,temp,-44,ffffffd4,12,MeReal[3]
+McdConvexMeshPlaneCut,dv,-4936,ffffecb8,4,MeReal
+McdConvexMeshPlaneCut,start,-4928,ffffecc0,4,int
+McdConvexMeshPlaneCut,v,-4940,ffffecb4,4,int
+McdConvexMeshPlaneCut,m,-4944,ffffecb0,4,int
+McdConvexMeshPlaneCut,set,-124,ffffff84,80,MeSet
+McdConvexMeshPlaneCut,nodemem,-4924,ffffecc4,4800,MeDictNode[200]
+McdConvexMeshGetSlice,norm,-44,ffffffd4,12,MeReal[3]
+McdConvexMeshGetSlice,ins,4,00000004,4,McdGeometryInstanceID
+McdConvexMeshGetSlice,normal,8,00000008,4,MeReal *
+McdConvexMeshGetSlice,dist,12,0000000c,4,MeReal
+McdConvexMeshGetSlice,maxVert,16,00000010,4,int
+McdConvexMeshGetSlice,numVert,20,00000014,4,int *
+McdConvexMeshGetSlice,outVert,24,00000018,4,MeVector3 *
+McdCylinderGetSlice,ins,4,00000004,4,McdGeometryInstanceID
+McdCylinderGetSlice,normal,8,00000008,4,MeReal *
+McdCylinderGetSlice,dist,12,0000000c,4,MeReal
+McdCylinderGetSlice,maxVert,16,00000010,4,int
+McdCylinderGetSlice,norm,-44,ffffffd4,12,MeReal[3]
+McdCylinderGetSlice,numVert,20,00000014,4,int *
+McdCylinderGetSlice,outVert,24,00000018,4,MeVector3 *
+McdCylinderGetSlice,temp,-60,ffffffc4,12,MeReal[3]
+McdCylinderGetSlice,minor,-76,ffffffb4,12,MeReal[3]
+McdCylinderGetSlice,major,-92,ffffffa4,12,MeReal[3]
+McdCylinderGetSlice,a,-96,ffffffa0,4,MeReal
+McdGeometryInstanceGetSlice,ins,4,00000004,4,McdGeometryInstanceID
+McdGeometryInstanceGetSlice,normal,8,00000008,4,MeReal *
+McdGeometryInstanceGetSlice,dist,12,0000000c,4,MeReal
+McdGeometryInstanceGetSlice,maxVert,16,00000010,4,int
+McdGeometryInstanceGetSlice,numVert,20,00000014,4,int *
+McdGeometryInstanceGetSlice,outVert,24,00000018,4,MeVector3 *
+McdPlaneIntersectTest,eps,-1284,fffffafc,4,MeReal
+McdPlaneIntersectTest,norm,-44,ffffffd4,12,MeReal[3]
+McdPlaneIntersectTest,neg,-60,ffffffc4,12,MeReal[3]
+McdPlaneIntersectTest,modplane,4,00000004,4,McdModelID.conflict
+McdPlaneIntersectTest,p,-76,ffffffb4,12,MeReal[3]
+McdPlaneIntersectTest,mod,8,00000008,4,McdModelID.conflict
+McdPlaneIntersectTest,vert,-1276,fffffb04,1200,MeReal[100][3]
+McdPlaneIntersectTest,numv,-1280,fffffb00,4,int
+McdPlaneIntersectTest,result,12,0000000c,4,McdIntersectResult *
+McdPlaneIntersect,result,8,00000008,4,McdIntersectResult *
+McdPlaneIntersect,modplane,-28,ffffffe4,4,McdModelID.conflict
+McdPlaneIntersect,mod,-24,ffffffe8,4,McdModelID.conflict
+McdPlaneIntersect,p,4,00000004,4,McdModelPair *
+MeVector3Normalize,v,4,00000004,4,MeReal *
+MeVector3Normalize,local_8,-8,fffffff8,4,float

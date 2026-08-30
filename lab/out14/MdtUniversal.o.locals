@@ -1,0 +1,5 @@
+# function,name,stackoff,hexoff,size,type
+MdtUniversalCreate,w,4,00000004,4,MdtWorldID
+MdtUniversalReset,j,4,00000004,4,MdtUniversalID
+MdtUniversalQuaConstraint,j,4,00000004,4,MdtUniversalID
+MdtConstraintDCastUniversal,c,4,00000004,4,MdtConstraintID

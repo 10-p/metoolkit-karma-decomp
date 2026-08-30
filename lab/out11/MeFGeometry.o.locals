@@ -1,0 +1,33 @@
+# function,name,stackoff,hexoff,size,type
+MeFGeometryLookupPrimitive,fg,4,00000004,4,MeFGeometry *
+MeFGeometryLookupPrimitive,name,8,00000008,4,char *
+MeFGeometryRename,fg,4,00000004,4,MeFGeometry *
+MeFGeometryRename,newName,8,00000008,4,char *
+MeFGeometryInsertPrimitive,geometry,4,00000004,4,MeFGeometry *
+MeFGeometryInsertPrimitive,p,8,00000008,4,MeFPrimitive *
+MeFGeometryRemovePrimitive,p,4,00000004,4,MeFPrimitive *
+MeFGeometryCreate,name,4,00000004,4,char *
+MeFGeometryCreateCopy,geometry,4,00000004,4,MeFGeometry *
+MeFGeometryCreateCopy,recurse,8,00000008,4,MeBool
+MeFGeometryDestroy,fg,4,00000004,4,MeFGeometry *
+MeFGeometryGetName,fg,4,00000004,4,MeFGeometry *
+MeFGeometryGetGraphicHint,fg,4,00000004,4,MeFGeometry *
+MeFGeometryGetGraphicScale,fg,4,00000004,4,MeFGeometry *
+MeFGeometryGetGraphicOffset,geometry,4,00000004,4,MeFGeometry *
+MeFGeometryGetGraphicOffset,v,8,00000008,4,MeReal *
+MeFGeometryInitPrimitiveIterator,geometry,4,00000004,4,MeFGeometry *
+MeFGeometryInitPrimitiveIterator,it,8,00000008,4,MeFPrimitiveIt *
+MeFGeometryGetPrimitive,it,4,00000004,4,MeFPrimitiveIt *
+MeFGeometryGetPrimitiveCount,geometry,4,00000004,4,MeFGeometry *
+MeFGeometrySetGraphicHint,fg,4,00000004,4,MeFGeometry *
+MeFGeometrySetGraphicHint,hint,8,00000008,4,char *
+MeFGeometrySetGraphicScale,fg,4,00000004,4,MeFGeometry *
+MeFGeometrySetGraphicScale,scale,8,00000008,4,MeReal
+MeFGeometrySetGraphicOffset,geometry,4,00000004,4,MeFGeometry *
+MeFGeometrySetGraphicOffset,dx,8,00000008,4,MeReal
+MeFGeometrySetGraphicOffset,dy,12,0000000c,4,MeReal
+MeFGeometrySetGraphicOffset,dz,16,00000010,4,MeReal
+MeFGeometryScale,geometry,4,00000004,4,MeFGeometry *
+MeFGeometryScale,scale,8,00000008,4,MeReal
+MeFGeometryScaleNoGraphic,geometry,4,00000004,4,MeFGeometry *
+MeFGeometryScaleNoGraphic,scale,8,00000008,4,MeReal

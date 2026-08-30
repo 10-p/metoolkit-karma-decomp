@@ -1,0 +1,8 @@
+# function,name,stackoff,hexoff,size,type
+MdtHingeCreate,w,4,00000004,4,MdtWorldID
+MdtHingeReset,j,4,00000004,4,MdtHingeID
+MdtHingeQuaConstraint,j,4,00000004,4,MdtHingeID
+MdtConstraintDCastHinge,c,4,00000004,4,MdtConstraintID
+MdtHingeGetLimit,j,4,00000004,4,MdtHingeID
+MdtHingeSetLimit,j,4,00000004,4,MdtHingeID
+MdtHingeSetLimit,NewLimit,8,00000008,4,MdtLimitID

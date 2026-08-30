@@ -1,0 +1,41 @@
+# function,name,stackoff,hexoff,size,type
+MdtSpring6Create,w,4,00000004,4,MdtWorldID
+MdtSpring6Reset,j,4,00000004,4,MdtSpring6ID
+MdtSpring6QuaConstraint,j,4,00000004,4,MdtSpring6ID
+MdtConstraintDCastSpring6,c,4,00000004,4,MdtConstraintID
+MdtSpring6GetLinearStiffness,j,4,00000004,4,MdtSpring6ID
+MdtSpring6GetLinearStiffness,axisindex,8,00000008,4,int
+MdtSpring6GetLinearDamping,j,4,00000004,4,MdtSpring6ID
+MdtSpring6GetLinearDamping,axisindex,8,00000008,4,int
+MdtSpring6GetAngularStiffness,j,4,00000004,4,MdtSpring6ID
+MdtSpring6GetAngularStiffness,axisindex,8,00000008,4,int
+MdtSpring6GetAngularDamping,j,4,00000004,4,MdtSpring6ID
+MdtSpring6GetAngularDamping,axisindex,8,00000008,4,int
+MdtSpring6GetWorldLinearVelocity,j,4,00000004,4,MdtSpring6ID
+MdtSpring6GetWorldLinearVelocity,v,8,00000008,4,MeReal *
+MdtSpring6GetWorldAngularVelocity,j,4,00000004,4,MdtSpring6ID
+MdtSpring6GetWorldAngularVelocity,v,8,00000008,4,MeReal *
+MdtSpring6SetLinearStiffness,s,12,0000000c,4,MeReal
+MdtSpring6SetLinearStiffness,j,4,00000004,4,MdtSpring6ID
+MdtSpring6SetLinearStiffness,axisindex,8,00000008,4,int
+MdtSpring6SetLinearDamping,j,4,00000004,4,MdtSpring6ID
+MdtSpring6SetLinearDamping,axisindex,8,00000008,4,int
+MdtSpring6SetLinearDamping,d,12,0000000c,4,MeReal
+MdtSpring6SetAngularStiffness,j,4,00000004,4,MdtSpring6ID
+MdtSpring6SetAngularStiffness,axisindex,8,00000008,4,int
+MdtSpring6SetAngularStiffness,s,12,0000000c,4,MeReal
+MdtSpring6SetAngularDamping,j,4,00000004,4,MdtSpring6ID
+MdtSpring6SetAngularDamping,axisindex,8,00000008,4,int
+MdtSpring6SetAngularDamping,d,12,0000000c,4,MeReal
+MdtSpring6SetWorldLinearVelocity,j,4,00000004,4,MdtSpring6ID
+MdtSpring6SetWorldLinearVelocity,vx,8,00000008,4,MeReal
+MdtSpring6SetWorldLinearVelocity,vy,12,0000000c,4,MeReal
+MdtSpring6SetWorldLinearVelocity,vz,16,00000010,4,MeReal
+MdtSpring6SetWorldAngularVelocity,vy,12,0000000c,4,MeReal
+MdtSpring6SetWorldAngularVelocity,vz,16,00000010,4,MeReal
+MdtSpring6SetWorldAngularVelocity,j,4,00000004,4,MdtSpring6ID
+MdtSpring6SetWorldAngularVelocity,vx,8,00000008,4,MeReal
+Spring6SetBodies,c,4,00000004,4,MdtConstraintID
+Spring6SetBodies,b1,8,00000008,4,MdtBodyID
+Spring6SetBodies,b2,12,0000000c,4,MdtBodyID
+Spring6SetBodies,tm,-76,ffffffb4,64,MeMatrix4

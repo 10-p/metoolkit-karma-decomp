@@ -1,0 +1,13 @@
+# function,name,stackoff,hexoff,size,type
+McdConvexMeshConvexMeshRegisterInteraction,frame,4,00000004,4,McdFramework *
+McdConvexMeshConvexMeshRegisterInteraction,interactions,-44,ffffffd4,28,McdInteractions
+McdConvexMeshPlaneRegisterInteraction,frame,4,00000004,4,McdFramework *
+McdConvexMeshPlaneRegisterInteraction,interactions,-44,ffffffd4,28,McdInteractions
+McdSphylConvexMeshRegisterInteraction,frame,4,00000004,4,McdFramework *
+McdSphylConvexMeshRegisterInteraction,interactions,-44,ffffffd4,28,McdInteractions
+McdSphereConvexMeshRegisterInteraction,frame,4,00000004,4,McdFramework *
+McdSphereConvexMeshRegisterInteraction,interactions,-44,ffffffd4,28,McdInteractions
+McdCylinderConvexMeshRegisterInteraction,frame,4,00000004,4,McdFramework *
+McdCylinderConvexMeshRegisterInteraction,interactions,-44,ffffffd4,28,McdInteractions
+McdBoxConvexMeshRegisterInteraction,frame,4,00000004,4,McdFramework *
+McdBoxConvexMeshRegisterInteraction,interactions,-44,ffffffd4,28,McdInteractions

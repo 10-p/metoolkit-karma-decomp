@@ -1,0 +1,32 @@
+# function,name,stackoff,hexoff,size,type
+McdSphylRegisterType,frame,4,00000004,4,McdFramework *
+McdSphylCreate,frame,4,00000004,4,McdFramework *
+McdSphylCreate,r,8,00000008,4,MeReal
+McdSphylCreate,h,12,0000000c,4,MeReal
+McdSphylSetRadius,s,4,00000004,4,McdSphylID
+McdSphylSetRadius,r,8,00000008,4,MeReal
+McdSphylGetRadius,s,4,00000004,4,McdSphylID
+McdSphylSetHeight,s,4,00000004,4,McdSphylID
+McdSphylSetHeight,h,8,00000008,4,MeReal
+McdSphylGetHeight,s,4,00000004,4,McdSphylID
+McdSphylDestroy,s,4,00000004,4,McdSphylID
+McdSphylUpdateAABB,ins,4,00000004,4,McdGeometryInstanceID
+McdSphylUpdateAABB,finalTM,8,00000008,4,MeMatrix4Ptr
+McdSphylUpdateAABB,tight,12,0000000c,4,MeBool
+McdSphylUpdateAABB,absAx,-44,ffffffd4,12,MeReal[3]
+McdSphylUpdateAABB,fMin,-60,ffffffc4,12,MeReal[3]
+McdSphylUpdateAABB,fMax,-76,ffffffb4,12,MeReal[3]
+McdSphylGetBSphere,s,4,00000004,4,McdSphylID
+McdSphylGetBSphere,center,8,00000008,4,MeReal *
+McdSphylGetBSphere,radius,12,0000000c,4,MeReal *
+McdSphylMaximumPoint,ins,4,00000004,4,McdGeometryInstanceID
+McdSphylMaximumPoint,inDir,8,00000008,4,MeReal *
+McdSphylMaximumPoint,outPoint,12,0000000c,4,MeReal *
+McdSphylMaximumPoint,s,-20,ffffffec,4,McdSphyl *
+McdSphylGetMassProperties,s,4,00000004,4,McdSphylID
+McdSphylGetMassProperties,relTM,8,00000008,4,MeVector4 *
+McdSphylGetMassProperties,m,12,0000000c,4,MeVector3 *
+McdSphylGetMassProperties,volume,16,00000010,4,MeReal *
+McdSphylDebugDraw,geom,4,00000004,4,McdGeometryID
+McdSphylDebugDraw,tm,8,00000008,4,MeReal[4] *
+McdSphylDebugDraw,colour,12,0000000c,4,MeReal *

@@ -1,0 +1,793 @@
+/* ==== MstHandleCollisions ==== */
+
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+/* WARNING: Unknown calling convention */
+
+void MstHandleCollisions(McdModelPairContainer *pairs,McdSpaceID s,MdtWorldID w,MstBridgeID b)
+
+{
+  McdModelPair *pMVar1;
+  McdModelID_conflict pMVar2;
+  McdModelID_conflict pMVar3;
+  McdModelIntersectFnPtr p_Var4;
+  int iVar5;
+  MstMaterialID MVar6;
+  MstPerContactCBPtr p_Var7;
+  MstPerContactCBPtr p_Var8;
+  int iVar9;
+  MeBool extraout_EAX;
+  MeBool MVar10;
+  MstPerContactCBPtr p_Var11;
+  MstPerContactCBPtr extraout_EAX_00;
+  code *pcVar12;
+  void *pvVar13;
+  undefined4 extraout_ECX;
+  undefined4 extraout_ECX_00;
+  undefined4 uVar14;
+  undefined4 extraout_ECX_01;
+  McdContact *pMVar15;
+  McdContact *pMVar16;
+  int aiStack_9cb0 [6];
+  float fStack_9c98;
+  MeReal aMStack_9c94 [2];
+  McdContact aMStack_9c8c [1000];
+  McdIntersectResult *local_48;
+  MstIntersectCBPtr intersectCB;
+  MstMaterialID material2;
+  MstMaterialID material1;
+  MstPerContactCBPtr contactCB;
+  MdtContactParamsID params;
+  MdtContactGroupID_conflict group;
+  MeBool arrayFinished;
+  McdContact *contacts;
+  McdIntersectResult *results;
+  int j;
+  int i;
+  int resultCount;
+  int contactCount;
+  
+  iVar5 = -(pairs->size * 0x24 + 0xfU & 0xfffffff0);
+  results = (McdIntersectResult *)(&stack0xffffffb4 + iVar5);
+  contacts = (McdContact *)((int)aMStack_9c8c + iVar5);
+  if (pairs->helloFirst != pairs->stayingEnd) {
+    *(McdBatchContext **)((int)aiStack_9cb0 + iVar5 + 0x14) = b->context;
+    *(undefined4 *)((int)aiStack_9cb0 + iVar5 + 0x10) = 0x10045;
+    McdBatchContextReset(*(void **)((int)aiStack_9cb0 + iVar5 + 0x14));
+    do {
+      *(undefined4 *)((int)aMStack_9c94 + iVar5 + 4) = 1000;
+      *(int **)((int)aMStack_9c94 + iVar5) = &contactCount;
+      *(McdContact **)((int)&fStack_9c98 + iVar5) = contacts;
+      *(int *)((int)aiStack_9cb0 + iVar5 + 0x14) = pairs->size;
+      *(int **)((int)aiStack_9cb0 + iVar5 + 0x10) = &resultCount;
+      *(McdIntersectResult **)((int)aiStack_9cb0 + iVar5 + 0xc) = results;
+      *(McdModelPairContainer **)((int)aiStack_9cb0 + iVar5 + 8) = pairs;
+      *(McdBatchContext **)((int)aiStack_9cb0 + iVar5 + 4) = b->context;
+      *(undefined4 *)((int)aiStack_9cb0 + iVar5) = 0x10071;
+      arrayFinished =
+           McdBatchIntersectEach
+                     (*(void **)((int)aiStack_9cb0 + iVar5 + 4),
+                      *(void **)((int)aiStack_9cb0 + iVar5 + 8),
+                      *(void **)((int)aiStack_9cb0 + iVar5 + 0xc),
+                      *(void **)((int)aiStack_9cb0 + iVar5 + 0x10),
+                      *(int *)((int)aiStack_9cb0 + iVar5 + 0x14),
+                      *(void **)((int)&fStack_9c98 + iVar5),*(void **)((int)aMStack_9c94 + iVar5),
+                      *(int *)((int)aMStack_9c94 + iVar5 + 4));
+      i = 0;
+      if (0 < resultCount) {
+        local_48 = results;
+        do {
+                    /* Unresolved local var: MdtContactID.conflict dynC@[DW_OP_reg6(ESI)]
+                       Unresolved local var: McdContact * colC@[DW_OP_reg3(EBX)]
+                       Unresolved local var: McdIntersectResult * result@[???]
+                       Unresolved local var: McdModelPairID pair@[DW_OP_reg6(ESI)]
+                       Unresolved local var: MstPerPairCBPtr pairCB@[DW_OP_reg0(EAX)]
+                       Unresolved local var: McdModelID.conflict m1@[DW_OP_reg3(EBX)]
+                       Unresolved local var: McdModelID.conflict m2@[DW_OP_reg7(EDI)] */
+          pMVar1 = local_48->pair;
+          pMVar2 = pMVar1->model1;
+          pMVar3 = pMVar1->model2;
+          *(McdModelID_conflict *)((int)aiStack_9cb0 + iVar5 + 0x14) = pMVar2;
+          *(undefined4 *)((int)aiStack_9cb0 + iVar5 + 0x10) = 0x100a3;
+          material1 = McdModelGetMaterial(*(void **)((int)aiStack_9cb0 + iVar5 + 0x14));
+          *(McdModelID_conflict *)((int)aiStack_9cb0 + iVar5 + 0x14) = pMVar3;
+          *(undefined4 *)((int)aiStack_9cb0 + iVar5 + 0x10) = 0x100ae;
+          material2 = McdModelGetMaterial(*(void **)((int)aiStack_9cb0 + iVar5 + 0x14));
+          if (local_48->touch != 0) {
+            *(MstMaterialID *)((int)aMStack_9c94 + iVar5 + 4) = material2;
+            *(MstMaterialID *)((int)aMStack_9c94 + iVar5) = material2;
+            *(MstMaterialID *)((int)&fStack_9c98 + iVar5) = material1;
+            *(MstBridgeID *)((int)aiStack_9cb0 + iVar5 + 0x14) = b;
+            *(undefined4 *)((int)aiStack_9cb0 + iVar5 + 0x10) = 0x103a4;
+            intersectCB = MstBridgeGetIntersectCB
+                                    (*(void **)((int)aiStack_9cb0 + iVar5 + 0x14),
+                                     *(uint *)((int)&fStack_9c98 + iVar5),
+                                     *(uint *)((int)aMStack_9c94 + iVar5));
+            p_Var4 = pMVar2->mIntersectFn;
+            uVar14 = extraout_ECX_00;
+            if (p_Var4 != (McdModelIntersectFnPtr)0x0) {
+              *(undefined4 *)((int)aMStack_9c94 + iVar5 + 4) = extraout_ECX_00;
+              *(undefined4 *)((int)aMStack_9c94 + iVar5) = extraout_ECX_00;
+              *(McdIntersectResult **)((int)&fStack_9c98 + iVar5) = local_48;
+              *(McdModelID_conflict *)((int)aiStack_9cb0 + iVar5 + 0x14) = pMVar2;
+              *(undefined4 *)((int)aiStack_9cb0 + iVar5 + 0x10) = 0x103ec;
+              (*p_Var4)(*(McdModel_conflict **)((int)aiStack_9cb0 + iVar5 + 0x14),
+                        *(McdIntersectResult **)((int)&fStack_9c98 + iVar5));
+              uVar14 = extraout_ECX_01;
+            }
+            p_Var4 = pMVar3->mIntersectFn;
+            if (p_Var4 != (McdModelIntersectFnPtr)0x0) {
+              *(undefined4 *)((int)aMStack_9c94 + iVar5 + 4) = uVar14;
+              *(undefined4 *)((int)aMStack_9c94 + iVar5) = uVar14;
+              *(McdIntersectResult **)((int)&fStack_9c98 + iVar5) = local_48;
+              *(McdModelID_conflict *)((int)aiStack_9cb0 + iVar5 + 0x14) = pMVar3;
+              *(undefined4 *)((int)aiStack_9cb0 + iVar5 + 0x10) = 0x103de;
+              (*p_Var4)(*(McdModel_conflict **)((int)aiStack_9cb0 + iVar5 + 0x14),
+                        *(McdIntersectResult **)((int)&fStack_9c98 + iVar5));
+            }
+            if (intersectCB != (MstIntersectCBPtr)0x0) {
+              *(McdIntersectResult **)((int)aiStack_9cb0 + iVar5 + 0x14) = local_48;
+              *(undefined4 *)((int)aiStack_9cb0 + iVar5 + 0x10) = 0x103cd;
+              (*intersectCB)(*(McdIntersectResult **)((int)aiStack_9cb0 + iVar5 + 0x14));
+            }
+          }
+          group = pMVar1->responseData;
+          pMVar15 = local_48->contacts;
+          if (group == (MdtContactGroupID_conflict)0x0) {
+            *(undefined4 *)((int)aMStack_9c94 + iVar5 + 4) = 0;
+            *(undefined4 *)((int)aMStack_9c94 + iVar5) = 0;
+            *(McdModelPair **)((int)&fStack_9c98 + iVar5) = pMVar1;
+            *(MdtWorldID *)((int)aiStack_9cb0 + iVar5 + 0x14) = w;
+            *(undefined4 *)((int)aiStack_9cb0 + iVar5 + 0x10) = 0x1037f;
+            group = createContactGroup(*(MdtWorldID *)((int)aiStack_9cb0 + iVar5 + 0x14),
+                                       *(McdModelPairID *)((int)&fStack_9c98 + iVar5));
+            if (group != (MdtContactGroupID_conflict)0x0) goto LAB_000100d6;
+          }
+          else {
+LAB_000100d6:
+            *(MdtContactGroupID_conflict *)((int)aiStack_9cb0 + iVar5 + 0x14) = group;
+            *(undefined4 *)((int)aiStack_9cb0 + iVar5 + 0x10) = 0x100e2;
+            p_Var7 = MdtContactGroupGetFirstContact(*(void **)((int)aiStack_9cb0 + iVar5 + 0x14));
+            *(MstMaterialID *)((int)aMStack_9c94 + iVar5) = material2;
+            *(MstMaterialID *)((int)&fStack_9c98 + iVar5) = material1;
+            *(MstBridgeID *)((int)aiStack_9cb0 + iVar5 + 0x14) = b;
+            *(undefined4 *)((int)aiStack_9cb0 + iVar5 + 0x10) = 0x100f8;
+            params = MstBridgeGetContactParams
+                               (*(void **)((int)aiStack_9cb0 + iVar5 + 0x14),
+                                *(uint *)((int)&fStack_9c98 + iVar5),
+                                *(uint *)((int)aMStack_9c94 + iVar5));
+            *(MstMaterialID *)((int)aMStack_9c94 + iVar5) = material2;
+            *(MstMaterialID *)((int)&fStack_9c98 + iVar5) = material1;
+            *(MstBridgeID *)((int)aiStack_9cb0 + iVar5 + 0x14) = b;
+            *(undefined4 *)((int)aiStack_9cb0 + iVar5 + 0x10) = 0x1010f;
+            p_Var8 = MstBridgeGetPerContactCB
+                               (*(void **)((int)aiStack_9cb0 + iVar5 + 0x14),
+                                *(uint *)((int)&fStack_9c98 + iVar5),
+                                *(uint *)((int)aMStack_9c94 + iVar5));
+            j = 0;
+            pMVar16 = pMVar15;
+            contactCB = p_Var8;
+            if (0 < local_48->contactCount) {
+              do {
+                if (p_Var7 == _MdtContactInvalidID) {
+                  *(MdtContactGroupID_conflict *)((int)aiStack_9cb0 + iVar5 + 0x14) = group;
+                  *(undefined4 *)((int)aiStack_9cb0 + iVar5 + 0x10) = 0x1035d;
+                  p_Var8 = MdtContactGroupCreateContact
+                                     (*(void **)((int)aiStack_9cb0 + iVar5 + 0x14));
+                  p_Var7 = p_Var8;
+                  if (p_Var8 != _MdtContactInvalidID) goto LAB_0001013c;
+                }
+                else {
+LAB_0001013c:
+                  *(MdtContactGroupID_conflict *)((int)aiStack_9cb0 + iVar5 + 0x14) = group;
+                  *(undefined4 *)((int)aiStack_9cb0 + iVar5 + 0x10) = 0x1014a;
+                  iVar9 = MdtContactGroupIsSwapped(*(void **)((int)aiStack_9cb0 + iVar5 + 0x14));
+                  if (iVar9 == 0) {
+                    *(MeReal *)((int)aMStack_9c94 + iVar5 + 4) = pMVar16->normal[2];
+                    *(MeReal *)((int)aMStack_9c94 + iVar5) = pMVar16->normal[1];
+                    *(MeReal *)((int)&fStack_9c98 + iVar5) = pMVar16->normal[0];
+                  }
+                  else {
+                    *(float *)((int)aMStack_9c94 + iVar5 + 4) = -pMVar16->normal[2];
+                    *(float *)((int)aMStack_9c94 + iVar5) = -pMVar16->normal[1];
+                    *(float *)((int)&fStack_9c98 + iVar5) = -pMVar16->normal[0];
+                  }
+                  *(MstPerContactCBPtr *)((int)aiStack_9cb0 + iVar5 + 0x14) = p_Var7;
+                  *(undefined4 *)((int)aiStack_9cb0 + iVar5 + 0x10) = 0x10179;
+                  MdtContactSetNormal(*(void **)((int)aiStack_9cb0 + iVar5 + 0x14),
+                                      *(float *)((int)&fStack_9c98 + iVar5),
+                                      *(float *)((int)aMStack_9c94 + iVar5),
+                                      *(float *)((int)aMStack_9c94 + iVar5 + 4));
+                  *(MeReal *)((int)aMStack_9c94 + iVar5 + 4) = pMVar16->position[2];
+                  *(MeReal *)((int)aMStack_9c94 + iVar5) = pMVar16->position[1];
+                  *(MeReal *)((int)&fStack_9c98 + iVar5) = pMVar16->position[0];
+                  *(MstPerContactCBPtr *)((int)aiStack_9cb0 + iVar5 + 0x14) = p_Var7;
+                  *(undefined4 *)((int)aiStack_9cb0 + iVar5 + 0x10) = 0x1018d;
+                  MdtContactSetPosition
+                            (*(void **)((int)aiStack_9cb0 + iVar5 + 0x14),
+                             *(float *)((int)&fStack_9c98 + iVar5),
+                             *(float *)((int)aMStack_9c94 + iVar5),
+                             *(float *)((int)aMStack_9c94 + iVar5 + 4));
+                  *(float *)((int)&fStack_9c98 + iVar5) = -pMVar16->separation;
+                  *(MstPerContactCBPtr *)((int)aiStack_9cb0 + iVar5 + 0x14) = p_Var7;
+                  *(undefined4 *)((int)aiStack_9cb0 + iVar5 + 0x10) = 0x1019f;
+                  MdtContactSetPenetration
+                            (*(void **)((int)aiStack_9cb0 + iVar5 + 0x14),
+                             *(float *)((int)&fStack_9c98 + iVar5));
+                  *(MdtContactParamsID *)((int)&fStack_9c98 + iVar5) = params;
+                  *(MstPerContactCBPtr *)((int)aiStack_9cb0 + iVar5 + 0x14) = p_Var7;
+                  *(undefined4 *)((int)aiStack_9cb0 + iVar5 + 0x10) = 0x101ab;
+                  MdtContactSetParams(*(void **)((int)aiStack_9cb0 + iVar5 + 0x14),
+                                      *(void **)((int)&fStack_9c98 + iVar5));
+                  MVar10 = extraout_EAX;
+                  if (contactCB != (MstPerContactCBPtr)0x0) {
+                    *(MeBool *)((int)aMStack_9c94 + iVar5 + 4) = extraout_EAX;
+                    *(MstPerContactCBPtr *)((int)aMStack_9c94 + iVar5) = p_Var7;
+                    *(McdContact **)((int)&fStack_9c98 + iVar5) = pMVar16;
+                    *(McdIntersectResult **)((int)aiStack_9cb0 + iVar5 + 0x14) = local_48;
+                    *(undefined4 *)((int)aiStack_9cb0 + iVar5 + 0x10) = 0x101bf;
+                    MVar10 = (*contactCB)(*(McdIntersectResult **)((int)aiStack_9cb0 + iVar5 + 0x14)
+                                          ,*(McdContact **)((int)&fStack_9c98 + iVar5),
+                                          *(MdtContactID_conflict *)((int)aMStack_9c94 + iVar5));
+                    p_Var8 = (MstPerContactCBPtr)0x0;
+                    if (MVar10 == 0) goto LAB_000101d7;
+                  }
+                  *(MeBool *)((int)aMStack_9c94 + iVar5 + 4) = MVar10;
+                  *(MeBool *)((int)aMStack_9c94 + iVar5) = MVar10;
+                  *(MstPerContactCBPtr *)((int)&fStack_9c98 + iVar5) = p_Var7;
+                  *(MdtContactGroupID_conflict *)((int)aiStack_9cb0 + iVar5 + 0x14) = group;
+                  *(undefined4 *)((int)aiStack_9cb0 + iVar5 + 0x10) = 0x101d2;
+                  p_Var8 = MdtContactGroupGetNextContact
+                                     (*(void **)((int)aiStack_9cb0 + iVar5 + 0x14),
+                                      *(void **)((int)&fStack_9c98 + iVar5));
+                  p_Var7 = p_Var8;
+                }
+LAB_000101d7:
+                pMVar15 = (McdContact *)(j + 1);
+                pMVar16 = pMVar16 + 1;
+                j = (int)pMVar15;
+              } while ((int)pMVar15 < local_48->contactCount);
+            }
+            if (p_Var7 != _MdtContactInvalidID) {
+              do {
+                    /* Unresolved local var: MdtContactID.conflict nextC@[DW_OP_reg3(EBX)] */
+                *(McdContact **)((int)aMStack_9c94 + iVar5 + 4) = pMVar15;
+                *(McdContact **)((int)aMStack_9c94 + iVar5) = pMVar15;
+                *(MstPerContactCBPtr *)((int)&fStack_9c98 + iVar5) = p_Var7;
+                *(MdtContactGroupID_conflict *)((int)aiStack_9cb0 + iVar5 + 0x14) = group;
+                *(undefined4 *)((int)aiStack_9cb0 + iVar5 + 0x10) = 0x10204;
+                p_Var11 = MdtContactGroupGetNextContact
+                                    (*(void **)((int)aiStack_9cb0 + iVar5 + 0x14),
+                                     *(void **)((int)&fStack_9c98 + iVar5));
+                *(MstPerContactCBPtr *)((int)&fStack_9c98 + iVar5) = p_Var7;
+                *(MdtContactGroupID_conflict *)((int)aiStack_9cb0 + iVar5 + 0x14) = group;
+                *(undefined4 *)((int)aiStack_9cb0 + iVar5 + 0x10) = 0x10214;
+                MdtContactGroupDestroyContact
+                          (*(void **)((int)aiStack_9cb0 + iVar5 + 0x14),
+                           *(void **)((int)&fStack_9c98 + iVar5));
+                p_Var8 = extraout_EAX_00;
+                p_Var7 = p_Var11;
+              } while (p_Var11 != _MdtContactInvalidID);
+            }
+            MVar6 = material2;
+            *(MstPerContactCBPtr *)((int)aMStack_9c94 + iVar5 + 4) = p_Var8;
+            *(MstMaterialID *)((int)aMStack_9c94 + iVar5) = material2;
+            *(MstMaterialID *)((int)&fStack_9c98 + iVar5) = material1;
+            *(MstBridgeID *)((int)aiStack_9cb0 + iVar5 + 0x14) = b;
+            *(undefined4 *)((int)aiStack_9cb0 + iVar5 + 0x10) = 0x10231;
+            pcVar12 = MstBridgeGetPerPairCB
+                                (*(void **)((int)aiStack_9cb0 + iVar5 + 0x14),
+                                 *(uint *)((int)&fStack_9c98 + iVar5),
+                                 *(uint *)((int)aMStack_9c94 + iVar5));
+            if (pcVar12 != (code *)0x0) {
+              *(undefined4 *)((int)aMStack_9c94 + iVar5 + 4) = extraout_ECX;
+              *(undefined4 *)((int)aMStack_9c94 + iVar5) = extraout_ECX;
+              *(MdtContactGroupID_conflict *)((int)&fStack_9c98 + iVar5) = group;
+              *(McdIntersectResult **)((int)aiStack_9cb0 + iVar5 + 0x14) = local_48;
+              *(undefined4 *)((int)aiStack_9cb0 + iVar5 + 0x10) = 0x10244;
+              iVar9 = (*pcVar12)();
+              if (iVar9 == 0) {
+                    /* Unresolved local var: MdtContactID.conflict c@[DW_OP_reg6(ESI)] */
+                *(MdtContactGroupID_conflict *)((int)aiStack_9cb0 + iVar5 + 0x14) = group;
+                *(undefined4 *)((int)aiStack_9cb0 + iVar5 + 0x10) = 0x102f9;
+                p_Var8 = MdtContactGroupGetFirstContact
+                                   (*(void **)((int)aiStack_9cb0 + iVar5 + 0x14));
+                if (p_Var8 != _MdtContactInvalidID) {
+                  do {
+                    /* Unresolved local var: MdtContactID.conflict nextC@[DW_OP_reg3(EBX)] */
+                    *(MstMaterialID *)((int)aMStack_9c94 + iVar5 + 4) = MVar6;
+                    *(MstMaterialID *)((int)aMStack_9c94 + iVar5) = MVar6;
+                    *(MstPerContactCBPtr *)((int)&fStack_9c98 + iVar5) = p_Var8;
+                    *(MdtContactGroupID_conflict *)((int)aiStack_9cb0 + iVar5 + 0x14) = group;
+                    *(undefined4 *)((int)aiStack_9cb0 + iVar5 + 0x10) = 0x1031c;
+                    p_Var7 = MdtContactGroupGetNextContact
+                                       (*(void **)((int)aiStack_9cb0 + iVar5 + 0x14),
+                                        *(void **)((int)&fStack_9c98 + iVar5));
+                    *(MstPerContactCBPtr *)((int)&fStack_9c98 + iVar5) = p_Var8;
+                    *(MdtContactGroupID_conflict *)((int)aiStack_9cb0 + iVar5 + 0x14) = group;
+                    *(undefined4 *)((int)aiStack_9cb0 + iVar5 + 0x10) = 0x1032c;
+                    MdtContactGroupDestroyContact
+                              (*(void **)((int)aiStack_9cb0 + iVar5 + 0x14),
+                               *(void **)((int)&fStack_9c98 + iVar5));
+                    p_Var8 = p_Var7;
+                  } while (p_Var7 != _MdtContactInvalidID);
+                }
+              }
+            }
+            if (group->count < 1) {
+              *(MdtContactGroupID_conflict *)((int)aiStack_9cb0 + iVar5 + 0x14) = group;
+              *(undefined4 *)((int)aiStack_9cb0 + iVar5 + 0x10) = 0x102c8;
+              pvVar13 = MdtContactGroupQuaConstraint(*(void **)((int)aiStack_9cb0 + iVar5 + 0x14));
+              *(void **)((int)aiStack_9cb0 + iVar5 + 0x14) = pvVar13;
+              *(undefined4 *)((int)aiStack_9cb0 + iVar5 + 0x10) = 0x102d0;
+              iVar9 = MdtConstraintIsEnabled(*(void **)((int)aiStack_9cb0 + iVar5 + 0x14));
+              if (iVar9 != 0) {
+                *(MdtContactGroupID_conflict *)((int)aiStack_9cb0 + iVar5 + 0x14) = group;
+                *(undefined4 *)((int)aiStack_9cb0 + iVar5 + 0x10) = 0x102e3;
+                pvVar13 = MdtContactGroupQuaConstraint(*(void **)((int)aiStack_9cb0 + iVar5 + 0x14))
+                ;
+                *(void **)((int)aiStack_9cb0 + iVar5 + 0x14) = pvVar13;
+                *(undefined4 *)((int)aiStack_9cb0 + iVar5 + 0x10) = 0x102eb;
+                MdtConstraintDisable(*(void **)((int)aiStack_9cb0 + iVar5 + 0x14));
+              }
+            }
+            else {
+              *(MdtContactGroupID_conflict *)((int)aiStack_9cb0 + iVar5 + 0x14) = group;
+              *(undefined4 *)((int)aiStack_9cb0 + iVar5 + 0x10) = 0x10265;
+              pvVar13 = MdtContactGroupQuaConstraint(*(void **)((int)aiStack_9cb0 + iVar5 + 0x14));
+              *(void **)((int)aiStack_9cb0 + iVar5 + 0x14) = pvVar13;
+              *(undefined4 *)((int)aiStack_9cb0 + iVar5 + 0x10) = 0x1026d;
+              iVar9 = MdtConstraintIsEnabled(*(void **)((int)aiStack_9cb0 + iVar5 + 0x14));
+              if (iVar9 == 0) {
+                *(MdtContactGroupID_conflict *)((int)aiStack_9cb0 + iVar5 + 0x14) = group;
+                *(undefined4 *)((int)aiStack_9cb0 + iVar5 + 0x10) = 0x102af;
+                pvVar13 = MdtContactGroupQuaConstraint(*(void **)((int)aiStack_9cb0 + iVar5 + 0x14))
+                ;
+                *(void **)((int)aiStack_9cb0 + iVar5 + 0x14) = pvVar13;
+                *(undefined4 *)((int)aiStack_9cb0 + iVar5 + 0x10) = 0x102b7;
+                MdtConstraintEnable(*(void **)((int)aiStack_9cb0 + iVar5 + 0x14));
+              }
+            }
+          }
+          i = i + 1;
+          local_48 = local_48 + 1;
+        } while (i < resultCount);
+      }
+    } while (arrayFinished == 0);
+  }
+  return;
+}
+
+
+/* ==== MstHandleTransitions ==== */
+
+/* WARNING: Unknown calling convention */
+
+void MstHandleTransitions(McdModelPairContainer *pairs,McdSpaceID s,MdtWorldID w,MstBridgeID b)
+
+{
+  char cVar1;
+  void *pvVar2;
+  McdModelPair *pMVar3;
+  McdModelID_conflict pMVar4;
+  short sVar5;
+  short sVar6;
+  char *pcVar7;
+  int iVar8;
+  int iVar9;
+  MeI32 key2;
+  MeI32 key1;
+  
+                    /* Unresolved local var: int i@[DW_OP_reg7(EDI)] */
+  iVar8 = 0;
+  iVar9 = pairs->goodbyeEnd;
+  if (0 < iVar9) {
+    do {
+                    /* Unresolved local var: MdtContactGroupID.conflict g@[DW_OP_reg3(EBX)] */
+      pvVar2 = pairs->array[iVar8]->responseData;
+      if (pvVar2 != (void *)0x0) {
+        MdtContactGroupReset(pvVar2);
+        MdtContactGroupDestroy(pvVar2);
+        pairs->array[iVar8]->responseData = (void *)0x0;
+        iVar9 = pairs->goodbyeEnd;
+      }
+      iVar8 = iVar8 + 1;
+    } while (iVar8 < iVar9);
+  }
+  McdGoodbyeEach(pairs);
+  iVar9 = pairs->helloFirst;
+  if (iVar9 < pairs->helloEndStayingFirst) {
+    do {
+                    /* Unresolved local var: McdModelPairID pair@[DW_OP_reg6(ESI)]
+                       Unresolved local var: McdGeometryType g1@[DW_OP_reg3(EBX)]
+                       Unresolved local var: McdGeometryType g2@[DW_OP_reg0(EAX)] */
+      pMVar3 = pairs->array[iVar9];
+      sVar5 = McdModelGetSortKey(pMVar3->model1);
+      sVar6 = McdModelGetSortKey(pMVar3->model2);
+      pcVar7 = McdModelGetGeometry(pMVar3->model1);
+      cVar1 = *pcVar7;
+      pcVar7 = McdModelGetGeometry(pMVar3->model2);
+      if ((cVar1 == *pcVar7) && (sVar6 < sVar5)) {
+                    /* Unresolved local var: McdModelID.conflict tmp@[DW_OP_reg2(EDX)] */
+        pMVar4 = pMVar3->model1;
+        pMVar3->model1 = pMVar3->model2;
+        pMVar3->model2 = pMVar4;
+      }
+      iVar9 = iVar9 + 1;
+      McdHello(pMVar3);
+    } while (iVar9 < pairs->helloEndStayingFirst);
+  }
+  return;
+}
+
+
+/* ==== MstAutoSetInertialTensor ==== */
+
+void MstAutoSetInertialTensor(McdModelID_conflict model)
+
+{
+  byte bVar1;
+  ushort uVar2;
+  void *pvVar3;
+  byte *pbVar4;
+  float fVar5;
+  MeReal vol;
+  MeMatrix4 com_tm;
+  MeMatrix3 I;
+  
+                    /* Unresolved local var: McdGeometryID geom@[DW_OP_reg6(ESI)]
+                       Unresolved local var: MdtBodyID body@[DW_OP_reg7(EDI)] */
+  if (model != (McdModelID_conflict)0x0) {
+    pvVar3 = McdModelGetBody(model);
+    if (pvVar3 != (void *)0x0) {
+      pvVar3 = McdModelGetGeometry(model);
+      if (pvVar3 != (void *)0x0) {
+        pbVar4 = McdModelGetGeometry(model);
+        pvVar3 = McdModelGetBody(model);
+        bVar1 = *pbVar4;
+        uVar2 = McdNullGetTypeId();
+        if (bVar1 == uVar2) {
+          I[0][0] = 0.4;
+          I[0][1] = 0.0;
+          I[0][2] = 0.0;
+          I[1][0] = 0.0;
+          I[1][1] = 0.4;
+          I[1][2] = 0.0;
+          I[2][0] = 0.0;
+          I[2][1] = 0.0;
+          I[2][2] = 0.4;
+        }
+        else {
+          McdGeometryGetMassProperties(pbVar4,com_tm,I,&vol);
+        }
+        fVar5 = MdtBodyGetMass(pvVar3);
+        I[0][0] = I[0][0] * fVar5;
+        I[0][1] = I[0][1] * fVar5;
+        I[0][2] = I[0][2] * fVar5;
+        I[1][0] = I[1][0] * fVar5;
+        I[1][1] = I[1][1] * fVar5;
+        I[1][2] = I[1][2] * fVar5;
+        I[2][0] = I[2][0] * fVar5;
+        I[2][1] = I[2][1] * fVar5;
+        I[2][2] = fVar5 * I[2][2];
+        MdtBodySetInertiaTensor(pvVar3,I);
+      }
+    }
+  }
+  return;
+}
+
+
+/* ==== MstModelAndBodyCreate ==== */
+
+McdModelID_conflict MstModelAndBodyCreate(MstUniverseID u,McdGeometryID g,MeReal density)
+
+{
+  float fVar1;
+  McdModelID_conflict pMVar2;
+  void *pvVar3;
+  void *pvVar4;
+  McdModelID_conflict pMVar5;
+  MeReal vol;
+  MeMatrix4 com_tm;
+  MeMatrix3 I;
+  
+                    /* Unresolved local var: MdtBodyID body@[DW_OP_reg6(ESI)]
+                       Unresolved local var: McdModelID.conflict model@[DW_OP_reg7(EDI)] */
+  pMVar2 = McdModelCreate(g);
+  pMVar5 = (McdModelID_conflict)0x0;
+  if (pMVar2 != (McdModelID_conflict)0x0) {
+    pvVar3 = MdtBodyCreate(u->world);
+    pMVar5 = (McdModelID_conflict)0x0;
+    if (pvVar3 != (void *)0x0) {
+                    /* Unresolved local var: MeReal mass@[DW_OP_reg12(ST1)]
+                       Unresolved local var: McdGeometryID g@[DW_OP_reg0(EAX)] */
+      MdtBodyEnable(pvVar3);
+      pvVar4 = McdModelGetGeometry(pMVar2);
+      McdGeometryGetMassProperties(pvVar4,com_tm,I,&vol);
+      MdtBodySetCenterOfMassRelativePosition(pvVar3,com_tm + 3);
+      fVar1 = vol * density;
+      I[0][0] = I[0][0] * fVar1;
+      I[0][1] = I[0][1] * fVar1;
+      I[0][2] = I[0][2] * fVar1;
+      I[1][0] = I[1][0] * fVar1;
+      I[1][1] = I[1][1] * fVar1;
+      I[1][2] = I[1][2] * fVar1;
+      I[2][0] = I[2][0] * fVar1;
+      I[2][1] = I[2][1] * fVar1;
+      I[2][2] = I[2][2] * fVar1;
+      MdtBodySetMass(pvVar3,fVar1);
+      MdtBodySetInertiaTensor(pvVar3,I);
+      McdModelSetBody(pMVar2,pvVar3);
+      McdSpaceInsertModel(u->space,pMVar2);
+      pMVar5 = pMVar2;
+    }
+  }
+  return pMVar5;
+}
+
+
+/* ==== MstModelAndBodyDestroy ==== */
+
+void MstModelAndBodyDestroy(McdModelID_conflict m)
+
+{
+  if (m->mBody != (void *)0x0) {
+    MdtBodyDisable(m->mBody);
+    MdtBodyDestroy(m->mBody);
+  }
+  McdSpaceRemoveModel(m);
+  McdModelDestroy(m);
+  return;
+}
+
+
+/* ==== MstFixedModelCreate ==== */
+
+/* WARNING: Unknown calling convention */
+
+McdModelID_conflict MstFixedModelCreate(MstUniverseID u,McdGeometryID g,MeMatrix4Ptr transformation)
+
+{
+  McdModelID_conflict pMVar1;
+  void *pvVar2;
+  McdModelID_conflict pMVar3;
+  
+                    /* Unresolved local var: McdModelID.conflict m@[DW_OP_reg3(EBX)] */
+  pMVar1 = McdModelCreate(g);
+  McdModelSetTransformPtr(pMVar1,transformation);
+  pMVar3 = pMVar1;
+  pvVar2 = MstUniverseGetSpace(u);
+  McdSpaceInsertModel(pvVar2,pMVar3);
+  McdSpaceUpdateModel(pMVar1);
+  McdSpaceFreezeModel(pMVar1);
+  return pMVar1;
+}
+
+
+/* ==== MstFixedModelDestroy ==== */
+
+void MstFixedModelDestroy(McdModelID_conflict m)
+
+{
+  McdSpaceRemoveModel(m);
+  McdModelDestroy(m);
+  return;
+}
+
+
+/* ==== ConvertCollisionContact ==== */
+
+void ConvertCollisionContact
+               (MdtBclContactParams *params,McdContact *colC,MdtContactID_conflict dynC,int swap)
+
+{
+  MeReal MVar1;
+  MeReal MVar2;
+  MeReal MVar3;
+  
+  if (swap == 0) {
+    MVar2 = colC->normal[2];
+    MVar1 = colC->normal[1];
+    MVar3 = colC->normal[0];
+  }
+  else {
+    MVar2 = -colC->normal[2];
+    MVar1 = -colC->normal[1];
+    MVar3 = -colC->normal[0];
+  }
+  MdtContactSetNormal(dynC,MVar3,MVar1,MVar2);
+  MdtContactSetPosition(dynC,colC->position[0],colC->position[1],colC->position[2]);
+  MdtContactSetPenetration(dynC,-colC->separation);
+  MdtContactSetParams(dynC,params);
+  return;
+}
+
+
+/* ==== DebugOutputContact ==== */
+
+void DebugOutputContact(McdContact *contact)
+
+{
+  MeInfo(0,"  pos: % f % f % f");
+  MeInfo(0,"  nor: % f % f % f");
+  MeInfo(0,"  sep: % f");
+  return;
+}
+
+
+/* ==== DebugOutputIntersectResult ==== */
+
+/* WARNING: Unknown calling convention */
+
+void DebugOutputIntersectResult(McdIntersectResult *result)
+
+{
+  int iVar1;
+  
+                    /* Unresolved local var: int i@[DW_OP_reg6(ESI)] */
+  iVar1 = 0;
+  MeInfo(0,"Intersect Result: %d Contacts");
+  if (0 < result->contactCount) {
+    do {
+      iVar1 = iVar1 + 1;
+      MeInfo(0,"Contact %d:");
+      MeInfo(0,"  pos: % f % f % f");
+      MeInfo(0,"  nor: % f % f % f");
+      MeInfo(0,"  sep: % f");
+    } while (iVar1 < result->contactCount);
+  }
+  MeInfo(0,"max contact count: %d");
+  MeInfo(0,"touch: %d");
+  return;
+}
+
+
+/* ==== MstAutoSetMassProperties ==== */
+
+void MstAutoSetMassProperties(MdtBodyID body,McdModelID_conflict model,MeReal density)
+
+{
+  float fVar1;
+  void *pvVar2;
+  MeReal vol;
+  MeMatrix4 com_tm;
+  MeMatrix3 I;
+  
+                    /* Unresolved local var: MeReal mass@[DW_OP_reg12(ST1)]
+                       Unresolved local var: McdGeometryID g@[DW_OP_reg0(EAX)] */
+  pvVar2 = McdModelGetGeometry(model);
+  McdGeometryGetMassProperties(pvVar2,com_tm,I,&vol);
+  MdtBodySetCenterOfMassRelativePosition(body,com_tm + 3);
+  fVar1 = vol * density;
+  I[0][0] = I[0][0] * fVar1;
+  I[0][1] = I[0][1] * fVar1;
+  I[0][2] = I[0][2] * fVar1;
+  I[1][0] = I[1][0] * fVar1;
+  I[1][1] = I[1][1] * fVar1;
+  I[1][2] = I[1][2] * fVar1;
+  I[2][0] = I[2][0] * fVar1;
+  I[2][1] = I[2][1] * fVar1;
+  I[2][2] = I[2][2] * fVar1;
+  MdtBodySetMass(body,fVar1);
+  MdtBodySetInertiaTensor(body,I);
+  return;
+}
+
+
+/* ==== FreezeModelFromBody ==== */
+
+void FreezeModelFromBody(MdtBodyID b)
+
+{
+  void *pvVar1;
+  
+  if (b->model != (void *)0x0) {
+    pvVar1 = McdModelGetSpace(b->model);
+    if (pvVar1 != (void *)0x0) {
+      McdSpaceFreezeModel(b->model);
+      return;
+    }
+  }
+  return;
+}
+
+
+/* ==== UnfreezeModelFromBody ==== */
+
+void UnfreezeModelFromBody(MdtBodyID b)
+
+{
+  void *pvVar1;
+  
+  if (b->model != (void *)0x0) {
+    pvVar1 = McdModelGetSpace(b->model);
+    if (pvVar1 != (void *)0x0) {
+      McdSpaceUnfreezeModel(b->model);
+      return;
+    }
+  }
+  return;
+}
+
+
+/* ==== DestroyContactGroupReferences ==== */
+
+void DestroyContactGroupReferences(MdtContactGroupID_conflict c)
+
+{
+                    /* Unresolved local var: McdModelPairID m@[DW_OP_reg0(EAX)] */
+  if (c->generator != (void *)0x0) {
+    *(undefined4 *)((int)c->generator + 0x18) = 0;
+  }
+  return;
+}
+
+
+/* ==== MstSetWorldHandlers ==== */
+
+void MstSetWorldHandlers(MdtWorldID world)
+
+{
+  world->bodyDisableCallback = FreezeModelFromBody;
+  world->bodyEnableCallback = UnfreezeModelFromBody;
+  world->contactGroupDestroyCallback = DestroyContactGroupReferences;
+  return;
+}
+
+
+/* ==== createContactGroup ==== */
+
+/* WARNING: Unknown calling convention */
+
+MdtContactGroupID_conflict createContactGroup(MdtWorldID w,McdModelPairID pair)
+
+{
+  short sVar1;
+  short sVar2;
+  void *pvVar3;
+  void *pvVar4;
+  MdtContactGroupID_conflict pMVar5;
+  void *pvVar6;
+  int iVar7;
+  MdtContactGroupID_conflict pMVar8;
+  MeI32 key2;
+  MeI32 key1;
+  
+                    /* Unresolved local var: MdtBodyID body1@[DW_OP_reg3(EBX)]
+                       Unresolved local var: MdtBodyID body2@[DW_OP_reg6(ESI)]
+                       Unresolved local var: MdtContactGroupID.conflict g@[DW_OP_reg7(EDI)] */
+  sVar1 = McdModelGetSortKey(pair->model1);
+  pMVar8 = (MdtContactGroupID_conflict)0x0;
+  sVar2 = McdModelGetSortKey(pair->model2);
+  pvVar3 = McdModelGetBody(pair->model1);
+  pvVar4 = McdModelGetBody(pair->model2);
+  if ((pvVar3 != (void *)0x0) || (pvVar4 != (void *)0x0)) {
+    pMVar5 = MdtContactGroupCreate(w);
+    pMVar8 = (MdtContactGroupID_conflict)0x0;
+    if (pMVar5 != (MdtContactGroupID_conflict)0x0) {
+      if (pvVar3 == (void *)0x0) {
+        pvVar6 = (void *)0x0;
+        pvVar3 = MdtContactGroupQuaConstraint(pMVar5);
+        MdtConstraintSetBodies(pvVar3,pvVar4,pvVar6);
+        iVar7 = -(sVar2 * 0x8000 + (int)sVar1);
+        pvVar3 = MdtContactGroupQuaConstraint(pMVar5);
+        MdtConstraintSetSortKey(pvVar3,iVar7);
+        pMVar5->swapped = 1;
+      }
+      else {
+        pvVar6 = MdtContactGroupQuaConstraint(pMVar5);
+        MdtConstraintSetBodies(pvVar6,pvVar3,pvVar4);
+        iVar7 = -(sVar1 * 0x8000 + (int)sVar2);
+        pvVar3 = MdtContactGroupQuaConstraint(pMVar5);
+        MdtConstraintSetSortKey(pvVar3,iVar7);
+        pMVar5->swapped = 0;
+      }
+      MdtContactGroupSetGenerator(pMVar5,pair);
+      pair->responseData = pMVar5;
+      pMVar8 = pMVar5;
+    }
+  }
+  return pMVar8;
+}
+
+

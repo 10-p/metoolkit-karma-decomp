@@ -1,0 +1,35 @@
+# function,name,stackoff,hexoff,size,type
+singPartmakejlenandbl2body,offs,-24,ffffffe8,4,int
+singPartmakejlenandbl2body,body0,-28,ffffffe4,4,int
+singPartmakejlenandbl2body,body1,-32,ffffffe0,4,int
+singPartmakejlenandbl2body,pbl2bodybase,-36,ffffffdc,4,int *
+singPartmakejlenandbl2body,pbl2conybase,-40,ffffffd8,4,int *
+singPartmakejlenandbl2body,next_constraint,4,00000004,4,int *
+singPartmakejlenandbl2body,jlen,8,00000008,4,int *
+singPartmakejlenandbl2body,bl2body,12,0000000c,4,int[8] *
+singPartmakejlenandbl2body,bl2cony,16,00000010,4,int[8] *
+singPartmakejlenandbl2body,jbody,20,00000014,4,int[2] *
+singPartmakejlenandbl2body,jsize,24,00000018,4,int *
+singPartmakejlenandbl2body,num_strips_inc_padding,28,0000001c,4,int
+singPartmakejlenandbl2body,num_strips,32,00000020,4,int
+singPartmakejlenandbl2body,num_constraints,36,00000024,4,int
+singPartmakejlenandbl2body,i,-20,ffffffec,4,int
+makejlenandbl2body,this,4,00000004,4,keaFunctions *
+makejlenandbl2body,jlen_12padded,8,00000008,4,int *
+makejlenandbl2body,jlen,12,0000000c,4,int *
+makejlenandbl2body,bl2body_12padded,16,00000010,4,int[8] *
+makejlenandbl2body,bl2body,20,00000014,4,int[8] *
+makejlenandbl2body,bl2cbody,24,00000018,4,int[8] *
+makejlenandbl2body,Jbody,28,0000001c,4,int[2] *
+makejlenandbl2body,Jsize,32,00000020,4,int *
+makejlenandbl2body,num_rows_inc_padding_partition,36,00000024,4,int *
+makejlenandbl2body,num_rows_exc_padding_partition,40,00000028,4,int *
+makejlenandbl2body,num_constraints_partition,44,0000002c,4,int *
+makejlenandbl2body,num_constraints,48,00000030,4,int
+makejlenandbl2body,num_partitions,52,00000034,4,int
+makejlenandbl2body,partition,-24,ffffffe8,4,int
+makejlenandbl2body,constraint,-20,ffffffec,4,int
+makejlenandbl2body,num_rows,-40,ffffffd8,4,int
+makejlenandbl2body,num_strips,-28,ffffffe4,4,int
+makejlenandbl2body,num_strips_inc_padding,-32,ffffffe0,4,int
+makejlenandbl2body,ceil3_num_strips,-36,ffffffdc,4,int

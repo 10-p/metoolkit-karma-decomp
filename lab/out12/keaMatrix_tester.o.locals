@@ -1,0 +1,42 @@
+# function,name,stackoff,hexoff,size,type
+checkNorm,a,4,00000004,4,MeReal *
+checkNorm,b,8,00000008,4,MeReal *
+checkNorm,numElts,12,0000000c,4,int
+checkNorm,desc,16,00000010,4,char *
+checkNorm,norm,-20,ffffffec,4,MeReal
+allocate,this,4,00000004,4,keaMatrix_tester *
+allocate,n,8,00000008,4,int
+makeFromJMJT,this,4,00000004,4,keaMatrix_tester *
+makeFromJMJT,JM,8,00000008,4,MeReal *
+makeFromJMJT,Js,12,0000000c,4,MeReal *
+makeFromJMJT,num_in_strip,16,00000010,4,int *
+makeFromJMJT,block2body,20,00000014,4,int *
+makeFromJMJT,slipfactor,24,00000018,4,MeReal *
+makeFromJMJT,epsilon,28,0000001c,4,MeReal
+makeFromJMJT,hinv,32,00000020,4,MeReal
+makeFromColMajorPSM,this,4,00000004,4,keaMatrix_tester *
+makeFromColMajorPSM,Qrhs,8,00000008,4,MeReal *
+makeFromColMajorPSM,Ainv,12,0000000c,4,MeReal *
+makeFromColMajorPSM,clampedValues,16,00000010,4,MeReal *
+makeFromColMajorPSM,initialSolve,20,00000014,4,MeReal *
+makeFromColMajorPSM,unclamped,24,00000018,4,int *
+makeFromColMajorPSM,clamped,28,0000001c,4,int *
+makeFromColMajorPSM,numUnclamped,32,00000020,4,int
+makeFromColMajorPSM,numClamped,36,00000024,4,int
+makeFromColMajorPSM,n_padded,40,00000028,4,int
+factorize,this,4,00000004,4,keaMatrix_tester *
+solve,this,4,00000004,4,keaMatrix_tester *
+solve,x,8,00000008,4,MeReal *
+solve,rhs,12,0000000c,4,MeReal *
+multiply,this,4,00000004,4,keaMatrix_tester *
+multiply,b,8,00000008,4,MeReal *
+multiply,x,12,0000000c,4,MeReal *
+solveUnits,cached,12,0000000c,4,int *
+solveUnits,this,4,00000004,4,keaMatrix_tester *
+solveUnits,clamped,16,00000010,4,int *
+solveUnits,numClamped,20,00000014,4,int
+solveUnits,AinvStride,24,00000018,4,int
+solveUnits,Ainv,8,00000008,4,MeReal *
+writebackMatrixChol,this,4,00000004,4,keaMatrix_tester *
+prefetchMatrixChol,this,4,00000004,4,keaMatrix_tester *
+putchar,__c,4,00000004,4,int

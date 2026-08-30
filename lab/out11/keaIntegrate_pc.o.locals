@@ -1,0 +1,12 @@
+# function,name,stackoff,hexoff,size,type
+KeaIntegrateSystem_vanilla,blist,4,00000004,4,MdtKeaBody * *
+KeaIntegrateSystem_vanilla,tlist,8,00000008,4,MdtKeaTransformation *
+KeaIntegrateSystem_vanilla,num_bodies,12,0000000c,4,int
+KeaIntegrateSystem_vanilla,parameters,16,00000010,76,MdtKeaParameters
+KeaIntegrateSystem_vanilla,myw,-44,ffffffd4,12,MeReal[3]
+KeaIntegrateSystem_vanilla,dq,-60,ffffffc4,16,MeReal[4]
+MdtKeaIntegrateSystem,blist,4,00000004,4,MdtKeaBody * *
+MdtKeaIntegrateSystem,tlist,8,00000008,4,MdtKeaTransformation *
+MdtKeaIntegrateSystem,num_bodies,12,0000000c,4,int
+MdtKeaIntegrateSystem,in_stack_ffffffa0,-96,ffffffa0,76,MdtKeaParameters
+MdtKeaIntegrateSystem,parameters,16,00000010,76,MdtKeaParameters

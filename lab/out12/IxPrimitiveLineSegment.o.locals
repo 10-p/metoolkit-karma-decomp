@@ -1,0 +1,45 @@
+# function,name,stackoff,hexoff,size,type
+IxBoxLineSegment,insctPoint,-140,ffffff74,12,lsVec3
+IxBoxLineSegment,faceId,-144,ffffff70,4,FaceId
+IxBoxLineSegment,model,4,00000004,4,McdModelID.conflict
+IxBoxLineSegment,inOrig,8,00000008,4,MeReal *
+IxBoxLineSegment,inDest,12,0000000c,4,MeReal *
+IxBoxLineSegment,info,16,00000010,4,McdLineSegIntersectResult *
+IxBoxLineSegment,box,-152,ffffff68,4,McdGeometry *
+IxBoxLineSegment,p0_inboxcs,-44,ffffffd4,12,lsVec3
+IxBoxLineSegment,p1_inboxcs,-60,ffffffc4,12,lsVec3
+IxBoxLineSegment,minB,-76,ffffffb4,12,lsVec3
+IxBoxLineSegment,inMaxB,-92,ffffffa4,12,lsVec3
+IxBoxLineSegment,outInst,-108,ffffff94,12,lsVec3
+IxBoxLineSegment,dirLS,-124,ffffff84,12,lsVec3
+IxBoxLineSegment,dist,-148,ffffff6c,4,MeReal
+IxRayAABB,inMinB,4,00000004,4,MeReal *
+IxRayAABB,inMaxB,8,00000008,4,MeReal *
+IxRayAABB,inOrig,12,0000000c,4,MeReal *
+IxRayAABB,inDir,16,00000010,4,MeReal *
+IxRayAABB,outInsct,20,00000014,4,MeReal *
+IxRayAABB,outLen,24,00000018,4,MeReal *
+IxRayAABB,outFaceId,28,0000001c,4,FaceId *
+IxRayAABB,iQuad,-44,ffffffd4,12,uint[3]
+IxRayAABB,i,-80,ffffffb0,4,int
+IxRayAABB,maxT,-60,ffffffc4,12,MeReal[3]
+IxRayAABB,candPlane,-76,ffffffb4,12,MeReal[3]
+IxSphereLineSegment,center,-44,ffffffd4,12,lsVec3
+IxSphereLineSegment,R,-112,ffffff90,4,MeReal
+IxSphereLineSegment,rayDir,-60,ffffffc4,12,lsVec3
+IxSphereLineSegment,origToCenter,-76,ffffffb4,12,lsVec3
+IxSphereLineSegment,model,4,00000004,4,McdModelID.conflict
+IxSphereLineSegment,inOrig,8,00000008,4,MeReal *
+IxSphereLineSegment,inDest,12,0000000c,4,MeReal *
+IxSphereLineSegment,info,16,00000010,4,McdLineSegIntersectResult *
+IxPlaneLineSegment,inOrig,8,00000008,4,MeReal *
+IxPlaneLineSegment,inDest,12,0000000c,4,MeReal *
+IxPlaneLineSegment,info,16,00000010,4,McdLineSegIntersectResult *
+IxPlaneLineSegment,p0_intrics,-44,ffffffd4,12,lsVec3
+IxPlaneLineSegment,p1_intrics,-60,ffffffc4,12,lsVec3
+IxPlaneLineSegment,dirLS,-76,ffffffb4,12,lsVec3
+IxPlaneLineSegment,ip,-92,ffffffa4,12,lsVec3
+IxPlaneLineSegment,model,4,00000004,4,McdModelID.conflict
+McdBoxLineSegmentRegisterInteraction,frame,4,00000004,4,McdFramework *
+McdSphereLineSegmentRegisterInteraction,frame,4,00000004,4,McdFramework *
+McdPlaneLineSegmentRegisterInteraction,frame,4,00000004,4,McdFramework *

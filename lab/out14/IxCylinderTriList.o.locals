@@ -1,0 +1,98 @@
+# function,name,stackoff,hexoff,size,type
+McdCylinderTriangleListIntersect,p,4,00000004,4,McdModelPair *
+McdCylinderTriangleListIntersect,result,8,00000008,4,McdIntersectResult *
+McdCylinderTriangleListIntersect,local_254,-596,fffffdac,4,float *
+McdCylinderTriangleListIntersect,temp,-44,ffffffd4,12,lsVec3
+McdCylinderTriangleListIntersect,triToCyl,-108,ffffff94,64,lsTransform
+McdCylinderTriangleListIntersect,cylPosTrans,-124,ffffff84,12,lsVec3
+McdCylinderTriangleListIntersect,vector,-172,ffffff54,48,lsVec3[4]
+McdCylinderTriangleListIntersect,ct,-204,ffffff34,24,McdUserTriangle
+McdCylinderTriangleListIntersect,dims,-546,fffffdde,2,MeI16
+McdCylinderTriangleListIntersect,footprint,-428,fffffe54,216,lsVec3[18]
+McdCylinderTriangleListIntersect,verts,-552,fffffdd8,4,lsVec3 *
+McdCylinderTriangleListIntersect,normal,-444,fffffe44,12,lsVec3
+McdCylinderTriangleListIntersect,v,-460,fffffe34,12,lsVec3
+McdCylinderTriangleListIntersect,separation,-560,fffffdd0,4,MeReal
+McdCylinderTriangleListIntersect,PN,-556,fffffdd4,4,MeReal
+McdCylinderTriangleListIntersect,edge,-508,fffffe04,36,MeReal[3][3]
+McdCylinderTriangleListIntersect,j,-564,fffffdcc,4,int
+McdCylinderTriangleListIntersect,count,-568,fffffdc8,4,int
+McdCylinderTriangleListIntersect,cylgeom,-572,fffffdc4,4,McdCylinderID
+McdCylinderTriangleListIntersect,triList,-576,fffffdc0,4,McdTriangleList *
+McdCylinderTriangleListIntersect,fwk,-580,fffffdbc,4,McdFramework *
+McdCylinderTriangleListIntersect,cylBSCentre,-524,fffffdf4,12,MeReal[3]
+McdCylinderTriangleListIntersect,eps,-584,fffffdb8,4,MeReal
+McdCylinderTriangleListIntersect,cylRadius,-588,fffffdb4,4,MeReal
+McdCylinderTriangleListIntersect,cylHH,-592,fffffdb0,4,MeReal
+McdCylinderTriangleListIntersect,cylBSRad,-544,fffffde0,4,MeReal
+McdCylinderTriangleListIntersect,diff,-540,fffffde4,12,lsVec3
+McdCylinderTriangleListIntersect,aiStackY_2a0,-672,fffffd60,24,int[6]
+McdCylinderTriangleListIntersect,aMStackY_288,-648,fffffd78,8,MeReal[2]
+McdCylinderTriangleListIntersect,fStackY_280,-640,fffffd80,4,float
+McdCylinderTriangleListIntersect,iStack_270,-624,fffffd90,4,int
+McdCylinderTriangleListIntersect,MStack_26c,-620,fffffd94,24,McdUserTriangle
+McdCylinderTriangleListRegisterInteraction,frame,4,00000004,4,McdFramework *
+McdCylinderTriangleListRegisterInteraction,interactions,-44,ffffffd4,28,McdInteractions
+MeVector3Normalize,local_8,-8,fffffff8,4,float
+MeVector3Normalize,v,4,00000004,4,MeReal *
+McdVanillaOverlapCylTri,outSep,4,00000004,4,MeReal *
+McdVanillaOverlapCylTri,outN,8,00000008,4,lsVec3 *
+McdVanillaOverlapCylTri,outPN,12,0000000c,4,MeReal *
+McdVanillaOverlapCylTri,outPos,16,00000010,4,lsVec3 * *
+McdVanillaOverlapCylTri,outDims,20,00000014,4,MeI16 *
+McdVanillaOverlapCylTri,inEps,24,00000018,4,MeReal
+McdVanillaOverlapCylTri,inRCyl,28,0000001c,4,MeReal
+McdVanillaOverlapCylTri,inHHCyl,32,00000020,4,MeReal
+McdVanillaOverlapCylTri,inTri,36,00000024,4,McdUserTriangle *
+McdVanillaOverlapCylTri,edge,40,00000028,4,MeReal[3] *
+McdVanillaOverlapCylTri,scale,44,0000002c,4,MeReal
+McdVanillaOverlapCylTri,eps2,-264,fffffef8,4,MeReal
+McdVanillaOverlapCylTri,maxSeparation,-268,fffffef4,4,MeReal
+McdVanillaOverlapCylTri,normalSign,-272,fffffef0,4,MeReal
+McdVanillaOverlapCylTri,normInfo,-273,fffffeef,1,MeU8
+McdVanillaOverlapCylTri,PN,-280,fffffee8,4,MeReal
+McdVanillaOverlapCylTri,nRLen,-284,fffffee4,4,MeReal
+McdVanillaOverlapCylTri,minCoord,-288,fffffee0,4,MeReal
+McdVanillaOverlapCylTri,nParaN,-44,ffffffd4,12,lsVec3
+McdVanillaOverlapCylTri,nPerpN,-60,ffffffc4,12,lsVec3
+McdVanillaOverlapCylTri,aE,-108,ffffff94,36,lsVec3[3]
+McdVanillaOverlapCylTri,sqE,-124,ffffff84,12,MeReal[3]
+McdVanillaOverlapCylTri,nPara,-140,ffffff74,12,lsVec3
+McdVanillaOverlapCylTri,nPerp,-156,ffffff64,12,lsVec3
+McdVanillaOverlapCylTri,posList,-340,fffffeac,4,lsVec3 *
+McdVanillaOverlapCylTri,axb,-236,ffffff14,36,lsVec3[3]
+McdVanillaOverlapCylTri,outVec,-172,ffffff54,12,lsVec3
+McdVanillaOverlapCylTri,outVec_1,-188,ffffff44,12,lsVec3
+McdVanillaOverlapCylTri,tIn,-256,ffffff00,4,MeReal
+McdVanillaOverlapCylTri,tOut,-260,fffffefc,4,MeReal
+McdVanillaOverlapCylTri,tIn_1,-248,ffffff08,4,MeReal
+McdVanillaOverlapCylTri,tOut_1,-252,ffffff04,4,MeReal
+McdVanillaOverlapCylTri,tIn_2,-240,ffffff10,4,MeReal
+McdVanillaOverlapCylTri,tOut_2,-244,ffffff0c,4,MeReal
+McdVanillaSegmentCylinderIntersect,tExitNum,-32,ffffffe0,4,MeReal
+McdVanillaSegmentCylinderIntersect,tExitNumZ,-36,ffffffdc,4,MeReal
+McdVanillaSegmentCylinderIntersect,tInMax,4,00000004,4,MeReal *
+McdVanillaSegmentCylinderIntersect,tOutMin,8,00000008,4,MeReal *
+McdVanillaSegmentCylinderIntersect,orig,12,0000000c,4,lsVec3 *
+McdVanillaSegmentCylinderIntersect,disp,16,00000010,4,lsVec3 *
+McdVanillaSegmentCylinderIntersect,inR,20,00000014,4,MeReal
+McdVanillaSegmentCylinderIntersect,inHH,24,00000018,4,MeReal
+McdVanillaSegmentCylinderIntersect,scale,28,0000001c,4,MeReal
+McdVanillaSegmentCylinderIntersect,tEnterNum,-28,ffffffe4,4,MeReal
+McdVanillaAddTriCylSegmentPoints,outList,4,00000004,4,lsVec3 * *
+McdVanillaAddTriCylSegmentPoints,inRCyl,8,00000008,4,MeReal
+McdVanillaAddTriCylSegmentPoints,inHHCyl,12,0000000c,4,MeReal
+McdVanillaAddTriCylSegmentPoints,e0,16,00000010,4,lsVec3 *
+McdVanillaAddTriCylSegmentPoints,e1,20,00000014,4,lsVec3 *
+McdVanillaAddTriCylSegmentPoints,inTri,24,00000018,4,McdUserTriangle *
+McdVanillaAddTriCylSegmentPoints,edge,28,0000001c,4,MeReal[3] *
+McdVanillaAddTriCylSegmentPoints,axb,32,00000020,4,lsVec3 *
+McdVanillaAddTriCylSegmentPoints,inTriD,36,00000024,4,MeReal
+McdVanillaAddTriCylSegmentPoints,ccw,-61,ffffffc3,1,bool
+McdVanillaAddTriCylSegmentPoints,ccwPerp,-93,ffffffa3,1,bool
+McdVanillaAddTriCylSegmentPoints,x,-44,ffffffd4,12,MeReal[3]
+McdVanillaAddTriCylSegmentPoints,y,-60,ffffffc4,12,MeReal[3]
+McdVanillaAddTriCylSegmentPoints,p2,-104,ffffff98,4,MeReal
+McdVanillaAddTriCylSegmentPoints,x1,-108,ffffff94,4,MeReal
+McdVanillaAddTriCylSegmentPoints,x2,-112,ffffff90,4,MeReal
+McdVanillaAddTriCylSegmentPoints,dz,-116,ffffff8c,4,MeReal

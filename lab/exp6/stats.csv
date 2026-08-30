@@ -1,0 +1,7 @@
+IxBoxTriList.o,McdBoxTriangleListIntersect,2058,265,true,false,false,false,true,true,0
+IxBoxTriList.o,McdBoxTriangleListRegisterInteraction,74,17,true,false,false,false,false,false,1
+IxBoxTriList.o,MeVector3Normalize,120,32,true,false,false,false,true,false,0
+IxBoxTriList.o,McdVanillaOverlapOBBTri,2522,285,true,false,false,false,true,false,0
+IxBoxTriList.o,McdVanillaBoxTriIntersect,1639,177,true,false,false,false,false,false,0
+IxBoxTriList.o,McdVanillaSegmentCubeIntersect,496,75,true,false,false,false,true,false,0
+IxBoxTriList.o,McdVanillaAddTriBoxSegmentPoints,1471,127,true,false,false,false,true,false,0

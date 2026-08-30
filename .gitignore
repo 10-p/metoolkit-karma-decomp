@@ -1,0 +1,28 @@
+# Python bytecode from the decomp tools (recover.py imports its siblings).
+__pycache__/
+*.pyc
+
+# ──────────────────────────────────────────────────────────────────────────
+# Do NOT add a blanket *.a / *.o / *.lib / *.obj rule. This repository exists
+# to preserve BINARIES with no source, and they are intentionally TRACKED:
+#   metoolkit/lib.{rel,chk}/**   the MathEngine Karma 1.2.1 drop (*.a, *.lib, *.obj)
+#   lab/allobj/*.o               the 153 shipped objects the recovery reads
+#   lab/out*/                    the Ghidra dumps
+# A global binary-extension ignore would mask these and break the pipeline.
+# ──────────────────────────────────────────────────────────────────────────
+
+# Compiled scratch binaries the lab produced while debugging. Their sources
+# (difftest.c, divcol.c, diverge.c, obb_*.c) ARE tracked; the ELF outputs are
+# not — nothing reads them and they are ~19 MB of rebuildable i386 binaries.
+/lab/dcol32
+/lab/dcol32_recovered
+/lab/dcol64
+/lab/difftest
+/lab/difftest_boxbox
+/lab/difftest_sse
+/lab/div32
+/lab/div64
+
+# Local build / scratch trees
+/build*/
+/_deps/

@@ -1,0 +1,80 @@
+# function,name,stackoff,hexoff,size,type
+printMeReal,x,4,00000004,4,MeReal
+printMeReal,desc,8,00000008,4,char *
+printColMajorMat,A,4,00000004,4,MeReal *
+printColMajorMat,rows,8,00000008,4,int
+printColMajorMat,cols,12,0000000c,4,int
+printColMajorMat,desc,16,00000010,4,char *
+printColMajorMat,i,-32,ffffffe0,4,int
+printColMajorMat,A_local,-20,ffffffec,4,MeReal *
+printColMajorMat,rows_local,-24,ffffffe8,4,int
+printColMajorMat,cols_local,-28,ffffffe4,4,int
+printIntMat,A,4,00000004,4,int *
+printIntMat,rows,8,00000008,4,int
+printIntMat,cols,12,0000000c,4,int
+printIntMat,desc,16,00000010,4,char *
+printIntMat,i,-20,ffffffec,4,int
+printIntMat,local_18,-24,ffffffe8,4,int
+printMat44,A,4,00000004,4,MeReal *
+printMat44,desc,8,00000008,4,char *
+printMat46,A,4,00000004,4,MeReal *
+printMat46,desc,8,00000008,4,char *
+printMat412,A,4,00000004,4,MeReal *
+printMat412,desc,8,00000008,4,char *
+printIntVec,A,4,00000004,4,int *
+printIntVec,numElts,8,00000008,4,int
+printIntVec,desc,12,0000000c,4,char *
+printVec4,A,4,00000004,4,MeReal *
+printVec4,desc,8,00000008,4,char *
+printVec3,A,4,00000004,4,MeReal *
+printVec3,desc,8,00000008,4,char *
+printVec,A,4,00000004,4,MeReal *
+printVec,numElts,8,00000008,4,int
+printVec,desc,12,0000000c,4,char *
+printVec,numElts_local,-20,ffffffec,4,int
+printPtr,ptr,4,00000004,4,void *
+printPtr,desc,8,00000008,4,char *
+printInvMassMatrix,invM,4,00000004,48,MdtKeaInverseMassMatrix
+printInvMassMatrix,desc,52,00000034,4,char *
+printInvMassMatrixArray,invM,4,00000004,4,MdtKeaInverseMassMatrix *
+printInvMassMatrixArray,numElts,8,00000008,4,int
+printInvMassMatrixArray,desc,12,0000000c,4,char *
+printInvMassMatrixArray,j,-20,ffffffec,4,int
+printInvMassMatrixArray,local_1c,-28,ffffffe4,4,int
+printInvMassMatrixArray,local_18,-24,ffffffe8,4,MeReal *
+printMdtKeaForcePairArray,cforces,4,00000004,4,MdtKeaForcePair *
+printMdtKeaForcePairArray,numConstraints,8,00000008,4,int
+printMdtKeaForcePairArray,cforces_local,-20,ffffffec,4,MdtKeaForcePair *
+printMdtKeaBl2CBodyRowArray,bl2cbody,4,00000004,4,int[8] *
+printMdtKeaBl2CBodyRowArray,numElts,8,00000008,4,int
+printMdtKeaBl2BodyRowArray,numElts,8,00000008,4,int
+printMdtKeaBl2BodyRowArray,bl2cbody,4,00000004,4,int[8] *
+printMdtKeaJBlockPairArray,J,4,00000004,4,MdtKeaJBlock[2] *
+printMdtKeaJBlockPairArray,num_rows_inc_padding,8,00000008,4,int
+printMdtKeaJBlockPairArray,i,-28,ffffffe4,4,int
+printMdtKeaJBlockPairArray,l,-32,ffffffe0,4,int
+printMdtKeaJBlockPairArray,J_local,-20,ffffffec,4,MdtKeaJBlock[2] *
+printMdtKeaJBlockPairArray,local_24,-36,ffffffdc,4,int
+printMdtKeaJBlockPairArray,num_rows_inc_padding_local,-24,ffffffe8,4,int
+printMdtKeaVelocityArray,v,4,00000004,4,MdtKeaVelocity *
+printMdtKeaVelocityArray,num_bodies,8,00000008,4,int
+printMdtKeaVelocityArray,desc,12,0000000c,4,char *
+printMdtKeaVelocityArray,v_local,-20,ffffffec,4,MdtKeaVelocity *
+printHalfWallpaperMatrix,A,4,00000004,4,MeReal *
+printHalfWallpaperMatrix,c4numRows,8,00000008,4,int
+printHalfWallpaperMatrix,i,-24,ffffffe8,4,int
+printHalfWallpaperMatrix,k,-28,ffffffe4,4,int
+printHalfWallpaperMatrix,pRowBlock,-32,ffffffe0,4,MeReal *
+printHalfWallpaperMatrix,c4numRows_local,-20,ffffffec,4,int
+printPS2SparseMatrix,matrix_local,-20,ffffffec,4,MeReal *
+printPS2SparseMatrix,rlist_local,-24,ffffffe8,4,int *
+printPS2SparseMatrix,rlist_len_local,-28,ffffffe4,4,int *
+printPS2SparseMatrix,num_12_blocks_local,-32,ffffffe0,4,int
+printPS2SparseMatrix,matrix,4,00000004,4,MeReal *
+printPS2SparseMatrix,rlist,8,00000008,4,int *
+printPS2SparseMatrix,rlist_len,12,0000000c,4,int *
+printPS2SparseMatrix,num_12_blocks,16,00000010,4,int
+printPS2SparseMatrix,i,-36,ffffffdc,4,int
+printPS2SparseMatrix,j,-40,ffffffd8,4,int
+printPS2SparseMatrix,rlist_index,-44,ffffffd4,4,int
+putchar,__c,4,00000004,4,int

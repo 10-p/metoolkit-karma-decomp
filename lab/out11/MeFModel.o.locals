@@ -1,0 +1,53 @@
+# function,name,stackoff,hexoff,size,type
+MeFModelRename,fm,4,00000004,4,MeFModel *
+MeFModelRename,newName,8,00000008,4,char *
+MeFModelCreate,name,4,00000004,4,char *
+MeFModelCreate,type,8,00000008,4,MeFModelType
+MeFModelCreateCopy,model,4,00000004,4,MeFModel *
+MeFModelCreateCopy,recurse,8,00000008,4,MeBool
+MeFModelCopy,dst,4,00000004,4,MeFModel *
+MeFModelCopy,src,8,00000008,4,MeFModel *
+MeFModelCopy,setGeometry,12,0000000c,4,MeBool
+MeFModelDestroy,fm,4,00000004,4,MeFModel *
+MeFModelGetName,fm,4,00000004,4,MeFModel *
+MeFModelGetType,fm,4,00000004,4,MeFModel *
+MeFModelGetGeometryName,fm,4,00000004,4,MeFModel *
+MeFModelGetGeometry,fm,4,00000004,4,MeFModel *
+MeFModelGetMassOffset,fm,4,00000004,4,MeFModel *
+MeFModelGetMassOffset,o,8,00000008,4,MeReal *
+MeFModelGetMass,fm,4,00000004,4,MeFModel *
+MeFModelGetDensity,fm,4,00000004,4,MeFModel *
+MeFModelGetInertiaTensor,fm,4,00000004,4,MeFModel *
+MeFModelGetInertiaTensor,I,8,00000008,4,MeMatrix3Ptr
+MeFModelGetLinearVelocityDamping,fm,4,00000004,4,MeFModel *
+MeFModelGetAngularVelocityDamping,fm,4,00000004,4,MeFModel *
+MeFModelGetFastSpinAxis,fm,4,00000004,4,MeFModel *
+MeFModelGetFastSpinAxis,axis,8,00000008,4,MeReal *
+MeFModelIsFastSpinAxisEnabled,model,4,00000004,4,MeFModel *
+MeFModelSetType,fm,4,00000004,4,MeFModel *
+MeFModelSetType,type,8,00000008,4,MeFModelType
+MeFModelSetGeometry,fg,8,00000008,4,MeFGeometry *
+MeFModelSetGeometry,fm,4,00000004,4,MeFModel *
+MeFModelSetGeometryByName,model,4,00000004,4,MeFModel *
+MeFModelSetGeometryByName,name,8,00000008,4,char *
+MeFModelSetMassOffset,fm,4,00000004,4,MeFModel *
+MeFModelSetMassOffset,v,8,00000008,4,MeReal *
+MeFModelSetMass,fm,4,00000004,4,MeFModel *
+MeFModelSetMass,mass,8,00000008,4,MeReal
+MeFModelSetDensity,fm,4,00000004,4,MeFModel *
+MeFModelSetDensity,density,8,00000008,4,MeReal
+MeFModelSetInertiaTensor,fm,4,00000004,4,MeFModel *
+MeFModelSetInertiaTensor,I,8,00000008,4,MeMatrix3Ptr
+MeFModelSetLinearVelocityDamping,fm,4,00000004,4,MeFModel *
+MeFModelSetLinearVelocityDamping,d,8,00000008,4,MeReal
+MeFModelSetAngularVelocityDamping,fm,4,00000004,4,MeFModel *
+MeFModelSetAngularVelocityDamping,d,8,00000008,4,MeReal
+MeFModelSetFastSpinAxis,x,8,00000008,4,MeReal
+MeFModelSetFastSpinAxis,y,12,0000000c,4,MeReal
+MeFModelSetFastSpinAxis,z,16,00000010,4,MeReal
+MeFModelSetFastSpinAxis,fm,4,00000004,4,MeFModel *
+MeFModelEnableFastSpinAxis,model,4,00000004,4,MeFModel *
+MeFModelEnableFastSpinAxis,b,8,00000008,4,MeBool
+MeFModelScale,model,4,00000004,4,MeFModel *
+MeFModelScale,scale,8,00000008,4,MeReal
+MeFModelScale,I,-60,ffffffc4,36,MeMatrix3

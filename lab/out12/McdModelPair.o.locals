@@ -1,0 +1,16 @@
+# function,name,stackoff,hexoff,size,type
+McdModelPairCreate,m1,4,00000004,4,McdModelID.conflict
+McdModelPairCreate,m2,8,00000008,4,McdModelID.conflict
+McdModelPairReset,p,4,00000004,4,McdModelPair *
+McdModelPairReset,model1,8,00000008,4,McdModelID.conflict
+McdModelPairReset,model2,12,0000000c,4,McdModelID.conflict
+McdModelPairDestroy,p,4,00000004,4,McdModelPairID
+McdModelPairGetModels,p,4,00000004,4,McdModelPairID
+McdModelPairGetModels,m1,8,00000008,4,McdModelID.conflict *
+McdModelPairGetModels,m2,12,0000000c,4,McdModelID.conflict *
+McdModelPairSetRequestPtr,r,8,00000008,4,McdRequest *
+McdModelPairSetRequestPtr,p,4,00000004,4,McdModelPairID
+McdModelPairGetRequestPtr,p,4,00000004,4,McdModelPairID
+McdModelPairGetUserData,p,4,00000004,4,McdModelPairID
+McdModelPairSetUserData,p,4,00000004,4,McdModelPairID
+McdModelPairSetUserData,d,8,00000008,4,void *

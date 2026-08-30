@@ -1,0 +1,64 @@
+# function,name,stackoff,hexoff,size,type
+McdBoxPlaneIntersect,p,4,00000004,4,McdModelPair *
+McdBoxPlaneIntersect,result,8,00000008,4,McdIntersectResult *
+McdBoxPlaneIntersect,eps,-412,fffffe64,4,MeReal
+McdBoxPlaneIntersect,footprint,-316,fffffec4,288,lsVec3[24]
+McdBoxPlaneIntersect,separation,-400,fffffe70,4,MeReal
+McdBoxPlaneIntersect,verts,-404,fffffe6c,4,lsVec3 *
+McdBoxPlaneIntersect,dims,-406,fffffe6a,2,MeI16
+McdBoxPlaneIntersect,tBA,-380,fffffe84,64,lsTransform
+McdBoxPlaneIntersect,diff,-396,fffffe74,12,lsVec3
+McdBoxPlaneSafeTime,planeTM,-80,ffffffb0,4,MeMatrix4Ptr
+McdBoxPlaneSafeTime,relV,-44,ffffffd4,12,lsVec3
+McdBoxPlaneSafeTime,planeN,-60,ffffffc4,12,lsVec3
+McdBoxPlaneSafeTime,closestPoint,-76,ffffffb4,12,lsVec3
+McdBoxPlaneSafeTime,plVar11,-104,ffffff98,4,lsVec3 *
+McdBoxPlaneSafeTime,plVar12,-100,ffffff9c,4,lsVec3 *
+McdBoxPlaneSafeTime,p,4,00000004,4,McdModelPair *
+McdBoxPlaneSafeTime,maxTime,8,00000008,4,MeReal
+McdBoxPlaneSafeTime,result,12,0000000c,4,McdSafeTimeResult *
+McdBoxPlaneRegisterInteraction,frame,4,00000004,4,McdFramework *
+McdBoxPlaneRegisterInteraction,interactions,-44,ffffffd4,28,McdInteractions
+McdVanillaBoxPlaneIntersect,local_110,-272,fffffef0,4,MeReal
+McdVanillaBoxPlaneIntersect,local_108,-264,fffffef8,4,MeReal
+McdVanillaBoxPlaneIntersect,local_104,-260,fffffefc,4,MeReal
+McdVanillaBoxPlaneIntersect,local_7c,-124,ffffff84,12,lsVec3
+McdVanillaBoxPlaneIntersect,outList,4,00000004,4,lsVec3 * *
+McdVanillaBoxPlaneIntersect,tAB,8,00000008,4,lsTransform *
+McdVanillaBoxPlaneIntersect,inRBox,12,0000000c,4,lsVec3 *
+McdVanillaBoxPlaneIntersect,anon_var_0,-44,ffffffd4,12,lsVec3
+McdVanillaBoxPlaneIntersect,anon_var_0_1,-60,ffffffc4,12,lsVec3
+McdVanillaBoxPlaneIntersect,anon_var_0_2,-76,ffffffb4,12,lsVec3
+McdVanillaBoxPlaneIntersect,anon_var_0_3,-92,ffffffa4,12,lsVec3
+McdVanillaBoxPlaneIntersect,anon_var_0_4,-108,ffffff94,12,lsVec3
+McdVanillaBoxPlaneIntersect,tIn,-160,ffffff60,4,MeReal
+McdVanillaBoxPlaneIntersect,tOut,-164,ffffff5c,4,MeReal
+McdVanillaBoxPlaneIntersect,tIn_1,-168,ffffff58,4,MeReal
+McdVanillaBoxPlaneIntersect,tOut_1,-172,ffffff54,4,MeReal
+McdVanillaBoxPlaneIntersect,tIn_2,-176,ffffff50,4,MeReal
+McdVanillaBoxPlaneIntersect,tOut_2,-180,ffffff4c,4,MeReal
+McdVanillaBoxPlaneIntersect,tIn_3,-184,ffffff48,4,MeReal
+McdVanillaBoxPlaneIntersect,tOut_3,-188,ffffff44,4,MeReal
+McdVanillaBoxPlaneIntersect,anon_var_0_5,-156,ffffff64,12,lsVec3
+McdVanillaBoxPlaneIntersect,anon_var_0_6,-140,ffffff74,12,lsVec3
+McdVanillaBoxPlaneIntersect,tIn_4,-192,ffffff40,4,MeReal
+McdVanillaBoxPlaneIntersect,tOut_4,-196,ffffff3c,4,MeReal
+McdVanillaBoxPlaneIntersect,tIn_5,-200,ffffff38,4,MeReal
+McdVanillaBoxPlaneIntersect,tOut_5,-204,ffffff34,4,MeReal
+McdVanillaBoxPlaneIntersect,tIn_6,-208,ffffff30,4,MeReal
+McdVanillaBoxPlaneIntersect,tOut_6,-212,ffffff2c,4,MeReal
+McdVanillaBoxPlaneIntersect,tIn_7,-216,ffffff28,4,MeReal
+McdVanillaBoxPlaneIntersect,tOut_7,-220,ffffff24,4,MeReal
+McdVanillaBoxPlaneIntersect,tIn_8,-224,ffffff20,4,MeReal
+McdVanillaBoxPlaneIntersect,tOut_8,-228,ffffff1c,4,MeReal
+McdVanillaBoxPlaneIntersect,tIn_9,-232,ffffff18,4,MeReal
+McdVanillaBoxPlaneIntersect,tOut_9,-236,ffffff14,4,MeReal
+McdVanillaBoxPlaneIntersect,tIn_10,-240,ffffff10,4,MeReal
+McdVanillaBoxPlaneIntersect,tOut_10,-244,ffffff0c,4,MeReal
+McdVanillaBoxPlaneIntersect,tIn_11,-248,ffffff08,4,MeReal
+McdVanillaBoxPlaneIntersect,tOut_11,-252,ffffff04,4,MeReal
+McdVanillaSegmentPlaneIntersect,tInMax,4,00000004,4,MeReal *
+McdVanillaSegmentPlaneIntersect,tOutMin,8,00000008,4,MeReal *
+McdVanillaSegmentPlaneIntersect,orig,12,0000000c,4,lsVec3 *
+McdVanillaSegmentPlaneIntersect,disp,16,00000010,4,lsVec3 *
+McdVanillaSegmentPlaneIntersect,invDisp,20,00000014,4,MeReal

@@ -1,0 +1,14 @@
+# function,name,stackoff,hexoff,size,type
+MeChunkInit,chunk,4,00000004,4,MeChunk *
+MeChunkInit,alignment,8,00000008,4,int
+MeChunkTerm,chunk,4,00000004,4,MeChunk *
+MeChunkSetMode,chunk,4,00000004,4,MeChunk *
+MeChunkSetMode,mode,8,00000008,4,kMeChunkMode
+MeChunkGetMem,chunk,4,00000004,4,MeChunk *
+MeChunkGetMem,size,8,00000008,4,int
+MeChunkPutMem,chunk,4,00000004,4,MeChunk *
+MeChunkPutMem,mem,8,00000008,4,void *
+MeChunkGetMaxSize,chunk,4,00000004,4,MeChunk *
+MeChunkGetCurrentSize,chunk,4,00000004,4,MeChunk *
+MeChunkIsInUse,chunk,4,00000004,4,MeChunk *
+MeChunkGetAlignment,chunk,4,00000004,4,MeChunk *

@@ -1,0 +1,82 @@
+# function,name,stackoff,hexoff,size,type
+KaFileWriteXML_1_0,local_440,-1088,fffffbc0,4,undefined4
+KaFileWriteXML_1_0,local_42c,-1068,fffffbd4,4,int
+KaFileWriteXML_1_0,op,4,00000004,4,MeXMLOutput *
+KaFileWriteXML_1_0,fa,8,00000008,4,MeFAsset *
+KaFileWriteXML_1_0,parent,12,0000000c,4,MeXMLElementID
+KaFileWriteXML_1_0,buffer,-1052,fffffbe4,1024,char[1024]
+KaFileWriteXML_1_0,asset,-1056,fffffbe0,4,MeXMLElementID
+KaFileWriteXML_1_0,i,-1060,fffffbdc,4,int
+KaFileWriteXML_1_0,count,-1064,fffffbd8,4,int
+KaFileWriteXML_1_0,pvStack_430,-1072,fffffbd0,4,void *
+MeFGeometryWriteXML_1_0,op,4,00000004,4,MeXMLOutput *
+MeFGeometryWriteXML_1_0,fg,8,00000008,4,MeFGeometry *
+MeFGeometryWriteXML_1_0,parent,12,0000000c,4,MeXMLElementID
+MeFGeometryWriteXML_1_0,buffer,-1052,fffffbe4,1024,char[1024]
+MeFGeometryWriteXML_1_0,v,-1068,fffffbd4,12,MeVector3
+MeFGeometryWriteXML_1_0,dVar4,-1112,fffffba8,8,double
+MeFGeometryWriteXML_1_0,it,-1072,fffffbd0,4,MeFPrimitiveIt
+MeFGeometryWriteXML_1_0,dVar5,-1104,fffffbb0,8,double
+MeFGeometryWriteXML_1_0,dVar6,-1096,fffffbb8,8,double
+MeFGeometryWriteXML_1_0,pvVar7,-1088,fffffbc0,4,void *
+MeFPrimitiveWriteXML_1_0,__format,-1096,fffffbb8,4,char *
+MeFPrimitiveWriteXML_1_0,op,4,00000004,4,MeXMLOutput *
+MeFPrimitiveWriteXML_1_0,prim,8,00000008,4,MeFPrimitive *
+MeFPrimitiveWriteXML_1_0,parent,12,0000000c,4,MeXMLElementID
+MeFPrimitiveWriteXML_1_0,buffer,-1052,fffffbe4,1024,char[1024]
+MeFPrimitiveWriteXML_1_0,v,-1068,fffffbd4,12,MeVector3
+MeFPrimitiveWriteXML_1_0,it,-1076,fffffbcc,8,MeFVertexIt
+MeFModelWriteXML_1_0,buffer,-1052,fffffbe4,1024,char[1024]
+MeFModelWriteXML_1_0,__format,-1144,fffffb88,4,char *
+MeFModelWriteXML_1_0,offset,-1068,fffffbd4,12,MeVector3
+MeFModelWriteXML_1_0,I,-1116,fffffba4,36,MeMatrix3
+MeFModelWriteXML_1_0,fast,-1132,fffffb94,12,MeVector3
+MeFModelWriteXML_1_0,op,4,00000004,4,MeXMLOutput *
+MeFModelWriteXML_1_0,fm,8,00000008,4,MeFModel *
+MeFModelWriteXML_1_0,parent,12,0000000c,4,MeXMLElementID
+MeFAssetPartWriteXML_1_0,dVar5,-1096,fffffbb8,8,double
+MeFAssetPartWriteXML_1_0,dVar6,-1088,fffffbc0,8,double
+MeFAssetPartWriteXML_1_0,dVar7,-1080,fffffbc8,8,double
+MeFAssetPartWriteXML_1_0,op,4,00000004,4,MeXMLOutput *
+MeFAssetPartWriteXML_1_0,part,8,00000008,4,MeFAssetPart *
+MeFAssetPartWriteXML_1_0,parent,12,0000000c,4,MeXMLElementID
+MeFAssetPartWriteXML_1_0,buffer,-1052,fffffbe4,1024,char[1024]
+MeFAssetPartWriteXML_1_0,v,-1068,fffffbd4,12,MeVector3
+MeFJointWriteXML_1_0,op,4,00000004,4,MeXMLOutput *
+MeFJointWriteXML_1_0,fj,8,00000008,4,MeFJoint *
+MeFJointWriteXML_1_0,parent,12,0000000c,4,MeXMLElementID
+MeFJointWriteXML_1_0,buffer,-1052,fffffbe4,1024,char[1024]
+MeFJointWriteXML_1_0,v,-1068,fffffbd4,12,MeVector3
+MeFJointWriteXML_1_0,p,-1076,fffffbcc,4,MeReal
+MeFJointWriteXML_1_0,b,-1080,fffffbc8,4,MeBool
+MeFJointWriteXML_1_0,p_1,-1072,fffffbd0,4,MeReal
+MeFJointWriteXML_1_0,__format,-1096,fffffbb8,4,char *
+MeFJointWriteXML_1_0,uVar6,-1092,fffffbbc,8,undefined8
+RproWriteXML_1_0,op,4,00000004,4,MeXMLOutput *
+RproWriteXML_1_0,j,8,00000008,4,MeFJoint *
+RproWriteXML_1_0,parent,12,0000000c,4,MeXMLElementID
+RproWriteXML_1_0,p,-20,ffffffec,4,MeReal
+HingeWriteXML_1_0,op,4,00000004,4,MeXMLOutput *
+HingeWriteXML_1_0,j,8,00000008,4,MeFJoint *
+HingeWriteXML_1_0,parent,12,0000000c,4,MeXMLElementID
+HingeWriteXML_1_0,p,-20,ffffffec,4,MeReal
+HingeWriteXML_1_0,b,-24,ffffffe8,4,MeBool
+CarWheelWriteXML_1_0,op,4,00000004,4,MeXMLOutput *
+CarWheelWriteXML_1_0,j,8,00000008,4,MeFJoint *
+CarWheelWriteXML_1_0,parent,12,0000000c,4,MeXMLElementID
+CarWheelWriteXML_1_0,p,-20,ffffffec,4,MeReal
+CarWheelWriteXML_1_0,b,-24,ffffffe8,4,MeBool
+PrismaticWriteXML_1_0,j,8,00000008,4,MeFJoint *
+PrismaticWriteXML_1_0,parent,12,0000000c,4,MeXMLElementID
+PrismaticWriteXML_1_0,p,-20,ffffffec,4,MeReal
+PrismaticWriteXML_1_0,b,-24,ffffffe8,4,MeBool
+PrismaticWriteXML_1_0,op,4,00000004,4,MeXMLOutput *
+SkeletalWriteXML_1_0,op,4,00000004,4,MeXMLOutput *
+SkeletalWriteXML_1_0,j,8,00000008,4,MeFJoint *
+SkeletalWriteXML_1_0,parent,12,0000000c,4,MeXMLElementID
+SkeletalWriteXML_1_0,p,-20,ffffffec,4,MeReal
+SkeletalWriteXML_1_0,i,-24,ffffffe8,4,int
+Spring6WriteXML_1_0,op,4,00000004,4,MeXMLOutput *
+Spring6WriteXML_1_0,j,8,00000008,4,MeFJoint *
+Spring6WriteXML_1_0,parent,12,0000000c,4,MeXMLElementID
+Spring6WriteXML_1_0,p,-20,ffffffec,4,MeReal

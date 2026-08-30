@@ -1,0 +1,7 @@
+# function,name,stackoff,hexoff,size,type
+MeHSVtoRGB,h,4,00000004,4,float
+MeHSVtoRGB,s,8,00000008,4,float
+MeHSVtoRGB,v,12,0000000c,4,float
+MeHSVtoRGB,rgb,16,00000010,4,float *
+MeHSVtoRGB,__cw,-6,fffffffa,2,ushort
+MeHSVtoRGB,__cwtmp,-8,fffffff8,2,ushort

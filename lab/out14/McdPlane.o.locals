@@ -1,0 +1,31 @@
+# function,name,stackoff,hexoff,size,type
+McdPlaneRegisterType,frame,4,00000004,4,McdFramework *
+McdPlaneCreate,frame,4,00000004,4,McdFramework *
+McdPlaneDestroy,g,4,00000004,4,McdGeometryID
+McdPlaneUpdateAABB,ins,4,00000004,4,McdGeometryInstanceID
+McdPlaneUpdateAABB,finalTM,8,00000008,4,MeMatrix4Ptr
+McdPlaneUpdateAABB,tight,12,0000000c,4,MeBool
+McdPlaneUpdateAABB,tm,-64,ffffffc0,4,MeMatrix4Ptr
+McdPlaneUpdateAABB,min,-44,ffffffd4,12,MeReal[3]
+McdPlaneUpdateAABB,max,-60,ffffffc4,12,MeReal[3]
+McdPlaneGetBSphere,g,4,00000004,4,McdGeometry *
+McdPlaneGetBSphere,center,8,00000008,4,MeReal *
+McdPlaneGetBSphere,radius,12,0000000c,4,MeReal *
+McdPlaneMaximumPoint,ins,4,00000004,4,McdGeometryInstanceID
+McdPlaneMaximumPoint,inDir,8,00000008,4,MeReal *
+McdPlaneMaximumPoint,outPoint,12,0000000c,4,MeReal *
+McdPlaneGetMassProperties,volume,16,00000010,4,MeReal *
+McdPlaneGetMassProperties,g,4,00000004,4,McdGeometry *
+McdPlaneGetMassProperties,relTM,8,00000008,4,MeVector4 *
+McdPlaneGetMassProperties,m,12,0000000c,4,MeVector3 *
+McdPlaneGetNormal,g,4,00000004,4,McdGeometry *
+McdPlaneGetNormal,_tm,8,00000008,4,MeReal[4] *
+McdPlaneGetNormal,_normal,12,0000000c,4,MeReal *
+McdPlaneGetDistanceToPoint,g,4,00000004,4,McdGeometry *
+McdPlaneGetDistanceToPoint,_tm,8,00000008,4,MeReal[4] *
+McdPlaneGetDistanceToPoint,point,12,0000000c,4,MeReal *
+McdPlaneGetDistanceToPoint,normal,-28,ffffffe4,12,lsVec3
+McdPlaneGetDistanceToPoint,disp,-44,ffffffd4,12,lsVec3
+McdPlaneDebugDraw,geom,4,00000004,4,McdGeometryID
+McdPlaneDebugDraw,tm,8,00000008,4,MeReal[4] *
+McdPlaneDebugDraw,colour,12,0000000c,4,MeReal *

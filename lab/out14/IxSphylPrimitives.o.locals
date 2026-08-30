@@ -1,0 +1,186 @@
+# function,name,stackoff,hexoff,size,type
+AccumulateSphylContacts,sep,12,0000000c,4,MeReal
+AccumulateSphylContacts,segDim,16,00000010,2,MeI16
+AccumulateSphylContacts,otherDim,20,00000014,2,MeI16
+AccumulateSphylContacts,axis,24,00000018,4,MeVector3Ptr
+AccumulateSphylContacts,ds,28,0000001c,4,MeReal
+AccumulateSphylContacts,tm,32,00000020,4,MeMatrix4Ptr
+AccumulateSphylContacts,result,36,00000024,4,McdIntersectResult *
+AccumulateSphylContacts,dims,-46,ffffffd2,2,MeI16
+AccumulateSphylContacts,globalNormal,-44,ffffffd4,12,MeReal[3]
+AccumulateSphylContacts,cp,4,00000004,4,MeReal *
+AccumulateSphylContacts,normal,8,00000008,4,MeReal *
+McdSphylPlaneIntersect,tm1,-96,ffffffa0,4,MeMatrix4Ptr
+McdSphylPlaneIntersect,eps,-100,ffffff9c,4,MeReal
+McdSphylPlaneIntersect,sphyl,-104,ffffff98,4,McdSphyl *
+McdSphylPlaneIntersect,end,-44,ffffffd4,12,MeReal[3]
+McdSphylPlaneIntersect,disp,-60,ffffffc4,12,MeReal[3]
+McdSphylPlaneIntersect,ds,-112,ffffff90,4,MeReal
+McdSphylPlaneIntersect,sep,-116,ffffff8c,4,MeReal
+McdSphylPlaneIntersect,p,4,00000004,4,McdModelPair *
+McdSphylPlaneIntersect,pos,-76,ffffffb4,12,MeReal[3]
+McdSphylPlaneIntersect,result,8,00000008,4,McdIntersectResult *
+McdSphylPlaneIntersect,s,-124,ffffff84,4,MeReal
+McdSphylPlaneIntersect,pos2,-92,ffffffa4,12,MeReal[3]
+McdSphylPlaneRegisterInteraction,frame,4,00000004,4,McdFramework *
+McdSphylPlaneRegisterInteraction,interactions,-44,ffffffd4,28,McdInteractions
+McdSphylSphereIntersect,p,4,00000004,4,McdModelPair *
+McdSphylSphereIntersect,result,8,00000008,4,McdIntersectResult *
+McdSphylSphereIntersect,eps,-96,ffffffa0,4,MeReal
+McdSphylSphereIntersect,sphyl,-100,ffffff9c,4,McdSphyl *
+McdSphylSphereIntersect,sphere,-104,ffffff98,4,McdSphere *
+McdSphylSphereIntersect,fwk,-108,ffffff94,4,McdFramework *
+McdSphylSphereIntersect,cp,-44,ffffffd4,12,MeReal[3]
+McdSphylSphereIntersect,n,-60,ffffffc4,12,MeReal[3]
+McdSphylSphereIntersect,pos,-92,ffffffa4,12,MeReal[3]
+McdSphylSphereIntersect,aa,-76,ffffffb4,12,MeReal[3]
+McdSphylSphereRegisterInteraction,frame,4,00000004,4,McdFramework *
+McdSphylSphereRegisterInteraction,interactions,-44,ffffffd4,28,McdInteractions
+McdSphylSphylIntersect,tm2,-128,ffffff80,4,MeMatrix4Ptr
+McdSphylSphylIntersect,eps,-132,ffffff7c,4,MeReal
+McdSphylSphylIntersect,sphyl1,-136,ffffff78,4,McdSphyl *
+McdSphylSphylIntersect,sphyl2,-140,ffffff74,4,McdSphyl *
+McdSphylSphylIntersect,s,-120,ffffff88,4,MeReal
+McdSphylSphylIntersect,t,-116,ffffff8c,4,MeReal
+McdSphylSphylIntersect,ds,-112,ffffff90,4,MeReal
+McdSphylSphylIntersect,cp1,-44,ffffffd4,12,MeReal[3]
+McdSphylSphylIntersect,cp2,-60,ffffffc4,12,MeReal[3]
+McdSphylSphylIntersect,n,-76,ffffffb4,12,MeReal[3]
+McdSphylSphylIntersect,p_1,-108,ffffff94,12,MeReal[3]
+McdSphylSphylIntersect,aa,-92,ffffffa4,12,MeReal[3]
+McdSphylSphylIntersect,local_ac,-172,ffffff54,4,float
+McdSphylSphylIntersect,p,4,00000004,4,McdModelPair *
+McdSphylSphylIntersect,result,8,00000008,4,McdIntersectResult *
+McdSphylSphylIntersect,tm1,-124,ffffff84,4,MeMatrix4Ptr
+McdSphylSphylRegisterInteraction,frame,4,00000004,4,McdFramework *
+McdSphylSphylRegisterInteraction,interactions,-44,ffffffd4,28,McdInteractions
+McdSphylBoxIntersect,j,-192,ffffff40,4,int
+McdSphylBoxIntersect,tm2,-196,ffffff3c,4,MeMatrix4Ptr
+McdSphylBoxIntersect,eps,-200,ffffff38,4,MeReal
+McdSphylBoxIntersect,sphyl,-204,ffffff34,4,McdSphyl *
+McdSphylBoxIntersect,box,-208,ffffff30,4,McdBox *
+McdSphylBoxIntersect,relAxis,-44,ffffffd4,12,MeReal[3]
+McdSphylBoxIntersect,relPos,-60,ffffffc4,12,MeReal[3]
+McdSphylBoxIntersect,axis,-216,ffffff28,4,MeI32
+McdSphylBoxIntersect,si,-108,ffffff94,28,MeReal[7]
+McdSphylBoxIntersect,signN,-220,ffffff24,4,MeI32
+McdSphylBoxIntersect,boxP,-76,ffffffb4,12,MeReal[3]
+McdSphylBoxIntersect,pos,-124,ffffff84,12,MeReal[3]
+McdSphylBoxIntersect,sort,-156,ffffff64,28,MeI32[7]
+McdSphylBoxIntersect,s,-224,ffffff20,4,MeReal
+McdSphylBoxIntersect,jMin,-228,ffffff1c,4,MeI32
+McdSphylBoxIntersect,n,-172,ffffff54,12,MeReal[3]
+McdSphylBoxIntersect,boxDim,-230,ffffff1a,2,MeI16
+McdSphylBoxIntersect,ds1,-236,ffffff14,4,MeReal
+McdSphylBoxIntersect,d,-188,ffffff44,12,MeReal[3]
+McdSphylBoxIntersect,sepIndex,-260,fffffefc,4,MeI32
+McdSphylBoxIntersect,sepSign,-264,fffffef8,4,MeReal
+McdSphylBoxIntersect,local_114,-276,fffffeec,1,sbyte
+McdSphylBoxIntersect,p,4,00000004,4,McdModelPair *
+McdSphylBoxIntersect,result,8,00000008,4,McdIntersectResult *
+McdSphylBoxRegisterInteraction,frame,4,00000004,4,McdFramework *
+McdSphylBoxRegisterInteraction,interactions,-44,ffffffd4,28,McdInteractions
+McdSphylCylinderIntersect,tm2,-304,fffffed0,4,MeMatrix4Ptr
+McdSphylCylinderIntersect,eps,-308,fffffecc,4,MeReal
+McdSphylCylinderIntersect,sphyl,-312,fffffec8,4,McdSphyl *
+McdSphylCylinderIntersect,cyl,-316,fffffec4,4,McdCylinder *
+McdSphylCylinderIntersect,relAxis,-44,ffffffd4,12,MeReal[3]
+McdSphylCylinderIntersect,relPos,-60,ffffffc4,12,MeReal[3]
+McdSphylCylinderIntersect,regionType,-324,fffffebc,4,MeI32
+McdSphylCylinderIntersect,si,-108,ffffff94,20,MeReal[5]
+McdSphylCylinderIntersect,signZ,-328,fffffeb8,4,MeI32
+McdSphylCylinderIntersect,pos,-76,ffffffb4,12,MeReal[3]
+McdSphylCylinderIntersect,cylZ,-332,fffffeb4,4,MeReal
+McdSphylCylinderIntersect,sort,-140,ffffff74,20,MeI32[5]
+McdSphylCylinderIntersect,n,-156,ffffff64,12,MeReal[3]
+McdSphylCylinderIntersect,cylP,-172,ffffff54,12,MeReal[3]
+McdSphylCylinderIntersect,cylDim,-342,fffffeaa,2,MeI16
+McdSphylCylinderIntersect,ds1,-348,fffffea4,4,MeReal
+McdSphylCylinderIntersect,c,-356,fffffe9c,4,MeReal
+McdSphylCylinderIntersect,coef,-252,ffffff04,80,MeReal[20]
+McdSphylCylinderIntersect,roots,-284,fffffee4,24,MeReal[6]
+McdSphylCylinderIntersect,rootCount,-420,fffffe5c,4,MeI32
+McdSphylCylinderIntersect,rootN,-360,fffffe98,4,MeI32
+McdSphylCylinderIntersect,rootDist2,-364,fffffe94,4,MeReal
+McdSphylCylinderIntersect,p_1,-300,fffffed4,12,MeReal[3]
+McdSphylCylinderIntersect,maxSep,-384,fffffe80,4,MeReal
+McdSphylCylinderIntersect,p,4,00000004,4,McdModelPair *
+McdSphylCylinderIntersect,result,8,00000008,4,McdIntersectResult *
+McdSphylCylinderRegisterInteraction,frame,4,00000004,4,McdFramework *
+McdSphylCylinderRegisterInteraction,interactions,-44,ffffffd4,28,McdInteractions
+McdSphylTriangleListIntersect,result,8,00000008,4,McdIntersectResult *
+McdSphylTriangleListIntersect,eps,-80,ffffffb0,4,MeReal
+McdSphylTriangleListIntersect,trilistGeom,-84,ffffffac,4,McdTriangleListID
+McdSphylTriangleListIntersect,relAxis,-44,ffffffd4,12,MeReal[3]
+McdSphylTriangleListIntersect,relPos,-60,ffffffc4,12,MeReal[3]
+McdSphylTriangleListIntersect,tmp,-76,ffffffb4,12,MeReal[3]
+McdSphylTriangleListIntersect,local_5c,-92,ffffffa4,4,int
+McdSphylTriangleListIntersect,local_58,-88,ffffffa8,4,MeReal *
+McdSphylTriangleListIntersect,aiStackY_80,-128,ffffff80,16,int[4]
+McdSphylTriangleListIntersect,fStackY_70,-112,ffffff90,4,float
+McdSphylTriangleListIntersect,aMStack_64,-100,ffffff9c,8,MeReal[2]
+McdSphylTriangleListIntersect,p,4,00000004,4,McdModelPair *
+McdSphylTriangleListRegisterInteraction,frame,4,00000004,4,McdFramework *
+McdSphylTriangleListRegisterInteraction,interactions,-44,ffffffd4,28,McdInteractions
+LineSphere,origToCentre,-44,ffffffd4,12,MeReal[3]
+LineSphere,sp,4,00000004,4,MeReal *
+LineSphere,r,8,00000008,4,MeReal
+LineSphere,inOrig,12,0000000c,4,MeReal *
+LineSphere,dir,16,00000010,4,MeReal *
+LineSphere,mag,20,00000014,4,MeReal
+LineSphere,info,24,00000018,4,McdLineSegIntersectResult *
+IxSphylLineSegment,model,4,00000004,4,McdModelID.conflict
+IxSphylLineSegment,inOrig,8,00000008,4,MeReal *
+IxSphylLineSegment,inDest,12,0000000c,4,MeReal *
+IxSphylLineSegment,info,16,00000010,4,McdLineSegIntersectResult *
+IxSphylLineSegment,sphyl,-144,ffffff70,4,McdSphyl *
+IxSphylLineSegment,lOrig,-44,ffffffd4,12,MeReal[3]
+IxSphylLineSegment,lDest,-60,ffffffc4,12,MeReal[3]
+IxSphylLineSegment,doTest,-76,ffffffb4,12,MeBool[3]
+IxSphylLineSegment,sp,-92,ffffffa4,12,MeReal[3]
+IxSphylLineSegment,dir,-108,ffffff94,12,MeReal[3]
+IxSphylLineSegment,tmpInfo,-140,ffffff74,32,McdLineSegIntersectResult
+IxSphylLineSegment,dx,-148,ffffff6c,4,MeReal
+IxSphylLineSegment,dy,-152,ffffff68,4,MeReal
+IxSphylLineSegment,z0,-156,ffffff64,4,MeReal
+McdSphylLineSegmentRegisterInteraction,frame,4,00000004,4,McdFramework *
+MeVector3Normalize,local_8,-8,fffffff8,4,float
+MeVector3Normalize,v,4,00000004,4,MeReal *
+GenerateTriangleContact,s,-420,fffffe5c,4,MeReal
+GenerateTriangleContact,tri,4,00000004,4,McdUserTriangle *
+GenerateTriangleContact,center,8,00000008,4,MeReal *
+GenerateTriangleContact,axis,12,0000000c,4,MeReal *
+GenerateTriangleContact,hh,16,00000010,4,MeReal
+GenerateTriangleContact,R,20,00000014,4,MeReal
+GenerateTriangleContact,tm,24,00000018,4,MeVector4 *
+GenerateTriangleContact,eps,28,0000001c,4,MeReal
+GenerateTriangleContact,result,32,00000020,4,McdIntersectResult *
+GenerateTriangleContact,edge,-76,ffffffb4,36,MeReal[3][3]
+GenerateTriangleContact,faceN,-92,ffffffa4,12,MeReal[3]
+GenerateTriangleContact,faceN2,-316,fffffec4,4,MeReal
+GenerateTriangleContact,eN,-140,ffffff74,36,MeReal[3][3]
+GenerateTriangleContact,eN2,-156,ffffff64,12,MeReal[3]
+GenerateTriangleContact,b,-172,ffffff54,12,MeReal[3]
+GenerateTriangleContact,bFace,-360,fffffe98,4,MeReal
+GenerateTriangleContact,m,-188,ffffff44,12,MeReal[3]
+GenerateTriangleContact,mFace,-376,fffffe88,4,MeReal
+GenerateTriangleContact,centerUnderFace,-380,fffffe84,4,MeBool
+GenerateTriangleContact,n,-204,ffffff34,12,MeReal[3]
+GenerateTriangleContact,p,-220,ffffff24,12,MeReal[3]
+GenerateTriangleContact,s0,-384,fffffe80,4,MeReal
+GenerateTriangleContact,ds0,-388,fffffe7c,4,MeReal
+GenerateTriangleContact,triDim,-390,fffffe7a,2,MeI16
+GenerateTriangleContact,hhm,-236,ffffff14,12,MeReal[3]
+GenerateTriangleContact,bothInside,-396,fffffe74,4,MeI32
+GenerateTriangleContact,parallel,-404,fffffe6c,4,MeBool
+GenerateTriangleContact,askew,-408,fffffe68,4,MeBool
+GenerateTriangleContact,local_1dc,-476,fffffe24,4,float
+GenerateTriangleContact,local_1c4,-452,fffffe3c,4,float
+GenerateTriangleContact,s0i,-280,fffffee8,4,MeReal
+GenerateTriangleContact,s1i,-276,fffffeec,4,MeReal
+GenerateTriangleContact,ds0i,-272,fffffef0,4,MeReal
+GenerateTriangleContact,local_1bc,-444,fffffe44,4,float
+GenerateTriangleContact,local_1b8,-440,fffffe48,4,float
+GenerateTriangleContact,r,-252,ffffff04,12,MeReal[3]
+GenerateTriangleContact,local_1b4,-436,fffffe4c,4,float
+GenerateTriangleContact,r1,-268,fffffef4,12,MeReal[3]

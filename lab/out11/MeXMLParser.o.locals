@@ -1,0 +1,134 @@
+# function,name,stackoff,hexoff,size,type
+MeXMLParseUIntArray,file,4,00000004,4,MeXMLInput *
+MeXMLParseUIntArray,action,8,00000008,4,MeXMLHandler *
+MeXMLParseUIntArray,data,12,0000000c,4,void *
+MeXMLParseUIntArray,x,-1052,fffffbe4,1024,char[1024]
+MeXMLParseUIntArray,c,-1060,fffffbdc,4,char *
+MeXMLParseUIntArray,d,-1056,fffffbe0,4,char *
+MeXMLParseUIntArray,line,-1064,fffffbd8,4,int
+MeXMLParseUIntArray,posn,-1068,fffffbd4,4,int
+MeXMLParseIntArray,file,4,00000004,4,MeXMLInput *
+MeXMLParseIntArray,action,8,00000008,4,MeXMLHandler *
+MeXMLParseIntArray,data,12,0000000c,4,void *
+MeXMLParseIntArray,x,-1052,fffffbe4,1024,char[1024]
+MeXMLParseIntArray,c,-1060,fffffbdc,4,char *
+MeXMLParseIntArray,d,-1056,fffffbe0,4,char *
+MeXMLParseIntArray,line,-1064,fffffbd8,4,int
+MeXMLParseIntArray,posn,-1068,fffffbd4,4,int
+MeXMLParseFloatArray,line,-1068,fffffbd4,4,int
+MeXMLParseFloatArray,posn,-1072,fffffbd0,4,int
+MeXMLParseFloatArray,file,4,00000004,4,MeXMLInput *
+MeXMLParseFloatArray,action,8,00000008,4,MeXMLHandler *
+MeXMLParseFloatArray,data,12,0000000c,4,void *
+MeXMLParseFloatArray,x,-1052,fffffbe4,1024,char[1024]
+MeXMLParseFloatArray,c,-1064,fffffbd8,4,char *
+MeXMLParseFloatArray,d,-1060,fffffbdc,4,char *
+MeXMLParseMeRealArray,file,4,00000004,4,MeXMLInput *
+MeXMLParseMeRealArray,action,8,00000008,4,MeXMLHandler *
+MeXMLParseMeRealArray,data,12,0000000c,4,void *
+MeXMLParseMeRealArray,x,-1052,fffffbe4,1024,char[1024]
+MeXMLParseMeRealArray,c,-1064,fffffbd8,4,char *
+MeXMLParseMeRealArray,d,-1060,fffffbdc,4,char *
+MeXMLParseMeRealArray,line,-1068,fffffbd4,4,int
+MeXMLParseMeRealArray,posn,-1072,fffffbd0,4,int
+MeXMLParseDoubleArray,file,4,00000004,4,MeXMLInput *
+MeXMLParseDoubleArray,action,8,00000008,4,MeXMLHandler *
+MeXMLParseDoubleArray,data,12,0000000c,4,void *
+MeXMLParseDoubleArray,x,-1052,fffffbe4,1024,char[1024]
+MeXMLParseDoubleArray,c,-1060,fffffbdc,4,char *
+MeXMLParseDoubleArray,d,-1056,fffffbe0,4,char *
+MeXMLParseDoubleArray,line,-1064,fffffbd8,4,int
+MeXMLParseDoubleArray,posn,-1068,fffffbd4,4,int
+MeXMLParseStringArray,pcVar7,-1096,fffffbb8,4,char *
+MeXMLParseStringArray,x,-1052,fffffbe4,1024,char[1024]
+MeXMLParseStringArray,line,-1056,fffffbe0,4,int
+MeXMLParseStringArray,uVar8,-1084,fffffbc4,4,uint
+MeXMLParseStringArray,posn,-1060,fffffbdc,4,int
+MeXMLParseStringArray,puVar9,-1080,fffffbc8,4,undefined *
+MeXMLParseStringArray,i,-1064,fffffbd8,4,uint
+MeXMLParseStringArray,file,4,00000004,4,MeXMLInput *
+MeXMLParseStringArray,action,8,00000008,4,MeXMLHandler *
+MeXMLParseStringArray,data,12,0000000c,4,void *
+readToNextTag,fi,4,00000004,4,MeXMLInput *
+readToNextTag,dest,8,00000008,4,char *
+readToNextTag,size,12,0000000c,4,int
+readToNextTag,iVar4,-36,ffffffdc,4,int
+readToNextTag,iVar5,-32,ffffffe0,4,int
+MeXMLElementProcess,start,-1100,fffffbb4,1036,MeXMLElement
+MeXMLElementProcess,end,-2140,fffff7a4,1036,MeXMLElement
+MeXMLElementProcess,__format,-2184,fffff778,4,char *
+MeXMLElementProcess,e,-2168,fffff788,4,MeXMLElement *
+MeXMLElementProcess,MVar9,-2164,fffff78c,4,MeXMLError
+MeXMLElementProcess,terminator,4,00000004,4,MeXMLElement *
+MeXMLElementProcess,actions,8,00000008,4,MeXMLHandler *
+MeXMLElementProcess,data,12,0000000c,4,void *
+MeXMLElementProcess,userdata,16,00000010,4,void *
+MeXMLElementProcess,skipAction,-60,ffffffc4,32,MeXMLHandler[1]
+MeXMLElementProcess,line,-2144,fffff7a0,4,int
+MeXMLElementProcess,posn,-2148,fffff79c,4,int
+MeXMLInputSetErrorString,input,4,00000004,4,MeXMLInput *
+MeXMLInputSetErrorString,error,8,00000008,4,char *
+MeXMLHandlerWasCalled,name,8,00000008,4,char *
+MeXMLHandlerWasCalled,handlers,4,00000004,4,MeXMLHandler *
+MeXMLParseComma,in,4,00000004,4,char *
+MeXMLParseComma,out,8,00000008,4,char * *
+MeXMLParseUInt,x,-1052,fffffbe4,1024,char[1024]
+MeXMLParseUInt,c,-1056,fffffbe0,4,char *
+MeXMLParseUInt,file,4,00000004,4,MeXMLInput *
+MeXMLParseUInt,action,8,00000008,4,MeXMLHandler *
+MeXMLParseUInt,line,-1060,fffffbdc,4,int
+MeXMLParseUInt,data,12,0000000c,4,void *
+MeXMLParseUInt,posn,-1064,fffffbd8,4,int
+MeXMLParseInt,file,4,00000004,4,MeXMLInput *
+MeXMLParseInt,x,-1052,fffffbe4,1024,char[1024]
+MeXMLParseInt,action,8,00000008,4,MeXMLHandler *
+MeXMLParseInt,c,-1056,fffffbe0,4,char *
+MeXMLParseInt,data,12,0000000c,4,void *
+MeXMLParseInt,line,-1060,fffffbdc,4,int
+MeXMLParseInt,posn,-1064,fffffbd8,4,int
+MeXMLParseFloat,file,4,00000004,4,MeXMLInput *
+MeXMLParseFloat,action,8,00000008,4,MeXMLHandler *
+MeXMLParseFloat,x,-1052,fffffbe4,1024,char[1024]
+MeXMLParseFloat,c,-1060,fffffbdc,4,char *
+MeXMLParseFloat,data,12,0000000c,4,void *
+MeXMLParseFloat,line,-1064,fffffbd8,4,int
+MeXMLParseFloat,posn,-1068,fffffbd4,4,int
+MeXMLParseMeReal,file,4,00000004,4,MeXMLInput *
+MeXMLParseMeReal,action,8,00000008,4,MeXMLHandler *
+MeXMLParseMeReal,data,12,0000000c,4,void *
+MeXMLParseMeReal,x,-1052,fffffbe4,1024,char[1024]
+MeXMLParseMeReal,c,-1060,fffffbdc,4,char *
+MeXMLParseMeReal,line,-1064,fffffbd8,4,int
+MeXMLParseMeReal,posn,-1068,fffffbd4,4,int
+MeXMLParseDouble,file,4,00000004,4,MeXMLInput *
+MeXMLParseDouble,action,8,00000008,4,MeXMLHandler *
+MeXMLParseDouble,data,12,0000000c,4,void *
+MeXMLParseDouble,x,-1052,fffffbe4,1024,char[1024]
+MeXMLParseDouble,c,-1056,fffffbe0,4,char *
+MeXMLParseDouble,line,-1060,fffffbdc,4,int
+MeXMLParseDouble,posn,-1064,fffffbd8,4,int
+MeXMLParseString,file,4,00000004,4,MeXMLInput *
+MeXMLParseString,action,8,00000008,4,MeXMLHandler *
+MeXMLParseString,data,12,0000000c,4,void *
+MeXMLInputCreate,stream,4,00000004,4,MeStream
+MeXMLInputDestroy,input,4,00000004,4,MeXMLInput *
+MeXMLInputSetUserData,input,4,00000004,4,MeXMLInput *
+MeXMLInputSetUserData,userData,8,00000008,4,void *
+MeXMLInputGetUserData,input,4,00000004,4,MeXMLInput *
+MeXMLInputGetErrorString,input,4,00000004,4,MeXMLInput *
+MeXMLInputProcess,e,-1052,fffffbe4,1036,MeXMLElement
+MeXMLInputProcess,input,4,00000004,4,MeXMLInput *
+MeXMLInputProcess,handlers,8,00000008,4,MeXMLHandler *
+MeXMLInputProcess,userdata,12,0000000c,4,void *
+MeXMLElementGetInput,elem,4,00000004,4,MeXMLElement *
+MeXMLElementHandlerCreate,name,8,00000008,4,char *
+MeXMLElementHandlerCreate,fn,12,0000000c,4,void *
+MeXMLElementHandlerCreate,handler,4,00000004,4,MeXMLHandler *
+MeXMLElementHandlerDestroy,handler,4,00000004,4,MeXMLHandler *
+XMLChomp,fi,4,00000004,4,MeXMLInput *
+readNextTag,fi,4,00000004,4,MeXMLInput *
+readNextTag,e,8,00000008,4,MeXMLElement *
+readNextTag,pcVar2,-40,ffffffd8,4,char *
+readNextTag,iVar3,-36,ffffffdc,4,int
+readNextTag,size,12,0000000c,4,int
+readNextTag,iVar4,-32,ffffffe0,4,int

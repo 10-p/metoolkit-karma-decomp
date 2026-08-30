@@ -1,0 +1,9 @@
+# function,name,stackoff,hexoff,size,type
+MallocCreate,bytes,4,00000004,4,size_t
+Calloc,bytes,4,00000004,4,size_t
+MallocDestroy,block,4,00000004,4,void *
+MallocResize,block,4,00000004,4,void *
+MallocResize,bytes,8,00000008,4,size_t
+MallocCreateAligned,alignment,8,00000008,4,uint
+MallocCreateAligned,bytes,4,00000004,4,size_t
+MallocDestroyAligned,block,4,00000004,4,void *

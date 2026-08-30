@@ -1,0 +1,1064 @@
+/* ==== SegmentConvexHullSep ==== */
+
+MeReal SegmentConvexHullSep
+                 (MeReal *p,MeReal *d,MeReal smin,MeReal smax,McdConvexHull *convex,MeReal *n,
+                 MeReal *s,VoronoiRegionType *regionType)
+
+{
+  float fVar1;
+  float fVar2;
+  float fVar3;
+  float fVar4;
+  float fVar5;
+  float fVar6;
+  int iVar7;
+  McdCnvFace *pMVar8;
+  McdCnvVertex *pMVar10;
+  McdCnvVertex *pMVar11;
+  float *pfVar12;
+  int iVar13;
+  MeReal MVar14;
+  McdCnvVertex *v;
+  int local_a8;
+  float local_a4;
+  float local_a0;
+  float local_9c;
+  float local_98;
+  float local_94;
+  float local_90;
+  MeBool askew;
+  MeReal edgeLen;
+  MeReal sep;
+  MeI32 face;
+  VoronoiRegionType closestRegionType;
+  int maxPoint;
+  MeReal s0;
+  MeReal s1;
+  MeReal ds0;
+  MeReal si;
+  MeReal edgeNormal [3];
+  MeReal ni [3];
+  MeReal disp [3];
+  McdCnvFace *pMVar9;
+  
+                    /* Unresolved local var: MeI32 i@[DW_OP_reg7(EDI)]
+                       Unresolved local var: McdCnvFace * f@[DW_OP_reg1(ECX)]
+                       Unresolved local var: McdCnvEdge * e@[???]
+                       Unresolved local var: McdCnvVertex * v@[DW_OP_reg3(EBX)] */
+  closestRegionType = kFaceRegion;
+  face = 0;
+  pMVar8 = convex->face;
+                    /* Unresolved local var: MeReal dn@[DW_OP_reg14(ST3)] */
+  pMVar11 = convex->vertex + convex->edge[pMVar8->firstEdge].fromVert;
+  fVar1 = pMVar8->normal[2] * d[2] + pMVar8->normal[1] * d[1] + pMVar8->normal[0] * *d;
+  MVar14 = smin;
+  if ((0.00025 < fVar1) || (MVar14 = smax, fVar1 < -0.00025)) {
+    *s = MVar14;
+  }
+  else {
+    *s = 0.0;
+  }
+  sep = fVar1 * *s +
+        (p[2] - pMVar11->position[2]) * pMVar8->normal[2] +
+        (p[1] - pMVar11->position[1]) * pMVar8->normal[1] +
+        (*p - pMVar11->position[0]) * pMVar8->normal[0];
+  *n = pMVar8->normal[0];
+  n[1] = pMVar8->normal[1];
+  iVar13 = 1;
+  n[2] = pMVar8->normal[2];
+  iVar7 = convex->numFace;
+  if (1 < iVar7) {
+    do {
+                    /* Unresolved local var: McdCnvEdge * e@[???]
+                       Unresolved local var: MeReal faceSep@[???] */
+      pMVar9 = pMVar8 + 1;
+      pMVar11 = convex->vertex + convex->edge[pMVar8[1].firstEdge].fromVert;
+                    /* Unresolved local var: MeReal dn@[DW_OP_reg14(ST3)] */
+      fVar1 = pMVar8[1].normal[2] * d[2] + pMVar8[1].normal[1] * d[1] + pMVar9->normal[0] * *d;
+      si = smin;
+      if ((fVar1 <= 0.00025) && (si = smax, -0.00025 <= fVar1)) {
+        si = 0.0;
+      }
+      fVar1 = (p[2] - pMVar11->position[2]) * pMVar8[1].normal[2] +
+              (*p - pMVar11->position[0]) * pMVar9->normal[0] +
+              (p[1] - pMVar11->position[1]) * pMVar8[1].normal[1] + fVar1 * si;
+      if (sep < fVar1) {
+        *s = si;
+        iVar7 = convex->numFace;
+        sep = fVar1;
+        face = iVar13;
+      }
+      iVar13 = iVar13 + 1;
+      pMVar8 = pMVar9;
+    } while (iVar13 < iVar7);
+  }
+  pMVar8 = convex->face + face;
+  *n = pMVar8->normal[0];
+  n[1] = pMVar8->normal[1];
+  n[2] = pMVar8->normal[2];
+  iVar13 = 0;
+  iVar7 = convex->numEdge;
+  if (0 < iVar7) {
+    local_a8 = 0;
+    do {
+                    /* Unresolved local var: McdCnvEdge * ei@[DW_OP_reg6(ESI)]
+                       Unresolved local var: McdCnvVertex * v0i@[DW_OP_reg3(EBX)]
+                       Unresolved local var: McdCnvVertex * v1i@[DW_OP_reg2(EDX)]
+                       Unresolved local var: MeReal edgeLen2@[???]
+                       Unresolved local var: MeReal ni2@[DW_OP_reg12(ST1)]
+                       Unresolved local var: McdCnvFace * leftFace@[DW_OP_reg2(EDX)]
+                       Unresolved local var: McdCnvFace * rightFace@[DW_OP_reg1(ECX)]
+                       Unresolved local var: MeReal di@[DW_OP_reg11(ST0)]
+                       Unresolved local var: MeReal ci@[DW_OP_reg12(ST1)]
+                       Unresolved local var: MeReal maxP@[DW_OP_reg11(ST0)]
+                       Unresolved local var: MeReal sepi@[DW_OP_reg12(ST1)] */
+      pfVar12 = (float *)((int)&convex->edge->invLength + local_a8);
+      if ((int)pfVar12[3] <= (int)pfVar12[4]) {
+        pMVar11 = convex->vertex + (int)pfVar12[1];
+        pMVar10 = convex->vertex + (int)pfVar12[2];
+        fVar2 = pMVar10->position[0] - pMVar11->position[0];
+        fVar4 = pMVar10->position[1] - pMVar11->position[1];
+        fVar3 = pMVar10->position[2] - pMVar11->position[2];
+        fVar1 = *pfVar12;
+        disp[0] = fVar2 * fVar1;
+        disp[1] = fVar4 * fVar1;
+        disp[2] = fVar1 * fVar3;
+        fVar1 = (fVar3 * fVar3 + fVar4 * fVar4 + fVar2 * fVar2) * *pfVar12;
+        iVar7 = NSegmentSegment(pMVar11->position,disp,0.0,fVar1,p,d,smin,smax,&s0,&s1,&ds0);
+        local_94 = *d;
+        local_90 = *p;
+        local_9c = d[1];
+        local_98 = p[1];
+        local_a4 = d[2];
+        local_a0 = p[2];
+        fVar2 = -s0;
+        fVar5 = disp[0] * fVar2 + ((local_94 * s1 + local_90) - pMVar11->position[0]);
+        fVar4 = ((local_9c * s1 + local_98) - pMVar11->position[1]) + disp[1] * fVar2;
+        fVar2 = ((local_a4 * s1 + local_a0) - pMVar11->position[2]) + fVar2 * disp[2];
+        pMVar8 = convex->face + (int)pfVar12[4];
+        pMVar9 = convex->face + (int)pfVar12[3];
+        edgeNormal[0] = pMVar9->normal[0] + pMVar8->normal[0];
+        edgeNormal[1] = pMVar9->normal[1] + pMVar8->normal[1];
+        fVar3 = fVar5 * fVar5 + fVar4 * fVar4 + fVar2 * fVar2;
+        edgeNormal[2] = pMVar9->normal[2] + pMVar8->normal[2];
+        if (fVar3 <= 0.00025) {
+          ni[0] = edgeNormal[0];
+          ni[1] = edgeNormal[1];
+          ni[2] = edgeNormal[2];
+          if (iVar7 != 0) {
+                    /* Unresolved local var: float __result@[???] */
+            fVar2 = 1.0 / SQRT(fVar3);
+            ni[0] = (disp[1] * local_a4 - disp[2] * local_9c) * fVar2;
+            ni[1] = (disp[2] * local_94 - disp[0] * local_a4) * fVar2;
+            ni[2] = (disp[0] * local_9c - disp[1] * local_94) * fVar2;
+            if (ni[2] * edgeNormal[2] + ni[0] * edgeNormal[0] + ni[1] * edgeNormal[1] < 0.0) {
+              ni[0] = ni[0] * -1.0;
+              ni[1] = ni[1] * -1.0;
+              ni[2] = ni[2] * -1.0;
+            }
+          }
+          MeVector3Normalize(ni);
+          local_94 = *d;
+          local_9c = d[1];
+          local_a4 = d[2];
+          local_90 = *p;
+          local_98 = p[1];
+          local_a0 = p[2];
+        }
+        else {
+                    /* Unresolved local var: float __result@[???] */
+          fVar3 = 1.0 / SQRT(fVar3);
+          ni[0] = fVar5 * fVar3;
+          ni[1] = fVar4 * fVar3;
+          ni[2] = fVar3 * fVar2;
+          if (ni[0] * edgeNormal[0] + edgeNormal[1] * ni[1] + edgeNormal[2] * ni[2] < 0.0) {
+            ni[0] = ni[0] * -1.0;
+            ni[1] = ni[1] * -1.0;
+            ni[2] = ni[2] * -1.0;
+          }
+        }
+        fVar2 = local_a4 * ni[2] + local_9c * ni[1] + local_94 * ni[0];
+        fVar3 = smax;
+        if (0.0 <= fVar2) {
+          fVar3 = smin;
+        }
+        fVar5 = ni[1] * local_98;
+        fVar6 = ni[0] * local_90;
+        fVar4 = ni[2] * local_a0;
+        MVar14 = McdConvexHullMaximumPoint(convex,ni,-1,3.4028235e+38,&maxPoint);
+        fVar2 = (fVar6 + fVar5 + fVar4 + fVar2 * fVar3) - MVar14;
+        if (fVar2 <= sep - 0.00025) {
+          iVar7 = convex->numEdge;
+        }
+        else {
+          *n = ni[0];
+          n[1] = ni[1];
+          n[2] = ni[2];
+          if ((s0 <= 0.0) || (closestRegionType = kEdgeRegion, fVar1 <= s0)) {
+            closestRegionType = kVertexRegion;
+          }
+          *s = s1;
+          iVar7 = convex->numEdge;
+          sep = fVar2;
+        }
+      }
+      iVar13 = iVar13 + 1;
+      local_a8 = local_a8 + 0x14;
+    } while (iVar13 < iVar7);
+  }
+  *regionType = closestRegionType;
+  return sep;
+}
+
+
+/* ==== ConvexHullMaximumFeature ==== */
+
+VoronoiRegionType
+ConvexHullMaximumFeature(McdConvexHull *convex,MeReal *d,MeI32 *regionIndex,MeReal eps)
+
+{
+  float fVar1;
+  float fVar2;
+  float fVar3;
+  McdCnvEdge *pMVar4;
+  McdCnvVertex *pMVar5;
+  int iVar6;
+  float fVar7;
+  float fVar8;
+  VoronoiRegionType VVar9;
+  McdCnvVertex *pMVar10;
+  McdCnvVertex *pMVar11;
+  int iVar12;
+  int iVar13;
+  McdCnvFace *pMVar14;
+  MeReal edgeDisp [3];
+  
+                    /* Unresolved local var: MeI32 edgeIndex@[DW_OP_reg6(ESI)]
+                       Unresolved local var: MeReal maxDH@[DW_OP_reg14(ST3)]
+                       Unresolved local var: MeI32 rightFace@[DW_OP_reg2(EDX)] */
+  pMVar4 = convex->edge;
+  iVar13 = convex->face->firstEdge;
+  pMVar5 = convex->vertex;
+  fVar1 = *d;
+  fVar2 = d[1];
+  fVar3 = d[2];
+  do {
+                    /* Unresolved local var: McdCnvVertex * v@[DW_OP_reg1(ECX)] */
+                    /* Unresolved local var: McdCnvEdge * e@[???] */
+    pMVar10 = pMVar5 + pMVar4[iVar13].toVert;
+    iVar13 = convex->edgeIndex[pMVar10->firstEdgeIndex];
+    pMVar11 = pMVar5 + pMVar4[iVar13].toVert;
+                    /* Unresolved local var: MeI32 i@[DW_OP_reg3(EBX)] */
+    iVar12 = pMVar10->firstEdgeIndex + 1;
+    fVar7 = (pMVar11->position[2] - pMVar10->position[2]) * fVar3 +
+            (pMVar11->position[0] - pMVar10->position[0]) * fVar1 +
+            (pMVar11->position[1] - pMVar10->position[1]) * fVar2;
+    if (iVar12 < pMVar10[1].firstEdgeIndex) {
+      do {
+                    /* Unresolved local var: MeI32 index@[DW_OP_reg2(EDX)]
+                       Unresolved local var: McdCnvEdge * e@[???]
+                       Unresolved local var: MeReal dh@[???] */
+        iVar6 = convex->edgeIndex[iVar12];
+        pMVar11 = pMVar5 + pMVar4[iVar6].toVert;
+        fVar8 = (pMVar11->position[2] - pMVar10->position[2]) * fVar3 +
+                (pMVar11->position[0] - pMVar10->position[0]) * fVar1 +
+                (pMVar11->position[1] - pMVar10->position[1]) * fVar2;
+        if (fVar7 - eps < fVar8) {
+          iVar13 = iVar6;
+          fVar7 = fVar8;
+        }
+        iVar12 = iVar12 + 1;
+      } while (iVar12 < pMVar10[1].firstEdgeIndex);
+    }
+  } while (eps < fVar7);
+  if (-eps <= fVar7) {
+    pMVar14 = convex->face + pMVar4[iVar13].rightFace;
+    if (1.0 - eps <=
+        fVar1 * pMVar14->normal[0] + fVar2 * pMVar14->normal[1] + fVar3 * pMVar14->normal[2]) {
+      VVar9 = kFaceRegion;
+      *regionIndex = pMVar4[iVar13].rightFace;
+    }
+    else {
+      VVar9 = kEdgeRegion;
+      *regionIndex = iVar13;
+    }
+  }
+  else {
+    VVar9 = kVertexRegion;
+    *regionIndex = pMVar4[iVar13].fromVert;
+  }
+  return VVar9;
+}
+
+
+/* ==== ConvexHullVoronoiRegion ==== */
+
+VoronoiRegionType ConvexHullVoronoiRegion(McdConvexHull *convex,MeReal *pos,MeI32 *regionIndex)
+
+{
+  float fVar1;
+  float fVar2;
+  float fVar3;
+  float fVar4;
+  float fVar5;
+  McdCnvEdge *pMVar6;
+  float fVar7;
+  float fVar8;
+  VoronoiRegionType VVar9;
+  McdCnvFace *pMVar10;
+  McdCnvFace *pMVar11;
+  McdCnvVertex *pMVar12;
+  McdCnvVertex *pMVar13;
+  McdCnvEdge *pMVar14;
+  int iVar15;
+  int iVar16;
+  MeI32 edgeIndex;
+  MeI32 faceIndex;
+  MeReal edgeDisp [3];
+  MeReal r [3];
+  MeReal edgeDir [3];
+  
+                    /* Unresolved local var: MeReal h@[DW_OP_reg17(ST6)]
+                       Unresolved local var: MeI32 i@[DW_OP_reg7(EDI)]
+                       Unresolved local var: McdCnvFace * face@[DW_OP_reg1(ECX)]
+                       Unresolved local var: McdCnvEdge * edge@[DW_OP_reg6(ESI)]
+                       Unresolved local var: MeReal edgeDisp2@[???] */
+  pMVar11 = convex->face;
+                    /* Unresolved local var: MeI32 vIndex@[DW_OP_reg0(EAX)] */
+  fVar1 = *pos;
+  fVar2 = pos[1];
+  pMVar6 = convex->edge;
+  fVar3 = pos[2];
+  pMVar13 = convex->vertex;
+  pMVar12 = pMVar13 + pMVar6[pMVar11->firstEdge].fromVert;
+  iVar15 = 1;
+  faceIndex = 0;
+  iVar16 = convex->numFace;
+  fVar4 = (fVar1 * pMVar11->normal[0] + fVar2 * pMVar11->normal[1] + fVar3 * pMVar11->normal[2]) -
+          (pMVar11->normal[0] * pMVar12->position[0] + pMVar11->normal[1] * pMVar12->position[1] +
+          pMVar11->normal[2] * pMVar12->position[2]);
+  fVar5 = fVar4;
+  if (1 < iVar16) {
+    if ((iVar16 < 3) || (pMVar10 = pMVar11, (iVar16 - 1U & 1) != 0)) {
+                    /* Unresolved local var: MeReal hi@[???]
+                       Unresolved local var: MeI32 vIndex@[???] */
+      pMVar10 = pMVar11 + 1;
+      pMVar12 = pMVar13 + pMVar6[pMVar11[1].firstEdge].fromVert;
+      fVar7 = (fVar1 * pMVar10->normal[0] + fVar2 * pMVar11[1].normal[1] +
+              fVar3 * pMVar11[1].normal[2]) -
+              (pMVar10->normal[0] * pMVar12->position[0] +
+               pMVar11[1].normal[1] * pMVar12->position[1] +
+              pMVar11[1].normal[2] * pMVar12->position[2]);
+      if (fVar4 < fVar7) {
+        fVar5 = fVar7;
+      }
+      faceIndex = (MeI32)(fVar4 < fVar7);
+      iVar15 = 2;
+      if (iVar16 < 3) goto LAB_00010a71;
+    }
+    do {
+      pMVar12 = pMVar13 + pMVar6[pMVar10[1].firstEdge].fromVert;
+      fVar4 = (fVar1 * pMVar10[1].normal[0] + fVar2 * pMVar10[1].normal[1] +
+              fVar3 * pMVar10[1].normal[2]) -
+              (pMVar10[1].normal[0] * pMVar12->position[0] +
+               pMVar10[1].normal[1] * pMVar12->position[1] +
+              pMVar10[1].normal[2] * pMVar12->position[2]);
+      if (fVar5 < fVar4) {
+        fVar5 = fVar4;
+        faceIndex = iVar15;
+      }
+      fVar4 = pMVar10[2].normal[0];
+      pMVar12 = pMVar13 + pMVar6[pMVar10[2].firstEdge].fromVert;
+      fVar4 = (fVar1 * fVar4 + fVar2 * pMVar10[2].normal[1] + fVar3 * pMVar10[2].normal[2]) -
+              (fVar4 * pMVar12->position[0] + pMVar10[2].normal[1] * pMVar12->position[1] +
+              pMVar10[2].normal[2] * pMVar12->position[2]);
+      if (fVar5 < fVar4) {
+        fVar5 = fVar4;
+        faceIndex = iVar15 + 1;
+      }
+      iVar15 = iVar15 + 2;
+      pMVar10 = pMVar10 + 2;
+    } while (iVar15 < iVar16);
+  }
+LAB_00010a71:
+  if (0.0 <= fVar5) {
+    pMVar11 = pMVar11 + faceIndex;
+    pMVar14 = pMVar6 + pMVar11->firstEdge;
+    pMVar12 = pMVar13 + pMVar14->fromVert;
+    pMVar13 = pMVar13 + pMVar14->toVert;
+    fVar4 = pMVar14->invLength;
+    fVar5 = (pMVar13->position[0] - pMVar12->position[0]) * fVar4;
+    fVar7 = (pMVar13->position[1] - pMVar12->position[1]) * fVar4;
+    fVar4 = fVar4 * (pMVar13->position[2] - pMVar12->position[2]);
+    pMVar13 = convex->vertex;
+    pMVar12 = pMVar13 + pMVar14->fromVert;
+    edgeIndex = pMVar11->firstEdge;
+    iVar16 = edgeIndex + 1;
+    fVar4 = (fVar1 - pMVar12->position[0]) *
+            (fVar7 * pMVar11->normal[2] - fVar4 * pMVar11->normal[1]) +
+            (fVar2 - pMVar12->position[1]) *
+            (fVar4 * pMVar11->normal[0] - fVar5 * pMVar11->normal[2]) +
+            (fVar3 - pMVar12->position[2]) *
+            (fVar5 * pMVar11->normal[1] - fVar7 * pMVar11->normal[0]);
+    if (iVar16 < pMVar11[1].firstEdge) {
+      do {
+                    /* Unresolved local var: MeReal hi@[???] */
+        pMVar12 = pMVar13 + pMVar14[1].toVert;
+        pMVar13 = pMVar13 + pMVar14[1].fromVert;
+        fVar5 = pMVar14[1].invLength;
+        fVar7 = (pMVar12->position[0] - pMVar13->position[0]) * fVar5;
+        fVar8 = (pMVar12->position[1] - pMVar13->position[1]) * fVar5;
+        fVar5 = fVar5 * (pMVar12->position[2] - pMVar13->position[2]);
+        pMVar13 = convex->vertex;
+        pMVar12 = pMVar13 + pMVar14[1].fromVert;
+        fVar5 = (fVar1 - pMVar12->position[0]) *
+                (fVar8 * pMVar11->normal[2] - fVar5 * pMVar11->normal[1]) +
+                (fVar2 - pMVar12->position[1]) *
+                (fVar5 * pMVar11->normal[0] - fVar7 * pMVar11->normal[2]) +
+                (fVar3 - pMVar12->position[2]) *
+                (fVar7 * pMVar11->normal[1] - fVar8 * pMVar11->normal[0]);
+        if (fVar4 < fVar5) {
+          fVar4 = fVar5;
+          edgeIndex = iVar16;
+        }
+        iVar16 = iVar16 + 1;
+        pMVar14 = pMVar14 + 1;
+      } while (iVar16 < pMVar11[1].firstEdge);
+    }
+    if (0.0 <= fVar4) {
+      pMVar12 = pMVar13 + pMVar6[edgeIndex].toVert;
+      pMVar13 = pMVar13 + pMVar6[edgeIndex].fromVert;
+      fVar5 = pMVar12->position[0] - pMVar13->position[0];
+      fVar4 = pMVar12->position[1] - pMVar13->position[1];
+      fVar7 = pMVar12->position[2] - pMVar13->position[2];
+      pMVar12 = convex->vertex + pMVar6[edgeIndex].fromVert;
+      fVar1 = (fVar1 - pMVar12->position[0]) * fVar5 + (fVar2 - pMVar12->position[1]) * fVar4 +
+              (fVar3 - pMVar12->position[2]) * fVar7;
+      if (0.0 < fVar1) {
+        if (fVar1 < fVar7 * fVar7 + fVar4 * fVar4 + fVar5 * fVar5) {
+          *regionIndex = edgeIndex;
+          return kEdgeRegion;
+        }
+        iVar16 = pMVar6[edgeIndex].toVert;
+      }
+      else {
+        iVar16 = pMVar6[edgeIndex].fromVert;
+      }
+      *regionIndex = iVar16;
+      VVar9 = kVertexRegion;
+    }
+    else {
+      VVar9 = kFaceRegion;
+      *regionIndex = faceIndex;
+    }
+  }
+  else {
+    VVar9 = kInteriorRegion;
+    *regionIndex = 0;
+  }
+  return VVar9;
+}
+
+
+/* ==== ConvexHullNSegment ==== */
+
+MeReal ConvexHullNSegment(McdConvexHull *convex,MeReal *p,MeReal *d,MeReal smin,MeReal smax,
+                         MeReal *cp,MeReal *s,VoronoiRegionType *closestRegionType)
+
+{
+  int iVar1;
+  MeReal ds;
+  VoronoiRegionType regionType;
+  MeI32 regionIndex;
+  MeReal sp [3];
+  
+  sp[0] = smin * *d + *p;
+  sp[1] = smin * d[1] + p[1];
+  sp[2] = smin * d[2] + p[2];
+  regionType = ConvexHullVoronoiRegion(convex,sp,&regionIndex);
+  *s = smin;
+  do {
+    if ((regionType & kFaceRegion) == kVertexRegion) {
+      if ((regionType & kEdgeRegion) == kVertexRegion) {
+        iVar1 = ClosestInVertexRegion(convex,p,d,smax,cp,s,&ds,&regionType,&regionIndex);
+      }
+      else {
+        iVar1 = ClosestInEdgeRegion(convex,p,d,smax,cp,s,&ds,&regionType,&regionIndex);
+      }
+    }
+    else if ((regionType & kEdgeRegion) == kVertexRegion) {
+      iVar1 = ClosestInFaceRegion(convex,p,d,smax,cp,s,&ds,&regionType,&regionIndex);
+    }
+    else {
+      iVar1 = ClosestInInteriorRegion(convex,p,d,smax,cp,s,&ds,&regionType,&regionIndex);
+    }
+  } while (iVar1 == 0);
+  *closestRegionType = regionType;
+  return ds;
+}
+
+
+/* ==== MeVector3Normalize ==== */
+
+MeReal MeVector3Normalize(MeReal *v)
+
+{
+  float fVar1;
+  float fVar2;
+  float fVar3;
+  float fVar4;
+  float local_8;
+  
+                    /* Unresolved local var: int j@[???]
+                       Unresolved local var: MeReal mag@[DW_OP_reg16(ST5)]
+                       Unresolved local var: MeReal k@[DW_OP_reg12(ST1)] */
+  fVar1 = *v;
+  fVar2 = v[1];
+  fVar3 = v[2];
+  local_8 = fVar3 * fVar3 + fVar2 * fVar2 + fVar1 * fVar1;
+  if (local_8 <= 0.0) {
+    *v = 1.0;
+    v[1] = 0.0;
+    v[2] = 0.0;
+    local_8 = 0.0;
+  }
+  else {
+    local_8 = SQRT(local_8);
+    fVar4 = 1.0 / local_8;
+    *v = fVar1 * fVar4;
+    v[1] = fVar2 * fVar4;
+    v[2] = fVar4 * fVar3;
+  }
+  return local_8;
+}
+
+
+/* ==== McdConvexHullMaximumPoint ==== */
+
+MeReal McdConvexHullMaximumPoint
+                 (McdConvexHull *hull,MeReal *inDir,int hint,MeReal minDist,int *outIndex)
+
+{
+  int iVar1;
+  McdCnvVertex *pMVar2;
+  float fVar3;
+  uint uVar4;
+  int iVar5;
+  int iVar6;
+  McdCnvVertex *pMVar7;
+  int iVar8;
+  int iVar9;
+  ushort uVar10;
+  MeReal d1;
+  McdCnvVertex *vert;
+  int n;
+  int prev;
+  int m;
+  int t;
+  int i;
+  
+                    /* Unresolved local var: int j@[DW_OP_reg3(EBX)]
+                       Unresolved local var: int k@[???]
+                       Unresolved local var: int next@[DW_OP_reg7(EDI)]
+                       Unresolved local var: MeReal d2@[???] */
+  iVar1 = hull->numVertex;
+  pMVar2 = hull->vertex;
+  if ((hint < 0) || (iVar1 <= hint)) {
+    hint = 0;
+  }
+  pMVar7 = pMVar2 + hint;
+  t = -2;
+  i = -1;
+  d1 = pMVar7->position[2] * inDir[2] +
+       pMVar7->position[1] * inDir[1] + pMVar7->position[0] * *inDir;
+  if ((-2 < iVar1) && (hint != -1)) {
+    while (iVar9 = hint,
+          uVar10 = (ushort)(d1 < minDist) << 8 | (ushort)(NAN(d1) || NAN(minDist)) << 10 |
+                   (ushort)(d1 == minDist) << 0xe, hint = iVar9, (char)(uVar10 >> 8) != '\0') {
+      uVar4 = McdCnvVertexGetCount(hull,iVar9,uVar10,uVar10);
+      iVar8 = 0;
+      if (0 < (int)uVar4) {
+        if (((int)uVar4 < 2) || (iVar5 = 0, (uVar4 & 1) != 0)) {
+          iVar8 = McdCnvVertexGetNeighbor(hull,iVar9,0,uVar4 & 1);
+          iVar5 = iVar8;
+          if (iVar8 != i) {
+            pMVar7 = pMVar2 + iVar8;
+            fVar3 = pMVar7->position[2] * inDir[2] +
+                    pMVar7->position[1] * inDir[1] + pMVar7->position[0] * *inDir;
+            uVar10 = (ushort)(fVar3 < d1) << 8 | (ushort)(NAN(fVar3) || NAN(d1)) << 10 |
+                     (ushort)(fVar3 == d1) << 0xe;
+            iVar5 = CONCAT22((short)((uint)pMVar7 >> 0x10),uVar10);
+            if ((char)(uVar10 >> 8) == '\0') {
+              hint = iVar8;
+              d1 = fVar3;
+            }
+          }
+          iVar8 = 1;
+          if ((int)uVar4 < 2) goto LAB_000110d3;
+        }
+        do {
+          iVar5 = McdCnvVertexGetNeighbor(hull,iVar9,iVar8,iVar5);
+          if (iVar5 != i) {
+            pMVar7 = pMVar2 + iVar5;
+            fVar3 = pMVar7->position[2] * inDir[2] +
+                    pMVar7->position[1] * inDir[1] + pMVar7->position[0] * *inDir;
+            if (d1 < fVar3) {
+              hint = iVar5;
+              d1 = fVar3;
+            }
+          }
+          iVar6 = McdCnvVertexGetNeighbor(hull,iVar9,iVar8 + 1,iVar5);
+          iVar5 = iVar6;
+          if (iVar6 != i) {
+            pMVar7 = pMVar2 + iVar6;
+            fVar3 = pMVar7->position[2] * inDir[2] +
+                    pMVar7->position[1] * inDir[1] + pMVar7->position[0] * *inDir;
+            uVar10 = (ushort)(fVar3 < d1) << 8 | (ushort)(NAN(fVar3) || NAN(d1)) << 10 |
+                     (ushort)(fVar3 == d1) << 0xe;
+            iVar5 = CONCAT22((short)((uint)pMVar7 >> 0x10),uVar10);
+            if ((char)(uVar10 >> 8) == '\0') {
+              hint = iVar6;
+              d1 = fVar3;
+            }
+          }
+          iVar8 = iVar8 + 2;
+        } while (iVar8 < (int)uVar4);
+      }
+LAB_000110d3:
+      t = t + 1;
+      if ((iVar1 <= t) || (i = iVar9, iVar9 == hint)) break;
+    }
+  }
+  *outIndex = hint;
+  return d1;
+}
+
+
+/* ==== ClosestInVertexRegion ==== */
+
+MeBool ClosestInVertexRegion
+                 (McdConvexHull *convex,MeReal *p,MeReal *d,MeReal smax,MeReal *cp,MeReal *s,
+                 MeReal *ds,VoronoiRegionType *regionType,MeI32 *regionIndex)
+
+{
+  float fVar1;
+  float fVar2;
+  float fVar3;
+  float fVar4;
+  float fVar5;
+  float fVar6;
+  float fVar7;
+  float fVar8;
+  McdCnvVertex *pMVar9;
+  int iVar10;
+  McdCnvVertex *pMVar11;
+  MeI32 nextRegionIndex;
+  MeReal sClosestDen;
+  MeReal edgeDisp [3];
+  MeReal r [3];
+  
+                    /* Unresolved local var: McdCnvVertex * v@[DW_OP_reg3(EBX)]
+                       Unresolved local var: MeReal sClosestNum@[DW_OP_reg13(ST2)]
+                       Unresolved local var: MeReal smin@[???] */
+  pMVar11 = convex->vertex + *regionIndex;
+  fVar1 = pMVar11->position[0] - *p;
+  fVar7 = pMVar11->position[1] - p[1];
+  fVar5 = pMVar11->position[2] - p[2];
+  fVar2 = fVar1 * *d + fVar7 * d[1] + fVar5 * d[2];
+  if (*s <= fVar2 + 0.00025) {
+    if (smax < fVar2) {
+      fVar2 = smax;
+    }
+    nextRegionIndex = -1;
+    sClosestDen = 1.0;
+                    /* Unresolved local var: MeI32 i@[DW_OP_reg1(ECX)] */
+    iVar10 = pMVar11->firstEdgeIndex;
+    if (iVar10 < pMVar11[1].firstEdgeIndex) {
+      do {
+                    /* Unresolved local var: MeI32 index@[DW_OP_reg2(EDX)]
+                       Unresolved local var: McdCnvEdge * e@[???]
+                       Unresolved local var: MeReal sExitDen@[???]
+                       Unresolved local var: MeReal sExitNum@[???] */
+        pMVar9 = convex->vertex + convex->edge[convex->edgeIndex[iVar10]].toVert;
+        fVar6 = pMVar9->position[0] - pMVar11->position[0];
+        fVar8 = pMVar9->position[1] - pMVar11->position[1];
+        fVar3 = pMVar9->position[2] - pMVar11->position[2];
+        fVar4 = d[2] * fVar3 + *d * fVar6 + d[1] * fVar8;
+        if ((0.00025 <= fVar4) &&
+           (fVar3 = fVar3 * fVar5 + fVar6 * fVar1 + fVar8 * fVar7,
+           (fVar3 - 0.00025) * sClosestDen < fVar2 * fVar4)) {
+          fVar2 = fVar3;
+          nextRegionIndex = convex->edgeIndex[iVar10];
+          sClosestDen = fVar4;
+        }
+        iVar10 = iVar10 + 1;
+      } while (iVar10 < pMVar11[1].firstEdgeIndex);
+    }
+    *s = (1.0 / sClosestDen) * fVar2;
+    if (-1 < nextRegionIndex) {
+      *regionIndex = nextRegionIndex;
+      *regionType = kEdgeRegion;
+      return 0;
+    }
+  }
+  *cp = pMVar11->position[0];
+  cp[1] = pMVar11->position[1];
+  cp[2] = pMVar11->position[2];
+  *ds = 0.0;
+  return 1;
+}
+
+
+/* ==== ClosestInEdgeRegion ==== */
+
+MeBool ClosestInEdgeRegion(McdConvexHull *convex,MeReal *p,MeReal *d,MeReal smax,MeReal *cp,
+                          MeReal *s,MeReal *ds,VoronoiRegionType *regionType,MeI32 *regionIndex)
+
+{
+  McdCnvEdge *pMVar1;
+  McdCnvVertex *pMVar2;
+  float fVar3;
+  float fVar4;
+  float fVar5;
+  float fVar6;
+  float fVar7;
+  float fVar8;
+  float fVar9;
+  float fVar10;
+  float fVar11;
+  float fVar12;
+  float fVar13;
+  float fVar14;
+  float fVar15;
+  float fVar16;
+  float fVar17;
+  float fVar18;
+  float fVar19;
+  float fVar20;
+  float fVar21;
+  float fVar22;
+  McdCnvFace *pMVar23;
+  McdCnvVertex *pMVar24;
+  int iVar25;
+  MeReal smin;
+  VoronoiRegionType nextRegionType;
+  MeReal sClosestDen;
+  MeReal sClosestNum;
+  MeReal er;
+  MeReal det;
+  MeReal edgeLength2;
+  MeReal n [3];
+  MeReal r [3];
+  MeReal edgeDir [3];
+  
+                    /* Unresolved local var: McdCnvEdge * e@[DW_OP_reg7(EDI)]
+                       Unresolved local var: McdCnvVertex * v@[DW_OP_reg6(ESI)]
+                       Unresolved local var: MeReal de@[DW_OP_reg18(ST7)]
+                       Unresolved local var: MeBool parallel@[DW_OP_reg1(ECX)]
+                       Unresolved local var: MeI32 nextRegionIndex@[DW_OP_reg3(EBX)]
+                       Unresolved local var: MeReal sClosest@[DW_OP_reg11(ST0)] */
+  pMVar1 = convex->edge + *regionIndex;
+  pMVar2 = convex->vertex + pMVar1->fromVert;
+  pMVar24 = convex->vertex + pMVar1->toVert;
+  fVar8 = pMVar24->position[0] - pMVar2->position[0];
+  fVar15 = pMVar24->position[1] - pMVar2->position[1];
+  fVar13 = pMVar24->position[2] - pMVar2->position[2];
+  fVar3 = pMVar1->invLength;
+  fVar9 = fVar8 * fVar3;
+  fVar14 = fVar15 * fVar3;
+  fVar3 = fVar3 * fVar13;
+  fVar11 = pMVar2->position[0] - *p;
+  fVar16 = pMVar2->position[1] - p[1];
+  fVar17 = pMVar2->position[2] - p[2];
+  fVar4 = *d;
+  fVar5 = d[1];
+  fVar6 = d[2];
+  sClosestDen = 1.0;
+  fVar12 = fVar6 * fVar3 + fVar5 * fVar14 + fVar4 * fVar9;
+  fVar18 = 1.0 - fVar12 * fVar12;
+  fVar10 = fVar3 * fVar17 + fVar14 * fVar16 + fVar9 * fVar11;
+  iVar25 = -1;
+  fVar7 = *s;
+  if (fVar18 <= 0.00025) {
+    sClosestNum = smax;
+  }
+  else {
+    sClosestNum = (1.0 / fVar18) *
+                  ((fVar17 * fVar6 + fVar16 * fVar5 + fVar11 * fVar4) - fVar10 * fVar12);
+    if (sClosestNum + 0.00025 < fVar7) {
+      fVar10 = fVar7 * fVar12 - fVar10;
+      *cp = fVar9 * fVar10 + pMVar2->position[0];
+      cp[1] = fVar14 * fVar10 + pMVar2->position[1];
+      cp[2] = fVar10 * fVar3 + pMVar2->position[2];
+      *ds = 0.0;
+      return 1;
+    }
+    if (smax < sClosestNum) {
+      sClosestNum = smax;
+    }
+                    /* Unresolved local var: McdCnvFace * f@[DW_OP_reg0(EAX)]
+                       Unresolved local var: MeReal sExitDen@[???] */
+    pMVar23 = convex->face + pMVar1->rightFace;
+    fVar19 = fVar14 * pMVar23->normal[2] - fVar3 * pMVar23->normal[1];
+    fVar21 = fVar3 * pMVar23->normal[0] - fVar9 * pMVar23->normal[2];
+    fVar22 = fVar9 * pMVar23->normal[1] - fVar14 * pMVar23->normal[0];
+    fVar20 = fVar6 * fVar22 + fVar4 * fVar19 + fVar5 * fVar21;
+                    /* Unresolved local var: MeReal sExitNum@[???] */
+    if ((0.00025 <= fVar20) &&
+       (fVar19 = fVar11 * fVar19 + fVar21 * fVar16 + fVar22 * fVar17,
+       fVar19 - 0.00025 < sClosestNum * fVar20)) {
+      iVar25 = pMVar1->rightFace;
+      nextRegionType = kFaceRegion;
+      sClosestDen = fVar20;
+      sClosestNum = fVar19;
+    }
+                    /* Unresolved local var: McdCnvFace * f@[DW_OP_reg0(EAX)]
+                       Unresolved local var: MeReal sExitDen@[???] */
+    pMVar23 = convex->face + pMVar1->leftFace;
+    fVar20 = fVar3 * pMVar23->normal[1] - fVar14 * pMVar23->normal[2];
+    fVar21 = pMVar23->normal[2] * fVar9 - fVar3 * pMVar23->normal[0];
+    fVar19 = fVar14 * pMVar23->normal[0] - fVar9 * pMVar23->normal[1];
+    fVar4 = fVar4 * fVar20 + fVar5 * fVar21 + fVar6 * fVar19;
+                    /* Unresolved local var: MeReal sExitNum@[???] */
+    if ((0.00025 <= fVar4) &&
+       (fVar5 = fVar20 * fVar11 + fVar21 * fVar16 + fVar19 * fVar17,
+       (fVar5 - 0.00025) * sClosestDen < sClosestNum * fVar4)) {
+      iVar25 = pMVar1->leftFace;
+      nextRegionType = kFaceRegion;
+      sClosestDen = fVar4;
+      sClosestNum = fVar5;
+    }
+  }
+  if (fVar12 <= 0.00025) {
+    if ((-0.00025 <= fVar12) || (fVar10 * sClosestDen <= sClosestNum * fVar12)) goto LAB_000116cb;
+    sClosestNum = -fVar10;
+    sClosestDen = -fVar12;
+    iVar25 = pMVar1->fromVert;
+  }
+  else {
+                    /* Unresolved local var: MeReal edgeLength@[???]
+                       Unresolved local var: MeReal sExitNum@[DW_OP_reg13(ST2)] */
+    fVar4 = (fVar13 * fVar13 + fVar15 * fVar15 + fVar8 * fVar8) * pMVar1->invLength + fVar10;
+    if (sClosestNum * fVar12 <= sClosestDen * fVar4) goto LAB_000116cb;
+    iVar25 = pMVar1->toVert;
+    sClosestDen = fVar12;
+    sClosestNum = fVar4;
+  }
+  nextRegionType = kVertexRegion;
+LAB_000116cb:
+  fVar4 = (1.0 / sClosestDen) * sClosestNum;
+  if (fVar18 <= 0.00025) {
+    *ds = fVar4 - fVar7;
+  }
+  else {
+    if (-1 < iVar25) {
+      *s = fVar4;
+      *regionIndex = iVar25;
+      *regionType = nextRegionType;
+      return 0;
+    }
+    *s = fVar4;
+    *ds = 0.0;
+  }
+  fVar10 = *s * fVar12 - fVar10;
+  *cp = fVar10 * fVar9 + pMVar2->position[0];
+  cp[1] = fVar10 * fVar14 + pMVar2->position[1];
+  cp[2] = fVar10 * fVar3 + pMVar2->position[2];
+  return 1;
+}
+
+
+/* ==== ClosestInFaceRegion ==== */
+
+MeBool ClosestInFaceRegion(McdConvexHull *convex,MeReal *p,MeReal *d,MeReal smax,MeReal *cp,
+                          MeReal *s,MeReal *ds,VoronoiRegionType *regionType,MeI32 *regionIndex)
+
+{
+  McdCnvVertex *pMVar1;
+  McdCnvVertex *pMVar2;
+  float fVar3;
+  float fVar4;
+  float fVar5;
+  McdCnvVertex *pMVar6;
+  float fVar7;
+  float fVar8;
+  float fVar9;
+  float fVar10;
+  float fVar11;
+  float fVar12;
+  float fVar13;
+  int iVar14;
+  McdCnvFace *pMVar15;
+  McdCnvEdge *pMVar16;
+  MeReal sClosestDen;
+  MeReal sClosestNum;
+  MeI32 nextRegionIndex;
+  VoronoiRegionType nextRegionType;
+  MeBool parallel;
+  MeReal rn;
+  MeReal dn;
+  MeReal ri [3];
+  MeReal n [3];
+  MeReal edgeDisp [3];
+  MeReal r [3];
+  
+                    /* Unresolved local var: McdCnvFace * f@[DW_OP_reg3(EBX)]
+                       Unresolved local var: McdCnvVertex * v@[DW_OP_reg0(EAX)]
+                       Unresolved local var: MeReal smin@[DW_OP_reg17(ST6)]
+                       Unresolved local var: MeReal sClosest@[DW_OP_reg11(ST0)] */
+  pMVar15 = convex->face + *regionIndex;
+  pMVar6 = convex->vertex;
+  fVar3 = *p;
+  pMVar1 = pMVar6 + convex->edge[pMVar15->firstEdge].fromVert;
+  fVar4 = *d;
+  fVar8 = d[2] * pMVar15->normal[2] + d[1] * pMVar15->normal[1] + fVar4 * pMVar15->normal[0];
+  fVar7 = pMVar15->normal[2] * (pMVar1->position[2] - p[2]) +
+          pMVar15->normal[1] * (pMVar1->position[1] - p[1]) +
+          pMVar15->normal[0] * (pMVar1->position[0] - fVar3);
+  fVar5 = *s;
+  if (fVar8 <= 0.00025) {
+    if ((-0.00025 <= fVar8) || (fVar7 < fVar8 * smax)) {
+      sClosestNum = smax;
+      sClosestDen = 1.0;
+      nextRegionIndex = -1;
+    }
+    else {
+      nextRegionType = kInteriorRegion;
+      sClosestNum = -fVar7;
+      nextRegionIndex = 0;
+      sClosestDen = -fVar8;
+    }
+                    /* Unresolved local var: MeI32 index@[DW_OP_reg2(EDX)] */
+    iVar14 = pMVar15->firstEdge;
+    if (iVar14 < pMVar15[1].firstEdge) {
+      pMVar16 = convex->edge + iVar14;
+      do {
+                    /* Unresolved local var: McdCnvEdge * e@[???]
+                       Unresolved local var: McdCnvVertex * vi@[DW_OP_reg1(ECX)]
+                       Unresolved local var: MeReal sExitDen@[???]
+                       Unresolved local var: MeReal sExitNum@[???] */
+        pMVar1 = pMVar6 + pMVar16->fromVert;
+        pMVar2 = pMVar6 + pMVar16->toVert;
+        fVar13 = pMVar2->position[0] - pMVar1->position[0];
+        fVar9 = pMVar2->position[1] - pMVar1->position[1];
+        fVar10 = pMVar2->position[2] - pMVar1->position[2];
+        fVar11 = fVar9 * pMVar15->normal[2] - fVar10 * pMVar15->normal[1];
+        fVar12 = fVar10 * pMVar15->normal[0] - fVar13 * pMVar15->normal[2];
+        fVar10 = fVar13 * pMVar15->normal[1] - fVar9 * pMVar15->normal[0];
+        fVar9 = fVar4 * fVar11 + d[1] * fVar12 + d[2] * fVar10;
+        if ((0.00025 <= fVar9) &&
+           (fVar10 = (pMVar1->position[0] - fVar3) * fVar11 + (pMVar1->position[1] - p[1]) * fVar12
+                     + (pMVar1->position[2] - p[2]) * fVar10,
+           sClosestDen * fVar10 < sClosestNum * fVar9)) {
+          nextRegionType = kEdgeRegion;
+          sClosestDen = fVar9;
+          sClosestNum = fVar10;
+          nextRegionIndex = iVar14;
+        }
+        iVar14 = iVar14 + 1;
+        pMVar16 = pMVar16 + 1;
+      } while (iVar14 < pMVar15[1].firstEdge);
+    }
+    fVar3 = (1.0 / sClosestDen) * sClosestNum;
+    if (-0.00025 <= fVar8) {
+      *ds = fVar3 - fVar5;
+    }
+    else {
+      if (-1 < nextRegionIndex) {
+        *s = fVar3;
+        *regionIndex = nextRegionIndex;
+        *regionType = nextRegionType;
+        return 0;
+      }
+      *s = fVar3;
+      *ds = 0.0;
+    }
+    fVar3 = *s;
+    fVar5 = fVar3 * *d + *p;
+    *cp = fVar5;
+    fVar4 = fVar3 * d[1] + p[1];
+    cp[1] = fVar4;
+    fVar3 = fVar3 * d[2] + p[2];
+    cp[2] = fVar3;
+    fVar7 = fVar7 - fVar8 * *s;
+    *cp = fVar7 * pMVar15->normal[0] + fVar5;
+    cp[1] = fVar7 * pMVar15->normal[1] + fVar4;
+    cp[2] = fVar7 * pMVar15->normal[2] + fVar3;
+  }
+  else {
+    fVar3 = fVar4 * fVar5 + fVar3;
+    *cp = fVar3;
+    fVar9 = fVar5 * d[1] + p[1];
+    cp[1] = fVar9;
+    fVar4 = fVar5 * d[2] + p[2];
+    cp[2] = fVar4;
+    fVar7 = fVar7 - fVar5 * fVar8;
+    *cp = fVar7 * pMVar15->normal[0] + fVar3;
+    cp[1] = fVar7 * pMVar15->normal[1] + fVar9;
+    cp[2] = fVar7 * pMVar15->normal[2] + fVar4;
+    *ds = 0.0;
+  }
+  return 1;
+}
+
+
+/* ==== ClosestInInteriorRegion ==== */
+
+MeBool ClosestInInteriorRegion
+                 (McdConvexHull *convex,MeReal *p,MeReal *d,MeReal smax,MeReal *cp,MeReal *s,
+                 MeReal *ds,VoronoiRegionType *regionType,MeI32 *regionIndex)
+
+{
+  float fVar1;
+  float fVar2;
+  float fVar3;
+  float fVar4;
+  float fVar5;
+  McdCnvVertex *pMVar6;
+  McdCnvFace *pMVar7;
+  int iVar8;
+  MeReal sClosestDen;
+  MeReal smin;
+  MeReal r [3];
+  
+                    /* Unresolved local var: MeReal sClosestNum@[DW_OP_reg17(ST6)] */
+                    /* Unresolved local var: MeI32 index@[DW_OP_reg3(EBX)] */
+  iVar8 = 0;
+  fVar1 = *s;
+  sClosestDen = 1.0;
+  if (convex->numFace < 1) {
+    fVar2 = *d;
+    fVar3 = *p;
+  }
+  else {
+    fVar2 = *d;
+    fVar3 = *p;
+    do {
+                    /* Unresolved local var: McdCnvFace * f@[DW_OP_reg1(ECX)]
+                       Unresolved local var: MeReal dn@[???]
+                       Unresolved local var: McdCnvEdge * e@[???]
+                       Unresolved local var: McdCnvVertex * v@[DW_OP_reg0(EAX)]
+                       Unresolved local var: MeReal rn@[???] */
+      pMVar7 = convex->face + iVar8;
+      fVar5 = d[2] * pMVar7->normal[2] + d[1] * pMVar7->normal[1] + fVar2 * pMVar7->normal[0];
+      if (0.00025 <= fVar5) {
+        pMVar6 = convex->vertex + convex->edge[pMVar7->firstEdge].fromVert;
+        fVar4 = (pMVar6->position[0] - fVar3) * pMVar7->normal[0] +
+                (pMVar6->position[1] - p[1]) * pMVar7->normal[1] +
+                (pMVar6->position[2] - p[2]) * pMVar7->normal[2];
+        if (sClosestDen * fVar4 < smax * fVar5) {
+          smax = fVar4;
+          sClosestDen = fVar5;
+        }
+      }
+      iVar8 = iVar8 + 1;
+    } while (iVar8 < convex->numFace);
+  }
+  *cp = fVar2 * fVar1 + fVar3;
+  cp[1] = fVar1 * d[1] + p[1];
+  cp[2] = fVar1 * d[2] + p[2];
+  *ds = (1.0 / sClosestDen) * smax - fVar1;
+  return 1;
+}
+
+

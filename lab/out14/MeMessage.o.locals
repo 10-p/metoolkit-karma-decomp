@@ -1,0 +1,53 @@
+# function,name,stackoff,hexoff,size,type
+MeInfo,level,4,00000004,4,int
+MeInfo,format,8,00000008,4,char *
+MeLog,level,4,00000004,4,int
+MeLog,format,8,00000008,4,char *
+MeWarning,level,4,00000004,4,int
+MeWarning,format,8,00000008,4,char *
+MeFatalError,format,8,00000008,4,char *
+MeFatalError,level,4,00000004,4,int
+MeDebug,level,4,00000004,4,int
+MeDebug,format,8,00000008,4,char *
+MeDebugF,f,4,00000004,4,FILE *
+MeDebugF,format,8,00000008,4,char *
+MeShowStdout,level,4,00000004,4,int
+MeShowStdout,string,8,00000008,4,char *
+MeShowStderr,level,4,00000004,4,int
+MeShowStderr,string,8,00000008,4,char *
+MeHandlerInfo,format2,-5020,ffffec64,5000,char[5000]
+MeHandlerInfo,message,-10028,ffffd8d4,5000,char[5000]
+MeHandlerInfo,level,4,00000004,4,int
+MeHandlerInfo,format,8,00000008,4,char *
+MeHandlerInfo,ap,12,0000000c,4,va_list
+MeHandlerLog,format2,-5020,ffffec64,5000,char[5000]
+MeHandlerLog,message,-10028,ffffd8d4,5000,char[5000]
+MeHandlerLog,level,4,00000004,4,int
+MeHandlerLog,format,8,00000008,4,char *
+MeHandlerLog,ap,12,0000000c,4,va_list
+MeHandlerWarning,format,8,00000008,4,char *
+MeHandlerWarning,ap,12,0000000c,4,va_list
+MeHandlerWarning,format2,-5020,ffffec64,5000,char[5000]
+MeHandlerWarning,message,-10028,ffffd8d4,5000,char[5000]
+MeHandlerWarning,level,4,00000004,4,int
+MeHandlerFatalError,level,4,00000004,4,int
+MeHandlerFatalError,format,8,00000008,4,char *
+MeHandlerFatalError,ap,12,0000000c,4,va_list
+MeHandlerFatalError,format2,-5020,ffffec64,5000,char[5000]
+MeHandlerFatalError,message,-10028,ffffd8d4,5000,char[5000]
+MeHandlerDebug,level,4,00000004,4,int
+MeHandlerDebug,format,8,00000008,4,char *
+MeHandlerDebug,ap,12,0000000c,4,va_list
+MeHandlerDebug,format2,-5020,ffffec64,5000,char[5000]
+MeHandlerDebug,message,-10028,ffffd8d4,5000,char[5000]
+MeSetInfoShow,n,4,00000004,4,MeShow
+MeSetLogShow,n,4,00000004,4,MeShow
+MeSetWarningShow,n,4,00000004,4,MeShow
+MeSetFatalErrorShow,n,4,00000004,4,MeShow
+MeSetDebugShow,n,4,00000004,4,MeShow
+MeSetInfoHandler,n,4,00000004,4,MeHandler
+MeSetLogHandler,n,4,00000004,4,MeHandler
+MeSetWarningHandler,n,4,00000004,4,MeHandler
+MeSetFatalErrorHandler,n,4,00000004,4,MeHandler
+MeSetDebugHandler,n,4,00000004,4,MeHandler
+MeShortenPath,path,4,00000004,4,char *

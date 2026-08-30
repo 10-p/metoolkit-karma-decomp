@@ -1,0 +1,30 @@
+# function,name,stackoff,hexoff,size,type
+McdModelPairManagerHashCreate,size,4,00000004,4,int
+McdModelPairManagerHashCreate,buckets,8,00000008,4,int
+McdModelPairManagerHashDestroy,hash,4,00000004,4,McdModelPairManagerHash *
+McdModelPairManagerCreate,count,4,00000004,4,int
+McdModelPairManagerDestroy,manager,4,00000004,4,McdModelPairManagerID
+McdModelPairManagerGetTransitions,manager,4,00000004,4,McdModelPairManagerID
+McdModelPairManagerGetTransitions,iter,8,00000008,4,McdSpacePairIterator *
+McdModelPairManagerGetTransitions,a,12,0000000c,4,McdModelPairContainer *
+McdModelPairManagerGetPairs,manager,4,00000004,4,McdModelPairManagerID
+McdModelPairManagerGetPairs,iter,8,00000008,4,McdSpacePairIterator *
+McdModelPairManagerGetPairs,a,12,0000000c,4,McdModelPairContainer *
+McdModelPairManagerGetPairs,result,-20,ffffffec,4,int
+McdModelPairManagerGetPair,manager,4,00000004,4,McdModelPairManagerID
+McdModelPairManagerGetPair,m1,8,00000008,4,McdModelID.conflict
+McdModelPairManagerGetPair,m2,12,0000000c,4,McdModelID.conflict
+McdModelPairManagerActivate,manager,4,00000004,4,McdModelPairManagerID
+McdModelPairManagerActivate,m1,8,00000008,4,McdModelID.conflict
+McdModelPairManagerActivate,m2,12,0000000c,4,McdModelID.conflict
+McdModelPairManagerDeactivate,manager,4,00000004,4,McdModelPairManagerID
+McdModelPairManagerDeactivate,m1,8,00000008,4,McdModelID.conflict
+McdModelPairManagerDeactivate,m2,12,0000000c,4,McdModelID.conflict
+McdModelPairManagerFlush,manager,4,00000004,4,McdModelPairManagerID
+McdModelPairManagerFlush,nextLink,-20,ffffffec,4,McdModelPairManagerLink *
+McdModelPairManagerGetSize,manager,4,00000004,4,McdModelPairManagerID
+McdModelPairManagerSetPoolFullHandler,manager,4,00000004,4,McdModelPairManagerID
+McdModelPairManagerSetPoolFullHandler,handler,8,00000008,4,McdSpacePoolErrorFnPtr
+McdModelPairManagerGetPoolFullHandler,manager,4,00000004,4,McdModelPairManagerID
+McdModelPairManagerHashGetNext,hash,4,00000004,4,McdModelPairManagerHash *
+McdModelPairManagerHashGetNext,i,8,00000008,4,McdSpacePairIterator *

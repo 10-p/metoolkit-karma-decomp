@@ -1,0 +1,61 @@
+# function,name,stackoff,hexoff,size,type
+McdConvexMeshRegisterType,frame,4,00000004,4,McdFramework *
+MeBoundingSphereCalc2,points,4,00000004,4,McdCnvVertex *
+MeBoundingSphereCalc2,numPoints,8,00000008,4,int
+MeBoundingSphereCalc2,centre,12,0000000c,4,MeReal *
+MeBoundingSphereCalc2,radius,16,00000010,4,MeReal *
+MeBoundingSphereCalc2,r2,-112,ffffff90,4,MeReal
+MeBoundingSphereCalc2,min,-44,ffffffd4,12,MeReal[3]
+MeBoundingSphereCalc2,max,-60,ffffffc4,12,MeReal[3]
+MeBoundingSphereCalc2,minIx,-76,ffffffb4,12,int[3]
+MeBoundingSphereCalc2,maxIx,-92,ffffffa4,12,int[3]
+MeBoundingSphereCalc2,diff,-108,ffffff94,12,MeReal[3]
+MeBoundingSphereCalc2,__result,-128,ffffff80,4,float
+McdConvexMeshCreate,frame,4,00000004,4,McdFramework *
+McdConvexMeshCreate,poly,8,00000008,4,McdConvexHull *
+McdConvexMeshCreate,fatness,12,0000000c,4,MeReal
+McdConvexMeshCreateHull,frame,4,00000004,4,McdFramework *
+McdConvexMeshCreateHull,vertices,8,00000008,4,MeReal[3] *
+McdConvexMeshCreateHull,vertexCount,12,0000000c,4,int
+McdConvexMeshCreateHull,fatnessRadius,16,00000010,4,MeReal
+McdConvexMeshCreateHull,poly,-44,ffffffd4,28,McdConvexHull
+McdConvexMeshSetPolyhedron,g,4,00000004,4,McdConvexMeshID
+McdConvexMeshSetPolyhedron,poly,8,00000008,4,McdConvexHull *
+McdConvexMeshSetPolyhedron,fatness,12,0000000c,4,MeReal
+McdConvexMeshDestroy,g,4,00000004,4,McdConvexMeshID
+McdConvexMeshUpdateAABB,ins,4,00000004,4,McdGeometryInstanceID
+McdConvexMeshUpdateAABB,finalTM,8,00000008,4,MeMatrix4Ptr
+McdConvexMeshUpdateAABB,tight,12,0000000c,4,MeBool
+McdConvexMeshUpdateAABB,c,-88,ffffffa8,4,McdConvexMesh *
+McdConvexMeshUpdateAABB,localDir,-44,ffffffd4,12,MeReal[3]
+McdConvexMeshUpdateAABB,h,-80,ffffffb0,4,int
+McdConvexMeshUpdateAABB,max,-60,ffffffc4,12,MeReal[3]
+McdConvexMeshUpdateAABB,localDir_1,-76,ffffffb4,12,MeReal[3]
+McdConvexMeshUpdateAABB,h_1,-84,ffffffac,4,int
+McdConvexMeshGetBSphere,g,4,00000004,4,McdGeometryID
+McdConvexMeshGetBSphere,center,8,00000008,4,MeReal *
+McdConvexMeshGetBSphere,radius,12,0000000c,4,MeReal *
+McdConvexMeshMaximumPoint,ins,4,00000004,4,McdGeometryInstanceID
+McdConvexMeshMaximumPoint,inDir,8,00000008,4,MeReal *
+McdConvexMeshMaximumPoint,outPoint,12,0000000c,4,MeReal *
+McdConvexMeshGetXYAABB,_tm,8,00000008,4,MeVector4 *
+McdConvexMeshGetXYAABB,bounds,12,0000000c,4,MeReal *
+McdConvexMeshGetXYAABB,g,4,00000004,4,McdGeometryID
+McdConvexMeshGetPolygonVertexCount,polyID,8,00000008,4,int
+McdConvexMeshGetPolygonVertexCount,g,4,00000004,4,McdConvexMeshID
+McdConvexMeshGetPolyhedron,g,4,00000004,4,McdConvexMeshID
+McdConvexMeshGetPolygonVertex,m,4,00000004,4,McdConvexMeshID
+McdConvexMeshGetPolygonVertex,polyID,8,00000008,4,int
+McdConvexMeshGetPolygonVertex,vertexID,12,0000000c,4,int
+McdConvexMeshGetPolygonVertex,coords,16,00000010,4,MeReal *
+McdConvexMeshGetPolygonVertexPtr,m,4,00000004,4,McdConvexMeshID
+McdConvexMeshGetPolygonVertexPtr,polyID,8,00000008,4,int
+McdConvexMeshGetPolygonVertexPtr,vertexID,12,0000000c,4,int
+McdConvexMeshGetFatness,g,4,00000004,4,McdConvexMeshID
+McdConvexMeshGetPolygonNormal,m,4,00000004,4,McdConvexMeshID
+McdConvexMeshGetPolygonNormal,polyID,8,00000008,4,int
+McdConvexMeshGetPolygonNormal,coords,12,0000000c,4,MeReal *
+McdConvexMeshGetPolygonCount,m,4,00000004,4,McdConvexMeshID
+McdConvexMeshDebugDraw,g,4,00000004,4,McdGeometryID
+McdConvexMeshDebugDraw,tm,8,00000008,4,MeReal[4] *
+McdConvexMeshDebugDraw,colour,12,0000000c,4,MeReal *

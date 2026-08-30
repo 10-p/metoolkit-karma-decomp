@@ -1,0 +1,1636 @@
+/* ==== lsda_exception_table_00010000 ==== */
+
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+/* (LSDA) Exception Table */
+
+void __thiscall
+CxSmallSort::lsda_exception_table_00010000(CxSmallSort *this,int inNObjects,int inNPairs)
+
+{
+  MeU8 *pMVar1;
+  uint uVar2;
+  MeU8 *pMVar3;
+  
+  uVar2 = inNObjects * (inNObjects + -1) >> 1;
+  this->_vptr_CxSmallSort = (_func_int_varargs **)&PTR__CxSmallSort_00011f20;
+  uVar2 = (uVar2 >> 1) + (uVar2 & 1);
+  (this->mPairState).mSize = uVar2;
+  pMVar1 = (MeU8 *)(*_MeMemoryAPI)(uVar2);
+  pMVar3 = pMVar1 + (this->mPairState).mSize;
+  (this->mPairState).mArray = pMVar1;
+  if (pMVar3 <= pMVar1) goto code_r0x00010076;
+  uVar2 = (int)pMVar3 - (int)pMVar1 & 3;
+  if (pMVar1 + 1 < pMVar3) {
+    if (uVar2 != 0) {
+      if (1 < uVar2) {
+        if (2 < uVar2) {
+          *pMVar1 = '\0';
+          pMVar1 = pMVar1 + 1;
+        }
+        *pMVar1 = '\0';
+        pMVar1 = pMVar1 + 1;
+      }
+      goto code_r0x00010055;
+    }
+  }
+  else {
+code_r0x00010055:
+    *pMVar1 = '\0';
+    pMVar1 = pMVar1 + 1;
+    if (pMVar3 <= pMVar1) goto code_r0x00010076;
+  }
+  do {
+    *pMVar1 = '\0';
+    pMVar1[1] = '\0';
+    pMVar1[2] = '\0';
+    pMVar1[3] = '\0';
+    pMVar1 = pMVar1 + 4;
+  } while (pMVar1 < pMVar3);
+code_r0x00010076:
+  this->mMinBound[0].super_Link.mNext = &this->mMinBound[0].super_Link;
+  this->mMinBound[0].super_Link.mPrev = &this->mMinBound[0].super_Link;
+  this->mMinBound[0].mOrdinate = 0.0;
+  this->mMinBound[0].mRep = (CxSmallSortRep *)0x0;
+  this->mMinBound[0].mType = '\0';
+  this->mMinBound[1].super_Link.mNext = &this->mMinBound[1].super_Link;
+  this->mMinBound[1].super_Link.mPrev = &this->mMinBound[1].super_Link;
+  this->mMinBound[1].mOrdinate = 0.0;
+  this->mMinBound[1].mRep = (CxSmallSortRep *)0x0;
+  this->mMinBound[1].mType = '\0';
+  this->mMinBound[2].super_Link.mNext = &this->mMinBound[2].super_Link;
+  this->mMinBound[2].super_Link.mPrev = &this->mMinBound[2].super_Link;
+  this->mMinBound[2].mOrdinate = 0.0;
+  this->mMinBound[2].mRep = (CxSmallSortRep *)0x0;
+  this->mMinBound[2].mType = '\0';
+  this->mMaxBound[0].super_Link.mPrev = &this->mMaxBound[0].super_Link;
+  this->mMaxBound[0].super_Link.mNext = &this->mMaxBound[0].super_Link;
+  this->mMaxBound[0].mOrdinate = 0.0;
+  this->mMaxBound[0].mRep = (CxSmallSortRep *)0x0;
+  this->mMaxBound[0].mType = '\0';
+  this->mMaxBound[1].super_Link.mNext = &this->mMaxBound[1].super_Link;
+  this->mMaxBound[1].super_Link.mPrev = &this->mMaxBound[1].super_Link;
+  this->mMaxBound[1].mOrdinate = 0.0;
+  this->mMaxBound[1].mRep = (CxSmallSortRep *)0x0;
+  this->mMaxBound[1].mType = '\0';
+  this->mMaxBound[2].super_Link.mNext = &this->mMaxBound[2].super_Link;
+  this->mMaxBound[2].super_Link.mPrev = &this->mMaxBound[2].super_Link;
+  this->mMaxBound[2].mOrdinate = 0.0;
+  this->mMaxBound[2].mRep = (CxSmallSortRep *)0x0;
+  this->mMaxBound[2].mType = '\0';
+  this->mSort[0].mRoot.mPrev = &this->mSort[0].mRoot;
+  this->mSort[0].mRoot.mNext = &this->mSort[0].mRoot;
+  this->mSort[1].mRoot.mPrev = &this->mSort[1].mRoot;
+  this->mSort[1].mRoot.mNext = &this->mSort[1].mRoot;
+  this->mSort[2].mRoot.mPrev = &this->mSort[2].mRoot;
+  this->mSort[2].mRoot.mNext = &this->mSort[2].mRoot;
+  (this->mActiveList).mRoot.mPrev = &(this->mActiveList).mRoot;
+  (this->mActiveList).mRoot.mNext = &(this->mActiveList).mRoot;
+  return;
+}
+
+
+/* ==== CxSmallSort ==== */
+
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+/* DWARF original prototype: void CxSmallSort(CxSmallSort * this, int inNObjects, int inNPairs) */
+
+void __thiscall CxSmallSort::CxSmallSort(CxSmallSort *this,int inNObjects,int inNPairs)
+
+{
+  MeU8 *pMVar1;
+  uint uVar2;
+  MeU8 *pMVar3;
+  
+                    /* Unresolved local var: MeU8 * elem@[DW_OP_reg0(EAX)]
+                       Unresolved local var: MeU8 * stop@[DW_OP_reg2(EDX)] */
+  uVar2 = inNObjects * (inNObjects + -1) >> 1;
+  this->_vptr_CxSmallSort = (_func_int_varargs **)&PTR__CxSmallSort_00011f20;
+  uVar2 = (uVar2 >> 1) + (uVar2 & 1);
+  (this->mPairState).mSize = uVar2;
+  pMVar1 = (*_MeMemoryAPI)(uVar2);
+  pMVar3 = pMVar1 + (this->mPairState).mSize;
+  (this->mPairState).mArray = pMVar1;
+  if (pMVar3 <= pMVar1) goto LAB_00010206;
+  uVar2 = (int)pMVar3 - (int)pMVar1 & 3;
+  if (pMVar1 + 1 < pMVar3) {
+    if (uVar2 != 0) {
+      if (1 < uVar2) {
+        if (2 < uVar2) {
+          *pMVar1 = '\0';
+          pMVar1 = pMVar1 + 1;
+        }
+        *pMVar1 = '\0';
+        pMVar1 = pMVar1 + 1;
+      }
+      goto LAB_000101e5;
+    }
+  }
+  else {
+LAB_000101e5:
+    *pMVar1 = '\0';
+    pMVar1 = pMVar1 + 1;
+    if (pMVar3 <= pMVar1) goto LAB_00010206;
+  }
+  do {
+    *pMVar1 = '\0';
+    pMVar1[1] = '\0';
+    pMVar1[2] = '\0';
+    pMVar1[3] = '\0';
+    pMVar1 = pMVar1 + 4;
+  } while (pMVar1 < pMVar3);
+LAB_00010206:
+  this->mMinBound[0].super_Link.mNext = &this->mMinBound[0].super_Link;
+  this->mMinBound[0].super_Link.mPrev = &this->mMinBound[0].super_Link;
+  this->mMinBound[0].mOrdinate = 0.0;
+  this->mMinBound[0].mRep = (CxSmallSortRep *)0x0;
+  this->mMinBound[0].mType = '\0';
+  this->mMinBound[1].super_Link.mNext = &this->mMinBound[1].super_Link;
+  this->mMinBound[1].super_Link.mPrev = &this->mMinBound[1].super_Link;
+  this->mMinBound[1].mOrdinate = 0.0;
+  this->mMinBound[1].mRep = (CxSmallSortRep *)0x0;
+  this->mMinBound[1].mType = '\0';
+  this->mMinBound[2].super_Link.mNext = &this->mMinBound[2].super_Link;
+  this->mMinBound[2].super_Link.mPrev = &this->mMinBound[2].super_Link;
+  this->mMinBound[2].mOrdinate = 0.0;
+  this->mMinBound[2].mRep = (CxSmallSortRep *)0x0;
+  this->mMinBound[2].mType = '\0';
+  this->mMaxBound[0].super_Link.mPrev = &this->mMaxBound[0].super_Link;
+  this->mMaxBound[0].super_Link.mNext = &this->mMaxBound[0].super_Link;
+  this->mMaxBound[0].mOrdinate = 0.0;
+  this->mMaxBound[0].mRep = (CxSmallSortRep *)0x0;
+  this->mMaxBound[0].mType = '\0';
+  this->mMaxBound[1].super_Link.mNext = &this->mMaxBound[1].super_Link;
+  this->mMaxBound[1].super_Link.mPrev = &this->mMaxBound[1].super_Link;
+  this->mMaxBound[1].mOrdinate = 0.0;
+  this->mMaxBound[1].mRep = (CxSmallSortRep *)0x0;
+  this->mMaxBound[1].mType = '\0';
+  this->mMaxBound[2].super_Link.mNext = &this->mMaxBound[2].super_Link;
+  this->mMaxBound[2].super_Link.mPrev = &this->mMaxBound[2].super_Link;
+  this->mMaxBound[2].mOrdinate = 0.0;
+  this->mMaxBound[2].mRep = (CxSmallSortRep *)0x0;
+  this->mMaxBound[2].mType = '\0';
+  this->mSort[0].mRoot.mPrev = &this->mSort[0].mRoot;
+  this->mSort[0].mRoot.mNext = &this->mSort[0].mRoot;
+  this->mSort[1].mRoot.mPrev = &this->mSort[1].mRoot;
+  this->mSort[1].mRoot.mNext = &this->mSort[1].mRoot;
+  this->mSort[2].mRoot.mPrev = &this->mSort[2].mRoot;
+  this->mSort[2].mRoot.mNext = &this->mSort[2].mRoot;
+  (this->mActiveList).mRoot.mPrev = &(this->mActiveList).mRoot;
+  (this->mActiveList).mRoot.mNext = &(this->mActiveList).mRoot;
+  return;
+}
+
+
+/* ==== ~CxSmallSort ==== */
+
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+/* DWARF original prototype: void ~CxSmallSort(CxSmallSort * this, int __in_chrg) */
+
+void __thiscall CxSmallSort::~CxSmallSort(CxSmallSort *this,int __in_chrg)
+
+{
+  MeU8 *pMVar1;
+  
+  pMVar1 = (this->mPairState).mArray;
+  this->_vptr_CxSmallSort = (_func_int_varargs **)&PTR__CxSmallSort_00011f20;
+  if (pMVar1 != (MeU8 *)0x0) {
+    (*__Unwind_Resume)(pMVar1);
+  }
+  return;
+}
+
+
+/* ==== ~CxSmallSort ==== */
+
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+/* DWARF original prototype: void ~CxSmallSort(CxSmallSort * this, int __in_chrg) */
+
+void __thiscall CxSmallSort::~CxSmallSort(CxSmallSort *this,int __in_chrg)
+
+{
+  MeU8 *pMVar1;
+  
+  pMVar1 = (this->mPairState).mArray;
+  this->_vptr_CxSmallSort = (_func_int_varargs **)&PTR__CxSmallSort_00011f20;
+  if (pMVar1 != (MeU8 *)0x0) {
+    (*__Unwind_Resume)(pMVar1);
+  }
+  return;
+}
+
+
+/* ==== ~CxSmallSort ==== */
+
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+/* DWARF original prototype: void ~CxSmallSort(CxSmallSort * this, int __in_chrg) */
+
+void __thiscall CxSmallSort::~CxSmallSort(CxSmallSort *this,int __in_chrg)
+
+{
+  MeU8 *pMVar1;
+  
+  pMVar1 = (this->mPairState).mArray;
+  this->_vptr_CxSmallSort = (_func_int_varargs **)&PTR__CxSmallSort_00011f20;
+  if (pMVar1 != (MeU8 *)0x0) {
+    (*__Unwind_Resume)(pMVar1);
+  }
+  operator_delete(this);
+  return;
+}
+
+
+/* ==== Delete ==== */
+
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+/* DWARF original prototype: void Delete(CxSmallSort * this) */
+
+void __thiscall CxSmallSort::Delete(CxSmallSort *this)
+
+{
+  (*__Unwind_Resume)(this->mFreeIDs);
+  (*__Unwind_Resume)(this->mRepList);
+  (*__Unwind_Resume)(this->mReleasedIDs);
+  McdModelPairManagerDestroy(this->mManager);
+  (**this->_vptr_CxSmallSort)(this);
+  (*__Unwind_Resume)(this);
+  return;
+}
+
+
+/* ==== New ==== */
+
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+CxSmallSort * CxSmallSort::New(McdFramework *fwk,MeU8 inAxes,int inNObjects,int inNPairs)
+
+{
+  Link *pLVar1;
+  Link *pLVar2;
+  CxSmallSort *this;
+  MeI32 *pMVar3;
+  CxSmallSortRep *pCVar4;
+  uint uVar5;
+  McdModelPairManagerID pMVar6;
+  MeU8 MVar7;
+  uint uVar8;
+  int iVar9;
+  
+                    /* Unresolved local var: int i@[DW_OP_reg7(EDI)]
+                       Unresolved local var: CxSmallSort * ns@[DW_OP_reg3(EBX)] */
+  if (((6 < (byte)(inAxes - 1)) || (inNObjects < 1)) || (inNPairs < 1)) {
+    return (CxSmallSort *)0x0;
+  }
+  this = (*_MeMemoryAPI)(0xd4);
+  if (this == (CxSmallSort *)0x0) {
+    return (CxSmallSort *)0x0;
+  }
+  CxSmallSort(this,inNObjects,inNPairs);
+  this->mModelMax = inNObjects;
+  this->mAABBUpdateFn = (McdUpdateAABBFnPtr)0x0;
+  this->mUserData = (void *)0x0;
+  this->mFramework = fwk;
+  pMVar3 = (*_MeMemoryAPI)(inNObjects << 2);
+  this->mFreeIDs = pMVar3;
+  pCVar4 = (*_MeMemoryAPI)(inNObjects * 0x98);
+  this->mRepList = pCVar4;
+  for (uVar8 = (uint)(inNObjects * 0x98) >> 2; uVar8 != 0; uVar8 = uVar8 - 1) {
+    (pCVar4->super_Link).mNext = (Link *)0x0;
+    pCVar4 = (CxSmallSortRep *)&(pCVar4->super_Link).mPrev;
+  }
+  uVar8 = 0;
+  if (inNObjects < 1) goto LAB_0001059a;
+  iVar9 = 0;
+  uVar5 = inNObjects & 3;
+  if (inNObjects < 2) {
+LAB_000104e2:
+    this->mFreeIDs[uVar8] = (uVar8 ^ 0xffffffff) + this->mModelMax;
+    uVar8 = uVar8 + 1;
+    *(undefined4 *)((int)this->mRepList->mAABBMarkers + iVar9 + -0x18) = 0xffffffff;
+    iVar9 = iVar9 + 0x98;
+    if (inNObjects <= (int)uVar8) goto LAB_0001059a;
+  }
+  else if (uVar5 != 0) {
+    if (1 < uVar5) {
+      if (2 < uVar5) {
+        *this->mFreeIDs = this->mModelMax + -1;
+        iVar9 = 0x98;
+        this->mRepList->mID = -1;
+      }
+      uVar8 = (uint)(2 < uVar5);
+      this->mFreeIDs[uVar8] = (uVar8 ^ 0xffffffff) + this->mModelMax;
+      uVar8 = uVar8 + 1;
+      *(undefined4 *)((int)this->mRepList->mAABBMarkers + iVar9 + -0x18) = 0xffffffff;
+      iVar9 = iVar9 + 0x98;
+    }
+    goto LAB_000104e2;
+  }
+  do {
+    this->mFreeIDs[uVar8] = (uVar8 ^ 0xffffffff) + this->mModelMax;
+    *(undefined4 *)((int)this->mRepList->mAABBMarkers + iVar9 + -0x18) = 0xffffffff;
+    this->mFreeIDs[uVar8 + 1] = (uVar8 + 1 ^ 0xffffffff) + this->mModelMax;
+    *(undefined4 *)((int)this->mRepList[1].mAABBMarkers + iVar9 + -0x18) = 0xffffffff;
+    this->mFreeIDs[uVar8 + 2] = (uVar8 + 2 ^ 0xffffffff) + this->mModelMax;
+    uVar5 = uVar8 + 3;
+    uVar8 = uVar8 + 4;
+    *(undefined4 *)((int)this->mRepList[2].mAABBMarkers + iVar9 + -0x18) = 0xffffffff;
+    this->mFreeIDs[uVar5] = (uVar5 ^ 0xffffffff) + this->mModelMax;
+    *(undefined4 *)((int)this->mRepList[3].mAABBMarkers + iVar9 + -0x18) = 0xffffffff;
+    iVar9 = iVar9 + 0x260;
+  } while ((int)uVar8 < inNObjects);
+LAB_0001059a:
+  this->mFreeIDCount = this->mModelMax;
+  pMVar3 = (*_MeMemoryAPI)(inNObjects << 2);
+                    /* Unresolved local var: MeU8 axes@[DW_OP_reg2(EDX)] */
+  this->mReleasedIDs = pMVar3;
+  this->mAxes = inAxes;
+  this->mReleasedIDCount = 0;
+  this->mNAxes = '\0';
+  if (inAxes != '\0') {
+    MVar7 = '\0';
+    do {
+      MVar7 = MVar7 + '\x01';
+      inAxes = inAxes & inAxes - 1;
+    } while (inAxes != 0);
+    this->mNAxes = MVar7;
+  }
+  pLVar1 = this->mSort[0].mRoot.mNext;
+  this->mMinBound[0].super_Link.mPrev = &this->mSort[0].mRoot;
+  this->mMinBound[0].mOrdinate = -3.4028235e+38;
+  this->mMaxBound[0].mOrdinate = 3.4028235e+38;
+  this->mMinBound[0].mType = 0xff;
+  this->mMaxBound[0].mType = 0xff;
+  pLVar1->mPrev = &this->mMinBound[0].super_Link;
+  pLVar2 = this->mSort[0].mRoot.mPrev;
+  this->mMinBound[0].super_Link.mNext = pLVar1;
+  this->mMaxBound[0].super_Link.mNext = &this->mSort[0].mRoot;
+  this->mSort[0].mRoot.mNext = &this->mMinBound[0].super_Link;
+  pLVar2->mNext = &this->mMaxBound[0].super_Link;
+  this->mMaxBound[0].super_Link.mPrev = pLVar2;
+  (this->mMaxBound[0].super_Link.mNext)->mPrev = &this->mMaxBound[0].super_Link;
+  this->mMinBound[1].mOrdinate = -3.4028235e+38;
+  this->mMaxBound[1].mOrdinate = 3.4028235e+38;
+  this->mMinBound[1].mType = 0xff;
+  this->mMaxBound[1].mType = 0xff;
+  pLVar1 = this->mSort[1].mRoot.mNext;
+  this->mMinBound[1].super_Link.mPrev = &this->mSort[1].mRoot;
+  this->mMinBound[1].super_Link.mNext = pLVar1;
+  this->mSort[1].mRoot.mNext = &this->mMinBound[1].super_Link;
+  pLVar1 = this->mMinBound[1].super_Link.mNext;
+  this->mMaxBound[1].super_Link.mNext = &this->mSort[1].mRoot;
+  pLVar1->mPrev = &this->mMinBound[1].super_Link;
+  pLVar1 = this->mSort[1].mRoot.mPrev;
+  this->mMaxBound[1].super_Link.mPrev = pLVar1;
+  pLVar1->mNext = &this->mMaxBound[1].super_Link;
+  (this->mMaxBound[1].super_Link.mNext)->mPrev = &this->mMaxBound[1].super_Link;
+  this->mMinBound[2].mOrdinate = -3.4028235e+38;
+  this->mMaxBound[2].mOrdinate = 3.4028235e+38;
+  this->mMinBound[2].mType = 0xff;
+  this->mMaxBound[2].mType = 0xff;
+  this->mMinBound[2].super_Link.mNext = this->mSort[2].mRoot.mNext;
+  this->mSort[2].mRoot.mNext = &this->mMinBound[2].super_Link;
+  pLVar1 = this->mMinBound[2].super_Link.mNext;
+  this->mMinBound[2].super_Link.mPrev = &this->mSort[2].mRoot;
+  this->mMaxBound[2].super_Link.mNext = &this->mSort[2].mRoot;
+  pLVar1->mPrev = &this->mMinBound[2].super_Link;
+  pLVar1 = this->mSort[2].mRoot.mPrev;
+  this->mMaxBound[2].super_Link.mPrev = pLVar1;
+  pLVar1->mNext = &this->mMaxBound[2].super_Link;
+  (this->mMaxBound[2].super_Link.mNext)->mPrev = &this->mMaxBound[2].super_Link;
+  pMVar6 = McdModelPairManagerCreate(inNPairs);
+  this->mChanging = 1;
+  this->mManager = pMVar6;
+  return this;
+}
+
+
+/* ==== Insert ==== */
+
+/* DWARF original prototype: MeI32 Insert(CxSmallSort * this, McdModelID.conflict inData,
+   McdCullingTable * cullingTable, MeU32 cullingIndex, MeU32 cullingID) */
+
+MeI32 __thiscall
+CxSmallSort::Insert(CxSmallSort *this,McdModelID_conflict inData,McdCullingTable *cullingTable,
+                   MeU32 cullingIndex,MeU32 cullingID)
+
+{
+  CxSmallSortRep *pCVar1;
+  uint inID;
+  Link *pLVar2;
+  Link *pLVar3;
+  uint uVar4;
+  Link **ppLVar5;
+  Link *pLVar6;
+  int iVar7;
+  int iVar8;
+  Link *pLVar9;
+  byte *pbVar10;
+  Link *pLVar11;
+  int iVar12;
+  CxSmallSortRep *rep;
+  MeI32 id;
+  
+                    /* Unresolved local var: int i@[DW_OP_reg7(EDI)]
+                       Unresolved local var: CxSmallSortMarker * marker@[DW_OP_reg1(ECX)] */
+  if (this->mFreeIDCount == 0) {
+    return -1;
+  }
+  iVar8 = this->mFreeIDCount + -1;
+  this->mFreeIDCount = iVar8;
+  inID = this->mFreeIDs[iVar8];
+  pCVar1 = this->mRepList + inID;
+  pCVar1->mID = inID;
+  pCVar1->mModel = inData;
+  pCVar1->mCullingID = cullingID;
+  pCVar1->mCullingIndex = cullingIndex;
+  pCVar1->mCullingTable = cullingTable;
+  pCVar1->mAABBMarkers[0].mOrdinate = 3.4028235e+38;
+  pCVar1->mAABBMarkers[0].mRep = pCVar1;
+  pCVar1->mAABBMarkers[0].mType = '\0';
+  pLVar2 = this->mSort[0].mRoot.mPrev;
+  pLVar2 = (Link *)((pLVar2 == &this->mSort[0].mRoot) - 1 & (uint)pLVar2);
+  pLVar11 = pLVar2->mPrev;
+  pCVar1->mAABBMarkers[0].super_Link.mNext = pLVar2;
+  pCVar1->mAABBMarkers[0].super_Link.mPrev = pLVar11;
+  pLVar11->mNext = &pCVar1->mAABBMarkers[0].super_Link;
+  (pCVar1->mAABBMarkers[0].super_Link.mNext)->mPrev = &pCVar1->mAABBMarkers[0].super_Link;
+  pCVar1->mAABBMarkers[1].mOrdinate = 3.4028235e+38;
+  pCVar1->mAABBMarkers[1].mRep = pCVar1;
+  pCVar1->mAABBMarkers[1].mType = '\x01';
+  pLVar2 = this->mSort[0].mRoot.mPrev;
+  pLVar11 = &this->mSort[1].mRoot;
+  pLVar2 = (Link *)((pLVar2 == &this->mSort[0].mRoot) - 1 & (uint)pLVar2);
+  pCVar1->mAABBMarkers[1].super_Link.mNext = pLVar2;
+  pLVar2 = pLVar2->mPrev;
+  pCVar1->mAABBMarkers[1].super_Link.mPrev = pLVar2;
+  pLVar2->mNext = &pCVar1->mAABBMarkers[1].super_Link;
+  iVar8 = 1;
+  (pCVar1->mAABBMarkers[1].super_Link.mNext)->mPrev = &pCVar1->mAABBMarkers[1].super_Link;
+  pLVar2 = &pCVar1->mAABBMarkers[2].super_Link;
+  do {
+    pLVar2[1].mNext = (Link *)0x7f7fffff;
+    pLVar2[1].mPrev = &pCVar1->super_Link;
+    *(undefined1 *)&pLVar2[2].mNext = 0;
+    pLVar9 = (Link *)((pLVar11->mPrev == pLVar11) - 1 & (uint)pLVar11->mPrev);
+    ((Link *)&pLVar2->mNext)->mNext = pLVar9;
+    pLVar9 = pLVar9->mPrev;
+    pLVar2->mPrev = pLVar9;
+    pLVar9->mNext = pLVar2;
+    pLVar2->mNext->mPrev = pLVar2;
+    ppLVar5 = &pLVar2[2].mPrev;
+    pLVar2[3].mPrev = (Link *)0x7f7fffff;
+    pLVar2[4].mNext = &pCVar1->super_Link;
+    *(undefined1 *)&pLVar2[4].mPrev = 1;
+    pLVar9 = (Link *)((pLVar11->mPrev == pLVar11) - 1 & (uint)pLVar11->mPrev);
+    *ppLVar5 = pLVar9;
+    pLVar9 = pLVar9->mPrev;
+    pLVar2[3].mNext = pLVar9;
+    pLVar9->mNext = (Link *)ppLVar5;
+    (*ppLVar5)->mPrev = (Link *)ppLVar5;
+    pLVar6 = pLVar2 + 5;
+    pLVar9 = pLVar11 + 1;
+    pLVar2[6].mNext = (Link *)0x7f7fffff;
+    pLVar2[6].mPrev = &pCVar1->super_Link;
+    *(undefined1 *)&pLVar2[7].mNext = 0;
+    pLVar3 = (Link *)((pLVar11[1].mPrev == pLVar9) - 1 & (uint)pLVar11[1].mPrev);
+    pLVar6->mNext = pLVar3;
+    pLVar3 = pLVar3->mPrev;
+    pLVar2[5].mPrev = pLVar3;
+    pLVar3->mNext = pLVar6;
+    pLVar6->mNext->mPrev = pLVar6;
+    ppLVar5 = &pLVar2[7].mPrev;
+    pLVar2[8].mPrev = (Link *)0x7f7fffff;
+    pLVar2[9].mNext = &pCVar1->super_Link;
+    *(undefined1 *)&pLVar2[9].mPrev = 1;
+    pLVar3 = pLVar11 + 1;
+    pLVar11 = pLVar11 + 2;
+    pLVar9 = (Link *)((pLVar3->mPrev == pLVar9) - 1 & (uint)pLVar3->mPrev);
+    *ppLVar5 = pLVar9;
+    pLVar9 = pLVar9->mPrev;
+    pLVar2[8].mNext = pLVar9;
+    pLVar9->mNext = (Link *)ppLVar5;
+    (*ppLVar5)->mPrev = (Link *)ppLVar5;
+    pLVar2 = pLVar2 + 10;
+    iVar8 = iVar8 + -2;
+  } while (-1 < iVar8);
+  iVar8 = 0;
+  SetDynamic(this,inID,true);
+  if ((int)inID < 1) goto LAB_00010a6f;
+  uVar4 = inID & 3;
+  if ((int)inID < 2) {
+LAB_00010954:
+    iVar12 = iVar8 + 2;
+    iVar7 = this->mModelMax * iVar8;
+    iVar8 = iVar8 + 1;
+    uVar4 = (iVar7 + inID) - (iVar12 * iVar8 >> 1);
+    pbVar10 = (this->mPairState).mArray + ((int)uVar4 >> 1);
+    *pbVar10 = *pbVar10 & (byte)(0xf0 >> (sbyte)((uVar4 & 1) << 2));
+    if ((int)inID <= iVar8) goto LAB_00010a6f;
+  }
+  else if (uVar4 != 0) {
+    if (1 < uVar4) {
+      if (2 < uVar4) {
+                    /* Unresolved local var: MeU8 * mem@[???]
+                       Unresolved local var: MeU8 shift@[???] */
+        pbVar10 = (this->mPairState).mArray + ((int)(inID - 1) >> 1);
+        *pbVar10 = *pbVar10 & (byte)(0xf0 >> (sbyte)((inID - 1 & 1) << 2));
+      }
+      uVar4 = (uint)(2 < uVar4);
+      iVar8 = uVar4 + 1;
+      uVar4 = (this->mModelMax * uVar4 + inID) - ((int)((uVar4 + 2) * iVar8) >> 1);
+      pbVar10 = (this->mPairState).mArray + ((int)uVar4 >> 1);
+      *pbVar10 = *pbVar10 & (byte)(0xf0 >> (sbyte)((uVar4 & 1) << 2));
+    }
+    goto LAB_00010954;
+  }
+  do {
+    uVar4 = (this->mModelMax * iVar8 + inID) - ((iVar8 + 2) * (iVar8 + 1) >> 1);
+    pbVar10 = (this->mPairState).mArray + ((int)uVar4 >> 1);
+    *pbVar10 = *pbVar10 & (byte)(0xf0 >> (sbyte)((uVar4 & 1) << 2));
+    uVar4 = (this->mModelMax * (iVar8 + 1) + inID) - ((iVar8 + 3) * (iVar8 + 2) >> 1);
+    pbVar10 = (this->mPairState).mArray + ((int)uVar4 >> 1);
+    *pbVar10 = *pbVar10 & (byte)(0xf0 >> (sbyte)((uVar4 & 1) << 2));
+    iVar12 = iVar8 + 3;
+    uVar4 = (this->mModelMax * (iVar8 + 2) + inID) - ((iVar8 + 4) * iVar12 >> 1);
+    pbVar10 = (this->mPairState).mArray + ((int)uVar4 >> 1);
+    *pbVar10 = *pbVar10 & (byte)(0xf0 >> (sbyte)((uVar4 & 1) << 2));
+    iVar7 = iVar8 + 5;
+    iVar8 = iVar8 + 4;
+    uVar4 = (this->mModelMax * iVar12 + inID) - (iVar7 * iVar8 >> 1);
+    pbVar10 = (this->mPairState).mArray + ((int)uVar4 >> 1);
+    *pbVar10 = *pbVar10 & (byte)(0xf0 >> (sbyte)((uVar4 & 1) << 2));
+  } while (iVar8 < (int)inID);
+LAB_00010a6f:
+  iVar12 = inID + 1;
+  iVar8 = this->mModelMax;
+  if (iVar12 < iVar8) {
+    iVar7 = (inID + 2) * iVar12;
+    do {
+                    /* Unresolved local var: MeU8 * mem@[???]
+                       Unresolved local var: MeU8 shift@[???] */
+      uVar4 = (iVar8 * inID + iVar12) - (iVar7 >> 1);
+      iVar12 = iVar12 + 1;
+      pbVar10 = (this->mPairState).mArray + ((int)uVar4 >> 1);
+      *pbVar10 = *pbVar10 & (byte)(0xf0 >> (sbyte)((uVar4 & 1) << 2));
+      iVar8 = this->mModelMax;
+    } while (iVar12 < iVar8);
+  }
+  return inID;
+}
+
+
+/* ==== Remove ==== */
+
+/* DWARF original prototype: bool Remove(CxSmallSort * this, MeI32 inID) */
+
+bool __thiscall CxSmallSort::Remove(CxSmallSort *this,MeI32 inID)
+
+{
+  Link *pLVar1;
+  Link *pLVar2;
+  bool bVar3;
+  uint uVar4;
+  uint uVar5;
+  MeU8 *pMVar6;
+  CxSmallSortRep *pCVar7;
+  int iVar8;
+  int iVar9;
+  int iVar10;
+  int local_30;
+  CxSmallSortRep *rep;
+  
+                    /* Unresolved local var: int i@[DW_OP_reg7(EDI)]
+                       Unresolved local var: CxSmallSortMarker * marker@[???] */
+  bVar3 = false;
+  if (((-1 < inID) && (inID < this->mModelMax)) && (this->mRepList[inID].mID == inID)) {
+    bVar3 = true;
+  }
+  if (bVar3) {
+    SetDynamic(this,inID,false);
+    pCVar7 = this->mRepList + inID;
+    pLVar1 = pCVar7->mAABBMarkers[0].super_Link.mNext;
+    pLVar1->mPrev = pCVar7->mAABBMarkers[0].super_Link.mPrev;
+    pLVar2 = pCVar7->mAABBMarkers[0].super_Link.mPrev;
+    pCVar7->mAABBMarkers[0].super_Link.mPrev = &pCVar7->mAABBMarkers[0].super_Link;
+    pLVar2->mNext = pLVar1;
+    pCVar7->mAABBMarkers[0].super_Link.mNext = &pCVar7->mAABBMarkers[0].super_Link;
+    pLVar1 = pCVar7->mAABBMarkers[1].super_Link.mNext;
+    pLVar1->mPrev = pCVar7->mAABBMarkers[1].super_Link.mPrev;
+    pLVar2 = pCVar7->mAABBMarkers[1].super_Link.mPrev;
+    pCVar7->mAABBMarkers[1].super_Link.mPrev = &pCVar7->mAABBMarkers[1].super_Link;
+    pLVar2->mNext = pLVar1;
+    pCVar7->mAABBMarkers[1].super_Link.mNext = &pCVar7->mAABBMarkers[1].super_Link;
+    pLVar1 = pCVar7->mAABBMarkers[2].super_Link.mNext;
+    pLVar1->mPrev = pCVar7->mAABBMarkers[2].super_Link.mPrev;
+    pLVar2 = pCVar7->mAABBMarkers[2].super_Link.mPrev;
+    pCVar7->mAABBMarkers[2].super_Link.mPrev = &pCVar7->mAABBMarkers[2].super_Link;
+    pLVar2->mNext = pLVar1;
+    pCVar7->mAABBMarkers[2].super_Link.mNext = &pCVar7->mAABBMarkers[2].super_Link;
+    pLVar1 = pCVar7->mAABBMarkers[3].super_Link.mNext;
+    pLVar1->mPrev = pCVar7->mAABBMarkers[3].super_Link.mPrev;
+    pLVar2 = pCVar7->mAABBMarkers[3].super_Link.mPrev;
+    pCVar7->mAABBMarkers[3].super_Link.mPrev = &pCVar7->mAABBMarkers[3].super_Link;
+    pLVar2->mNext = pLVar1;
+    pCVar7->mAABBMarkers[3].super_Link.mNext = &pCVar7->mAABBMarkers[3].super_Link;
+    pLVar1 = pCVar7->mAABBMarkers[4].super_Link.mNext;
+    pLVar1->mPrev = pCVar7->mAABBMarkers[4].super_Link.mPrev;
+    pLVar2 = pCVar7->mAABBMarkers[4].super_Link.mPrev;
+    pCVar7->mAABBMarkers[4].super_Link.mPrev = &pCVar7->mAABBMarkers[4].super_Link;
+    pLVar2->mNext = pLVar1;
+    pCVar7->mAABBMarkers[4].super_Link.mNext = &pCVar7->mAABBMarkers[4].super_Link;
+    pLVar1 = pCVar7->mAABBMarkers[5].super_Link.mNext;
+    pLVar1->mPrev = pCVar7->mAABBMarkers[5].super_Link.mPrev;
+    pLVar2 = pCVar7->mAABBMarkers[5].super_Link.mPrev;
+    pCVar7->mAABBMarkers[5].super_Link.mPrev = &pCVar7->mAABBMarkers[5].super_Link;
+    pLVar2->mNext = pLVar1;
+    pCVar7->mAABBMarkers[5].super_Link.mNext = &pCVar7->mAABBMarkers[5].super_Link;
+    iVar9 = 0;
+    if (0 < inID) {
+      do {
+                    /* Unresolved local var: MeU32 index@[???] */
+        iVar10 = iVar9 + 1;
+        uVar4 = (this->mModelMax * iVar9 + inID) - ((iVar9 + 2) * iVar10 >> 1);
+        pMVar6 = (this->mPairState).mArray;
+        uVar5 = uVar4 & 1;
+        iVar8 = (int)uVar4 >> 1;
+        if (this->mNAxes == ((byte)((int)(uint)pMVar6[iVar8] >> (sbyte)(uVar5 << 2)) & 0xf)) {
+          McdModelPairManagerDeactivate
+                    (this->mManager,this->mRepList[iVar9].mModel,this->mRepList[inID].mModel);
+          pMVar6 = (this->mPairState).mArray;
+        }
+                    /* Unresolved local var: MeU8 * mem@[???]
+                       Unresolved local var: MeU8 shift@[???] */
+        pMVar6[iVar8] = pMVar6[iVar8] & (byte)(0xf0 >> (sbyte)(uVar5 << 2));
+        iVar9 = iVar10;
+      } while (iVar10 < inID);
+    }
+    iVar10 = inID + 1;
+    iVar9 = this->mModelMax;
+    if (iVar10 < iVar9) {
+      iVar8 = (inID + 2) * iVar10;
+      local_30 = iVar10 * 0x98;
+      do {
+                    /* Unresolved local var: MeU32 index@[???] */
+        pMVar6 = (this->mPairState).mArray;
+        uVar4 = (iVar10 + iVar9 * inID) - (iVar8 >> 1);
+        uVar5 = uVar4 & 1;
+        iVar9 = (int)uVar4 >> 1;
+        if (this->mNAxes == ((byte)((int)(uint)pMVar6[iVar9] >> (sbyte)(uVar5 << 2)) & 0xf)) {
+          McdModelPairManagerDeactivate
+                    (this->mManager,this->mRepList[inID].mModel,
+                     *(void **)((int)(this->mRepList->mAABBMarkers + -1) + local_30));
+          pMVar6 = (this->mPairState).mArray;
+        }
+                    /* Unresolved local var: MeU8 * mem@[???]
+                       Unresolved local var: MeU8 shift@[???] */
+        iVar10 = iVar10 + 1;
+        pMVar6[iVar9] = pMVar6[iVar9] & (byte)(0xf0 >> (sbyte)(uVar5 << 2));
+        local_30 = local_30 + 0x98;
+        iVar9 = this->mModelMax;
+      } while (iVar10 < iVar9);
+    }
+    if (pCVar7->mDynamic != false) {
+      pLVar1 = (pCVar7->super_Link).mNext;
+      pLVar1->mPrev = (pCVar7->super_Link).mPrev;
+      pLVar2 = (pCVar7->super_Link).mPrev;
+      (pCVar7->super_Link).mPrev = &pCVar7->super_Link;
+      pLVar2->mNext = pLVar1;
+      (pCVar7->super_Link).mNext = &pCVar7->super_Link;
+    }
+    this->mReleasedIDs[this->mReleasedIDCount] = pCVar7->mID;
+    this->mReleasedIDCount = this->mReleasedIDCount + 1;
+    pCVar7->mID = -1;
+    pCVar7->mModel = (McdModelID_conflict)0x0;
+  }
+  return true;
+}
+
+
+/* ==== SetDynamic ==== */
+
+/* DWARF original prototype: bool SetDynamic(CxSmallSort * this, MeI32 inID, bool inIsDynamic) */
+
+bool __thiscall CxSmallSort::SetDynamic(CxSmallSort *this,MeI32 inID,bool inIsDynamic)
+
+{
+  Link *pLVar1;
+  Link *pLVar2;
+  bool bVar3;
+  bool bVar4;
+  CxSmallSortRep *pCVar5;
+  
+  bVar3 = false;
+  if (((-1 < inID) && (inID < this->mModelMax)) && (this->mRepList[inID].mID == inID)) {
+    bVar3 = true;
+  }
+  bVar4 = false;
+  if (bVar3) {
+    pCVar5 = this->mRepList;
+    if (pCVar5[inID].mDynamic != inIsDynamic) {
+      if (inIsDynamic) {
+        pCVar5[inID].mDynamic = true;
+        pCVar5 = this->mRepList + inID;
+        (pCVar5->super_Link).mPrev = &(this->mActiveList).mRoot;
+        (pCVar5->super_Link).mNext = (this->mActiveList).mRoot.mNext;
+        (this->mActiveList).mRoot.mNext = &pCVar5->super_Link;
+        ((pCVar5->super_Link).mNext)->mPrev = &pCVar5->super_Link;
+      }
+      else {
+        pCVar5[inID].mDynamic = false;
+        pCVar5 = this->mRepList + inID;
+        pLVar1 = (pCVar5->super_Link).mNext;
+        pLVar1->mPrev = (pCVar5->super_Link).mPrev;
+        pLVar2 = (pCVar5->super_Link).mPrev;
+        (pCVar5->super_Link).mPrev = &pCVar5->super_Link;
+        pLVar2->mNext = pLVar1;
+        (pCVar5->super_Link).mNext = &pCVar5->super_Link;
+      }
+    }
+    bVar4 = true;
+  }
+  return bVar4;
+}
+
+
+/* ==== GetDynamic ==== */
+
+/* DWARF original prototype: bool GetDynamic(CxSmallSort * this, MeI32 inID) */
+
+bool __thiscall CxSmallSort::GetDynamic(CxSmallSort *this,MeI32 inID)
+
+{
+  bool bVar1;
+  undefined1 uVar2;
+  
+  bVar1 = false;
+  if (((-1 < inID) && (inID < this->mModelMax)) && (this->mRepList[inID].mID == inID)) {
+    bVar1 = true;
+  }
+  uVar2 = 0;
+  if (bVar1) {
+    uVar2 = this->mRepList[inID].mDynamic;
+  }
+  return (bool)uVar2;
+}
+
+
+/* ==== SetData ==== */
+
+/* DWARF original prototype: void SetData(CxSmallSort * this, void * inData) */
+
+void __thiscall CxSmallSort::SetData(CxSmallSort *this,void *inData)
+
+{
+  this->mUserData = inData;
+  return;
+}
+
+
+/* ==== GetData ==== */
+
+/* DWARF original prototype: void * GetData(CxSmallSort * this) */
+
+void * __thiscall CxSmallSort::GetData(CxSmallSort *this)
+
+{
+  return this->mUserData;
+}
+
+
+/* ==== ValidID ==== */
+
+/* DWARF original prototype: bool ValidID(CxSmallSort * this, MeI32 inID) */
+
+bool __thiscall CxSmallSort::ValidID(CxSmallSort *this,MeI32 inID)
+
+{
+  bool bVar1;
+  
+  bVar1 = false;
+  if (((-1 < inID) && (inID < this->mModelMax)) && (this->mRepList[inID].mID == inID)) {
+    bVar1 = true;
+  }
+  return bVar1;
+}
+
+
+/* ==== GetPairOverlapEnabled ==== */
+
+/* DWARF original prototype: bool GetPairOverlapEnabled(CxSmallSort * this, MeI32 inID1, MeI32
+   inID2) */
+
+bool __thiscall CxSmallSort::GetPairOverlapEnabled(CxSmallSort *this,MeI32 inID1,MeI32 inID2)
+
+{
+  bool bVar1;
+  uint uVar2;
+  uint uVar3;
+  
+                    /* Unresolved local var: MeI32 index@[???] */
+  bVar1 = false;
+  if (inID1 != inID2) {
+                    /* Unresolved local var: int o@[DW_OP_reg0(EAX)]
+                       Unresolved local var: int d@[DW_OP_reg3(EBX)]
+                       Unresolved local var: int rowIndex@[DW_OP_reg2(EDX)]
+                       Unresolved local var: int colIndex@[???] */
+    uVar2 = inID2 - inID1 >> 0x1f;
+    uVar3 = (uVar2 ^ 0xffffffff) & inID1 | uVar2 & inID2;
+    uVar2 = (this->mModelMax * uVar3 + (uVar2 & inID1 | (uVar2 ^ 0xffffffff) & inID2)) -
+            ((int)((uVar3 + 2) * (uVar3 + 1)) >> 1);
+    bVar1 = (bool)(((byte)(((int)(uint)(this->mPairState).mArray[(int)uVar2 >> 1] >>
+                            (sbyte)((uVar2 & 1) << 2) & 0xfU) >> 2) ^ 1) & 1);
+  }
+  return bVar1;
+}
+
+
+/* ==== SetPairOverlapEnabled ==== */
+
+/* DWARF original prototype: bool SetPairOverlapEnabled(CxSmallSort * this, MeI32 inID1, MeI32
+   inID2, bool enable) */
+
+bool __thiscall
+CxSmallSort::SetPairOverlapEnabled(CxSmallSort *this,MeI32 inID1,MeI32 inID2,bool enable)
+
+{
+  MeU8 *pMVar1;
+  byte bVar2;
+  bool bVar3;
+  int iVar4;
+  sbyte sVar5;
+  int iVar6;
+  uint uVar7;
+  uint uVar8;
+  uint uVar9;
+  MeI32 l;
+  
+                    /* Unresolved local var: MeI32 i1@[???]
+                       Unresolved local var: MeI32 i2@[???]
+                       Unresolved local var: MeU32 index@[???]
+                       Unresolved local var: MeU8 state@[DW_OP_reg6(ESI)] */
+  bVar3 = false;
+  if (inID1 != inID2) {
+                    /* Unresolved local var: MeI32 o@[DW_OP_reg2(EDX)]
+                       Unresolved local var: MeI32 d@[DW_OP_reg1(ECX)] */
+    uVar7 = inID2 - inID1 >> 0x1f;
+    uVar8 = uVar7 & inID1 | (uVar7 ^ 0xffffffff) & inID2;
+    uVar9 = (uVar7 ^ 0xffffffff) & inID1 | uVar7 & inID2;
+    iVar6 = (uVar9 * this->mModelMax + uVar8) - ((int)((uVar9 + 2) * (uVar9 + 1)) >> 1);
+    iVar4 = iVar6 >> 1;
+    bVar2 = (byte)iVar6 & 1;
+    pMVar1 = (this->mPairState).mArray;
+    sVar5 = bVar2 * '\x04';
+    uVar7 = (int)(uint)pMVar1[iVar4] >> sVar5;
+    if (enable) {
+                    /* Unresolved local var: MeU8 * mem@[DW_OP_reg3(EBX)]
+                       Unresolved local var: MeU8 shift@[???] */
+      if (((uVar7 & 4) != 0) &&
+         (pMVar1[iVar4] = pMVar1[iVar4] & (byte)(0xf0 >> sVar5) | (byte)((uVar7 & 0xb) << sVar5),
+         (MeU8)(uVar7 & 0xb) == this->mNAxes)) {
+        McdModelPairManagerActivate
+                  (this->mManager,this->mRepList[uVar9].mModel,this->mRepList[uVar8].mModel);
+      }
+    }
+    else {
+                    /* Unresolved local var: MeU8 * mem@[DW_OP_reg3(EBX)]
+                       Unresolved local var: MeU8 shift@[???] */
+      if (((uVar7 & 4) == 0) &&
+         (sVar5 = bVar2 * '\x04',
+         pMVar1[iVar4] = (byte)(0xf0 >> sVar5) & pMVar1[iVar4] | (byte)((uVar7 & 0xf | 4) << sVar5),
+         (MeU8)(uVar7 & 0xf) == this->mNAxes)) {
+        McdModelPairManagerDeactivate
+                  (this->mManager,this->mRepList[uVar9].mModel,this->mRepList[uVar8].mModel);
+      }
+    }
+    bVar3 = true;
+  }
+  return bVar3;
+}
+
+
+/* ==== getPairs ==== */
+
+/* DWARF original prototype: int getPairs(CxSmallSort * this, McdSpacePairIterator * iter,
+   McdModelPairContainer * a) */
+
+int __thiscall
+CxSmallSort::getPairs(CxSmallSort *this,McdSpacePairIterator *iter,McdModelPairContainer *a)
+
+{
+  int iVar1;
+  
+  iVar1 = McdModelPairManagerGetPairs(this->mManager,iter,a);
+  return iVar1;
+}
+
+
+/* ==== getTransitions ==== */
+
+/* DWARF original prototype: int getTransitions(CxSmallSort * this, McdSpacePairIterator * iter,
+   McdModelPairContainer * a) */
+
+int __thiscall
+CxSmallSort::getTransitions(CxSmallSort *this,McdSpacePairIterator *iter,McdModelPairContainer *a)
+
+{
+  int iVar1;
+  
+  iVar1 = McdModelPairManagerGetTransitions(this->mManager,iter,a);
+  return iVar1;
+}
+
+
+/* ==== MoveStartMarkerUp ==== */
+
+/* DWARF original prototype: void MoveStartMarkerUp(CxSmallSort * this, CxSmallSortMarker *
+   inMarker) */
+
+void __thiscall CxSmallSort::MoveStartMarkerUp(CxSmallSort *this,CxSmallSortMarker *inMarker)
+
+{
+  float fVar1;
+  CxSmallSortRep *pCVar2;
+  uint uVar3;
+  Link *pLVar4;
+  MeU8 *pMVar5;
+  McdCullingTable *pMVar6;
+  byte bVar7;
+  uint uVar8;
+  uint uVar9;
+  sbyte sVar10;
+  int iVar11;
+  Link *pLVar12;
+  uint uVar13;
+  uint uVar14;
+  uint uVar15;
+  int iVar16;
+  byte *pbVar17;
+  Link *pLVar18;
+  MeU8 state;
+  MeU32 o;
+  MeU8 *mem;
+  MeI32 l;
+  CxSmallSortRep *rep;
+  MeReal inOrdinate;
+  MeI32 inID;
+  
+                    /* Unresolved local var: CxSmallSortMarker * marker@[DW_OP_reg7(EDI)]
+                       Unresolved local var: CxSmallSortRep * inRep@[???] */
+  pCVar2 = inMarker->mRep;
+  pLVar12 = (inMarker->super_Link).mNext;
+  uVar3 = pCVar2->mID;
+  fVar1 = inMarker->mOrdinate;
+  pLVar18 = pLVar12;
+  if (((float)pLVar12[1].mNext < fVar1) && (*(char *)&pLVar12[2].mNext != -1)) {
+    do {
+      if (*(char *)&pLVar18[2].mNext == '\x01') {
+                    /* Unresolved local var: MeI32 i1@[???]
+                       Unresolved local var: MeI32 i2@[???] */
+        pLVar12 = pLVar18[1].mPrev;
+                    /* Unresolved local var: MeU32 index@[???]
+                       Unresolved local var: MeI32 o@[DW_OP_reg2(EDX)]
+                       Unresolved local var: MeI32 d@[DW_OP_reg1(ECX)] */
+        pLVar4 = pLVar12[1].mNext;
+        uVar14 = (int)((int)pLVar4 - uVar3) >> 0x1f;
+        uVar15 = uVar3 & (uVar14 ^ 0xffffffff) | (uint)pLVar4 & uVar14;
+        uVar14 = uVar14 & uVar3 | (uVar14 ^ 0xffffffff) & (uint)pLVar4;
+        pMVar5 = (this->mPairState).mArray;
+        iVar11 = (uVar14 + uVar15 * this->mModelMax) - ((int)((uVar15 + 2) * (uVar15 + 1)) >> 1);
+                    /* Unresolved local var: MeU8 shift@[???] */
+        iVar16 = iVar11 >> 1;
+        sVar10 = ((byte)iVar11 & 1) * '\x04';
+        bVar7 = (byte)((int)(uint)pMVar5[iVar16] >> sVar10) & 0xf;
+        pbVar17 = pMVar5 + iVar16;
+        *pbVar17 = (byte)(0xf0 >> sVar10) & *pbVar17 | (byte)((bVar7 - 1 & 0xff) << sVar10);
+        if (this->mNAxes == bVar7) {
+          pMVar6 = pCVar2->mCullingTable;
+          if (((pMVar6 != (McdCullingTable *)0x0) && (pMVar6 == (McdCullingTable *)pLVar12[2].mPrev)
+              ) && ((Link *)pCVar2->mCullingID == pLVar12[3].mNext)) {
+                    /* Unresolved local var: MeU32 d@[DW_OP_reg2(EDX)]
+                       Unresolved local var: MeU32 l@[???]
+                       Unresolved local var: MeU32 index@[DW_OP_reg0(EAX)] */
+            pLVar12 = pLVar12[3].mPrev;
+            uVar9 = pCVar2->mCullingIndex;
+            uVar13 = 0xffffffff - ((int)((int)pLVar12 - uVar9) >> 0x1f);
+            uVar8 = (uint)pLVar12 & uVar13 | (uVar13 ^ 0xffffffff) & uVar9;
+            uVar9 = (uVar8 * (uVar8 + 1) >> 1) +
+                    (uVar13 & uVar9 | (uVar13 ^ 0xffffffff) & (uint)pLVar12);
+            if ((pMVar6->array[uVar9 >> 5] & 1 << ((byte)uVar9 & 0x1f)) != 0) goto LAB_000111db;
+          }
+          McdModelPairManagerDeactivate
+                    (this->mManager,this->mRepList[uVar15].mModel,this->mRepList[uVar14].mModel);
+        }
+      }
+LAB_000111db:
+      pLVar18 = pLVar18->mNext;
+      if (fVar1 <= (float)pLVar18[1].mNext) {
+        pLVar12 = (inMarker->super_Link).mNext;
+        goto LAB_000111f5;
+      }
+    } while (*(char *)&pLVar18[2].mNext != -1);
+    pLVar12 = (inMarker->super_Link).mNext;
+  }
+LAB_000111f5:
+  pLVar12->mPrev = (inMarker->super_Link).mPrev;
+  ((inMarker->super_Link).mPrev)->mNext = pLVar12;
+  pLVar12 = pLVar18->mPrev;
+  (inMarker->super_Link).mNext = pLVar18;
+  (inMarker->super_Link).mPrev = pLVar12;
+  pLVar12->mNext = &inMarker->super_Link;
+  ((inMarker->super_Link).mNext)->mPrev = &inMarker->super_Link;
+  return;
+}
+
+
+/* ==== MoveStartMarkerDown ==== */
+
+/* DWARF original prototype: void MoveStartMarkerDown(CxSmallSort * this, CxSmallSortMarker *
+   inMarker) */
+
+void __thiscall CxSmallSort::MoveStartMarkerDown(CxSmallSort *this,CxSmallSortMarker *inMarker)
+
+{
+  float fVar1;
+  CxSmallSortRep *pCVar2;
+  uint uVar3;
+  Link *pLVar4;
+  MeU8 *pMVar5;
+  McdCullingTable *pMVar6;
+  MeU8 MVar7;
+  uint uVar8;
+  uint uVar9;
+  sbyte sVar10;
+  Link *pLVar11;
+  int iVar12;
+  uint uVar13;
+  int iVar14;
+  uint uVar15;
+  byte *pbVar16;
+  uint uVar17;
+  Link *pLVar18;
+  MeU8 state;
+  MeI32 l;
+  CxSmallSortRep *rep;
+  MeReal inOrdinate;
+  MeI32 inID;
+  
+                    /* Unresolved local var: CxSmallSortMarker * marker@[DW_OP_reg7(EDI)]
+                       Unresolved local var: CxSmallSortRep * inRep@[???] */
+  pCVar2 = inMarker->mRep;
+  pLVar11 = (inMarker->super_Link).mPrev;
+  uVar3 = pCVar2->mID;
+  fVar1 = inMarker->mOrdinate;
+  pLVar18 = pLVar11;
+  if ((fVar1 <= (float)pLVar11[1].mNext) && (*(char *)&pLVar11[2].mNext != -1)) {
+    do {
+      if (*(char *)&pLVar18[2].mNext == '\x01') {
+                    /* Unresolved local var: MeI32 i1@[???]
+                       Unresolved local var: MeI32 i2@[???] */
+        pLVar11 = pLVar18[1].mPrev;
+                    /* Unresolved local var: MeU32 index@[???]
+                       Unresolved local var: MeI32 o@[DW_OP_reg2(EDX)]
+                       Unresolved local var: MeI32 d@[DW_OP_reg1(ECX)] */
+        pLVar4 = pLVar11[1].mNext;
+        uVar13 = (int)((int)pLVar4 - uVar3) >> 0x1f;
+        uVar17 = uVar3 & (uVar13 ^ 0xffffffff) | uVar13 & (uint)pLVar4;
+        uVar13 = uVar13 & uVar3 | (uVar13 ^ 0xffffffff) & (uint)pLVar4;
+        iVar12 = (uVar13 + uVar17 * this->mModelMax) - ((int)((uVar17 + 2) * (uVar17 + 1)) >> 1);
+        iVar14 = iVar12 >> 1;
+        pMVar5 = (this->mPairState).mArray;
+                    /* Unresolved local var: MeU8 * mem@[DW_OP_reg3(EBX)]
+                       Unresolved local var: MeU8 shift@[???] */
+        pbVar16 = pMVar5 + iVar14;
+        sVar10 = ((byte)iVar12 & 1) * '\x04';
+        MVar7 = ((byte)((int)(uint)pMVar5[iVar14] >> sVar10) & 0xf) + 1;
+        *pbVar16 = *pbVar16 & (byte)(0xf0 >> sVar10) | MVar7 << sVar10;
+        if (MVar7 == this->mNAxes) {
+          pMVar6 = pCVar2->mCullingTable;
+          if (((pMVar6 != (McdCullingTable *)0x0) && (pMVar6 == (McdCullingTable *)pLVar11[2].mPrev)
+              ) && ((Link *)pCVar2->mCullingID == pLVar11[3].mNext)) {
+                    /* Unresolved local var: MeU32 d@[DW_OP_reg2(EDX)]
+                       Unresolved local var: MeU32 o@[DW_OP_reg3(EBX)]
+                       Unresolved local var: MeU32 l@[???]
+                       Unresolved local var: MeU32 index@[DW_OP_reg0(EAX)] */
+            pLVar11 = pLVar11[3].mPrev;
+            uVar9 = pCVar2->mCullingIndex;
+            uVar15 = 0xffffffff - ((int)((int)pLVar11 - uVar9) >> 0x1f);
+            uVar8 = (uint)pLVar11 & uVar15 | (uVar15 ^ 0xffffffff) & uVar9;
+            uVar9 = (uVar8 * (uVar8 + 1) >> 1) +
+                    (uVar15 & uVar9 | (uVar15 ^ 0xffffffff) & (uint)pLVar11);
+            if ((pMVar6->array[uVar9 >> 5] & 1 << ((byte)uVar9 & 0x1f)) != 0) goto LAB_000113cc;
+          }
+          McdModelPairManagerActivate
+                    (this->mManager,this->mRepList[uVar17].mModel,this->mRepList[uVar13].mModel);
+        }
+      }
+LAB_000113cc:
+      pLVar18 = pLVar18->mPrev;
+      if ((float)pLVar18[1].mNext < fVar1) {
+        pLVar11 = (inMarker->super_Link).mPrev;
+        goto LAB_000113e8;
+      }
+    } while (*(char *)&pLVar18[2].mNext != -1);
+    pLVar11 = (inMarker->super_Link).mPrev;
+  }
+LAB_000113e8:
+  pLVar4 = (inMarker->super_Link).mNext;
+  pLVar4->mPrev = pLVar11;
+  pLVar11 = (inMarker->super_Link).mPrev;
+  (inMarker->super_Link).mPrev = pLVar18;
+  pLVar11->mNext = pLVar4;
+  (inMarker->super_Link).mNext = pLVar18->mNext;
+  pLVar18->mNext = &inMarker->super_Link;
+  ((inMarker->super_Link).mNext)->mPrev = &inMarker->super_Link;
+  return;
+}
+
+
+/* ==== MoveEndMarkerUp ==== */
+
+/* DWARF original prototype: void MoveEndMarkerUp(CxSmallSort * this, CxSmallSortMarker * inMarker)
+    */
+
+void __thiscall CxSmallSort::MoveEndMarkerUp(CxSmallSort *this,CxSmallSortMarker *inMarker)
+
+{
+  float fVar1;
+  CxSmallSortRep *pCVar2;
+  uint uVar3;
+  Link *pLVar4;
+  MeU8 *pMVar5;
+  McdCullingTable *pMVar6;
+  MeU8 MVar7;
+  uint uVar8;
+  uint uVar9;
+  sbyte sVar10;
+  int iVar11;
+  uint uVar12;
+  int iVar13;
+  Link *pLVar14;
+  uint uVar15;
+  byte *pbVar16;
+  uint uVar17;
+  Link *pLVar18;
+  MeU8 state;
+  MeI32 l;
+  CxSmallSortRep *rep;
+  MeReal inOrdinate;
+  MeI32 inID;
+  
+                    /* Unresolved local var: CxSmallSortMarker * marker@[DW_OP_reg7(EDI)]
+                       Unresolved local var: CxSmallSortRep * inRep@[???] */
+  pCVar2 = inMarker->mRep;
+  pLVar14 = (inMarker->super_Link).mNext;
+  uVar3 = pCVar2->mID;
+  fVar1 = inMarker->mOrdinate;
+  pLVar18 = pLVar14;
+  if (((float)pLVar14[1].mNext <= fVar1) && (*(char *)&pLVar14[2].mNext != -1)) {
+    do {
+      if (*(char *)&pLVar14[2].mNext == '\0') {
+                    /* Unresolved local var: MeI32 i1@[???]
+                       Unresolved local var: MeI32 i2@[???] */
+        pLVar18 = pLVar14[1].mPrev;
+                    /* Unresolved local var: MeU32 index@[???]
+                       Unresolved local var: MeI32 o@[DW_OP_reg2(EDX)]
+                       Unresolved local var: MeI32 d@[DW_OP_reg1(ECX)] */
+        pLVar4 = pLVar18[1].mNext;
+        uVar12 = (int)((int)pLVar4 - uVar3) >> 0x1f;
+        uVar17 = uVar3 & (uVar12 ^ 0xffffffff) | uVar12 & (uint)pLVar4;
+        uVar12 = uVar12 & uVar3 | (uVar12 ^ 0xffffffff) & (uint)pLVar4;
+        iVar11 = (uVar12 + uVar17 * this->mModelMax) - ((int)((uVar17 + 2) * (uVar17 + 1)) >> 1);
+        iVar13 = iVar11 >> 1;
+        pMVar5 = (this->mPairState).mArray;
+                    /* Unresolved local var: MeU8 * mem@[DW_OP_reg3(EBX)]
+                       Unresolved local var: MeU8 shift@[???] */
+        pbVar16 = pMVar5 + iVar13;
+        sVar10 = ((byte)iVar11 & 1) * '\x04';
+        MVar7 = ((byte)((int)(uint)pMVar5[iVar13] >> sVar10) & 0xf) + 1;
+        *pbVar16 = *pbVar16 & (byte)(0xf0 >> sVar10) | MVar7 << sVar10;
+        if (MVar7 == this->mNAxes) {
+          pMVar6 = pCVar2->mCullingTable;
+          if (((pMVar6 != (McdCullingTable *)0x0) && (pMVar6 == (McdCullingTable *)pLVar18[2].mPrev)
+              ) && ((Link *)pCVar2->mCullingID == pLVar18[3].mNext)) {
+                    /* Unresolved local var: MeU32 d@[DW_OP_reg2(EDX)]
+                       Unresolved local var: MeU32 o@[DW_OP_reg3(EBX)]
+                       Unresolved local var: MeU32 l@[???]
+                       Unresolved local var: MeU32 index@[DW_OP_reg0(EAX)] */
+            pLVar18 = pLVar18[3].mPrev;
+            uVar9 = pCVar2->mCullingIndex;
+            uVar15 = 0xffffffff - ((int)((int)pLVar18 - uVar9) >> 0x1f);
+            uVar8 = (uint)pLVar18 & uVar15 | (uVar15 ^ 0xffffffff) & uVar9;
+            uVar9 = (uVar8 * (uVar8 + 1) >> 1) +
+                    (uVar15 & uVar9 | (uVar15 ^ 0xffffffff) & (uint)pLVar18);
+            if ((pMVar6->array[uVar9 >> 5] & 1 << ((byte)uVar9 & 0x1f)) != 0) goto LAB_0001165c;
+          }
+          McdModelPairManagerActivate
+                    (this->mManager,this->mRepList[uVar17].mModel,this->mRepList[uVar12].mModel);
+        }
+      }
+LAB_0001165c:
+      pLVar18 = pLVar14->mNext;
+      if (fVar1 < (float)pLVar18[1].mNext) {
+        pLVar14 = (inMarker->super_Link).mNext;
+        goto LAB_0001167a;
+      }
+      pLVar14 = pLVar18;
+    } while (*(char *)&pLVar18[2].mNext != -1);
+    pLVar14 = (inMarker->super_Link).mNext;
+  }
+LAB_0001167a:
+  pLVar14->mPrev = (inMarker->super_Link).mPrev;
+  ((inMarker->super_Link).mPrev)->mNext = pLVar14;
+  pLVar14 = pLVar18->mPrev;
+  (inMarker->super_Link).mNext = pLVar18;
+  (inMarker->super_Link).mPrev = pLVar14;
+  pLVar14->mNext = &inMarker->super_Link;
+  ((inMarker->super_Link).mNext)->mPrev = &inMarker->super_Link;
+  return;
+}
+
+
+/* ==== MoveEndMarkerDown ==== */
+
+/* DWARF original prototype: void MoveEndMarkerDown(CxSmallSort * this, CxSmallSortMarker *
+   inMarker) */
+
+void __thiscall CxSmallSort::MoveEndMarkerDown(CxSmallSort *this,CxSmallSortMarker *inMarker)
+
+{
+  float fVar1;
+  CxSmallSortRep *pCVar2;
+  uint uVar3;
+  CxSmallSortRep *pCVar4;
+  MeU8 *pMVar5;
+  Link *pLVar6;
+  McdCullingTable *pMVar7;
+  uint uVar8;
+  byte bVar9;
+  uint uVar10;
+  sbyte sVar11;
+  CxSmallSortMarker *pCVar12;
+  uint uVar13;
+  uint uVar14;
+  uint uVar15;
+  byte *pbVar16;
+  int iVar17;
+  uint uVar18;
+  int iVar19;
+  MeU8 state;
+  MeI32 l;
+  CxSmallSortRep *rep;
+  MeReal inOrdinate;
+  MeI32 inID;
+  CxSmallSortMarker *marker;
+  
+                    /* Unresolved local var: CxSmallSortRep * inRep@[???] */
+  pCVar12 = (CxSmallSortMarker *)(inMarker->super_Link).mPrev;
+  pCVar2 = inMarker->mRep;
+  uVar3 = pCVar2->mID;
+  fVar1 = inMarker->mOrdinate;
+  marker = pCVar12;
+  if ((fVar1 < pCVar12->mOrdinate) && (pCVar12->mType != 0xff)) {
+    do {
+                    /* Unresolved local var: MeU8 delta@[???] */
+      if (marker->mType == '\0') {
+                    /* Unresolved local var: MeI32 i1@[???]
+                       Unresolved local var: MeI32 i2@[???] */
+        pCVar4 = marker->mRep;
+                    /* Unresolved local var: MeU32 index@[???]
+                       Unresolved local var: MeI32 o@[DW_OP_reg2(EDX)]
+                       Unresolved local var: MeI32 d@[DW_OP_reg1(ECX)] */
+        uVar14 = pCVar4->mID;
+        uVar13 = (int)(uVar14 - uVar3) >> 0x1f;
+        uVar18 = uVar3 & (uVar13 ^ 0xffffffff) | uVar13 & uVar14;
+        uVar14 = uVar13 & uVar3 | (uVar13 ^ 0xffffffff) & uVar14;
+        iVar19 = (uVar14 + uVar18 * this->mModelMax) - ((int)((uVar18 + 2) * (uVar18 + 1)) >> 1);
+        iVar17 = iVar19 >> 1;
+        pMVar5 = (this->mPairState).mArray;
+                    /* Unresolved local var: MeU8 * mem@[DW_OP_reg3(EBX)]
+                       Unresolved local var: MeU8 shift@[???] */
+        pbVar16 = pMVar5 + iVar17;
+        sVar11 = ((byte)iVar19 & 1) * '\x04';
+        bVar9 = (byte)((int)(uint)pMVar5[iVar17] >> sVar11) & 0xf;
+        *pbVar16 = (byte)(0xf0 >> sVar11) & *pbVar16 | (byte)((bVar9 - 1 & 0xff) << sVar11);
+        if (this->mNAxes == bVar9) {
+          pMVar7 = pCVar2->mCullingTable;
+          if (((pMVar7 != (McdCullingTable *)0x0) && (pMVar7 == pCVar4->mCullingTable)) &&
+             (pCVar2->mCullingID == pCVar4->mCullingID)) {
+                    /* Unresolved local var: MeU32 d@[DW_OP_reg2(EDX)]
+                       Unresolved local var: MeU32 o@[DW_OP_reg3(EBX)]
+                       Unresolved local var: MeU32 l@[???]
+                       Unresolved local var: MeU32 index@[DW_OP_reg0(EAX)] */
+            uVar13 = pCVar4->mCullingIndex;
+            uVar8 = pCVar2->mCullingIndex;
+            uVar15 = 0xffffffff - ((int)(uVar13 - uVar8) >> 0x1f);
+            uVar10 = uVar13 & uVar15 | (uVar15 ^ 0xffffffff) & uVar8;
+            uVar13 = (uVar10 * (uVar10 + 1) >> 1) +
+                     (uVar15 & uVar8 | (uVar15 ^ 0xffffffff) & uVar13);
+            if ((pMVar7->array[uVar13 >> 5] & 1 << ((byte)uVar13 & 0x1f)) != 0) goto LAB_00011857;
+          }
+          McdModelPairManagerDeactivate
+                    (this->mManager,this->mRepList[uVar18].mModel,this->mRepList[uVar14].mModel);
+        }
+      }
+LAB_00011857:
+      marker = (CxSmallSortMarker *)(marker->super_Link).mPrev;
+      if (marker->mOrdinate <= fVar1) {
+        pCVar12 = (CxSmallSortMarker *)(inMarker->super_Link).mPrev;
+        goto LAB_0001187d;
+      }
+    } while (marker->mType != 0xff);
+    pCVar12 = (CxSmallSortMarker *)(inMarker->super_Link).mPrev;
+  }
+LAB_0001187d:
+  pLVar6 = (inMarker->super_Link).mNext;
+  pLVar6->mPrev = &pCVar12->super_Link;
+  ((inMarker->super_Link).mPrev)->mNext = pLVar6;
+  (inMarker->super_Link).mPrev = &marker->super_Link;
+  (inMarker->super_Link).mNext = (marker->super_Link).mNext;
+  (marker->super_Link).mNext = &inMarker->super_Link;
+  ((inMarker->super_Link).mNext)->mPrev = &inMarker->super_Link;
+  return;
+}
+
+
+/* ==== _Update ==== */
+
+/* DWARF original prototype: void _Update(CxSmallSort * this, MeI32 inID, MeVector3Ptr min,
+   MeVector3Ptr max) */
+
+void __thiscall CxSmallSort::_Update(CxSmallSort *this,MeI32 inID,MeVector3Ptr min,MeVector3Ptr max)
+
+{
+  CxSmallSortMarker *inMarker;
+  float fVar1;
+  float fVar2;
+  float fVar3;
+  bool bVar4;
+  CxSmallSortRep *pCVar5;
+  int iVar6;
+  MeReal oldmax;
+  MeReal oldmin;
+  CxSmallSortMarker *endm;
+  CxSmallSortMarker *startm;
+  int maxDone;
+  
+                    /* Unresolved local var: CxSmallSortRep * rep@[???] */
+                    /* Unresolved local var: int i@[DW_OP_reg6(ESI)] */
+  iVar6 = 0;
+  pCVar5 = this->mRepList + inID;
+  do {
+    if (((int)(uint)this->mAxes >> ((byte)iVar6 & 0x1f) & 1U) != 0) {
+      inMarker = pCVar5->mAABBMarkers + 1;
+      bVar4 = false;
+      fVar1 = pCVar5->mAABBMarkers[0].mOrdinate;
+      fVar2 = pCVar5->mAABBMarkers[1].mOrdinate;
+      pCVar5->mAABBMarkers[0].mOrdinate = min[iVar6];
+      pCVar5->mAABBMarkers[1].mOrdinate = max[iVar6];
+      fVar3 = min[iVar6];
+      if (fVar2 <= fVar3) {
+        if (max[iVar6] < fVar2) {
+          MoveEndMarkerDown(this,inMarker);
+LAB_00011a95:
+          fVar3 = min[iVar6];
+        }
+        else if (fVar2 < max[iVar6]) {
+          MoveEndMarkerUp(this,inMarker);
+          goto LAB_00011a95;
+        }
+        bVar4 = true;
+      }
+      if (fVar3 < fVar1) {
+        MoveStartMarkerDown(this,pCVar5->mAABBMarkers);
+      }
+      else if (fVar1 < fVar3) {
+        MoveStartMarkerUp(this,pCVar5->mAABBMarkers);
+      }
+      if (!bVar4) {
+        if (max[iVar6] < fVar2) {
+          MoveEndMarkerDown(this,inMarker);
+        }
+        else if (fVar2 < max[iVar6]) {
+          MoveEndMarkerUp(this,inMarker);
+        }
+      }
+    }
+    iVar6 = iVar6 + 1;
+    pCVar5 = (CxSmallSortRep *)&pCVar5->mAABBMarkers[0].mOrdinate;
+    if (2 < iVar6) {
+      return;
+    }
+  } while( true );
+}
+
+
+/* ==== UpdateSingle ==== */
+
+/* DWARF original prototype: bool UpdateSingle(CxSmallSort * this, MeI32 inID, MeReal duration) */
+
+bool __thiscall CxSmallSort::UpdateSingle(CxSmallSort *this,MeI32 inID,MeReal duration)
+
+{
+  McdModel_conflict *pMVar1;
+  bool bVar2;
+  char cVar3;
+  MeReal max [3];
+  MeReal min [3];
+  
+  bVar2 = false;
+  if (((-1 < inID) && (inID < this->mModelMax)) && (this->mRepList[inID].mID == inID)) {
+    bVar2 = true;
+  }
+  cVar3 = '\0';
+  if (bVar2) {
+    cVar3 = this->mRepList[inID].mDynamic;
+  }
+  if (cVar3 != '\0') {
+                    /* Unresolved local var: McdModelID.conflict model@[???] */
+    pMVar1 = this->mRepList[inID].mModel;
+    (*this->mAABBUpdateFn)(pMVar1,duration);
+    McdModelGetAABB(pMVar1,min,max);
+    _Update(this,inID,min,max);
+  }
+  return true;
+}
+
+
+/* ==== UpdateAll ==== */
+
+/* DWARF original prototype: bool UpdateAll(CxSmallSort * this, MeReal duration) */
+
+bool __thiscall CxSmallSort::UpdateAll(CxSmallSort *this,MeReal duration)
+
+{
+  bool bVar1;
+  McdUpdateAABBFnPtr p_Var2;
+  Link *pLVar3;
+  MeReal max [3];
+  MeReal min [3];
+  
+                    /* Unresolved local var: CxSmallSortRep * rep@[DW_OP_reg3(EBX)] */
+  bVar1 = false;
+  p_Var2 = this->mAABBUpdateFn;
+  if (p_Var2 != (McdUpdateAABBFnPtr)0x0) {
+    pLVar3 = (this->mActiveList).mRoot.mNext;
+    if (pLVar3 != &(this->mActiveList).mRoot) {
+      while( true ) {
+        (*p_Var2)((McdModel_conflict *)pLVar3[1].mPrev,duration);
+        McdModelGetAABB(pLVar3[1].mPrev,min,max);
+        _Update(this,(MeI32)pLVar3[1].mNext,min,max);
+        pLVar3 = pLVar3->mNext;
+        if (pLVar3 == &(this->mActiveList).mRoot) break;
+        p_Var2 = this->mAABBUpdateFn;
+      }
+    }
+    bVar1 = true;
+  }
+  return bVar1;
+}
+
+
+/* ==== UpdateBegin ==== */
+
+/* DWARF original prototype: bool UpdateBegin(CxSmallSort * this) */
+
+bool __thiscall CxSmallSort::UpdateBegin(CxSmallSort *this)
+
+{
+  int iVar1;
+  
+  McdModelPairManagerFlush(this->mManager);
+  iVar1 = this->mReleasedIDCount + -1;
+  this->mReleasedIDCount = iVar1;
+  while (-1 < iVar1) {
+    this->mFreeIDs[this->mFreeIDCount] = this->mReleasedIDs[this->mReleasedIDCount];
+    iVar1 = this->mReleasedIDCount + -1;
+    this->mFreeIDCount = this->mFreeIDCount + 1;
+    this->mReleasedIDCount = iVar1;
+  }
+  this->mReleasedIDCount = 0;
+  this->mChanging = 1;
+  return true;
+}
+
+
+/* ==== UpdateEnd ==== */
+
+/* DWARF original prototype: bool UpdateEnd(CxSmallSort * this) */
+
+bool __thiscall CxSmallSort::UpdateEnd(CxSmallSort *this)
+
+{
+  this->mChanging = 0;
+  return true;
+}
+
+
+/* ==== SetCullingParameters ==== */
+
+/* DWARF original prototype: void SetCullingParameters(CxSmallSort * this, MeI32 inID,
+   McdCullingTable * table, MeU32 cullingIndex, MeU32 cullingID) */
+
+void __thiscall
+CxSmallSort::SetCullingParameters
+          (CxSmallSort *this,MeI32 inID,McdCullingTable *table,MeU32 cullingIndex,MeU32 cullingID)
+
+{
+  McdCullingTable *pMVar1;
+  uint uVar2;
+  MeU32 MVar3;
+  bool bVar4;
+  uint uVar5;
+  uint uVar6;
+  uint uVar7;
+  uint uVar8;
+  int local_34;
+  CxSmallSortRep *local_30;
+  int local_2c;
+  int local_28;
+  CxSmallSortRep *inRep;
+  MeI16 i;
+  MeU32 oldCullingID;
+  MeU32 oldCullingIndex;
+  McdCullingTable *oldTable;
+  
+  local_30 = this->mRepList;
+  pMVar1 = local_30[inID].mCullingTable;
+  uVar8 = 0;
+  uVar2 = local_30[inID].mCullingIndex;
+  MVar3 = local_30[inID].mCullingID;
+  i = 0;
+  local_34 = this->mModelMax;
+  if (0 < local_34) {
+    while( true ) {
+      bVar4 = false;
+      if (((-1 < (int)uVar8) && ((int)uVar8 < local_34)) && (local_30[uVar8].mID == uVar8)) {
+        bVar4 = true;
+      }
+      if ((bVar4) && (uVar8 != inID)) {
+                    /* Unresolved local var: MeBool oldCullingState@[???]
+                       Unresolved local var: MeBool newCullingState@[???]
+                       Unresolved local var: MeI32 a@[???]
+                       Unresolved local var: MeI32 b@[???] */
+        local_28 = 0;
+        if ((pMVar1 != (McdCullingTable *)0x0) &&
+           ((local_30[uVar8].mCullingTable == pMVar1 && (local_30[uVar8].mCullingID == MVar3)))) {
+                    /* Unresolved local var: MeU32 d@[DW_OP_reg2(EDX)]
+                       Unresolved local var: MeU32 o@[DW_OP_reg0(EAX)]
+                       Unresolved local var: MeU32 l@[???]
+                       Unresolved local var: MeU32 index@[DW_OP_reg0(EAX)] */
+          uVar5 = local_30[uVar8].mCullingIndex;
+          uVar6 = 0xffffffff - ((int)(uVar2 - uVar5) >> 0x1f);
+          uVar7 = (uVar6 ^ 0xffffffff) & uVar5 | uVar6 & uVar2;
+          uVar5 = (uVar7 * (uVar7 + 1) >> 1) + (uVar6 & uVar5 | uVar2 & (uVar6 ^ 0xffffffff));
+          if ((pMVar1->array[uVar5 >> 5] & 1 << ((byte)uVar5 & 0x1f)) != 0) {
+            local_28 = 1;
+          }
+        }
+        local_2c = 0;
+        if (((table != (McdCullingTable *)0x0) && (local_30[uVar8].mCullingTable == table)) &&
+           (local_30[uVar8].mCullingID == cullingID)) {
+                    /* Unresolved local var: MeU32 d@[DW_OP_reg2(EDX)]
+                       Unresolved local var: MeU32 o@[DW_OP_reg0(EAX)]
+                       Unresolved local var: MeU32 l@[???]
+                       Unresolved local var: MeU32 index@[DW_OP_reg0(EAX)] */
+          uVar5 = local_30[uVar8].mCullingIndex;
+          uVar6 = 0xffffffff - ((int)(cullingIndex - uVar5) >> 0x1f);
+          uVar7 = (uVar6 ^ 0xffffffff) & uVar5 | uVar6 & cullingIndex;
+          uVar5 = (uVar7 * (uVar7 + 1) >> 1) + (uVar6 & uVar5 | cullingIndex & (uVar6 ^ 0xffffffff))
+          ;
+          if ((table->array[uVar5 >> 5] & 1 << ((byte)uVar5 & 0x1f)) != 0) {
+            local_2c = 1;
+          }
+        }
+                    /* Unresolved local var: MeI32 o@[DW_OP_reg0(EAX)]
+                       Unresolved local var: MeI32 d@[DW_OP_reg1(ECX)]
+                       Unresolved local var: MeI32 l@[DW_OP_reg3(EBX)] */
+        uVar5 = (int)(inID - uVar8) >> 0x1f;
+        uVar7 = (uVar5 ^ 0xffffffff) & uVar8 | inID & uVar5;
+        uVar8 = uVar5 & uVar8 | (uVar5 ^ 0xffffffff) & inID;
+        if (local_2c != local_28) {
+          uVar5 = (local_34 * uVar7 + uVar8) - ((int)((uVar7 + 2) * (uVar7 + 1)) >> 1);
+          if (this->mNAxes ==
+              ((byte)((int)(uint)(this->mPairState).mArray[(int)uVar5 >> 1] >>
+                     (sbyte)((uVar5 & 1) << 2)) & 0xf)) {
+            if (local_28 == 0) {
+              McdModelPairManagerDeactivate
+                        (this->mManager,local_30[uVar7].mModel,local_30[uVar8].mModel);
+              local_34 = this->mModelMax;
+            }
+            else {
+              McdModelPairManagerActivate
+                        (this->mManager,local_30[uVar7].mModel,local_30[uVar8].mModel);
+              local_34 = this->mModelMax;
+            }
+          }
+        }
+      }
+      i = i + 1;
+      uVar8 = (uint)i;
+      if (local_34 <= (int)uVar8) break;
+      local_30 = this->mRepList;
+    }
+  }
+  return;
+}
+
+

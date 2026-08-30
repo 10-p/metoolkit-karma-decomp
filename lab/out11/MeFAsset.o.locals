@@ -1,0 +1,169 @@
+# function,name,stackoff,hexoff,size,type
+MeFAssetCreateCopy,asset,4,00000004,4,MeFAsset *
+MeFAssetCreateCopy,recurse,8,00000008,4,MeBool
+MeFAssetCreateCopy,asset_1,-32,ffffffe0,4,MeFAsset *
+MeFAssetCreateCopy,it,-20,ffffffec,4,MeFJointIt
+MeFAssetCreateCopy,i,-36,ffffffdc,4,int
+MeFAssetCreateCopy,count,-40,ffffffd8,4,int
+MeFAssetCreateCopy,copyArray,-44,ffffffd4,4,MeFAssetPart * *
+MeFAssetCreateCopy,it_1,-24,ffffffe8,4,MeFModelIt
+MeFAssetCreateCopy,it_2,-28,ffffffe4,4,MeFGeometryIt
+MeFAssetCreateCopy,pMStackY_50,-80,ffffffb0,4,MeFAsset *
+MeFAssetCreateCopy,iStack_40,-64,ffffffc0,4,int
+MeFAssetCreateCopy,apMStack_3c,-60,ffffffc4,12,MeFAssetPart *[3]
+MeFAssetCreateCopy,local_30,-48,ffffffd0,4,MeFAssetPart * *
+MeFAssetCreateCopy,pMStack_44,-68,ffffffbc,4,MeFAsset *
+MeFAssetDestroy,it_2,-28,ffffffe4,4,MeFModelIt
+MeFAssetDestroy,asset,4,00000004,4,MeFAsset *
+MeFAssetDestroy,it_3,-32,ffffffe0,4,MeFGeometryIt
+MeFAssetDestroy,it,-20,ffffffec,4,MeFJointIt
+MeFAssetDestroy,it_1,-24,ffffffe8,4,MeFAssetPartIt
+MeFAssetCombine,buffer,-284,fffffee4,256,char[256]
+MeFAssetCombine,it,-288,fffffee0,4,MeFGeometryIt
+MeFAssetCombine,it_1,-292,fffffedc,4,MeFModelIt
+MeFAssetCombine,it_2,-296,fffffed8,4,MeFAssetPartIt
+MeFAssetCombine,it_3,-300,fffffed4,4,MeFJointIt
+MeFAssetCombine,it_4,-304,fffffed0,4,MeFGeometryIt
+MeFAssetCombine,it_5,-308,fffffecc,4,MeFModelIt
+MeFAssetCombine,it_6,-312,fffffec8,4,MeFAssetPartIt
+MeFAssetCombine,it_7,-316,fffffec4,4,MeFJointIt
+MeFAssetCombine,it1,-320,fffffec0,4,MeFAssetPartIt
+MeFAssetCombine,it2,-324,fffffebc,4,MeFAssetPartIt
+MeFAssetCombine,dest,4,00000004,4,MeFAsset *
+MeFAssetCombine,source,8,00000008,4,MeFAsset *
+MeFAssetGetPartCount,asset,4,00000004,4,MeFAsset *
+MeFAssetInitGeometryIterator,asset,4,00000004,4,MeFAsset *
+MeFAssetInitGeometryIterator,it,8,00000008,4,MeFGeometryIt *
+MeFAssetGetGeometry,it,4,00000004,4,MeFGeometryIt *
+MeFAssetInitModelIterator,asset,4,00000004,4,MeFAsset *
+MeFAssetInitModelIterator,it,8,00000008,4,MeFModelIt *
+MeFAssetGetModel,it,4,00000004,4,MeFModelIt *
+MeFAssetInitJointIterator,asset,4,00000004,4,MeFAsset *
+MeFAssetInitJointIterator,it,8,00000008,4,MeFJointIt *
+MeFAssetGetJoint,it,4,00000004,4,MeFJointIt *
+MeFAssetInitPartIterator,asset,4,00000004,4,MeFAsset *
+MeFAssetInitPartIterator,it,8,00000008,4,MeFAssetPartIt *
+MeFAssetGetPart,it,4,00000004,4,MeFAssetPartIt *
+MeFAssetLookupPart,asset,4,00000004,4,MeFAsset *
+MeFAssetLookupPart,name,8,00000008,4,char *
+MeFAssetGetPartsSortedByName,asset,4,00000004,4,MeFAsset *
+MeFAssetGetPartsSortedByName,partArray,8,00000008,4,MeFAssetPart * *
+MeFAssetGetPartsSortedByName,it,-20,ffffffec,4,MeFAssetPartIt
+MeFAssetMakeGeometryNameUnique,asset,4,00000004,4,MeFAsset *
+MeFAssetMakeGeometryNameUnique,asset2,8,00000008,4,MeFAsset *
+MeFAssetMakeGeometryNameUnique,name,12,0000000c,4,char *
+MeFAssetMakeGeometryNameUnique,buffer,16,00000010,4,char *
+MeFAssetMakeGeometryNameUnique,bufLength,20,00000014,4,int
+MeFAssetMakeGeometryNameUnique,count,-64,ffffffc0,4,int
+MeFAssetMakeGeometryNameUnique,number,-60,ffffffc4,32,char[32]
+MeFAssetMakeModelNameUnique,asset,4,00000004,4,MeFAsset *
+MeFAssetMakeModelNameUnique,asset2,8,00000008,4,MeFAsset *
+MeFAssetMakeModelNameUnique,name,12,0000000c,4,char *
+MeFAssetMakeModelNameUnique,buffer,16,00000010,4,char *
+MeFAssetMakeModelNameUnique,bufLength,20,00000014,4,int
+MeFAssetMakeModelNameUnique,count,-64,ffffffc0,4,int
+MeFAssetMakeModelNameUnique,number,-60,ffffffc4,32,char[32]
+MeFAssetMakePartNameUnique,bufLength,20,00000014,4,int
+MeFAssetMakePartNameUnique,count,-64,ffffffc0,4,int
+MeFAssetMakePartNameUnique,number,-60,ffffffc4,32,char[32]
+MeFAssetMakePartNameUnique,asset,4,00000004,4,MeFAsset *
+MeFAssetMakePartNameUnique,asset2,8,00000008,4,MeFAsset *
+MeFAssetMakePartNameUnique,name,12,0000000c,4,char *
+MeFAssetMakePartNameUnique,buffer,16,00000010,4,char *
+MeFAssetMakeJointNameUnique,asset,4,00000004,4,MeFAsset *
+MeFAssetMakeJointNameUnique,asset2,8,00000008,4,MeFAsset *
+MeFAssetMakeJointNameUnique,name,12,0000000c,4,char *
+MeFAssetMakeJointNameUnique,buffer,16,00000010,4,char *
+MeFAssetMakeJointNameUnique,bufLength,20,00000014,4,int
+MeFAssetMakeJointNameUnique,count,-64,ffffffc0,4,int
+MeFAssetMakeJointNameUnique,number,-60,ffffffc4,32,char[32]
+MeFAssetInsertGeometry,asset,4,00000004,4,MeFAsset *
+MeFAssetInsertGeometry,geometry,8,00000008,4,MeFGeometry *
+MeFAssetRemoveGeometry,geometry,4,00000004,4,MeFGeometry *
+MeFAssetInsertModel,asset,4,00000004,4,MeFAsset *
+MeFAssetInsertModel,model,8,00000008,4,MeFModel *
+MeFAssetRemoveModel,model,4,00000004,4,MeFModel *
+MeFAssetInsertJoint,joint,8,00000008,4,MeFJoint *
+MeFAssetInsertJoint,asset,4,00000004,4,MeFAsset *
+MeFAssetRemoveJoint,joint,4,00000004,4,MeFJoint *
+MeFAssetInsertPart,asset,4,00000004,4,MeFAsset *
+MeFAssetInsertPart,part,8,00000008,4,MeFAssetPart *
+MeFAssetRemovePart,part,4,00000004,4,MeFAssetPart *
+MeFAssetResolveGeometryReferences,asset,4,00000004,4,MeFAsset *
+MeFAssetResolveGeometryReferences,oldName,8,00000008,4,char *
+MeFAssetResolveGeometryReferences,newName,12,0000000c,4,char *
+MeFAssetResolveGeometryReferences,it,-20,ffffffec,4,MeFModelIt
+MeFAssetResolveModelReferences,asset,4,00000004,4,MeFAsset *
+MeFAssetResolveModelReferences,oldName,8,00000008,4,char *
+MeFAssetResolveModelReferences,newName,12,0000000c,4,char *
+MeFAssetResolveModelReferences,it,-20,ffffffec,4,MeFAssetPartIt
+MeFAssetResolvePartReferences,asset,4,00000004,4,MeFAsset *
+MeFAssetResolvePartReferences,it,-20,ffffffec,4,MeFJointIt
+MeFAssetResolvePartReferences,oldName,8,00000008,4,char *
+MeFAssetResolvePartReferences,it_1,-24,ffffffe8,4,MeFAssetPartIt
+MeFAssetResolvePartReferences,newName,12,0000000c,4,char *
+MeFAssetCreate,name,4,00000004,4,char *
+MeFAssetCreate,id,8,00000008,4,int
+MeFAssetGetName,asset,4,00000004,4,MeFAsset *
+MeFAssetGetID,asset,4,00000004,4,MeFAsset *
+MeFAssetGetReferencePart,asset,4,00000004,4,MeFAsset *
+MeFAssetGetGraphicHint,asset,4,00000004,4,MeFAsset *
+MeFAssetGetGraphicScale,asset,4,00000004,4,MeFAsset *
+MeFAssetGetGeometryCount,asset,4,00000004,4,MeFAsset *
+MeFAssetGetModelCount,asset,4,00000004,4,MeFAsset *
+MeFAssetGetJointCount,asset,4,00000004,4,MeFAsset *
+MeFAssetLookupGeometry,asset,4,00000004,4,MeFAsset *
+MeFAssetLookupGeometry,name,8,00000008,4,char *
+MeFAssetLookupModel,asset,4,00000004,4,MeFAsset *
+MeFAssetLookupModel,name,8,00000008,4,char *
+MeFAssetLookupJoint,asset,4,00000004,4,MeFAsset *
+MeFAssetLookupJoint,name,8,00000008,4,char *
+MeFAssetGetGeometrySortedByName,asset,4,00000004,4,MeFAsset *
+MeFAssetGetGeometrySortedByName,it,-20,ffffffec,4,MeFGeometryIt
+MeFAssetGetGeometrySortedByName,geomArray,8,00000008,4,MeFGeometry * *
+MeFAssetGetModelsSortedByName,asset,4,00000004,4,MeFAsset *
+MeFAssetGetModelsSortedByName,modelArray,8,00000008,4,MeFModel * *
+MeFAssetGetModelsSortedByName,it,-20,ffffffec,4,MeFModelIt
+MeFAssetGetJointsSortedByName,it,-20,ffffffec,4,MeFJointIt
+MeFAssetGetJointsSortedByName,asset,4,00000004,4,MeFAsset *
+MeFAssetGetJointsSortedByName,jointArray,8,00000008,4,MeFJoint * *
+MeFAssetIsEmpty,asset,4,00000004,4,MeFAsset *
+MeFAssetGetMassScale,asset,4,00000004,4,MeFAsset *
+MeFAssetGetLengthScale,asset,4,00000004,4,MeFAsset *
+MeFAssetRename,asset,4,00000004,4,MeFAsset *
+MeFAssetRename,name,8,00000008,4,char *
+MeFAssetSetID,asset,4,00000004,4,MeFAsset *
+MeFAssetSetID,id,8,00000008,4,int
+MeFAssetSetReferencePart,asset,4,00000004,4,MeFAsset *
+MeFAssetSetReferencePart,refPart,8,00000008,4,char *
+MeFAssetSetGraphicHint,asset,4,00000004,4,MeFAsset *
+MeFAssetSetGraphicHint,hint,8,00000008,4,char *
+MeFAssetSetGraphicScale,scale,8,00000008,4,MeReal
+MeFAssetSetGraphicScale,asset,4,00000004,4,MeFAsset *
+MeFAssetRemoveAllGeometry,asset,4,00000004,4,MeFAsset *
+MeFAssetRemoveAllGeometry,it,-16,fffffff0,4,MeFGeometryIt
+MeFAssetRemoveAllModels,asset,4,00000004,4,MeFAsset *
+MeFAssetRemoveAllModels,it,-16,fffffff0,4,MeFModelIt
+MeFAssetRemoveAllParts,asset,4,00000004,4,MeFAsset *
+MeFAssetRemoveAllParts,it,-16,fffffff0,4,MeFAssetPartIt
+MeFAssetRemoveAllJoints,asset,4,00000004,4,MeFAsset *
+MeFAssetRemoveAllJoints,it,-16,fffffff0,4,MeFJointIt
+MeFAssetScale,asset,4,00000004,4,MeFAsset *
+MeFAssetScale,geomIt,-20,ffffffec,4,MeFGeometryIt
+MeFAssetScale,modelIt,-24,ffffffe8,4,MeFModelIt
+MeFAssetScale,scale,8,00000008,4,MeReal
+MeFAssetScale,partIt,-28,ffffffe4,4,MeFAssetPartIt
+MeFAssetScale,jointIt,-32,ffffffe0,4,MeFJointIt
+MeFAssetSetMassScale,asset,4,00000004,4,MeFAsset *
+MeFAssetSetMassScale,scale,8,00000008,4,MeReal
+MeFAssetSetLengthScale,asset,4,00000004,4,MeFAsset *
+MeFAssetSetLengthScale,scale,8,00000008,4,MeReal
+_MeFAssetInit,asset,4,00000004,4,MeFAsset *
+_MeFGeometrySortFunc,elem1,4,00000004,4,void *
+_MeFGeometrySortFunc,elem2,8,00000008,4,void *
+_MeFModelSortFunc,elem1,4,00000004,4,void *
+_MeFModelSortFunc,elem2,8,00000008,4,void *
+_MeFAssetPartSortFunc,elem1,4,00000004,4,void *
+_MeFAssetPartSortFunc,elem2,8,00000008,4,void *
+_MeFJointSortFunc,elem1,4,00000004,4,void *
+_MeFJointSortFunc,elem2,8,00000008,4,void *

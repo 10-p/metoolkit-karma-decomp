@@ -1,0 +1,2 @@
+# function,name,stackoff,hexoff,size,type
+McdSphereBoxPlaneRegisterInteractions,frame,4,00000004,4,McdFramework *

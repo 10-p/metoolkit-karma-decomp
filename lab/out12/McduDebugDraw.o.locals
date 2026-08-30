@@ -1,0 +1,24 @@
+# function,name,stackoff,hexoff,size,type
+McduDebugDrawAABB,min,4,00000004,4,MeReal *
+McduDebugDrawAABB,max,8,00000008,4,MeReal *
+McduDebugDrawAABB,colour,12,0000000c,4,MeReal *
+McduDebugDrawAABB,centre,-44,ffffffd4,12,MeReal[3]
+McduDebugDrawAABB,radius,-60,ffffffc4,12,MeReal[3]
+McduDebugDrawAABB,lv,-76,ffffffb4,12,MeReal[3]
+McduDebugDrawAABB,wv1,-92,ffffffa4,12,MeReal[3]
+McduDebugDrawAABB,wv2,-108,ffffff94,12,MeReal[3]
+McduDebugDrawModel,max,-60,ffffffc4,12,MeReal[3]
+McduDebugDrawModel,model,4,00000004,4,McdModelID.conflict
+McduDebugDrawModel,flags,8,00000008,4,McduDebugDrawFlags
+McduDebugDrawModel,colour,12,0000000c,4,MeReal *
+McduDebugDrawModel,geom,-64,ffffffc0,4,McdGeometryID
+McduDebugDrawModel,min,-44,ffffffd4,12,MeReal[3]
+McduDebugDrawSpace,it,-68,ffffffbc,8,McdSpaceModelIterator
+McduDebugDrawSpace,m,-72,ffffffb8,4,McdModelID.conflict
+McduDebugDrawSpace,geom,-76,ffffffb4,4,McdGeometryID
+McduDebugDrawSpace,tm,-80,ffffffb0,4,MeMatrix4Ptr
+McduDebugDrawSpace,min,-44,ffffffd4,12,MeReal[3]
+McduDebugDrawSpace,max,-60,ffffffc4,12,MeReal[3]
+McduDebugDrawSpace,space,4,00000004,4,McdSpaceID
+McduDebugDrawSpace,flags,8,00000008,4,McduDebugDrawFlags
+McduDebugDrawSpace,colour,12,0000000c,4,MeReal *

@@ -1,0 +1,67 @@
+# function,name,stackoff,hexoff,size,type
+KaFileCreate_1_0,parent,4,00000004,4,MeAssetDB *
+KaFileCreate_1_0,IDPool,8,00000008,4,MeIDPool *
+KaFileCreate_1_0,e,12,0000000c,4,PElement *
+KaFileCreate_1_0,asset,-24,ffffffe8,4,MeFAsset *
+MeFGeometryCreateFromFile_1_0,parent,4,00000004,4,MeFAsset *
+MeFGeometryCreateFromFile_1_0,e,8,00000008,4,PElement *
+MeFGeometryCreateFromFile_1_0,off,-60,ffffffc4,12,MeVector3
+MeFGeometryCreateFromFile_1_0,c,-68,ffffffbc,4,char *
+MeFGeometryCreateFromFile_1_0,d,-64,ffffffc0,4,char *
+MeFGeometryCreateFromFile_1_0,i,-72,ffffffb8,4,int
+MeFPrimitiveCreateFromFile_1_0,p,-20,ffffffec,4,MeFPrimitive *
+MeFPrimitiveCreateFromFile_1_0,source,-24,ffffffe8,4,PPrimitive *
+MeFPrimitiveCreateFromFile_1_0,name,-28,ffffffe4,4,char *
+MeFPrimitiveCreateFromFile_1_0,parent,4,00000004,4,MeFGeometry *
+MeFPrimitiveCreateFromFile_1_0,e,8,00000008,4,PElement *
+MeFModelCreateFromFile_1_0,name,-80,ffffffb0,4,char *
+MeFModelCreateFromFile_1_0,modelType,-84,ffffffac,4,MeFModelType
+MeFModelCreateFromFile_1_0,dynamics,-88,ffffffa8,4,PElementNode *
+MeFModelCreateFromFile_1_0,fg,-92,ffffffa4,4,MeFGeometry *
+MeFModelCreateFromFile_1_0,I,-76,ffffffb4,36,MeMatrix3
+MeFModelCreateFromFile_1_0,parent,4,00000004,4,MeFAsset *
+MeFModelCreateFromFile_1_0,e,8,00000008,4,PElement *
+MeFAssetPartCreateFromFile_1_0,off,-60,ffffffc4,12,MeVector3
+MeFAssetPartCreateFromFile_1_0,c,-68,ffffffbc,4,char *
+MeFAssetPartCreateFromFile_1_0,d,-64,ffffffc0,4,char *
+MeFAssetPartCreateFromFile_1_0,asset,4,00000004,4,MeFAsset *
+MeFAssetPartCreateFromFile_1_0,i,-72,ffffffb8,4,int
+MeFAssetPartCreateFromFile_1_0,e,8,00000008,4,PElement *
+MeFJointCreateFromFile_1_0,asset,4,00000004,4,MeFAsset *
+MeFJointCreateFromFile_1_0,e,8,00000008,4,PElement *
+MeFJointCreateFromFile_1_0,fj,-20,ffffffec,4,MeFJoint *
+MeFJointCreateFromFile_1_0,source,-24,ffffffe8,4,PJoint *
+MeFJointCreateFromFile_1_0,name,-28,ffffffe4,4,char *
+MeFJointCreateFromFile_1_0,part1,-32,ffffffe0,4,char *
+MeFJointCreateFromFile_1_0,fVar9,-52,ffffffcc,4,float
+Handle_Asset_1_0,parent,8,00000008,4,PElement *
+Handle_Asset_1_0,handlers,-220,ffffff24,192,MeXMLHandler[6]
+Handle_Asset_1_0,elem,4,00000004,4,MeXMLElement *
+Handle_KaFile_0_1,elem,4,00000004,4,MeXMLElement *
+Handle_KaFile_0_1,parent,8,00000008,4,PElement *
+Handle_KaFile_0_1,handlers,-76,ffffffb4,64,MeXMLHandler[2]
+AddVertex_1_0,elem,4,00000004,4,MeXMLElement *
+AddVertex_1_0,prim,8,00000008,4,void *
+AddVertex_1_0,parent,12,0000000c,4,void *
+Handle_GeometryPrimitive_1_0,elem,4,00000004,4,MeXMLElement *
+Handle_GeometryPrimitive_1_0,parent,8,00000008,4,PElement *
+Handle_GeometryPrimitive_1_0,handlers,-220,ffffff24,192,MeXMLHandler[6]
+Handle_Geometry_1_0,elem,4,00000004,4,MeXMLElement *
+Handle_Geometry_1_0,parent,8,00000008,4,PElement *
+Handle_Geometry_1_0,handlers,-92,ffffffa4,64,MeXMLHandler[2]
+Handle_Dynamics_1_0,parent,8,00000008,4,PElement *
+Handle_Dynamics_1_0,handlers,-316,fffffec4,288,MeXMLHandler[9]
+Handle_Dynamics_1_0,elem,4,00000004,4,MeXMLElement *
+Handle_Model_1_0,elem,4,00000004,4,MeXMLElement *
+Handle_Model_1_0,parent,8,00000008,4,PElement *
+Handle_Model_1_0,handlers,-92,ffffffa4,64,MeXMLHandler[2]
+Handle_Joint_1_0,elem,4,00000004,4,MeXMLElement *
+Handle_Joint_1_0,parent,8,00000008,4,PElement *
+Handle_Joint_1_0,handlers,-1884,fffff8a4,1856,MeXMLHandler[58]
+Handle_AssetPart_1_0,elem,4,00000004,4,MeXMLElement *
+Handle_AssetPart_1_0,parent,8,00000008,4,PElement *
+Handle_AssetPart_1_0,handlers,-92,ffffffa4,64,MeXMLHandler[2]
+Handle_NoCollision_1_0,elem,4,00000004,4,MeXMLElement *
+Handle_NoCollision_1_0,parent,8,00000008,4,PElement *
+Handle_NoCollision_1_0,handlers,-44,ffffffd4,32,MeXMLHandler[1]
+FreePrimitive,m,4,00000004,4,void *

@@ -1,0 +1,33 @@
+# function,name,stackoff,hexoff,size,type
+MeHashStringCompare,k1,4,00000004,4,void *
+MeHashStringCompare,k2,8,00000008,4,void *
+MeHashInsert,hashVal,-20,ffffffec,4,int
+MeHashInsert,key,4,00000004,4,void *
+MeHashInsert,datum,8,00000008,4,void *
+MeHashInsert,table,12,0000000c,4,MeHash *
+MeHashDelete,hashVal,-20,ffffffec,4,int
+MeHashDelete,key,4,00000004,4,void *
+MeHashDelete,table,8,00000008,4,MeHash *
+MeHashGetDatum,i,4,00000004,4,MeHashIterator *
+MeHashString,size,8,00000008,4,int
+MeHashString,string,4,00000004,4,void *
+MeHashInt,i,4,00000004,4,void *
+MeHashInt,size,8,00000008,4,int
+MeHashIntCompare,k1,4,00000004,4,void *
+MeHashIntCompare,k2,8,00000008,4,void *
+MeHashCreate,size,4,00000004,4,int
+MeHashDestroy,table,4,00000004,4,MeHash *
+MeHashReset,table,4,00000004,4,MeHash *
+MeHashSetHashFunc,table,4,00000004,4,MeHash *
+MeHashSetHashFunc,hash,8,00000008,4,MeHashFunc
+MeHashSetKeyCompareFunc,table,4,00000004,4,MeHash *
+MeHashSetKeyCompareFunc,compare,8,00000008,4,MeHashCompareFunc
+MeHashSetKeyFreeFunc,table,4,00000004,4,MeHash *
+MeHashSetKeyFreeFunc,freeKey,8,00000008,4,MeHashFreeFunc
+MeHashSetDatumFreeFunc,table,4,00000004,4,MeHash *
+MeHashSetDatumFreeFunc,freeDatum,8,00000008,4,MeHashFreeFunc
+MeHashLookup,key,4,00000004,4,void *
+MeHashLookup,table,8,00000008,4,MeHash *
+MeHashPopulation,table,4,00000004,4,MeHash *
+MeHashInitIterator,i,4,00000004,4,MeHashIterator *
+MeHashInitIterator,table,8,00000008,4,MeHash *

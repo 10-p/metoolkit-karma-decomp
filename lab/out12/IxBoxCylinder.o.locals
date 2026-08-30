@@ -1,0 +1,139 @@
+# function,name,stackoff,hexoff,size,type
+BoxCylIntersect,local_214,-532,fffffdec,4,float
+BoxCylIntersect,local_20c,-524,fffffdf4,12,lsVec3
+BoxCylIntersect,outList,4,00000004,4,lsVec3 * *
+BoxCylIntersect,tAB,8,00000008,4,lsTransform *
+BoxCylIntersect,inRA,12,0000000c,4,lsVec3 *
+BoxCylIntersect,inRCyl,16,00000010,4,MeReal
+BoxCylIntersect,inHHCyl,20,00000014,4,MeReal
+BoxCylIntersect,nPara,24,00000018,4,lsVec3 *
+BoxCylIntersect,nPerp,28,0000001c,4,lsVec3 *
+BoxCylIntersect,cylAxis,32,00000020,4,lsVec3 *
+BoxCylIntersect,scale,36,00000024,4,MeReal
+BoxCylIntersect,tBA,-92,ffffffa4,64,lsTransform
+BoxCylIntersect,bVertList,-396,fffffe74,288,lsVec3[24]
+BoxCylIntersect,bVerts,-624,fffffd90,4,lsVec3 *
+BoxCylIntersect,a0,-108,ffffff94,12,lsVec3
+BoxCylIntersect,a1,-412,fffffe64,12,lsVec3
+BoxCylIntersect,a2,-428,fffffe54,12,lsVec3
+BoxCylIntersect,invA1,-444,fffffe44,12,lsVec3
+BoxCylIntersect,invA2,-460,fffffe34,12,lsVec3
+BoxCylIntersect,d0,-476,fffffe24,12,lsVec3
+BoxCylIntersect,d1,-492,fffffe14,12,lsVec3
+BoxCylIntersect,d2,-508,fffffe04,12,lsVec3
+BoxCylIntersect,tIn,-576,fffffdc0,4,MeReal
+BoxCylIntersect,tOut,-580,fffffdbc,4,MeReal
+BoxCylIntersect,tIn_1,-584,fffffdb8,4,MeReal
+BoxCylIntersect,tOut_1,-588,fffffdb4,4,MeReal
+BoxCylIntersect,tIn_2,-592,fffffdb0,4,MeReal
+BoxCylIntersect,tOut_2,-596,fffffdac,4,MeReal
+BoxCylIntersect,tIn_3,-600,fffffda8,4,MeReal
+BoxCylIntersect,tOut_3,-604,fffffda4,4,MeReal
+BoxCylIntersect,tIn_4,-608,fffffda0,4,MeReal
+BoxCylIntersect,tOut_4,-612,fffffd9c,4,MeReal
+BoxCylIntersect,tIn_5,-616,fffffd98,4,MeReal
+BoxCylIntersect,tOut_5,-620,fffffd94,4,MeReal
+BoxCylIntersect,tIn_6,-628,fffffd8c,4,MeReal
+BoxCylIntersect,tOut_6,-632,fffffd88,4,MeReal
+BoxCylIntersect,tIn_7,-636,fffffd84,4,MeReal
+BoxCylIntersect,tOut_7,-640,fffffd80,4,MeReal
+BoxCylIntersect,tIn_8,-644,fffffd7c,4,MeReal
+BoxCylIntersect,tOut_8,-648,fffffd78,4,MeReal
+BoxCylIntersect,tIn_9,-652,fffffd74,4,MeReal
+BoxCylIntersect,tOut_9,-656,fffffd70,4,MeReal
+BoxCylIntersect,tIn_10,-660,fffffd6c,4,MeReal
+BoxCylIntersect,tOut_10,-664,fffffd68,4,MeReal
+BoxCylIntersect,tIn_11,-668,fffffd64,4,MeReal
+BoxCylIntersect,tOut_11,-672,fffffd60,4,MeReal
+BoxCylIntersect,tIn_12,-676,fffffd5c,4,MeReal
+BoxCylIntersect,tOut_12,-680,fffffd58,4,MeReal
+BoxCylIntersect,tIn_13,-684,fffffd54,4,MeReal
+BoxCylIntersect,tOut_13,-688,fffffd50,4,MeReal
+BoxCylIntersect,tIn_14,-692,fffffd4c,4,MeReal
+BoxCylIntersect,tOut_14,-696,fffffd48,4,MeReal
+BoxCylIntersect,tIn_15,-700,fffffd44,4,MeReal
+BoxCylIntersect,tOut_15,-704,fffffd40,4,MeReal
+BoxCylIntersect,tIn_16,-708,fffffd3c,4,MeReal
+BoxCylIntersect,tOut_16,-712,fffffd38,4,MeReal
+BoxCylIntersect,tIn_17,-716,fffffd34,4,MeReal
+BoxCylIntersect,tOut_17,-720,fffffd30,4,MeReal
+BoxCylIntersect,local_23c,-572,fffffdc4,12,lsVec3
+BoxCylIntersect,local_22c,-556,fffffdd4,4,float
+BoxCylIntersect,local_228,-552,fffffdd8,4,float
+BoxCylIntersect,local_224,-548,fffffddc,4,float
+BoxCylIntersect,local_21c,-540,fffffde4,4,float
+BoxCylIntersect,local_218,-536,fffffde8,4,float
+OverlapOBBCyl,inHHCyl,32,00000020,4,MeReal
+OverlapOBBCyl,inT12,36,00000024,4,lsTransform *
+OverlapOBBCyl,scale,40,00000028,4,MeReal
+OverlapOBBCyl,i,-336,fffffeb0,4,int
+OverlapOBBCyl,apart,-337,fffffeaf,1,bool
+OverlapOBBCyl,maxSeparation,-344,fffffea8,4,MeReal
+OverlapOBBCyl,normalSign,-348,fffffea4,4,MeReal
+OverlapOBBCyl,normInfo,-364,fffffe94,1,MeU8
+OverlapOBBCyl,sr,-44,ffffffd4,12,lsVec3
+OverlapOBBCyl,d,-60,ffffffc4,12,lsVec3
+OverlapOBBCyl,d2,-76,ffffffb4,12,lsVec3
+OverlapOBBCyl,PN,-368,fffffe90,4,MeReal
+OverlapOBBCyl,nCW,-92,ffffffa4,12,lsVec3
+OverlapOBBCyl,nBExCA,-140,ffffff74,36,lsVec3[3]
+OverlapOBBCyl,nBExET,-188,ffffff44,36,lsVec3[3]
+OverlapOBBCyl,nParaN,-236,ffffff14,36,lsVec3[3]
+OverlapOBBCyl,nPerpN,-284,fffffee4,36,lsVec3[3]
+OverlapOBBCyl,nPara,-300,fffffed4,12,lsVec3
+OverlapOBBCyl,nPerp,-316,fffffec4,12,lsVec3
+OverlapOBBCyl,vCross,-332,fffffeb4,12,lsVec3
+OverlapOBBCyl,local_1b4,-436,fffffe4c,4,lsVec3 *
+OverlapOBBCyl,local_1b0,-432,fffffe50,4,lsVec3 *
+OverlapOBBCyl,local_188,-392,fffffe78,4,float
+OverlapOBBCyl,outSep,4,00000004,4,MeReal *
+OverlapOBBCyl,outN,8,00000008,4,lsVec3 *
+OverlapOBBCyl,outPN,12,0000000c,4,MeReal *
+OverlapOBBCyl,outPos,16,00000010,4,lsVec3 * *
+OverlapOBBCyl,inEps,20,00000014,4,MeReal
+OverlapOBBCyl,inROBB,24,00000018,4,lsVec3 *
+OverlapOBBCyl,inRCyl,28,0000001c,4,MeReal
+McdBoxCylinderIntersect,p,4,00000004,4,McdModelPair *
+McdBoxCylinderIntersect,result,8,00000008,4,McdIntersectResult *
+McdBoxCylinderIntersect,eps,-700,fffffd44,4,MeReal
+McdBoxCylinderIntersect,geometry1,-704,fffffd40,4,McdBoxID
+McdBoxCylinderIntersect,fwk,-708,fffffd3c,4,McdFramework *
+McdBoxCylinderIntersect,rA,-712,fffffd38,4,lsVec3 *
+McdBoxCylinderIntersect,rCyl,-716,fffffd34,4,MeReal
+McdBoxCylinderIntersect,tAB,-92,ffffffa4,64,lsTransform
+McdBoxCylinderIntersect,footprint,-684,fffffd54,576,lsVec3[48]
+McdBoxCylinderIntersect,verts,-688,fffffd50,4,lsVec3 *
+McdBoxCylinderIntersect,separation,-696,fffffd48,4,MeReal
+McdBoxCylinderIntersect,normal,-108,ffffff94,12,lsVec3
+McdBoxCylinderIntersect,PN,-692,fffffd4c,4,MeReal
+McdBoxCylinderIntersect,dimA,-718,fffffd32,2,MeI16
+McdBoxCylinderIntersect,dimB,-738,fffffd1e,2,MeI16
+McdBoxCylinderSafeTime,geometry1,-68,ffffffbc,4,McdBoxID
+McdBoxCylinderSafeTime,V0,-72,ffffffb8,4,lsVec3 *
+McdBoxCylinderSafeTime,V1,-76,ffffffb4,4,lsVec3 *
+McdBoxCylinderSafeTime,radCyl2,-80,ffffffb0,4,MeReal
+McdBoxCylinderSafeTime,ext2,-44,ffffffd4,12,MeReal[3]
+McdBoxCylinderSafeTime,T,-64,ffffffc0,4,MeReal
+McdBoxCylinderSafeTime,P,-60,ffffffc4,12,lsVec3
+McdBoxCylinderSafeTime,p,4,00000004,4,McdModelPair *
+McdBoxCylinderSafeTime,maxTime,8,00000008,4,MeReal
+McdBoxCylinderSafeTime,result,12,0000000c,4,McdSafeTimeResult *
+McdBoxCylinderRegisterInteraction,frame,4,00000004,4,McdFramework *
+McdBoxCylinderRegisterInteraction,interactions,-44,ffffffd4,28,McdInteractions
+McdVanillaSegmentCubeIntersect,orig,12,0000000c,4,lsVec3 *
+McdVanillaSegmentCubeIntersect,disp,16,00000010,4,lsVec3 *
+McdVanillaSegmentCubeIntersect,invDisp,20,00000014,4,lsVec3 *
+McdVanillaSegmentCubeIntersect,inR,24,00000018,4,lsVec3 *
+McdVanillaSegmentCubeIntersect,eps,28,0000001c,4,MeReal
+McdVanillaSegmentCubeIntersect,tInMax,4,00000004,4,MeReal *
+McdVanillaSegmentCubeIntersect,tOutMin,8,00000008,4,MeReal *
+McdVanillaSegmentCylinderIntersect,tExitNumZ,-36,ffffffdc,4,MeReal
+McdVanillaSegmentCylinderIntersect,tInMax,4,00000004,4,MeReal *
+McdVanillaSegmentCylinderIntersect,tOutMin,8,00000008,4,MeReal *
+McdVanillaSegmentCylinderIntersect,orig,12,0000000c,4,lsVec3 *
+McdVanillaSegmentCylinderIntersect,disp,16,00000010,4,lsVec3 *
+McdVanillaSegmentCylinderIntersect,inR,20,00000014,4,MeReal
+McdVanillaSegmentCylinderIntersect,inHH,24,00000018,4,MeReal
+McdVanillaSegmentCylinderIntersect,scale,28,0000001c,4,MeReal
+McdVanillaSegmentCylinderIntersect,tEnterNum,-28,ffffffe4,4,MeReal
+McdVanillaSegmentCylinderIntersect,tExitNum,-32,ffffffe0,4,MeReal

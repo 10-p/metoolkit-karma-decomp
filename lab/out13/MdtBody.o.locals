@@ -1,0 +1,168 @@
+# function,name,stackoff,hexoff,size,type
+MdtBodyReset,b,4,00000004,4,MdtBodyID
+MdtBodyDisable,b,4,00000004,4,MdtBodyID
+MdtBodyIsEnabled,b,4,00000004,4,MdtBodyID
+MdtBodyCreate,w,4,00000004,4,MdtWorldID
+MdtBodyDestroy,b,4,00000004,4,MdtBodyID
+MdtBodyCopy,b,4,00000004,4,MdtBodyID
+MdtBodyCopy,w,8,00000008,4,MdtWorldID
+MdtBodyGetWorld,b,4,00000004,4,MdtBodyID
+MdtBodyGetPartition,b,4,00000004,4,MdtBodyID
+MdtBodyGetTransformPtr,b,4,00000004,4,MdtBodyID
+MdtBodyGetTransform,b,4,00000004,4,MdtBodyID
+MdtBodyGetTransform,m,8,00000008,4,MeVector4 *
+MdtBodyGetUserData,b,4,00000004,4,MdtBodyID
+MdtBodyGetMass,b,4,00000004,4,MdtBodyID
+MdtBodyGetInertiaTensor,b,4,00000004,4,MdtBodyID
+MdtBodyGetInertiaTensor,i,8,00000008,4,MeVector3 *
+MdtBodyGetPosition,b,4,00000004,4,MdtBodyID
+MdtBodyGetPosition,p,8,00000008,4,MeReal *
+MdtBodyGetQuaternion,b,4,00000004,4,MdtBodyID
+MdtBodyGetQuaternion,q,8,00000008,4,MeReal *
+MdtBodyGetOrientation,b,4,00000004,4,MdtBodyID
+MdtBodyGetOrientation,R,8,00000008,4,MeVector3 *
+MdtBodyGetLinearVelocity,b,4,00000004,4,MdtBodyID
+MdtBodyGetLinearVelocity,v,8,00000008,4,MeReal *
+MdtBodyGetLinearVelocityPtr,b,4,00000004,4,MdtBodyID
+MdtBodyGetAngularVelocity,b,4,00000004,4,MdtBodyID
+MdtBodyGetAngularVelocity,v,8,00000008,4,MeReal *
+MdtBodyGetAngularVelocityPtr,b,4,00000004,4,MdtBodyID
+MdtBodyGetVelocityAtPoint,tmp,-28,ffffffe4,12,MeVector3
+MdtBodyGetVelocityAtPoint,toP,-44,ffffffd4,12,MeVector3
+MdtBodyGetVelocityAtPoint,b,4,00000004,4,MdtBodyID
+MdtBodyGetVelocityAtPoint,p,8,00000008,4,MeReal *
+MdtBodyGetVelocityAtPoint,v,12,0000000c,4,MeReal *
+MdtBodyGetLinearAcceleration,b,4,00000004,4,MdtBodyID
+MdtBodyGetLinearAcceleration,v,8,00000008,4,MeReal *
+MdtBodyGetAngularAcceleration,b,4,00000004,4,MdtBodyID
+MdtBodyGetAngularAcceleration,v,8,00000008,4,MeReal *
+MdtBodyGetFastSpinAxis,v,8,00000008,4,MeReal *
+MdtBodyGetFastSpinAxis,b,4,00000004,4,MdtBodyID
+MdtBodyGetLinearVelocityDamping,b,4,00000004,4,MdtBodyID
+MdtBodyGetAngularVelocityDamping,b,4,00000004,4,MdtBodyID
+MdtBodyGetForce,b,4,00000004,4,MdtBodyID
+MdtBodyGetForce,v,8,00000008,4,MeReal *
+MdtBodyGetTorque,b,4,00000004,4,MdtBodyID
+MdtBodyGetTorque,v,8,00000008,4,MeReal *
+MdtBodyGetKineticEnergy,b,4,00000004,4,MdtBodyID
+MdtBodyGetFirst,w,4,00000004,4,MdtWorldID
+MdtBodyGetNext,b,4,00000004,4,MdtBodyID
+MdtBodyGetEnabledTime,b,4,00000004,4,MdtBodyID
+MdtBodyGetCenterOfMassRelativeTransform,b,4,00000004,4,MdtBodyID
+MdtBodyGetCenterOfMassRelativeTransform,t,8,00000008,4,MeVector4 *
+MdtBodyGetCenterOfMassRelativePosition,b,4,00000004,4,MdtBodyID
+MdtBodyGetCenterOfMassRelativePosition,pos,8,00000008,4,MeReal *
+MdtBodyGetCenterOfMassPosition,pos,8,00000008,4,MeReal *
+MdtBodyGetCenterOfMassPosition,b,4,00000004,4,MdtBodyID
+MdtBodyGetCenterOfMassTransformPtr,b,4,00000004,4,MdtBodyID
+MdtBodyGetSafeTime,b,4,00000004,4,MdtBodyID
+MdtBodyGetSortKey,b,4,00000004,4,MdtBodyID
+MdtBodySetUserData,b,4,00000004,4,MdtBodyID
+MdtBodySetUserData,d,8,00000008,4,void *
+MdtBodySetTransform,b,4,00000004,4,MdtBodyID
+MdtBodySetTransform,tm,8,00000008,4,MeReal[4] *
+MdtBodySetPosition,b,4,00000004,4,MdtBodyID
+MdtBodySetPosition,x,8,00000008,4,MeReal
+MdtBodySetPosition,y,12,0000000c,4,MeReal
+MdtBodySetPosition,z,16,00000010,4,MeReal
+MdtBodySetOrientation,b,4,00000004,4,MdtBodyID
+MdtBodySetOrientation,R,8,00000008,4,MeReal[3] *
+MdtBodySetQuaternion,b,4,00000004,4,MdtBodyID
+MdtBodySetQuaternion,qw,8,00000008,4,MeReal
+MdtBodySetQuaternion,qx,12,0000000c,4,MeReal
+MdtBodySetQuaternion,qy,16,00000010,4,MeReal
+MdtBodySetQuaternion,qz,20,00000014,4,MeReal
+MdtBodySetQuaternion,bodyq,-28,ffffffe4,16,MeVector4
+MdtBodySetQuaternion,q1sq,-32,ffffffe0,4,MeReal
+MdtBodySetQuaternion,q2sq,-36,ffffffdc,4,MeReal
+MdtBodySetQuaternion,q3sq,-40,ffffffd8,4,MeReal
+MdtBodySetQuaternion,q0q2,-44,ffffffd4,4,MeReal
+MdtBodySetLinearVelocity,b,4,00000004,4,MdtBodyID
+MdtBodySetLinearVelocity,dx,8,00000008,4,MeReal
+MdtBodySetLinearVelocity,dy,12,0000000c,4,MeReal
+MdtBodySetLinearVelocity,dz,16,00000010,4,MeReal
+MdtBodySetAngularVelocity,b,4,00000004,4,MdtBodyID
+MdtBodySetAngularVelocity,wx,8,00000008,4,MeReal
+MdtBodySetAngularVelocity,wy,12,0000000c,4,MeReal
+MdtBodySetAngularVelocity,wz,16,00000010,4,MeReal
+MdtBodySetLinearVelocityDamping,b,4,00000004,4,MdtBodyID
+MdtBodySetLinearVelocityDamping,d,8,00000008,4,MeReal
+MdtBodySetAngularVelocityDamping,b,4,00000004,4,MdtBodyID
+MdtBodySetAngularVelocityDamping,d,8,00000008,4,MeReal
+MdtBodySetFastSpinAxis,x,8,00000008,4,MeReal
+MdtBodySetFastSpinAxis,y,12,0000000c,4,MeReal
+MdtBodySetFastSpinAxis,z,16,00000010,4,MeReal
+MdtBodySetFastSpinAxis,b,4,00000004,4,MdtBodyID
+MdtBodySetNoFastSpinAxis,b,4,00000004,4,MdtBodyID
+MdtBodySetMass,b,4,00000004,4,MdtBodyID
+MdtBodySetMass,mass,8,00000008,4,MeReal
+MdtBodySetInertiaTensor,b,4,00000004,4,MdtBodyID
+MdtBodySetInertiaTensor,i,8,00000008,4,MeReal[3] *
+MdtBodySetInertiaTensor,clamped,-60,ffffffc4,36,MeMatrix3
+MdtBodySetSphericalInertiaTensor,b,4,00000004,4,MdtBodyID
+MdtBodySetSphericalInertiaTensor,i,8,00000008,4,MeReal
+MdtBodySetSphericalInertiaTensor,moi,-60,ffffffc4,36,MeMatrix3
+MdtBodySetCenterOfMassRelativePosition,b,4,00000004,4,MdtBodyID
+MdtBodySetCenterOfMassRelativePosition,pos,8,00000008,4,MeReal *
+MdtBodySetCenterOfMassPosition,tmp,-28,ffffffe4,12,MeVector3
+MdtBodySetCenterOfMassPosition,tmp_1,-44,ffffffd4,12,MeVector3
+MdtBodySetCenterOfMassPosition,b,4,00000004,4,MdtBodyID
+MdtBodySetCenterOfMassPosition,pos,8,00000008,4,MeReal *
+MdtBodySetCenterOfMassRelativeTransform,b,4,00000004,4,MdtBodyID
+MdtBodySetCenterOfMassRelativeTransform,t,8,00000008,4,MeReal[4] *
+MdtBodySetSafeTime,b,4,00000004,4,MdtBodyID
+MdtBodySetSafeTime,t,8,00000008,4,MeReal
+MdtBodySetSortKey,b,4,00000004,4,MdtBodyID
+MdtBodySetSortKey,key,8,00000008,4,MeI32
+MdtBodyEnable,b,4,00000004,4,MdtBodyID
+MdtBodyResetForces,b,4,00000004,4,MdtBodyID
+MdtBodyResetImpulses,b,4,00000004,4,MdtBodyID
+MdtBodyForAllConstraints,b,4,00000004,4,MdtBodyID
+MdtBodyForAllConstraints,cb,8,00000008,4,MdtConstraintIteratorCBPtr
+MdtBodyForAllConstraints,ccbdata,12,0000000c,4,void *
+MdtBodyDisableConstraints,b,4,00000004,4,MdtBodyID
+MdtBodyDestroyConstraints,b,4,00000004,4,MdtBodyID
+MdtBodyDisableContacts,b,4,00000004,4,MdtBodyID
+MdtBodyDestroyContacts,b,4,00000004,4,MdtBodyID
+MdtBodyAddForce,fy,12,0000000c,4,MeReal
+MdtBodyAddForce,fz,16,00000010,4,MeReal
+MdtBodyAddForce,b,4,00000004,4,MdtBodyID
+MdtBodyAddForce,fx,8,00000008,4,MeReal
+MdtBodyAddForceAtPosition,b,4,00000004,4,MdtBodyID
+MdtBodyAddForceAtPosition,d,-28,ffffffe4,12,MeVector3
+MdtBodyAddForceAtPosition,f,-44,ffffffd4,12,MeVector3
+MdtBodyAddForceAtPosition,fx,8,00000008,4,MeReal
+MdtBodyAddForceAtPosition,fy,12,0000000c,4,MeReal
+MdtBodyAddForceAtPosition,t,-60,ffffffc4,12,MeVector3
+MdtBodyAddForceAtPosition,fz,16,00000010,4,MeReal
+MdtBodyAddForceAtPosition,px,20,00000014,4,MeReal
+MdtBodyAddForceAtPosition,py,24,00000018,4,MeReal
+MdtBodyAddForceAtPosition,pz,28,0000001c,4,MeReal
+MdtBodyAddTorque,b,4,00000004,4,MdtBodyID
+MdtBodyAddTorque,tx,8,00000008,4,MeReal
+MdtBodyAddTorque,ty,12,0000000c,4,MeReal
+MdtBodyAddTorque,tz,16,00000010,4,MeReal
+MdtBodyAddImpulse,iz,16,00000010,4,MeReal
+MdtBodyAddImpulse,b,4,00000004,4,MdtBodyID
+MdtBodyAddImpulse,ix,8,00000008,4,MeReal
+MdtBodyAddImpulse,iy,12,0000000c,4,MeReal
+MdtBodyAddImpulseAtPosition,d,-28,ffffffe4,12,MeVector3
+MdtBodyAddImpulseAtPosition,i,-44,ffffffd4,12,MeVector3
+MdtBodyAddImpulseAtPosition,t,-60,ffffffc4,12,MeVector3
+MdtBodyAddImpulseAtPosition,b,4,00000004,4,MdtBodyID
+MdtBodyAddImpulseAtPosition,ix,8,00000008,4,MeReal
+MdtBodyAddImpulseAtPosition,iy,12,0000000c,4,MeReal
+MdtBodyAddImpulseAtPosition,iz,16,00000010,4,MeReal
+MdtBodyAddImpulseAtPosition,px,20,00000014,4,MeReal
+MdtBodyAddImpulseAtPosition,py,24,00000018,4,MeReal
+MdtBodyAddImpulseAtPosition,pz,28,0000001c,4,MeReal
+MdtBodyIsMovingTest,b,4,00000004,4,MdtBodyID
+MdtBodyIsMovingTest,params,8,00000008,4,MdtPartitionParams *
+MdtBodyEnableNonSphericalInertia,b,4,00000004,4,MdtBodyID
+MdtBodyDisableNonSphericalInertia,b,4,00000004,4,MdtBodyID
+MdtBodyNonSphericalInertiaIsEnabled,b,4,00000004,4,MdtBodyID
+MdtBodyEnableCoriolisForce,b,4,00000004,4,MdtBodyID
+MdtBodyDisableCoriolisForce,b,4,00000004,4,MdtBodyID
+MdtBodyCoriolisForceIsEnabled,b,4,00000004,4,MdtBodyID
+MeVector3Normalize,v,4,00000004,4,MeReal *
+MeVector3Normalize,local_8,-8,fffffff8,4,float

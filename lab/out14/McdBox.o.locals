@@ -1,0 +1,52 @@
+# function,name,stackoff,hexoff,size,type
+McdBoxRegisterType,frame,4,00000004,4,McdFramework *
+McdBoxCreate,dz,16,00000010,4,MeReal
+McdBoxCreate,frame,4,00000004,4,McdFramework *
+McdBoxCreate,dx,8,00000008,4,MeReal
+McdBoxCreate,dy,12,0000000c,4,MeReal
+McdBoxSetDimensions,g,4,00000004,4,McdGeometryID
+McdBoxSetDimensions,dx,8,00000008,4,MeReal
+McdBoxSetDimensions,dy,12,0000000c,4,MeReal
+McdBoxSetDimensions,dz,16,00000010,4,MeReal
+McdBoxGetDimensions,g,4,00000004,4,McdGeometryID
+McdBoxGetDimensions,dx,8,00000008,4,MeReal *
+McdBoxGetDimensions,dy,12,0000000c,4,MeReal *
+McdBoxGetDimensions,dz,16,00000010,4,MeReal *
+McdBoxGetBSphereRadius,g,4,00000004,4,McdGeometryID
+McdBoxGetRadii,g,4,00000004,4,McdBoxID
+McdBoxDestroy,g,4,00000004,4,McdGeometry *
+McdBoxUpdateAABB,rFit,-44,ffffffd4,12,MeReal[3]
+McdBoxUpdateAABB,min,-60,ffffffc4,12,MeReal[3]
+McdBoxUpdateAABB,max,-76,ffffffb4,12,MeReal[3]
+McdBoxUpdateAABB,ins,4,00000004,4,McdGeometryInstanceID
+McdBoxUpdateAABB,finalTM,8,00000008,4,MeVector4 *
+McdBoxUpdateAABB,tight,12,0000000c,4,MeBool
+McdBoxGetXYAABB,g,4,00000004,4,McdGeometry *
+McdBoxGetXYAABB,tm,8,00000008,4,lsTransform *
+McdBoxGetXYAABB,bounds,12,0000000c,4,MeReal *
+McdBoxGetBSphere,g,4,00000004,4,McdGeometry *
+McdBoxGetBSphere,center,8,00000008,4,MeReal *
+McdBoxGetBSphere,radius,12,0000000c,4,MeReal *
+localSignZ,x,4,00000004,4,MeReal
+McdBoxMaximumPoint,n,-44,ffffffd4,12,lsVec3
+McdBoxMaximumPoint,sR,-60,ffffffc4,12,lsVec3
+McdBoxMaximumPoint,ins,4,00000004,4,McdGeometryInstanceID
+McdBoxMaximumPoint,inDir,8,00000008,4,MeReal *
+McdBoxMaximumPoint,outPoint,12,0000000c,4,MeReal *
+McdBoxGetMassProperties,g,4,00000004,4,McdGeometry *
+McdBoxGetMassProperties,relTM,8,00000008,4,MeVector4 *
+McdBoxGetMassProperties,m,12,0000000c,4,MeVector3 *
+McdBoxGetMassProperties,volume,16,00000010,4,MeReal *
+McdBoxMaximumPointLocal,g,4,00000004,4,McdBoxID
+McdBoxMaximumPointLocal,inDir,8,00000008,4,MeReal *
+McdBoxMaximumPointLocal,outPoint,12,0000000c,4,MeReal *
+McdBoxGetXYAABB,g,4,00000004,4,McdBoxID
+McdBoxGetXYAABB,_tm,8,00000008,4,MeVector4 *
+McdBoxGetXYAABB,bounds,12,0000000c,4,MeReal *
+McdBoxDebugDraw,rads,-44,ffffffd4,12,MeReal[3]
+McdBoxDebugDraw,wv1,-60,ffffffc4,12,MeReal[3]
+McdBoxDebugDraw,wv2,-76,ffffffb4,12,MeReal[3]
+McdBoxDebugDraw,lv,-92,ffffffa4,12,MeReal[3]
+McdBoxDebugDraw,geom,4,00000004,4,McdGeometryID
+McdBoxDebugDraw,tm,8,00000008,4,MeReal[4] *
+McdBoxDebugDraw,colour,12,0000000c,4,MeReal *

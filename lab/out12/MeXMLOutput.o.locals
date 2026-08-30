@@ -1,0 +1,20 @@
+# function,name,stackoff,hexoff,size,type
+MeXMLWriteElement,buffer,-1052,fffffbe4,1024,char[1024]
+MeXMLWriteElement,op,4,00000004,4,MeXMLOutput *
+MeXMLWriteElement,parent,8,00000008,4,int
+MeXMLWriteElement,tag,12,0000000c,4,char *
+MeXMLWritePCDATA,buffer,-1052,fffffbe4,1024,char[1024]
+MeXMLWritePCDATA,op,4,00000004,4,MeXMLOutput *
+MeXMLWritePCDATA,format,8,00000008,4,char *
+MeXMLWriteComment,c,8,00000008,4,char *
+MeXMLWriteComment,buffer,-4124,ffffefe4,4096,char[4096]
+MeXMLWriteComment,op,4,00000004,4,MeXMLOutput *
+pushTag,op,4,00000004,4,MeXMLOutput *
+pushTag,tag,8,00000008,4,char *
+pushTag,buffer,-1052,fffffbe4,1024,char[1024]
+closeTag,op,4,00000004,4,MeXMLOutput *
+closeTag,uVar3,-36,ffffffdc,4,uint
+closeTag,p_Var4,-32,ffffffe0,4,MeStream
+newLine,op,4,00000004,4,MeXMLOutput *
+MeXMLOutputCreate,stream,4,00000004,4,MeStream
+MeXMLOutputDestroy,op,4,00000004,4,MeXMLOutput *

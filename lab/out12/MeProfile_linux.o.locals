@@ -1,0 +1,7 @@
+# function,name,stackoff,hexoff,size,type
+MeProfileGetTimerValue,result,4,00000004,4,MeProfileTimerResult *
+MeProfileStartHardwareTimer,mode,4,00000004,4,MeProfileTimerMode *
+MeProfileCreateHardwareTimer,mode,4,00000004,16,MeProfileTimerMode
+GetOutputInfo,start,-44,ffffffd4,24,MeProfileTimerResult
+GetOutputInfo,finish,-76,ffffffb4,24,MeProfileTimerResult
+GetOutputInfo,t,-84,ffffffac,8,timeval

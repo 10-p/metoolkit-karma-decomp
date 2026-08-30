@@ -1,0 +1,39 @@
+# function,name,stackoff,hexoff,size,type
+MeStreamOpen,filename,4,00000004,4,char *
+MeStreamOpen,mode,8,00000008,4,MeOpenMode_enum
+MeStreamOpenWithSearch,filename,4,00000004,4,char *
+MeStreamOpenWithSearch,mode,8,00000008,4,MeOpenMode_enum
+MeStreamOpenAsMemBuffer,initialSize,4,00000004,4,uint
+MeStreamCreateFromMemBuffer,bufSize,12,0000000c,4,uint
+MeStreamCreateFromMemBuffer,buffer,4,00000004,4,char *
+MeStreamCreateFromMemBuffer,bufLength,8,00000008,4,uint
+MeStreamMemBufferFreeSlackSpace,stream,4,00000004,4,MeStream
+MeStreamMemBufferUseConservativeGrowth,stream,4,00000004,4,MeStream
+MeStreamMemBufferUseConservativeGrowth,bConsGrowth,8,00000008,4,MeBool
+MeStreamClose,stream,4,00000004,4,MeStream
+MeStreamRead,local_34,-52,ffffffcc,4,size_t
+MeStreamRead,buffer,4,00000004,4,void *
+MeStreamRead,size,8,00000008,4,size_t
+MeStreamRead,count,12,0000000c,4,size_t
+MeStreamRead,stream,16,00000010,4,MeStream
+MeStreamRead,__cw,-22,ffffffea,2,ushort
+MeStreamRead,__cwtmp,-24,ffffffe8,2,ushort
+MeStreamReadLine,string,4,00000004,4,char *
+MeStreamReadLine,n,8,00000008,4,int
+MeStreamReadLine,stream,12,0000000c,4,MeStream
+MeStreamReadLine,string_local,-20,ffffffec,4,char *
+MeStreamWrite,newbufsize,-28,ffffffe4,4,uint
+MeStreamWrite,buffer_local,-20,ffffffec,4,void *
+MeStreamWrite,count_local,-24,ffffffe8,4,size_t
+MeStreamWrite,buffer,4,00000004,4,void *
+MeStreamWrite,size,8,00000008,4,size_t
+MeStreamWrite,count,12,0000000c,4,size_t
+MeStreamWrite,stream,16,00000010,4,MeStream
+MeStreamRewind,stream,4,00000004,4,MeStream
+MeStreamOpenPrefixed,filename,4,00000004,4,char *
+MeStreamOpenPrefixed,mode,8,00000008,4,MeOpenMode_enum
+MeStreamOpenPrefixed,allPrefixes,12,0000000c,4,uint
+MeStreamOpenPrefixed,s,-4128,ffffefe0,4,MeStream
+MeStreamOpenPrefixed,m,-4132,ffffefdc,4,char *
+MeStreamOpenPrefixed,fullname,-4124,ffffefe4,4096,char[4096]
+MeStreamOpenPrefixed,prefixlen,-4136,ffffefd8,4,uint

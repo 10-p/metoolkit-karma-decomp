@@ -1,0 +1,45 @@
+# function,name,stackoff,hexoff,size,type
+MeCommandLineOptionsGetPos,found,-20,ffffffec,4,MeBool
+MeCommandLineOptionsGetPos,options,4,00000004,4,MeCommandLineOptions *
+MeCommandLineOptionsGetPos,arg,8,00000008,4,char *
+MeCommandLineOptionsGetNumeric,newargc_2,-44,ffffffd4,4,int
+MeCommandLineOptionsGetNumeric,checker,-32,ffffffe0,4,int
+MeCommandLineOptionsGetNumeric,newargc,-48,ffffffd0,4,int
+MeCommandLineOptionsGetNumeric,options,4,00000004,4,MeCommandLineOptions *
+MeCommandLineOptionsGetNumeric,arg,8,00000008,4,char *
+MeCommandLineOptionsGetNumeric,eats,-28,ffffffe4,8,int[2]
+MeCommandLineOptionsGetNumeric,eat,12,0000000c,4,MeBool
+MeCommandLineOptionsGetNumeric,newargc_1,-40,ffffffd8,4,int
+MeCommandLineOptionsGetFloat,options,4,00000004,4,MeCommandLineOptions *
+MeCommandLineOptionsGetFloat,arg,8,00000008,4,char *
+MeCommandLineOptionsGetFloat,checker,-32,ffffffe0,4,int
+MeCommandLineOptionsGetFloat,eat,12,0000000c,4,MeBool
+MeCommandLineOptionsGetFloat,newargc,-44,ffffffd4,4,int
+MeCommandLineOptionsGetFloat,eats,-28,ffffffe4,8,int[2]
+MeCommandLineOptionsGetFloat,newargc_1,-36,ffffffdc,4,int
+MeCommandLineOptionsGetFloat,newargc_2,-40,ffffffd8,4,int
+MeCommandLineOptionsGetString,options,4,00000004,4,MeCommandLineOptions *
+MeCommandLineOptionsGetString,arg,8,00000008,4,char *
+MeCommandLineOptionsGetString,eat,12,0000000c,4,MeBool
+MeCommandLineOptionsGetString,checker,-32,ffffffe0,4,int
+MeCommandLineOptionsGetString,parameter,-36,ffffffdc,4,char *
+MeCommandLineOptionsGetString,eats,-28,ffffffe4,8,int[2]
+MeCommandLineOptionsGetString,newargc,-40,ffffffd8,4,int
+MeCommandLineOptionsGetString,newargc_1,-44,ffffffd4,4,int
+MeCommandLineOptionsGetString,newargc_2,-48,ffffffd0,4,int
+MeCommandLineOptionsCreate,argc,4,00000004,4,int
+MeCommandLineOptionsCreate,argv,8,00000008,4,char * *
+MeCommandLineOptionsDestroy,options,4,00000004,4,MeCommandLineOptions *
+MeCommandLineOptionsEat,options,4,00000004,4,MeCommandLineOptions *
+MeCommandLineOptionsEat,eat,8,00000008,4,int *
+MeCommandLineOptionsEat,num_eat,12,0000000c,4,int
+MeCommandLineOptionsEat,newargc,-20,ffffffec,4,int
+MeCommandLineOptionsCheckFor,options,4,00000004,4,MeCommandLineOptions *
+MeCommandLineOptionsCheckFor,arg,8,00000008,4,char *
+MeCommandLineOptionsCheckFor,i,-20,ffffffec,4,int
+MeCommandLineOptionsCheckFor,eat,12,0000000c,4,MeBool
+MeCommandLineOptionsCheckFor,newargc,-24,ffffffe8,4,int
+MeCommandLineOptionsCheckForList,arglist,8,00000008,4,char * *
+MeCommandLineOptionsCheckForList,eat,12,0000000c,4,MeBool
+MeCommandLineOptionsCheckForList,found,-20,ffffffec,4,MeBool
+MeCommandLineOptionsCheckForList,options,4,00000004,4,MeCommandLineOptions *

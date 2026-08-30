@@ -1,0 +1,780 @@
+/* ==== Degenerate ==== */
+
+bool Degenerate(McdContact *p0,McdContact *p1,MeReal scale)
+
+{
+  float fVar1;
+  float fVar2;
+  float fVar3;
+  bool bVar4;
+  MeReal diff [3];
+  
+                    /* Unresolved local var: MeReal eps2@[???]
+                       Unresolved local var: bool p@[???]
+                       Unresolved local var: bool n@[???] */
+  fVar3 = p0->position[0] - p1->position[0];
+  fVar2 = p0->position[1] - p1->position[1];
+  fVar1 = p0->position[2] - p1->position[2];
+  bVar4 = false;
+  if ((fVar3 * fVar3 + fVar2 * fVar2 + fVar1 * fVar1 < scale * scale * 0.0001) &&
+     (0.9999 < p1->normal[2] * p0->normal[2] +
+               p1->normal[1] * p0->normal[1] + p1->normal[0] * p0->normal[0])) {
+    bVar4 = true;
+  }
+  return bVar4;
+}
+
+
+/* ==== initList ==== */
+
+void initList(McdContactList *list,int size)
+
+{
+  uint uVar1;
+  int iVar2;
+  int iVar3;
+  uint uVar4;
+  
+                    /* Unresolved local var: int i@[DW_OP_reg3(EBX)] */
+  uVar4 = size - 1;
+  iVar2 = 0;
+  if ((int)uVar4 < 1) goto LAB_0001012b;
+  uVar1 = uVar4 & 3;
+  if ((int)uVar4 < 2) {
+LAB_000100d1:
+    iVar3 = iVar2 + 1;
+    list->link[iVar2].next = list->link + iVar2 + 1;
+    iVar2 = iVar3;
+    if ((int)uVar4 <= iVar3) goto LAB_0001012b;
+  }
+  else if (uVar1 != 0) {
+    if (1 < uVar1) {
+      if (2 < uVar1) {
+        list->link->next = list->link + 1;
+      }
+      uVar1 = (uint)(2 < uVar1);
+      iVar2 = uVar1 + 1;
+      list->link[uVar1].next = list->link + uVar1 + 1;
+    }
+    goto LAB_000100d1;
+  }
+  do {
+    list->link[iVar2].next = list->link + iVar2 + 1;
+    list->link[iVar2 + 1].next = list->link + iVar2 + 2;
+    list->link[iVar2 + 2].next = list->link + iVar2 + 3;
+    iVar3 = iVar2 + 4;
+    list->link[iVar2 + 3].next = list->link + iVar2 + 4;
+    iVar2 = iVar3;
+  } while (iVar3 < (int)uVar4);
+LAB_0001012b:
+  list->link[size + -1].next = (_McdContactLink *)0x0;
+  list->head = (McdContactLink *)0x0;
+  list->free = list->link;
+  list->ct = 0;
+  return;
+}
+
+
+/* ==== newElt ==== */
+
+McdContactLink * newElt(McdContactList *list,McdContact *contact)
+
+{
+  McdContactLink *pMVar1;
+  
+                    /* Unresolved local var: McdContactLink * res@[DW_OP_reg2(EDX)] */
+  pMVar1 = list->free;
+  if (pMVar1 != (McdContactLink *)0x0) {
+    list->free = pMVar1->next;
+    pMVar1->contact = contact;
+    list->ct = list->ct + 1;
+  }
+  return pMVar1;
+}
+
+
+/* ==== insAfter ==== */
+
+void insAfter(McdContactLink *here,McdContactLink *addMe)
+
+{
+  _McdContactLink *p_Var1;
+  
+  p_Var1 = here->next;
+  addMe->prev = here;
+  addMe->next = p_Var1;
+  p_Var1 = here->next;
+  here->next = addMe;
+  p_Var1->prev = addMe;
+  return;
+}
+
+
+/* ==== rmvElt ==== */
+
+void rmvElt(McdContactList *list,McdContactLink *elt)
+
+{
+  _McdContactLink *p_Var1;
+  
+  list->head = elt->next;
+  p_Var1 = elt->next;
+  p_Var1->prev = elt->prev;
+  elt->prev->next = p_Var1;
+  elt->next = list->free;
+  list->free = elt;
+  list->ct = list->ct + -1;
+  return;
+}
+
+
+/* ==== UpdateHull ==== */
+
+void UpdateHull(McdContactList *list,McdContact *contact,MeReal *normal)
+
+{
+  float fVar1;
+  float fVar2;
+  float fVar3;
+  McdContact *pMVar4;
+  McdContact *pMVar5;
+  bool bVar6;
+  float fVar7;
+  float fVar8;
+  float fVar9;
+  McdContactLink *pMVar10;
+  McdContactLink *pMVar11;
+  McdContact *pMVar12;
+  McdContactLink *pMVar13;
+  _McdContactLink *p_Var14;
+  bool bVar15;
+  McdContactLink *pKeepFirst;
+  McdContactLink *pKeepLast;
+  
+                    /* Unresolved local var: McdContactLink * p0@[DW_OP_reg1(ECX)]
+                       Unresolved local var: McdContactLink * p1@[DW_OP_reg3(EBX)]
+                       Unresolved local var: McdContactLink * p2@[DW_OP_reg6(ESI)]
+                       Unresolved local var: bool s0@[DW_OP_reg7(EDI)]
+                       Unresolved local var: McdContactLink * p@[???] */
+                    /* Unresolved local var: MeReal * v0@[???]
+                       Unresolved local var: MeReal * v1@[???]
+                       Unresolved local var: MeReal * v2@[???] */
+  pMVar11 = list->head;
+  pMVar13 = pMVar11->next;
+  pKeepLast = (McdContactLink *)0x0;
+  pKeepFirst = (McdContactLink *)0x0;
+  pMVar4 = pMVar11->contact;
+  pMVar12 = pMVar13->contact;
+  fVar1 = *normal;
+  fVar7 = contact->position[1] - pMVar4->position[1];
+  fVar2 = normal[1];
+  fVar9 = contact->position[0] - pMVar4->position[0];
+  fVar3 = normal[2];
+  fVar8 = contact->position[2] - pMVar4->position[2];
+  p_Var14 = pMVar13->next;
+  bVar15 = (pMVar12->position[2] - pMVar4->position[2]) * (fVar1 * fVar7 - fVar2 * fVar9) +
+           (pMVar12->position[1] - pMVar4->position[1]) * (fVar9 * fVar3 - fVar1 * fVar8) +
+           (pMVar12->position[0] - pMVar4->position[0]) * (fVar8 * fVar2 - fVar7 * fVar3) < 0.0;
+  while( true ) {
+                    /* Unresolved local var: bool s1@[DW_OP_reg0(EAX)]
+                       Unresolved local var: MeReal * v0@[???]
+                       Unresolved local var: MeReal * v1@[???]
+                       Unresolved local var: MeReal * v2@[???] */
+    fVar7 = contact->position[1] - pMVar12->position[1];
+    fVar9 = contact->position[0] - pMVar12->position[0];
+    pMVar4 = p_Var14->contact;
+    fVar8 = contact->position[2] - pMVar12->position[2];
+    bVar6 = (pMVar4->position[2] - pMVar12->position[2]) * (fVar1 * fVar7 - fVar2 * fVar9) +
+            (pMVar4->position[1] - pMVar12->position[1]) * (fVar9 * fVar3 - fVar1 * fVar8) +
+            (pMVar4->position[0] - pMVar12->position[0]) * (fVar8 * fVar2 - fVar7 * fVar3) < 0.0;
+    pMVar10 = pKeepLast;
+    if ((bVar6 != bVar15) && (pMVar10 = pMVar13, bVar6)) {
+      pKeepFirst = pMVar13;
+      pMVar10 = pKeepLast;
+    }
+    pKeepLast = pMVar10;
+    if (pMVar13 == pMVar11) break;
+    pMVar12 = p_Var14->contact;
+    pMVar13 = p_Var14;
+    p_Var14 = p_Var14->next;
+    bVar15 = bVar6;
+  }
+  if (pKeepLast != (McdContactLink *)0x0) {
+    pMVar11 = pKeepLast->next;
+    while (pMVar11 != pKeepFirst) {
+      list->head = pMVar11->next;
+      p_Var14 = pMVar11->next;
+      p_Var14->prev = pMVar11->prev;
+      pMVar11->prev->next = p_Var14;
+      pMVar11->next = list->free;
+      list->free = pMVar11;
+      list->ct = list->ct + -1;
+      pMVar11 = pKeepLast->next;
+    }
+                    /* Unresolved local var: McdContactLink * res@[DW_OP_reg3(EBX)] */
+    pMVar13 = list->free;
+    if (pMVar13 != (McdContactLink *)0x0) {
+      list->free = pMVar13->next;
+      pMVar13->contact = contact;
+      list->ct = list->ct + 1;
+      pMVar11 = pKeepLast->next;
+    }
+    pMVar13->next = pMVar11;
+    pMVar13->prev = pKeepLast;
+    p_Var14 = pKeepLast->next;
+    pKeepLast->next = pMVar13;
+    p_Var14->prev = pMVar13;
+                    /* Unresolved local var: MeReal * v0@[???]
+                       Unresolved local var: MeReal * v1@[???]
+                       Unresolved local var: MeReal * v2@[???] */
+    pMVar4 = pKeepLast->contact;
+    pMVar12 = pKeepFirst->contact;
+    fVar1 = contact->position[1] - pMVar4->position[1];
+    fVar2 = contact->position[0] - pMVar4->position[0];
+    fVar3 = contact->position[2] - pMVar4->position[2];
+    pMVar13->area =
+         (pMVar12->position[2] - pMVar4->position[2]) * (fVar1 * *normal - normal[1] * fVar2) +
+         (pMVar12->position[1] - pMVar4->position[1]) * (fVar2 * normal[2] - *normal * fVar3) +
+         (normal[1] * fVar3 - normal[2] * fVar1) * (pMVar12->position[0] - pMVar4->position[0]);
+                    /* Unresolved local var: MeReal * v0@[???]
+                       Unresolved local var: MeReal * v1@[???]
+                       Unresolved local var: MeReal * v2@[???] */
+    pMVar5 = pKeepLast->prev->contact;
+    fVar1 = pMVar4->position[1] - pMVar5->position[1];
+    fVar2 = pMVar4->position[0] - pMVar5->position[0];
+    fVar3 = pMVar4->position[2] - pMVar5->position[2];
+    pKeepLast->area =
+         (contact->position[0] - pMVar5->position[0]) * (normal[1] * fVar3 - normal[2] * fVar1) +
+         (contact->position[2] - pMVar5->position[2]) * (fVar1 * *normal - normal[1] * fVar2) +
+         (fVar2 * normal[2] - *normal * fVar3) * (contact->position[1] - pMVar5->position[1]);
+                    /* Unresolved local var: MeReal * v0@[???]
+                       Unresolved local var: MeReal * v1@[???]
+                       Unresolved local var: MeReal * v2@[???] */
+    pMVar4 = pKeepFirst->next->contact;
+    fVar1 = pMVar12->position[1] - contact->position[1];
+    fVar2 = pMVar12->position[0] - contact->position[0];
+    fVar3 = pMVar12->position[2] - contact->position[2];
+    pKeepFirst->area =
+         (fVar2 * normal[2] - *normal * fVar3) * (pMVar4->position[1] - contact->position[1]) +
+         (pMVar4->position[2] - contact->position[2]) * (fVar1 * *normal - normal[1] * fVar2) +
+         (pMVar4->position[0] - contact->position[0]) * (normal[1] * fVar3 - normal[2] * fVar1);
+  }
+  return;
+}
+
+
+/* ==== McdContactSimplify ==== */
+
+int McdContactSimplify(MeReal *normal,McdContact *inContacts,int inNumContacts,
+                      McdContact *outContacts,int inMaxContactPointCount,int inFaceNormalsFirst,
+                      MeReal scale)
+
+{
+  _McdContactLink **pp_Var1;
+  MeReal MVar2;
+  MeReal MVar3;
+  MeReal MVar4;
+  MeReal MVar5;
+  MeReal MVar6;
+  MeReal MVar7;
+  MeReal MVar8;
+  anon_union_4_2_43add64d_for_element1 aVar9;
+  anon_union_4_2_43add64d_for_element2 aVar10;
+  _McdContactLink *p_Var11;
+  float fVar12;
+  float fVar13;
+  bool bVar14;
+  undefined2 uVar15;
+  short sVar16;
+  undefined2 uVar17;
+  McdContactLink *pMVar18;
+  McdContactLink *pMVar19;
+  uint uVar20;
+  McdContact *extraout_EAX;
+  float fVar21;
+  McdContact *pMVar22;
+  McdContact *pMVar23;
+  int iVar24;
+  int iVar25;
+  McdContact *pMVar26;
+  McdContactLink *pMVar27;
+  _McdContactLink *p_Var28;
+  _McdContactLink *p_Var29;
+  int iVar30;
+  McdContactLink *pMVar31;
+  int aiStack_b0 [5];
+  McdContactLink MStack_9c;
+  undefined1 auStack_8c [12];
+  McdContact *local_80;
+  float local_7c;
+  float local_78;
+  float local_74;
+  uint local_70;
+  int count;
+  float local_68;
+  float local_64;
+  float local_60;
+  float local_5c;
+  int cNum;
+  McdContactLink *p1;
+  MeReal eps;
+  McdContactList list;
+  MeReal diff [3];
+  
+                    /* Unresolved local var: McdContactLink * p@[DW_OP_reg6(ESI)]
+                       Unresolved local var: McdContactLink * p0@[DW_OP_reg3(EBX)]
+                       Unresolved local var: McdContactLink * p2@[DW_OP_reg2(EDX)]
+                       Unresolved local var: int i@[DW_OP_reg7(EDI)]
+                       Unresolved local var: McdContact * deepest@[DW_OP_reg3(EBX)]
+                       Unresolved local var: MeReal sep@[DW_OP_reg12(ST1)]
+                       Unresolved local var: MeReal area@[DW_OP_reg18(ST7)]
+                       Unresolved local var: int i@[DW_OP_reg3(EBX)] */
+  eps = scale * scale * 0.0001;
+  if ((inNumContacts == 0) || (inMaxContactPointCount == 0)) {
+    return 0;
+  }
+  pMVar23 = (McdContact *)0x0;
+  fVar21 = 3.4028235e+38;
+  if (0 < inNumContacts) {
+    uVar20 = -inNumContacts & 3;
+    pMVar22 = inContacts;
+    pMVar26 = inContacts;
+    iVar30 = inNumContacts;
+    if (uVar20 != 0) {
+      pMVar26 = pMVar23;
+      if (uVar20 < 3) {
+        if (uVar20 < 2) {
+          fVar21 = inContacts->separation;
+          pMVar26 = inContacts;
+          if (3.4028235e+38 <= fVar21) {
+            fVar21 = 3.4028235e+38;
+            pMVar26 = pMVar23;
+          }
+          pMVar22 = inContacts + 1;
+          iVar30 = inNumContacts + -1;
+        }
+        if (pMVar22->separation < fVar21) {
+          pMVar26 = pMVar22;
+          fVar21 = pMVar22->separation;
+        }
+        pMVar22 = pMVar22 + 1;
+        iVar30 = iVar30 + -1;
+      }
+      pMVar23 = pMVar26;
+      if (pMVar22->separation < fVar21) {
+        pMVar23 = pMVar22;
+        fVar21 = pMVar22->separation;
+      }
+      pMVar22 = pMVar22 + 1;
+      iVar30 = iVar30 + -1;
+      pMVar26 = pMVar22;
+      if (iVar30 == 0) goto LAB_000106f7;
+    }
+    do {
+      if (pMVar26->separation < fVar21) {
+        pMVar23 = pMVar22;
+        fVar21 = pMVar26->separation;
+      }
+      if (pMVar26[1].separation < fVar21) {
+        pMVar23 = pMVar22 + 1;
+        fVar21 = pMVar26[1].separation;
+      }
+      if (pMVar26[2].separation < fVar21) {
+        pMVar23 = pMVar22 + 2;
+        fVar21 = pMVar26[2].separation;
+      }
+      if (pMVar26[3].separation < fVar21) {
+        pMVar23 = pMVar22 + 3;
+        fVar21 = pMVar26[3].separation;
+      }
+      iVar30 = iVar30 + -4;
+      pMVar22 = pMVar22 + 4;
+      pMVar26 = pMVar26 + 4;
+    } while (iVar30 != 0);
+  }
+LAB_000106f7:
+  if (pMVar23 == (McdContact *)0x0) {
+    return 0;
+  }
+  if (inContacts != pMVar23) {
+    MVar2 = inContacts->position[0];
+    MVar3 = inContacts->position[1];
+    MVar4 = inContacts->position[2];
+    MVar5 = inContacts->normal[0];
+    MVar6 = inContacts->normal[1];
+    MVar7 = inContacts->normal[2];
+    MVar8 = inContacts->separation;
+    sVar16 = inContacts->dims;
+    uVar17 = *(undefined2 *)&inContacts->field_0x1e;
+    aVar9 = inContacts->element1;
+    aVar10 = inContacts->element2;
+    inContacts->position[0] = pMVar23->position[0];
+    inContacts->position[1] = pMVar23->position[1];
+    inContacts->position[2] = pMVar23->position[2];
+    inContacts->normal[0] = pMVar23->normal[0];
+    inContacts->normal[1] = pMVar23->normal[1];
+    inContacts->normal[2] = pMVar23->normal[2];
+    inContacts->separation = pMVar23->separation;
+    uVar15 = *(undefined2 *)&pMVar23->field_0x1e;
+    inContacts->dims = pMVar23->dims;
+    *(undefined2 *)&inContacts->field_0x1e = uVar15;
+    inContacts->element1 = pMVar23->element1;
+    inContacts->element2 = pMVar23->element2;
+    pMVar23->position[0] = MVar2;
+    pMVar23->position[1] = MVar3;
+    pMVar23->position[2] = MVar4;
+    pMVar23->normal[0] = MVar5;
+    pMVar23->normal[1] = MVar6;
+    pMVar23->normal[2] = MVar7;
+    pMVar23->separation = MVar8;
+    pMVar23->dims = sVar16;
+    *(undefined2 *)&pMVar23->field_0x1e = uVar17;
+    pMVar23->element1 = aVar9;
+    pMVar23->element2 = aVar10;
+  }
+  if (inNumContacts == 1) {
+    outContacts->position[0] = inContacts->position[0];
+    outContacts->position[1] = inContacts->position[1];
+    outContacts->position[2] = inContacts->position[2];
+    outContacts->normal[0] = inContacts->normal[0];
+    outContacts->normal[1] = inContacts->normal[1];
+    outContacts->normal[2] = inContacts->normal[2];
+    outContacts->separation = inContacts->separation;
+    uVar15 = *(undefined2 *)&inContacts->field_0x1e;
+    outContacts->dims = inContacts->dims;
+    *(undefined2 *)&outContacts->field_0x1e = uVar15;
+    outContacts->element1 = inContacts->element1;
+    outContacts->element2 = inContacts->element2;
+    return 1;
+  }
+  iVar30 = -(inMaxContactPointCount * 0x10 + 0x10);
+  iVar24 = 0;
+  list.link = (McdContactLink *)(auStack_8c + iVar30 + -0x10);
+  if (inMaxContactPointCount < 1) goto LAB_0001084f;
+  uVar20 = inMaxContactPointCount & 3;
+  if (inMaxContactPointCount < 2) {
+LAB_000107f0:
+    iVar25 = iVar24 + 1;
+    list.link[iVar24].next = list.link + iVar24 + 1;
+    iVar24 = iVar25;
+    if (inMaxContactPointCount <= iVar25) goto LAB_0001084f;
+  }
+  else if (uVar20 != 0) {
+    if (1 < uVar20) {
+      if (2 < uVar20) {
+        *(undefined1 **)(auStack_8c + iVar30 + -8) = auStack_8c + iVar30;
+      }
+      uVar20 = (uint)(2 < uVar20);
+      iVar24 = uVar20 + 1;
+      list.link[uVar20].next = list.link + uVar20 + 1;
+    }
+    goto LAB_000107f0;
+  }
+  do {
+    list.link[iVar24].next = list.link + iVar24 + 1;
+    list.link[iVar24 + 1].next = list.link + iVar24 + 2;
+    list.link[iVar24 + 2].next = list.link + iVar24 + 3;
+    iVar25 = iVar24 + 4;
+    list.link[iVar24 + 3].next = list.link + iVar24 + 4;
+    iVar24 = iVar25;
+  } while (iVar25 < inMaxContactPointCount);
+LAB_0001084f:
+  pMVar27 = list.link;
+  list.link[inMaxContactPointCount].next = (_McdContactLink *)0x0;
+  list.free = list.link;
+                    /* Unresolved local var: McdContactLink * res@[DW_OP_reg6(ESI)] */
+  list.ct = 0;
+  if (list.link != (McdContactLink *)0x0) {
+    list.free = (list.link)->next;
+    (list.link)->contact = inContacts;
+    list.ct = list.ct + 1;
+  }
+  list.head = pMVar27;
+  pMVar27->prev = pMVar27;
+  pMVar27->next = pMVar27;
+  pMVar31 = list.free;
+  cNum = 1;
+  pMVar23 = inContacts;
+  if (inMaxContactPointCount != 1) {
+    for (; cNum < inNumContacts; cNum = cNum + 1) {
+                    /* Unresolved local var: MeReal eps2@[???]
+                       Unresolved local var: bool p@[???]
+                       Unresolved local var: bool n@[???] */
+      pMVar22 = pMVar27->contact;
+      fVar13 = pMVar23[1].position[0] - pMVar22->position[0];
+      fVar12 = pMVar23[1].position[1] - pMVar22->position[1];
+      fVar21 = pMVar23[1].position[2] - pMVar22->position[2];
+      bVar14 = false;
+      if ((fVar13 * fVar13 + fVar12 * fVar12 + fVar21 * fVar21 < scale * scale * 0.0001) &&
+         (0.9999 < pMVar22->normal[2] * pMVar23[1].normal[2] +
+                   pMVar22->normal[1] * pMVar23[1].normal[1] +
+                   pMVar22->normal[0] * pMVar23[1].normal[0])) {
+        bVar14 = true;
+      }
+      if (!bVar14) break;
+      pMVar23 = pMVar23 + 1;
+    }
+    if (cNum != inNumContacts) {
+                    /* Unresolved local var: McdContactLink * res@[DW_OP_reg3(EBX)] */
+      iVar24 = cNum + 1;
+      pMVar23 = inContacts + cNum;
+      cNum = iVar24;
+      if (list.free != (McdContactLink *)0x0) {
+        list.free = (list.free)->next;
+        pMVar31->contact = pMVar23;
+        list.ct = list.ct + 1;
+      }
+      p1 = pMVar31;
+      pMVar31->next = pMVar27->next;
+      pMVar18 = p1;
+      p_Var28 = pMVar27->next;
+      pMVar27->next = p1;
+      pMVar18->prev = pMVar27;
+      pMVar19 = list.free;
+      p_Var28->prev = pMVar18;
+      if ((cNum != inNumContacts) && (inMaxContactPointCount != 2)) {
+        if (cNum < inNumContacts) {
+          pMVar23 = pMVar18->contact;
+          pMVar22 = pMVar27->contact;
+          local_74 = *normal;
+          local_78 = normal[1];
+          local_7c = normal[2];
+          MStack_9c.next = (_McdContactLink *)(inContacts + cNum);
+          do {
+                    /* Unresolved local var: MeReal * v0@[???]
+                       Unresolved local var: MeReal * v1@[???]
+                       Unresolved local var: MeReal * v2@[???] */
+            fVar21 = pMVar23->position[1] - pMVar22->position[1];
+            fVar13 = pMVar23->position[0] - pMVar22->position[0];
+            fVar12 = pMVar23->position[2] - pMVar22->position[2];
+            fVar21 = ((float)(&(MStack_9c.next)->contact)[2] - pMVar22->position[2]) *
+                     (local_74 * fVar21 - local_78 * fVar13) +
+                     ((float)(&(MStack_9c.next)->contact)[1] - pMVar22->position[1]) *
+                     (fVar13 * local_7c - local_74 * fVar12) +
+                     ((float)(MStack_9c.next)->contact - pMVar22->position[0]) *
+                     (fVar12 * local_78 - fVar21 * local_7c);
+            if (eps < fVar21) {
+                    /* Unresolved local var: McdContactLink * res@[DW_OP_reg2(EDX)] */
+              cNum = cNum + 1;
+              if (list.free != (McdContactLink *)0x0) {
+                list.free = (list.free)->next;
+                pMVar19->contact = (McdContact *)MStack_9c.next;
+                list.ct = list.ct + 1;
+              }
+              p_Var28 = pMVar31->next;
+              pMVar19->prev = pMVar31;
+              pMVar19->next = p_Var28;
+              p_Var28 = pMVar31->next;
+              pMVar31->next = pMVar19;
+              pMVar19->area = fVar21;
+              p_Var28->prev = pMVar19;
+              pMVar31->area = fVar21;
+              pMVar27->area = fVar21;
+              break;
+            }
+            if (fVar21 < -eps) {
+                    /* Unresolved local var: McdContactLink * res@[DW_OP_reg2(EDX)] */
+              cNum = cNum + 1;
+              if (list.free != (McdContactLink *)0x0) {
+                list.free = (list.free)->next;
+                pMVar19->contact = (McdContact *)MStack_9c.next;
+                list.ct = list.ct + 1;
+              }
+              p_Var28 = pMVar27->next;
+              pMVar19->prev = pMVar27;
+              pMVar19->next = p_Var28;
+              p_Var28 = pMVar27->next;
+              pMVar27->next = pMVar19;
+              p_Var28->prev = pMVar19;
+              MStack_9c.prev = (_McdContactLink *)fVar21;
+              fVar21 = -fVar21;
+              pMVar19->area = fVar21;
+              pMVar31->area = fVar21;
+              pMVar27->area = fVar21;
+              break;
+            }
+            MStack_9c.next = (_McdContactLink *)((int)MStack_9c.next + 0x28);
+            cNum = cNum + 1;
+          } while (cNum < inNumContacts);
+        }
+        if ((cNum != inNumContacts) && (cNum < inNumContacts)) {
+          local_80 = inContacts + cNum;
+          pMVar23 = inContacts;
+          cNum = inNumContacts - cNum;
+          do {
+            *(McdContact **)((int)aiStack_b0 + iVar30 + 0x10) = pMVar23;
+            pMVar23 = local_80;
+            *(MeReal **)((int)aiStack_b0 + iVar30 + 0xc) = normal;
+            *(McdContact **)((int)aiStack_b0 + iVar30 + 8) = pMVar23;
+            *(McdContactList **)((int)aiStack_b0 + iVar30 + 4) = &list;
+            local_80 = local_80 + 1;
+            cNum = cNum + -1;
+            *(undefined4 *)((int)aiStack_b0 + iVar30) = 0x10ae8;
+            UpdateHull(*(McdContactList **)((int)aiStack_b0 + iVar30 + 4),
+                       *(McdContact **)((int)aiStack_b0 + iVar30 + 8),
+                       *(MeReal **)((int)aiStack_b0 + iVar30 + 0xc));
+            pMVar23 = extraout_EAX;
+            if (inMaxContactPointCount < list.ct) {
+                    /* Unresolved local var: McdContactLink * pMin@[DW_OP_reg7(EDI)] */
+              fVar21 = (list.head)->area;
+              pMVar27 = list.head;
+              pMVar31 = list.head;
+              if ((list.head)->contact == inContacts) {
+                pMVar31 = (list.head)->next;
+              }
+              do {
+                if ((pMVar27->area < fVar21) && (pMVar27->contact != inContacts)) {
+                  pMVar31 = pMVar27;
+                  fVar21 = pMVar27->area;
+                }
+                pp_Var1 = &pMVar27->next;
+                pMVar27 = *pp_Var1;
+              } while (*pp_Var1 != list.head);
+              p_Var28 = pMVar31->prev;
+              p1 = pMVar31->next;
+                    /* Unresolved local var: MeReal * v0@[???]
+                       Unresolved local var: MeReal * v1@[???]
+                       Unresolved local var: MeReal * v2@[???] */
+              pMVar22 = p_Var28->contact;
+              pMVar26 = p1->contact;
+              pMVar23 = p_Var28->prev->contact;
+              local_5c = pMVar23->position[2];
+              local_60 = pMVar22->position[1] - pMVar23->position[1];
+              fVar21 = pMVar22->position[0] - pMVar23->position[0];
+              fVar12 = pMVar22->position[2] - local_5c;
+              p_Var28->area =
+                   (fVar21 * normal[2] - *normal * fVar12) *
+                   (pMVar26->position[1] - pMVar23->position[1]) +
+                   (pMVar26->position[2] - local_5c) * (local_60 * *normal - normal[1] * fVar21) +
+                   (pMVar26->position[0] - pMVar23->position[0]) *
+                   (normal[1] * fVar12 - normal[2] * local_60);
+                    /* Unresolved local var: MeReal * v0@[???]
+                       Unresolved local var: MeReal * v1@[???]
+                       Unresolved local var: MeReal * v2@[???] */
+              local_64 = pMVar22->position[2];
+              pMVar23 = p1->next->contact;
+              local_68 = pMVar26->position[1] - pMVar22->position[1];
+              fVar21 = pMVar26->position[0] - pMVar22->position[0];
+              fVar12 = pMVar26->position[2] - local_64;
+              p1->area = (fVar21 * normal[2] - *normal * fVar12) *
+                         (pMVar23->position[1] - pMVar22->position[1]) +
+                         (pMVar23->position[2] - local_64) *
+                         (local_68 * *normal - normal[1] * fVar21) +
+                         (pMVar23->position[0] - pMVar22->position[0]) *
+                         (normal[1] * fVar12 - normal[2] * local_68);
+              list.head = p1;
+              p_Var28 = pMVar31->next;
+              p_Var28->prev = pMVar31->prev;
+              pMVar31->prev->next = p_Var28;
+              pMVar31->next = list.free;
+              list.free = pMVar31;
+              list.ct = list.ct + -1;
+            }
+          } while (cNum != 0);
+        }
+      }
+    }
+  }
+  iVar30 = list.ct;
+  local_70 = list.ct;
+  cNum = 0;
+  if ((inFaceNormalsFirst != 0) &&
+     (iVar24 = 0, pMVar23 = outContacts, p_Var28 = list.head, 0 < list.ct)) {
+    do {
+                    /* Unresolved local var: MeI16 dims@[DW_OP_reg0(EAX)] */
+      pMVar22 = p_Var28->contact;
+      if (((char)pMVar22->dims == '\x02') || (pMVar22->dims >> 8 == 2)) {
+                    /* Unresolved local var: McdContactLink * q@[???] */
+        pMVar23->position[0] = pMVar22->position[0];
+        pMVar23->position[1] = pMVar22->position[1];
+        pMVar23->position[2] = pMVar22->position[2];
+        pMVar23->normal[0] = pMVar22->normal[0];
+        pMVar23->normal[1] = pMVar22->normal[1];
+        pMVar23->normal[2] = pMVar22->normal[2];
+        pMVar23->separation = pMVar22->separation;
+        uVar15 = *(undefined2 *)&pMVar22->field_0x1e;
+        pMVar23->dims = pMVar22->dims;
+        *(undefined2 *)&pMVar23->field_0x1e = uVar15;
+        pMVar23->element1 = pMVar22->element1;
+        pMVar23->element2 = pMVar22->element2;
+        pMVar23 = pMVar23 + 1;
+        p_Var29 = p_Var28->next;
+        p_Var11 = p_Var28->next;
+        p_Var11->prev = p_Var28->prev;
+        p_Var28->prev->next = p_Var11;
+        p_Var28->next = list.free;
+        list.ct = list.ct + -1;
+        cNum = cNum + 1;
+        list.head = p_Var29;
+        list.free = p_Var28;
+      }
+      else {
+        p_Var29 = p_Var28->next;
+      }
+      iVar24 = iVar24 + 1;
+      p_Var28 = p_Var29;
+    } while (iVar24 < iVar30);
+    local_70 = list.ct;
+  }
+  if (0 < (int)local_70) {
+    pMVar23 = outContacts + cNum;
+    if ((local_70 & 1) != 0) {
+      pMVar22 = (list.head)->contact;
+      cNum = cNum + 1;
+      pMVar23->position[0] = pMVar22->position[0];
+      pMVar23->position[1] = pMVar22->position[1];
+      pMVar23->position[2] = pMVar22->position[2];
+      pMVar23->normal[0] = pMVar22->normal[0];
+      pMVar23->normal[1] = pMVar22->normal[1];
+      pMVar23->normal[2] = pMVar22->normal[2];
+      pMVar23->separation = pMVar22->separation;
+      uVar15 = *(undefined2 *)&pMVar22->field_0x1e;
+      pMVar23->dims = pMVar22->dims;
+      *(undefined2 *)&pMVar23->field_0x1e = uVar15;
+      pMVar23->element1 = pMVar22->element1;
+      pMVar23->element2 = pMVar22->element2;
+      local_70 = local_70 - 1;
+      list.head = (list.head)->next;
+      pMVar23 = pMVar23 + 1;
+      if (local_70 == 0) {
+        return cNum;
+      }
+    }
+    do {
+      pMVar22 = (list.head)->contact;
+      pMVar23->position[0] = pMVar22->position[0];
+      pMVar23->position[1] = pMVar22->position[1];
+      pMVar23->position[2] = pMVar22->position[2];
+      pMVar23->normal[0] = pMVar22->normal[0];
+      pMVar23->normal[1] = pMVar22->normal[1];
+      pMVar23->normal[2] = pMVar22->normal[2];
+      pMVar23->separation = pMVar22->separation;
+      uVar15 = *(undefined2 *)&pMVar22->field_0x1e;
+      pMVar23->dims = pMVar22->dims;
+      *(undefined2 *)&pMVar23->field_0x1e = uVar15;
+      pMVar23->element1 = pMVar22->element1;
+      pMVar23->element2 = pMVar22->element2;
+      p_Var28 = (list.head)->next;
+      pMVar22 = p_Var28->contact;
+      pMVar23[1].position[0] = pMVar22->position[0];
+      pMVar23[1].position[1] = pMVar22->position[1];
+      pMVar23[1].position[2] = pMVar22->position[2];
+      pMVar23[1].normal[0] = pMVar22->normal[0];
+      pMVar23[1].normal[1] = pMVar22->normal[1];
+      pMVar23[1].normal[2] = pMVar22->normal[2];
+      pMVar23[1].separation = pMVar22->separation;
+      uVar15 = *(undefined2 *)&pMVar22->field_0x1e;
+      pMVar23[1].dims = pMVar22->dims;
+      *(undefined2 *)&pMVar23[1].field_0x1e = uVar15;
+      pMVar23[1].element1 = pMVar22->element1;
+      pMVar23[1].element2 = pMVar22->element2;
+      cNum = cNum + 2;
+      local_70 = local_70 - 2;
+      list.head = p_Var28->next;
+      pMVar23 = pMVar23 + 2;
+    } while (local_70 != 0);
+  }
+  return cNum;
+}
+
+

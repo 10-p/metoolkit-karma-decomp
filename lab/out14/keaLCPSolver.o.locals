@@ -1,0 +1,83 @@
+# function,name,stackoff,hexoff,size,type
+allocate,this,4,00000004,4,keaLCPSolver *
+allocate,size,8,00000008,4,int
+makeXandW,this,4,00000004,4,keaLCPSolver *
+makeXandW,vanillaQMatrix,-92,ffffffa4,1,keaMatrix_pcSparse_vanilla
+makeXandW,b,8,00000008,4,MeReal *
+makeXandW,unclamped,12,0000000c,4,int *
+makeXandW,numUnclamped,16,00000010,4,int
+makeXandW,clamped,20,00000014,4,int *
+makeXandW,numClamped,24,00000018,4,int
+PrincipalSubmatrix,this,4,00000004,4,keaLCPSolver *
+PrincipalSubmatrix,vanillaQMatrix,-92,ffffffa4,1,keaMatrix_pcSparse_vanilla
+PrincipalSubmatrix,unclamped,8,00000008,4,int *
+PrincipalSubmatrix,numUnclamped,12,0000000c,4,int
+PrincipalSubmatrix,clamped,16,00000010,4,int *
+PrincipalSubmatrix,numClamped,20,00000014,4,int
+PrincipalSubmatrix,b,24,00000018,4,MeReal *
+PrincipalPivotTransformMakeW,this,4,00000004,4,keaLCPSolver *
+PrincipalPivotTransformMakeW,w,8,00000008,4,MeReal *
+PrincipalPivotTransformMakeW,Qrhs,12,0000000c,4,MeReal *
+PrincipalPivotTransformMakeW,clamped,16,00000010,4,int *
+PrincipalPivotTransformMakeW,unclamped,20,00000014,4,int *
+PrincipalPivotTransformMakeW,numClamped,24,00000018,4,int
+PrincipalPivotTransformMakeW,numUnclamped,28,0000001c,4,int
+PrincipalPivotTransformMakeX,numClamped,32,00000020,4,int
+PrincipalPivotTransformMakeX,this,4,00000004,4,keaLCPSolver *
+PrincipalPivotTransformMakeX,numUnclamped,36,00000024,4,int
+PrincipalPivotTransformMakeX,n,40,00000028,4,int
+PrincipalPivotTransformMakeX,n_padded,44,0000002c,4,int
+PrincipalPivotTransformMakeX,AinvStride,48,00000030,4,int
+PrincipalPivotTransformMakeX,i,-20,ffffffec,4,int
+PrincipalPivotTransformMakeX,x,8,00000008,4,MeReal *
+PrincipalPivotTransformMakeX,initialSolve,12,0000000c,4,MeReal *
+PrincipalPivotTransformMakeX,Ainv,16,00000010,4,MeReal *
+PrincipalPivotTransformMakeX,Qrhs,20,00000014,4,MeReal *
+PrincipalPivotTransformMakeX,clamped,24,00000018,4,int *
+PrincipalPivotTransformMakeX,unclamped,28,0000001c,4,int *
+PrincipalPivotTransform,this,4,00000004,4,keaLCPSolver *
+PrincipalPivotTransform,unclamped,8,00000008,4,int *
+PrincipalPivotTransform,numUnclamped,12,0000000c,4,int
+PrincipalPivotTransform,clamped,16,00000010,4,int *
+PrincipalPivotTransform,numClamped,20,00000014,4,int
+PrincipalPivotTransform,vanillaQMatrix,-92,ffffffa4,1,keaMatrix_pcSparse_vanilla
+setUpper,this,4,00000004,4,keaLCPSolver *
+setUpper,upper,8,00000008,4,MeReal *
+setLower,this,4,00000004,4,keaLCPSolver *
+setLower,lower,8,00000008,4,MeReal *
+getFirstBadIndex,this,4,00000004,4,keaLCPSolver *
+copyXtoInitialSolve,this,4,00000004,4,keaLCPSolver *
+getClampIndices,this,4,00000004,4,keaLCPSolver *
+getClampIndices,I,8,00000008,4,int *
+getClampIndices,C,12,0000000c,4,int *
+setClampedValues,this,4,00000004,4,keaLCPSolver *
+setClampedValues,clamped,8,00000008,4,int *
+setClampedValues,unclamped,12,0000000c,4,int *
+setClampedValues,csize,16,00000010,4,int *
+setClampedValues,usize,20,00000014,4,int *
+setClampedValues,I,24,00000018,4,int *
+setClampedValues,C,28,0000001c,4,int *
+commonPivot,clampedhere,20,00000014,4,int *
+commonPivot,hilohere,24,00000018,4,int *
+commonPivot,DMASK,-20,ffffffec,4,int
+commonPivot,this,4,00000004,4,keaLCPSolver *
+commonPivot,MASK,8,00000008,4,int
+commonPivot,I,12,0000000c,4,int *
+commonPivot,C,16,00000010,4,int *
+blockMurtyChooseNewIndices,this,4,00000004,4,keaLCPSolver *
+blockMurtyChooseNewIndices,I,8,00000008,4,int *
+blockMurtyChooseNewIndices,C,12,0000000c,4,int *
+blockMurtyChooseNewIndices,clamped,16,00000010,4,int *
+blockMurtyChooseNewIndices,unclamped,20,00000014,4,int *
+blockMurtyChooseNewIndices,indexes_switched,-20,ffffffec,4,int
+blockMurtyChooseNewIndices,num_clamped,24,00000018,4,int
+blockMurtyChooseNewIndices,num_unclamped,28,0000001c,4,int
+singleMurtyChooseNewIndices,this,4,00000004,4,keaLCPSolver *
+singleMurtyChooseNewIndices,I,8,00000008,4,int *
+singleMurtyChooseNewIndices,indexes_switched,-20,ffffffec,4,int
+singleMurtyChooseNewIndices,C,12,0000000c,4,int *
+singleMurtyChooseNewIndices,clamped,16,00000010,4,int *
+singleMurtyChooseNewIndices,unclamped,20,00000014,4,int *
+singleMurtyChooseNewIndices,iorder,24,00000018,4,int *
+singleMurtyChooseNewIndices,num_clamped,28,0000001c,4,int
+singleMurtyChooseNewIndices,num_unclamped,32,00000020,4,int

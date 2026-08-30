@@ -1,0 +1,79 @@
+# function,name,stackoff,hexoff,size,type
+MeFJointCreateCopy,fj,4,00000004,4,MeFJoint *
+MeFJointCreateCopy,recurse,8,00000008,4,MeBool
+MeFJointCopy,dst,4,00000004,4,MeFJoint *
+MeFJointCopy,src,8,00000008,4,MeFJoint *
+MeFJointCopy,copyAxes,12,0000000c,4,MeBool
+MeFJointGetProperty1f,joint,4,00000004,4,MeFJoint *
+MeFJointGetProperty1f,p,8,00000008,4,MeFJointProperty
+MeFJointGetProperty1f,x,12,0000000c,4,MeReal *
+MeFJointSetPerTypeDefaults,p,-24,ffffffe8,4,MeFJointProperty
+MeFJointSetPerTypeDefaults,MVar1,-20,ffffffec,4,MeReal
+MeFJointSetPerTypeDefaults,fj,4,00000004,4,MeFJoint *
+MeFJointRename,fj,4,00000004,4,MeFJoint *
+MeFJointRename,newName,8,00000008,4,char *
+MeFJointSetProperty1i,i,12,0000000c,4,int
+MeFJointSetProperty1i,joint,4,00000004,4,MeFJoint *
+MeFJointSetProperty1i,p,8,00000008,4,MeFJointProperty
+MeFJointSetProperty1b,joint,4,00000004,4,MeFJoint *
+MeFJointSetProperty1b,p,8,00000008,4,MeFJointProperty
+MeFJointSetProperty1b,b,12,0000000c,4,MeBool
+MeFJointSetProperty1f,joint,4,00000004,4,MeFJoint *
+MeFJointSetProperty1f,p,8,00000008,4,MeFJointProperty
+MeFJointSetProperty1f,x,12,0000000c,4,MeReal
+MeFJointCreate,name,4,00000004,4,char *
+MeFJointCreate,type,8,00000008,4,MeFJointType
+MeFJointDestroy,fj,4,00000004,4,MeFJoint *
+MeFJointGetName,joint,4,00000004,4,MeFJoint *
+MeFJointGetType,joint,4,00000004,4,MeFJoint *
+MeFJointGetPartName,joint,4,00000004,4,MeFJoint *
+MeFJointGetPartName,index,8,00000008,4,int
+MeFJointGetPart,joint,4,00000004,4,MeFJoint *
+MeFJointGetPart,index,8,00000008,4,int
+MeFJointGetPosition,j,4,00000004,4,MeFJoint *
+MeFJointGetPosition,index,8,00000008,4,int
+MeFJointGetPosition,pos,12,0000000c,4,MeReal *
+MeFJointGetPrimaryAxis,j,4,00000004,4,MeFJoint *
+MeFJointGetPrimaryAxis,index,8,00000008,4,int
+MeFJointGetPrimaryAxis,axis,12,0000000c,4,MeReal *
+MeFJointGetOrthogonalAxis,j,4,00000004,4,MeFJoint *
+MeFJointGetOrthogonalAxis,index,8,00000008,4,int
+MeFJointGetOrthogonalAxis,axis,12,0000000c,4,MeReal *
+MeFJointGetProperty1i,joint,4,00000004,4,MeFJoint *
+MeFJointGetProperty1i,p,8,00000008,4,MeFJointProperty
+MeFJointGetProperty1i,i,12,0000000c,4,int *
+MeFJointGetProperty1ui,joint,4,00000004,4,MeFJoint *
+MeFJointGetProperty1ui,p,8,00000008,4,MeFJointProperty
+MeFJointGetProperty1ui,u,12,0000000c,4,uint *
+MeFJointGetProperty1b,p,8,00000008,4,MeFJointProperty
+MeFJointGetProperty1b,b,12,0000000c,4,MeBool *
+MeFJointGetProperty1b,joint,4,00000004,4,MeFJoint *
+MeFJointSetGenericDefaults,fj,4,00000004,4,MeFJoint *
+MeFJointSetType,fj,4,00000004,4,MeFJoint *
+MeFJointSetType,type,8,00000008,4,MeFJointType
+MeFJointSetPart,j,4,00000004,4,MeFJoint *
+MeFJointSetPart,part,8,00000008,4,MeFAssetPart *
+MeFJointSetPart,index,12,0000000c,4,int
+MeFJointSetPartByName,j,4,00000004,4,MeFJoint *
+MeFJointSetPartByName,part,8,00000008,4,char *
+MeFJointSetPartByName,index,12,0000000c,4,int
+MeFJointSetPosition,j,4,00000004,4,MeFJoint *
+MeFJointSetPosition,index,8,00000008,4,int
+MeFJointSetPosition,x,12,0000000c,4,MeReal
+MeFJointSetPosition,y,16,00000010,4,MeReal
+MeFJointSetPosition,z,20,00000014,4,MeReal
+MeFJointSetPrimaryAxis,j,4,00000004,4,MeFJoint *
+MeFJointSetPrimaryAxis,index,8,00000008,4,int
+MeFJointSetPrimaryAxis,x,12,0000000c,4,MeReal
+MeFJointSetPrimaryAxis,y,16,00000010,4,MeReal
+MeFJointSetPrimaryAxis,z,20,00000014,4,MeReal
+MeFJointSetOrthogonalAxis,j,4,00000004,4,MeFJoint *
+MeFJointSetOrthogonalAxis,index,8,00000008,4,int
+MeFJointSetOrthogonalAxis,x,12,0000000c,4,MeReal
+MeFJointSetOrthogonalAxis,y,16,00000010,4,MeReal
+MeFJointSetOrthogonalAxis,z,20,00000014,4,MeReal
+MeFJointScale,j,4,00000004,4,MeFJoint *
+MeFJointScale,scale,8,00000008,4,MeReal
+MeFJointSetProperty1ui,joint,4,00000004,4,MeFJoint *
+MeFJointSetProperty1ui,p,8,00000008,4,MeFJointProperty
+MeFJointSetProperty1ui,i,12,0000000c,4,uint

@@ -1,0 +1,45 @@
+# function,name,stackoff,hexoff,size,type
+MdtContactCreate,w,4,00000004,4,MdtWorldID
+MdtContactReset,c,4,00000004,4,MdtContactID.conflict
+MdtContactQuaConstraint,c,4,00000004,4,MdtContactID.conflict
+MdtConstraintDCastContact,c,4,00000004,4,MdtConstraintID
+MdtContactGetPosition,c,4,00000004,4,MdtContactID.conflict
+MdtContactGetPosition,v,8,00000008,4,MeReal *
+MdtContactGetNormal,c,4,00000004,4,MdtContactID.conflict
+MdtContactGetNormal,v,8,00000008,4,MeReal *
+MdtContactGetPenetration,c,4,00000004,4,MdtContactID.conflict
+MdtContactGetDirection,c,4,00000004,4,MdtContactID.conflict
+MdtContactGetDirection,v,8,00000008,4,MeReal *
+MdtContactGetWorldVelocity,c,4,00000004,4,MdtContactID.conflict
+MdtContactGetWorldVelocity,v,8,00000008,4,MeReal *
+MdtContactGetParams,c,4,00000004,4,MdtContactID.conflict
+MdtContactGetNext,c,4,00000004,4,MdtContactID.conflict
+MdtContactGetContactGroup,c,4,00000004,4,MdtContactID.conflict
+MdtContactGetRelativeVelocity,pos0,-44,ffffffd4,12,MeVector3
+MdtContactGetRelativeVelocity,pos1,-60,ffffffc4,12,MeVector3
+MdtContactGetRelativeVelocity,vel0,-76,ffffffb4,12,MeVector3
+MdtContactGetRelativeVelocity,vel1,-92,ffffffa4,12,MeVector3
+MdtContactGetRelativeVelocity,c,4,00000004,4,MdtContactID.conflict
+MdtContactGetRelativeVelocity,v,8,00000008,4,MeReal *
+MdtContactSetPosition,c,4,00000004,4,MdtContactID.conflict
+MdtContactSetPosition,x,8,00000008,4,MeReal
+MdtContactSetPosition,y,12,0000000c,4,MeReal
+MdtContactSetPosition,z,16,00000010,4,MeReal
+MdtContactSetNormal,z,16,00000010,4,MeReal
+MdtContactSetNormal,c,4,00000004,4,MdtContactID.conflict
+MdtContactSetNormal,x,8,00000008,4,MeReal
+MdtContactSetNormal,y,12,0000000c,4,MeReal
+MdtContactSetPenetration,c,4,00000004,4,MdtContactID.conflict
+MdtContactSetPenetration,p,8,00000008,4,MeReal
+MdtContactSetParams,c,4,00000004,4,MdtContactID.conflict
+MdtContactSetParams,p,8,00000008,4,MdtContactParamsID
+MdtContactSetNext,c,4,00000004,4,MdtContactID.conflict
+MdtContactSetNext,nc,8,00000008,4,MdtContactID.conflict
+MdtContactSetDirection,c,4,00000004,4,MdtContactID.conflict
+MdtContactSetDirection,x,8,00000008,4,MeReal
+MdtContactSetDirection,y,12,0000000c,4,MeReal
+MdtContactSetDirection,z,16,00000010,4,MeReal
+MdtContactSetWorldVelocity,c,4,00000004,4,MdtContactID.conflict
+MdtContactSetWorldVelocity,x,8,00000008,4,MeReal
+MdtContactSetWorldVelocity,y,12,0000000c,4,MeReal
+MdtContactSetWorldVelocity,z,16,00000010,4,MeReal

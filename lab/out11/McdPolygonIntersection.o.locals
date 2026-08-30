@@ -1,0 +1,75 @@
+# function,name,stackoff,hexoff,size,type
+McdEqual2D,a,4,00000004,4,MeReal *
+McdEqual2D,xv,8,00000008,4,MeReal
+McdEqual2D,yv,12,0000000c,4,MeReal
+McdEqual2D,x,16,00000010,4,int
+McdEqual2D,y,20,00000014,4,int
+McdSubtract2D,r,4,00000004,4,MeReal *
+McdSubtract2D,a,8,00000008,4,MeReal *
+McdSubtract2D,b,12,0000000c,4,MeReal *
+McdSubtract2D,x,16,00000010,4,int
+McdSubtract2D,y,20,00000014,4,int
+McdAdd2D,r,4,00000004,4,MeReal *
+McdAdd2D,a,8,00000008,4,MeReal *
+McdAdd2D,b,12,0000000c,4,MeReal *
+McdAdd2D,x,16,00000010,4,int
+McdAdd2D,y,20,00000014,4,int
+McdCross2D,a,4,00000004,4,MeReal *
+McdCross2D,b,8,00000008,4,MeReal *
+McdCross2D,x,12,0000000c,4,int
+McdCross2D,y,16,00000010,4,int
+McdPolyPointCompare0,p1,4,00000004,4,void *
+McdPolyPointCompare0,p2,8,00000008,4,void *
+McdPolyPointCompare1,p1,4,00000004,4,void *
+McdPolyPointCompare1,p2,8,00000008,4,void *
+McdPolyPointCompare2,p1,4,00000004,4,void *
+McdPolyPointCompare2,p2,8,00000008,4,void *
+McdPolygonBestAxis,temp,-28,ffffffe4,12,MeReal[3]
+McdPolygonBestAxis,normal,4,00000004,4,MeReal *
+McdPolygonSort,axis,12,0000000c,4,int
+McdPolygonSort,v,-44,ffffffd4,12,MeReal[3]
+McdPolygonSort,local_60,-96,ffffffa0,1,sbyte
+McdPolygonSort,mid,-60,ffffffc4,12,MeReal[3]
+McdPolygonSort,cmp,-92,ffffffa4,12,McdPolyPointCompareFn[3]
+McdPolygonSort,numpoly,4,00000004,4,int
+McdPolygonSort,poly,8,00000008,4,MeVector3 *
+McdAddPoint,numOut,4,00000004,4,int *
+McdAddPoint,polyOut,8,00000008,4,MeVector3 *
+McdAddPoint,xv,12,0000000c,4,MeReal
+McdAddPoint,yv,16,00000010,4,MeReal
+McdAddPoint,x,20,00000014,4,int
+McdAddPoint,y,24,00000018,4,int
+McdPolygonContainsPoint,pt,12,0000000c,4,MeReal *
+McdPolygonContainsPoint,axis,16,00000010,4,int
+McdPolygonContainsPoint,a,-44,ffffffd4,12,MeReal[3]
+McdPolygonContainsPoint,b,-60,ffffffc4,12,MeReal[3]
+McdPolygonContainsPoint,i1,-64,ffffffc0,4,int
+McdPolygonContainsPoint,numpoly,4,00000004,4,int
+McdPolygonContainsPoint,poly,8,00000008,4,MeVector3 *
+McdPolygonIntersection,normal,4,00000004,4,MeReal *
+McdPolygonIntersection,dist,8,00000008,4,MeReal
+McdPolygonIntersection,numpoly1,12,0000000c,4,int
+McdPolygonIntersection,poly1,16,00000010,4,MeVector3 *
+McdPolygonIntersection,axis,-112,ffffff90,4,int
+McdPolygonIntersection,numpoly2,20,00000014,4,int
+McdPolygonIntersection,poly2,24,00000018,4,MeVector3 *
+McdPolygonIntersection,s1,-116,ffffff8c,4,int
+McdPolygonIntersection,numOut,28,0000001c,4,int *
+McdPolygonIntersection,s2,-120,ffffff88,4,int
+McdPolygonIntersection,e1,-124,ffffff84,4,int
+McdPolygonIntersection,polyOut,32,00000020,4,MeVector3 *
+McdPolygonIntersection,e2,-128,ffffff80,4,int
+McdPolygonIntersection,neg1,-132,ffffff7c,4,int
+McdPolygonIntersection,neg2,-136,ffffff78,4,int
+McdPolygonIntersection,inside,-140,ffffff74,4,int
+McdPolygonIntersection,i,-144,ffffff70,4,int
+McdPolygonIntersection,numboth,-148,ffffff6c,4,int
+McdPolygonIntersection,a1,-44,ffffffd4,12,MeReal[3]
+McdPolygonIntersection,a2,-60,ffffffc4,12,MeReal[3]
+McdPolygonIntersection,b1,-76,ffffffb4,12,MeReal[3]
+McdPolygonIntersection,b2,-92,ffffffa4,12,MeReal[3]
+McdPolygonIntersection,b3,-108,ffffff94,12,MeReal[3]
+McdPolygonIntersection,sign1,-152,ffffff68,4,MeReal
+McdPolygonIntersection,sign2,-156,ffffff64,4,MeReal
+McdPolygonIntersection,ps1,-160,ffffff60,4,MeReal
+McdPolygonIntersection,ps2,-196,ffffff3c,4,MeReal

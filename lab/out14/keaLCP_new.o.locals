@@ -1,0 +1,28 @@
+# function,name,stackoff,hexoff,size,type
+checkForCycles,I,4,00000004,4,int *
+checkForCycles,C,8,00000008,4,int *
+checkForCycles,hilohere,12,0000000c,4,int *
+checkForCycles,clampedhere,16,00000010,4,int *
+checkForCycles,iteration,20,00000014,4,int
+checkForCycles,n,24,00000018,4,int
+solveLCP,this,4,00000004,4,keaLCPSolver *
+solveLCP,A,8,00000008,4,keaMatrix *
+solveLCP,b,12,0000000c,4,MeReal *
+solveLCP,lower,16,00000010,4,MeReal *
+solveLCP,upper,20,00000014,4,MeReal *
+solveLCP,max_iterations,24,00000018,4,int
+solveLCP,cpuType,28,0000001c,4,MeCPUResources
+solveLCP,velocityZeroTol,32,00000020,4,MeReal
+solveLCP,iteration,-28,ffffffe4,4,int
+solveLCP,numClamped,-24,ffffffe8,4,int
+solveLCP,numUnclamped,-20,ffffffec,4,int
+solveLCP,inCycle,-32,ffffffe0,4,int
+solveLCP,I,-36,ffffffdc,4,int *
+solveLCP,C,-40,ffffffd8,4,int *
+solveLCP,clamped,-44,ffffffd4,4,int *
+solveLCP,unclamped,-48,ffffffd0,4,int *
+solveLCP,aiStackY_60,-96,ffffffa0,12,int[3]
+solveLCP,uStackY_54,-84,ffffffac,4,undefined4
+solveLCP,iStackY_50,-80,ffffffb0,4,int
+solveLCP,uStack_40,-64,ffffffc0,4,uint
+solveLCP,auStack_3c,-60,ffffffc4,12,uint[3]

@@ -1,0 +1,314 @@
+/* ==== McdBoxSphereIntersect ==== */
+
+MeBool McdBoxSphereIntersect(McdModelPair *p,McdIntersectResult *result)
+
+{
+  McdContact *pMVar1;
+  bool bVar2;
+  float *pfVar3;
+  float *pfVar4;
+  void *pvVar5;
+  void *pvVar6;
+  lsVec3 *inROBB;
+  MeBool MVar7;
+  float fVar8;
+  float fVar9;
+  float inRSphere;
+  lsVec3 *rA;
+  lsTransform *tB;
+  MeReal separation;
+  MeI16 dims;
+  lsVec3 normal;
+  lsVec3 pos;
+  lsTransform tAB;
+  
+                    /* Unresolved local var: lsTransform * tA@[DW_OP_reg7(EDI)]
+                       Unresolved local var: MeReal eps@[???]
+                       Unresolved local var: McdBoxID geometry1@[DW_OP_reg6(ESI)]
+                       Unresolved local var: McdSphereID geometry2@[DW_OP_reg3(EBX)]
+                       Unresolved local var: MeReal rB@[DW_OP_reg11(ST0)] */
+  pfVar3 = McdModelGetTransformPtr(p->model1);
+  pfVar4 = McdModelGetTransformPtr(p->model2);
+  fVar8 = McdModelGetContactTolerance(p->model1);
+  fVar9 = McdModelGetContactTolerance(p->model2);
+  pvVar5 = McdModelGetGeometry(p->model1);
+  pvVar6 = McdModelGetGeometry(p->model2);
+  inROBB = McdBoxGetRadii(pvVar5);
+  inRSphere = McdSphereGetRadius(pvVar6);
+  result->contactCount = 0;
+  result->touch = 0;
+  tAB.row[0].v.v[0] = pfVar3[2] * pfVar4[2] + pfVar3[1] * pfVar4[1] + *pfVar3 * *pfVar4;
+  tAB.row[0].v.v[1] = pfVar3[6] * pfVar4[2] + pfVar3[5] * pfVar4[1] + pfVar3[4] * *pfVar4;
+  tAB.row[0].v.v[2] = pfVar3[10] * pfVar4[2] + pfVar3[9] * pfVar4[1] + pfVar3[8] * *pfVar4;
+  tAB.row[1].v.v[0] = pfVar3[2] * pfVar4[6] + pfVar3[1] * pfVar4[5] + *pfVar3 * pfVar4[4];
+  tAB.row[1].v.v[1] = pfVar3[6] * pfVar4[6] + pfVar3[5] * pfVar4[5] + pfVar3[4] * pfVar4[4];
+  tAB.row[1].v.v[2] = pfVar3[10] * pfVar4[6] + pfVar3[9] * pfVar4[5] + pfVar3[8] * pfVar4[4];
+  tAB.row[2].v.v[0] = pfVar3[2] * pfVar4[10] + pfVar3[1] * pfVar4[9] + *pfVar3 * pfVar4[8];
+  tAB.row[2].v.v[1] = pfVar3[6] * pfVar4[10] + pfVar3[5] * pfVar4[9] + pfVar3[4] * pfVar4[8];
+  tAB.row[2].v.v[2] = pfVar3[10] * pfVar4[10] + pfVar3[9] * pfVar4[9] + pfVar3[8] * pfVar4[8];
+  pos.v[1] = pfVar4[0xd] - pfVar3[0xd];
+  pos.v[2] = pfVar4[0xe] - pfVar3[0xe];
+  pos.v[0] = pfVar4[0xc] - pfVar3[0xc];
+  tAB.row[3].v.v[0] = pos.v[2] * pfVar3[2] + pos.v[0] * *pfVar3 + pos.v[1] * pfVar3[1];
+  tAB.row[3].v.v[1] = pos.v[2] * pfVar3[6] + pos.v[0] * pfVar3[4] + pos.v[1] * pfVar3[5];
+  tAB.row[3].v.v[2] = pos.v[2] * pfVar3[10] + pos.v[0] * pfVar3[8] + pos.v[1] * pfVar3[9];
+  bVar2 = McdVanillaOverlapOBBSphere
+                    (&separation,&normal,&pos,&dims,fVar9 + fVar8,inROBB,inRSphere,
+                     (lsVec3 *)(tAB.row + 3));
+  MVar7 = 0;
+  if (bVar2) {
+    if (0 < result->contactMaxCount) {
+      result->normal[0] = normal.v[2] * pfVar3[8] + normal.v[1] * pfVar3[4] + normal.v[0] * *pfVar3;
+      result->normal[1] =
+           normal.v[2] * pfVar3[9] + normal.v[0] * pfVar3[1] + normal.v[1] * pfVar3[5];
+      result->normal[2] =
+           normal.v[2] * pfVar3[10] + normal.v[0] * pfVar3[2] + normal.v[1] * pfVar3[6];
+      result->contacts->dims = dims;
+      result->contacts->separation = separation;
+      pMVar1 = result->contacts;
+      pMVar1->position[0] =
+           pfVar3[8] * pos.v[2] + pfVar3[4] * pos.v[1] + *pfVar3 * pos.v[0] + pfVar3[0xc];
+      pMVar1->position[1] =
+           pfVar3[9] * pos.v[2] + pfVar3[5] * pos.v[1] + pfVar3[1] * pos.v[0] + pfVar3[0xd];
+      pMVar1->position[2] =
+           pfVar3[10] * pos.v[2] + pfVar3[6] * pos.v[1] + pfVar3[2] * pos.v[0] + pfVar3[0xe];
+      pMVar1 = result->contacts;
+      pMVar1->normal[0] = result->normal[0];
+      pMVar1->normal[1] = result->normal[1];
+      pMVar1->normal[2] = result->normal[2];
+      result->contactCount = 1;
+    }
+    MVar7 = 1;
+    result->touch = 1;
+  }
+  return MVar7;
+}
+
+
+/* ==== McdBoxSphereSafeTime ==== */
+
+int McdBoxSphereSafeTime(McdModelPair *p,MeReal maxTime,McdSafeTimeResult *result)
+
+{
+  lsVec3 *plVar1;
+  lsVec3 *plVar2;
+  lsTransform *plVar3;
+  lsTransform *plVar4;
+  void *pvVar5;
+  void *pvVar6;
+  float *pfVar7;
+  int iVar8;
+  float fVar9;
+  lsTransform *tm0;
+  lsVec3 *V1;
+  lsVec3 *V0;
+  MeReal T;
+  lsVec3 P;
+  MeReal ext1 [3];
+  
+                    /* Unresolved local var: lsTransform * tm1@[DW_OP_reg7(EDI)]
+                       Unresolved local var: McdBoxID geometry0@[DW_OP_reg6(ESI)]
+                       Unresolved local var: McdSphereID geometry1@[DW_OP_reg0(EAX)]
+                       Unresolved local var: MeReal radS@[DW_OP_reg12(ST1)]
+                       Unresolved local var: MeReal * ext0@[DW_OP_reg0(EAX)]
+                       Unresolved local var: uint ixt@[DW_OP_reg2(EDX)] */
+  result->pair = p;
+  result->time = maxTime;
+  plVar1 = McdModelGetLinearVelocityPtr(p->model1);
+  plVar2 = McdModelGetLinearVelocityPtr(p->model2);
+  plVar3 = McdModelGetTransformPtr(p->model1);
+  plVar4 = McdModelGetTransformPtr(p->model2);
+  pvVar5 = McdModelGetGeometry(p->model1);
+  pvVar6 = McdModelGetGeometry(p->model2);
+  fVar9 = McdSphereGetRadius(pvVar6);
+                    /* Unresolved local var: float __result@[???] */
+  fVar9 = fVar9 * 0.8284271;
+  pfVar7 = McdBoxGetRadii(pvVar5);
+  ext1[0] = fVar9;
+  ext1[1] = fVar9;
+  ext1[2] = fVar9;
+  iVar8 = MovingBoxBoxIntersect(pfVar7,plVar3,plVar1,ext1,plVar4,plVar2,maxTime,&T,(lsVec3 *)&P);
+  if (iVar8 == 0) {
+    result->time = maxTime;
+  }
+  else {
+    result->time = T;
+  }
+  return iVar8;
+}
+
+
+/* ==== McdBoxSphereRegisterInteraction ==== */
+
+MeBool McdBoxSphereRegisterInteraction(McdFramework *frame)
+
+{
+  McdInteractions interactions;
+  
+  interactions.helloFn = (McdHelloFn)0x0;
+  interactions.goodbyeFn = (McdGoodbyeFn)0x0;
+  interactions.intersectFn = McdBoxSphereIntersect;
+  interactions.safetimeFn = McdBoxSphereSafeTime;
+  interactions.cull = 0;
+  interactions.warned = 0;
+  McdFrameworkSetInteractions(frame,2,1,&interactions);
+  return 1;
+}
+
+
+/* ==== McdVanillaOverlapOBBSphere ==== */
+
+bool McdVanillaOverlapOBBSphere
+               (MeReal *outSep,lsVec3 *outN,lsVec3 *outPos,MeI16 *outDims,MeReal inEps,
+               lsVec3 *inROBB,MeReal inRSphere,lsVec3 *inPos)
+
+{
+  float fVar1;
+  float fVar2;
+  float fVar3;
+  float fVar4;
+  float fVar5;
+  MeReal MVar6;
+  MeReal MVar7;
+  MeReal MVar8;
+  float fVar9;
+  float fVar10;
+  bool bVar11;
+  short sVar12;
+  int best;
+  
+                    /* Unresolved local var: int outsides@[DW_OP_reg3(EBX)]
+                       Unresolved local var: int i@[DW_OP_reg3(EBX)]
+                       Unresolved local var: MeReal dist@[DW_OP_reg13(ST2)]
+                       Unresolved local var: MeReal d@[DW_OP_reg11(ST0)]
+                       Unresolved local var: MeReal separation@[DW_OP_reg12(ST1)]
+                       Unresolved local var: MeReal sign@[DW_OP_reg15(ST4)] */
+  sVar12 = 0;
+  outN->v[2] = 0.0;
+  outN->v[1] = 0.0;
+  outN->v[0] = 0.0;
+  if (inPos->v[0] <= inROBB->v[0]) {
+    if (-inROBB->v[0] <= inPos->v[0]) {
+      fVar1 = 0.0;
+    }
+    else {
+      fVar1 = -inROBB->v[0] - inPos->v[0];
+      sVar12 = 1;
+      outN->v[0] = fVar1;
+      fVar1 = fVar1 * fVar1 + 0.0;
+    }
+  }
+  else {
+    fVar1 = inROBB->v[0] - inPos->v[0];
+    sVar12 = 1;
+    outN->v[0] = fVar1;
+    fVar1 = fVar1 * fVar1;
+  }
+  MVar6 = NAN;
+  if (inPos->v[1] <= inROBB->v[1]) {
+    if (inPos->v[1] < -inROBB->v[1]) {
+      fVar2 = -inROBB->v[1] - inPos->v[1];
+      outN->v[1] = fVar2;
+      fVar2 = fVar2 * fVar2;
+      goto LAB_00010513;
+    }
+  }
+  else {
+    fVar2 = inROBB->v[1] - inPos->v[1];
+    outN->v[1] = fVar2;
+    fVar2 = fVar2 * fVar2;
+LAB_00010513:
+    fVar1 = fVar2 + fVar1;
+    sVar12 = sVar12 + 1;
+  }
+  if (inPos->v[2] <= inROBB->v[2]) {
+    if (-inROBB->v[2] <= inPos->v[2]) goto LAB_0001053a;
+    fVar2 = -inROBB->v[2] - inPos->v[2];
+    outN->v[2] = fVar2;
+    fVar2 = fVar2 * fVar2;
+  }
+  else {
+    fVar2 = inROBB->v[2] - inPos->v[2];
+    outN->v[2] = fVar2;
+    fVar2 = fVar2 * fVar2;
+  }
+  fVar1 = fVar2 + fVar1;
+  sVar12 = sVar12 + 1;
+LAB_0001053a:
+  bVar11 = false;
+  if (fVar1 <= (inRSphere + inEps) * (inRSphere + inEps)) {
+    if (fVar1 <= inEps * inEps) {
+      fVar2 = 3.4028235e+38;
+      MVar8 = -1.0;
+      fVar1 = ABS(inROBB->v[0] - inPos->v[0]);
+      MVar7 = 1.0;
+      if (fVar1 < 3.4028235e+38) {
+        best = 0;
+        MVar6 = MVar8;
+        fVar2 = fVar1;
+      }
+      fVar1 = ABS(inROBB->v[0] + inPos->v[0]);
+      if (fVar1 < fVar2) {
+        best = 0;
+        MVar6 = MVar7;
+        fVar2 = fVar1;
+      }
+      fVar1 = ABS(inROBB->v[1] - inPos->v[1]);
+      if (fVar1 < fVar2) {
+        best = 1;
+        MVar6 = MVar8;
+        fVar2 = fVar1;
+      }
+      fVar1 = ABS(inROBB->v[1] + inPos->v[1]);
+      if (fVar1 < fVar2) {
+        best = 1;
+        MVar6 = MVar7;
+        fVar2 = fVar1;
+      }
+      fVar1 = ABS(inROBB->v[2] - inPos->v[2]);
+      if (fVar1 < fVar2) {
+        best = 2;
+        MVar6 = MVar8;
+        fVar2 = fVar1;
+      }
+      if (ABS(inROBB->v[2] + inPos->v[2]) < fVar2) {
+        best = 2;
+        MVar6 = MVar7;
+      }
+      outN->v[best] = MVar6;
+      *outSep = (ABS(inPos->v[best]) - inROBB->v[best]) - inRSphere;
+      fVar1 = outN->v[1];
+      fVar2 = outN->v[2];
+      fVar3 = inPos->v[1];
+      fVar4 = inPos->v[2];
+      outPos->v[0] = outN->v[0] * inRSphere + inPos->v[0];
+      outPos->v[1] = fVar1 * inRSphere + fVar3;
+      outPos->v[2] = fVar2 * inRSphere + fVar4;
+      *outDims = 0x302;
+    }
+    else {
+                    /* Unresolved local var: MeReal len@[???] */
+      *outDims = 3U - sVar12 | 0x300;
+                    /* Unresolved local var: float __result@[DW_OP_reg15(ST4)] */
+      fVar1 = outN->v[0];
+      fVar2 = outN->v[1];
+      fVar3 = outN->v[2];
+      fVar9 = SQRT(fVar3 * fVar3 + fVar2 * fVar2 + fVar1 * fVar1);
+                    /* Unresolved local var: MeReal recipX@[DW_OP_reg11(ST0)] */
+      fVar10 = 1.0 / fVar9;
+      outN->v[0] = fVar1 * fVar10;
+      outN->v[1] = fVar2 * fVar10;
+      outN->v[2] = fVar3 * fVar10;
+      fVar4 = inPos->v[1];
+      fVar5 = inPos->v[2];
+      outPos->v[0] = inPos->v[0] + fVar1 * fVar10 * inRSphere;
+      outPos->v[1] = fVar2 * fVar10 * inRSphere + fVar4;
+      outPos->v[2] = fVar3 * fVar10 * inRSphere + fVar5;
+      *outSep = fVar9 - inRSphere;
+    }
+    bVar11 = true;
+  }
+  return bVar11;
+}
+
+

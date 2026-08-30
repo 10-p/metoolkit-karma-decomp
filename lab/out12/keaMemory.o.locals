@@ -1,0 +1,55 @@
+# function,name,stackoff,hexoff,size,type
+initPool,this,4,00000004,4,keaFunctions *
+initPool,ptr,8,00000008,4,void *
+initPool,size,12,0000000c,4,int
+keaPoolAlloc,size,4,00000004,4,int
+keaPoolAlloc,name,8,00000008,4,char *
+vanillaAllocateMemory,constraints,8,00000008,92,MdtKeaConstraints
+vanillaAllocateMemory,num_bodies,100,00000064,4,int
+vanillaAllocateMemory,total_strips_inc_padding,-20,ffffffec,4,int
+vanillaAllocateMemory,total_strips_exc_padding,-24,ffffffe8,4,int
+vanillaAllocateMemory,num_rows,-32,ffffffe0,4,int
+vanillaAllocateMemory,mem,4,00000004,4,keaTempMemory *
+allocateMemory,mem,8,00000008,4,keaTempMemory *
+allocateMemory,this,4,00000004,4,keaFunctions_Vanilla *
+allocateMemory,constraints,12,0000000c,92,MdtKeaConstraints
+allocateMemory,num_bodies,104,00000068,4,int
+allocateMemory,in_stack_ffffff88,-120,ffffff88,92,MdtKeaConstraints
+MdtKeaMemoryRequired,num_rows_exc_padding,4,00000004,4,int *
+MdtKeaMemoryRequired,num_partitions,8,00000008,4,int
+MdtKeaMemoryRequired,max_rows,12,0000000c,4,int
+MdtKeaMemoryRequired,max_bodies,16,00000010,4,int
+MdtKeaMemoryRequired,c4size,-20,ffffffec,4,int
+MdtKeaMemoryRequired,c16c12size,-24,ffffffe8,4,int
+MdtKeaMemoryRequired,invIworld,-28,ffffffe4,4,int
+MdtKeaMemoryRequired,vhmf,-32,ffffffe0,4,int
+MdtKeaMemoryRequired,jm,-36,ffffffdc,4,int
+MdtKeaMemoryRequired,rhs,-40,ffffffd8,4,int
+MdtKeaMemoryRequired,jlen_12padded,-44,ffffffd4,4,int
+MdtKeaMemoryRequired,jlen,-48,ffffffd0,4,int
+MdtKeaMemoryRequired,bl2cbody,-52,ffffffcc,4,int
+MdtKeaMemoryRequired,bl2body_12padded,-56,ffffffc8,4,int
+MdtKeaMemoryRequired,bl2body,-60,ffffffc4,4,int
+MdtKeaMemoryRequired,ArsD,-64,ffffffc0,4,int
+MdtKeaMemoryRequired,Arhs,-68,ffffffbc,4,int
+MdtKeaMemoryRequired,A,-72,ffffffb8,4,int
+MdtKeaMemoryRequired,ANAZ,-76,ffffffb4,4,int
+MdtKeaMemoryRequired,ANCZ,-80,ffffffb0,4,int
+MdtKeaMemoryRequired,ANR,-84,ffffffac,4,int
+MdtKeaMemoryRequired,ANC,-88,ffffffa8,4,int
+MdtKeaMemoryRequired,cached,-92,ffffffa4,4,int
+MdtKeaMemoryRequired,x,-96,ffffffa0,4,int
+MdtKeaMemoryRequired,w,-100,ffffff9c,4,int
+MdtKeaMemoryRequired,upper,-104,ffffff98,4,int
+MdtKeaMemoryRequired,lower,-108,ffffff94,4,int
+MdtKeaMemoryRequired,initialSolve,-112,ffffff90,4,int
+MdtKeaMemoryRequired,clampedValues,-116,ffffff8c,4,int
+MdtKeaMemoryRequired,Ainv,-120,ffffff88,4,int
+MdtKeaMemoryRequired,Qrhs,-124,ffffff84,4,int
+MdtKeaMemoryRequired,QrsD,-128,ffffff80,4,int
+MdtKeaMemoryRequired,QNC,-132,ffffff7c,4,int
+MdtFlushCache,a,4,00000004,4,int
+MdtSyncDCache,a,4,00000004,4,void *
+MdtSyncDCache,b,8,00000008,4,void *
+MdtInvalidDCache,a,4,00000004,4,void *
+MdtInvalidDCache,b,8,00000008,4,void *

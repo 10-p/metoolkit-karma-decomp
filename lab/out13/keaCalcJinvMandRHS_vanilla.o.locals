@@ -1,0 +1,33 @@
+# function,name,stackoff,hexoff,size,type
+calcJinvMandRHS,strip,-32,ffffffe0,4,int
+calcJinvMandRHS,block,-36,ffffffdc,4,int
+calcJinvMandRHS,ptrhs,-40,ffffffd8,4,MeReal *
+calcJinvMandRHS,J,-44,ffffffd4,4,MdtKeaJBlock *
+calcJinvMandRHS,JM,-48,ffffffd0,4,MdtKeaJBlock *
+calcJinvMandRHS,this,4,00000004,4,keaFunctions_Vanilla *
+calcJinvMandRHS,xgammaptr,-52,ffffffcc,4,MeReal *
+calcJinvMandRHS,cptr,-56,ffffffc8,4,MeReal *
+calcJinvMandRHS,rhs,8,00000008,4,MeReal *
+calcJinvMandRHS,jmstore,12,0000000c,4,MdtKeaJBlockPair *
+calcJinvMandRHS,xiptr,-60,ffffffc4,4,MeReal *
+calcJinvMandRHS,jstore,16,00000010,4,MdtKeaJBlock[2] *
+calcJinvMandRHS,xgamma,20,00000014,4,MeReal *
+calcJinvMandRHS,c,24,00000018,4,MeReal *
+calcJinvMandRHS,xi,28,0000001c,4,MeReal *
+calcJinvMandRHS,invIworld,32,00000020,4,MdtKeaInverseMassMatrix *
+calcJinvMandRHS,bl2body,36,00000024,4,int[8] *
+calcJinvMandRHS,jlen,40,00000028,4,int *
+calcJinvMandRHS,vhmf,44,0000002c,4,MdtKeaVelocity *
+calcJinvMandRHS,num_bodies,48,00000030,4,int
+calcJinvMandRHS,num_rows_exc_padding,52,00000034,4,int
+calcJinvMandRHS,num_rows_inc_padding,56,00000038,4,int
+calcJinvMandRHS,stepsize,60,0000003c,4,MeReal
+calcJinvMandRHS,gamma,64,00000040,4,MeReal
+Multiply46BlockByMBlock,jmblock,4,00000004,4,MdtKeaJBlock *
+Multiply46BlockByMBlock,jblock,8,00000008,4,MdtKeaJBlock *
+Multiply46BlockByMBlock,invMblock,12,0000000c,4,MdtKeaInverseMassMatrix *
+Multiply46BlockByMBlock,tmp,-28,ffffffe4,16,MeReal[4]
+Multiply46BlockBy61Vector,arhs,4,00000004,4,MeReal *
+Multiply46BlockBy61Vector,jblock,8,00000008,4,MdtKeaJBlock *
+Multiply46BlockBy61Vector,vmMif,12,0000000c,4,MdtKeaVelocity *
+Multiply46BlockBy61Vector,tmp,-28,ffffffe4,16,MeReal[4]

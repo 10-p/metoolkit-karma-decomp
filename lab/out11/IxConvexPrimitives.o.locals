@@ -1,0 +1,15 @@
+# function,name,stackoff,hexoff,size,type
+McdSphylConvexMeshIntersect,p,4,00000004,4,McdModelPair *
+McdSphylConvexMeshIntersect,result,8,00000008,4,McdIntersectResult *
+McdSphylConvexMeshIntersect,eps,-120,ffffff88,4,MeReal
+McdSphylConvexMeshIntersect,sphyl,-124,ffffff84,4,McdSphyl *
+McdSphylConvexMeshIntersect,convexMesh,-128,ffffff80,4,McdConvexMesh *
+McdSphylConvexMeshIntersect,convex,-132,ffffff7c,4,McdConvexHull *
+McdSphylConvexMeshIntersect,axis,-44,ffffffd4,12,MeReal[3]
+McdSphylConvexMeshIntersect,pos,-60,ffffffc4,12,MeReal[3]
+McdSphylConvexMeshIntersect,cp,-76,ffffffb4,12,MeReal[3]
+McdSphylConvexMeshIntersect,sp,-92,ffffffa4,12,MeReal[3]
+McdSphylConvexMeshIntersect,regionType,-112,ffffff90,4,VoronoiRegionType
+McdSphylConvexMeshIntersect,s,-116,ffffff8c,4,MeReal
+McdSphylConvexMeshIntersect,ds,-136,ffffff78,4,MeReal
+McdSphylConvexMeshIntersect,n,-108,ffffff94,12,MeReal[3]

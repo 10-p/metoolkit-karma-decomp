@@ -1,0 +1,27 @@
+# function,name,stackoff,hexoff,size,type
+MdtSpringCreate,w,4,00000004,4,MdtWorldID
+MdtSpringReset,j,4,00000004,4,MdtSpringID
+MdtSpringQuaConstraint,j,4,00000004,4,MdtSpringID
+MdtConstraintDCastSpring,c,4,00000004,4,MdtConstraintID
+MdtSpringGetPosition,j,4,00000004,4,MdtSpringID
+MdtSpringGetPosition,v,8,00000008,4,MeReal *
+MdtSpringGetPosition,bodyindex,12,0000000c,4,uint
+MdtSpringGetPosition,pMVar1,-28,ffffffe4,4,MdtBody *
+MdtSpringGetPosition,pMVar2,-24,ffffffe8,4,MeReal *
+MdtSpringGetLimit,j,4,00000004,4,MdtSpringID
+MdtSpringSetPosition,j,4,00000004,4,MdtSpringID
+MdtSpringSetPosition,bodyindex,8,00000008,4,uint
+MdtSpringSetPosition,pMVar1,-52,ffffffcc,4,MdtBody *
+MdtSpringSetPosition,pMVar2,-48,ffffffd0,4,MeReal *
+MdtSpringSetPosition,x,12,0000000c,4,MeReal
+MdtSpringSetPosition,y,16,00000010,4,MeReal
+MdtSpringSetPosition,z,20,00000014,4,MeReal
+MdtSpringSetPosition,tmp,-44,ffffffd4,12,MeVector3
+MdtSpringSetLimit,j,4,00000004,4,MdtSpringID
+MdtSpringSetLimit,NewLimit,8,00000008,4,MdtLimitID
+MdtSpringSetNaturalLength,j,4,00000004,4,MdtSpringID
+MdtSpringSetNaturalLength,NewNaturalLength,8,00000008,4,MeReal
+MdtSpringSetStiffness,NewStiffness,8,00000008,4,MeReal
+MdtSpringSetStiffness,j,4,00000004,4,MdtSpringID
+MdtSpringSetDamping,j,4,00000004,4,MdtSpringID
+MdtSpringSetDamping,NewDamping,8,00000008,4,MeReal

@@ -1,0 +1,112 @@
+# function,name,stackoff,hexoff,size,type
+MeFGeometryCreateFromASE,aiStack_198,-408,fffffe68,28,int[7]
+MeFGeometryCreateFromASE,name,4,00000004,4,char *
+MeFGeometryCreateFromASE,file,8,00000008,4,char *
+MeFGeometryCreateFromASE,xScale,12,0000000c,4,MeReal
+MeFGeometryCreateFromASE,yScale,16,00000010,4,MeReal
+MeFGeometryCreateFromASE,zScale,20,00000014,4,MeReal
+MeFGeometryCreateFromASE,ag,-368,fffffe90,4,MeFGeometry *
+MeFGeometryCreateFromASE,aseObject,-372,fffffe8c,4,MeASEObject *
+MeFGeometryCreateFromASE,headObject,-376,fffffe88,4,MeASEObject *
+MeFGeometryCreateFromASE,mesh,-44,ffffffd4,16,MyMesh
+MeFGeometryCreateFromASE,relTM,-108,ffffff94,64,MeMatrix4
+MeFGeometryCreateFromASE,partGeometry,-380,fffffe84,4,MeFPrimitive *
+MeFGeometryCreateFromASE,typeName,-364,fffffe94,256,char[256]
+MeFSphereCreateFromMesh,pcVar17,-152,ffffff68,4,char *
+MeFSphereCreateFromMesh,name,4,00000004,4,char *
+MeFSphereCreateFromMesh,mesh,8,00000008,4,MyMesh *
+MeFSphereCreateFromMesh,relTM,12,0000000c,4,MeMatrix4Ptr
+MeFSphereCreateFromMesh,bbox,-76,ffffffb4,48,MyAABB
+MeFSphereCreateFromMesh,radius,-96,ffffffa0,4,MeReal
+MeFSphereCreateFromMesh,fgeom,-100,ffffff9c,4,MeFPrimitive *
+MeFSphereCreateFromMesh,ctov,-92,ffffffa4,12,MeVector3
+MeFBoxCreateFromMesh,planeDistCount,-156,ffffff64,4,int *
+MeFBoxCreateFromMesh,numPlanes,-160,ffffff60,4,int
+MeFBoxCreateFromMesh,i,-164,ffffff5c,4,int
+MeFBoxCreateFromMesh,bbox,-76,ffffffb4,48,MyAABB
+MeFBoxCreateFromMesh,size,-92,ffffffa4,12,MeVector3
+MeFBoxCreateFromMesh,boxgeom,-168,ffffff58,4,MeFPrimitive *
+MeFBoxCreateFromMesh,e1,-108,ffffff94,12,MeVector3
+MeFBoxCreateFromMesh,e2,-124,ffffff84,12,MeVector3
+MeFBoxCreateFromMesh,normal,-140,ffffff74,12,MeVector3
+MeFBoxCreateFromMesh,foundPlane,-172,ffffff54,4,MeBool
+MeFBoxCreateFromMesh,aiStack_130,-304,fffffed0,8,int[2]
+MeFBoxCreateFromMesh,afStack_128,-296,fffffed8,12,float[3]
+MeFBoxCreateFromMesh,aMStack_11c,-284,fffffee4,12,MeReal[3]
+MeFBoxCreateFromMesh,local_110,-272,fffffef0,4,int
+MeFBoxCreateFromMesh,local_104,-260,fffffefc,4,float *
+MeFBoxCreateFromMesh,local_100,-256,ffffff00,4,int[3] *
+MeFBoxCreateFromMesh,local_e8,-232,ffffff18,4,int
+MeFBoxCreateFromMesh,local_e4,-228,ffffff1c,4,MeReal *
+MeFBoxCreateFromMesh,local_e0,-224,ffffff20,4,int
+MeFBoxCreateFromMesh,local_dc,-220,ffffff24,4,int[3] *
+MeFBoxCreateFromMesh,local_d8,-216,ffffff28,4,int
+MeFBoxCreateFromMesh,local_d4,-212,ffffff2c,4,float
+MeFBoxCreateFromMesh,local_d0,-208,ffffff30,4,float
+MeFBoxCreateFromMesh,local_c4,-196,ffffff3c,4,float
+MeFBoxCreateFromMesh,local_c0,-192,ffffff40,4,float
+MeFBoxCreateFromMesh,local_b4,-180,ffffff4c,4,MeVector3 *
+MeFBoxCreateFromMesh,local_b0,-176,ffffff50,4,float
+MeFBoxCreateFromMesh,local_94,-148,ffffff6c,4,int
+MeFBoxCreateFromMesh,name,4,00000004,4,char *
+MeFBoxCreateFromMesh,mesh,8,00000008,4,MyMesh *
+MeFBoxCreateFromMesh,relTM,12,0000000c,4,MeMatrix4Ptr
+MeFBoxCreateFromMesh,planeNormal,-144,ffffff70,4,MeVector3 *
+MeFBoxCreateFromMesh,planeDist,-152,ffffff68,4,MeReal[2] *
+MeFCylinderCreateFromMesh,name,4,00000004,4,char *
+MeFCylinderCreateFromMesh,mesh,8,00000008,4,MyMesh *
+MeFCylinderCreateFromMesh,relTM,12,0000000c,4,MeMatrix4Ptr
+MeFCylinderCreateFromMesh,dir,-176,ffffff50,4,MeVector3 *
+MeFCylinderCreateFromMesh,dirCount,-184,ffffff48,4,int *
+MeFCylinderCreateFromMesh,numDirs,-188,ffffff44,4,int
+MeFCylinderCreateFromMesh,cylgeom,-192,ffffff40,4,MeFPrimitive *
+MeFCylinderCreateFromMesh,bbox,-76,ffffffb4,48,MyAABB
+MeFCylinderCreateFromMesh,i,-196,ffffff3c,4,int
+MeFCylinderCreateFromMesh,j,-200,ffffff38,4,int
+MeFCylinderCreateFromMesh,axisIx,-204,ffffff34,4,int
+MeFCylinderCreateFromMesh,cylAxis,-92,ffffffa4,12,MeVector3
+MeFCylinderCreateFromMesh,minr,-208,ffffff30,4,MeReal
+MeFCylinderCreateFromMesh,maxlen,-212,ffffff2c,4,MeReal
+MeFCylinderCreateFromMesh,minlen,-216,ffffff28,4,MeReal
+MeFCylinderCreateFromMesh,edge,-140,ffffff74,36,MeReal[3][3]
+MeFCylinderCreateFromMesh,i_1,-220,ffffff24,4,int
+MeFCylinderCreateFromMesh,relOrigin,-156,ffffff64,12,MeVector3
+MeFCylinderCreateFromMesh,toClosest,-172,ffffff54,12,MeVector3
+MeFCylinderCreateFromMesh,__result,-228,ffffff1c,4,float
+MeFCylinderCreateFromMesh,aiStack_120,-288,fffffee0,8,int[2]
+MeFCylinderCreateFromMesh,fStack_118,-280,fffffee8,4,float
+MeFCylinderCreateFromMesh,auStack_114,-276,fffffeec,8,uint[2]
+MeFCylinderCreateFromMesh,MStack_10c,-268,fffffef4,4,MeReal
+MeFCylinderCreateFromMesh,local_108,-264,fffffef8,4,MeVector3 *
+MeFCylinderCreateFromMesh,local_104,-260,fffffefc,4,MeVector3 *
+MeFCylinderCreateFromMesh,local_100,-256,ffffff00,4,float
+MeFCylinderCreateFromMesh,local_f8,-248,ffffff08,4,int
+MeFCylinderCreateFromMesh,local_f4,-244,ffffff0c,4,int[3] *
+MeFCylinderCreateFromMesh,local_f0,-240,ffffff10,4,MeReal *
+MeFCylinderCreateFromMesh,local_ec,-236,ffffff14,4,MeVector3 *
+MeFCylinderCreateFromMesh,local_e8,-232,ffffff18,4,float
+MeFCylinderCreateFromMesh,local_e0,-224,ffffff20,4,MeVector3 *
+MeFCylinderCreateFromMesh,local_b4,-180,ffffff4c,4,int
+MeFConvexCreateFromMesh,newOrigin,-60,ffffffc4,12,MeVector3
+MeFConvexCreateFromMesh,MStackY_60,-96,ffffffa0,4,MeReal
+MeFConvexCreateFromMesh,afStack_4c,-76,ffffffb4,12,float[3]
+MeFConvexCreateFromMesh,name,4,00000004,4,char *
+MeFConvexCreateFromMesh,mesh,8,00000008,4,MyMesh *
+MeFConvexCreateFromMesh,relTM,12,0000000c,4,MeMatrix4Ptr
+MeFConvexCreateFromMesh,convexGeom,-64,ffffffc0,4,MeFPrimitive *
+MeFConvexCreateFromMesh,localMesh,-44,ffffffd4,16,MyMesh
+MeMesh2AABB,i,-20,ffffffec,4,int
+MeMesh2AABB,local_1c,-28,ffffffe4,4,int
+MeMesh2AABB,mesh,4,00000004,4,MyMesh *
+MeMesh2AABB,bbox,8,00000008,4,MyAABB *
+name2Type,name,4,00000004,4,char *
+name2Type,type,-288,fffffee0,4,Mesh2GeometryType
+name2Type,tmpName,-284,fffffee4,256,char[256]
+PointInsideConvex,mesh,4,00000004,4,MyMesh *
+PointInsideConvex,inside,8,00000008,4,MeReal *
+PointInsideConvex,haveTetra,-96,ffffffa0,4,MeBool
+PointInsideConvex,e1,-44,ffffffd4,12,MeVector3
+PointInsideConvex,e2,-60,ffffffc4,12,MeVector3
+PointInsideConvex,faceNormal,-76,ffffffb4,12,MeVector3
+PointInsideConvex,vertRel,-92,ffffffa4,12,MeVector3
+PointInsideConvex,local_70,-112,ffffff90,4,MeVector3 *

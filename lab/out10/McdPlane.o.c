@@ -1,0 +1,296 @@
+/* ==== McdPlaneGetTypeId ==== */
+
+MeI16 McdPlaneGetTypeId(void)
+
+{
+  return 3;
+}
+
+
+/* ==== McdPlaneRegisterType ==== */
+
+void McdPlaneRegisterType(McdFramework *frame)
+
+{
+  McdFrameworkRegisterGeometryType
+            (frame,3,"McdPlane",McdPlaneDestroy,McdPlaneUpdateAABB,McdPlaneGetBSphere,
+             McdPlaneMaximumPoint,McdPlaneGetMassProperties,McdPlaneDebugDraw);
+  return;
+}
+
+
+/* ==== McdPlaneCreate ==== */
+
+/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */
+
+McdPlaneID McdPlaneCreate(McdFramework *frame)
+
+{
+  McdPlaneID pMVar1;
+  
+                    /* Unresolved local var: McdPlaneID p@[DW_OP_reg3(EBX)] */
+  pMVar1 = (*_McdGeometryDeinit)(0x10,0x10);
+  if (pMVar1 != (McdPlaneID)0x0) {
+    McdGeometryInit(pMVar1,frame,3);
+  }
+  return pMVar1;
+}
+
+
+/* ==== McdPlaneDestroy ==== */
+
+void McdPlaneDestroy(McdGeometryID g)
+
+{
+  McdGeometryDeinit(g);
+  return;
+}
+
+
+/* ==== McdPlaneUpdateAABB ==== */
+
+void McdPlaneUpdateAABB(McdGeometryInstanceID ins,MeMatrix4Ptr finalTM,MeBool tight)
+
+{
+  void *pvVar1;
+  MeMatrix4Ptr tm;
+  MeReal max [3];
+  MeReal min [3];
+  
+                    /* Unresolved local var: MeReal cosTolAngle@[???]
+                       Unresolved local var: MeVector3Ptr n@[DW_OP_reg2(EDX)]
+                       Unresolved local var: MeVector3Ptr t@[DW_OP_reg6(ESI)] */
+  pvVar1 = McdGeometryInstanceGetTransformPtr(ins);
+  ins->min[0] = -3.4028235e+38;
+  ins->min[1] = -3.4028235e+38;
+  ins->min[2] = -3.4028235e+38;
+  ins->max[0] = 3.4028235e+38;
+  ins->max[1] = 3.4028235e+38;
+  ins->max[2] = 3.4028235e+38;
+  if (*(float *)((int)pvVar1 + 0x20) <= 0.9999995) {
+    if (-0.9999995 <= *(float *)((int)pvVar1 + 0x20)) {
+      if (*(float *)((int)pvVar1 + 0x24) <= 0.9999995) {
+        if (-0.9999995 <= *(float *)((int)pvVar1 + 0x24)) {
+          if (*(float *)((int)pvVar1 + 0x28) <= 0.9999995) {
+            if (*(float *)((int)pvVar1 + 0x28) < -0.9999995) {
+              ins->min[2] = *(MeReal *)((int)pvVar1 + 0x38);
+            }
+          }
+          else {
+            ins->max[2] = *(MeReal *)((int)pvVar1 + 0x38);
+          }
+        }
+        else {
+          ins->min[1] = *(MeReal *)((int)pvVar1 + 0x34);
+        }
+      }
+      else {
+        ins->max[1] = *(MeReal *)((int)pvVar1 + 0x34);
+      }
+    }
+    else {
+      ins->min[0] = *(MeReal *)((int)pvVar1 + 0x30);
+    }
+  }
+  else {
+    ins->max[0] = *(MeReal *)((int)pvVar1 + 0x30);
+  }
+  if (finalTM != (MeMatrix4Ptr)0x0) {
+                    /* Unresolved local var: MeVector3Ptr n@[DW_OP_reg2(EDX)] */
+    min[0] = -3.4028235e+38;
+    min[1] = -3.4028235e+38;
+    min[2] = -3.4028235e+38;
+    max[0] = 3.4028235e+38;
+    max[1] = 3.4028235e+38;
+    max[2] = 3.4028235e+38;
+    if (finalTM[2][0] <= 0.9999995) {
+      if (-0.9999995 <= finalTM[2][0]) {
+        if (finalTM[2][1] <= 0.9999995) {
+          if (-0.9999995 <= finalTM[2][1]) {
+            if (finalTM[2][2] <= 0.9999995) {
+              if (finalTM[2][2] < -0.9999995) {
+                min[2] = finalTM[3][2];
+              }
+            }
+            else {
+              max[2] = finalTM[3][2];
+            }
+          }
+          else {
+            min[1] = finalTM[3][1];
+          }
+        }
+        else {
+          max[1] = finalTM[3][1];
+        }
+      }
+      else {
+        min[0] = finalTM[3][0];
+      }
+    }
+    else {
+      max[0] = finalTM[3][0];
+    }
+    if (ins->min[0] < min[0]) {
+      min[0] = ins->min[0];
+    }
+    ins->min[0] = min[0];
+    if (ins->min[1] < min[1]) {
+      min[1] = ins->min[1];
+    }
+    ins->min[1] = min[1];
+    if (ins->min[2] < min[2]) {
+      min[2] = ins->min[2];
+    }
+    ins->min[2] = min[2];
+    if (max[0] < ins->max[0]) {
+      max[0] = ins->max[0];
+    }
+    ins->max[0] = max[0];
+    if (max[1] < ins->max[1]) {
+      max[1] = ins->max[1];
+    }
+    ins->max[1] = max[1];
+    if (max[2] < ins->max[2]) {
+      max[2] = ins->max[2];
+    }
+    ins->max[2] = max[2];
+  }
+  return;
+}
+
+
+/* ==== McdPlaneGetBSphere ==== */
+
+void McdPlaneGetBSphere(McdGeometry *g,MeReal *center,MeReal *radius)
+
+{
+  center[2] = 0.0;
+  center[1] = 0.0;
+  *center = 0.0;
+  *radius = 3.4028235e+38;
+  return;
+}
+
+
+/* ==== McdPlaneMaximumPoint ==== */
+
+void McdPlaneMaximumPoint(McdGeometryInstanceID ins,MeReal *inDir,MeReal *outPoint)
+
+{
+  float fVar1;
+  float fVar2;
+  void *pvVar3;
+  
+                    /* Unresolved local var: lsTransform * tm@[DW_OP_reg2(EDX)]
+                       Unresolved local var: lsVec3 * n@[???]
+                       Unresolved local var: lsVec3 * p@[???]
+                       Unresolved local var: MeReal cosTolAngle@[???] */
+  pvVar3 = McdGeometryInstanceGetTransformPtr(ins);
+  if (inDir[2] * *(float *)((int)pvVar3 + 0x28) +
+      inDir[1] * *(float *)((int)pvVar3 + 0x24) + *inDir * *(float *)((int)pvVar3 + 0x20) <
+      0.9999995) {
+    fVar1 = inDir[1];
+    fVar2 = inDir[2];
+    *outPoint = *inDir * 3.4028235e+38;
+    outPoint[1] = fVar1 * 3.4028235e+38;
+    outPoint[2] = fVar2 * 3.4028235e+38;
+  }
+  else {
+    *outPoint = *(MeReal *)((int)pvVar3 + 0x30);
+    outPoint[1] = *(MeReal *)((int)pvVar3 + 0x34);
+    outPoint[2] = *(MeReal *)((int)pvVar3 + 0x38);
+  }
+  return;
+}
+
+
+/* ==== McdPlaneGetMassProperties ==== */
+
+MeI16 McdPlaneGetMassProperties(McdGeometry *g,MeVector4 *relTM,MeVector3 *m,MeReal *volume)
+
+{
+  (*m)[0] = 1.0;
+  m[1][1] = 1.0;
+  m[2][2] = 1.0;
+  (*m)[1] = 0.0;
+  (*m)[2] = 0.0;
+  m[1][0] = 0.0;
+  m[1][2] = 0.0;
+  m[2][0] = 0.0;
+  m[2][1] = 0.0;
+  (*relTM)[0] = 1.0;
+  (*relTM)[1] = 0.0;
+  (*relTM)[2] = 0.0;
+  (*relTM)[3] = 0.0;
+  relTM[1][0] = 0.0;
+  relTM[1][1] = 1.0;
+  relTM[1][2] = 0.0;
+  relTM[1][3] = 0.0;
+  relTM[2][0] = 0.0;
+  relTM[2][1] = 0.0;
+  relTM[2][2] = 1.0;
+  relTM[2][3] = 0.0;
+  relTM[3][0] = 0.0;
+  relTM[3][1] = 0.0;
+  relTM[3][2] = 0.0;
+  relTM[3][3] = 1.0;
+  return 0;
+}
+
+
+/* ==== McdPlaneGetNormal ==== */
+
+void McdPlaneGetNormal(McdGeometry *g,MeReal (*_tm) [4],MeReal *_normal)
+
+{
+                    /* Unresolved local var: lsTransform * tm@[???]
+                       Unresolved local var: lsVec3 * normal@[???] */
+  if (_tm == (MeReal (*) [4])0x0) {
+    *_normal = 0.0;
+    _normal[1] = 0.0;
+    _normal[2] = 1.0;
+  }
+  else {
+    *_normal = _tm[2][0];
+    _normal[1] = _tm[2][1];
+    _normal[2] = _tm[2][2];
+  }
+  return;
+}
+
+
+/* ==== McdPlaneGetDistanceToPoint ==== */
+
+MeReal McdPlaneGetDistanceToPoint(McdGeometry *g,MeReal (*_tm) [4],MeReal *point)
+
+{
+  lsVec3 disp;
+  lsVec3 normal;
+  
+  McdPlaneGetNormal(g,_tm,normal.v);
+  disp.v[0] = *point;
+  disp.v[1] = point[1];
+  disp.v[2] = point[2];
+  if (_tm != (MeReal (*) [4])0x0) {
+    disp.v[0] = disp.v[0] - _tm[3][0];
+    disp.v[1] = disp.v[1] - _tm[3][1];
+    disp.v[2] = disp.v[2] - _tm[3][2];
+  }
+  return normal.v[2] * disp.v[2] + normal.v[1] * disp.v[1] + normal.v[0] * disp.v[0];
+}
+
+
+/* ==== McdPlaneDebugDraw ==== */
+
+void McdPlaneDebugDraw(McdGeometryID geom,MeReal (*tm) [4],MeReal *colour)
+
+{
+  if (McdPlaneDebugDraw::warn != 0) {
+    MeWarning(0,"McdPlaneDebugDraw: Don\'t know how to draw a plane!");
+  }
+  McdPlaneDebugDraw::warn = 0;
+  return;
+}
+
+

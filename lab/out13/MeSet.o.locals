@@ -1,0 +1,20 @@
+# function,name,stackoff,hexoff,size,type
+MeSetInit,s,4,00000004,4,MeSet *
+MeSetInit,nodemem,8,00000008,4,MeDictNode *
+MeSetInit,maxnode,12,0000000c,4,int
+MeSetInit,cmp,16,00000010,4,MeDictCompareFn
+MeSetSize,s,4,00000004,4,MeSet *
+MeSetContains,s,4,00000004,4,MeSet *
+MeSetContains,item,8,00000008,4,void *
+MeSetAdd,s,4,00000004,4,MeSet *
+MeSetAdd,item,8,00000008,4,void *
+MeSetRemove,s,4,00000004,4,MeSet *
+MeSetRemove,item,8,00000008,4,void *
+MeSetPopFirst,s,4,00000004,4,MeSet *
+MeSetPop,s,4,00000004,4,MeSet *
+MeSetIteratorNext,s,4,00000004,4,MeSet *
+MeSetIsFull,s,4,00000004,4,MeSet *
+MeSetCreate,cmp,4,00000004,4,MeDictCompareFn
+MeSetDestroy,s,4,00000004,4,MeSet *
+MeSetDefaultCompare,item1,4,00000004,4,void *
+MeSetDefaultCompare,item2,8,00000008,4,void *

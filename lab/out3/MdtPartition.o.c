@@ -1,0 +1,391 @@
+/* ==== MdtUpdatePartitions ==== */
+
+/* WARNING: Unknown calling convention */
+
+void MdtUpdatePartitions(MeDict *enabledBodyDict,MdtPartitionOutput *po,MdtPartitionEndCB pcb,
+                        void *pcbdata)
+
+{
+  MdtBody **ppMVar1;
+  MdtBaseConstraint **ppMVar2;
+  MdtBody *pMVar3;
+  MdtBaseConstraint *pMVar4;
+  MdtPartitionInfo *pMVar5;
+  int iVar6;
+  int iVar7;
+  int iVar8;
+  MeDictNode *pMVar9;
+  int iVar10;
+  MeDictNode *pMVar11;
+  void *pvVar12;
+  int iVar13;
+  uint uVar14;
+  MeDict *pMVar15;
+  int iVar16;
+  int aiStack_50 [5];
+  MdtBody *local_3c;
+  MdtBody *currentBody;
+  MeDictNode *node;
+  MeDict *dict;
+  int addNext;
+  int exploreNext;
+  int numAddedConstraints;
+  MdtBaseConstraint **addedConstraints;
+  int numAddedBodies;
+  MdtBody **addedBodies;
+  MeDictNode *rootNode;
+  
+                    /* Unresolved local var: MdtBody * rootBody@[DW_OP_reg3(EBX)]
+                       Unresolved local var: int i@[DW_OP_reg2(EDX)]
+                       Unresolved local var: MdtBaseConstraint * cp@[DW_OP_reg3(EBX)]
+                       Unresolved local var: MdtBody * bp@[???] */
+  numAddedBodies = 0;
+  iVar16 = -(po->maxBodies * 4 + 0xfU & 0xfffffff0);
+  addedBodies = (MdtBody **)((int)&local_3c + iVar16);
+  numAddedConstraints = 0;
+  iVar8 = -(po->maxConstraints * 4 + 0xfU & 0xfffffff0);
+  addedConstraints = (MdtBaseConstraint **)((int)&local_3c + iVar8 + iVar16);
+  po->nPartitions = 0;
+  po->totalBodies = 0;
+  po->totalConstraints = 0;
+  (po->overallInfo).contactCount = 0;
+  (po->overallInfo).jointCount = 0;
+  (po->overallInfo).rowCount = 0;
+  *(MeDict **)((int)aiStack_50 + iVar8 + iVar16 + 4) = enabledBodyDict;
+  *(undefined4 *)((int)aiStack_50 + iVar8 + iVar16) = 0x10074;
+  pMVar9 = MeDictFirst(*(void **)((int)aiStack_50 + iVar8 + iVar16 + 4));
+  rootNode = pMVar9;
+  while (pMVar9 != (MeDictNode *)0x0) {
+    pMVar3 = rootNode->data;
+    po->bodiesSize[po->nPartitions] = 0;
+    po->constraintsSize[po->nPartitions] = 0;
+    pMVar5 = po->info + po->nPartitions;
+    pMVar5->contactCount = 0;
+    pMVar5->jointCount = 0;
+    pMVar5->rowCount = 0;
+    po->bodiesStart[po->nPartitions] = po->totalBodies;
+    po->constraintsStart[po->nPartitions] = po->totalConstraints;
+    iVar10 = po->bodiesStart[po->nPartitions];
+    exploreNext = iVar10;
+    po->bodies[iVar10] = pMVar3;
+    addNext = iVar10 + 1;
+    local_3c = (MdtBody *)(iVar10 + 1);
+    addedBodies[numAddedBodies] = pMVar3;
+    numAddedBodies = numAddedBodies + 1;
+    pMVar3->arrayIdPartition = po->bodiesSize[po->nPartitions];
+    pMVar3->arrayIdWorld = po->bodiesSize[po->nPartitions] + po->bodiesStart[po->nPartitions];
+    iVar13 = po->nPartitions;
+    pMVar3->flags = pMVar3->flags | 2;
+    pMVar3->partitionIndex = iVar13;
+    po->totalBodies = po->totalBodies + 1;
+    po->bodiesSize[po->nPartitions] = po->bodiesSize[po->nPartitions] + 1;
+    iVar13 = po->nPartitions;
+    if (iVar10 < po->bodiesSize[iVar13] + po->bodiesStart[iVar13]) {
+      while( true ) {
+        ppMVar1 = po->bodies + exploreNext;
+        exploreNext = (int)local_3c;
+        currentBody = *ppMVar1;
+        pMVar15 = &(*ppMVar1)->constraintDict;
+        *(MeDict **)((int)aiStack_50 + iVar8 + iVar16 + 4) = pMVar15;
+        dict = pMVar15;
+        *(undefined4 *)((int)aiStack_50 + iVar8 + iVar16) = 0x1019f;
+        pMVar9 = MeDictFirst(*(void **)((int)aiStack_50 + iVar8 + iVar16 + 4));
+        node = pMVar9;
+        while (node = pMVar9, pMVar9 != (MeDictNode *)0x0) {
+          pMVar4 = pMVar9->data;
+          if (((pMVar4->head).flags & 2) == 0) {
+                    /* Unresolved local var: int rows@[???]
+                       Unresolved local var: int padding@[???]
+                       Unresolved local var: MdtContactGroupID.conflict group@[DW_OP_reg7(EDI)] */
+            po->constraints[po->totalConstraints] = pMVar4;
+            addedConstraints[numAddedConstraints] = pMVar4;
+            numAddedConstraints = numAddedConstraints + 1;
+            po->totalConstraints = po->totalConstraints + 1;
+            po->constraintsSize[po->nPartitions] = po->constraintsSize[po->nPartitions] + 1;
+            iVar10 = po->nPartitions;
+            pMVar5 = po->info;
+            *(MdtBaseConstraint **)((int)aiStack_50 + iVar8 + iVar16 + 4) = pMVar4;
+            pMVar5 = pMVar5 + iVar10;
+            *(undefined4 *)((int)aiStack_50 + iVar8 + iVar16) = 0x104c9;
+            pvVar12 = MdtConstraintDCastContactGroup
+                                (*(void **)((int)aiStack_50 + iVar8 + iVar16 + 4));
+            *(MdtBaseConstraint **)((int)aiStack_50 + iVar8 + iVar16 + 4) = pMVar4;
+            *(undefined4 *)((int)aiStack_50 + iVar8 + iVar16) = 0x104d3;
+            pMVar9 = (MeDictNode *)
+                     MdtConstraintGetRowCount(*(void **)((int)aiStack_50 + iVar8 + iVar16 + 4));
+            pMVar5->rowCount = (int)&pMVar9->left + pMVar5->rowCount;
+            if (pvVar12 == (void *)0x0) {
+              pMVar9 = (MeDictNode *)(pMVar5->jointCount + 1);
+              pMVar5->jointCount = (int)pMVar9;
+            }
+            else {
+              pMVar5->contactCount = pMVar5->contactCount + *(int *)((int)pvVar12 + 0x160);
+            }
+            pMVar3 = (pMVar4->head).mdtbody[0];
+            (pMVar4->head).flags = (pMVar4->head).flags | 2;
+            if (((pMVar3 != (MdtBody *)0x0) && (pMVar3 != currentBody)) &&
+               ((pMVar3->flags & 2) == 0)) {
+              po->bodies[addNext] = pMVar3;
+              addNext = addNext + 1;
+              addedBodies[numAddedBodies] = pMVar3;
+              numAddedBodies = numAddedBodies + 1;
+              pMVar3->arrayIdPartition = po->bodiesSize[po->nPartitions];
+              pMVar3->arrayIdWorld =
+                   po->bodiesSize[po->nPartitions] + po->bodiesStart[po->nPartitions];
+              iVar10 = po->nPartitions;
+              pMVar3->flags = pMVar3->flags | 2;
+              pMVar3->partitionIndex = iVar10;
+              pMVar9 = (MeDictNode *)po->nPartitions;
+              po->totalBodies = po->totalBodies + 1;
+              po->bodiesSize[(int)pMVar9] = po->bodiesSize[(int)pMVar9] + 1;
+            }
+            pMVar3 = (pMVar4->head).mdtbody[1];
+            if (((pMVar3 != (MdtBody *)0x0) && (pMVar3 != currentBody)) &&
+               ((pMVar3->flags & 2) == 0)) {
+              po->bodies[addNext] = pMVar3;
+              addNext = addNext + 1;
+              addedBodies[numAddedBodies] = pMVar3;
+              numAddedBodies = numAddedBodies + 1;
+              pMVar3->arrayIdPartition = po->bodiesSize[po->nPartitions];
+              pMVar9 = (MeDictNode *)
+                       (po->bodiesSize[po->nPartitions] + po->bodiesStart[po->nPartitions]);
+              pMVar3->arrayIdWorld = (int)pMVar9;
+              iVar10 = po->nPartitions;
+              pMVar3->flags = pMVar3->flags | 2;
+              pMVar3->partitionIndex = iVar10;
+              po->totalBodies = po->totalBodies + 1;
+              po->bodiesSize[po->nPartitions] = po->bodiesSize[po->nPartitions] + 1;
+            }
+          }
+          *(MeDictNode **)((int)aiStack_50 + iVar8 + iVar16 + 0x10) = pMVar9;
+          *(MeDictNode **)((int)aiStack_50 + iVar8 + iVar16 + 0xc) = pMVar9;
+          *(MeDictNode **)((int)aiStack_50 + iVar8 + iVar16 + 8) = node;
+          *(MeDict **)((int)aiStack_50 + iVar8 + iVar16 + 4) = dict;
+          *(undefined4 *)((int)aiStack_50 + iVar8 + iVar16) = 65999;
+          pMVar9 = MeDictNext(*(void **)((int)aiStack_50 + iVar8 + iVar16 + 4),
+                              *(void **)((int)aiStack_50 + iVar8 + iVar16 + 8));
+          node = pMVar9;
+        }
+        *(MdtBody **)((int)aiStack_50 + iVar8 + iVar16 + 4) = currentBody;
+        *(undefined4 *)((int)aiStack_50 + iVar8 + iVar16) = 0x101e5;
+        iVar10 = MdtBodyIsEnabled(*(void **)((int)aiStack_50 + iVar8 + iVar16 + 4));
+        if (iVar10 == 0) {
+          *(MdtBody **)((int)aiStack_50 + iVar8 + iVar16 + 4) = currentBody;
+          *(undefined4 *)((int)aiStack_50 + iVar8 + iVar16) = 0x1046e;
+          MdtBodyEnable(*(void **)((int)aiStack_50 + iVar8 + iVar16 + 4));
+          currentBody->flags = currentBody->flags | 4;
+        }
+        else {
+          currentBody->flags = currentBody->flags & 0xfffffffb;
+        }
+        iVar13 = po->nPartitions;
+        if (po->bodiesSize[iVar13] + po->bodiesStart[iVar13] <= (int)local_3c) break;
+        local_3c = (MdtBody *)((int)&(local_3c->keaBody).tag + 1);
+      }
+    }
+    uVar14 = po->info[iVar13].rowCount;
+    if ((uVar14 & 3) != 0) {
+      if ((int)uVar14 < 0) {
+        uVar14 = uVar14 + 3;
+      }
+      uVar14 = (uVar14 & 0xfffffffc) + 4;
+    }
+    po->info[iVar13].rowCount = uVar14;
+    iVar10 = po->nPartitions;
+    pMVar5 = po->info;
+    pMVar11 = (MeDictNode *)(iVar10 * 0xc);
+    iVar13 = pMVar5[iVar10].jointCount;
+    (po->overallInfo).rowCount = (po->overallInfo).rowCount + pMVar5[iVar10].rowCount;
+    iVar6 = pMVar5[iVar10].contactCount;
+    iVar7 = (po->overallInfo).contactCount;
+    (po->overallInfo).jointCount = (po->overallInfo).jointCount + iVar13;
+    po->nPartitions = iVar10 + 1;
+    (po->overallInfo).contactCount = iVar7 + iVar6;
+    pMVar9 = rootNode;
+    while (pMVar9 != (MeDictNode *)0x0) {
+                    /* Unresolved local var: MdtBody * b@[DW_OP_reg0(EAX)] */
+      if ((*(byte *)((int)pMVar9->data + 0x1ec) & 2) == 0) goto LAB_000102b7;
+      *(MeDictNode **)((int)aiStack_50 + iVar8 + iVar16 + 0x10) = pMVar11;
+      *(MeDictNode **)((int)aiStack_50 + iVar8 + iVar16 + 0xc) = pMVar11;
+      *(MeDictNode **)((int)aiStack_50 + iVar8 + iVar16 + 8) = pMVar9;
+      *(MeDict **)((int)aiStack_50 + iVar8 + iVar16 + 4) = enabledBodyDict;
+      *(undefined4 *)((int)aiStack_50 + iVar8 + iVar16) = 0x102ac;
+      pMVar11 = MeDictNext(*(void **)((int)aiStack_50 + iVar8 + iVar16 + 4),
+                           *(void **)((int)aiStack_50 + iVar8 + iVar16 + 8));
+      pMVar9 = pMVar11;
+    }
+    pMVar9 = (MeDictNode *)0x0;
+LAB_000102b7:
+    rootNode = pMVar9;
+    if (pcb != (MdtPartitionEndCB)0x0) {
+      *(MeDictNode **)((int)aiStack_50 + iVar8 + iVar16 + 0x10) = pMVar11;
+      *(MeDictNode **)((int)aiStack_50 + iVar8 + iVar16 + 0xc) = pMVar11;
+      *(void **)((int)aiStack_50 + iVar8 + iVar16 + 8) = pcbdata;
+      *(MdtPartitionOutput **)((int)aiStack_50 + iVar8 + iVar16 + 4) = po;
+      *(undefined4 *)((int)aiStack_50 + iVar8 + iVar16) = 0x102ce;
+      (*pcb)(*(MdtPartitionOutput **)((int)aiStack_50 + iVar8 + iVar16 + 4),
+             *(void **)((int)aiStack_50 + iVar8 + iVar16 + 8));
+    }
+  }
+  iVar16 = 0;
+  if (0 < numAddedConstraints) {
+    uVar14 = numAddedConstraints & 3;
+    if (numAddedConstraints < 2) {
+LAB_000102f0:
+      ppMVar2 = addedConstraints + iVar16;
+      iVar16 = iVar16 + 1;
+      ((*ppMVar2)->head).flags = ((*ppMVar2)->head).flags & 0xfffffffd;
+      if (numAddedConstraints <= iVar16) goto LAB_00010343;
+    }
+    else if (uVar14 != 0) {
+      if (1 < uVar14) {
+        if (2 < uVar14) {
+          ((*addedConstraints)->head).flags = ((*addedConstraints)->head).flags & 0xfffffffd;
+        }
+        iVar16 = (2 < uVar14) + 1;
+        (addedConstraints[2 < uVar14]->head).flags =
+             (addedConstraints[2 < uVar14]->head).flags & 0xfffffffd;
+      }
+      goto LAB_000102f0;
+    }
+    do {
+      (addedConstraints[iVar16]->head).flags = (addedConstraints[iVar16]->head).flags & 0xfffffffd;
+      (addedConstraints[iVar16 + 1]->head).flags =
+           (addedConstraints[iVar16 + 1]->head).flags & 0xfffffffd;
+      (addedConstraints[iVar16 + 2]->head).flags =
+           (addedConstraints[iVar16 + 2]->head).flags & 0xfffffffd;
+      iVar8 = iVar16 + 3;
+      iVar16 = iVar16 + 4;
+      (addedConstraints[iVar8]->head).flags = (addedConstraints[iVar8]->head).flags & 0xfffffffd;
+    } while (iVar16 < numAddedConstraints);
+  }
+LAB_00010343:
+  iVar16 = 0;
+  if (numAddedBodies < 1) {
+    return;
+  }
+  uVar14 = numAddedBodies & 3;
+  if (1 < numAddedBodies) {
+    if (uVar14 == 0) goto LAB_00010371;
+    if (1 < uVar14) {
+      if (2 < uVar14) {
+        (*addedBodies)->flags = (*addedBodies)->flags & 0xfffffffd;
+      }
+      iVar16 = (2 < uVar14) + 1;
+      addedBodies[2 < uVar14]->flags = addedBodies[2 < uVar14]->flags & 0xfffffffd;
+    }
+  }
+  ppMVar1 = addedBodies + iVar16;
+  iVar16 = iVar16 + 1;
+  (*ppMVar1)->flags = (*ppMVar1)->flags & 0xfffffffd;
+  if (numAddedBodies <= iVar16) {
+    return;
+  }
+LAB_00010371:
+  do {
+    addedBodies[iVar16]->flags = addedBodies[iVar16]->flags & 0xfffffffd;
+    addedBodies[iVar16 + 1]->flags = addedBodies[iVar16 + 1]->flags & 0xfffffffd;
+    addedBodies[iVar16 + 2]->flags = addedBodies[iVar16 + 2]->flags & 0xfffffffd;
+    iVar8 = iVar16 + 3;
+    iVar16 = iVar16 + 4;
+    addedBodies[iVar8]->flags = addedBodies[iVar8]->flags & 0xfffffffd;
+  } while (iVar16 < numAddedBodies);
+  return;
+}
+
+
+/* ==== FindNextUnadded ==== */
+
+MeDictNode * FindNextUnadded(MeDict *dict,MeDictNode *node)
+
+{
+  while( true ) {
+    if (node == (MeDictNode *)0x0) {
+      return (MeDictNode *)0x0;
+    }
+                    /* Unresolved local var: MdtBody * b@[DW_OP_reg0(EAX)] */
+    if ((*(byte *)((int)node->data + 0x1ec) & 2) == 0) break;
+    node = MeDictNext(dict,node);
+  }
+  return node;
+}
+
+
+/* ==== MdtPartOutCreateFromChunk ==== */
+
+MdtPartitionOutput * MdtPartOutCreateFromChunk(MeChunk *chunk,int maxBodies,int maxConstraints)
+
+{
+  MdtPartitionOutput *pMVar1;
+  MdtBaseConstraint ***pppMVar2;
+  
+                    /* Unresolved local var: MdtPartitionOutput * po@[DW_OP_reg0(EAX)]
+                       Unresolved local var: int maxPartitions@[???]
+                       Unresolved local var: int structSize@[???]
+                       Unresolved local var: int bStartSize@[???]
+                       Unresolved local var: int bSizeSize@[???]
+                       Unresolved local var: int bSize@[???]
+                       Unresolved local var: int cStartSize@[???]
+                       Unresolved local var: int cSizeSize@[???]
+                       Unresolved local var: int cSize@[???]
+                       Unresolved local var: int pInfoSize@[???]
+                       Unresolved local var: int totalSize@[DW_OP_reg0(EAX)] */
+  pMVar1 = MeChunkGetMem(chunk,maxBodies * 0x20 + 0x40 + maxConstraints * 4);
+  pMVar1->maxPartitions = maxBodies;
+  pMVar1->bodiesStart = (int *)(pMVar1 + 1);
+  pppMVar2 = &pMVar1[1].constraints + maxBodies;
+  pMVar1->bodiesSize = (int *)pppMVar2;
+  pppMVar2 = pppMVar2 + maxBodies;
+  pMVar1->bodies = (MdtBody **)pppMVar2;
+  pppMVar2 = pppMVar2 + maxBodies;
+  pMVar1->constraintsStart = (int *)pppMVar2;
+  pppMVar2 = pppMVar2 + maxBodies;
+  pMVar1->constraintsSize = (int *)pppMVar2;
+  pMVar1->info = (MdtPartitionInfo *)(pppMVar2 + maxBodies);
+  pMVar1->constraints =
+       (MdtBaseConstraint **)((MdtPartitionInfo *)(pppMVar2 + maxBodies) + maxBodies);
+  pMVar1->maxBodies = maxBodies;
+  pMVar1->maxConstraints = maxConstraints;
+  pMVar1->nPartitions = 0;
+  pMVar1->totalBodies = 0;
+  pMVar1->totalConstraints = 0;
+  return pMVar1;
+}
+
+
+/* ==== MdtPartInfoReset ==== */
+
+void MdtPartInfoReset(MdtPartitionInfo *info)
+
+{
+  info->contactCount = 0;
+  info->jointCount = 0;
+  info->rowCount = 0;
+  return;
+}
+
+
+/* ==== MdtPartInfoAddConstraint ==== */
+
+void MdtPartInfoAddConstraint(MdtPartitionInfo *info,MdtBaseConstraint *c)
+
+{
+  void *pvVar1;
+  int iVar2;
+  
+                    /* Unresolved local var: int rows@[???]
+                       Unresolved local var: int padding@[???]
+                       Unresolved local var: MdtContactGroupID.conflict group@[DW_OP_reg7(EDI)] */
+  pvVar1 = MdtConstraintDCastContactGroup(c);
+  iVar2 = MdtConstraintGetRowCount(c);
+  info->rowCount = info->rowCount + iVar2;
+  if (pvVar1 == (void *)0x0) {
+    info->jointCount = info->jointCount + 1;
+  }
+  else {
+    info->contactCount = info->contactCount + *(int *)((int)pvVar1 + 0x160);
+  }
+  return;
+}
+
+

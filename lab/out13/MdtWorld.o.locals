@@ -1,0 +1,131 @@
+# function,name,stackoff,hexoff,size,type
+MdtWorldCreate,maxBodies,4,00000004,4,uint
+MdtWorldCreate,maxConstraints,8,00000008,4,uint
+MdtWorldCreate,lengthScale,12,0000000c,4,MeReal
+MdtWorldCreate,massScale,16,00000010,4,MeReal
+MdtWorldReset,w,4,00000004,4,MdtWorldID
+MdtWorldStep,keabodyArray,-20,ffffffec,4,MdtKeaBody * *
+MdtWorldStep,po,-24,ffffffe8,4,MdtPartitionOutput *
+MdtWorldStep,keatmArray,-36,ffffffdc,4,MdtKeaTransformation *
+MdtWorldStep,keaCon,-40,ffffffd8,4,MdtKeaConstraints *
+MdtWorldStep,w,4,00000004,4,MdtWorldID
+MdtWorldStep,stepSize,8,00000008,4,MeReal
+MdtWorldStep,in_stack_ffffff04,-252,ffffff04,92,kd_agg92
+MdtWorldStep,in_stack_ffffff6c,-148,ffffff6c,4,MeReal
+MdtWorldStep,in_stack_ffffff70,-144,ffffff70,48,undefined1[48]
+MdtWorldStep,uVar18,-96,ffffffa0,4,undefined4
+MdtWorldStep,pMVar19,-92,ffffffa4,4,MdtPartitionOutput *
+MdtWorldStep,MVar20,-88,ffffffa8,4,MeReal
+MdtWorldStep,pMVar21,-84,ffffffac,4,MdtWorldParams *
+MdtWorldStep,uVar22,-80,ffffffb0,4,undefined4
+MdtWorldStep,pMVar23,-76,ffffffb4,4,MdtWorldID
+MdtWorldStep,ppMVar24,-72,ffffffb8,4,MdtBody * *
+MdtWorldStepSafeTime,partitionindex,-20,ffffffec,4,int
+MdtWorldStepSafeTime,po,-24,ffffffe8,4,MdtPartitionOutput *
+MdtWorldStepSafeTime,timeStep,-36,ffffffdc,4,MeReal
+MdtWorldStepSafeTime,keabodyArray,-40,ffffffd8,4,MdtKeaBody * *
+MdtWorldStepSafeTime,keatmArray,-44,ffffffd4,4,MdtKeaTransformation *
+MdtWorldStepSafeTime,keaCon,-48,ffffffd0,4,MdtKeaConstraints *
+MdtWorldStepSafeTime,local_48,-72,ffffffb8,4,int
+MdtWorldStepSafeTime,w,4,00000004,4,MdtWorldID
+MdtWorldStepSafeTime,stepSize,8,00000008,4,MeReal
+MdtWorldStepSafeTime,in_stack_fffffef4,-268,fffffef4,92,kd_agg92
+MdtWorldStepSafeTime,in_stack_ffffff5c,-164,ffffff5c,4,MeReal
+MdtWorldStepSafeTime,in_stack_ffffff60,-160,ffffff60,48,undefined1[48]
+MdtWorldStepSafeTime,uVar17,-112,ffffff90,4,undefined4
+MdtWorldStepSafeTime,pvVar18,-108,ffffff94,4,void *
+MdtWorldStepSafeTime,iVar19,-104,ffffff98,4,int
+MdtWorldStepSafeTime,MVar20,-100,ffffff9c,4,MeReal
+MdtWorldStepSafeTime,uVar21,-96,ffffffa0,4,undefined4
+MdtWorldStepSafeTime,pMVar22,-92,ffffffa4,4,MdtWorldID
+MdtWorldStepSafeTime,ppMVar23,-88,ffffffa8,4,MdtKeaBody * *
+MdtWorldDestroy,w,4,00000004,4,MdtWorldID
+MdtWorldGetMaxBodies,w,4,00000004,4,MdtWorldID
+MdtWorldGetMaxConstraints,w,4,00000004,4,MdtWorldID
+MdtWorldGetMaxMemoryPoolUsed,w,4,00000004,4,MdtWorldID
+MdtWorldGetKeaPoolChunk,w,4,00000004,4,MdtWorldID
+MdtWorldGetKeaTMChunk,w,4,00000004,4,MdtWorldID
+MdtWorldGetKeaConstraintsChunk,w,4,00000004,4,MdtWorldID
+MdtWorldGetPartitionOutputChunk,w,4,00000004,4,MdtWorldID
+MdtWorldGetGravity,w,4,00000004,4,MdtWorldID
+MdtWorldGetGravity,g,8,00000008,4,MeReal *
+MdtWorldGetEpsilon,w,4,00000004,4,MdtWorldID
+MdtWorldGetGamma,w,4,00000004,4,MdtWorldID
+MdtWorldGetMinSafeTime,w,4,00000004,4,MdtWorldID
+MdtWorldGetTotalBodies,w,4,00000004,4,MdtWorldID
+MdtWorldGetEnabledBodies,w,4,00000004,4,MdtWorldID
+MdtWorldGetTotalConstraints,w,4,00000004,4,MdtWorldID
+MdtWorldGetEnabledConstraints,w,4,00000004,4,MdtWorldID
+MdtWorldGetAutoDisable,w,4,00000004,4,MdtWorldID
+MdtWorldGetAutoDisableVelocityThreshold,w,4,00000004,4,MdtWorldID
+MdtWorldGetAutoDisableAngularVelocityThreshold,w,4,00000004,4,MdtWorldID
+MdtWorldGetAutoDisableAccelerationThreshold,w,4,00000004,4,MdtWorldID
+MdtWorldGetAutoDisableAngularAccelerationThreshold,w,4,00000004,4,MdtWorldID
+MdtWorldGetAutoDisableAliveTime,w,4,00000004,4,MdtWorldID
+MdtWorldGetMaxMatrixSize,w,4,00000004,4,MdtWorldID
+MdtWorldGetMaxLCPIterations,w,4,00000004,4,MdtWorldID
+MdtWorldGetLODParams,w,4,00000004,4,MdtWorldID
+MdtWorldGetLODParams,lodParams,8,00000008,4,MdtLODParams *
+MdtWorldGetCheckSim,w,4,00000004,4,MdtWorldID
+MdtWorldGetSimErrorCB,w,4,00000004,4,MdtWorldID
+MdtWorldGetDefaultDensity,w,4,00000004,4,MdtWorldID
+MdtWorldSetEpsilon,w,4,00000004,4,MdtWorldID
+MdtWorldSetEpsilon,e,8,00000008,4,MeReal
+MdtWorldSetGamma,w,4,00000004,4,MdtWorldID
+MdtWorldSetGamma,g,8,00000008,4,MeReal
+MdtWorldSetGammaWithRefTimeStep,w,4,00000004,4,MdtWorldID
+MdtWorldSetGammaWithRefTimeStep,aGamma,8,00000008,4,MeReal
+MdtWorldSetGammaWithRefTimeStep,aRefStep,12,0000000c,4,MeReal
+MdtWorldSetGammaWithRefTimeStep,aTimeStep,16,00000010,4,MeReal
+MdtWorldSetMinSafeTime,w,4,00000004,4,MdtWorldID
+MdtWorldSetMinSafeTime,t,8,00000008,4,MeReal
+MdtWorldSetAutoDisable,w,4,00000004,4,MdtWorldID
+MdtWorldSetAutoDisable,d,8,00000008,4,MeBool
+MdtWorldSetAutoDisableVelocityThreshold,w,4,00000004,4,MdtWorldID
+MdtWorldSetAutoDisableVelocityThreshold,vt,8,00000008,4,MeReal
+MdtWorldSetAutoDisableAngularVelocityThreshold,w,4,00000004,4,MdtWorldID
+MdtWorldSetAutoDisableAngularVelocityThreshold,avt,8,00000008,4,MeReal
+MdtWorldSetAutoDisableAccelerationThreshold,w,4,00000004,4,MdtWorldID
+MdtWorldSetAutoDisableAccelerationThreshold,at,8,00000008,4,MeReal
+MdtWorldSetAutoDisableAngularAccelerationThreshold,w,4,00000004,4,MdtWorldID
+MdtWorldSetAutoDisableAngularAccelerationThreshold,aat,8,00000008,4,MeReal
+MdtWorldSetAutoDisableAliveTime,w,4,00000004,4,MdtWorldID
+MdtWorldSetAutoDisableAliveTime,aw,8,00000008,4,MeReal
+MdtWorldSetMaxMatrixSize,w,4,00000004,4,MdtWorldID
+MdtWorldSetMaxMatrixSize,size,8,00000008,4,int
+MdtWorldSetGravity,w,4,00000004,4,MdtWorldID
+MdtWorldSetGravity,gx,8,00000008,4,MeReal
+MdtWorldSetGravity,gy,12,0000000c,4,MeReal
+MdtWorldSetGravity,gz,16,00000010,4,MeReal
+MdtWorldSetDebugDrawing,w,4,00000004,4,MdtWorldID
+MdtWorldSetDebugDrawing,drawOptions,8,00000008,4,MdtDebugDrawOptions
+MdtWorldSetKeaDebugRequest,w,4,00000004,4,MdtWorldID
+MdtWorldSetKeaDebugRequest,debugDataRequest,8,00000008,44,MdtKeaDebugDataRequest
+MdtWorldResetForces,w,4,00000004,4,MdtWorldID
+MdtWorldSetMatrixSizeLog,w,4,00000004,4,MdtWorldID
+MdtWorldSetMatrixSizeLog,sizeLog,8,00000008,4,int *
+MdtWorldSetMatrixSizeLog,logSize,12,0000000c,4,int
+MdtWorldSetMaxLCPIterations,w,4,00000004,4,MdtWorldID
+MdtWorldSetMaxLCPIterations,mi,8,00000008,4,int
+MdtWorldSetLODParams,w,4,00000004,4,MdtWorldID
+MdtWorldSetLODParams,lodParams,8,00000008,4,MdtLODParams *
+MdtWorldSetSimErrorCB,w,4,00000004,4,MdtWorldID
+MdtWorldSetSimErrorCB,cb,8,00000008,4,MdtSimErrorCBPtr
+MdtWorldSetSimErrorCB,secbdata,12,0000000c,4,void *
+MdtWorldSetCheckSim,w,4,00000004,4,MdtWorldID
+MdtWorldSetCheckSim,c,8,00000008,4,MeBool
+MdtWorldForAllConstraints,w,4,00000004,4,MdtWorldID
+MdtWorldForAllConstraints,cb,8,00000008,4,MdtConstraintIteratorCBPtr
+MdtWorldForAllConstraints,ccbdata,12,0000000c,4,void *
+DrawPartitionContacts,po,4,00000004,4,MdtPartitionOutput *
+DrawPartitionContacts,pid,8,00000008,4,int
+DrawPartitionContacts,o,12,0000000c,4,MdtDebugDrawOptions
+DrawPartitionContacts,start,-44,ffffffd4,12,MeVector3
+DrawPartitionContacts,end,-76,ffffffb4,12,MeVector3
+DrawPartitionContacts,end_1,-60,ffffffc4,12,MeVector3
+DrawPartitionContacts,uVar5,-88,ffffffa8,4,uint
+DrawPartitionContacts,pMVar6,-84,ffffffac,4,MeReal *
+CheckSim,w,4,00000004,4,MdtWorldID
+CheckSim,keabodyArray,8,00000008,4,MdtKeaBody * *
+CheckSim,nBodies,12,0000000c,4,int
+CheckSim,keaCon,16,00000010,4,MdtKeaConstraints *

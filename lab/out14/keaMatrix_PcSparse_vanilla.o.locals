@@ -1,0 +1,100 @@
+# function,name,stackoff,hexoff,size,type
+allocate,this,4,00000004,4,keaMatrix_pcSparse_vanilla *
+allocate,size,8,00000008,4,int
+makeFromJMJT,strip,-20,ffffffec,4,int
+makeFromJMJT,jm,-24,ffffffe8,4,int
+makeFromJMJT,z,-28,ffffffe4,4,int
+makeFromJMJT,k,-32,ffffffe0,4,int
+makeFromJMJT,step,-36,ffffffdc,4,int
+makeFromJMJT,Jb,-40,ffffffd8,4,int *
+makeFromJMJT,JMb,-44,ffffffd4,4,int *
+makeFromJMJT,jmptr,-48,ffffffd0,4,MeReal *
+makeFromJMJT,J,-52,ffffffcc,4,MeReal *
+makeFromJMJT,AMatrix,-56,ffffffc8,4,MeReal *
+makeFromJMJT,AcholMatrix,-60,ffffffc4,4,MeReal *
+makeFromJMJT,i,-80,ffffffb0,4,int
+makeFromJMJT,c,-84,ffffffac,4,int
+makeFromJMJT,block,-64,ffffffc0,4,int
+makeFromJMJT,JMblock2bodystrip,-68,ffffffbc,4,int *
+makeFromJMJT,jmstrip,-72,ffffffb8,4,MeReal *
+makeFromJMJT,num_in_Jstrip,-76,ffffffb4,4,int
+makeFromJMJT,this,4,00000004,4,keaMatrix_pcSparse_vanilla *
+makeFromJMJT,JM,8,00000008,4,MeReal *
+makeFromJMJT,Js,12,0000000c,4,MeReal *
+makeFromJMJT,num_in_strip,16,00000010,4,int *
+makeFromJMJT,block2body,20,00000014,4,int *
+makeFromJMJT,slipfactor,24,00000018,4,MeReal *
+makeFromJMJT,epsilon,28,0000001c,4,MeReal
+makeFromJMJT,hinv,32,00000020,4,MeReal
+multiply,tmp,-44,ffffffd4,16,MeReal[4]
+multiply,k,-48,ffffffd0,4,int
+multiply,g,-52,ffffffcc,4,int
+multiply,h,-56,ffffffc8,4,int
+multiply,this,4,00000004,4,keaMatrix_pcSparse_vanilla *
+multiply,B,8,00000008,4,MeReal *
+multiply,X,12,0000000c,4,MeReal *
+factorize,local_24,-36,ffffffdc,4,int
+factorize,local_20,-32,ffffffe0,4,int
+factorize,aMStack_70,-112,ffffff90,76,MeReal[19]
+factorize,z,-20,ffffffec,4,int
+factorize,stride,-24,ffffffe8,4,int
+factorize,ablock,-28,ffffffe4,4,MeReal *
+factorize,this,4,00000004,4,keaMatrix_pcSparse_vanilla *
+solve,this,4,00000004,4,keaMatrix_pcSparse_vanilla *
+solve,local_48,-72,ffffffb8,4,int
+solve,afStack_1c,-28,ffffffe4,12,float[3]
+solve,tmp,-44,ffffffd4,16,MeReal[4]
+solve,i,-48,ffffffd0,4,int
+solve,x,8,00000008,4,MeReal *
+solve,b,12,0000000c,4,MeReal *
+solve,j,-52,ffffffcc,4,int
+solve,g,-56,ffffffc8,4,int
+solve,h,-60,ffffffc4,4,int
+solve,t,-64,ffffffc0,4,int
+solveUnits,aiStack_4c,-76,ffffffb4,16,int[4]
+solveUnits,this,4,00000004,4,keaMatrix_pcSparse_vanilla *
+solveUnits,Ainv,8,00000008,4,MeReal *
+solveUnits,cached,12,0000000c,4,int *
+solveUnits,clamped,16,00000010,4,int *
+solveUnits,c,-20,ffffffec,4,int
+solveUnits,numClamped,20,00000014,4,int
+solveUnits,AinvStride,24,00000018,4,int
+solveUnits,t,-24,ffffffe8,4,int
+solveUnits,num_rhs,-28,ffffffe4,4,int
+solveUnits,i,-32,ffffffe0,4,int
+solveUnits,j,-36,ffffffdc,4,int
+solveUnits,k,-40,ffffffd8,4,int
+solveUnits,g,-44,ffffffd4,4,int
+solveUnits,h,-48,ffffffd0,4,int
+solveUnits,v,-52,ffffffcc,4,int
+solveUnits,G,-56,ffffffc8,4,MeReal *
+solveUnits,rp,-60,ffffffc4,4,int *
+Multiply46BlockBy46BlockTranspose,acholblock,4,00000004,4,MeReal *
+Multiply46BlockBy46BlockTranspose,jmblock,8,00000008,4,MeReal *
+Multiply46BlockBy46BlockTranspose,jblock,12,0000000c,4,MeReal *
+Multiply46BlockBy46BlockTranspose,notzero,16,00000010,4,int
+Multiply46BlockBy46BlockTranspose,tmp,-44,ffffffd4,16,MeReal[4]
+vc_strip_Cholesky,tmp,4,00000004,4,MeReal *
+vc_strip_Cholesky,rsD,8,00000008,4,MeReal *
+vc_strip_Cholesky,z,12,0000000c,4,int
+vc_strip_Cholesky,w,16,00000010,4,int
+vc_strip_Cholesky,d,20,00000014,4,int
+vc_strip_Cholesky,s,24,00000018,4,int
+vc_strip_Cholesky,NZ,28,0000001c,4,MeReal * *
+vc_strip_Cholesky,mcLPptr,32,00000020,4,MeReal * *
+vc_strip_Cholesky,i,-20,ffffffec,4,int
+vc_strip_Cholesky,r,-24,ffffffe8,4,int
+vc_strip_Cholesky,t,-28,ffffffe4,4,int
+vc_strip_Cholesky,p,-32,ffffffe0,4,int
+vc_strip_Cholesky,b,-36,ffffffdc,4,MeReal *
+vc_dstrip_Cholesky,t,-32,ffffffe0,4,int
+vc_dstrip_Cholesky,MB,-36,ffffffdc,4,MeReal *
+vc_dstrip_Cholesky,tmp,4,00000004,4,MeReal *
+vc_dstrip_Cholesky,rsD,8,00000008,4,MeReal *
+vc_dstrip_Cholesky,z,12,0000000c,4,int
+vc_dstrip_Cholesky,d,16,00000010,4,int
+vc_dstrip_Cholesky,s,20,00000014,4,int
+vc_dstrip_Cholesky,NZ,24,00000018,4,MeReal * *
+vc_dstrip_Cholesky,i,-20,ffffffec,4,int
+vc_dstrip_Cholesky,j,-24,ffffffe8,4,int
+vc_dstrip_Cholesky,r,-28,ffffffe4,4,int

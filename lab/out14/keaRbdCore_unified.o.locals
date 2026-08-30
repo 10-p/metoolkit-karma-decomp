@@ -1,0 +1,38 @@
+# function,name,stackoff,hexoff,size,type
+MdtKeaAddConstraintForces,pconstraints,4,00000004,92,MdtKeaConstraints
+MdtKeaAddConstraintForces,blist,96,00000060,4,MdtKeaBody * *
+MdtKeaAddConstraintForces,tlist,100,00000064,4,MdtKeaTransformation *
+MdtKeaAddConstraintForces,num_bodies,104,00000068,4,int
+MdtKeaAddConstraintForces,parameters,108,0000006c,76,MdtKeaParameters
+MdtKeaAddConstraintForces,in_stack_fffffdd8,-552,fffffdd8,72,undefined1[72]
+MdtKeaAddConstraintForces,in_stack_fffffe20,-480,fffffe20,4,undefined4
+MdtKeaAddConstraintForces,in_stack_fffffe24,-476,fffffe24,4,undefined4
+MdtKeaAddConstraintForces,in_stack_fffffe28,-472,fffffe28,4,undefined4
+MdtKeaAddConstraintForces,in_stack_fffffe2c,-468,fffffe2c,8,undefined8
+MdtKeaAddConstraintForces,in_stack_fffffe34,-460,fffffe34,28,undefined1[28]
+MdtKeaAddConstraintForces,in_stack_fffffe50,-432,fffffe50,4,undefined4
+MdtKeaAddConstraintForces,in_stack_fffffe54,-428,fffffe54,4,undefined4
+MdtKeaAddConstraintForces,in_stack_fffffe58,-424,fffffe58,4,undefined4
+MdtKeaAddConstraintForces,in_stack_fffffe5c,-420,fffffe5c,4,undefined4
+MdtKeaAddConstraintForces,in_stack_fffffe60,-416,fffffe60,4,undefined4
+MdtKeaAddConstraintForces,in_stack_fffffe64,-412,fffffe64,4,undefined4
+MdtKeaAddConstraintForces,in_stack_fffffe68,-408,fffffe68,4,undefined4
+MdtKeaAddConstraintForces,in_stack_fffffe6c,-404,fffffe6c,4,undefined4
+MdtKeaAddConstraintForces,in_stack_fffffe70,-400,fffffe70,4,undefined4
+MdtKeaAddConstraintForces,in_stack_fffffe74,-396,fffffe74,4,undefined4
+MdtKeaAddConstraintForces,in_stack_fffffe78,-392,fffffe78,4,undefined4
+MdtKeaAddConstraintForces,in_stack_fffffe7c,-388,fffffe7c,4,undefined4
+MdtKeaAddConstraintForces,ppMVar17,-384,fffffe80,4,MdtKeaBody * *
+MdtKeaAddConstraintForces,uVar18,-384,fffffe80,4,undefined4
+MdtKeaAddConstraintForces,pkVar19,-380,fffffe84,4,keaFunctions_Vanilla *
+MdtKeaAddConstraintForces,mem,-76,ffffffb4,36,keaTempMemory
+MdtKeaAddConstraintForces,constraints,-172,ffffff54,92,MdtKeaConstraints
+MdtKeaAddConstraintForces,jlen_12padded,-336,fffffeb0,4,int *
+MdtKeaAddConstraintForces,bl2body_12padded,-340,fffffeac,4,int[8] *
+MdtKeaAddConstraintForces,jm,-344,fffffea8,4,MdtKeaJBlockPair *
+MdtKeaAddConstraintForces,rhs,-348,fffffea4,4,MeReal *
+MdtKeaAddConstraintForces,vanillaFunctions,-188,ffffff44,1,keaFunctions_Vanilla
+MdtKeaAddConstraintForces,num_strips,-352,fffffea0,4,int
+MdtKeaAddConstraintForces,ceil3_num_strips,-356,fffffe9c,4,int
+MdtKeaAddConstraintForces,kSolver,-268,fffffef4,76,keaLCPSolver
+MdtKeaAddConstraintForces,vanillaAMatrix,-332,fffffeb4,1,keaMatrix_pcSparse_vanilla

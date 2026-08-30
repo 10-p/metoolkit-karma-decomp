@@ -1,0 +1,471 @@
+# function,name,stackoff,hexoff,size,type
+MdtBclInitConstraintRowList,clist,4,00000004,4,MdtKeaConstraints *
+MdtBclEndPartition,clist,4,00000004,4,MdtKeaConstraints *
+MdtBclStartPartition,clist,4,00000004,4,MdtKeaConstraints *
+MdtBclDotJ,v,4,00000004,4,MeReal *
+MdtBclDotJ,clist,8,00000008,4,MdtKeaConstraints *
+MdtBclDotJ,row,12,0000000c,4,int
+MdtBclDotJ,body,16,00000010,4,int
+MdtBclEndConstraint,i,-20,ffffffec,4,int
+MdtBclEndConstraint,clist,4,00000004,4,MdtKeaConstraints *
+MdtBclEndConstraint,rows_added,8,00000008,4,uint
+MdtBclAddSphericalRowsWorld,xgamma,-116,ffffff8c,4,MeReal *
+MdtBclAddSphericalRowsWorld,factors,-60,ffffffc4,24,MdtKeaInputRowFactors
+MdtBclAddSphericalRowsWorld,cpos1rel,-76,ffffffb4,12,MeReal[3]
+MdtBclAddSphericalRowsWorld,z,-120,ffffff88,4,int
+MdtBclAddSphericalRowsWorld,z_1,-124,ffffff84,4,int
+MdtBclAddSphericalRowsWorld,z_2,-128,ffffff80,4,int
+MdtBclAddSphericalRowsWorld,cpos2rel,-92,ffffffa4,12,MeReal[3]
+MdtBclAddSphericalRowsWorld,clist,4,00000004,4,MdtKeaConstraints *
+MdtBclAddSphericalRowsWorld,body1pos,8,00000008,4,MeReal *
+MdtBclAddSphericalRowsWorld,body2pos,12,0000000c,4,MeReal *
+MdtBclAddSphericalRowsWorld,cpos1world,16,00000010,4,MeReal *
+MdtBclAddSphericalRowsWorld,cpos2world,20,00000014,4,MeReal *
+MdtBclAddSphericalRowsWorld,body2Present,24,00000018,4,int
+MdtBclAddSphericalRowsWorld,worldLinVel,28,0000001c,4,MeReal *
+MdtBclAddSphericalRowsWorld,worldAngVel,32,00000020,4,MeReal *
+MdtBclAddSphericalRowsWorld,c,-96,ffffffa0,4,MeReal *
+MdtBclAddSphericalRowsWorld,xi,-100,ffffff9c,4,MeReal *
+MdtBclAddSphericalRowsWorld,lo,-104,ffffff98,4,MeReal *
+MdtBclAddSphericalRowsWorld,hi,-108,ffffff94,4,MeReal *
+MdtBclAddSphericalRowsWorld,slipfactor,-112,ffffff90,4,MeReal *
+MdtBclAddBSJoint,c,-56,ffffffc8,4,MeReal *
+MdtBclAddBSJoint,ref1world,-124,ffffff84,64,MeReal[4][4]
+MdtBclAddBSJoint,ref2world,-188,ffffff44,64,MeReal[4][4]
+MdtBclAddBSJoint,clist,4,00000004,4,MdtKeaConstraints *
+MdtBclAddBSJoint,constraint,8,00000008,4,void *
+MdtBclAddBSJoint,tlist,12,0000000c,4,MdtKeaTransformation *
+MdtBclAddBSJoint,blist,16,00000010,4,MdtKeaBody * *
+MdtBclAddBSJoint,params,20,00000014,4,void *
+MdtBclAddContact,c,-208,ffffff30,4,MeReal *
+MdtBclAddContact,xi,-212,ffffff2c,4,MeReal *
+MdtBclAddContact,lo,-216,ffffff28,4,MeReal *
+MdtBclAddContact,hi,-220,ffffff24,4,MeReal *
+MdtBclAddContact,slipfactor,-224,ffffff20,4,MeReal *
+MdtBclAddContact,xgamma,-228,ffffff1c,4,MeReal *
+MdtBclAddContact,factors,-60,ffffffc4,24,MdtKeaInputRowFactors
+MdtBclAddContact,clist,4,00000004,4,MdtKeaConstraints *
+MdtBclAddContact,p,-232,ffffff18,4,MdtBclContactParams *
+MdtBclAddContact,constraint,8,00000008,4,void *
+MdtBclAddContact,options,-236,ffffff14,4,int
+MdtBclAddContact,friction_rows,-240,ffffff10,4,int
+MdtBclAddContact,tlist,12,0000000c,4,MdtKeaTransformation *
+MdtBclAddContact,blist,16,00000010,4,MdtKeaBody * *
+MdtBclAddContact,sliding_world,-244,ffffff0c,4,MeBool
+MdtBclAddContact,b1,-248,ffffff08,4,MdtBodyID
+MdtBclAddContact,params,20,00000014,4,void *
+MdtBclAddContact,pos0,-76,ffffffb4,12,MeReal[3]
+MdtBclAddContact,pos1,-92,ffffffa4,12,MeReal[3]
+MdtBclAddContact,vel0,-108,ffffff94,12,MeReal[3]
+MdtBclAddContact,vel1,-124,ffffff84,12,MeReal[3]
+MdtBclAddContact,rvel,-140,ffffff74,12,MeReal[3]
+MdtBclAddContact,dir1,-156,ffffff64,12,MeReal[3]
+MdtBclAddContact,dir2,-172,ffffff54,12,MeReal[3]
+MdtBclAddContact,boxScale,-252,ffffff04,4,MeReal
+MdtBclAddContact,par,-188,ffffff44,12,MeReal[3]
+MdtBclAddContact,perp,-204,ffffff34,12,MeReal[3]
+MdtBclAddContactGroup,averageForce,-20,ffffffec,4,MeReal
+MdtBclAddContactGroup,clist,4,00000004,4,MdtKeaConstraints *
+MdtBclAddContactGroup,constraint,8,00000008,4,void *
+MdtBclAddContactGroup,tlist,12,0000000c,4,MdtKeaTransformation *
+MdtBclAddContactGroup,blist,16,00000010,4,MdtKeaBody * *
+MdtBclAddContactGroup,params,20,00000014,4,void *
+MdtBclAddHinge,local_1a4,-420,fffffe5c,4,MdtBclLimit *
+MdtBclAddHinge,clist,4,00000004,4,MdtKeaConstraints *
+MdtBclAddHinge,constraint,8,00000008,4,void *
+MdtBclAddHinge,tlist,12,0000000c,4,MdtKeaTransformation *
+MdtBclAddHinge,blist,16,00000010,4,MdtKeaBody * *
+MdtBclAddHinge,params,20,00000014,4,void *
+MdtBclAddHinge,c,-368,fffffe90,4,MeReal *
+MdtBclAddHinge,xi,-372,fffffe8c,4,MeReal *
+MdtBclAddHinge,lo,-376,fffffe88,4,MeReal *
+MdtBclAddHinge,hi,-380,fffffe84,4,MeReal *
+MdtBclAddHinge,slipfactor,-384,fffffe80,4,MeReal *
+MdtBclAddHinge,xgamma,-388,fffffe7c,4,MeReal *
+MdtBclAddHinge,factors,-60,ffffffc4,24,MdtKeaInputRowFactors
+MdtBclAddHinge,i,-416,fffffe60,4,uint
+MdtBclAddHinge,ref1world,-124,ffffff84,64,MeReal[4][4]
+MdtBclAddHinge,ref2world,-188,ffffff44,64,MeReal[4][4]
+MdtBclAddHinge,qacw,-204,ffffff34,16,MeReal[4]
+MdtBclAddHinge,qbcw,-236,ffffff14,16,MeReal[4]
+MdtBclAddHinge,qrel,-252,ffffff04,16,MeReal[4]
+MdtBclAddHinge,qmul,-316,fffffec4,64,MeReal[4][4]
+MdtBclAddHinge,JwQ2,-332,fffffeb4,12,MeReal[3]
+MdtBclAddHinge,JwQ3,-348,fffffea4,12,MeReal[3]
+MdtBclAddHinge,LinearAxis,-364,fffffe94,12,MeReal[3]
+MdtBclAddHinge,z,-392,fffffe78,4,int
+MdtBclAddHinge,z_1,-396,fffffe74,4,int
+MdtBclAddHinge,z_2,-400,fffffe70,4,int
+MdtBclAddHinge,z_3,-404,fffffe6c,4,int
+MdtBclAddHinge,z_4,-408,fffffe68,4,int
+MdtBclAddHinge,z_5,-412,fffffe64,4,int
+MdtBclAddPrismatic,ref_Jw,-188,ffffff44,64,MeReal[4][4]
+MdtBclAddPrismatic,pos_IJw,-204,ffffff34,12,MeReal[3]
+MdtBclAddPrismatic,pos_iJw,-220,ffffff24,12,MeReal[3]
+MdtBclAddPrismatic,pos_jJw,-236,ffffff14,12,MeReal[3]
+MdtBclAddPrismatic,tmp,-252,ffffff04,12,MeReal[3]
+MdtBclAddPrismatic,RotationalAxis1,-268,fffffef4,12,MeReal[3]
+MdtBclAddPrismatic,RotationalAxis2,-284,fffffee4,12,MeReal[3]
+MdtBclAddPrismatic,z,-312,fffffec8,4,int
+MdtBclAddPrismatic,z_1,-316,fffffec4,4,int
+MdtBclAddPrismatic,z_2,-320,fffffec0,4,int
+MdtBclAddPrismatic,z_3,-324,fffffebc,4,int
+MdtBclAddPrismatic,z_4,-328,fffffeb8,4,int
+MdtBclAddPrismatic,z_5,-332,fffffeb4,4,int
+MdtBclAddPrismatic,local_15c,-348,fffffea4,4,MdtBclLimit *
+MdtBclAddPrismatic,clist,4,00000004,4,MdtKeaConstraints *
+MdtBclAddPrismatic,constraint,8,00000008,4,void *
+MdtBclAddPrismatic,tlist,12,0000000c,4,MdtKeaTransformation *
+MdtBclAddPrismatic,blist,16,00000010,4,MdtKeaBody * *
+MdtBclAddPrismatic,params,20,00000014,4,void *
+MdtBclAddPrismatic,rows_added,-360,fffffe98,4,uint
+MdtBclAddPrismatic,c,-288,fffffee0,4,MeReal *
+MdtBclAddPrismatic,xi,-292,fffffedc,4,MeReal *
+MdtBclAddPrismatic,lo,-296,fffffed8,4,MeReal *
+MdtBclAddPrismatic,hi,-300,fffffed4,4,MeReal *
+MdtBclAddPrismatic,slipfactor,-304,fffffed0,4,MeReal *
+MdtBclAddPrismatic,xgamma,-308,fffffecc,4,MeReal *
+MdtBclAddPrismatic,factors,-60,ffffffc4,24,MdtKeaInputRowFactors
+MdtBclAddPrismatic,ref_Iw,-124,ffffff84,64,MeReal[4][4]
+MdtBclAddCarWheel,c,-272,fffffef0,4,MeReal *
+MdtBclAddCarWheel,xi,-276,fffffeec,4,MeReal *
+MdtBclAddCarWheel,lo,-280,fffffee8,4,MeReal *
+MdtBclAddCarWheel,hi,-284,fffffee4,4,MeReal *
+MdtBclAddCarWheel,slipfactor,-288,fffffee0,4,MeReal *
+MdtBclAddCarWheel,xgamma,-292,fffffedc,4,MeReal *
+MdtBclAddCarWheel,factors,-60,ffffffc4,24,MdtKeaInputRowFactors
+MdtBclAddCarWheel,ref1world,-124,ffffff84,64,MeReal[4][4]
+MdtBclAddCarWheel,ref2world,-188,ffffff44,64,MeReal[4][4]
+MdtBclAddCarWheel,a,-204,ffffff34,12,MeReal[3]
+MdtBclAddCarWheel,b,-220,ffffff24,12,MeReal[3]
+MdtBclAddCarWheel,tmp,-236,ffffff14,12,MeReal[3]
+MdtBclAddCarWheel,at1,-252,ffffff04,12,MeReal[3]
+MdtBclAddCarWheel,z,-296,fffffed8,4,int
+MdtBclAddCarWheel,z_1,-300,fffffed4,4,int
+MdtBclAddCarWheel,rows_added,-328,fffffeb8,4,uint
+MdtBclAddCarWheel,z_2,-304,fffffed0,4,int
+MdtBclAddCarWheel,z_3,-308,fffffecc,4,int
+MdtBclAddCarWheel,z_4,-312,fffffec8,4,int
+MdtBclAddCarWheel,z_5,-316,fffffec4,4,int
+MdtBclAddCarWheel,torque,-268,fffffef4,12,MeReal[3]
+MdtBclAddCarWheel,clist,4,00000004,4,MdtKeaConstraints *
+MdtBclAddCarWheel,constraint,8,00000008,4,void *
+MdtBclAddCarWheel,tlist,12,0000000c,4,MdtKeaTransformation *
+MdtBclAddCarWheel,blist,16,00000010,4,MdtKeaBody * *
+MdtBclAddCarWheel,params,20,00000014,4,void *
+MdtBclAddFixedPath,c,-240,ffffff10,4,MeReal *
+MdtBclAddFixedPath,xi,-244,ffffff0c,4,MeReal *
+MdtBclAddFixedPath,slipfactor,-248,ffffff08,4,MeReal *
+MdtBclAddFixedPath,xgamma,-252,ffffff04,4,MeReal *
+MdtBclAddFixedPath,factors,-60,ffffffc4,24,MdtKeaInputRowFactors
+MdtBclAddFixedPath,ref1world,-124,ffffff84,64,MeReal[4][4]
+MdtBclAddFixedPath,ref2world,-188,ffffff44,64,MeReal[4][4]
+MdtBclAddFixedPath,temp,-204,ffffff34,16,MeReal[4]
+MdtBclAddFixedPath,negc,-220,ffffff24,16,MeReal[4]
+MdtBclAddFixedPath,clist,4,00000004,4,MdtKeaConstraints *
+MdtBclAddFixedPath,z,-256,ffffff00,4,int
+MdtBclAddFixedPath,constraint,8,00000008,4,void *
+MdtBclAddFixedPath,z_1,-260,fffffefc,4,int
+MdtBclAddFixedPath,tlist,12,0000000c,4,MdtKeaTransformation *
+MdtBclAddFixedPath,z_2,-264,fffffef8,4,int
+MdtBclAddFixedPath,blist,16,00000010,4,MdtKeaBody * *
+MdtBclAddFixedPath,v2,-236,ffffff14,16,MeReal[4]
+MdtBclAddFixedPath,params,20,00000014,4,void *
+MdtBclAddUniversal,c,-208,ffffff30,4,MeReal *
+MdtBclAddUniversal,clist,4,00000004,4,MdtKeaConstraints *
+MdtBclAddUniversal,xi,-212,ffffff2c,4,MeReal *
+MdtBclAddUniversal,constraint,8,00000008,4,void *
+MdtBclAddUniversal,lo,-216,ffffff28,4,MeReal *
+MdtBclAddUniversal,hi,-220,ffffff24,4,MeReal *
+MdtBclAddUniversal,tlist,12,0000000c,4,MdtKeaTransformation *
+MdtBclAddUniversal,blist,16,00000010,4,MdtKeaBody * *
+MdtBclAddUniversal,slipfactor,-224,ffffff20,4,MeReal *
+MdtBclAddUniversal,params,20,00000014,4,void *
+MdtBclAddUniversal,xgamma,-228,ffffff1c,4,MeReal *
+MdtBclAddUniversal,factors,-60,ffffffc4,24,MdtKeaInputRowFactors
+MdtBclAddUniversal,ref1world,-124,ffffff84,64,MeReal[4][4]
+MdtBclAddUniversal,ref2world,-188,ffffff44,64,MeReal[4][4]
+MdtBclAddUniversal,universalPerpendicular,-204,ffffff34,12,MeReal[3]
+MdtBclAddUniversal,z,-232,ffffff18,4,int
+MdtBclAddUniversal,z_1,-236,ffffff14,4,int
+MdtBclAddUniversal,z_2,-240,ffffff10,4,int
+MdtBclAddUniversal,z_3,-244,ffffff0c,4,int
+MdtBclAddSkeletal,c,-432,fffffe50,4,MeReal *
+MdtBclAddSkeletal,xi,-436,fffffe4c,4,MeReal *
+MdtBclAddSkeletal,lo,-440,fffffe48,4,MeReal *
+MdtBclAddSkeletal,hi,-444,fffffe44,4,MeReal *
+MdtBclAddSkeletal,slipfactor,-448,fffffe40,4,MeReal *
+MdtBclAddSkeletal,xgamma,-452,fffffe3c,4,MeReal *
+MdtBclAddSkeletal,factors,-60,ffffffc4,24,MdtKeaInputRowFactors
+MdtBclAddSkeletal,nRows,-456,fffffe38,4,MeI32
+MdtBclAddSkeletal,Racw,-124,ffffff84,64,MeReal[4][4]
+MdtBclAddSkeletal,Rbcw,-188,ffffff44,64,MeReal[4][4]
+MdtBclAddSkeletal,qaca,-204,ffffff34,16,MeReal[4]
+MdtBclAddSkeletal,qbcb,-220,ffffff24,16,MeReal[4]
+MdtBclAddSkeletal,qacw,-236,ffffff14,16,MeReal[4]
+MdtBclAddSkeletal,qbcw,-252,ffffff04,16,MeReal[4]
+MdtBclAddSkeletal,qrel,-268,fffffef4,16,MeReal[4]
+MdtBclAddSkeletal,qmul,-332,fffffeb4,64,MeReal[4][4]
+MdtBclAddSkeletal,Rrel,-380,fffffe84,36,MeReal[3][3]
+MdtBclAddSkeletal,q1sq,-460,fffffe34,4,MeReal
+MdtBclAddSkeletal,q2sq,-464,fffffe30,4,MeReal
+MdtBclAddSkeletal,q3sq,-468,fffffe2c,4,MeReal
+MdtBclAddSkeletal,q0q2,-472,fffffe28,4,MeReal
+MdtBclAddSkeletal,q1sq_1,-476,fffffe24,4,MeReal
+MdtBclAddSkeletal,q2sq_1,-480,fffffe20,4,MeReal
+MdtBclAddSkeletal,q3sq_1,-484,fffffe1c,4,MeReal
+MdtBclAddSkeletal,q0q2_1,-488,fffffe18,4,MeReal
+MdtBclAddSkeletal,q1sq_2,-492,fffffe14,4,MeReal
+MdtBclAddSkeletal,q3sq_2,-496,fffffe10,4,MeReal
+MdtBclAddSkeletal,q0q2_2,-500,fffffe0c,4,MeReal
+MdtBclAddSkeletal,JwQ1,-396,fffffe74,12,MeReal[3]
+MdtBclAddSkeletal,JwQ0,-412,fffffe64,12,MeReal[3]
+MdtBclAddSkeletal,Jw,-428,fffffe54,12,MeReal[3]
+MdtBclAddSkeletal,r10_div_sq_tan_qcla1,-504,fffffe08,4,MeReal
+MdtBclAddSkeletal,r20_div_sq_tan_qcla2,-508,fffffe04,4,MeReal
+MdtBclAddSkeletal,PositionError,-512,fffffe00,4,MeReal
+MdtBclAddSkeletal,clist,4,00000004,4,MdtKeaConstraints *
+MdtBclAddSkeletal,constraint,8,00000008,4,void *
+MdtBclAddSkeletal,tlist,12,0000000c,4,MdtKeaTransformation *
+MdtBclAddSkeletal,blist,16,00000010,4,MdtKeaBody * *
+MdtBclAddSkeletal,params,20,00000014,4,void *
+MdtBclAddLinear1,c,-112,ffffff90,4,MeReal *
+MdtBclAddLinear1,xi,-116,ffffff8c,4,MeReal *
+MdtBclAddLinear1,lo,-120,ffffff88,4,MeReal *
+MdtBclAddLinear1,hi,-124,ffffff84,4,MeReal *
+MdtBclAddLinear1,slipfactor,-128,ffffff80,4,MeReal *
+MdtBclAddLinear1,xgamma,-132,ffffff7c,4,MeReal *
+MdtBclAddLinear1,factors,-60,ffffffc4,24,MdtKeaInputRowFactors
+MdtBclAddLinear1,normal,-76,ffffffb4,16,MeReal[4]
+MdtBclAddLinear1,displacement,-92,ffffffa4,12,MeReal[3]
+MdtBclAddLinear1,CrossProduct,-108,ffffff94,12,MeReal[3]
+MdtBclAddLinear1,clist,4,00000004,4,MdtKeaConstraints *
+MdtBclAddLinear1,constraint,8,00000008,4,void *
+MdtBclAddLinear1,tlist,12,0000000c,4,MdtKeaTransformation *
+MdtBclAddLinear1,blist,16,00000010,4,MdtKeaBody * *
+MdtBclAddLinear1,params,20,00000014,4,void *
+MdtBclAddLinear2,tlist,12,0000000c,4,MdtKeaTransformation *
+MdtBclAddLinear2,blist,16,00000010,4,MdtKeaBody * *
+MdtBclAddLinear2,params,20,00000014,4,void *
+MdtBclAddLinear2,c,-192,ffffff40,4,MeReal *
+MdtBclAddLinear2,xi,-196,ffffff3c,4,MeReal *
+MdtBclAddLinear2,lo,-200,ffffff38,4,MeReal *
+MdtBclAddLinear2,hi,-204,ffffff34,4,MeReal *
+MdtBclAddLinear2,slipfactor,-208,ffffff30,4,MeReal *
+MdtBclAddLinear2,xgamma,-212,ffffff2c,4,MeReal *
+MdtBclAddLinear2,factors,-60,ffffffc4,24,MdtKeaInputRowFactors
+MdtBclAddLinear2,vector1,-76,ffffffb4,16,MeReal[4]
+MdtBclAddLinear2,vector2,-92,ffffffa4,16,MeReal[4]
+MdtBclAddLinear2,rel_pos,-108,ffffff94,16,MeReal[4]
+MdtBclAddLinear2,initial_pos,-124,ffffff84,16,MeReal[4]
+MdtBclAddLinear2,abs_pos,-140,ffffff74,12,MeReal[3]
+MdtBclAddLinear2,displacement,-156,ffffff64,12,MeReal[3]
+MdtBclAddLinear2,Perpendicular1,-172,ffffff54,12,MeReal[3]
+MdtBclAddLinear2,Perpendicular2,-188,ffffff44,12,MeReal[3]
+MdtBclAddLinear2,clist,4,00000004,4,MdtKeaConstraints *
+MdtBclAddLinear2,constraint,8,00000008,4,void *
+MdtBclAddAngular3,hepsilon,-424,fffffe58,4,MeReal
+MdtBclAddAngular3,qaca,-172,ffffff54,16,MeReal[4]
+MdtBclAddAngular3,qbcb,-188,ffffff44,16,MeReal[4]
+MdtBclAddAngular3,clist,4,00000004,4,MdtKeaConstraints *
+MdtBclAddAngular3,qacw,-204,ffffff34,16,MeReal[4]
+MdtBclAddAngular3,constraint,8,00000008,4,void *
+MdtBclAddAngular3,qbcw,-220,ffffff24,16,MeReal[4]
+MdtBclAddAngular3,qrel,-236,ffffff14,16,MeReal[4]
+MdtBclAddAngular3,tlist,12,0000000c,4,MdtKeaTransformation *
+MdtBclAddAngular3,blist,16,00000010,4,MdtKeaBody * *
+MdtBclAddAngular3,qmul,-300,fffffed4,64,MeReal[4][4]
+MdtBclAddAngular3,Rrel,-348,fffffea4,36,MeReal[3][3]
+MdtBclAddAngular3,params,20,00000014,4,void *
+MdtBclAddAngular3,q0sq,-436,fffffe4c,4,MeReal
+MdtBclAddAngular3,q1sq,-440,fffffe48,4,MeReal
+MdtBclAddAngular3,q2sq,-444,fffffe44,4,MeReal
+MdtBclAddAngular3,q3sq,-448,fffffe40,4,MeReal
+MdtBclAddAngular3,q0q1,-452,fffffe3c,4,MeReal
+MdtBclAddAngular3,q0q2,-456,fffffe38,4,MeReal
+MdtBclAddAngular3,q1sq_1,-464,fffffe30,4,MeReal
+MdtBclAddAngular3,q2sq_1,-468,fffffe2c,4,MeReal
+MdtBclAddAngular3,q3sq_1,-472,fffffe28,4,MeReal
+MdtBclAddAngular3,q0q2_1,-476,fffffe24,4,MeReal
+MdtBclAddAngular3,q1q2,-480,fffffe20,4,MeReal
+MdtBclAddAngular3,q1sq_2,-484,fffffe1c,4,MeReal
+MdtBclAddAngular3,q2sq_2,-488,fffffe18,4,MeReal
+MdtBclAddAngular3,q3sq_2,-492,fffffe14,4,MeReal
+MdtBclAddAngular3,q0q1_1,-496,fffffe10,4,MeReal
+MdtBclAddAngular3,t0,-364,fffffe94,12,MeReal[3]
+MdtBclAddAngular3,t1,-380,fffffe84,12,MeReal[3]
+MdtBclAddAngular3,t2,-396,fffffe74,12,MeReal[3]
+MdtBclAddAngular3,Recip_roop1pSqrt2_r00p1,-508,fffffe04,4,MeReal
+MdtBclAddAngular3,multfac,-512,fffffe00,4,MeReal
+MdtBclAddAngular3,uVar23,-568,fffffdc8,4,uint
+MdtBclAddAngular3,c,-400,fffffe70,4,MeReal *
+MdtBclAddAngular3,xi,-404,fffffe6c,4,MeReal *
+MdtBclAddAngular3,lo,-408,fffffe68,4,MeReal *
+MdtBclAddAngular3,hi,-412,fffffe64,4,MeReal *
+MdtBclAddAngular3,slipfactor,-416,fffffe60,4,MeReal *
+MdtBclAddAngular3,xgamma,-420,fffffe5c,4,MeReal *
+MdtBclAddAngular3,factors,-60,ffffffc4,24,MdtKeaInputRowFactors
+MdtBclAddAngular3,Racw,-108,ffffff94,36,MeReal[3][3]
+MdtBclAddAngular3,Rbcw,-156,ffffff64,36,MeReal[3][3]
+MdtBclAddSpring6,clist,4,00000004,4,MdtKeaConstraints *
+MdtBclAddSpring6,constraint,8,00000008,4,void *
+MdtBclAddSpring6,tlist,12,0000000c,4,MdtKeaTransformation *
+MdtBclAddSpring6,blist,16,00000010,4,MdtKeaBody * *
+MdtBclAddSpring6,params,20,00000014,4,void *
+MdtBclAddSpring6,ref1world,-92,ffffffa4,64,MeReal[4][4]
+MdtBclAddSpring6,ref2world,-156,ffffff64,64,MeReal[4][4]
+MdtBclAddSpring6,cpos1rel,-172,ffffff54,12,MeReal[3]
+MdtBclAddSpring6,xiWorld,-188,ffffff44,12,MeReal[3]
+MdtBclAddSpring6,c,-256,ffffff00,4,MeReal *
+MdtBclAddSpring6,xi,-260,fffffefc,4,MeReal *
+MdtBclAddSpring6,lo,-264,fffffef8,4,MeReal *
+MdtBclAddSpring6,hi,-268,fffffef4,4,MeReal *
+MdtBclAddSpring6,slipfactor,-272,fffffef0,4,MeReal *
+MdtBclAddSpring6,xgamma,-276,fffffeec,4,MeReal *
+MdtBclAddSpring6,factors,-220,ffffff24,24,MdtKeaInputRowFactors
+MdtBclAddSpring6,linHEpsilon,-236,ffffff14,12,MeReal[3]
+MdtBclAddSpring6,angHEpsilon,-252,ffffff04,12,MeReal[3]
+MdtBclAddSpring6,local_124,-292,fffffedc,4,undefined1 *
+MdtBclAddSpring,clist,4,00000004,4,MdtKeaConstraints *
+MdtBclAddSpring,constraint,8,00000008,4,void *
+MdtBclAddSpring,tlist,12,0000000c,4,MdtKeaTransformation *
+MdtBclAddSpring,blist,16,00000010,4,MdtKeaBody * *
+MdtBclAddSpring,params,20,00000014,4,void *
+MdtBclAddSpring,c,-192,ffffff40,4,MeReal *
+MdtBclAddSpring,xi,-196,ffffff3c,4,MeReal *
+MdtBclAddSpring,lo,-200,ffffff38,4,MeReal *
+MdtBclAddSpring,hi,-204,ffffff34,4,MeReal *
+MdtBclAddSpring,slipfactor,-208,ffffff30,4,MeReal *
+MdtBclAddSpring,xgamma,-212,ffffff2c,4,MeReal *
+MdtBclAddSpring,factors,-60,ffffffc4,24,MdtKeaInputRowFactors
+MdtBclAddSpring,abs_offset1,-76,ffffffb4,16,MeReal[4]
+MdtBclAddSpring,abs_pos1,-92,ffffffa4,12,MeReal[3]
+MdtBclAddSpring,SpringAxis,-108,ffffff94,12,MeReal[3]
+MdtBclAddSpring,velocity,-124,ffffff84,12,MeReal[3]
+MdtBclAddSpring,RotationalAxis1,-140,ffffff74,12,MeReal[3]
+MdtBclAddSpring,RotationalAxis2,-156,ffffff64,12,MeReal[3]
+MdtBclAddSpring,abs_offset2,-172,ffffff54,16,MeReal[4]
+MdtBclAddSpring,abs_pos2,-188,ffffff44,12,MeReal[3]
+MdtBclAddConeLimit,xgamma,-232,ffffff18,4,MeReal *
+MdtBclAddConeLimit,factors,-204,ffffff34,24,MdtKeaInputRowFactors
+MdtBclAddConeLimit,z,-236,ffffff14,4,int
+MdtBclAddConeLimit,clist,4,00000004,4,MdtKeaConstraints *
+MdtBclAddConeLimit,constraint,8,00000008,4,void *
+MdtBclAddConeLimit,tlist,12,0000000c,4,MdtKeaTransformation *
+MdtBclAddConeLimit,blist,16,00000010,4,MdtKeaBody * *
+MdtBclAddConeLimit,params,20,00000014,4,void *
+MdtBclAddConeLimit,ref1world,-92,ffffffa4,64,MeReal[4][4]
+MdtBclAddConeLimit,ref2world,-156,ffffff64,64,MeReal[4][4]
+MdtBclAddConeLimit,cross,-172,ffffff54,12,MeReal[3]
+MdtBclAddConeLimit,c,-212,ffffff2c,4,MeReal *
+MdtBclAddConeLimit,xi,-216,ffffff28,4,MeReal *
+MdtBclAddConeLimit,lo,-220,ffffff24,4,MeReal *
+MdtBclAddConeLimit,hi,-224,ffffff20,4,MeReal *
+MdtBclAddConeLimit,slipfactor,-228,ffffff1c,4,MeReal *
+MdtBclAddSphericalRows,clist,4,00000004,4,MdtKeaConstraints *
+MdtBclAddSphericalRows,body0trans,8,00000008,4,MeReal *
+MdtBclAddSphericalRows,body1trans,12,0000000c,4,MeReal *
+MdtBclAddSphericalRows,pos0,16,00000010,4,MeReal *
+MdtBclAddSphericalRows,pos1,20,00000014,4,MeReal *
+MdtBclAddSphericalRows,body1Present,24,00000018,4,int
+MdtBclAddSphericalRows,c,-96,ffffffa0,4,MeReal *
+MdtBclAddSphericalRows,xi,-100,ffffff9c,4,MeReal *
+MdtBclAddSphericalRows,lo,-104,ffffff98,4,MeReal *
+MdtBclAddSphericalRows,hi,-108,ffffff94,4,MeReal *
+MdtBclAddSphericalRows,slipfactor,-112,ffffff90,4,MeReal *
+MdtBclAddSphericalRows,xgamma,-116,ffffff8c,4,MeReal *
+MdtBclAddSphericalRows,factors,-60,ffffffc4,24,MdtKeaInputRowFactors
+MdtBclAddSphericalRows,at1,-76,ffffffb4,16,MeReal[4]
+MdtBclAddSphericalRows,z,-120,ffffff88,4,int
+MdtBclAddSphericalRows,z_1,-124,ffffff84,4,int
+MdtBclAddSphericalRows,z_2,-128,ffffff80,4,int
+MdtBclAddSphericalRows,at2,-92,ffffffa4,16,MeReal[4]
+MdtBclAddRPROJoint,clist,4,00000004,4,MdtKeaConstraints *
+MdtBclAddRPROJoint,constraint,8,00000008,4,void *
+MdtBclAddRPROJoint,tlist,12,0000000c,4,MdtKeaTransformation *
+MdtBclAddRPROJoint,blist,16,00000010,4,MdtKeaBody * *
+MdtBclAddRPROJoint,params,20,00000014,4,void *
+MdtBclAddRPROJoint,local_244,-580,fffffdbc,4,int
+MdtBclAddRPROJoint,local_240,-576,fffffdc0,4,int
+MdtBclAddRPROJoint,local_238,-568,fffffdc8,4,int
+MdtBclAddRPROJoint,local_204,-516,fffffdfc,4,float
+MdtBclAddRPROJoint,local_200,-512,fffffe00,4,float
+MdtBclAddRPROJoint,local_1fc,-508,fffffe04,4,float
+MdtBclAddRPROJoint,local_1f8,-504,fffffe08,4,float
+MdtBclAddRPROJoint,local_1f4,-500,fffffe0c,4,float
+MdtBclAddRPROJoint,local_1f0,-496,fffffe10,4,float
+MdtBclAddRPROJoint,c,-468,fffffe2c,4,MeReal *
+MdtBclAddRPROJoint,xi,-472,fffffe28,4,MeReal *
+MdtBclAddRPROJoint,lo,-476,fffffe24,4,MeReal *
+MdtBclAddRPROJoint,hi,-480,fffffe20,4,MeReal *
+MdtBclAddRPROJoint,slipfactor,-484,fffffe1c,4,MeReal *
+MdtBclAddRPROJoint,xgamma,-488,fffffe18,4,MeReal *
+MdtBclAddRPROJoint,factors,-60,ffffffc4,24,MdtKeaInputRowFactors
+MdtBclAddRPROJoint,EMatrixB1,-108,ffffff94,48,MeReal[3][4]
+MdtBclAddRPROJoint,GMatrixB2,-156,ffffff64,48,MeReal[3][4]
+MdtBclAddRPROJoint,GEt,-204,ffffff34,36,MeReal[3][3]
+MdtBclAddRPROJoint,Gr,-252,ffffff04,48,MeReal[3][4]
+MdtBclAddRPROJoint,Eq,-300,fffffed4,48,MeReal[3][4]
+MdtBclAddRPROJoint,GrEqt,-348,fffffea4,36,MeReal[3][3]
+MdtBclAddRPROJoint,qr,-364,fffffe94,16,MeReal[4]
+MdtBclAddRPROJoint,ejej0,-380,fffffe84,16,MeReal[4]
+MdtBclAddRPROJoint,err,-460,fffffe34,12,MeReal[3]
+MdtBclAddRPROJoint,q2Adj,-396,fffffe74,16,MeReal[4]
+MdtBclAddRPROJoint,q20Adj,-412,fffffe64,16,MeReal[4]
+MdtBclAddRPROJoint,tmp,-428,fffffe54,16,MeReal[4]
+MdtBclAddRPROJoint,tmp1,-444,fffffe44,16,MeReal[4]
+MdtBclAddRPROJoint,j,-560,fffffdd0,4,int
+MdtBclAddRPROJoint,j_1,-564,fffffdcc,4,int
+MeVector3Normalize,local_8,-8,fffffff8,4,float
+MeVector3Normalize,v,4,00000004,4,MeReal *
+MeMatrixMultiply,local_20,-32,ffffffe0,4,int
+MeMatrixMultiply,A,4,00000004,4,MeReal *
+MeMatrixMultiply,p,8,00000008,4,int
+MeMatrixMultiply,q,12,0000000c,4,int
+MeMatrixMultiply,r,16,00000010,4,int
+MeMatrixMultiply,B,20,00000014,4,MeReal *
+MeMatrixMultiply,C,24,00000018,4,MeReal *
+MeMatrixMultiply,i,-20,ffffffec,4,int
+MeMatrixMultiply,j,-24,ffffffe8,4,int
+MeMatrix4MultiplyMatrix,A,4,00000004,4,MeVector4 *
+MeMatrix4MultiplyMatrix,B,8,00000008,4,MeReal[4] *
+MeMatrix4MultiplyMatrix,C,12,0000000c,4,MeReal[4] *
+MyMultiplyT2,p,4,00000004,4,int
+MyMultiplyT2,q,8,00000008,4,int
+MyMultiplyT2,r,12,0000000c,4,int
+MyMultiplyT2,A,16,00000010,4,MeReal *
+MyMultiplyT2,B,20,00000014,4,MeReal *
+MyMultiplyT2,C,24,00000018,4,MeReal *
+MyMultiplyT2,i,-20,ffffffec,4,int
+MyMultiplyT2,local_24,-36,ffffffdc,4,int
+MyMultiplyT2,local_20,-32,ffffffe0,4,int
+MyMultiplyT2,local_1c,-28,ffffffe4,4,int
+LimitSingleAxis,limit,4,00000004,4,MdtBclLimit *
+LimitSingleAxis,factors,8,00000008,4,MdtKeaInputRowFactors *
+LimitSingleAxis,RowIndex,12,0000000c,4,uint
+LimitSingleAxis,params,16,00000010,4,MdtBclSolverParameters *
+ActuateJointAxes,limit,4,00000004,4,MdtBclLimit *
+ActuateJointAxes,BodyIndex,8,00000008,4,int *
+ActuateJointAxes,LinearAxis,12,0000000c,4,MeReal *
+ActuateJointAxes,RotationalAxis1,16,00000010,4,MeReal *
+ActuateJointAxes,RotationalAxis2,20,00000014,4,MeReal *
+ActuateJointAxes,blist,24,00000018,4,MdtKeaBody * *
+ActuateJointAxes,factors,28,0000001c,4,MdtKeaInputRowFactors *
+ActuateJointAxes,RowIndex,32,00000020,4,uint
+ActuateJointAxes,clist,36,00000024,4,MdtKeaConstraints *
+CalculateLimitPositionAndOvershoot,limit,4,00000004,4,MdtBclLimit *
+CalculateLimitPositionAndOvershoot,stepsize,8,00000008,4,MeReal
+CalculateLimitPositionAndOvershoot,bRotary,12,0000000c,4,MeBool
+MdtContactWriteRow,clist,4,00000004,4,MdtKeaConstraints *
+MdtContactWriteRow,row,8,00000008,4,int
+MdtContactWriteRow,vector,12,0000000c,4,MeReal *
+MdtContactWriteRow,pos0,16,00000010,4,MeReal *
+MdtContactWriteRow,pos1,20,00000014,4,MeReal *
+MdtContactWriteRow,writeBody1,24,00000018,4,MeBool
+SetLimitFactors,factors,4,00000004,4,MdtKeaInputRowFactors *
+SetLimitFactors,RowIndex,8,00000008,4,uint
+SetLimitFactors,limit,12,0000000c,4,MdtBclLimit *
+SetLimitFactors,sl,16,00000010,4,MdtBclSingleLimit *
+SetLimitFactors,params,20,00000014,4,MdtBclSolverParameters *
+FUN_00021130,auStack_8,-8,fffffff8,4,undefined1[4]
+FUN_00021130,auStack_4,-4,fffffffc,4,undefined1[4]

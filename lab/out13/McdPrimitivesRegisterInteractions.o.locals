@@ -1,0 +1,2 @@
+# function,name,stackoff,hexoff,size,type
+McdPrimitivesRegisterInteractions,frame,4,00000004,4,McdFramework *

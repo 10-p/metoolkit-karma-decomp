@@ -1,0 +1,11 @@
+# function,name,stackoff,hexoff,size,type
+McdModelSetBody,model,4,00000004,4,McdModelID.conflict
+McdModelSetBody,body,8,00000008,4,MdtBodyID
+McdModelSetBody,bp,-44,ffffffd4,16,BodyData
+McdModelGetBody,m,4,00000004,4,McdModelID.conflict
+McdModelDynamicsReset,m,4,00000004,4,McdModelID.conflict
+transferContactGroups,body0,-24,ffffffe8,4,MdtBodyID
+transferContactGroups,uVar10,-40,ffffffd8,4,uint
+transferContactGroups,c,4,00000004,4,MdtConstraintID
+transferContactGroups,ccbdata,8,00000008,4,void *
+transferContactGroups,otherModel,-20,ffffffec,4,McdModelID.conflict

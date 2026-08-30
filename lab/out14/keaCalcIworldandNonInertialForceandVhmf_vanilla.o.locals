@@ -1,0 +1,12 @@
+# function,name,stackoff,hexoff,size,type
+calcIworldandNonInertialForceandVhmf,this,4,00000004,4,keaFunctions_Vanilla *
+calcIworldandNonInertialForceandVhmf,invIworld,8,00000008,4,MdtKeaInverseMassMatrix *
+calcIworldandNonInertialForceandVhmf,vhmf,12,0000000c,4,MdtKeaVelocity *
+calcIworldandNonInertialForceandVhmf,blist,16,00000010,4,MdtKeaBody * *
+calcIworldandNonInertialForceandVhmf,tlist,20,00000014,4,MdtKeaTransformation *
+calcIworldandNonInertialForceandVhmf,num_bodies,24,00000018,4,int
+calcIworldandNonInertialForceandVhmf,stepsize,28,0000001c,4,MeReal
+calcIworldandNonInertialForceandVhmf,body,-128,ffffff80,4,int
+calcIworldandNonInertialForceandVhmf,pb,-132,ffffff7c,4,MdtKeaBody * *
+calcIworldandNonInertialForceandVhmf,m1,-76,ffffffb4,36,MeReal[3][3]
+calcIworldandNonInertialForceandVhmf,m2,-124,ffffff84,36,MeReal[3][3]

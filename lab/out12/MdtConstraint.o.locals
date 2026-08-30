@@ -1,0 +1,132 @@
+# function,name,stackoff,hexoff,size,type
+BaseConstraintReset,c,4,00000004,4,MdtConstraintID
+MdtConstraintBodySetAxes,py,16,00000010,4,MeReal
+MdtConstraintBodySetAxes,pz,20,00000014,4,MeReal
+MdtConstraintBodySetAxes,ox,24,00000018,4,MeReal
+MdtConstraintBodySetAxes,oy,28,0000001c,4,MeReal
+MdtConstraintBodySetAxes,oz,32,00000020,4,MeReal
+MdtConstraintBodySetAxes,pMVar3,-84,ffffffac,4,MdtBody *
+MdtConstraintBodySetAxes,paxis,-44,ffffffd4,12,MeVector3
+MdtConstraintBodySetAxes,oaxis,-60,ffffffc4,12,MeVector3
+MdtConstraintBodySetAxes,r_axis,-76,ffffffb4,12,MeVector3
+MdtConstraintBodySetAxes,c,4,00000004,4,MdtConstraintID
+MdtConstraintBodySetAxes,bodyindex,8,00000008,4,uint
+MdtConstraintBodySetAxes,px,12,0000000c,4,MeReal
+MdtConstraintBodySetAxesRel,c,4,00000004,4,MdtConstraintID
+MdtConstraintBodySetAxesRel,bodyindex,8,00000008,4,uint
+MdtConstraintBodySetAxesRel,px,12,0000000c,4,MeReal
+MdtConstraintBodySetAxesRel,py,16,00000010,4,MeReal
+MdtConstraintBodySetAxesRel,pz,20,00000014,4,MeReal
+MdtConstraintBodySetAxesRel,ox,24,00000018,4,MeReal
+MdtConstraintBodySetAxesRel,oy,28,0000001c,4,MeReal
+MdtConstraintBodySetAxesRel,oz,32,00000020,4,MeReal
+MdtConstraintBodySetAxesRel,paxis,-28,ffffffe4,12,MeVector3
+MdtConstraintBodySetAxesRel,oaxis,-44,ffffffd4,12,MeVector3
+MdtConstraintBodySetAxesRel,r_axis,-60,ffffffc4,12,MeVector3
+BaseConstraintCreate,w,4,00000004,4,MdtWorldID
+BaseConstraintSetBodies,b2,12,0000000c,4,MdtBodyID
+BaseConstraintSetBodies,c,4,00000004,4,MdtConstraintID
+BaseConstraintSetBodies,b1,8,00000008,4,MdtBodyID
+BaseConstraintSetAxis,c,4,00000004,4,MdtConstraintID
+BaseConstraintSetAxis,px,8,00000008,4,MeReal
+BaseConstraintSetAxis,py,12,0000000c,4,MeReal
+BaseConstraintSetAxis,pz,16,00000010,4,MeReal
+BaseConstraintSetAxis,axis,-44,ffffffd4,12,MeVector3
+BaseConstraintSetAxis,r_axis1,-60,ffffffc4,12,MeVector3
+BaseConstraintSetAxis,r_axis2,-76,ffffffb4,12,MeVector3
+MdtConstraintDestroy,c,4,00000004,4,MdtConstraintID
+MdtConstraintEnable,c,4,00000004,4,MdtConstraintID
+MdtConstraintDisable,c,4,00000004,4,MdtConstraintID
+MdtConstraintIsEnabled,c,4,00000004,4,MdtConstraintID
+MdtConstraintGetWorld,c,4,00000004,4,MdtConstraintID
+MdtConstraintGetRowCount,c,4,00000004,4,MdtConstraintID
+MdtConstraintGetBody,c,4,00000004,4,MdtConstraintID
+MdtConstraintGetBody,bodyindex,8,00000008,4,uint
+MdtConstraintGetUserData,c,4,00000004,4,MdtConstraintID
+MdtConstraintGetForce,v,12,0000000c,4,MeReal *
+MdtConstraintGetForce,c,4,00000004,4,MdtConstraintID
+MdtConstraintGetForce,bodyindex,8,00000008,4,uint
+MdtConstraintGetTorque,c,4,00000004,4,MdtConstraintID
+MdtConstraintGetTorque,bodyindex,8,00000008,4,uint
+MdtConstraintGetTorque,v,12,0000000c,4,MeReal *
+MdtConstraintGetPosition,c,4,00000004,4,MdtConstraintID
+MdtConstraintGetPosition,p,8,00000008,4,MeReal *
+MdtConstraintBodyGetPosition,c,4,00000004,4,MdtConstraintID
+MdtConstraintBodyGetPosition,bodyindex,8,00000008,4,uint
+MdtConstraintBodyGetPosition,a,12,0000000c,4,MeReal *
+MdtConstraintBodyGetPosition,pMVar2,-28,ffffffe4,4,MdtBody *
+MdtConstraintBodyGetPositionRel,c,4,00000004,4,MdtConstraintID
+MdtConstraintBodyGetPositionRel,bodyindex,8,00000008,4,uint
+MdtConstraintBodyGetPositionRel,a,12,0000000c,4,MeReal *
+MdtConstraintBodyGetAxis,pMVar1,-28,ffffffe4,4,MdtBody *
+MdtConstraintBodyGetAxis,paMVar2,-24,ffffffe8,4,MeReal[4] *
+MdtConstraintBodyGetAxis,c,4,00000004,4,MdtConstraintID
+MdtConstraintBodyGetAxis,bodyindex,8,00000008,4,uint
+MdtConstraintBodyGetAxis,a,12,0000000c,4,MeReal *
+MdtConstraintBodyGetAxes,bodyindex,8,00000008,4,uint
+MdtConstraintBodyGetAxes,p,12,0000000c,4,MeReal *
+MdtConstraintBodyGetAxes,o,16,00000010,4,MeReal *
+MdtConstraintBodyGetAxes,c,4,00000004,4,MdtConstraintID
+MdtConstraintBodyGetAxesRel,c,4,00000004,4,MdtConstraintID
+MdtConstraintBodyGetAxesRel,bodyindex,8,00000008,4,uint
+MdtConstraintBodyGetAxesRel,p,12,0000000c,4,MeReal *
+MdtConstraintBodyGetAxesRel,o,16,00000010,4,MeReal *
+MdtConstraintGetAxes,c,4,00000004,4,MdtConstraintID
+MdtConstraintGetAxes,p,8,00000008,4,MeReal *
+MdtConstraintGetAxes,o,12,0000000c,4,MeReal *
+MdtConstraintGetFirst,w,4,00000004,4,MdtWorldID
+MdtConstraintGetNext,c,4,00000004,4,MdtConstraintID
+MdtConstraintGetSortKey,c,4,00000004,4,MdtConstraintID
+MdtConstraintGetWorldLinearVelocity,c,4,00000004,4,MdtConstraintID
+MdtConstraintGetWorldLinearVelocity,lv,8,00000008,4,MeReal *
+MdtConstraintGetWorldAngularVelocity,av,8,00000008,4,MeReal *
+MdtConstraintGetWorldAngularVelocity,c,4,00000004,4,MdtConstraintID
+MdtConstraintSetBodies,c,4,00000004,4,MdtConstraintID
+MdtConstraintSetBodies,b1,8,00000008,4,MdtBodyID
+MdtConstraintSetBodies,b2,12,0000000c,4,MdtBodyID
+MdtConstraintSetUserData,c,4,00000004,4,MdtConstraintID
+MdtConstraintSetUserData,d,8,00000008,4,void *
+MdtConstraintBodySetPosition,pMVar2,-36,ffffffdc,4,MdtBody *
+MdtConstraintBodySetPosition,c,4,00000004,4,MdtConstraintID
+MdtConstraintBodySetPosition,bodyindex,8,00000008,4,uint
+MdtConstraintBodySetPosition,x,12,0000000c,4,MeReal
+MdtConstraintBodySetPosition,y,16,00000010,4,MeReal
+MdtConstraintBodySetPosition,z,20,00000014,4,MeReal
+MdtConstraintBodySetPosition,pos,-28,ffffffe4,12,MeVector3
+MdtConstraintBodySetPositionRel,c,4,00000004,4,MdtConstraintID
+MdtConstraintBodySetPositionRel,bodyindex,8,00000008,4,uint
+MdtConstraintBodySetPositionRel,x,12,0000000c,4,MeReal
+MdtConstraintBodySetPositionRel,y,16,00000010,4,MeReal
+MdtConstraintBodySetPositionRel,z,20,00000014,4,MeReal
+MdtConstraintSetPosition,c,4,00000004,4,MdtConstraintID
+MdtConstraintSetPosition,x,8,00000008,4,MeReal
+MdtConstraintSetPosition,y,12,0000000c,4,MeReal
+MdtConstraintSetPosition,z,16,00000010,4,MeReal
+MdtConstraintSetPosition,pos,-44,ffffffd4,12,MeVector3
+MdtConstraintSetPosition,pos_1,-60,ffffffc4,12,MeVector3
+MdtConstraintSetAxis,c,4,00000004,4,MdtConstraintID
+MdtConstraintSetAxis,px,8,00000008,4,MeReal
+MdtConstraintSetAxis,py,12,0000000c,4,MeReal
+MdtConstraintSetAxis,pz,16,00000010,4,MeReal
+MdtConstraintSetAxes,c,4,00000004,4,MdtConstraintID
+MdtConstraintSetAxes,px,8,00000008,4,MeReal
+MdtConstraintSetAxes,py,12,0000000c,4,MeReal
+MdtConstraintSetAxes,pz,16,00000010,4,MeReal
+MdtConstraintSetAxes,ox,20,00000014,4,MeReal
+MdtConstraintSetAxes,oy,24,00000018,4,MeReal
+MdtConstraintSetAxes,oz,28,0000001c,4,MeReal
+MdtConstraintSetSortKey,key,8,00000008,4,MeI32
+MdtConstraintSetSortKey,c,4,00000004,4,MdtConstraintID
+MdtConstraintSetWorldLinearVelocity,c,4,00000004,4,MdtConstraintID
+MdtConstraintSetWorldLinearVelocity,vx,8,00000008,4,MeReal
+MdtConstraintSetWorldLinearVelocity,vy,12,0000000c,4,MeReal
+MdtConstraintSetWorldLinearVelocity,vz,16,00000010,4,MeReal
+MdtConstraintSetWorldAngularVelocity,c,4,00000004,4,MdtConstraintID
+MdtConstraintSetWorldAngularVelocity,ax,8,00000008,4,MeReal
+MdtConstraintSetWorldAngularVelocity,ay,12,0000000c,4,MeReal
+MdtConstraintSetWorldAngularVelocity,az,16,00000010,4,MeReal
+MeVector3Normalize,local_8,-8,fffffff8,4,float
+MeVector3Normalize,v,4,00000004,4,MeReal *
+MeVector3PlaneSpace,a,8,00000008,4,MeReal *
+MeVector3PlaneSpace,b,12,0000000c,4,MeReal *
+MeVector3PlaneSpace,n,4,00000004,4,MeReal *

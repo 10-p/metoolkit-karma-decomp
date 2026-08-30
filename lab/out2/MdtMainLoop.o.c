@@ -1,0 +1,1201 @@
+/* ==== MdtAutoDisableLastPartition ==== */
+
+void __regparm1 MdtAutoDisableLastPartition(MdtPartitionOutput *po,void *pcbdata)
+
+{
+  undefined4 uVar1;
+  bool bVar2;
+  int iVar3;
+  int iVar4;
+  int iVar5;
+  int *in_stack_00000008;
+  int b;
+  MeBool partitionIsMoving;
+  void *pcbdata_local;
+  
+                    /* Unresolved local var: int p@[DW_OP_reg7(EDI)]
+                       Unresolved local var: MdtPartitionParams * params@[???] */
+  bVar2 = false;
+  iVar5 = *(int *)((int)pcbdata + 0x2c) + -1;
+  if (*in_stack_00000008 == 0) {
+    bVar2 = true;
+  }
+  else {
+                    /* Unresolved local var: int b@[DW_OP_reg3(EBX)] */
+    iVar4 = *(int *)(*(int *)((int)pcbdata + 0x18) + iVar5 * 4);
+    if (iVar4 < *(int *)(*(int *)((int)pcbdata + 0x1c) + iVar5 * 4) + iVar4) {
+      do {
+        iVar3 = MdtBodyIsMovingTest(*(undefined4 *)(*(int *)((int)pcbdata + 0x14) + iVar4 * 4),
+                                    in_stack_00000008,po,po);
+        if (iVar3 != 0) {
+          bVar2 = true;
+        }
+        iVar4 = iVar4 + 1;
+        po = (MdtPartitionOutput *)
+             (*(int *)(*(int *)((int)pcbdata + 0x1c) + iVar5 * 4) +
+             *(int *)(*(int *)((int)pcbdata + 0x18) + iVar5 * 4));
+        if ((int)po <= iVar4) goto LAB_000100a5;
+      } while (!bVar2);
+      goto LAB_0001007a;
+    }
+  }
+LAB_000100a5:
+  if (!bVar2) {
+    b = *(int *)(*(int *)((int)pcbdata + 0x18) + iVar5 * 4);
+    iVar4 = *(int *)((int)pcbdata + 0x1c);
+    if (b < b + *(int *)(iVar4 + iVar5 * 4)) {
+      do {
+                    /* Unresolved local var: MdtBodyID body@[DW_OP_reg3(EBX)] */
+        uVar1 = *(undefined4 *)(*(int *)((int)pcbdata + 0x14) + b * 4);
+        MdtBodyDisable(uVar1);
+        MdtBodyResetForces(uVar1);
+        MdtBodyResetImpulses(uVar1);
+        b = b + 1;
+        iVar4 = *(int *)((int)pcbdata + 0x1c);
+      } while (b < *(int *)(iVar4 + iVar5 * 4) + *(int *)(*(int *)((int)pcbdata + 0x18) + iVar5 * 4)
+              );
+    }
+    *(int *)((int)pcbdata + 0x2c) = *(int *)((int)pcbdata + 0x2c) + -1;
+    *(int *)((int)pcbdata + 0x20) = *(int *)((int)pcbdata + 0x20) - *(int *)(iVar4 + iVar5 * 4);
+    iVar3 = iVar5 * 0xc;
+    iVar4 = *(int *)((int)pcbdata + 0x28);
+    *(int *)((int)pcbdata + 0xc) =
+         *(int *)((int)pcbdata + 0xc) - *(int *)(*(int *)((int)pcbdata + 8) + iVar5 * 4);
+    iVar5 = *(int *)(iVar4 + 8 + iVar3);
+    *(int *)((int)pcbdata + 0x34) = *(int *)((int)pcbdata + 0x34) - *(int *)(iVar4 + iVar3);
+    iVar4 = *(int *)(iVar4 + 4 + iVar3);
+    *(int *)((int)pcbdata + 0x3c) = *(int *)((int)pcbdata + 0x3c) - iVar5;
+    *(int *)((int)pcbdata + 0x38) = *(int *)((int)pcbdata + 0x38) - iVar4;
+    return;
+  }
+LAB_0001007a:
+  if (*(int *)(*(int *)((int)pcbdata + 0x28) + iVar5 * 0xc) <= in_stack_00000008[6]) {
+    return;
+  }
+  MdtLODLastPartition();
+  return;
+}
+
+
+/* ==== MdtUpdateBodyForces ==== */
+
+void MdtUpdateBodyForces(MdtBodyID b,MeReal stepSize,MeReal *g)
+
+{
+  float fVar1;
+  float fVar2;
+  float fVar3;
+  float fVar4;
+  float fVar5;
+  int iVar6;
+  float fVar7;
+  
+                    /* Unresolved local var: MeReal averageInertia@[DW_OP_reg13(ST2)] */
+  if ((b->constraintDict).nodecount == 0) {
+    (b->keaBody).flags = (b->keaBody).flags & 0xfffffffd;
+  }
+  else {
+    (b->keaBody).flags = (b->keaBody).flags | 2;
+  }
+  fVar7 = -b->angularDamping;
+  iVar6 = b->impulseAdded;
+  fVar5 = ((b->keaBody).I1[1] + (b->keaBody).I0[0] + (b->keaBody).I2[2]) * 0.33333334;
+  (b->keaBody).torque[0] = fVar7 * (b->keaBody).velrot[0] * fVar5 + (b->keaBody).torque[0];
+  fVar1 = (b->keaBody).velrot[1];
+  fVar2 = b->mass;
+  fVar3 = (b->keaBody).torque[1];
+  (b->keaBody).torque[2] = fVar7 * (b->keaBody).velrot[2] * fVar5 + (b->keaBody).torque[2];
+  fVar4 = b->damping;
+  (b->keaBody).torque[1] = fVar7 * fVar1 * fVar5 + fVar3;
+  fVar4 = -fVar4;
+  (b->keaBody).force[0] = (fVar4 * (b->keaBody).vel[0] + *g) * fVar2 + (b->keaBody).force[0];
+  fVar1 = (b->keaBody).vel[2];
+  (b->keaBody).force[1] = (fVar4 * (b->keaBody).vel[1] + g[1]) * fVar2 + (b->keaBody).force[1];
+  fVar3 = g[2];
+  fVar5 = (b->keaBody).force[2];
+  b->enabledTime = b->enabledTime + stepSize;
+  (b->keaBody).force[2] = (fVar4 * fVar1 + fVar3) * fVar2 + fVar5;
+  if (iVar6 != 0) {
+                    /* Unresolved local var: int i@[???]
+                       Unresolved local var: MeReal invStep@[DW_OP_reg11(ST0)] */
+    fVar4 = 1.0 / stepSize;
+    b->impulseAdded = 0;
+    fVar1 = b->impulseLinear[0];
+    b->impulseLinear[0] = 0.0;
+    (b->keaBody).force[0] = fVar4 * fVar1 + (b->keaBody).force[0];
+    fVar1 = b->impulseAngular[0];
+    b->impulseAngular[0] = 0.0;
+    (b->keaBody).torque[0] = fVar4 * fVar1 + (b->keaBody).torque[0];
+    fVar1 = b->impulseLinear[1];
+    b->impulseLinear[1] = 0.0;
+    (b->keaBody).force[1] = fVar4 * fVar1 + (b->keaBody).force[1];
+    fVar1 = b->impulseAngular[1];
+    b->impulseAngular[1] = 0.0;
+    (b->keaBody).torque[1] = fVar4 * fVar1 + (b->keaBody).torque[1];
+    fVar1 = b->impulseLinear[2];
+    b->impulseLinear[2] = 0.0;
+    (b->keaBody).force[2] = fVar4 * fVar1 + (b->keaBody).force[2];
+    fVar1 = b->impulseAngular[2];
+    b->impulseAngular[2] = 0.0;
+    (b->keaBody).torque[2] = fVar4 * fVar1 + (b->keaBody).torque[2];
+    fVar1 = b->impulseAngular[3];
+    b->impulseAngular[3] = 0.0;
+    fVar2 = b->impulseLinear[3];
+    fVar3 = (b->keaBody).torque[3];
+    b->impulseLinear[3] = 0.0;
+    (b->keaBody).torque[3] = fVar4 * fVar1 + fVar3;
+    (b->keaBody).force[3] = fVar4 * fVar2 + (b->keaBody).force[3];
+  }
+  return;
+}
+
+
+/* ==== MdtPackAllPartitions ==== */
+
+uint MdtPackAllPartitions
+               (MdtPartitionOutput *po,MeReal stepSize,MdtWorldParams *params,
+               MdtKeaParameters *keaParams,MdtKeaTransformation *keaTMArray,
+               MdtKeaConstraints *constraints)
+
+{
+  MdtBaseConstraint **ppMVar1;
+  MdtBody **ppMVar2;
+  MdtBody **ppMVar3;
+  MdtBaseConstraint *pMVar4;
+  MdtBody *pMVar5;
+  bool bVar6;
+  uint uVar7;
+  uint uVar8;
+  uint uVar9;
+  uint uVar10;
+  int *piVar11;
+  MdtBody **ppMVar12;
+  int iVar13;
+  MdtWorldParams *pMVar14;
+  MdtKeaTransformation *local_50;
+  int constraintsSize;
+  int bodiesSize;
+  MdtKeaBody **keabodyArray;
+  MdtBody **blist;
+  uint maxPartitionConstraintRows;
+  uint partitionConstraintRows;
+  int partitionindex;
+  int i;
+  MdtBclSolverParameters bclParams;
+  
+                    /* Unresolved local var: MdtBaseConstraint * * clist@[DW_OP_reg7(EDI)]
+                       Unresolved local var: int bodiesStart@[???] */
+  partitionConstraintRows = 0;
+  bclParams.stepsize = stepSize;
+  maxPartitionConstraintRows = 0;
+  bclParams.epsilon = keaParams->epsilon;
+  bclParams.gamma = keaParams->gamma;
+  MdtBclInitConstraintRowList(constraints);
+  ppMVar3 = po->bodies;
+  partitionindex = 0;
+  ppMVar12 = ppMVar3;
+  if (po->nPartitions < 1) {
+    return 0;
+  }
+  do {
+    ppMVar12 = ppMVar12 + po->bodiesStart[partitionindex];
+    uVar9 = po->bodiesSize[partitionindex];
+    ppMVar1 = po->constraints + po->constraintsStart[partitionindex];
+    uVar10 = po->constraintsSize[partitionindex];
+    i = 0;
+    if (0 < (int)uVar9) {
+      local_50 = keaTMArray + po->bodiesStart[partitionindex];
+      uVar7 = uVar9 & 3;
+      if ((int)uVar9 < 2) {
+LAB_00010442:
+        pMVar14 = params;
+        MdtUpdateBodyForces(ppMVar12[i],stepSize,params->gravity);
+        ppMVar2 = ppMVar12 + i;
+        i = i + 1;
+        GetCOMTransform(*ppMVar2,local_50,pMVar14,uVar7);
+        local_50 = local_50 + 1;
+        uVar8 = uVar9;
+        if ((int)uVar9 <= i) goto LAB_00010575;
+      }
+      else {
+        uVar8 = 0;
+        if (uVar7 != 0) {
+          if (1 < uVar7) {
+            bVar6 = 2 < uVar7;
+            if (bVar6) {
+              pMVar14 = params;
+              MdtUpdateBodyForces(*ppMVar12,stepSize,params->gravity);
+              uVar7 = GetCOMTransform(*ppMVar12,local_50,pMVar14,uVar7);
+              local_50 = local_50 + 1;
+            }
+            i = (int)bVar6;
+            pMVar14 = params;
+            MdtUpdateBodyForces(ppMVar12[i],stepSize,params->gravity);
+            uVar7 = GetCOMTransform(ppMVar12[i],local_50,pMVar14,uVar7);
+            local_50 = local_50 + 1;
+            i = i + 1;
+          }
+          goto LAB_00010442;
+        }
+      }
+      do {
+        pMVar14 = params;
+        MdtUpdateBodyForces(ppMVar12[i],stepSize,params->gravity);
+        GetCOMTransform(ppMVar12[i],local_50,pMVar14,uVar8);
+        MdtUpdateBodyForces(ppMVar12[i + 1],stepSize,params->gravity);
+        GetCOMTransform(ppMVar12[i + 1],local_50 + 1);
+        MdtUpdateBodyForces(ppMVar12[i + 2],stepSize,params->gravity);
+        GetCOMTransform(ppMVar12[i + 2],local_50 + 2);
+        MdtUpdateBodyForces(ppMVar12[i + 3],stepSize,params->gravity);
+        uVar8 = GetCOMTransform(ppMVar12[i + 3],local_50 + 3);
+        i = i + 4;
+        local_50 = local_50 + 4;
+      } while (i < (int)uVar9);
+    }
+LAB_00010575:
+    i = 0;
+    if (0 < (int)uVar10) {
+      uVar9 = uVar10 & 3;
+      if ((int)uVar10 < 2) {
+LAB_00010594:
+        MdtConstraintDCastContactGroup(ppMVar1[i]);
+        (ppMVar1[i]->head).bodyindex[0] = (ppMVar1[i]->head).mdtbody[0]->arrayIdWorld;
+        pMVar4 = ppMVar1[i];
+        pMVar5 = (pMVar4->head).mdtbody[1];
+        if (pMVar5 == (MdtBody *)0x0) {
+          (pMVar4->head).bodyindex[1] = -1;
+        }
+        else {
+          (pMVar4->head).bodyindex[1] = pMVar5->arrayIdWorld;
+        }
+        i = i + 1;
+        if ((int)uVar10 <= i) goto LAB_00010702;
+      }
+      else if (uVar9 != 0) {
+        if (1 < uVar9) {
+          if (2 < uVar9) {
+                    /* Unresolved local var: MdtContactGroup * group@[???] */
+            MdtConstraintDCastContactGroup(*ppMVar1);
+            ((*ppMVar1)->head).bodyindex[0] = ((*ppMVar1)->head).mdtbody[0]->arrayIdWorld;
+            pMVar4 = *ppMVar1;
+            pMVar5 = (pMVar4->head).mdtbody[1];
+            if (pMVar5 == (MdtBody *)0x0) {
+              (pMVar4->head).bodyindex[1] = -1;
+            }
+            else {
+              (pMVar4->head).bodyindex[1] = pMVar5->arrayIdWorld;
+            }
+            i = 1;
+          }
+          MdtConstraintDCastContactGroup(ppMVar1[i]);
+          (ppMVar1[i]->head).bodyindex[0] = (ppMVar1[i]->head).mdtbody[0]->arrayIdWorld;
+          pMVar4 = ppMVar1[i];
+          pMVar5 = (pMVar4->head).mdtbody[1];
+          if (pMVar5 == (MdtBody *)0x0) {
+            (pMVar4->head).bodyindex[1] = -1;
+          }
+          else {
+            (pMVar4->head).bodyindex[1] = pMVar5->arrayIdWorld;
+          }
+          i = i + 1;
+        }
+        goto LAB_00010594;
+      }
+      do {
+        MdtConstraintDCastContactGroup(ppMVar1[i]);
+        (ppMVar1[i]->head).bodyindex[0] = (ppMVar1[i]->head).mdtbody[0]->arrayIdWorld;
+        pMVar4 = ppMVar1[i];
+        pMVar5 = (pMVar4->head).mdtbody[1];
+        if (pMVar5 == (MdtBody *)0x0) {
+          (pMVar4->head).bodyindex[1] = -1;
+        }
+        else {
+          (pMVar4->head).bodyindex[1] = pMVar5->arrayIdWorld;
+        }
+        iVar13 = i + 1;
+        MdtConstraintDCastContactGroup(ppMVar1[iVar13]);
+        (ppMVar1[iVar13]->head).bodyindex[0] = (ppMVar1[iVar13]->head).mdtbody[0]->arrayIdWorld;
+        pMVar4 = ppMVar1[iVar13];
+        pMVar5 = (pMVar4->head).mdtbody[1];
+        if (pMVar5 == (MdtBody *)0x0) {
+          (pMVar4->head).bodyindex[1] = -1;
+        }
+        else {
+          (pMVar4->head).bodyindex[1] = pMVar5->arrayIdWorld;
+        }
+        iVar13 = i + 2;
+        MdtConstraintDCastContactGroup(ppMVar1[iVar13]);
+        (ppMVar1[iVar13]->head).bodyindex[0] = (ppMVar1[iVar13]->head).mdtbody[0]->arrayIdWorld;
+        pMVar4 = ppMVar1[iVar13];
+        pMVar5 = (pMVar4->head).mdtbody[1];
+        if (pMVar5 == (MdtBody *)0x0) {
+          (pMVar4->head).bodyindex[1] = -1;
+        }
+        else {
+          (pMVar4->head).bodyindex[1] = pMVar5->arrayIdWorld;
+        }
+        iVar13 = i + 3;
+        MdtConstraintDCastContactGroup(ppMVar1[iVar13]);
+        (ppMVar1[iVar13]->head).bodyindex[0] = (ppMVar1[iVar13]->head).mdtbody[0]->arrayIdWorld;
+        pMVar4 = ppMVar1[iVar13];
+        pMVar5 = (pMVar4->head).mdtbody[1];
+        if (pMVar5 == (MdtBody *)0x0) {
+          (pMVar4->head).bodyindex[1] = -1;
+        }
+        else {
+          (pMVar4->head).bodyindex[1] = pMVar5->arrayIdWorld;
+        }
+        i = i + 4;
+      } while (i < (int)uVar10);
+    }
+LAB_00010702:
+    if ((int)uVar10 < 1) {
+      piVar11 = params->matrixSizeLog;
+      if (piVar11 != (int *)0x0) {
+        uVar10 = params->matrixSizeLogSize - 1;
+        uVar10 = uVar10 & (0 < (int)uVar10) - 1;
+        uVar9 = 0xffffffff - ((int)uVar10 >> 0x1f);
+        goto LAB_00010863;
+      }
+    }
+    else {
+      MdtBclStartPartition(constraints);
+      i = 0;
+      if (0 < (int)uVar10) {
+        uVar9 = uVar10 & 3;
+        if ((int)uVar10 < 2) {
+LAB_0001073f:
+          (*(ppMVar1[i]->head).bclFunction)
+                    (constraints,ppMVar1[i],keaTMArray,(MdtKeaBody **)ppMVar3,&bclParams);
+          i = i + 1;
+          if ((int)uVar10 <= i) goto LAB_00010805;
+        }
+        else if (uVar9 != 0) {
+          if (1 < uVar9) {
+            if (2 < uVar9) {
+              (*((*ppMVar1)->head).bclFunction)
+                        (constraints,*ppMVar1,keaTMArray,(MdtKeaBody **)ppMVar3,&bclParams);
+            }
+            i = (int)(2 < uVar9);
+            (*(ppMVar1[i]->head).bclFunction)
+                      (constraints,ppMVar1[i],keaTMArray,(MdtKeaBody **)ppMVar3,&bclParams);
+            i = i + 1;
+          }
+          goto LAB_0001073f;
+        }
+        do {
+          (*(ppMVar1[i]->head).bclFunction)
+                    (constraints,ppMVar1[i],keaTMArray,(MdtKeaBody **)ppMVar3,&bclParams);
+          (*(ppMVar1[i + 1]->head).bclFunction)
+                    (constraints,ppMVar1[i + 1],keaTMArray,(MdtKeaBody **)ppMVar3,&bclParams);
+          (*(ppMVar1[i + 2]->head).bclFunction)
+                    (constraints,ppMVar1[i + 2],keaTMArray,(MdtKeaBody **)ppMVar3,&bclParams);
+          (*(ppMVar1[i + 3]->head).bclFunction)
+                    (constraints,ppMVar1[i + 3],keaTMArray,(MdtKeaBody **)ppMVar3,&bclParams);
+          i = i + 4;
+        } while (i < (int)uVar10);
+      }
+LAB_00010805:
+      MdtBclEndPartition(constraints);
+      partitionConstraintRows =
+           constraints->num_rows_exc_padding_partition[constraints->num_partitions + -1];
+      piVar11 = params->matrixSizeLog;
+      if (piVar11 != (int *)0x0) {
+                    /* Unresolved local var: int entry@[DW_OP_reg2(EDX)] */
+        if ((partitionConstraintRows & 3) == 0) {
+          uVar10 = partitionConstraintRows;
+          if ((int)partitionConstraintRows < 0) {
+            uVar10 = partitionConstraintRows + 3;
+          }
+        }
+        else {
+          uVar9 = partitionConstraintRows;
+          if ((int)partitionConstraintRows < 0) {
+            uVar9 = partitionConstraintRows + 3;
+          }
+          uVar10 = (uVar9 & 0xfffffffc) + 4;
+          if ((int)uVar10 < 0) {
+            uVar10 = (uVar9 & 0xfffffffc) + 7;
+          }
+        }
+        uVar9 = params->matrixSizeLogSize - 1;
+        if ((int)uVar10 >> 2 < (int)uVar9) {
+          uVar9 = (int)uVar10 >> 2;
+        }
+        uVar10 = 0xffffffff - ((int)uVar9 >> 0x1f);
+LAB_00010863:
+                    /* Unresolved local var: int entry@[???] */
+        piVar11[uVar10 & uVar9] = piVar11[uVar10 & uVar9] + 1;
+      }
+    }
+    if (maxPartitionConstraintRows < partitionConstraintRows) {
+      maxPartitionConstraintRows = partitionConstraintRows;
+    }
+    partitionindex = partitionindex + 1;
+    if (po->nPartitions <= partitionindex) {
+      return maxPartitionConstraintRows;
+    }
+    ppMVar12 = po->bodies;
+  } while( true );
+}
+
+
+/* ==== MdtPackPartition ==== */
+
+uint MdtPackPartition(MdtPartitionOutput *po,uint partitionindex,MeReal stepSize,
+                     MdtWorldParams *params,MdtKeaParameters *keaParams,
+                     MdtKeaTransformation *keaTMArray,MdtKeaConstraints *constraints)
+
+{
+  MdtBody **ppMVar1;
+  MdtBaseConstraint **ppMVar2;
+  MdtBody **ppMVar3;
+  MdtBaseConstraint *pMVar4;
+  MdtBody *pMVar5;
+  uint uVar6;
+  uint uVar7;
+  uint uVar8;
+  int iVar9;
+  int *piVar10;
+  int iVar11;
+  MeReal (*paMVar12) [4];
+  MdtKeaTransformation *pMVar13;
+  int constraintsSize;
+  int bodiesSize;
+  MdtBaseConstraint **clist;
+  MdtBody **blist;
+  uint partitionConstraintRows;
+  int i;
+  MdtBclSolverParameters bclParams;
+  
+                    /* Unresolved local var: MdtKeaBody * * keabodyArray@[???] */
+  partitionConstraintRows = 0;
+  bclParams.stepsize = stepSize;
+  bclParams.epsilon = keaParams->epsilon;
+  bclParams.gamma = keaParams->gamma;
+  MdtBclInitConstraintRowList(constraints);
+  ppMVar1 = po->bodies + po->bodiesStart[partitionindex];
+  uVar7 = po->bodiesSize[partitionindex];
+  ppMVar2 = po->constraints + po->constraintsStart[partitionindex];
+  uVar8 = po->constraintsSize[partitionindex];
+  i = 0;
+  if (0 < (int)uVar7) {
+    uVar6 = uVar7 & 3;
+    if ((int)uVar7 < 2) {
+LAB_00010b86:
+      MdtUpdateBodyForces(ppMVar1[i],stepSize,params->gravity);
+      ppMVar3 = ppMVar1 + i;
+      pMVar13 = keaTMArray + i;
+      i = i + 1;
+      paMVar12 = (*ppMVar3)->comTM;
+      for (iVar9 = 0x10; iVar9 != 0; iVar9 = iVar9 + -1) {
+        pMVar13->R0[0] = (*paMVar12)[0];
+        paMVar12 = (MeReal (*) [4])(*paMVar12 + 1);
+        pMVar13 = (MdtKeaTransformation *)(pMVar13->R0 + 1);
+      }
+      if ((int)uVar7 <= i) goto LAB_00010cca;
+    }
+    else if (uVar6 != 0) {
+      if (1 < uVar6) {
+        if (2 < uVar6) {
+          MdtUpdateBodyForces(*ppMVar1,stepSize,params->gravity);
+          paMVar12 = (*ppMVar1)->comTM;
+          pMVar13 = keaTMArray;
+          for (iVar9 = 0x10; iVar9 != 0; iVar9 = iVar9 + -1) {
+            pMVar13->R0[0] = (*paMVar12)[0];
+            paMVar12 = (MeReal (*) [4])(*paMVar12 + 1);
+            pMVar13 = (MdtKeaTransformation *)(pMVar13->R0 + 1);
+          }
+          i = 1;
+        }
+        MdtUpdateBodyForces(ppMVar1[i],stepSize,params->gravity);
+        ppMVar3 = ppMVar1 + i;
+        pMVar13 = keaTMArray + i;
+        i = i + 1;
+        paMVar12 = (*ppMVar3)->comTM;
+        for (iVar9 = 0x10; iVar9 != 0; iVar9 = iVar9 + -1) {
+          pMVar13->R0[0] = (*paMVar12)[0];
+          paMVar12 = (MeReal (*) [4])(*paMVar12 + 1);
+          pMVar13 = (MdtKeaTransformation *)(pMVar13->R0 + 1);
+        }
+      }
+      goto LAB_00010b86;
+    }
+    do {
+      MdtUpdateBodyForces(ppMVar1[i],stepSize,params->gravity);
+      paMVar12 = ppMVar1[i]->comTM;
+      pMVar13 = keaTMArray + i;
+      for (iVar9 = 0x10; iVar9 != 0; iVar9 = iVar9 + -1) {
+        pMVar13->R0[0] = (*paMVar12)[0];
+        paMVar12 = (MeReal (*) [4])(*paMVar12 + 1);
+        pMVar13 = (MdtKeaTransformation *)(pMVar13->R0 + 1);
+      }
+      iVar11 = i + 1;
+      MdtUpdateBodyForces(ppMVar1[iVar11],stepSize,params->gravity);
+      paMVar12 = ppMVar1[iVar11]->comTM;
+      pMVar13 = keaTMArray + iVar11;
+      for (iVar9 = 0x10; iVar9 != 0; iVar9 = iVar9 + -1) {
+        pMVar13->R0[0] = (*paMVar12)[0];
+        paMVar12 = (MeReal (*) [4])(*paMVar12 + 1);
+        pMVar13 = (MdtKeaTransformation *)(pMVar13->R0 + 1);
+      }
+      iVar11 = i + 2;
+      MdtUpdateBodyForces(ppMVar1[iVar11],stepSize,params->gravity);
+      paMVar12 = ppMVar1[iVar11]->comTM;
+      pMVar13 = keaTMArray + iVar11;
+      for (iVar9 = 0x10; iVar9 != 0; iVar9 = iVar9 + -1) {
+        pMVar13->R0[0] = (*paMVar12)[0];
+        paMVar12 = (MeReal (*) [4])(*paMVar12 + 1);
+        pMVar13 = (MdtKeaTransformation *)(pMVar13->R0 + 1);
+      }
+      iVar11 = i + 3;
+      MdtUpdateBodyForces(ppMVar1[iVar11],stepSize,params->gravity);
+      paMVar12 = ppMVar1[iVar11]->comTM;
+      pMVar13 = keaTMArray + iVar11;
+      for (iVar9 = 0x10; iVar9 != 0; iVar9 = iVar9 + -1) {
+        pMVar13->R0[0] = (*paMVar12)[0];
+        paMVar12 = (MeReal (*) [4])(*paMVar12 + 1);
+        pMVar13 = (MdtKeaTransformation *)(pMVar13->R0 + 1);
+      }
+      i = i + 4;
+    } while (i < (int)uVar7);
+  }
+LAB_00010cca:
+  i = 0;
+  if (0 < (int)uVar8) {
+    uVar7 = uVar8 & 3;
+    if ((int)uVar8 < 2) {
+LAB_00010cea:
+      MdtConstraintDCastContactGroup(ppMVar2[i]);
+      (ppMVar2[i]->head).bodyindex[0] = (ppMVar2[i]->head).mdtbody[0]->arrayIdPartition;
+      pMVar4 = ppMVar2[i];
+      pMVar5 = (pMVar4->head).mdtbody[1];
+      if (pMVar5 == (MdtBody *)0x0) {
+        (pMVar4->head).bodyindex[1] = -1;
+      }
+      else {
+        (pMVar4->head).bodyindex[1] = pMVar5->arrayIdPartition;
+      }
+      i = i + 1;
+      if ((int)uVar8 <= i) goto LAB_00010e69;
+    }
+    else if (uVar7 != 0) {
+      if (1 < uVar7) {
+        if (2 < uVar7) {
+                    /* Unresolved local var: MdtContactGroup * group@[???] */
+          MdtConstraintDCastContactGroup(*ppMVar2);
+          ((*ppMVar2)->head).bodyindex[0] = ((*ppMVar2)->head).mdtbody[0]->arrayIdPartition;
+          pMVar4 = *ppMVar2;
+          pMVar5 = (pMVar4->head).mdtbody[1];
+          if (pMVar5 == (MdtBody *)0x0) {
+            (pMVar4->head).bodyindex[1] = -1;
+          }
+          else {
+            (pMVar4->head).bodyindex[1] = pMVar5->arrayIdPartition;
+          }
+          i = 1;
+        }
+        MdtConstraintDCastContactGroup(ppMVar2[i]);
+        (ppMVar2[i]->head).bodyindex[0] = (ppMVar2[i]->head).mdtbody[0]->arrayIdPartition;
+        pMVar4 = ppMVar2[i];
+        pMVar5 = (pMVar4->head).mdtbody[1];
+        if (pMVar5 == (MdtBody *)0x0) {
+          (pMVar4->head).bodyindex[1] = -1;
+        }
+        else {
+          (pMVar4->head).bodyindex[1] = pMVar5->arrayIdPartition;
+        }
+        i = i + 1;
+      }
+      goto LAB_00010cea;
+    }
+    do {
+      MdtConstraintDCastContactGroup(ppMVar2[i]);
+      (ppMVar2[i]->head).bodyindex[0] = (ppMVar2[i]->head).mdtbody[0]->arrayIdPartition;
+      pMVar4 = ppMVar2[i];
+      pMVar5 = (pMVar4->head).mdtbody[1];
+      if (pMVar5 == (MdtBody *)0x0) {
+        (pMVar4->head).bodyindex[1] = -1;
+      }
+      else {
+        (pMVar4->head).bodyindex[1] = pMVar5->arrayIdPartition;
+      }
+      iVar9 = i + 1;
+      MdtConstraintDCastContactGroup(ppMVar2[iVar9]);
+      (ppMVar2[iVar9]->head).bodyindex[0] = (ppMVar2[iVar9]->head).mdtbody[0]->arrayIdPartition;
+      pMVar4 = ppMVar2[iVar9];
+      pMVar5 = (pMVar4->head).mdtbody[1];
+      if (pMVar5 == (MdtBody *)0x0) {
+        (pMVar4->head).bodyindex[1] = -1;
+      }
+      else {
+        (pMVar4->head).bodyindex[1] = pMVar5->arrayIdPartition;
+      }
+      iVar9 = i + 2;
+      MdtConstraintDCastContactGroup(ppMVar2[iVar9]);
+      (ppMVar2[iVar9]->head).bodyindex[0] = (ppMVar2[iVar9]->head).mdtbody[0]->arrayIdPartition;
+      pMVar4 = ppMVar2[iVar9];
+      pMVar5 = (pMVar4->head).mdtbody[1];
+      if (pMVar5 == (MdtBody *)0x0) {
+        (pMVar4->head).bodyindex[1] = -1;
+      }
+      else {
+        (pMVar4->head).bodyindex[1] = pMVar5->arrayIdPartition;
+      }
+      iVar9 = i + 3;
+      MdtConstraintDCastContactGroup(ppMVar2[iVar9]);
+      (ppMVar2[iVar9]->head).bodyindex[0] = (ppMVar2[iVar9]->head).mdtbody[0]->arrayIdPartition;
+      pMVar4 = ppMVar2[iVar9];
+      pMVar5 = (pMVar4->head).mdtbody[1];
+      if (pMVar5 == (MdtBody *)0x0) {
+        (pMVar4->head).bodyindex[1] = -1;
+      }
+      else {
+        (pMVar4->head).bodyindex[1] = pMVar5->arrayIdPartition;
+      }
+      i = i + 4;
+    } while (i < (int)uVar8);
+  }
+LAB_00010e69:
+  if ((int)uVar8 < 1) {
+    piVar10 = params->matrixSizeLog;
+    if (piVar10 == (int *)0x0) {
+      return 0;
+    }
+    uVar8 = params->matrixSizeLogSize - 1;
+    uVar8 = uVar8 & (0 < (int)uVar8) - 1;
+    uVar7 = 0xffffffff - ((int)uVar8 >> 0x1f);
+    goto LAB_00010fdd;
+  }
+  MdtBclStartPartition(constraints);
+  i = 0;
+  if (0 < (int)uVar8) {
+    uVar7 = uVar8 & 3;
+    if ((int)uVar8 < 2) {
+LAB_00010ea6:
+      (*(ppMVar2[i]->head).bclFunction)
+                (constraints,ppMVar2[i],keaTMArray,(MdtKeaBody **)ppMVar1,&bclParams);
+      i = i + 1;
+      if ((int)uVar8 <= i) goto LAB_00010f7f;
+    }
+    else if (uVar7 != 0) {
+      if (1 < uVar7) {
+        if (2 < uVar7) {
+          (*((*ppMVar2)->head).bclFunction)
+                    (constraints,*ppMVar2,keaTMArray,(MdtKeaBody **)ppMVar1,&bclParams);
+        }
+        i = (int)(2 < uVar7);
+        (*(ppMVar2[i]->head).bclFunction)
+                  (constraints,ppMVar2[i],keaTMArray,(MdtKeaBody **)ppMVar1,&bclParams);
+        i = i + 1;
+      }
+      goto LAB_00010ea6;
+    }
+    do {
+      (*(ppMVar2[i]->head).bclFunction)
+                (constraints,ppMVar2[i],keaTMArray,(MdtKeaBody **)ppMVar1,&bclParams);
+      (*(ppMVar2[i + 1]->head).bclFunction)
+                (constraints,ppMVar2[i + 1],keaTMArray,(MdtKeaBody **)ppMVar1,&bclParams);
+      (*(ppMVar2[i + 2]->head).bclFunction)
+                (constraints,ppMVar2[i + 2],keaTMArray,(MdtKeaBody **)ppMVar1,&bclParams);
+      (*(ppMVar2[i + 3]->head).bclFunction)
+                (constraints,ppMVar2[i + 3],keaTMArray,(MdtKeaBody **)ppMVar1,&bclParams);
+      i = i + 4;
+    } while (i < (int)uVar8);
+  }
+LAB_00010f7f:
+  MdtBclEndPartition(constraints);
+  partitionConstraintRows =
+       constraints->num_rows_exc_padding_partition[constraints->num_partitions + -1];
+  piVar10 = params->matrixSizeLog;
+  if (piVar10 == (int *)0x0) {
+    return partitionConstraintRows;
+  }
+                    /* Unresolved local var: int entry@[DW_OP_reg2(EDX)] */
+  if ((partitionConstraintRows & 3) == 0) {
+    uVar8 = partitionConstraintRows;
+    if ((int)partitionConstraintRows < 0) {
+      uVar8 = partitionConstraintRows + 3;
+    }
+  }
+  else {
+    uVar7 = partitionConstraintRows;
+    if ((int)partitionConstraintRows < 0) {
+      uVar7 = partitionConstraintRows + 3;
+    }
+    uVar8 = (uVar7 & 0xfffffffc) + 4;
+    if ((int)uVar8 < 0) {
+      uVar8 = (uVar7 & 0xfffffffc) + 7;
+    }
+  }
+  uVar7 = params->matrixSizeLogSize - 1;
+  if ((int)uVar8 >> 2 < (int)uVar7) {
+    uVar7 = (int)uVar8 >> 2;
+  }
+  uVar8 = 0xffffffff - ((int)uVar7 >> 0x1f);
+LAB_00010fdd:
+                    /* Unresolved local var: int entry@[???] */
+  piVar10[uVar8 & uVar7] = piVar10[uVar8 & uVar7] + 1;
+  return partitionConstraintRows;
+}
+
+
+/* ==== MdtUnpackForces ==== */
+
+/* WARNING: Unknown calling convention */
+
+uint MdtUnpackForces(MdtKeaForcePair *force,uint partitionindex,MdtPartitionOutput *po)
+
+{
+  float fVar1;
+  float fVar2;
+  float fVar3;
+  int iVar4;
+  int iVar5;
+  MdtKeaForcePair *pMVar6;
+  uint uVar7;
+  uint uVar8;
+  MdtBaseConstraint **local_18;
+  int mdtCNum;
+  
+                    /* Unresolved local var: int keaCNum@[DW_OP_reg7(EDI)]
+                       Unresolved local var: int j@[???]
+                       Unresolved local var: MdtKeaForcePair * forceStart@[DW_OP_reg3(EBX)]
+                       Unresolved local var: MdtBaseConstraint * * clist@[DW_OP_reg2(EDX)] */
+  uVar7 = 0;
+  mdtCNum = 0;
+  local_18 = po->constraints + po->constraintsStart[partitionindex];
+  uVar8 = uVar7;
+  if (0 < po->constraintsSize[partitionindex]) {
+    do {
+                    /* Unresolved local var: MdtContactGroupID.conflict group@[DW_OP_reg6(ESI)] */
+      iVar5 = MdtConstraintDCastContactGroup(*local_18);
+      if (iVar5 == 0) {
+        uVar7 = uVar8 + 1;
+        pMVar6 = force + uVar8;
+        ((*local_18)->head).resultForce[0][0] = (pMVar6->primary_body).force[0];
+        ((*local_18)->head).resultTorque[0][0] = (pMVar6->primary_body).torque[0];
+        ((*local_18)->head).resultForce[1][0] = (pMVar6->secondary_body).force[0];
+        ((*local_18)->head).resultTorque[1][0] = (pMVar6->secondary_body).torque[0];
+        ((*local_18)->head).resultForce[0][1] = (pMVar6->primary_body).force[1];
+        ((*local_18)->head).resultTorque[0][1] = (pMVar6->primary_body).torque[1];
+        ((*local_18)->head).resultForce[1][1] = (pMVar6->secondary_body).force[1];
+        ((*local_18)->head).resultTorque[1][1] = (pMVar6->secondary_body).torque[1];
+        ((*local_18)->head).resultForce[0][2] = (pMVar6->primary_body).force[2];
+        ((*local_18)->head).resultTorque[0][2] = (pMVar6->primary_body).torque[2];
+        ((*local_18)->head).resultForce[1][2] = (pMVar6->secondary_body).force[2];
+        ((*local_18)->head).resultTorque[1][2] = (pMVar6->secondary_body).torque[2];
+        ((*local_18)->head).resultForce[0][3] = (MeReal)(pMVar6->primary_body).pad0;
+        ((*local_18)->head).resultTorque[0][3] = (MeReal)(pMVar6->primary_body).pad1;
+        ((*local_18)->head).resultForce[1][3] = (MeReal)(pMVar6->secondary_body).pad0;
+        ((*local_18)->head).resultTorque[1][3] = (MeReal)(pMVar6->secondary_body).pad1;
+      }
+      else {
+                    /* Unresolved local var: MdtContactID.conflict contact@[DW_OP_reg1(ECX)] */
+        iVar4 = *(int *)(iVar5 + 0x164);
+        *(undefined4 *)(iVar5 + 0x68) = 0;
+        *(undefined4 *)(iVar5 + 0x88) = 0;
+        *(undefined4 *)(iVar5 + 0x78) = 0;
+        *(undefined4 *)(iVar5 + 0x98) = 0;
+        *(undefined4 *)(iVar5 + 0x6c) = 0;
+        *(undefined4 *)(iVar5 + 0x8c) = 0;
+        *(undefined4 *)(iVar5 + 0x7c) = 0;
+        *(undefined4 *)(iVar5 + 0x9c) = 0;
+        *(undefined4 *)(iVar5 + 0x70) = 0;
+        *(undefined4 *)(iVar5 + 0x90) = 0;
+        *(undefined4 *)(iVar5 + 0x80) = 0;
+        *(undefined4 *)(iVar5 + 0xa0) = 0;
+        *(undefined4 *)(iVar5 + 0x74) = 0;
+        *(undefined4 *)(iVar5 + 0x94) = 0;
+        *(undefined4 *)(iVar5 + 0x84) = 0;
+        *(undefined4 *)(iVar5 + 0xa4) = 0;
+        *(undefined4 *)(iVar5 + 0x170) = 0;
+        uVar7 = uVar8;
+        for (; iVar4 != 0; iVar4 = *(int *)(iVar4 + 0x1dc)) {
+          pMVar6 = force + uVar7;
+          fVar1 = (pMVar6->primary_body).force[0];
+          *(float *)(iVar4 + 0x68) = fVar1;
+          fVar2 = (pMVar6->primary_body).torque[0];
+          *(float *)(iVar4 + 0x88) = fVar2;
+          *(MeReal *)(iVar4 + 0x78) = (pMVar6->secondary_body).force[0];
+          fVar3 = *(float *)(iVar5 + 0x68);
+          *(MeReal *)(iVar4 + 0x98) = (pMVar6->secondary_body).torque[0];
+          *(float *)(iVar5 + 0x68) = fVar1 + fVar3;
+          fVar1 = *(float *)(iVar4 + 0x78);
+          *(float *)(iVar5 + 0x88) = fVar2 + *(float *)(iVar5 + 0x88);
+          *(float *)(iVar5 + 0x78) = fVar1 + *(float *)(iVar5 + 0x78);
+          *(float *)(iVar5 + 0x98) = *(float *)(iVar4 + 0x98) + *(float *)(iVar5 + 0x98);
+          fVar1 = (pMVar6->primary_body).force[1];
+          *(float *)(iVar4 + 0x6c) = fVar1;
+          fVar2 = (pMVar6->primary_body).torque[1];
+          *(float *)(iVar4 + 0x8c) = fVar2;
+          *(MeReal *)(iVar4 + 0x7c) = (pMVar6->secondary_body).force[1];
+          fVar3 = *(float *)(iVar5 + 0x6c);
+          *(MeReal *)(iVar4 + 0x9c) = (pMVar6->secondary_body).torque[1];
+          *(float *)(iVar5 + 0x6c) = fVar1 + fVar3;
+          fVar1 = *(float *)(iVar4 + 0x7c);
+          *(float *)(iVar5 + 0x8c) = fVar2 + *(float *)(iVar5 + 0x8c);
+          *(float *)(iVar5 + 0x7c) = fVar1 + *(float *)(iVar5 + 0x7c);
+          *(float *)(iVar5 + 0x9c) = *(float *)(iVar4 + 0x9c) + *(float *)(iVar5 + 0x9c);
+          fVar1 = (pMVar6->primary_body).force[2];
+          *(float *)(iVar4 + 0x70) = fVar1;
+          fVar2 = (pMVar6->primary_body).torque[2];
+          *(float *)(iVar4 + 0x90) = fVar2;
+          *(MeReal *)(iVar4 + 0x80) = (pMVar6->secondary_body).force[2];
+          fVar3 = *(float *)(iVar5 + 0x70);
+          *(MeReal *)(iVar4 + 0xa0) = (pMVar6->secondary_body).torque[2];
+          *(float *)(iVar5 + 0x70) = fVar1 + fVar3;
+          fVar1 = *(float *)(iVar4 + 0x80);
+          *(float *)(iVar5 + 0x90) = fVar2 + *(float *)(iVar5 + 0x90);
+          *(float *)(iVar5 + 0x80) = fVar1 + *(float *)(iVar5 + 0x80);
+          *(float *)(iVar5 + 0xa0) = *(float *)(iVar4 + 0xa0) + *(float *)(iVar5 + 0xa0);
+          *(float *)(iVar5 + 0x170) =
+               *(float *)(iVar4 + 0x174) * *(float *)(iVar4 + 0x70) +
+               *(float *)(iVar4 + 0x170) * *(float *)(iVar4 + 0x6c) +
+               *(float *)(iVar4 + 0x16c) * *(float *)(iVar4 + 0x68) + *(float *)(iVar5 + 0x170);
+          uVar7 = uVar7 + 1;
+        }
+      }
+      local_18 = local_18 + 1;
+      mdtCNum = mdtCNum + 1;
+      uVar8 = uVar7;
+    } while (mdtCNum < po->constraintsSize[partitionindex]);
+  }
+  return uVar7;
+}
+
+
+/* ==== MdtKeaConstraintsCreateFromChunk ==== */
+
+MdtKeaConstraints *
+MdtKeaConstraintsCreateFromChunk(MeChunk *chunk,int maxPartitions,int maxKeaConstraints,int maxRows)
+
+{
+  int iVar1;
+  int iVar2;
+  MdtKeaConstraints *pMVar3;
+  int iVar4;
+  MeReal *pMVar5;
+  MdtKeaForcePair *pMVar6;
+  MdtKeaBodyIndexPair *paiVar7;
+  int *piVar8;
+  int xiSize;
+  int cSize;
+  int loSize;
+  int hiSize;
+  int lambdaSize;
+  int forceSize;
+  int slipfactorSize;
+  int xgammaSize;
+  int jsizeSize;
+  int jofsSize;
+  int jbodySize;
+  int maxRowsIncPadding;
+  
+                    /* Unresolved local var: MdtKeaConstraints * c@[DW_OP_reg2(EDX)]
+                       Unresolved local var: int totalSize@[DW_OP_reg0(EAX)]
+                       Unresolved local var: int jstoreSize@[???]
+                       Unresolved local var: int structSize@[???]
+                       Unresolved local var: int numrowsexSize@[???]
+                       Unresolved local var: int numrowsincSize@[???]
+                       Unresolved local var: int numconsSize@[???] */
+  iVar1 = maxRows + (maxPartitions + maxKeaConstraints) * 4;
+  iVar2 = maxPartitions * 0xc + 0x5c;
+  iVar4 = iVar2;
+  if (0 < maxKeaConstraints) {
+    jbodySize = maxKeaConstraints * 8;
+    if ((jbodySize & 0x3fU) != 0) {
+      jbodySize = (jbodySize - (jbodySize & 0x3fU)) + 0x40;
+    }
+    jsizeSize = maxKeaConstraints * 4;
+    xgammaSize = maxRows * 4;
+    if ((xgammaSize & 0x3fU) != 0) {
+      xgammaSize = (xgammaSize - (xgammaSize & 0x3fU)) + 0x40;
+    }
+    slipfactorSize = maxRows * 4;
+    if ((slipfactorSize & 0x3fU) != 0) {
+      slipfactorSize = (slipfactorSize - (slipfactorSize & 0x3fU)) + 0x40;
+    }
+    lambdaSize = maxRows * 4;
+    forceSize = maxKeaConstraints * 0x40;
+    if ((lambdaSize & 0x3fU) != 0) {
+      lambdaSize = (lambdaSize - (lambdaSize & 0x3fU)) + 0x40;
+    }
+    hiSize = maxRows * 4;
+    if ((hiSize & 0x3fU) != 0) {
+      hiSize = (hiSize - (hiSize & 0x3fU)) + 0x40;
+    }
+    loSize = maxRows * 4;
+    if ((loSize & 0x3fU) != 0) {
+      loSize = (loSize - (loSize & 0x3fU)) + 0x40;
+    }
+    cSize = maxRows * 4;
+    if ((cSize & 0x3fU) != 0) {
+      cSize = (cSize - (cSize & 0x3fU)) + 0x40;
+    }
+    xiSize = maxRows * 4;
+    if ((xiSize & 0x3fU) != 0) {
+      xiSize = (xiSize - (xiSize & 0x3fU)) + 0x40;
+    }
+    iVar4 = iVar1;
+    if (iVar1 < 0) {
+      iVar4 = iVar1 + 3;
+    }
+    iVar4 = jbodySize + maxKeaConstraints * 0x48 + xgammaSize + slipfactorSize + lambdaSize + hiSize
+            + loSize + cSize + xiSize + (iVar4 >> 2) * 0xc0 + 0x280 + iVar2;
+    jofsSize = jsizeSize;
+  }
+  pMVar3 = (MdtKeaConstraints *)MeChunkGetMem(chunk,iVar4,iVar2,iVar2);
+  pMVar3->max_partitions = maxPartitions;
+  pMVar3->max_constraints = maxKeaConstraints;
+  pMVar3->num_rows_exc_padding_partition = &pMVar3[1].num_partitions;
+  piVar8 = &pMVar3[1].num_partitions + maxPartitions;
+  pMVar3->num_rows_inc_padding_partition = piVar8;
+  pMVar3->num_constraints_partition = piVar8 + maxPartitions;
+  if (maxKeaConstraints < 1) {
+    pMVar3->max_rows_exc_padding = 0;
+    pMVar3->max_rows_inc_padding = 0;
+    pMVar3->Jbody = (MdtKeaBodyIndexPair *)0x0;
+    pMVar3->Jofs = (int *)0x0;
+    pMVar3->Jsize = (int *)0x0;
+    pMVar3->xgamma = (MeReal *)0x0;
+    pMVar3->slipfactor = (MeReal *)0x0;
+    pMVar3->force = (MdtKeaForcePair *)0x0;
+    pMVar3->lambda = (MeReal *)0x0;
+    pMVar3->hi = (MeReal *)0x0;
+    pMVar3->lo = (MeReal *)0x0;
+    pMVar3->c = (MeReal *)0x0;
+    pMVar3->xi = (MeReal *)0x0;
+    pMVar3->Jstore = (MdtKeaJBlockPair *)0x0;
+  }
+  else {
+    pMVar3->max_rows_exc_padding = maxRows;
+    pMVar3->max_rows_inc_padding = iVar1;
+    paiVar7 = (MdtKeaBodyIndexPair *)
+              (maxPartitions * 4 + 0x3f + (int)(piVar8 + maxPartitions) & 0xffffffc0);
+    pMVar3->Jbody = paiVar7;
+    piVar8 = (int *)((int)*paiVar7 + jbodySize);
+    pMVar3->Jofs = piVar8;
+    piVar8 = (int *)((int)piVar8 + jofsSize);
+    pMVar3->Jsize = piVar8;
+    pMVar5 = (MeReal *)(jsizeSize + 0x3f + (int)piVar8 & 0xffffffc0);
+    pMVar3->xgamma = pMVar5;
+    pMVar5 = (MeReal *)(xgammaSize + 0x3f + (int)pMVar5 & 0xffffffc0);
+    pMVar3->slipfactor = pMVar5;
+    pMVar6 = (MdtKeaForcePair *)(slipfactorSize + 0x3f + (int)pMVar5 & 0xffffffc0);
+    pMVar3->force = pMVar6;
+    pMVar5 = (MeReal *)((int)(pMVar6->secondary_body).torque + forceSize + 0xf & 0xffffffc0);
+    pMVar3->lambda = pMVar5;
+    pMVar5 = (MeReal *)(lambdaSize + 0x3f + (int)pMVar5 & 0xffffffc0);
+    pMVar3->hi = pMVar5;
+    pMVar5 = (MeReal *)(hiSize + 0x3f + (int)pMVar5 & 0xffffffc0);
+    pMVar3->lo = pMVar5;
+    pMVar5 = (MeReal *)(loSize + 0x3f + (int)pMVar5 & 0xffffffc0);
+    pMVar3->c = pMVar5;
+    pMVar5 = (MeReal *)(cSize + 0x3f + (int)pMVar5 & 0xffffffc0);
+    pMVar3->xi = pMVar5;
+    pMVar3->Jstore = (MdtKeaJBlockPair *)(xiSize + 0x3f + (int)pMVar5 & 0xffffffc0);
+  }
+  return pMVar3;
+}
+
+
+/* ==== MdtDefaultSimErrorCallBack ==== */
+
+void MdtDefaultSimErrorCallBack(MdtKeaConstraints *kc,MdtKeaBody **kb,int nBodies,void *secbdata)
+
+{
+  MdtKeaBody *pMVar1;
+  int iVar2;
+  int iVar3;
+  
+                    /* Unresolved local var: int i@[DW_OP_reg3(EBX)] */
+  iVar2 = 0;
+  if (0 < nBodies) {
+    if ((nBodies < 2) || ((nBodies & 1U) != 0)) {
+                    /* Unresolved local var: MdtKeaBody * body@[???] */
+      pMVar1 = *kb;
+      pMVar1->force[0] = 0.0;
+      pMVar1->force[1] = 0.0;
+      pMVar1->force[2] = 0.0;
+      pMVar1->torque[0] = 0.0;
+      pMVar1->torque[1] = 0.0;
+      pMVar1->torque[2] = 0.0;
+      pMVar1->accel[0] = 0.0;
+      pMVar1->accel[1] = 0.0;
+      pMVar1->accel[2] = 0.0;
+      pMVar1->accelrot[0] = 0.0;
+      pMVar1->accelrot[1] = 0.0;
+      pMVar1->accelrot[2] = 0.0;
+      pMVar1->vel[0] = 0.0;
+      pMVar1->vel[1] = 0.0;
+      pMVar1->vel[2] = 0.0;
+      pMVar1->velrot[0] = 0.0;
+      pMVar1->velrot[1] = 0.0;
+      pMVar1->velrot[2] = 0.0;
+      iVar2 = 1;
+      if (nBodies < 2) goto LAB_00011a82;
+    }
+    do {
+      pMVar1 = kb[iVar2];
+      pMVar1->force[0] = 0.0;
+      pMVar1->force[1] = 0.0;
+      pMVar1->force[2] = 0.0;
+      pMVar1->torque[0] = 0.0;
+      pMVar1->torque[1] = 0.0;
+      pMVar1->torque[2] = 0.0;
+      pMVar1->accel[0] = 0.0;
+      pMVar1->accel[1] = 0.0;
+      pMVar1->accel[2] = 0.0;
+      pMVar1->accelrot[0] = 0.0;
+      pMVar1->accelrot[1] = 0.0;
+      pMVar1->accelrot[2] = 0.0;
+      pMVar1->vel[0] = 0.0;
+      pMVar1->vel[1] = 0.0;
+      pMVar1->vel[2] = 0.0;
+      pMVar1->velrot[0] = 0.0;
+      pMVar1->velrot[1] = 0.0;
+      pMVar1->velrot[2] = 0.0;
+      pMVar1 = kb[iVar2 + 1];
+      iVar2 = iVar2 + 2;
+      pMVar1->force[0] = 0.0;
+      pMVar1->force[1] = 0.0;
+      pMVar1->force[2] = 0.0;
+      pMVar1->torque[0] = 0.0;
+      pMVar1->torque[1] = 0.0;
+      pMVar1->torque[2] = 0.0;
+      pMVar1->accel[0] = 0.0;
+      pMVar1->accel[1] = 0.0;
+      pMVar1->accel[2] = 0.0;
+      pMVar1->accelrot[0] = 0.0;
+      pMVar1->accelrot[1] = 0.0;
+      pMVar1->accelrot[2] = 0.0;
+      pMVar1->vel[0] = 0.0;
+      pMVar1->vel[1] = 0.0;
+      pMVar1->vel[2] = 0.0;
+      pMVar1->velrot[0] = 0.0;
+      pMVar1->velrot[1] = 0.0;
+      pMVar1->velrot[2] = 0.0;
+    } while (iVar2 < nBodies);
+  }
+LAB_00011a82:
+  iVar2 = 0;
+  if (0 < kc->num_constraints) {
+    do {
+      iVar3 = iVar2 + 1;
+      kc->force[iVar2].primary_body.force[0] = 0.0;
+      kc->force[iVar2].primary_body.force[1] = 0.0;
+      kc->force[iVar2].primary_body.force[2] = 0.0;
+      kc->force[iVar2].primary_body.torque[0] = 0.0;
+      kc->force[iVar2].primary_body.torque[1] = 0.0;
+      kc->force[iVar2].primary_body.torque[2] = 0.0;
+      kc->force[iVar2].secondary_body.force[0] = 0.0;
+      kc->force[iVar2].secondary_body.force[1] = 0.0;
+      kc->force[iVar2].secondary_body.force[2] = 0.0;
+      kc->force[iVar2].secondary_body.torque[0] = 0.0;
+      kc->force[iVar2].secondary_body.torque[1] = 0.0;
+      kc->force[iVar2].secondary_body.torque[2] = 0.0;
+      iVar2 = iVar3;
+    } while (iVar3 < kc->num_constraints);
+  }
+  MeWarning();
+  return;
+}
+
+
+/* ==== MdtUnpackBodies ==== */
+
+void __regparm1
+MdtUnpackBodies(MdtKeaTransformation *keaTMArray,uint partitionindex,MdtPartitionOutput *po)
+
+{
+  int iVar1;
+  int iVar2;
+  int iVar3;
+  int iVar4;
+  int in_stack_0000000c;
+  MdtBody **blist;
+  
+                    /* Unresolved local var: int i@[DW_OP_reg6(ESI)] */
+  iVar2 = *(int *)(in_stack_0000000c + 0x14);
+  iVar3 = *(int *)(*(int *)(in_stack_0000000c + 0x18) + (int)po * 4);
+  if (0 < *(int *)(*(int *)(in_stack_0000000c + 0x1c) + (int)po * 4)) {
+    iVar4 = 0;
+    do {
+      iVar1 = iVar4 * 4;
+      iVar4 = iVar4 + 1;
+      UpdateBodyTransform(*(undefined4 *)(iVar2 + iVar3 * 4 + iVar1),partitionindex,keaTMArray,
+                          keaTMArray);
+      keaTMArray = (MdtKeaTransformation *)po;
+      partitionindex = partitionindex + 0x40;
+    } while (iVar4 < *(int *)(*(int *)(in_stack_0000000c + 0x1c) + (int)po * 4));
+  }
+  return;
+}
+
+
+/* ==== MdtPartitionGetSafeTime ==== */
+
+MeReal MdtPartitionGetSafeTime(MdtPartitionOutput *po,int i)
+
+{
+  int iVar1;
+  float fVar2;
+  MdtBody **ppMVar3;
+  int iVar4;
+  uint uVar5;
+  
+                    /* Unresolved local var: int b@[DW_OP_reg1(ECX)]
+                       Unresolved local var: MdtBodyID body@[???]
+                       Unresolved local var: MeReal safeTime@[DW_OP_reg12(ST1)] */
+  fVar2 = 3.4028235e+38;
+  iVar4 = po->bodiesStart[i];
+  iVar1 = po->bodiesSize[i] + iVar4;
+  if (iVar1 <= iVar4) {
+    return 3.4028235e+38;
+  }
+  ppMVar3 = po->bodies;
+  uVar5 = iVar1 - iVar4 & 3;
+  if (iVar4 + 1 < iVar1) {
+    if (uVar5 == 0) goto LAB_00011c08;
+    if (1 < uVar5) {
+      if (2 < uVar5) {
+        fVar2 = ppMVar3[iVar4]->safeTime;
+        if (3.4028235e+38 <= fVar2) {
+          fVar2 = 3.4028235e+38;
+        }
+        iVar4 = iVar4 + 1;
+      }
+      if (ppMVar3[iVar4]->safeTime < fVar2) {
+        fVar2 = ppMVar3[iVar4]->safeTime;
+      }
+      iVar4 = iVar4 + 1;
+    }
+  }
+  if (ppMVar3[iVar4]->safeTime < fVar2) {
+    fVar2 = ppMVar3[iVar4]->safeTime;
+  }
+  iVar4 = iVar4 + 1;
+  if (iVar1 <= iVar4) {
+    return fVar2;
+  }
+LAB_00011c08:
+  do {
+    if (ppMVar3[iVar4]->safeTime < fVar2) {
+      fVar2 = ppMVar3[iVar4]->safeTime;
+    }
+    if (ppMVar3[iVar4 + 1]->safeTime < fVar2) {
+      fVar2 = ppMVar3[iVar4 + 1]->safeTime;
+    }
+    if (ppMVar3[iVar4 + 2]->safeTime < fVar2) {
+      fVar2 = ppMVar3[iVar4 + 2]->safeTime;
+    }
+    if (ppMVar3[iVar4 + 3]->safeTime < fVar2) {
+      fVar2 = ppMVar3[iVar4 + 3]->safeTime;
+    }
+    iVar4 = iVar4 + 4;
+  } while (iVar4 < iVar1);
+  return fVar2;
+}
+
+

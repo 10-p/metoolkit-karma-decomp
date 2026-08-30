@@ -1,0 +1,88 @@
+# function,name,stackoff,hexoff,size,type
+McdSpaceAxisSortCreate,pairCount,16,00000010,4,int
+McdSpaceAxisSortCreate,fwk,4,00000004,4,McdFramework *
+McdSpaceAxisSortCreate,axes,8,00000008,4,int
+McdSpaceAxisSortCreate,objectCount,12,0000000c,4,int
+McdSpaceDestroy,s,4,00000004,4,McdSpaceID
+McdSpaceBuild,s,4,00000004,4,McdSpaceID
+McdSpaceIsChanging,s,4,00000004,4,McdSpaceID
+McdSpaceInsertModel,s,4,00000004,4,McdSpaceID
+McdSpaceInsertModel,cm,8,00000008,4,McdModelID.conflict
+McdSpaceInsertModelWithCulling,cm,8,00000008,4,McdModelID.conflict
+McdSpaceInsertModelWithCulling,table,12,0000000c,4,McdCullingTable *
+McdSpaceInsertModelWithCulling,cullingIndex,16,00000010,4,int
+McdSpaceInsertModelWithCulling,cullingID,20,00000014,4,int
+McdSpaceInsertModelWithCulling,s,4,00000004,4,McdSpaceID
+McdSpaceSetModelCullingParameters,s,4,00000004,4,McdSpaceID
+McdSpaceSetModelCullingParameters,cm,8,00000008,4,McdModelID.conflict
+McdSpaceSetModelCullingParameters,table,12,0000000c,4,McdCullingTable *
+McdSpaceSetModelCullingParameters,cullingIndex,16,00000010,4,int
+McdSpaceSetModelCullingParameters,cullingID,20,00000014,4,int
+McdSpaceUpdateModel,cm,4,00000004,4,McdModelID.conflict
+McdSpaceFreezeModel,m,4,00000004,4,McdModelID.conflict
+McdSpaceUnfreezeModel,cm,4,00000004,4,McdModelID.conflict
+McdSpaceModelIsFrozen,m,4,00000004,4,McdModelID.conflict
+McdSpaceUpdateAll,s,4,00000004,4,McdSpaceID
+McdSpacePathUpdateAll,s,4,00000004,4,McdSpaceID
+McdSpacePathUpdateAll,duration,8,00000008,4,MeReal
+McdSpaceSetAABBFn,s,4,00000004,4,McdSpaceID
+McdSpaceSetAABBFn,updateAABBFn,8,00000008,4,McdSpaceUpdateAABBFnPtr
+McdSpaceSetUserData,s,4,00000004,4,McdSpaceID
+McdSpaceSetUserData,data,8,00000008,4,void *
+McdSpaceGetUserData,s,4,00000004,4,McdSpaceID
+McdSpacePairIteratorBegin,s,4,00000004,4,McdSpaceID
+McdSpacePairIteratorBegin,iter,8,00000008,4,McdSpacePairIterator *
+McdSpaceGetPairs,s,4,00000004,4,McdSpaceID
+McdSpaceGetPairs,iter,8,00000008,4,McdSpacePairIterator *
+McdSpaceGetPairs,a,12,0000000c,4,McdModelPairContainer *
+McdSpaceGetTransitions,s,4,00000004,4,McdSpaceID
+McdSpaceGetTransitions,iter,8,00000008,4,McdSpacePairIterator *
+McdSpaceGetTransitions,a,12,0000000c,4,McdModelPairContainer *
+McdSpaceGetLineSegIntersections,space,4,00000004,4,McdSpaceID
+McdSpaceGetLineSegIntersections,inOrig,8,00000008,4,MeReal *
+McdSpaceGetLineSegIntersections,inDest,12,0000000c,4,MeReal *
+McdSpaceGetLineSegIntersections,local_24,-36,ffffffdc,4,int
+McdSpaceGetLineSegIntersections,local_20,-32,ffffffe0,4,McdLineSegIntersectResult *
+McdSpaceGetLineSegIntersections,outList,16,00000010,4,McdLineSegIntersectResult *
+McdSpaceGetLineSegIntersections,inMaxListSize,20,00000014,4,int
+McdSpaceGetLineSegIntersections,iHit,-20,ffffffec,4,int
+McdSpaceGetLineSegIntersections,iNumOfModelsInSpace,-24,ffffffe8,4,int
+McdSpaceGetLineSegIntersections,iValidModelCount,-28,ffffffe4,4,int
+McdSpaceGetLineSegFirstIntersection,local_48,-72,ffffffb8,4,int
+McdSpaceGetLineSegFirstIntersection,space,4,00000004,4,McdSpaceID
+McdSpaceGetLineSegFirstIntersection,inOrig,8,00000008,4,MeReal *
+McdSpaceGetLineSegFirstIntersection,inDest,12,0000000c,4,MeReal *
+McdSpaceGetLineSegFirstIntersection,outResult,16,00000010,4,McdLineSegIntersectResult *
+McdSpaceGetLineSegFirstIntersection,iNumOfModelsInSpace,-64,ffffffc0,4,int
+McdSpaceGetLineSegFirstIntersection,iValidModelCount,-68,ffffffbc,4,int
+McdSpaceGetLineSegFirstIntersection,tmp,-60,ffffffc4,32,McdLineSegIntersectResult
+McdSpaceGetLineSegFirstEnabledIntersection,local_48,-72,ffffffb8,4,int
+McdSpaceGetLineSegFirstEnabledIntersection,space,4,00000004,4,McdSpaceID
+McdSpaceGetLineSegFirstEnabledIntersection,inOrig,8,00000008,4,MeReal *
+McdSpaceGetLineSegFirstEnabledIntersection,inDest,12,0000000c,4,MeReal *
+McdSpaceGetLineSegFirstEnabledIntersection,filterCB,16,00000010,4,McdLineSegIntersectEnableCallback
+McdSpaceGetLineSegFirstEnabledIntersection,filterData,20,00000014,4,void *
+McdSpaceGetLineSegFirstEnabledIntersection,outResult,24,00000018,4,McdLineSegIntersectResult *
+McdSpaceGetLineSegFirstEnabledIntersection,iNumOfModelsInSpace,-64,ffffffc0,4,int
+McdSpaceGetLineSegFirstEnabledIntersection,iValidModelCount,-68,ffffffbc,4,int
+McdSpaceGetLineSegFirstEnabledIntersection,tmp,-60,ffffffc4,32,McdLineSegIntersectResult
+McdSpaceRemoveModel,cm,4,00000004,4,McdModelID.conflict
+McdSpaceEnablePair,cm1,4,00000004,4,McdModelID.conflict
+McdSpaceEnablePair,cm2,8,00000008,4,McdModelID.conflict
+McdSpaceDisablePair,m2,8,00000008,4,McdModelID.conflict
+McdSpaceDisablePair,m1,4,00000004,4,McdModelID.conflict
+McdSpacePairIsEnabled,m1,4,00000004,4,McdModelID.conflict
+McdSpacePairIsEnabled,m2,8,00000008,4,McdModelID.conflict
+McdSpaceBeginChanges,space,4,00000004,4,McdSpaceID
+McdSpaceEndChanges,space,4,00000004,4,McdSpaceID
+McdSpaceModelIteratorBegin,param_1,4,00000004,4,McdSpaceID
+McdSpaceModelIteratorBegin,it,8,00000008,4,McdSpaceModelIterator *
+McdSpaceGetModel,space,4,00000004,4,McdSpaceID
+McdSpaceGetModel,it,8,00000008,4,McdSpaceModelIterator *
+McdSpaceGetModel,model,12,0000000c,4,McdModelID.conflict *
+McdSpaceGetModelCount,space,4,00000004,4,McdSpaceID
+McdSpaceSetPoolFullHandler,space,4,00000004,4,McdSpaceID
+McdSpaceSetPoolFullHandler,handler,8,00000008,4,McdSpacePoolErrorFnPtr
+McdSpaceGetPoolFullHandler,space,4,00000004,4,McdSpaceID
+defaultPoolFullHandler,model1,4,00000004,4,McdModelID.conflict
+defaultPoolFullHandler,model2,8,00000008,4,McdModelID.conflict

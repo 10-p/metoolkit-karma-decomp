@@ -1,0 +1,52 @@
+# function,name,stackoff,hexoff,size,type
+McdGjkFaceAddPoint,q,4,00000004,4,McdGjkFaceQueue *
+McdGjkFaceAddPoint,i,8,00000008,4,int
+McdGjkFaceCompare,f1,4,00000004,4,void *
+McdGjkFaceCompare,f2,8,00000008,4,void *
+McdGjkFaceAdd,v,8,00000008,4,MeReal *
+McdGjkFaceAdd,bits,12,0000000c,4,int
+McdGjkFaceAdd,slant,16,00000010,4,int
+McdGjkFaceAdd,depth,20,00000014,4,int
+McdGjkFaceAdd,bits_local,-20,ffffffec,4,int
+McdGjkFaceAdd,slant_local,-24,ffffffe8,4,int
+McdGjkFaceAdd,depth_local,-28,ffffffe4,4,int
+McdGjkFaceAdd,q,4,00000004,4,McdGjkFaceQueue *
+McdGjkFacePop,q,4,00000004,4,McdGjkFaceQueue *
+McdGjkFaceLoad,q,4,00000004,4,McdGjkFaceQueue *
+McdGjkFaceLoad,f,8,00000008,4,McdGjkFace *
+McdGjkFaceLoad,local_18,-24,ffffffe8,4,int
+McdGjkFaceLoad,stale_bits,-20,ffffffec,4,int
+McdGjkFindNextInflatePoint,v,4,00000004,4,MeReal *
+McdGjkFindNextInflatePoint,v_len,8,00000008,4,MeReal
+McdGjkFindNextInflatePoint,c,12,0000000c,4,McdCache *
+McdGjkFindNextInflatePoint,s,16,00000010,4,McdGjkSimplex *
+McdGjkFindNextInflatePoint,d1,-96,ffffffa0,4,MeReal
+McdGjkFindNextInflatePoint,p1,-60,ffffffc4,24,McdGjkPoint
+McdGjkFindNextInflatePoint,neg,-76,ffffffb4,12,MeReal[3]
+McdGjkFaceQueueInit,q,4,00000004,4,McdGjkFaceQueue *
+McdGjkFaceQueueInit,s,8,00000008,4,McdGjkSimplex *
+McdGjkFaceQueueInit,i,-48,ffffffd0,4,int
+McdGjkFaceQueueInit,v,-44,ffffffd4,12,MeReal[3]
+McdGjkResultIsReasonable,c,4,00000004,4,McdCache *
+McdGjkResultIsReasonable,s,8,00000008,4,McdGjkSimplex *
+McdGjkResultIsReasonable,s1,-44,ffffffd4,12,MeReal[3]
+McdGjkResultIsReasonable,s2,-60,ffffffc4,12,MeReal[3]
+McdGjkResultIsReasonable,neg,-76,ffffffb4,12,MeReal[3]
+McdGjkResultIsReasonable,v,-92,ffffffa4,12,MeReal[3]
+McdGjkResultIsReasonable,p,-108,ffffff94,12,MeReal[3]
+McdGjkResultIsReasonable,d1,-112,ffffff90,4,MeReal
+McdGjkPenetrationDepth,ok,-3752,fffff158,4,int
+McdGjkPenetrationDepth,v,-3740,fffff164,12,MeReal[3]
+McdGjkPenetrationDepth,d,-3756,fffff154,4,MeReal
+McdGjkPenetrationDepth,min_d,-3760,fffff150,4,MeReal
+McdGjkPenetrationDepth,min_f,-3764,fffff14c,4,McdGjkFace *
+McdGjkPenetrationDepth,c,4,00000004,4,McdCache *
+McdGjkPenetrationDepth,s,8,00000008,4,McdGjkSimplex *
+McdGjkPenetrationDepth,ptmem,-1228,fffffb34,1200,McdGjkPoint[50]
+McdGjkPenetrationDepth,poolmem,-3436,fffff294,2200,McdGjkFace[50]
+McdGjkPenetrationDepth,heapmem,-3644,fffff1c4,200,void *[50]
+McdGjkPenetrationDepth,qmem,-3724,fffff174,72,McdGjkFaceQueue
+McdGjkPenetrationDepth,i,-3744,fffff160,4,int
+McdGjkPenetrationDepth,depth,-3748,fffff15c,4,int
+MeVector3Normalize,local_8,-8,fffffff8,4,float
+MeVector3Normalize,v,4,00000004,4,MeReal *

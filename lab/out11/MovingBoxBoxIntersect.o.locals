@@ -1,0 +1,32 @@
+# function,name,stackoff,hexoff,size,type
+printV3,str,4,00000004,4,char *
+printV3,V3,8,00000008,4,lsVec3 *
+MovingBoxBoxIntersect,ExtBox0,4,00000004,4,MeReal *
+MovingBoxBoxIntersect,tm0,8,00000008,4,lsTransform *
+MovingBoxBoxIntersect,V0,12,0000000c,4,lsVec3 *
+MovingBoxBoxIntersect,ExtBox1,16,00000010,4,MeReal *
+MovingBoxBoxIntersect,tm1,20,00000014,4,lsTransform *
+MovingBoxBoxIntersect,V1,24,00000018,4,lsVec3 *
+MovingBoxBoxIntersect,dt,28,0000001c,4,MeReal
+MovingBoxBoxIntersect,T,32,00000020,4,MeReal *
+MovingBoxBoxIntersect,P,36,00000024,4,lsVec3 *
+MovingBoxBoxIntersect,A,-44,ffffffd4,12,lsVec3 *[3]
+MovingBoxBoxIntersect,B,-60,ffffffc4,12,lsVec3 *[3]
+MovingBoxBoxIntersect,W,-76,ffffffb4,12,lsVec3
+MovingBoxBoxIntersect,D0,-92,ffffffa4,12,lsVec3
+MovingBoxBoxIntersect,D1,-108,ffffff94,12,lsVec3
+MovingBoxBoxIntersect,AB,-156,ffffff64,36,MeReal[3][3]
+MovingBoxBoxIntersect,fAB,-204,ffffff34,36,MeReal[3][3]
+MovingBoxBoxIntersect,AD0,-220,ffffff24,12,MeReal[3]
+MovingBoxBoxIntersect,AD1,-236,ffffff14,12,MeReal[3]
+MovingBoxBoxIntersect,BD0,-252,ffffff04,12,MeReal[3]
+MovingBoxBoxIntersect,BD1,-268,fffffef4,12,MeReal[3]
+MovingBoxBoxIntersect,AR1,-284,fffffee4,12,MeReal[3]
+MovingBoxBoxIntersect,BR0,-300,fffffed4,12,MeReal[3]
+MovingBoxBoxIntersect,R,-324,fffffebc,4,MeReal
+MovingBoxBoxIntersect,local_164,-356,fffffe9c,4,float
+MovingBoxBoxIntersect,local_160,-352,fffffea0,4,float
+MovingBoxBoxIntersect,local_154,-340,fffffeac,4,float
+MovingBoxBoxIntersect,local_150,-336,fffffeb0,4,float
+MovingBoxBoxIntersect,local_14c,-332,fffffeb4,4,float
+MovingBoxBoxIntersect,local_148,-328,fffffeb8,4,float

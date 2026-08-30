@@ -1,0 +1,60 @@
+# function,name,stackoff,hexoff,size,type
+MeAssetInstanceCreate,auStackY_70,-112,ffffff90,20,undefined4[5]
+MeAssetInstanceCreate,pMStack_50,-80,ffffffb0,4,MeFGeometry *
+MeAssetInstanceCreate,aiStack_4c,-76,ffffffb4,12,int[3]
+MeAssetInstanceCreate,ins,-28,ffffffe4,4,MeAssetInstance *
+MeAssetInstanceCreate,assetName,-32,ffffffe0,4,char *
+MeAssetInstanceCreate,it,-20,ffffffec,4,MeFGeometryIt
+MeAssetInstanceCreate,i,-36,ffffffdc,4,int
+MeAssetInstanceCreate,count,-40,ffffffd8,4,int
+MeAssetInstanceCreate,it_1,-24,ffffffe8,4,MeFJointIt
+MeAssetInstanceCreate,constraint,-56,ffffffc8,4,MdtConstraintID
+MeAssetInstanceCreate,model1,-60,ffffffc4,4,McdModelID.conflict
+MeAssetInstanceCreate,model2,-64,ffffffc0,4,McdModelID.conflict
+MeAssetInstanceCreate,model,-44,ffffffd4,4,McdModelID.conflict
+MeAssetInstanceCreate,geom,-48,ffffffd0,4,McdGeometryID
+MeAssetInstanceCreate,model1_1,-52,ffffffcc,4,McdModelID.conflict
+MeAssetInstanceCreate,af,4,00000004,4,MeAssetFactory *
+MeAssetInstanceCreate,asset,8,00000008,4,MeFAsset *
+MeAssetInstanceCreate,tm,12,0000000c,4,MeMatrix4Ptr
+MeAssetInstanceCreate,owner,16,00000010,4,MeBool
+MeAssetInstanceCreate,world,20,00000014,4,MdtWorldID
+MeAssetInstanceCreate,space,24,00000018,4,McdSpaceID
+MeAssetInstanceDestroy,it,-44,ffffffd4,12,MeHashIterator
+MeAssetInstanceDestroy,tm,-48,ffffffd0,4,MeMatrix4Ptr
+MeAssetInstanceDestroy,ins,4,00000004,4,MeAssetInstance *
+MeAssetFactoryCreate,fwk,4,00000004,4,McdFrameworkID
+MeAssetFactoryDestroy,af,4,00000004,4,MeAssetFactory *
+MeAssetFactorySetGeometryPostCreateCB,af,4,00000004,4,MeAssetFactory *
+MeAssetFactorySetGeometryPostCreateCB,cb,8,00000008,4,GeometryPostCreateCB
+MeAssetFactorySetGeometryPostCreateCB,userdata,12,0000000c,4,void *
+MeAssetFactorySetModelCreateFunction,af,4,00000004,4,MeAssetFactory *
+MeAssetFactorySetModelCreateFunction,func,8,00000008,4,ModelCreateFunc
+MeAssetFactorySetModelPostCreateCB,af,4,00000004,4,MeAssetFactory *
+MeAssetFactorySetModelPostCreateCB,cb,8,00000008,4,ModelPostCreateCB
+MeAssetFactorySetModelPostCreateCB,userdata,12,0000000c,4,void *
+MeAssetFactorySetJointCreateFunction,func,8,00000008,4,JointCreateFunc
+MeAssetFactorySetJointCreateFunction,af,4,00000004,4,MeAssetFactory *
+MeAssetFactorySetJointPostCreateCB,af,4,00000004,4,MeAssetFactory *
+MeAssetFactorySetJointPostCreateCB,cb,8,00000008,4,JointPostCreateCB
+MeAssetFactorySetJointPostCreateCB,userdata,12,0000000c,4,void *
+MeAssetInstanceGetGeometry,ins,4,00000004,4,MeAssetInstance *
+MeAssetInstanceGetGeometry,name,8,00000008,4,char *
+MeAssetInstanceGetModel,ins,4,00000004,4,MeAssetInstance *
+MeAssetInstanceGetModel,name,8,00000008,4,char *
+MeAssetInstanceGetJoint,ins,4,00000004,4,MeAssetInstance *
+MeAssetInstanceGetJoint,name,8,00000008,4,char *
+MeAssetInstanceInitGeometryIterator,ins,4,00000004,4,MeAssetInstance *
+MeAssetInstanceInitGeometryIterator,it,8,00000008,4,MeAIGeomIt *
+MeAssetInstanceGetNextGeometry,it,4,00000004,4,MeAIGeomIt *
+MeAssetInstanceInitModelIterator,ins,4,00000004,4,MeAssetInstance *
+MeAssetInstanceInitModelIterator,it,8,00000008,4,MeAIModelIt *
+MeAssetInstanceGetNextModel,it,4,00000004,4,MeAIModelIt *
+MeAssetInstanceInitJointIterator,ins,4,00000004,4,MeAssetInstance *
+MeAssetInstanceInitJointIterator,it,8,00000008,4,MeAIJointIt *
+MeAssetInstanceGetNextJoint,it,4,00000004,4,MeAIJointIt *
+MeAssetInstanceEnableDynamics,ins,4,00000004,4,MeAssetInstance *
+MeAssetInstanceDisableDynamics,ins,4,00000004,4,MeAssetInstance *
+MeAssetInstanceGetUserData,ins,4,00000004,4,MeAssetInstance *
+MeAssetInstanceSetUserData,ins,4,00000004,4,MeAssetInstance *
+MeAssetInstanceSetUserData,userdata,8,00000008,4,void *

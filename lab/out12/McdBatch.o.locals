@@ -1,0 +1,73 @@
+# function,name,stackoff,hexoff,size,type
+McdBatchFlattenAggregate,local_70,-112,ffffff90,4,int
+McdBatchFlattenAggregate,flags_00,-152,ffffff68,4,uint
+McdBatchFlattenAggregate,ins1_00,-148,ffffff6c,4,McdGeometryInstanceID
+McdBatchFlattenAggregate,ins2_00,-144,ffffff70,4,McdGeometryInstance *
+McdBatchFlattenAggregate,eps1_00,-140,ffffff74,4,MeReal
+McdBatchFlattenAggregate,eps2_00,-136,ffffff78,4,MeReal
+McdBatchFlattenAggregate,context,4,00000004,4,McdBatchContext *
+McdBatchFlattenAggregate,flags,8,00000008,4,int
+McdBatchFlattenAggregate,ins1,12,0000000c,4,McdGeometryInstanceID
+McdBatchFlattenAggregate,ins2,16,00000010,4,McdGeometryInstanceID
+McdBatchFlattenAggregate,eps1,20,00000014,4,MeReal
+McdBatchFlattenAggregate,eps2,24,00000018,4,MeReal
+McdBatchFlattenAggregate,min1,-44,ffffffd4,12,MeReal[3]
+McdBatchFlattenAggregate,max1,-60,ffffffc4,12,MeReal[3]
+McdBatchFlattenAggregate,min2,-76,ffffffb4,12,MeReal[3]
+McdBatchFlattenAggregate,max2,-92,ffffffa4,12,MeReal[3]
+McdBatchFlattenAggregate,type1,-96,ffffffa0,4,int
+McdBatchFlattenAggregate,type2,-100,ffffff9c,4,int
+McdBatchFlattenAggregate,i,-104,ffffff98,4,int
+McdBatchFlattenAggregate,entry,-108,ffffff94,4,McdBatchEntry *
+McdBatchFlatten,type2,-32,ffffffe0,4,int
+McdBatchFlatten,ins1,-36,ffffffdc,4,McdGeometryInstanceID
+McdBatchFlatten,ins2,-40,ffffffd8,4,McdGeometryInstanceID
+McdBatchFlatten,index,-44,ffffffd4,4,int
+McdBatchFlatten,saveNextEntry,-48,ffffffd0,4,int
+McdBatchFlatten,saveNextFlattenPair,-52,ffffffcc,4,int
+McdBatchFlatten,saveNextTM,-56,ffffffc8,4,int
+McdBatchFlatten,local_40,-64,ffffffc0,4,int
+McdBatchFlatten,local_3c,-60,ffffffc4,4,int
+McdBatchFlatten,context,4,00000004,4,McdBatchContext *
+McdBatchFlatten,pairs,8,00000008,4,McdModelPairContainer *
+McdBatchFlatten,pd,-20,ffffffec,4,McdBatchPairData *
+McdBatchFlatten,model1,-24,ffffffe8,4,McdModelID.conflict
+McdBatchFlatten,model2,-28,ffffffe4,4,McdModelID.conflict
+McdBatchIntersectBucket,context,4,00000004,4,McdBatchContext *
+McdBatchIntersectBucket,type1,8,00000008,4,int
+McdBatchIntersectBucket,type2,12,0000000c,4,int
+McdBatchIntersectBucket,p,-60,ffffffc4,28,McdModelPair
+McdBatchIntersectBucket,r,-108,ffffff94,36,McdIntersectResult
+McdBatchIntersectBucket,m1,-236,ffffff14,120,McdModel.conflict
+McdBatchIntersectBucket,m2,-364,fffffe94,120,McdModel.conflict
+McdBatchIntersectBucket,index,-368,fffffe90,4,int
+McdBatchIntersectBucket,fn,-372,fffffe8c,4,McdIntersectFn
+McdBatchUnflattenAggregate,context,4,00000004,4,McdBatchContext *
+McdBatchUnflattenAggregate,ir,8,00000008,4,McdIntersectResult *
+McdBatchUnflattenAggregate,pd,12,0000000c,4,McdBatchPairData *
+McdBatchUnflattenAggregate,contactCount,-20,ffffffec,4,int
+McdBatchUnflattenAggregate,contacts,-24,ffffffe8,4,McdContact *
+McdBatchUnflatten,resultMaxCount,16,00000010,4,int
+McdBatchUnflatten,contactArray,20,00000014,4,McdContact *
+McdBatchUnflatten,contactCount,24,00000018,4,int *
+McdBatchUnflatten,contactMaxCount,28,0000001c,4,int
+McdBatchUnflatten,pd,-20,ffffffec,4,McdBatchPairData *
+McdBatchUnflatten,context,4,00000004,4,McdBatchContext *
+McdBatchUnflatten,resultArray,8,00000008,4,McdIntersectResult *
+McdBatchUnflatten,resultCount,12,0000000c,4,int *
+McdBatchContextCreate,i,-20,ffffffec,4,int
+McdBatchContextCreate,frame,4,00000004,4,McdFramework *
+McdBatchContextCreate,local_18,-24,ffffffe8,4,int
+McdBatchContextReset,context,4,00000004,4,McdBatchContext *
+McdBatchContextDestroy,context,4,00000004,4,McdBatchContext *
+McdBatchIntersectEach,contactArray,24,00000018,4,McdContact *
+McdBatchIntersectEach,contactCount,28,0000001c,4,int *
+McdBatchIntersectEach,contactMaxCount,32,00000020,4,int
+McdBatchIntersectEach,context,4,00000004,4,McdBatchContext *
+McdBatchIntersectEach,pairs,8,00000008,4,McdModelPairContainer *
+McdBatchIntersectEach,resultArray,12,0000000c,4,McdIntersectResult *
+McdBatchIntersectEach,resultCount,16,00000010,4,int *
+McdBatchIntersectEach,resultMaxCount,20,00000014,4,int
+MeVector3Normalize,local_8,-8,fffffff8,4,float
+MeVector3Normalize,v,4,00000004,4,MeReal *
+McdBatchTest,context,4,00000004,4,McdBatchContext *

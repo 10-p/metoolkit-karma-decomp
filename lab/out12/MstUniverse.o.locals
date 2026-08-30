@@ -1,0 +1,9 @@
+# function,name,stackoff,hexoff,size,type
+MstUniverseCreate,sizes,4,00000004,4,MstUniverseSizes *
+MstUniverseDestroy,u,4,00000004,4,MstUniverseID
+MstUniverseStep,u,4,00000004,4,MstUniverseID
+MstUniverseStep,stepSize,8,00000008,4,MeReal
+MstUniverseGetWorld,u,4,00000004,4,MstUniverseID
+MstUniverseGetSpace,u,4,00000004,4,MstUniverseID
+MstUniverseGetBridge,u,4,00000004,4,MstUniverseID
+MstUniverseGetFramework,u,4,00000004,4,MstUniverseID

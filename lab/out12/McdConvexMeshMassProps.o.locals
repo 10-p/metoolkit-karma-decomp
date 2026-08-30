@@ -1,0 +1,54 @@
+# function,name,stackoff,hexoff,size,type
+McdConvexMeshGetMassProperties,T1,-28,ffffffe4,12,MeReal[3]
+McdConvexMeshGetMassProperties,T2,-44,ffffffd4,12,MeReal[3]
+McdConvexMeshGetMassProperties,TP,-60,ffffffc4,12,MeReal[3]
+McdConvexMeshGetMassProperties,g,4,00000004,4,McdGeometry *
+McdConvexMeshGetMassProperties,comTM,8,00000008,4,MeVector4 *
+McdConvexMeshGetMassProperties,I,12,0000000c,4,MeVector3 *
+McdConvexMeshGetMassProperties,volume,16,00000010,4,MeReal *
+compVolumeIntegrals,p,4,00000004,4,McdConvexHull *
+compVolumeIntegrals,T1,8,00000008,4,MeReal *
+compVolumeIntegrals,T2,12,0000000c,4,MeReal *
+compVolumeIntegrals,TP,16,00000010,4,MeReal *
+compVolumeIntegrals,C,-24,ffffffe8,4,int
+compVolumeIntegrals,P1,-28,ffffffe4,4,MeReal
+compVolumeIntegrals,Pa,-32,ffffffe0,4,MeReal
+compVolumeIntegrals,Pb,-36,ffffffdc,4,MeReal
+compVolumeIntegrals,Paa,-40,ffffffd8,4,MeReal
+compVolumeIntegrals,Pab,-44,ffffffd4,4,MeReal
+compVolumeIntegrals,Pbb,-48,ffffffd0,4,MeReal
+compVolumeIntegrals,Paaa,-52,ffffffcc,4,MeReal
+compVolumeIntegrals,Paab,-56,ffffffc8,4,MeReal
+compVolumeIntegrals,Pabb,-60,ffffffc4,4,MeReal
+compVolumeIntegrals,Pbbb,-64,ffffffc0,4,MeReal
+compVolumeIntegrals,Fa,-68,ffffffbc,4,MeReal
+compVolumeIntegrals,Fb,-72,ffffffb8,4,MeReal
+compVolumeIntegrals,Fc,-76,ffffffb4,4,MeReal
+compVolumeIntegrals,Faa,-80,ffffffb0,4,MeReal
+compVolumeIntegrals,Fbb,-84,ffffffac,4,MeReal
+compVolumeIntegrals,Fcc,-88,ffffffa8,4,MeReal
+compVolumeIntegrals,Faaa,-92,ffffffa4,4,MeReal
+compVolumeIntegrals,Fbbb,-96,ffffffa0,4,MeReal
+compVolumeIntegrals,Fccc,-100,ffffff9c,4,MeReal
+compVolumeIntegrals,T0,-104,ffffff98,4,MeReal
+compVolumeIntegrals,w,-108,ffffff94,4,MeReal
+compVolumeIntegrals,k1,-112,ffffff90,4,MeReal
+compVolumeIntegrals,k3,-116,ffffff8c,4,MeReal
+compVolumeIntegrals,a1,-120,ffffff88,4,MeReal
+compVolumeIntegrals,da,-124,ffffff84,4,MeReal
+compVolumeIntegrals,b0,-128,ffffff80,4,MeReal
+compVolumeIntegrals,a0_3,-132,ffffff7c,4,MeReal
+compVolumeIntegrals,b0_2,-136,ffffff78,4,MeReal
+compVolumeIntegrals,b0_3,-140,ffffff74,4,MeReal
+compVolumeIntegrals,b0_4,-144,ffffff70,4,MeReal
+compVolumeIntegrals,a1_3,-148,ffffff6c,4,MeReal
+compVolumeIntegrals,b1_2,-152,ffffff68,4,MeReal
+compVolumeIntegrals,b1_3,-156,ffffff64,4,MeReal
+compVolumeIntegrals,C1,-160,ffffff60,4,MeReal
+compVolumeIntegrals,Ca,-164,ffffff5c,4,MeReal
+compVolumeIntegrals,Caa,-168,ffffff58,4,MeReal
+compVolumeIntegrals,Cbb,-172,ffffff54,4,MeReal
+compVolumeIntegrals,Cab,-176,ffffff50,4,MeReal
+compVolumeIntegrals,Kab,-180,ffffff4c,4,MeReal
+compVolumeIntegrals,f,-184,ffffff48,4,int
+compVolumeIntegrals,numedge,-188,ffffff44,4,int

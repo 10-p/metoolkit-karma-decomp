@@ -1,0 +1,56 @@
+# function,name,stackoff,hexoff,size,type
+MdtRPROJointCreate,w,4,00000004,4,MdtWorldID
+MdtRPROJointReset,j,4,00000004,4,MdtRPROJointID
+MdtRPROJointQuaConstraint,j,4,00000004,4,MdtRPROJointID
+MdtConstraintDCastRPROJoint,c,4,00000004,4,MdtConstraintID
+MdtRPROJointGetAttachmentPosition,j,4,00000004,4,MdtRPROJointID
+MdtRPROJointGetAttachmentPosition,bodyindex,8,00000008,4,uint
+MdtRPROJointGetAttachmentPosition,position,12,0000000c,4,MeReal *
+MdtRPROJointGetAttachmentQuaternion,j,4,00000004,4,MdtRPROJointID
+MdtRPROJointGetAttachmentQuaternion,bodyindex,8,00000008,4,uint
+MdtRPROJointGetAttachmentQuaternion,quaternion,12,0000000c,4,MeReal *
+MdtRPROJointGetRelativePosition,j,4,00000004,4,MdtRPROJointID
+MdtRPROJointGetRelativePosition,rel_pos,8,00000008,4,MeReal *
+MdtRPROJointGetRelativeVelocity,j,4,00000004,4,MdtRPROJointID
+MdtRPROJointGetRelativeVelocity,rel_vel,8,00000008,4,MeReal *
+MdtRPROJointGetRelativeQuaternion,j,4,00000004,4,MdtRPROJointID
+MdtRPROJointGetRelativeQuaternion,q,8,00000008,4,MeReal *
+MdtRPROJointGetRelativeAngularVelocity,j,4,00000004,4,MdtRPROJointID
+MdtRPROJointGetRelativeAngularVelocity,w,8,00000008,4,MeReal *
+MdtRPROJointGetAngularStrength,j,4,00000004,4,MdtRPROJointID
+MdtRPROJointGetAngularStrength,v,8,00000008,4,MeReal *
+MdtRPROJointGetLinearStrength,j,4,00000004,4,MdtRPROJointID
+MdtRPROJointGetLinearStrength,v,8,00000008,4,MeReal *
+MdtRPROJointSetAttachmentPosition,j,4,00000004,4,MdtRPROJointID
+MdtRPROJointSetAttachmentPosition,x,8,00000008,4,MeReal
+MdtRPROJointSetAttachmentPosition,y,12,0000000c,4,MeReal
+MdtRPROJointSetAttachmentPosition,z,16,00000010,4,MeReal
+MdtRPROJointSetAttachmentPosition,bodyindex,20,00000014,4,uint
+MdtRPROJointSetAttachmentQuaternion,q2,16,00000010,4,MeReal
+MdtRPROJointSetAttachmentQuaternion,q3,20,00000014,4,MeReal
+MdtRPROJointSetAttachmentQuaternion,bodyindex,24,00000018,4,uint
+MdtRPROJointSetAttachmentQuaternion,j,4,00000004,4,MdtRPROJointID
+MdtRPROJointSetAttachmentQuaternion,q0,8,00000008,4,MeReal
+MdtRPROJointSetAttachmentQuaternion,q1,12,0000000c,4,MeReal
+MdtRPROJointSetRelativePosition,j,4,00000004,4,MdtRPROJointID
+MdtRPROJointSetRelativePosition,rpx,8,00000008,4,MeReal
+MdtRPROJointSetRelativePosition,rpy,12,0000000c,4,MeReal
+MdtRPROJointSetRelativePosition,rpz,16,00000010,4,MeReal
+MdtRPROJointSetRelativePosition,rel_pos,-28,ffffffe4,12,MeVector3
+MdtRPROJointSetRelativeVelocity,j,4,00000004,4,MdtRPROJointID
+MdtRPROJointSetRelativeVelocity,rel_vel,-28,ffffffe4,12,MeVector3
+MdtRPROJointSetRelativeVelocity,rvx,8,00000008,4,MeReal
+MdtRPROJointSetRelativeVelocity,rvy,12,0000000c,4,MeReal
+MdtRPROJointSetRelativeVelocity,rvz,16,00000010,4,MeReal
+MdtRPROJointSetRelativeQuaternion,j,4,00000004,4,MdtRPROJointID
+MdtRPROJointSetRelativeQuaternion,q,8,00000008,4,MeReal *
+MdtRPROJointSetRelativeAngularVelocity,j,4,00000004,4,MdtRPROJointID
+MdtRPROJointSetRelativeAngularVelocity,w,8,00000008,4,MeReal *
+MdtRPROJointSetAngularStrength,sX,8,00000008,4,MeReal
+MdtRPROJointSetAngularStrength,sY,12,0000000c,4,MeReal
+MdtRPROJointSetAngularStrength,sZ,16,00000010,4,MeReal
+MdtRPROJointSetAngularStrength,j,4,00000004,4,MdtRPROJointID
+MdtRPROJointSetLinearStrength,j,4,00000004,4,MdtRPROJointID
+MdtRPROJointSetLinearStrength,sX,8,00000008,4,MeReal
+MdtRPROJointSetLinearStrength,sY,12,0000000c,4,MeReal
+MdtRPROJointSetLinearStrength,sZ,16,00000010,4,MeReal

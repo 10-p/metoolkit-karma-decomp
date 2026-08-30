@@ -1,0 +1,5 @@
+# function,name,stackoff,hexoff,size,type
+MdtBSJointCreate,w,4,00000004,4,MdtWorldID
+MdtBSJointReset,j,4,00000004,4,MdtBSJointID
+MdtBSJointQuaConstraint,j,4,00000004,4,MdtBSJointID
+MdtConstraintDCastBSJoint,c,4,00000004,4,MdtConstraintID

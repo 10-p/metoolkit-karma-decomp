@@ -1,0 +1,19 @@
+# function,name,stackoff,hexoff,size,type
+MdtAngular3Create,w,4,00000004,4,MdtWorldID
+MdtAngular3Reset,j,4,00000004,4,MdtAngular3ID
+MdtAngular3QuaConstraint,j,4,00000004,4,MdtAngular3ID
+MdtConstraintDCastAngular3,c,4,00000004,4,MdtConstraintID
+MdtAngular3GetStiffness,j,4,00000004,4,MdtAngular3ID
+MdtAngular3GetDamping,j,4,00000004,4,MdtAngular3ID
+MdtAngular3RotationIsEnabled,j,4,00000004,4,MdtAngular3ID
+Angular3SetBodies,c,4,00000004,4,MdtConstraintID
+Angular3SetBodies,b1,8,00000008,4,MdtBodyID
+Angular3SetBodies,b2,12,0000000c,4,MdtBodyID
+Angular3SetBodies,v,-28,ffffffe4,12,MeVector3
+Angular3SetBodies,tm,-92,ffffffa4,64,MeMatrix4
+MdtAngular3EnableRotation,j,4,00000004,4,MdtAngular3ID
+MdtAngular3EnableRotation,NewRotationState,8,00000008,4,MeBool
+MdtAngular3SetStiffness,j,4,00000004,4,MdtAngular3ID
+MdtAngular3SetStiffness,s,8,00000008,4,MeReal
+MdtAngular3SetDamping,j,4,00000004,4,MdtAngular3ID
+MdtAngular3SetDamping,d,8,00000008,4,MeReal

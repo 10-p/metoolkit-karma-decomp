@@ -1,0 +1,8 @@
+# function,name,stackoff,hexoff,size,type
+McdError,message,12,0000000c,4,char *
+McdError,fn,16,00000010,4,char *
+McdError,file,20,00000014,4,char *
+McdError,line,24,00000018,4,int
+McdError,msg,-524,fffffdf4,512,char[512]
+McdError,ErrorList,4,00000004,4,McdErrorDescription *
+McdError,errorCode,8,00000008,4,int

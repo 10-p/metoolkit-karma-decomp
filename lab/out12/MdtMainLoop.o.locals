@@ -1,0 +1,70 @@
+# function,name,stackoff,hexoff,size,type
+MdtAutoDisableLastPartition,partitionIsMoving,-24,ffffffe8,4,MeBool
+MdtAutoDisableLastPartition,po,4,00000004,4,MdtPartitionOutput *
+MdtAutoDisableLastPartition,b,-28,ffffffe4,4,int
+MdtAutoDisableLastPartition,pcbdata,8,00000008,4,void *
+MdtAutoDisableLastPartition,pcbdata_local,-20,ffffffec,4,void *
+MdtUpdateBodyForces,b,4,00000004,4,MdtBodyID
+MdtUpdateBodyForces,stepSize,8,00000008,4,MeReal
+MdtUpdateBodyForces,g,12,0000000c,4,MeReal *
+MdtPackAllPartitions,local_50,-80,ffffffb0,4,MdtKeaTransformation *
+MdtPackAllPartitions,po,4,00000004,4,MdtPartitionOutput *
+MdtPackAllPartitions,stepSize,8,00000008,4,MeReal
+MdtPackAllPartitions,params,12,0000000c,4,MdtWorldParams *
+MdtPackAllPartitions,keaParams,16,00000010,4,MdtKeaParameters *
+MdtPackAllPartitions,keaTMArray,20,00000014,4,MdtKeaTransformation *
+MdtPackAllPartitions,constraints,24,00000018,4,MdtKeaConstraints *
+MdtPackAllPartitions,i,-48,ffffffd0,4,int
+MdtPackAllPartitions,partitionindex,-52,ffffffcc,4,int
+MdtPackAllPartitions,partitionConstraintRows,-56,ffffffc8,4,uint
+MdtPackAllPartitions,maxPartitionConstraintRows,-60,ffffffc4,4,uint
+MdtPackAllPartitions,blist,-64,ffffffc0,4,MdtBody * *
+MdtPackAllPartitions,keabodyArray,-68,ffffffbc,4,MdtKeaBody * *
+MdtPackAllPartitions,bodiesSize,-72,ffffffb8,4,int
+MdtPackAllPartitions,constraintsSize,-76,ffffffb4,4,int
+MdtPackAllPartitions,bclParams,-44,ffffffd4,12,MdtBclSolverParameters
+MdtPackPartition,blist,-56,ffffffc8,4,MdtBody * *
+MdtPackPartition,clist,-60,ffffffc4,4,MdtBaseConstraint * *
+MdtPackPartition,bodiesSize,-64,ffffffc0,4,int
+MdtPackPartition,constraintsSize,-68,ffffffbc,4,int
+MdtPackPartition,bclParams,-44,ffffffd4,12,MdtBclSolverParameters
+MdtPackPartition,po,4,00000004,4,MdtPartitionOutput *
+MdtPackPartition,partitionindex,8,00000008,4,uint
+MdtPackPartition,stepSize,12,0000000c,4,MeReal
+MdtPackPartition,params,16,00000010,4,MdtWorldParams *
+MdtPackPartition,keaParams,20,00000014,4,MdtKeaParameters *
+MdtPackPartition,keaTMArray,24,00000018,4,MdtKeaTransformation *
+MdtPackPartition,constraints,28,0000001c,4,MdtKeaConstraints *
+MdtPackPartition,i,-48,ffffffd0,4,int
+MdtPackPartition,partitionConstraintRows,-52,ffffffcc,4,uint
+MdtUnpackForces,local_18,-24,ffffffe8,4,MdtBaseConstraint * *
+MdtUnpackForces,force,4,00000004,4,MdtKeaForcePair *
+MdtUnpackForces,partitionindex,8,00000008,4,uint
+MdtUnpackForces,po,12,0000000c,4,MdtPartitionOutput *
+MdtUnpackForces,mdtCNum,-20,ffffffec,4,int
+MdtKeaConstraintsCreateFromChunk,maxRowsIncPadding,-20,ffffffec,4,int
+MdtKeaConstraintsCreateFromChunk,jbodySize,-24,ffffffe8,4,int
+MdtKeaConstraintsCreateFromChunk,jofsSize,-28,ffffffe4,4,int
+MdtKeaConstraintsCreateFromChunk,jsizeSize,-32,ffffffe0,4,int
+MdtKeaConstraintsCreateFromChunk,xgammaSize,-36,ffffffdc,4,int
+MdtKeaConstraintsCreateFromChunk,slipfactorSize,-40,ffffffd8,4,int
+MdtKeaConstraintsCreateFromChunk,forceSize,-44,ffffffd4,4,int
+MdtKeaConstraintsCreateFromChunk,lambdaSize,-48,ffffffd0,4,int
+MdtKeaConstraintsCreateFromChunk,hiSize,-52,ffffffcc,4,int
+MdtKeaConstraintsCreateFromChunk,loSize,-56,ffffffc8,4,int
+MdtKeaConstraintsCreateFromChunk,cSize,-60,ffffffc4,4,int
+MdtKeaConstraintsCreateFromChunk,xiSize,-64,ffffffc0,4,int
+MdtKeaConstraintsCreateFromChunk,chunk,4,00000004,4,MeChunk *
+MdtKeaConstraintsCreateFromChunk,maxPartitions,8,00000008,4,int
+MdtKeaConstraintsCreateFromChunk,maxKeaConstraints,12,0000000c,4,int
+MdtKeaConstraintsCreateFromChunk,maxRows,16,00000010,4,int
+MdtDefaultSimErrorCallBack,kc,4,00000004,4,MdtKeaConstraints *
+MdtDefaultSimErrorCallBack,kb,8,00000008,4,MdtKeaBody * *
+MdtDefaultSimErrorCallBack,nBodies,12,0000000c,4,int
+MdtDefaultSimErrorCallBack,secbdata,16,00000010,4,void *
+MdtUnpackBodies,partitionindex,8,00000008,4,uint
+MdtUnpackBodies,po,12,0000000c,4,MdtPartitionOutput *
+MdtUnpackBodies,blist,-20,ffffffec,4,MdtBody * *
+MdtUnpackBodies,keaTMArray,4,00000004,4,MdtKeaTransformation *
+MdtPartitionGetSafeTime,po,4,00000004,4,MdtPartitionOutput *
+MdtPartitionGetSafeTime,i,8,00000008,4,int

@@ -1,0 +1,7 @@
+# function,name,stackoff,hexoff,size,type
+MeLoadWholeFileHandle,destination,-20,ffffffec,4,void *
+MeLoadWholeFileHandle,handle,4,00000004,4,int
+MeLoadWholeFileHandle,size,8,00000008,4,int *
+MeSaveWholeFileHandle,handle,4,00000004,4,int
+MeSaveWholeFileHandle,data,8,00000008,4,char *
+MeSaveWholeFileHandle,size,12,0000000c,4,int

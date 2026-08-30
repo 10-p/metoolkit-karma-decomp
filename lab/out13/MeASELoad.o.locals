@@ -1,0 +1,75 @@
+# function,name,stackoff,hexoff,size,type
+MeASEObjectDestroy,object,4,00000004,4,MeASEObject *
+MeASEObjectLoadPartsFromStream,fp,4,00000004,4,MeStream
+MeASEObjectLoadPartsFromStream,xScale,8,00000008,4,MeReal
+MeASEObjectLoadPartsFromStream,yScale,12,0000000c,4,MeReal
+MeASEObjectLoadPartsFromStream,zScale,16,00000010,4,MeReal
+MeASEObjectLoadPartsFromStream,asParts,20,00000014,4,MeBool
+MeASEObjectLoadPartsFromStream,line,-284,fffffee4,256,char[256]
+MeASEObjectLoadPartsFromStream,index,-668,fffffd64,4,int
+MeASEObjectLoadPartsFromStream,mappingchannel,-736,fffffd20,4,MeBool
+MeASEObjectLoadPartsFromStream,gotName,-740,fffffd1c,4,MeBool
+MeASEObjectLoadPartsFromStream,vertOffset,-744,fffffd18,4,int
+MeASEObjectLoadPartsFromStream,faceOffset,-748,fffffd14,4,int
+MeASEObjectLoadPartsFromStream,uvOffset,-752,fffffd10,4,int
+MeASEObjectLoadPartsFromStream,isError,-756,fffffd0c,4,MeBool
+MeASEObjectLoadPartsFromStream,object,-760,fffffd08,4,MeASEObject *
+MeASEObjectLoadPartsFromStream,vertexTM,-348,fffffea4,64,MeMatrix4
+MeASEObjectLoadPartsFromStream,materialList,-764,fffffd04,4,MeASEMaterialStore *
+MeASEObjectLoadPartsFromStream,materialIndex,-728,fffffd28,4,int
+MeASEObjectLoadPartsFromStream,submat,-768,fffffd00,4,int
+MeASEObjectLoadPartsFromStream,diffusemap_found,-772,fffffcfc,4,MeBool
+MeASEObjectLoadPartsFromStream,inmaterial,-776,fffffcf8,4,MeBool
+MeASEObjectLoadPartsFromStream,temp,-732,fffffd24,4,int
+MeASEObjectLoadPartsFromStream,temp_1,-724,fffffd2c,4,int
+MeASEObjectLoadPartsFromStream,i1,-720,fffffd30,4,int
+MeASEObjectLoadPartsFromStream,i2,-716,fffffd34,4,int
+MeASEObjectLoadPartsFromStream,i3,-712,fffffd38,4,int
+MeASEObjectLoadPartsFromStream,x,-708,fffffd3c,4,float
+MeASEObjectLoadPartsFromStream,y,-704,fffffd40,4,float
+MeASEObjectLoadPartsFromStream,z,-700,fffffd44,4,float
+MeASEObjectLoadPartsFromStream,i1_1,-696,fffffd48,4,int
+MeASEObjectLoadPartsFromStream,i2_1,-692,fffffd4c,4,int
+MeASEObjectLoadPartsFromStream,i3_1,-688,fffffd50,4,int
+MeASEObjectLoadPartsFromStream,n1,-680,fffffd58,4,float
+MeASEObjectLoadPartsFromStream,n2,-676,fffffd5c,4,float
+MeASEObjectLoadPartsFromStream,pcVar26,-840,fffffcb8,4,char *
+MeASEObjectLoadPartsFromStream,n3,-672,fffffd60,4,float
+MeASEObjectLoadPartsFromStream,pcVar27,-840,fffffcb8,4,char *
+MeASEObjectLoadPartsFromStream,MVar28,-832,fffffcc0,4,MeBool
+MeASEObjectLoadPartsFromStream,temp_2,-684,fffffd54,4,int
+MeASEObjectLoadPartsFromStream,norm,-604,fffffda4,16,MeVector4
+MeASEObjectLoadPartsFromStream,uVar29,-832,fffffcc0,4,undefined4
+MeASEObjectLoadPartsFromStream,transNorm,-588,fffffdb4,16,MeVector4
+MeASEObjectLoadPartsFromStream,x_1,-664,fffffd68,4,float
+MeASEObjectLoadPartsFromStream,y_1,-660,fffffd6c,4,float
+MeASEObjectLoadPartsFromStream,z_1,-656,fffffd70,4,float
+MeASEObjectLoadPartsFromStream,x_2,-652,fffffd74,4,float
+MeASEObjectLoadPartsFromStream,y_2,-648,fffffd78,4,float
+MeASEObjectLoadPartsFromStream,z_2,-644,fffffd7c,4,float
+MeASEObjectLoadPartsFromStream,x_3,-640,fffffd80,4,float
+MeASEObjectLoadPartsFromStream,y_3,-636,fffffd84,4,float
+MeASEObjectLoadPartsFromStream,z_3,-632,fffffd88,4,float
+MeASEObjectLoadPartsFromStream,x_4,-628,fffffd8c,4,float
+MeASEObjectLoadPartsFromStream,y_4,-624,fffffd90,4,float
+MeASEObjectLoadPartsFromStream,z_4,-620,fffffd94,4,float
+MeASEObjectLoadPartsFromStream,x_5,-616,fffffd98,4,float
+MeASEObjectLoadPartsFromStream,y_5,-612,fffffd9c,4,float
+MeASEObjectLoadPartsFromStream,z_5,-608,fffffda0,4,float
+MeASEObjectLoadPartsFromStream,local_320,-800,fffffce0,4,int
+MeASEObjectLoadPartsFromStream,local_31c,-796,fffffce4,4,int
+MeASEObjectLoadPartsFromStream,local_318,-792,fffffce8,4,MeASEMaterial *
+MeASEObjectLoadPartsFromStream,local_314,-788,fffffcec,4,int
+FindArgs,token,8,00000008,4,char *
+FindArgs,line,4,00000004,4,char *
+MeASEObjectLoad,filename,4,00000004,4,char *
+MeASEObjectLoad,xScale,8,00000008,4,MeReal
+MeASEObjectLoad,yScale,12,0000000c,4,MeReal
+MeASEObjectLoad,zScale,16,00000010,4,MeReal
+MeASEObjectLoadParts,xScale,8,00000008,4,MeReal
+MeASEObjectLoadParts,yScale,12,0000000c,4,MeReal
+MeASEObjectLoadParts,zScale,16,00000010,4,MeReal
+MeASEObjectLoadParts,asParts,20,00000014,4,MeBool
+MeASEObjectLoadParts,filename,4,00000004,4,char *
+ASEObjectReset,object,4,00000004,4,MeASEObject *
+ASEObjectReset,materials,8,00000008,4,MeASEMaterialStore *

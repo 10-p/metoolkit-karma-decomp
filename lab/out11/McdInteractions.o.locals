@@ -1,0 +1,45 @@
+# function,name,stackoff,hexoff,size,type
+McdNearby,minCorner1,-28,ffffffe4,12,MeReal[3]
+McdNearby,maxCorner1,-44,ffffffd4,12,MeReal[3]
+McdNearby,minCorner2,-60,ffffffc4,12,MeReal[3]
+McdNearby,maxCorner2,-76,ffffffb4,12,MeReal[3]
+McdNearby,p,4,00000004,4,McdModelPair *
+McdHello,p,4,00000004,4,McdModelPair *
+McdGoodbye,p,4,00000004,4,McdModelPair *
+McdIntersect,outContacts,-20,ffffffec,4,McdContact *
+McdIntersect,frame,-24,ffffffe8,4,McdFramework *
+McdIntersect,type1,-28,ffffffe4,4,int
+McdIntersect,p,4,00000004,4,McdModelPair *
+McdIntersect,result,8,00000008,4,McdIntersectResult *
+McdIntersect,aMStackY_501c,-20508,ffffafe4,20440,McdContact[511]
+McdIntersect,uStackY_40,-64,ffffffc0,4,undefined4
+McdIntersectAt,result,8,00000008,4,McdIntersectResult *
+McdIntersectAt,time,12,0000000c,4,MeReal
+McdIntersectAt,tm1,-92,ffffffa4,64,MeReal[4][4]
+McdIntersectAt,tm2,-156,ffffff64,64,MeReal[4][4]
+McdIntersectAt,tm1save,-160,ffffff60,4,MeMatrix4Ptr
+McdIntersectAt,p,4,00000004,4,McdModelPair *
+McdIntersectAt,tm2save,-164,ffffff5c,4,MeMatrix4Ptr
+McdSafeTime,p,4,00000004,4,McdModelPair *
+McdSafeTime,maxTime,8,00000008,4,MeReal
+McdSafeTime,result,12,0000000c,4,McdSafeTimeResult *
+McdLineSegIntersect,cm,4,00000004,4,McdModelID.conflict
+McdLineSegIntersect,inOrig,8,00000008,4,MeReal *
+McdLineSegIntersect,inDest,12,0000000c,4,MeReal *
+McdLineSegIntersect,outOverlap,16,00000010,4,McdLineSegIntersectResult *
+McdSetHelloCallback,frame,4,00000004,4,McdFramework *
+McdSetHelloCallback,f,8,00000008,4,McdHelloCallbackFnPtr
+McdGetHelloCallback,frame,4,00000004,4,McdFramework *
+McdHelloEach,pairs,4,00000004,4,McdModelPairContainer *
+McdGoodbyeEach,pairs,4,00000004,4,McdModelPairContainer *
+McdIntersectEach,contactArray,24,00000018,4,McdContact *
+McdIntersectEach,contactArraySize,28,0000001c,4,int
+McdIntersectEach,contactCount,32,00000020,4,int *
+McdIntersectEach,resultIndex,-20,ffffffec,4,int
+McdIntersectEach,freeContactCount,-28,ffffffe4,4,int
+McdIntersectEach,overflow,-24,ffffffe8,4,MeBool
+McdIntersectEach,pairs,4,00000004,4,McdModelPairContainer *
+McdIntersectEach,pairsIter,8,00000008,4,McdModelPairContainerIterator *
+McdIntersectEach,resultArray,12,0000000c,4,McdIntersectResult *
+McdIntersectEach,resultArraySize,16,00000010,4,int
+McdIntersectEach,resultCount,20,00000014,4,int *

@@ -1,0 +1,133 @@
+# function,name,stackoff,hexoff,size,type
+SegmentConvexHullSep,p,4,00000004,4,MeReal *
+SegmentConvexHullSep,d,8,00000008,4,MeReal *
+SegmentConvexHullSep,smin,12,0000000c,4,MeReal
+SegmentConvexHullSep,smax,16,00000010,4,MeReal
+SegmentConvexHullSep,convex,20,00000014,4,McdConvexHull *
+SegmentConvexHullSep,n,24,00000018,4,MeReal *
+SegmentConvexHullSep,s,28,0000001c,4,MeReal *
+SegmentConvexHullSep,regionType,32,00000020,4,VoronoiRegionType *
+SegmentConvexHullSep,closestRegionType,-100,ffffff9c,4,VoronoiRegionType
+SegmentConvexHullSep,face,-104,ffffff98,4,MeI32
+SegmentConvexHullSep,sep,-108,ffffff94,4,MeReal
+SegmentConvexHullSep,disp,-44,ffffffd4,12,MeReal[3]
+SegmentConvexHullSep,v,-192,ffffff40,4,McdCnvVertex *
+SegmentConvexHullSep,si,-80,ffffffb0,4,MeReal
+SegmentConvexHullSep,edgeLen,-112,ffffff90,4,MeReal
+SegmentConvexHullSep,s0,-92,ffffffa4,4,MeReal
+SegmentConvexHullSep,local_a8,-168,ffffff58,4,int
+SegmentConvexHullSep,s1,-88,ffffffa8,4,MeReal
+SegmentConvexHullSep,ds0,-84,ffffffac,4,MeReal
+SegmentConvexHullSep,local_a4,-164,ffffff5c,4,float
+SegmentConvexHullSep,askew,-116,ffffff8c,4,MeBool
+SegmentConvexHullSep,local_a0,-160,ffffff60,4,float
+SegmentConvexHullSep,local_9c,-156,ffffff64,4,float
+SegmentConvexHullSep,ni,-60,ffffffc4,12,MeReal[3]
+SegmentConvexHullSep,edgeNormal,-76,ffffffb4,12,MeReal[3]
+SegmentConvexHullSep,local_98,-152,ffffff68,4,float
+SegmentConvexHullSep,local_94,-148,ffffff6c,4,float
+SegmentConvexHullSep,maxPoint,-96,ffffffa0,4,int
+SegmentConvexHullSep,local_90,-144,ffffff70,4,float
+ConvexHullMaximumFeature,d,8,00000008,4,MeReal *
+ConvexHullMaximumFeature,regionIndex,12,0000000c,4,MeI32 *
+ConvexHullMaximumFeature,eps,16,00000010,4,MeReal
+ConvexHullMaximumFeature,edgeDisp,-44,ffffffd4,12,MeReal[3]
+ConvexHullMaximumFeature,convex,4,00000004,4,McdConvexHull *
+ConvexHullVoronoiRegion,convex,4,00000004,4,McdConvexHull *
+ConvexHullVoronoiRegion,pos,8,00000008,4,MeReal *
+ConvexHullVoronoiRegion,regionIndex,12,0000000c,4,MeI32 *
+ConvexHullVoronoiRegion,faceIndex,-80,ffffffb0,4,MeI32
+ConvexHullVoronoiRegion,edgeIndex,-100,ffffff9c,4,MeI32
+ConvexHullVoronoiRegion,edgeDisp,-76,ffffffb4,12,MeReal[3]
+ConvexHullVoronoiRegion,r,-60,ffffffc4,12,MeReal[3]
+ConvexHullVoronoiRegion,edgeDir,-44,ffffffd4,12,MeReal[3]
+ConvexHullNSegment,convex,4,00000004,4,McdConvexHull *
+ConvexHullNSegment,p,8,00000008,4,MeReal *
+ConvexHullNSegment,d,12,0000000c,4,MeReal *
+ConvexHullNSegment,smin,16,00000010,4,MeReal
+ConvexHullNSegment,smax,20,00000014,4,MeReal
+ConvexHullNSegment,cp,24,00000018,4,MeReal *
+ConvexHullNSegment,s,28,0000001c,4,MeReal *
+ConvexHullNSegment,closestRegionType,32,00000020,4,VoronoiRegionType *
+ConvexHullNSegment,sp,-44,ffffffd4,12,MeReal[3]
+ConvexHullNSegment,regionIndex,-48,ffffffd0,4,MeI32
+ConvexHullNSegment,regionType,-52,ffffffcc,4,VoronoiRegionType
+ConvexHullNSegment,ds,-56,ffffffc8,4,MeReal
+MeVector3Normalize,local_8,-8,fffffff8,4,float
+MeVector3Normalize,v,4,00000004,4,MeReal *
+McdConvexHullMaximumPoint,hull,4,00000004,4,McdConvexHull *
+McdConvexHullMaximumPoint,inDir,8,00000008,4,MeReal *
+McdConvexHullMaximumPoint,hint,12,0000000c,4,int
+McdConvexHullMaximumPoint,minDist,16,00000010,4,MeReal
+McdConvexHullMaximumPoint,outIndex,20,00000014,4,int *
+McdConvexHullMaximumPoint,i,-20,ffffffec,4,int
+McdConvexHullMaximumPoint,t,-24,ffffffe8,4,int
+McdConvexHullMaximumPoint,m,-28,ffffffe4,4,int
+McdConvexHullMaximumPoint,prev,-32,ffffffe0,4,int
+McdConvexHullMaximumPoint,n,-36,ffffffdc,4,int
+McdConvexHullMaximumPoint,vert,-40,ffffffd8,4,McdCnvVertex *
+McdConvexHullMaximumPoint,d1,-44,ffffffd4,4,MeReal
+ClosestInVertexRegion,convex,4,00000004,4,McdConvexHull *
+ClosestInVertexRegion,p,8,00000008,4,MeReal *
+ClosestInVertexRegion,d,12,0000000c,4,MeReal *
+ClosestInVertexRegion,smax,16,00000010,4,MeReal
+ClosestInVertexRegion,cp,20,00000014,4,MeReal *
+ClosestInVertexRegion,s,24,00000018,4,MeReal *
+ClosestInVertexRegion,ds,28,0000001c,4,MeReal *
+ClosestInVertexRegion,regionType,32,00000020,4,VoronoiRegionType *
+ClosestInVertexRegion,regionIndex,36,00000024,4,MeI32 *
+ClosestInVertexRegion,r,-44,ffffffd4,12,MeReal[3]
+ClosestInVertexRegion,sClosestDen,-72,ffffffb8,4,MeReal
+ClosestInVertexRegion,nextRegionIndex,-76,ffffffb4,4,MeI32
+ClosestInVertexRegion,edgeDisp,-60,ffffffc4,12,MeReal[3]
+ClosestInEdgeRegion,d,12,0000000c,4,MeReal *
+ClosestInEdgeRegion,smax,16,00000010,4,MeReal
+ClosestInEdgeRegion,cp,20,00000014,4,MeReal *
+ClosestInEdgeRegion,s,24,00000018,4,MeReal *
+ClosestInEdgeRegion,ds,28,0000001c,4,MeReal *
+ClosestInEdgeRegion,regionType,32,00000020,4,VoronoiRegionType *
+ClosestInEdgeRegion,regionIndex,36,00000024,4,MeI32 *
+ClosestInEdgeRegion,edgeDir,-44,ffffffd4,12,MeReal[3]
+ClosestInEdgeRegion,edgeLength2,-80,ffffffb0,4,MeReal
+ClosestInEdgeRegion,r,-60,ffffffc4,12,MeReal[3]
+ClosestInEdgeRegion,det,-96,ffffffa0,4,MeReal
+ClosestInEdgeRegion,er,-100,ffffff9c,4,MeReal
+ClosestInEdgeRegion,sClosestNum,-104,ffffff98,4,MeReal
+ClosestInEdgeRegion,sClosestDen,-108,ffffff94,4,MeReal
+ClosestInEdgeRegion,nextRegionType,-112,ffffff90,4,VoronoiRegionType
+ClosestInEdgeRegion,smin,-116,ffffff8c,4,MeReal
+ClosestInEdgeRegion,n,-76,ffffffb4,12,MeReal[3]
+ClosestInEdgeRegion,convex,4,00000004,4,McdConvexHull *
+ClosestInEdgeRegion,p,8,00000008,4,MeReal *
+ClosestInFaceRegion,convex,4,00000004,4,McdConvexHull *
+ClosestInFaceRegion,p,8,00000008,4,MeReal *
+ClosestInFaceRegion,d,12,0000000c,4,MeReal *
+ClosestInFaceRegion,smax,16,00000010,4,MeReal
+ClosestInFaceRegion,cp,20,00000014,4,MeReal *
+ClosestInFaceRegion,s,24,00000018,4,MeReal *
+ClosestInFaceRegion,ds,28,0000001c,4,MeReal *
+ClosestInFaceRegion,regionType,32,00000020,4,VoronoiRegionType *
+ClosestInFaceRegion,regionIndex,36,00000024,4,MeI32 *
+ClosestInFaceRegion,r,-44,ffffffd4,12,MeReal[3]
+ClosestInFaceRegion,dn,-108,ffffff94,4,MeReal
+ClosestInFaceRegion,rn,-124,ffffff84,4,MeReal
+ClosestInFaceRegion,parallel,-128,ffffff80,4,MeBool
+ClosestInFaceRegion,nextRegionType,-132,ffffff7c,4,VoronoiRegionType
+ClosestInFaceRegion,nextRegionIndex,-136,ffffff78,4,MeI32
+ClosestInFaceRegion,sClosestNum,-140,ffffff74,4,MeReal
+ClosestInFaceRegion,sClosestDen,-144,ffffff70,4,MeReal
+ClosestInFaceRegion,edgeDisp,-60,ffffffc4,12,MeReal[3]
+ClosestInFaceRegion,n,-76,ffffffb4,12,MeReal[3]
+ClosestInFaceRegion,ri,-92,ffffffa4,12,MeReal[3]
+ClosestInInteriorRegion,convex,4,00000004,4,McdConvexHull *
+ClosestInInteriorRegion,p,8,00000008,4,MeReal *
+ClosestInInteriorRegion,d,12,0000000c,4,MeReal *
+ClosestInInteriorRegion,smax,16,00000010,4,MeReal
+ClosestInInteriorRegion,cp,20,00000014,4,MeReal *
+ClosestInInteriorRegion,s,24,00000018,4,MeReal *
+ClosestInInteriorRegion,ds,28,0000001c,4,MeReal *
+ClosestInInteriorRegion,regionType,32,00000020,4,VoronoiRegionType *
+ClosestInInteriorRegion,regionIndex,36,00000024,4,MeI32 *
+ClosestInInteriorRegion,smin,-48,ffffffd0,4,MeReal
+ClosestInInteriorRegion,sClosestDen,-52,ffffffcc,4,MeReal
+ClosestInInteriorRegion,r,-44,ffffffd4,12,MeReal[3]

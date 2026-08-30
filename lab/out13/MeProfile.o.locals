@@ -1,0 +1,47 @@
+# function,name,stackoff,hexoff,size,type
+MeProfileEndFrame,thisfd,-64,ffffffc0,4,MeProfileFrameData *
+MeProfileEndFrame,thist,-60,ffffffc4,24,MeProfileTimerResult
+MeProfileEndFrame,foundIt,-68,ffffffbc,4,MeBool
+MeProfileStartSectionFn,result,-60,ffffffc4,24,MeProfileTimerResult
+MeProfileStartSectionFn,autoStop_local,-61,ffffffc3,1,uchar
+MeProfileStartSectionFn,codeSection,4,00000004,4,char *
+MeProfileStartSectionFn,autoStop,8,00000008,1,uchar
+MeProfileStartSectionFn,foundIt,-68,ffffffbc,4,MeBool
+MeProfileEndSectionFn,result,-60,ffffffc4,24,MeProfileTimerResult
+MeProfileEndSectionFn,foundIt,-64,ffffffc0,4,MeBool
+MeProfileEndSectionFn,cs,4,00000004,4,char *
+MeProfileGetSectionTime,codeSection,4,00000004,4,char *
+MeProfileOutputResults,count0AllFrames,-108,ffffff94,8,MeI64
+MeProfileOutputResults,count1AllFrames,-116,ffffff8c,8,MeI64
+MeProfileOutputResults,secondsAllFrames,-120,ffffff88,4,float
+MeProfileOutputResults,secondsAvgPerFrame,-124,ffffff84,4,float
+MeProfileOutputResults,eventsPerSection,-128,ffffff80,4,MeI64 *
+MeProfileOutputResults,cyclesPerSection,-132,ffffff7c,4,MeI64 *
+MeProfileOutputResults,count0PerSection,-136,ffffff78,4,MeI64 *
+MeProfileOutputResults,count1PerSection,-140,ffffff74,4,MeI64 *
+MeProfileOutputResults,cyclesSectAvgEvent,-172,ffffff54,8,MeI64
+MeProfileOutputResults,nFrames,-36,ffffffdc,4,uint
+MeProfileOutputResults,nSections,-40,ffffffd8,4,uint
+MeProfileOutputResults,sectionTotal,-44,ffffffd4,4,MeU64 *
+MeProfileOutputResults,total,-52,ffffffcc,8,MeU64
+MeProfileOutputResults,sectionsTotal,-60,ffffffc4,8,MeU64
+MeProfileOutputResults,avTimeInSecs,-64,ffffffc0,4,float
+MeProfileOutputResults,avSectionsTimeInSecs,-68,ffffffbc,4,float
+MeProfileOutputResults,eventsAllFrames,-92,ffffffa4,8,MeI64
+MeProfileOutputResults,cyclesAllFrames,-100,ffffff9c,8,MeI64
+doGnuplot,fh,-1040,fffffbf0,4,int
+doGnuplot,buffer,-1036,fffffbf4,1000,char[1000]
+doGnuplot,cpuCycleAcc,-1052,fffffbe4,8,MeU64
+doGnuplot,count0Acc,-1060,fffffbdc,8,MeU64
+doGnuplot,count1Acc,-1068,fffffbd4,8,MeU64
+doGnuplot,thisWD,-1072,fffffbd0,4,weightingData *
+doGnuplot,tailWD,-1076,fffffbcc,4,weightingData *
+doGnuplot,firstWD,-1080,fffffbc8,4,weightingData *
+doGnuplot,frames,-1082,fffffbc6,2,ushort
+doGnuplot,thisfd,-1088,fffffbc0,4,MeProfileFrameData *
+doGnuplot,thisfsi,-1092,fffffbbc,4,MeProfileFrameSectionInfo *
+doGnuplot,pcVar29,-1248,fffffb20,4,char *
+MeProfileStartTiming,mode,4,00000004,16,MeProfileTimerMode
+MeProfileStartTiming,log,20,00000014,4,MeProfileLogModes_enum
+MeProfileStartFrame,in_stack_00000004,4,00000004,4,void *
+MeProfileSetOutputParameters,p,4,00000004,12,MeProfileOutput

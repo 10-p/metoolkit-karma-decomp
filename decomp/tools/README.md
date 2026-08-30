@@ -617,7 +617,7 @@ XML-output and unused-constraint objects §3b retires.
 
 They need the NDK, they **edit in place**, and §4's output is not arm64-correct source until they
 have run. **Run them on a copy**, in this order — or just use `test/standalone/lp64_pipeline.sh`, which does
-the copy, all ten passes, the acceptance test and the harness in the right order.
+the copy, every pass, the acceptance test and the harness in the right order.
 
 ```bash
 ./test/standalone/lp64_pipeline.sh                      # all of the below, gated
@@ -637,9 +637,33 @@ python3 tools/fix_align_masks.py     /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/fix_frame_slots.py     /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/fix_pool_reserve.py    /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/fix_narrow_loads.py    /tmp/kd_lp64/allobj /tmp/kd_build $MT
+python3 tools/fix_list_walk.py       /tmp/kd_lp64/allobj /tmp/kd_build $MT
+python3 tools/fix_block_copy.py      /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/check_frame_bounds.py  /tmp/kd_lp64/allobj /tmp/kd_build   # must read 0
 KD_OUT=/tmp/kd_lp64 ./test/standalone/lp64_run.sh
 ```
+
+⚠ **`fix_list_walk` and `fix_block_copy` go after `fix_narrow_loads`, in that order, and
+they are the two passes the OFFLINE SCENES COULD NOT HAVE FOUND.** Both defects were found
+by running UT2004 on the x86-64 Linux vehicle (`-DUT_ALLOW_64BIT=ON`) with all three scenes
+already byte-identical at both widths. `fix_list_walk` needs the cursor's initialiser already
+spelled as an offsetof against a **named** field, which is `fix_literal_offsets` /
+`fix_derived_fields`' output, and cast through `kd_iptr`, which is `fix_ptrwidth`'s.
+
+⚠ **`fix_block_copy` goes LAST, after even `fix_narrow_loads`.** It is the only pass that
+does not re-spell an expression: it keeps the i386 text verbatim under
+`#if __SIZEOF_POINTER__ == 4` and puts the corrected body in the `#else`. Every pass above
+reads these sources as plain C, so running it earlier hands them a preprocessor conditional
+to parse and a second, hand-written copy of each repaired loop to "repair" again.
+
+★ **THE GUARD IS A LAST RESORT AND THE TWO NEW PASSES SHOW BOTH SIDES.** `fix_list_walk`
+needs none — `((PElementNode *)p)->next` *is* `p[1]` at i386, same address and same four-byte
+access, so one spelling serves both widths and the object is reproduced exactly.
+`fix_block_copy` cannot have one, and that was measured rather than assumed: its rodata
+template has **eight slots per handler at LP64 while the destination has six words**, and the
+per-field expansion compiles to a different i386 object (22800 → 22824 bytes). Because
+`__SIZEOF_POINTER__` is 4 on **wasm32** as well, the guard also makes the web artifact
+provably unchanged — verified at 146/146 byte-identical, not argued.
 
 ⚠ **`fix_index_layout` goes AFTER `fix_derived_fields`, not before.** They are the same defect
 class; the first types the base pointer per FILE and names the concrete field with its own declared
@@ -1317,6 +1341,89 @@ It runs **last** in `lp64_pipeline.sh`, deliberately: it reads diagnostics over 
 and `*(kd_iptr *)p` is exactly the spelling `fix_narrow_pointers` and `fix_align_masks` key on.
 A narrow struct FIELD is declined rather than patched — that is a layout question, not a load-width
 one, and widening the access would read past the field.
+
+### `fix_list_walk.py` — a linked list walked through a four-byte cursor
+
+```bash
+python3 tools/fix_list_walk.py /tmp/kd_lp64/allobj /tmp/kd_build $MT
+#   -> fix_list_walk: 1 repaired, 2 declined
+```
+
+Ghidra loses the node type of a list and walks it through `undefined4 *`, so both the link and
+the payload are read in four-byte units:
+
+```c
+for (puVar1 = *(undefined4 **)((kd_iptr)pvVar2 + KD_OFFSET(PElement, childHead));
+     puVar1 != (undefined4 *)0x0;
+     puVar1 = (undefined4 *)puVar1[1])                       /* `next` is at byte 4 */
+  ... (PElement *)*puVar1 ...                                /* `current`, TRUNCATED */
+```
+
+At i386 that is right twice over. At LP64 `next` moves to byte 8, so `puVar1[1]` reads the
+**top half of `current`** and calls it the next node, and `*puVar1` keeps only the low 32 bits
+of a pointer.
+
+★ **THIS IS FRAME (2) FROM RUNNING THE GAME, AND THE TRUNCATION IS IN THE CRASH ITSELF.** gdb
+caught `KaFileCreate_1_0` with `e = 0x58cabf90` beside `parent = 0x555558ce4030`. Every
+pointer in that process is `0x5555_5xxxxxxx`, so a 32-bit `e` is not a wild value — it is a
+measurement of where the top half went.
+
+**THE NODE TYPE IS DECLARED, NOT INFERRED.** The cursor is initialised from a *named* field and
+the oracle header says what that field is — `PElementNode *childHead;` — so the type comes from
+`metoolkit/include`, which is the yardstick and is never edited. A cursor initialised from a
+**baked** offset instead is declined and reported: `McdAggregate`'s two are, and they need
+their base typed first.
+
+⚠ **NO `#if` HERE, UNLIKE `fix_block_copy`, AND THE DIFFERENCE IS THE LESSON.**
+`((PElementNode *)p)->next` **is** `p[1]` at i386 — same address, same four-byte access — so
+one spelling serves both widths. Measured, not assumed: the repair reproduces the baseline
+object exactly.
+
+### `fix_block_copy.py` — a whole-struct copy rendered as a word loop
+
+```bash
+python3 tools/fix_block_copy.py /tmp/kd_lp64/allobj /tmp/kd_build $MT
+#   -> fix_block_copy: 15 repaired, 1 already correct, 0 declined
+```
+
+`rep movsd` is how a 32-bit compiler copies a struct, and Ghidra renders it as a loop that
+walks one field at a time and counts in **words**, with the cursor stepped by
+`p = (T *)&p->secondField` — four bytes at i386, **eight** at LP64, while the literal trip
+count stays put. `dummyModel = *p->model1;` becomes a loop that copies 240 bytes into a
+208-byte struct.
+
+| type | n | step 32/64 | sizeof 32/64 | n·step64 | |
+|---|---|---|---|---|---|
+| `McdModel` | 30 | 4 / 8 | 120 / 208 | 240 | overrun |
+| `McdGeometryInstance` | 13 | 4 / 8 | 52 / 80 | 104 | overrun |
+| `MdtKeaDebugDataRequest` | 11 | 4 / 8 | 44 / 80 | 88 | overrun |
+| `MdtKeaParameters` | 19 | 4 / 4 | 76 / 128 | 76 | **short copy** |
+| `MeXMLHandler` | 8 | 4 / 8 | 32 / 48 | 64 | overrun |
+| `MdtBclContactParams` | 18 | 4 / 4 | 72 / 72 | 72 | **already correct** |
+
+⚠ **THE LAST ROW IS WHY THIS PASS MEASURES INSTEAD OF MATCHING.** `MdtBclContactParams` holds
+no pointers, so its size and step are the same at both widths and the loop is already right.
+It matches the pattern perfectly and must be left alone.
+
+★ **FRAME (1) FROM RUNNING THE GAME.** SIGSEGV in `__strcmp_avx2` under `MeXMLElementProcess`
+from `Handle_GeometryPrimitive_1_0` — a `strcmp` against a NULL `name`, because the handler
+table being searched was built by one of these loops and never held its `MeXMLActionEnd`
+sentinel.
+
+**TWO SHAPES.** Both ends real memory → one struct assignment. Source `&PTR_s_RADIUS_...` →
+**not a copy at all**: that is `kd_relsec_rodata[]`, *one slot per original 4-byte word*, so at
+LP64 the source has **eight slots per handler** and the destination **six words**. Only a
+field-by-field read is correct — word *j* of element *i* is `slot[i*W + j]` — and it requires
+every field of the struct to be exactly 4 bytes at i386, which the pass verifies from the type
+database rather than assuming.
+
+★ **WHY THE REPAIR IS GUARDED.** The single-spelling repair every other pass uses was tried
+first and **measured**: the per-field expansion compiles to a different i386 object
+(22800 → 22824 bytes), and no one spelling can serve both widths here. So the i386 text is kept
+**verbatim** under `#if __SIZEOF_POINTER__ == 4`. That is a proof rather than a concession —
+the preprocessor deletes the new branch on every 4-byte-pointer target, so the shipped 32-bit
+object is byte-identical by construction and **so is wasm32**, where `__SIZEOF_POINTER__` is
+also 4. Verified at **146/146 byte-identical**, not argued.
 
 ### `fix_align_masks.py` — an alignment mask frozen at 32 bits
 

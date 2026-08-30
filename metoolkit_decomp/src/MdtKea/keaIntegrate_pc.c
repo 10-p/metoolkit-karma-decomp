@@ -203,11 +203,15 @@ void kd_MdtKeaIntegrateSystem
   pMVar2 = &parameters;
   pMVar3 = (MeReal *)&in_stack_ffffffa0;
                     
+#if __SIZEOF_POINTER__ == 4
   for (iVar1 = 0x13; iVar1 != 0; iVar1 = iVar1 + -1) {
     *pMVar3 = pMVar2->stepsize;
     pMVar2 = (MdtKeaParameters *)&pMVar2->epsilon;
     pMVar3 = pMVar3 + 1;
   }
+#else
+    *(MdtKeaParameters *)((MeReal *)&in_stack_ffffffa0) = *(MdtKeaParameters *)(&parameters);
+#endif
   kd_KeaIntegrateSystem_vanilla(blist,tlist,num_bodies,in_stack_ffffffa0);
   return;
 }

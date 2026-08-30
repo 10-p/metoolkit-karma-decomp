@@ -626,11 +626,15 @@ int kd_McdAggregateGenericIntersect(McdModelPairID p,McdIntersectResult *result)
   dummyResult.pair = &dummyPair;
   pMVar16 = p->model1;
   pMVar18 = &dummyModel;
+#if __SIZEOF_POINTER__ == 4
   for (iVar12 = 0x1e; iVar12 != 0; iVar12 = iVar12 + -1) {
     pMVar18->frame = pMVar16->frame;
     pMVar16 = (McdModelID)&pMVar16->prev;
     pMVar18 = (McdModel *)&pMVar18->prev;
   }
+#else
+    *(McdModelID)(&dummyModel) = *(McdModelID)(p->model1);
+#endif
   dummyPair.model2 = p->model2;
   dummyPair.request = p->request;
   pvVar10 = McdModelGetGeometryInstance(dummyPair.model2);
@@ -651,11 +655,15 @@ int kd_McdAggregateGenericIntersect(McdModelPairID p,McdIntersectResult *result)
         else {
           puVar17 = puVar15;
           pMVar19 = &dummyModel.mInstance;
+#if __SIZEOF_POINTER__ == 4
           for (iVar12 = 0xd; iVar12 != 0; iVar12 = iVar12 + -1) {
             pMVar19->mGeometry = (McdGeometry *)*puVar17;
             puVar17 = puVar17 + 1;
             pMVar19 = (McdGeometryInstance *)&pMVar19->mTM;
           }
+#else
+            *(McdGeometryInstance *)(&dummyModel.mInstance) = *(McdGeometryInstance *)(puVar15);
+#endif
           if (dummyModel.mInstance.mTM == (MeMatrix4Ptr)0x0) {
                     
             paMVar11 = elementTM;
@@ -790,11 +798,15 @@ int kd_IxAggregateLineSegment
   overlap->distance = 3.4028235e+38;
   pMVar13 = model;
   pMVar15 = &dummyModel;
+#if __SIZEOF_POINTER__ == 4
   for (iVar10 = 0x1e; iVar10 != 0; iVar10 = iVar10 + -1) {
     pMVar15->frame = pMVar13->frame;
     pMVar13 = (McdModelID)&pMVar13->prev;
     pMVar15 = (McdModel *)&pMVar15->prev;
   }
+#else
+    *(McdModelID)(&dummyModel) = *(McdModelID)(model);
+#endif
   i = 0;
   puVar12 = *(undefined4 **)((kd_iptr)pvVar7 + 0x30);
   iVar10 = *(int *)((kd_iptr)pvVar6 + ((int)((char *)&((McdAggregate *)0)->elementCountMax - (char *)0)));
@@ -804,11 +816,15 @@ int kd_IxAggregateLineSegment
       if (*(int *)(*(int *)((kd_iptr)pvVar6 + ((int)((char *)&((McdAggregate *)0)->elementTable - (char *)0))) + 0x40 + local_10c) != 0) {
         puVar14 = puVar12;
         pMVar16 = &dummyModel.mInstance;
+#if __SIZEOF_POINTER__ == 4
         for (iVar10 = 0xd; iVar10 != 0; iVar10 = iVar10 + -1) {
           pMVar16->mGeometry = (McdGeometry *)*puVar14;
           puVar14 = puVar14 + 1;
           pMVar16 = (McdGeometryInstance *)&pMVar16->mTM;
         }
+#else
+          *(McdGeometryInstance *)(&dummyModel.mInstance) = *(McdGeometryInstance *)(puVar12);
+#endif
         if (dummyModel.mInstance.mTM == (MeMatrix4Ptr)0x0) {
           dummyModel.mInstance.mTM = elementTM;
           pfVar5 = *(float **)((kd_iptr)pvVar7 + 4);

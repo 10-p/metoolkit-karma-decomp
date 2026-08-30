@@ -135,11 +135,24 @@ MeBool kd_MeAssetDBXMLInputRead(MeAssetDBXMLInput *i,MeStream stream)
   ppuVar7 = &PTR_s_KARMA_000104d4;
   pMVar8 = handlers;
                     
+#if __SIZEOF_POINTER__ == 4
   for (iVar6 = 0x10; iVar6 != 0; iVar6 = iVar6 + -1) {
     pMVar8->name = *ppuVar7;
     ppuVar7 = ppuVar7 + 1;
     pMVar8 = (MeXMLHandler *)&pMVar8->type;
   }
+#else
+    { int kd_e; for (kd_e = 0; kd_e < 2; kd_e++) {
+      ((MeXMLHandler *)(handlers))[kd_e].name = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].name))(kd_uptr)((void *const *)(&PTR_s_KARMA_000104d4))[kd_e * 8 + 0];
+      ((MeXMLHandler *)(handlers))[kd_e].type = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].type))(kd_uptr)((void *const *)(&PTR_s_KARMA_000104d4))[kd_e * 8 + 1];
+      ((MeXMLHandler *)(handlers))[kd_e].fn = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].fn))(kd_uptr)((void *const *)(&PTR_s_KARMA_000104d4))[kd_e * 8 + 2];
+      ((MeXMLHandler *)(handlers))[kd_e].offset = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].offset))(kd_uptr)((void *const *)(&PTR_s_KARMA_000104d4))[kd_e * 8 + 3];
+      ((MeXMLHandler *)(handlers))[kd_e].max = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].max))(kd_uptr)((void *const *)(&PTR_s_KARMA_000104d4))[kd_e * 8 + 4];
+      ((MeXMLHandler *)(handlers))[kd_e].maxstr = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].maxstr))(kd_uptr)((void *const *)(&PTR_s_KARMA_000104d4))[kd_e * 8 + 5];
+      ((MeXMLHandler *)(handlers))[kd_e].called = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].called))(kd_uptr)((void *const *)(&PTR_s_KARMA_000104d4))[kd_e * 8 + 6];
+      ((MeXMLHandler *)(handlers))[kd_e].cb = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].cb))(kd_uptr)((void *const *)(&PTR_s_KARMA_000104d4))[kd_e * 8 + 7];
+    } }
+#endif
   pvVar2 = PElementCreate(0,&DAT_0001047e,(void *)0x0,(void *)0x0,(void *)0x0);
   MVar3 = 0;
   if ((i != (MeAssetDBXMLInput *)0x0) && (MVar3 = 0, stream != (MeStream)0x0)) {
@@ -150,9 +163,9 @@ MeBool kd_MeAssetDBXMLInputRead(MeAssetDBXMLInput *i,MeStream stream)
       MeXMLInputDestroy(pvVar4);
                     
       for (puVar1 = *(undefined4 **)((kd_iptr)pvVar2 + ((int)((char *)&((struct PElement *)0)->childHead - (char *)0))); puVar1 != (undefined4 *)0x0;
-          puVar1 = (undefined4 *)puVar1[1]) {
+          puVar1 = (undefined4 *)((PElementNode *)puVar1)->next) {
                     
-        pMVar5 = (*MeFAssetCreateFunc[0])(i->db,i->IDPool,(PElement *)*puVar1);
+        pMVar5 = (*MeFAssetCreateFunc[0])(i->db,i->IDPool,(PElement *)((PElementNode *)puVar1)->current);
         MeAssetDBInsertAsset(i->db,pMVar5);
       }
       PElementTraverseAll(pvVar2,PElementDestroyChildren,0,(void *)0x0);
@@ -187,11 +200,24 @@ MeFAsset * kd_MeAssetDBXMLInputReadFirst(MeAssetDBXMLInput *i,MeStream stream)
   ppuVar5 = &PTR_s_KARMA_00010514;
   pMVar6 = handlers;
                     
+#if __SIZEOF_POINTER__ == 4
   for (iVar4 = 0x10; iVar4 != 0; iVar4 = iVar4 + -1) {
     pMVar6->name = *ppuVar5;
     ppuVar5 = ppuVar5 + 1;
     pMVar6 = (MeXMLHandler *)&pMVar6->type;
   }
+#else
+    { int kd_e; for (kd_e = 0; kd_e < 2; kd_e++) {
+      ((MeXMLHandler *)(handlers))[kd_e].name = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].name))(kd_uptr)((void *const *)(&PTR_s_KARMA_00010514))[kd_e * 8 + 0];
+      ((MeXMLHandler *)(handlers))[kd_e].type = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].type))(kd_uptr)((void *const *)(&PTR_s_KARMA_00010514))[kd_e * 8 + 1];
+      ((MeXMLHandler *)(handlers))[kd_e].fn = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].fn))(kd_uptr)((void *const *)(&PTR_s_KARMA_00010514))[kd_e * 8 + 2];
+      ((MeXMLHandler *)(handlers))[kd_e].offset = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].offset))(kd_uptr)((void *const *)(&PTR_s_KARMA_00010514))[kd_e * 8 + 3];
+      ((MeXMLHandler *)(handlers))[kd_e].max = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].max))(kd_uptr)((void *const *)(&PTR_s_KARMA_00010514))[kd_e * 8 + 4];
+      ((MeXMLHandler *)(handlers))[kd_e].maxstr = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].maxstr))(kd_uptr)((void *const *)(&PTR_s_KARMA_00010514))[kd_e * 8 + 5];
+      ((MeXMLHandler *)(handlers))[kd_e].called = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].called))(kd_uptr)((void *const *)(&PTR_s_KARMA_00010514))[kd_e * 8 + 6];
+      ((MeXMLHandler *)(handlers))[kd_e].cb = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].cb))(kd_uptr)((void *const *)(&PTR_s_KARMA_00010514))[kd_e * 8 + 7];
+    } }
+#endif
   pvVar1 = PElementCreate(0,&DAT_0001047e,(void *)0x0,(void *)0x0,(void *)0x0);
   pMVar3 = (MeFAsset *)0x0;
   if ((i != (MeAssetDBXMLInput *)0x0) && (pMVar3 = (MeFAsset *)0x0, stream != (MeStream)0x0)) {

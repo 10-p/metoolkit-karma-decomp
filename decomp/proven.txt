@@ -1,3 +1,110 @@
+# LP64-RUNS-THE-GAME  2026-08-30  ⚠ THE OFFLINE SCENES WERE NEVER GOING TO FIND
+#                     THESE. `LP64-CLOSED` below is still true — all three scenes
+#                     are byte-identical at both widths — and UT2004 still died at
+#                     64-bit on the first frame it drew. The x86-64 LINUX vehicle
+#                     (`-DUT_ALLOW_64BIT=ON`) is what closed the gap: same data
+#                     model as Android, with gdb, and WITHOUT the engine's own
+#                     SA_RESETHAND handler eating the tombstone.
+#
+#                     ⚠ AND THE OPTION DID NOT DO WHAT IT SAID. `UT_ALLOW_64BIT`
+#                     skipped the -m32 demotion block and then FOUR other places
+#                     put -m32 back — a bare `add_compile_options(-m32)`, the exe
+#                     link options in SDLLaunch and UCC, and a `CACHE ... FORCE`
+#                     for gl4es that rewrote CMAKE_C_FLAGS for the whole project.
+#                     The build announced "Pointer width: 8 bytes" and emitted
+#                     `ELF 32-bit LSB relocatable, Intel i386`. Everything below
+#                     was measured only after `file` said x86-64.
+#
+#                     THREE FRAMES, EACH FOUND BY RUNNING THE GAME:
+#
+#                     (1) SIGSEGV in __strcmp_avx2 under MeXMLElementProcess, from
+#                         Handle_GeometryPrimitive_1_0 — a strcmp against a NULL
+#                         `name`. The handler table it was searching had been built
+#                         by a word loop and never held its MeXMLActionEnd sentinel.
+#                         -> LP64-BLOCK-COPY, fixed.
+#                     (2) SIGSEGV in KaFileCreate_1_0 with `e = 0x58cabf90` beside
+#                         `parent = 0x555558ce4030`. Every pointer in that process
+#                         is 0x5555_5xxxxxxx, so a 32-bit `e` is a MEASUREMENT of
+#                         where the top half went. -> LP64-LIST-WALK, fixed.
+#                     (3) SIGSEGV in McdAggregateCreate at
+#                         `*(undefined4 *)(pMVar1[1].mRefCtAndID + 0x40 + iVar5)`.
+#                         ⚠ NOT NEW: `fix_index_layout` ALREADY REPORTS THIS SITE
+#                         BY NAME, nine times — "geom[1].next -> elementCountMax,
+#                         i386 24, LP64 44 (the index said 48)". It declines
+#                         because the index does not land on the field, which is
+#                         the frame test doing its job. STILL OPEN.
+#
+#                     ★ THE ORDER MATTERS AND IS THE POINT. Each fix bought the
+#                     next frame; none of them was reachable from the one before.
+#                     Boot went XML-parse -> asset-DB built -> UGameEngine::LoadMap
+#                     with per-actor collision. The remaining defect is in map
+#                     load, not in start-up.
+#
+# LP64-BLOCK-COPY  2026-08-30  A WHOLE-STRUCT COPY GHIDRA RENDERED AS A WORD LOOP.
+#                     `rep movsd` decompiles to a loop that walks ONE FIELD AT A
+#                     TIME and counts in WORDS, with the cursor advanced by
+#                     `p = (T *)&p->secondField` — four bytes at i386, EIGHT at
+#                     LP64, while the literal trip count stays put.
+#
+#                     MEASURED PER SITE, and the last row is why the pass measures
+#                     instead of matching:
+#                       type                    n  step32/64  sizeof32/64  n*step64
+#                       McdModel               30    4  8       120  208     240 over
+#                       McdGeometryInstance    13    4  8        52   80     104 over
+#                       MdtKeaDebugDataRequest 11    4  8        44   80      88 over
+#                       MdtKeaParameters       19    4  4        76  128      76 SHORT
+#                       MeXMLHandler            8    4  8        32   48      64 over
+#                       MdtBclContactParams    18    4  4        72   72      72 CORRECT
+#                     MdtBclContactParams holds no pointers, so it matches the
+#                     pattern perfectly and MUST BE LEFT ALONE. The pass reports it
+#                     as "already correct" rather than repairing it.
+#
+#                     TWO SHAPES. Both ends real memory -> one struct assignment.
+#                     Source `&PTR_s_RADIUS_...` -> NOT a copy at all: that is
+#                     `kd_relsec_rodata[]`, ONE SLOT PER ORIGINAL 4-BYTE WORD, so
+#                     at LP64 the source has EIGHT slots per handler and the
+#                     destination SIX words. Only a field-by-field read is correct:
+#                     word j of element i is slot[i*W + j].
+#
+#                     ★ WHY IT IS GUARDED, AND WHY THAT IS THE STRONGER ANSWER.
+#                     The single-spelling repair every other pass uses was tried
+#                     FIRST AND MEASURED: the per-field expansion compiles to a
+#                     different i386 object (22800 -> 22824 bytes). No one spelling
+#                     can serve both widths here, because the two widths genuinely
+#                     need different numbers of words per element. So the i386 text
+#                     is kept VERBATIM under `#if __SIZEOF_POINTER__ == 4`.
+#                     That is a proof, not a concession: __SIZEOF_POINTER__ IS 4 ON
+#                     wasm32, so THE WEB ARTIFACT CANNOT HAVE CHANGED — and it was
+#                     compiled and compared rather than argued, 146/146 identical.
+#
+#                     15 repaired, 1 already correct, 0 declined.
+#                     i386 acceptance 145 object(s), 0 compile failure(s),
+#                     0 byte difference(s); all three scenes still BIT-IDENTICAL;
+#                     lp64_pipeline.sh -> PASS; run-standalone 12/12.
+#
+# LP64-LIST-WALK  2026-08-30  A LINKED LIST WALKED THROUGH A FOUR-BYTE CURSOR.
+#                     `puVar1 = (undefined4 *)puVar1[1]` is right twice over at
+#                     i386 — PElementNode::next really is at byte 4 — and at LP64
+#                     `next` moves to byte 8, so `puVar1[1]` reads the TOP HALF of
+#                     `current` and calls it the next node, while `*puVar1` keeps
+#                     only the low 32 bits of a pointer. That is frame (2).
+#
+#                     THE NODE TYPE IS DECLARED, NOT INFERRED. The cursor is
+#                     initialised from a NAMED field and the ORACLE header says
+#                     what that field is: `PElementNode *childHead;`. The type
+#                     comes from metoolkit/include, which is never edited.
+#
+#                     ⚠ NO `#if` HERE, AND THE DIFFERENCE FROM LP64-BLOCK-COPY IS
+#                     THE WHOLE LESSON: `((PElementNode *)p)->next` IS `p[1]` at
+#                     i386 — same address, same four-byte access — so one spelling
+#                     does serve both widths. Reach for the guard only when a
+#                     measurement says no single spelling exists.
+#
+#                     1 repaired, 2 declined and reported by name: McdAggregate's
+#                     two cursors come from a BAKED offset (`+ 0x30`), not a named
+#                     field, so the node type cannot be derived and the site waits
+#                     on the base being typed first.
+#
 # LP64-CLOSED  2026-08-30  THE LP64 PORT IS DONE, AND "done" here means something
 #                     stronger than the gate that was in place could express: with the
 #                     ARITHMETIC HELD FIXED, two of the three scenes are BYTE-IDENTICAL at

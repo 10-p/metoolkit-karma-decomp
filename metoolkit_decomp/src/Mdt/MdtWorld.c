@@ -772,11 +772,15 @@ void kd_MdtWorldSetKeaDebugRequest(MdtWorldID w,MdtKeaDebugDataRequest debugData
   
   pMVar2 = &debugDataRequest;
   pMVar3 = &(w->keaParams).debug;
+#if __SIZEOF_POINTER__ == 4
   for (iVar1 = 0xb; iVar1 != 0; iVar1 = iVar1 + -1) {
     pMVar3->writeKeaInputData = pMVar2->writeKeaInputData;
     pMVar2 = (MdtKeaDebugDataRequest *)&pMVar2->writeKeaInputDataFilename;
     pMVar3 = (MdtKeaDebugDataRequest *)&pMVar3->writeKeaInputDataFilename;
   }
+#else
+    *(MdtKeaDebugDataRequest *)(&(w->keaParams).debug) = *(MdtKeaDebugDataRequest *)(&debugDataRequest);
+#endif
   return;
 }
 

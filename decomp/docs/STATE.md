@@ -12,7 +12,75 @@ read before resuming; `../HANDOVER.md` is the depth behind it and `../proven.txt
 
 ---
 
-★★★ **NEWEST: 2026-08-30 (last) — ALL THREE SCENES ARE BYTE-IDENTICAL AT i386 AND LP64.**
+★★★ **NEWEST: 2026-08-30 (later still) — THE GAME RUNS AT 64-BIT FURTHER THAN IT EVER HAS,
+AND THE OFFLINE SCENES WERE NEVER GOING TO GET IT THERE.** The entry below is still true —
+all three scenes are byte-identical at both widths — and UT2004 still died at 64-bit before
+its first frame. Three crashes, each found by RUNNING the game, two of them fixed here.
+
+⚠ **FIRST, THE VEHICLE DID NOT DO WHAT IT SAID.** `-DUT_ALLOW_64BIT=ON` skips the `-m32`
+demotion block, and then **four other places in `engine-ut2004` put `-m32` straight back**: a
+bare `add_compile_options(-m32)`, the exe link options in `SDLLaunch` and `UCC`, and — the
+worst of them — a `set(CMAKE_C_FLAGS "... -m32" CACHE STRING "" FORCE)` for gl4es that
+rewrote the flags **for the whole project**, taking zlib, ogg, vorbis and Speex with it. The
+configure printed `Pointer width: 8 bytes` while `file` said `ELF 32-bit LSB relocatable,
+Intel i386`. All four are now gated on `UT_PTR_BYTES`, which is the variable that already
+existed to be the width the build actually produces.
+
+Two more, found on the way and both real:
+
+| | |
+|---|---|
+| SDL2's i386 X11 forcing | a documented `-m32` cross-compile workaround, applied unconditionally. At 64-bit the probes link x86-64 objects against i386 libs, every check fails silently, `SDL_VIDEO_DRIVER_X11_SUPPORTS_GENERIC_EVENTS` goes undefined, and SDL emits a fallback `XGenericEventCookie` that collides with the real Xlib one — 6 TUs, 10 hard errors. It is the **mirror image** of the bug the demotion block's own comment warns about |
+| `USE_PIXOMATIC=ON` | **impossible at 64-bit and now says so at configure time.** `pixomatic_linux.a` is a prebuilt i386 archive with no source — the same shape of problem Karma itself was. It failed at the last link step after a full 200-TU build |
+
+**THE THREE FRAMES.** Each fix bought the next one; none was reachable from the one before.
+
+```
+(1) __strcmp_avx2  <- MeXMLElementProcess <- Handle_GeometryPrimitive_1_0
+    strcmp against a NULL name: the handler table never held its sentinel   -> FIXED
+(2) KaFileCreate_1_0, e = 0x58cabf90 beside parent = 0x555558ce4030
+    every pointer here is 0x5555_5xxxxxxx, so that is a measured truncation -> FIXED
+(3) McdAggregateCreate  *(undefined4 *)(pMVar1[1].mRefCtAndID + 0x40 + iVar5)
+    ⚠ NOT NEW — fix_index_layout already reports it BY NAME, nine times      -> OPEN
+```
+
+Boot moved from *XML parse* to *asset DB built* to **`UGameEngine::LoadMap` doing per-actor
+collision**. The remaining defect is in map load, not in start-up.
+
+**WHAT LANDED.**
+
+| | |
+|---|---|
+| `tools/fix_block_copy.py` | NEW. A whole-struct copy Ghidra rendered as a word loop — `rep movsd` walked one field at a time with the cursor stepped by `&p->secondField`, 4 bytes here and 8 there. **15 repaired, 1 already correct, 0 declined** |
+| `tools/fix_list_walk.py` | NEW. A linked list walked through `undefined4 *`, so the link is read at byte 4 when LP64 put it at 8. The node type is **declared, not inferred** — read out of the oracle header. **1 repaired, 2 declined by name** |
+
+⚠ **`MdtBclContactParams` MATCHES THE PATTERN PERFECTLY AND MUST BE LEFT ALONE.** It holds no
+pointers, so its size and step are the same at both widths and the loop is already right.
+That one row is why the pass measures every site instead of trusting the shape.
+
+★ **THE GUARD, AND WHY IT IS A PROOF RATHER THAN A CONCESSION.** `fix_block_copy` is the
+first pass in this chain that does **not** re-spell arithmetic into one width-correct
+expression. That was tried first and **measured**: the per-field expansion compiles to a
+different i386 object (22800 → 22824 bytes), and no single spelling can work, because at LP64
+the rodata template has **eight slots per handler** while the destination has **six words**.
+So the i386 text is kept verbatim under `#if __SIZEOF_POINTER__ == 4`. `__SIZEOF_POINTER__`
+is 4 on **wasm32** too, so the web artifact cannot have changed — and that was compiled and
+compared, not argued: **146/146 byte-identical**. `fix_list_walk` needs no guard, and the
+difference is the lesson: `((PElementNode *)p)->next` *is* `p[1]` at i386. Reach for a guard
+only when a measurement says no single spelling exists.
+
+```
+i386 acceptance   145 object(s), 0 compile failure(s), 0 byte difference(s)
+-ffloat-store     chain · boxes · ragdoll — ALL THREE STILL BIT-IDENTICAL, 901 rows each
+wasm32            146 source(s), 0 compile failure(s), 0 byte difference(s)
+lp64_pipeline.sh  -> PASS      run-standalone  12 passed, 0 failed
+```
+
+Evidence: `../proven.txt` `LP64-RUNS-THE-GAME`, `LP64-BLOCK-COPY`, `LP64-LIST-WALK`.
+
+---
+
+★★★ **PREVIOUS: 2026-08-30 (last) — ALL THREE SCENES ARE BYTE-IDENTICAL AT i386 AND LP64.**
 `LP64-CONTACT-ORDER` closed the same day it was filed, and the gate's one-scene allowlist went
 with it.
 

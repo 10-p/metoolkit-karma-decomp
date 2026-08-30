@@ -1538,11 +1538,24 @@ MeXMLError kd_Handle_KaFile_0_1(MeXMLElement *elem,PElement *parent)
   
   ppuVar3 = &PTR_s_ASSET_000124fc;
   pMVar4 = handlers;
+#if __SIZEOF_POINTER__ == 4
   for (iVar2 = 0x10; iVar2 != 0; iVar2 = iVar2 + -1) {
     pMVar4->name = *ppuVar3;
     ppuVar3 = ppuVar3 + 1;
     pMVar4 = (MeXMLHandler *)&pMVar4->type;
   }
+#else
+    { int kd_e; for (kd_e = 0; kd_e < 2; kd_e++) {
+      ((MeXMLHandler *)(handlers))[kd_e].name = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].name))(kd_uptr)((void *const *)(&PTR_s_ASSET_000124fc))[kd_e * 8 + 0];
+      ((MeXMLHandler *)(handlers))[kd_e].type = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].type))(kd_uptr)((void *const *)(&PTR_s_ASSET_000124fc))[kd_e * 8 + 1];
+      ((MeXMLHandler *)(handlers))[kd_e].fn = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].fn))(kd_uptr)((void *const *)(&PTR_s_ASSET_000124fc))[kd_e * 8 + 2];
+      ((MeXMLHandler *)(handlers))[kd_e].offset = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].offset))(kd_uptr)((void *const *)(&PTR_s_ASSET_000124fc))[kd_e * 8 + 3];
+      ((MeXMLHandler *)(handlers))[kd_e].max = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].max))(kd_uptr)((void *const *)(&PTR_s_ASSET_000124fc))[kd_e * 8 + 4];
+      ((MeXMLHandler *)(handlers))[kd_e].maxstr = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].maxstr))(kd_uptr)((void *const *)(&PTR_s_ASSET_000124fc))[kd_e * 8 + 5];
+      ((MeXMLHandler *)(handlers))[kd_e].called = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].called))(kd_uptr)((void *const *)(&PTR_s_ASSET_000124fc))[kd_e * 8 + 6];
+      ((MeXMLHandler *)(handlers))[kd_e].cb = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].cb))(kd_uptr)((void *const *)(&PTR_s_ASSET_000124fc))[kd_e * 8 + 7];
+    } }
+#endif
   MVar1 = MeXMLElementProcess(elem,handlers,(void *)0x0,parent);
   return MVar1;
 }
@@ -1586,11 +1599,24 @@ static MeXMLError Handle_GeometryPrimitive_1_0(MeXMLElement *elem,PElement *pare
   ppuVar5 = &PTR_s_RADIUS_00011b1c;
   pMVar6 = handlers;
                     
+#if __SIZEOF_POINTER__ == 4
   for (iVar4 = 0x30; iVar4 != 0; iVar4 = iVar4 + -1) {
     pMVar6->name = *ppuVar5;
     ppuVar5 = ppuVar5 + 1;
     pMVar6 = (MeXMLHandler *)&pMVar6->type;
   }
+#else
+    { int kd_e; for (kd_e = 0; kd_e < 6; kd_e++) {
+      ((MeXMLHandler *)(handlers))[kd_e].name = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].name))(kd_uptr)((void *const *)(&PTR_s_RADIUS_00011b1c))[kd_e * 8 + 0];
+      ((MeXMLHandler *)(handlers))[kd_e].type = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].type))(kd_uptr)((void *const *)(&PTR_s_RADIUS_00011b1c))[kd_e * 8 + 1];
+      ((MeXMLHandler *)(handlers))[kd_e].fn = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].fn))(kd_uptr)((void *const *)(&PTR_s_RADIUS_00011b1c))[kd_e * 8 + 2];
+      ((MeXMLHandler *)(handlers))[kd_e].offset = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].offset))(kd_uptr)((void *const *)(&PTR_s_RADIUS_00011b1c))[kd_e * 8 + 3];
+      ((MeXMLHandler *)(handlers))[kd_e].max = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].max))(kd_uptr)((void *const *)(&PTR_s_RADIUS_00011b1c))[kd_e * 8 + 4];
+      ((MeXMLHandler *)(handlers))[kd_e].maxstr = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].maxstr))(kd_uptr)((void *const *)(&PTR_s_RADIUS_00011b1c))[kd_e * 8 + 5];
+      ((MeXMLHandler *)(handlers))[kd_e].called = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].called))(kd_uptr)((void *const *)(&PTR_s_RADIUS_00011b1c))[kd_e * 8 + 6];
+      ((MeXMLHandler *)(handlers))[kd_e].cb = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].cb))(kd_uptr)((void *const *)(&PTR_s_RADIUS_00011b1c))[kd_e * 8 + 7];
+    } }
+#endif
   pvVar1 = (MeMemoryAPI.createZeroed)(100);
   *(undefined4 *)((kd_iptr)pvVar1 + 0xc) = 0;
   *(undefined4 *)((kd_iptr)pvVar1 + 0x14) = 1;
@@ -1616,11 +1642,24 @@ static MeXMLError Handle_Geometry_1_0(MeXMLElement *elem,PElement *parent)
   ppuVar4 = &PTR_s_PRIMITIVE_00011bdc;
   pMVar5 = handlers;
                     
+#if __SIZEOF_POINTER__ == 4
   for (iVar3 = 0x10; iVar3 != 0; iVar3 = iVar3 + -1) {
     pMVar5->name = *ppuVar4;
     ppuVar4 = ppuVar4 + 1;
     pMVar5 = (MeXMLHandler *)&pMVar5->type;
   }
+#else
+    { int kd_e; for (kd_e = 0; kd_e < 2; kd_e++) {
+      ((MeXMLHandler *)(handlers))[kd_e].name = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].name))(kd_uptr)((void *const *)(&PTR_s_PRIMITIVE_00011bdc))[kd_e * 8 + 0];
+      ((MeXMLHandler *)(handlers))[kd_e].type = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].type))(kd_uptr)((void *const *)(&PTR_s_PRIMITIVE_00011bdc))[kd_e * 8 + 1];
+      ((MeXMLHandler *)(handlers))[kd_e].fn = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].fn))(kd_uptr)((void *const *)(&PTR_s_PRIMITIVE_00011bdc))[kd_e * 8 + 2];
+      ((MeXMLHandler *)(handlers))[kd_e].offset = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].offset))(kd_uptr)((void *const *)(&PTR_s_PRIMITIVE_00011bdc))[kd_e * 8 + 3];
+      ((MeXMLHandler *)(handlers))[kd_e].max = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].max))(kd_uptr)((void *const *)(&PTR_s_PRIMITIVE_00011bdc))[kd_e * 8 + 4];
+      ((MeXMLHandler *)(handlers))[kd_e].maxstr = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].maxstr))(kd_uptr)((void *const *)(&PTR_s_PRIMITIVE_00011bdc))[kd_e * 8 + 5];
+      ((MeXMLHandler *)(handlers))[kd_e].called = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].called))(kd_uptr)((void *const *)(&PTR_s_PRIMITIVE_00011bdc))[kd_e * 8 + 6];
+      ((MeXMLHandler *)(handlers))[kd_e].cb = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].cb))(kd_uptr)((void *const *)(&PTR_s_PRIMITIVE_00011bdc))[kd_e * 8 + 7];
+    } }
+#endif
   pvVar1 = PElementCreate(1,elem,(void *)0x0,(void *)0x0,elem->attr);
   PElementInsert(pvVar1,parent);
   MVar2 = MeXMLElementProcess(elem,handlers,(void *)0x0,pvVar1);
@@ -1642,11 +1681,24 @@ static MeXMLError Handle_Dynamics_1_0(MeXMLElement *elem,PElement *parent)
   ppuVar5 = &PTR_s_MASS_OFFSET_00011c1c;
   pMVar6 = handlers;
                     
+#if __SIZEOF_POINTER__ == 4
   for (iVar4 = 0x48; iVar4 != 0; iVar4 = iVar4 + -1) {
     pMVar6->name = *ppuVar5;
     ppuVar5 = ppuVar5 + 1;
     pMVar6 = (MeXMLHandler *)&pMVar6->type;
   }
+#else
+    { int kd_e; for (kd_e = 0; kd_e < 9; kd_e++) {
+      ((MeXMLHandler *)(handlers))[kd_e].name = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].name))(kd_uptr)((void *const *)(&PTR_s_MASS_OFFSET_00011c1c))[kd_e * 8 + 0];
+      ((MeXMLHandler *)(handlers))[kd_e].type = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].type))(kd_uptr)((void *const *)(&PTR_s_MASS_OFFSET_00011c1c))[kd_e * 8 + 1];
+      ((MeXMLHandler *)(handlers))[kd_e].fn = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].fn))(kd_uptr)((void *const *)(&PTR_s_MASS_OFFSET_00011c1c))[kd_e * 8 + 2];
+      ((MeXMLHandler *)(handlers))[kd_e].offset = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].offset))(kd_uptr)((void *const *)(&PTR_s_MASS_OFFSET_00011c1c))[kd_e * 8 + 3];
+      ((MeXMLHandler *)(handlers))[kd_e].max = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].max))(kd_uptr)((void *const *)(&PTR_s_MASS_OFFSET_00011c1c))[kd_e * 8 + 4];
+      ((MeXMLHandler *)(handlers))[kd_e].maxstr = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].maxstr))(kd_uptr)((void *const *)(&PTR_s_MASS_OFFSET_00011c1c))[kd_e * 8 + 5];
+      ((MeXMLHandler *)(handlers))[kd_e].called = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].called))(kd_uptr)((void *const *)(&PTR_s_MASS_OFFSET_00011c1c))[kd_e * 8 + 6];
+      ((MeXMLHandler *)(handlers))[kd_e].cb = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].cb))(kd_uptr)((void *const *)(&PTR_s_MASS_OFFSET_00011c1c))[kd_e * 8 + 7];
+    } }
+#endif
   pvVar1 = (MeMemoryAPI.createZeroed)(0x44);
   pvVar2 = PElementCreate(4,elem,pvVar1,MeMemoryAPI.destroy,elem->attr);
   PElementInsert(pvVar2,parent);
@@ -1679,11 +1731,24 @@ static MeXMLError Handle_Model_1_0(MeXMLElement *elem,PElement *parent)
   ppuVar4 = &PTR_s_DYNAMICS_00011d3c;
   pMVar5 = handlers;
                     
+#if __SIZEOF_POINTER__ == 4
   for (iVar3 = 0x10; iVar3 != 0; iVar3 = iVar3 + -1) {
     pMVar5->name = *ppuVar4;
     ppuVar4 = ppuVar4 + 1;
     pMVar5 = (MeXMLHandler *)&pMVar5->type;
   }
+#else
+    { int kd_e; for (kd_e = 0; kd_e < 2; kd_e++) {
+      ((MeXMLHandler *)(handlers))[kd_e].name = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].name))(kd_uptr)((void *const *)(&PTR_s_DYNAMICS_00011d3c))[kd_e * 8 + 0];
+      ((MeXMLHandler *)(handlers))[kd_e].type = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].type))(kd_uptr)((void *const *)(&PTR_s_DYNAMICS_00011d3c))[kd_e * 8 + 1];
+      ((MeXMLHandler *)(handlers))[kd_e].fn = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].fn))(kd_uptr)((void *const *)(&PTR_s_DYNAMICS_00011d3c))[kd_e * 8 + 2];
+      ((MeXMLHandler *)(handlers))[kd_e].offset = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].offset))(kd_uptr)((void *const *)(&PTR_s_DYNAMICS_00011d3c))[kd_e * 8 + 3];
+      ((MeXMLHandler *)(handlers))[kd_e].max = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].max))(kd_uptr)((void *const *)(&PTR_s_DYNAMICS_00011d3c))[kd_e * 8 + 4];
+      ((MeXMLHandler *)(handlers))[kd_e].maxstr = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].maxstr))(kd_uptr)((void *const *)(&PTR_s_DYNAMICS_00011d3c))[kd_e * 8 + 5];
+      ((MeXMLHandler *)(handlers))[kd_e].called = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].called))(kd_uptr)((void *const *)(&PTR_s_DYNAMICS_00011d3c))[kd_e * 8 + 6];
+      ((MeXMLHandler *)(handlers))[kd_e].cb = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].cb))(kd_uptr)((void *const *)(&PTR_s_DYNAMICS_00011d3c))[kd_e * 8 + 7];
+    } }
+#endif
   pvVar1 = PElementCreate(3,elem,(void *)0x0,(void *)0x0,elem->attr);
   PElementInsert(pvVar1,parent);
   MVar2 = MeXMLElementProcess(elem,handlers,(void *)0x0,pvVar1);
@@ -1705,11 +1770,24 @@ static MeXMLError Handle_Joint_1_0(MeXMLElement *elem,PElement *parent)
   ppuVar5 = &PTR_DAT_00011d7c;
   pMVar6 = handlers;
                     
+#if __SIZEOF_POINTER__ == 4
   for (iVar4 = 0x1d0; iVar4 != 0; iVar4 = iVar4 + -1) {
     pMVar6->name = *ppuVar5;
     ppuVar5 = ppuVar5 + 1;
     pMVar6 = (MeXMLHandler *)&pMVar6->type;
   }
+#else
+    { int kd_e; for (kd_e = 0; kd_e < 58; kd_e++) {
+      ((MeXMLHandler *)(handlers))[kd_e].name = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].name))(kd_uptr)((void *const *)(&PTR_DAT_00011d7c))[kd_e * 8 + 0];
+      ((MeXMLHandler *)(handlers))[kd_e].type = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].type))(kd_uptr)((void *const *)(&PTR_DAT_00011d7c))[kd_e * 8 + 1];
+      ((MeXMLHandler *)(handlers))[kd_e].fn = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].fn))(kd_uptr)((void *const *)(&PTR_DAT_00011d7c))[kd_e * 8 + 2];
+      ((MeXMLHandler *)(handlers))[kd_e].offset = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].offset))(kd_uptr)((void *const *)(&PTR_DAT_00011d7c))[kd_e * 8 + 3];
+      ((MeXMLHandler *)(handlers))[kd_e].max = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].max))(kd_uptr)((void *const *)(&PTR_DAT_00011d7c))[kd_e * 8 + 4];
+      ((MeXMLHandler *)(handlers))[kd_e].maxstr = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].maxstr))(kd_uptr)((void *const *)(&PTR_DAT_00011d7c))[kd_e * 8 + 5];
+      ((MeXMLHandler *)(handlers))[kd_e].called = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].called))(kd_uptr)((void *const *)(&PTR_DAT_00011d7c))[kd_e * 8 + 6];
+      ((MeXMLHandler *)(handlers))[kd_e].cb = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].cb))(kd_uptr)((void *const *)(&PTR_DAT_00011d7c))[kd_e * 8 + 7];
+    } }
+#endif
   pvVar1 = (MeMemoryAPI.createZeroed)(0xbc);
   pvVar2 = PElementCreate(5,elem,pvVar1,MeMemoryAPI.destroy,elem->attr);
   PElementInsert(pvVar2,parent);
@@ -1732,11 +1810,24 @@ static MeXMLError Handle_AssetPart_1_0(MeXMLElement *elem,PElement *parent)
   ppuVar5 = &PTR_DAT_000124bc;
   pMVar6 = handlers;
                     
+#if __SIZEOF_POINTER__ == 4
   for (iVar4 = 0x10; iVar4 != 0; iVar4 = iVar4 + -1) {
     pMVar6->name = *ppuVar5;
     ppuVar5 = ppuVar5 + 1;
     pMVar6 = (MeXMLHandler *)&pMVar6->type;
   }
+#else
+    { int kd_e; for (kd_e = 0; kd_e < 2; kd_e++) {
+      ((MeXMLHandler *)(handlers))[kd_e].name = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].name))(kd_uptr)((void *const *)(&PTR_DAT_000124bc))[kd_e * 8 + 0];
+      ((MeXMLHandler *)(handlers))[kd_e].type = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].type))(kd_uptr)((void *const *)(&PTR_DAT_000124bc))[kd_e * 8 + 1];
+      ((MeXMLHandler *)(handlers))[kd_e].fn = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].fn))(kd_uptr)((void *const *)(&PTR_DAT_000124bc))[kd_e * 8 + 2];
+      ((MeXMLHandler *)(handlers))[kd_e].offset = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].offset))(kd_uptr)((void *const *)(&PTR_DAT_000124bc))[kd_e * 8 + 3];
+      ((MeXMLHandler *)(handlers))[kd_e].max = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].max))(kd_uptr)((void *const *)(&PTR_DAT_000124bc))[kd_e * 8 + 4];
+      ((MeXMLHandler *)(handlers))[kd_e].maxstr = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].maxstr))(kd_uptr)((void *const *)(&PTR_DAT_000124bc))[kd_e * 8 + 5];
+      ((MeXMLHandler *)(handlers))[kd_e].called = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].called))(kd_uptr)((void *const *)(&PTR_DAT_000124bc))[kd_e * 8 + 6];
+      ((MeXMLHandler *)(handlers))[kd_e].cb = (__typeof__(((MeXMLHandler *)(handlers))[kd_e].cb))(kd_uptr)((void *const *)(&PTR_DAT_000124bc))[kd_e * 8 + 7];
+    } }
+#endif
   pvVar1 = (MeMemoryAPI.createZeroed)(0x40);
   pvVar2 = PElementCreate(7,elem,pvVar1,MeMemoryAPI.destroy,elem->attr);
   PElementInsert(pvVar2,parent);

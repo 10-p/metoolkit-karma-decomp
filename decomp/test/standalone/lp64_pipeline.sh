@@ -65,6 +65,22 @@ python3 "$KD_ROOT/tools/fix_pool_reserve.py" "$DST/allobj" "$BUILD" "$MT" | head
 # triangle generator needs both.
 python3 "$KD_ROOT/tools/fix_narrow_loads.py" "$DST/allobj" "$BUILD" "$MT" | head -4 || exit 2
 
+# ---- AFTER the passes above, because it reads what they wrote: the cursor's
+# initialiser has to already be spelled as an offsetof against a NAMED field
+# (`fix_literal_offsets`/`fix_derived_fields`) and cast through `kd_iptr`
+# (`fix_ptrwidth`) before this one can tell which field a list head came from.
+# Before `fix_block_copy` because this repair is a plain re-spelling with no
+# preprocessor conditional in it.
+python3 "$KD_ROOT/tools/fix_list_walk.py" "$DST/allobj" "$BUILD" "$MT" | tail -4 || exit 2
+
+# ---- AFTER EVEN THAT ONE, and for a reason none of the others have: this pass
+# does not re-spell an expression, it puts the corrected body behind
+# `#if __SIZEOF_POINTER__ == 4` and leaves the i386 text VERBATIM. Every pass
+# above reads the sources as plain C; running this one earlier would hand them a
+# preprocessor conditional to parse and a second, hand-written copy of each
+# repaired loop to "repair" again. Last means nothing else has to know about it.
+python3 "$KD_ROOT/tools/fix_block_copy.py" "$DST/allobj" "$BUILD" "$MT" | tail -4 || exit 2
+
 # ---- THE DETECTOR THIS PASS COULD BLIND. check_frame_bounds reads CONSTANT
 # offsets and constant array bounds, and fix_frame_slots replaces both with
 # constant EXPRESSIONS. It has been taught the new spelling; running it here

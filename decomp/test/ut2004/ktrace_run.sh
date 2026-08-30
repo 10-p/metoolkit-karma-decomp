@@ -76,6 +76,27 @@ frames=$(grep -c '^F,' "$CSV")
 rows=$(grep -c '^B,' "$CSV")
 bodies=$(awk -F, '/^B,/{print $4"/"$5}' "$CSV" | sort -u | wc -l)
 echo "  frames: $frames   body-rows: $rows   distinct bodies: $bodies"
+
+# ★ SAY IT WHEN THE RUN FELL SHORT, because everything downstream compares the LAST frame of two
+# files and a short run therefore compares two different INSTANTS.
+#
+# Measured 2026-08-30: a legacy arm captured 94 frames and its candidate 35, same map, same
+# gametype, same requested KD_FRAMES. ktrace_score.py read that as "8 MISMATCH — bodies diverging
+# by up to 53 units". Truncated to matched frames it read MATCH 15/15. The whole difference was the
+# reference having fallen a further 59 frames.
+#
+# The scorer truncates for itself now, so this is not load-bearing — but a short run is still a
+# WEAKER measurement than the one you asked for, and it should not be silent. The usual cause is
+# not a crash: ULevel::Tick guards Karma with IsPaused(), so a match that pauses itself stops the
+# trace dead while the HUD — which ticks on the render path, outside that guard — keeps logging.
+# HUD output is not evidence the level is running.
+if [ "${FRAMES:-0}" -gt 0 ] && [ "$frames" -lt "$FRAMES" ]; then
+    pct=$(( frames * 100 / FRAMES ))
+    printf '  \033[33m⚠ SHORT RUN\033[0m — asked for %s frames, captured %s (%s%%).\n' \
+           "$FRAMES" "$frames" "$pct"
+    printf '    Compare only against another trace of the same length, or let\n'
+    printf '    ktrace_score.py truncate. A paused match, not a crash, is the usual cause.\n'
+fi
 # Contacts the ENGINE threw away before Karma ever saw them. A non-zero count here is a finding in
 # itself: KPerContactCB rejects a contact whose normal is not unit length, and a rejected contact is
 # a body with nothing holding it up.

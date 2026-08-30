@@ -97,9 +97,19 @@ timestep AND its substep count from `DeltaSeconds`, so two runs at different fra
 different equations. The hook `appErrorf`s rather than write a trace that would be diffed in good
 faith. `ktrace_run.sh` passes it; a browser run must too.
 
-**Read `first`, not `restZ`, when the two traces have different lengths.** `restZ` is the LAST frame
-of each file, so comparing a 600-frame run against an 85-frame one compares different instants and
-reads like catastrophe. Truncate the longer one first.
+**Unequal-length traces compare different INSTANTS, and both tools now handle it themselves.**
+`restZ` is the LAST frame of each file, so a 94-frame run against a 35-frame one reads like
+catastrophe — measured 2026-08-30, same map and gametype: `8 MISMATCH`, "bodies diverging by up to
+53 units", where the whole difference was the reference having fallen a further 59 frames.
+Truncated: `MATCH 15/15`.
+
+- `ktrace_score.py` **truncates to the shorter trace by default** and prints that it did.
+  `--no-truncate` restores the old reading if you genuinely want final states of unequal runs.
+- `ktrace_run.sh` **warns when it captured fewer frames than `KD_FRAMES` asked for**. A short run
+  is a weaker measurement, and the usual cause is not a crash: `ULevel::Tick` guards Karma with
+  `IsPaused()`, so a match that pauses itself stops the trace dead while the HUD — which ticks on
+  the render path, outside that guard — keeps logging. **HUD output is not evidence the level is
+  running.**
 
 `packages/e2e/tools/ktrace-probe.cjs` in the monorepo is the wasm side, driving the launcher FORM
 because `?map=` deliberately refuses arbitrary engine switches. Two things cost a run each there:

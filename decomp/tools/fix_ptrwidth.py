@@ -50,11 +50,15 @@ import re
 import subprocess
 import sys
 
-NDK = os.environ.get(
-    'KD_NDK',
-    '/home/ion/Android/Sdk/ndk/30.0.14904198/toolchains/llvm/prebuilt/'
-    'linux-x86_64/bin')
-CC = os.path.join(NDK, 'aarch64-linux-android21-clang')
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import kd_paths                                             # noqa: E402
+
+# The Android NDK's llvm bin/ — a real external toolchain, discovered from the
+# standard NDK variables rather than pinned to one version. The old pinned r30
+# path stopped existing on an NDK upgrade and the failure read like a compiler
+# bug rather than a missing directory.
+NDK = kd_paths.NDK_BIN
+CC = os.path.join(NDK, 'aarch64-linux-android21-clang') if NDK else ''
 
 # The cast spellings the corpus actually puns through, and what each becomes.
 # Signedness is preserved: `(uint)ptr` must stay unsigned or a comparison it
@@ -80,7 +84,7 @@ CAST_AT = re.compile(r'\(\s*(?P<ty>[A-Za-z_][\w ]*?)\s*\)')
 
 def cflags(root):
     inc = os.path.join(root, 'include')
-    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    here = kd_paths.MD          # here/include holds the three kd_*.h
     cf = ['-O2', '-fno-strict-aliasing', '-std=gnu99', '-DLINUX',
           '-I' + os.path.join(here, 'include'), '-I' + inc]
     for d in ('McdCommon', 'McdPrimitives', 'McdFrame', 'MeGlobals',
@@ -145,9 +149,7 @@ def widen_file(path, cf, rounds=6):
 
 def main():
     srcdir, build = sys.argv[1], sys.argv[2]
-    root = sys.argv[3] if len(sys.argv) > 3 else os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(
-            os.path.abspath(__file__)))), 'Thirdparty', 'metoolkit')
+    root = sys.argv[3] if len(sys.argv) > 3 else kd_paths.METOOLKIT_DIR
     if not os.path.exists(CC):
         print(f'fix_ptrwidth: no NDK at {NDK} — set KD_NDK.', file=sys.stderr)
         return 2

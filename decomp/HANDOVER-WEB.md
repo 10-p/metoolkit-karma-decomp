@@ -131,7 +131,7 @@ between optimisation levels anyway.
 A `UT_PTR_BYTES` gate makes a 64-bit-pointer Karma build a hard CMake error, which is what keeps
 Android's LP64 ABIs honest while the layout work waits.
 
-**A five-minute ONS match per build is now the acceptance test** (`test/ons_smoke.sh`), and it
+**A five-minute ONS match per build is now the acceptance test** (`test/ut2004/ons_smoke.sh`), and it
 immediately found what the 51/51 browser suite could not, because that suite is almost entirely
 DM and ONS is the gametype that spawns VEHICLES:
 
@@ -172,7 +172,7 @@ The owner played it and reported physics that runs but does not run correctly: v
 through terrain until `bDestroyOnWorldPenetrate` blew them up, every KActor falling through the
 floor immediately, friction feeling too high. **All of it was `McdSphere` and `McdTriangleList`,
 and it reproduced on native i386** — so it was never the association defect, and every instrument
-in `karma-decomp/test/` applied.
+in `decomp/test/` applied.
 
 ```
 recovered Karma vs MathEngine's own library, test-karma-1, 30 fps pinned, same engine source
@@ -202,8 +202,8 @@ verified against the shipped machine code. `proven.txt` `MCD-GEOM-FLOAT-FIELDS`.
 > *together, inside the engine, over time*.
 >
 > The instrument that found it is new and is the one to reach for next time:
-> `test/ktrace_run.sh` records every simulated body's state per frame from inside
-> `KTickLevelKarma`, and `test/ktrace_subst.sh` bisects by rebuilding with a chosen SET taken from
+> `test/ut2004/ktrace_run.sh` records every simulated body's state per frame from inside
+> `KTickLevelKarma`, and `test/ut2004/ktrace_subst.sh` bisects by rebuilding with a chosen SET taken from
 > the shipped library. Both controls, then the COMPLEMENT (keep one family of ours), which has no
 > blind spot when two objects are defective — and two were.
 
@@ -250,14 +250,14 @@ There are two presets, `wasm-karmadecomp-debug` (`-O0`, DWARF, assertions) and
 variable, `USE_KARMA_DECOMP=ON`. `BUILD.md` has the full description; the short version is that the
 compile side is identical to `BUILD_KARMA_REF` (the metoolkit public headers are portable C and were
 never what was missing) and the link side builds a CMake target from
-`karma-decomp/generated/allobj/*.c` instead of a glob of gcc-3.2 x86 archives.
+`metoolkit_decomp/src/*/*.c` instead of a glob of gcc-3.2 x86 archives.
 
 **And the recovered code is genuinely IN the binary, which is a separate question from the build
 succeeding.** `libKarmaDecomp.a` is an ordinary static archive, so the linker pulls only what
 something references — a build that shipped none of it would look the same on the console:
 
 ```
-python3 karma-decomp/tools/wasm_members.py build-wasm-karmadecomp-debug
+python3 decomp/tools/wasm_members.py build-wasm-karmadecomp-debug
 
   146 archive member(s)
     125 contribute at least one symbol to the .wasm
@@ -370,7 +370,7 @@ run on any of your three targets.
 > pointer. On i386 that is byte 48. On arm64 it is byte 96. **Nothing is truncated** — the
 > cast is width-correct and clang is silent — and the address is somebody else's memory.
 >
-> Measured today by `karma-decomp/tools/layout_check.py`, which needs no arm64 hardware
+> Measured today by `decomp/tools/layout_check.py`, which needs no arm64 hardware
 > because every layout question is a compile-time constant:
 >
 > ```
@@ -396,7 +396,7 @@ run on any of your three targets.
 > * **If your Android plan is 64-bit-only, say so now**, because that changes what the
 >   recovery side works on next.
 
-> **AND IT IS NO LONGER A STATIC ARGUMENT — IT EXECUTES.** `karma-decomp/test/lp64_run.sh`
+> **AND IT IS NO LONGER A STATIC ARGUMENT — IT EXECUTES.** `decomp/test/standalone/lp64_run.sh`
 > builds all 145 recovered objects for **x86-64**, which is the SAME LP64 data model as
 > arm64, and drives the scenes under AddressSanitizer. This file said "nothing on this
 > machine can execute arm64" and concluded only a textual gate was possible; the premise is
@@ -437,7 +437,7 @@ way**, all detailed below and all measured rather than guessed:
    **source order is the whole story and the machine's order is simply correct**. A
    wasm-vs-native A/B remains the only instrument that can settle all 575, and it is now the
    only one that can settle them CORRECTLY. It is still the highest-value thing on your side.
-   See `karma-decomp/proven.txt`, entry `ASSOC-ON-I386`.
+   See `decomp/proven.txt`, entry `ASSOC-ON-I386`.
 3. **"It compiles" has now been caught being wrong twice in one day**, once on arm64's
    layout and once on a function that compiled, passed all nine gates, and segfaulted the
    moment it was forced to execute. Treat a clean wasm build as the start of the test.
@@ -449,7 +449,7 @@ UT2004's physics engine is **Karma** (MathEngine `metoolkit`, 2003). It ships as
 The web and Android builds of this engine therefore currently define `NO_KARMA` and have no
 vehicle or ragdoll physics at all.
 
-A separate effort (`karma-decomp/`, branch `karma/decompile`) is recovering Karma as
+A separate effort (`decomp/`, branch `karma/decompile`) is recovering Karma as
 **portable C** from those binaries, using the DWARF-2 debug information the shipped
 libraries happen to contain. That effort produces ordinary `.c` files.
 
@@ -462,7 +462,7 @@ What exists today:
   §3's pointer-size section: **arm64 is not trustworthy and wasm32 is**, for the same reason.
 - **The full collision-detection path the game actually uses is recovered and validated** —
   all twelve interaction pairs UT2004 calls, each measured against the shipped original on
-  real inputs from a live match. Evidence per object in `karma-decomp/proven.txt`. §6 has
+  real inputs from a live match. Evidence per object in `decomp/proven.txt`. §6 has
   the census that says "twelve" and why that is the number to plan against.
 - **The whole set already compiles under Emscripten**, and its exported symbol NAMES are
   **byte-identical to the i386 build for all 145 objects** — nothing added or dropped. So
@@ -521,8 +521,8 @@ What does **not** exist, and you need to know this before planning anything:
 Reproduce the wasm result in one command:
 
 ```bash
-cd karma-decomp
-./test/wasm_check.sh /tmp/kd_out/allobj /tmp/kd_build ../Thirdparty/metoolkit
+cd decomp
+./test/standalone/wasm_check.sh /tmp/kd_out/allobj /tmp/kd_build ../metoolkit
 ```
 
 (after running the recovery once — `HANDOVER.md` §4 — to populate those two directories).
@@ -573,7 +573,7 @@ re-deriving the type database from a 64-bit source.
 > Every one of them compiles. The exported symbol sets are **byte-identical to i386 on all
 > three**. Every behavioural gate the project has passes. And arm64 is wrong.
 >
-> **There is now a gate for it — `test/ptrwidth_check.sh`, 13 seconds, no arm64 hardware
+> **There is now a gate for it — `test/standalone/ptrwidth_check.sh`, 13 seconds, no arm64 hardware
 > needed**, because truncation is a compile-time fact. It enables exactly three clang
 > diagnostics on top of `-Wno-everything`, so the count is those three and nothing else:
 >
@@ -604,7 +604,7 @@ re-deriving the type database from a 64-bit source.
 > **What this means for you concretely:**
 >
 > 1. **wasm32 is safe** and shares armv7's number — zero — not arm64's. Nothing here says
->    wasm32 is at risk. Run `test/ptrwidth_check.sh` yourself before believing that; it
+>    wasm32 is at risk. Run `test/standalone/ptrwidth_check.sh` yourself before believing that; it
 >    takes 13 seconds and it is the cheapest insurance in this document.
 > 2. **Never enable memory64.** The "do not enable without re-deriving" above now has a
 >    number attached: you would be turning on **2,436** truncation sites across two thirds
@@ -672,9 +672,9 @@ command). They include, in this order:
 Include paths needed:
 
 ```
-karma-decomp/include
-Thirdparty/metoolkit/include
-Thirdparty/metoolkit/include/{McdCommon,McdPrimitives,McdFrame,MeGlobals,MdtBcl,MdtKea,Mst,MeApp}
+decomp/include
+metoolkit/include
+metoolkit/include/{McdCommon,McdPrimitives,McdFrame,MeGlobals,MdtBcl,MdtKea,Mst,MeApp}
 ```
 
 Plus `-DLINUX`, which is how `MePrecision.h` selects `MeReal = float` and the pointer
@@ -701,7 +701,7 @@ Read "names" literally. `wasm_check.sh` compares `awk '$2 ~ /^[TDBRWV]$/{print $
 that is weak on one target and global on the other passes. That is not
 hypothetical; see the note at the end of this section.
 
-Re-run it yourself with `test/wasm_check.sh` (§5). It takes seconds and it is the
+Re-run it yourself with `test/standalone/wasm_check.sh` (§5). It takes seconds and it is the
 cheapest early warning that a recovery-side change has broken portability.
 
 Two of the five hazards below are settled by that, and the other three are
@@ -774,12 +774,12 @@ files are *generated*, and the next `recover.py` run overwrites them. Everything
 regenerated from the Ghidra dumps in about a minute, so the loop is:
 
 ```bash
-cd karma-decomp
+cd decomp
 # 1. change the GENERATOR (tools/ghidra_clean.py, tools/gen_*.py), not the output
 rm -rf /tmp/kd_out /tmp/kd_build
-python3 tools/recover.py --dump-dir /home/ion/tools/karma-lab/out5 \
-  --obj-dir /home/ion/tools/karma-lab/allobj --out-dir /tmp/kd_out \
-  --metoolkit ../Thirdparty/metoolkit --protos /home/ion/tools/karma-lab/kd_protos.h
+python3 tools/recover.py --dump-dir lab/out5 \
+  --obj-dir lab/allobj --out-dir /tmp/kd_out \
+  --metoolkit ../metoolkit --protos lab/kd_protos.h
 # 2. check the BLAST RADIUS before checking correctness
 diff -rq /tmp/kd_out.baseline/allobj /tmp/kd_out/allobj
 # 3. run every gate (§5). wasm_check.sh included, every time.
@@ -840,7 +840,7 @@ typedef void (*McdUpdateAABBFnPtr)();      /* no prototype */
 and `CxSmallSort` calls it with a `MeReal`. The recovered object emitted `flds` then
 **`fstpl`** — storing the float as an 8-byte double — against a callee taking a float. The
 shipped `CxSmallSort.o` contains zero `fstpl`. Fixed, and `grep -c 'void (\*)()'
-karma-decomp/include/kd_types.h` should stay at **0** — that is the tripwire.
+../metoolkit_decomp/include/kd_types.h` should stay at **0** — that is the tripwire.
 
 Why you should care more than the recovery side does: on x86 this is wrong physics in the
 broadphase; **on wasm it is a trap**, and it is in a code path none of the three offline
@@ -892,7 +892,7 @@ dies with no output, suspect a buffer before you suspect wasm.
 which Ghidra emits because that is what the DWARF calls it. Emscripten's libc does not have
 it. Fixed in `kd_compat.h` behind glibc's own `__COMPAR_FN_T` guard.
 
-This is the first time `test/wasm_check.sh` has caught something the native build could
+This is the first time `test/standalone/wasm_check.sh` has caught something the native build could
 not, and it is exactly what that gate is for. **Run it after every generator change.** Any
 glibc-internal spelling — `__ctype_b_loc`, `__strtol_internal`, `_IO_putc`,
 `__compar_fn_t` — is a candidate for the same treatment; `kd_compat.h` already maps several
@@ -946,7 +946,7 @@ that compares what each side passed the callback, rather than only what came bac
 **Five** gates already exist and all of them work. Reuse them rather than eyeballing
 physics.
 
-1. **`test/substitute_test.sh`** — swaps one recovered object into the link, runs a scripted
+1. **`test/standalone/substitute_test.sh`** — swaps one recovered object into the link, runs a scripted
    scene, compares the **trajectory** against baseline. On a collision-free scene a correct
    recovery is *bit-identical*; anything else is a bug. There are three scenes and you want
    all of them: `scene_chain.c` (collision-free, the authoritative trajectory signal),
@@ -954,20 +954,20 @@ physics.
    capsules on ball-socket joints — the other two make **not one Sphyl call** between them).
    Currently **115/115 clean on all three** on i386 — but read `HANDOVER.md` §4a before
    putting weight on that number: only eight of 103 objects have measurable sensitivity on
-   any of these scenes, and `test/scene_census.sh` and `test/gate_sensitivity.sh` exist to
+   any of these scenes, and `test/standalone/scene_census.sh` and `test/standalone/gate_sensitivity.sh` exist to
    say which. **Getting that under a wasm build is your first milestone.**
-2. **`test/difftest_pair.sh`** — drives one interaction directly over randomised transforms,
+2. **`test/standalone/difftest_pair.sh`** — drives one interaction directly over randomised transforms,
    seeded so anything it finds reproduces. **Twelve pairs wired up — every one the game
    calls.** Needs no solver and no engine, which makes it the natural basis for your first
    wasm driver (§8 step 1). Six switches; read `HANDOVER.md` §4 on `KD_SPREAD` before
    quoting any number from it, because divergence rates here are a strong function of
    contact regime and a figure without its regime is meaningless. `KD_GENARGS=1` and
    `KD_FIXEDSHAPE=1` are the two that found real bugs most recently.
-3. **`test/wasm_check.sh`** — compiles the whole set for wasm32 and diffs the exported
+3. **`test/standalone/wasm_check.sh`** — compiles the whole set for wasm32 and diffs the exported
    symbols against the native build. Currently 115/115. **Run this after any change
    to the recovery pipeline**; it is the cheapest possible early warning that a change has
    broken portability. It compares NAMES only — see the note at the end of §4.
-4. **`test/kd_shadow.c`** — the in-game shadow harness. Runs both implementations on the
+4. **`test/ut2004/kd_shadow.c`** — the in-game shadow harness. Runs both implementations on the
    same inputs and compares. Structural fields (return value, contact count, contact
    dimensionality, buffer overrun) must match **exactly**; float deltas are expected.
 5. **`KD_SELFTEST=1`** — runs the *original* as both sides. Any divergence it reports is a
@@ -975,7 +975,7 @@ physics.
    before believing any crash** — a SIGSEGV was misattributed to recovered code for half a
    day because this was skipped, and it reproduces with no recovered code executing.
 
-7. **`test/ptrwidth_check.sh <out>/allobj <build>`** — the pointer-width gate. armv7
+7. **`test/standalone/ptrwidth_check.sh <out>/allobj <build>`** — the pointer-width gate. armv7
    must read **0**; arm64 currently reads **2,436 across 69 of 115**. This is the only
    gate in the project that can see a defect on a target nobody has executed, and it is
    the one that matters most to you. 13 seconds.
@@ -1022,8 +1022,8 @@ that is a pass. That comparison is the single most useful calibration in this pr
 
 ```bash
 # native i386 vs the vendor's own x86-64 build — your reference for "how much is normal"
-gcc -m32 ... -o /tmp/rag_i386 test/scene_ragdoll.c  <linux_single_gcc3.2/*.a>
-gcc -m64 ... -o /tmp/rag_hx   test/scene_ragdoll.c  <linux_hx_single/*.a>
+gcc -m32 ... -o /tmp/rag_i386 test/standalone/scene_ragdoll.c  <linux_single_gcc3.2/*.a>
+gcc -m64 ... -o /tmp/rag_hx   test/standalone/scene_ragdoll.c  <linux_hx_single/*.a>
 ```
 
 ---
@@ -1066,7 +1066,7 @@ That last three points remove ~36% of the total binary footprint without recover
 
 ```bash
 python3 tools/dropin_gap.py <engine-build-dir> /tmp/kd_build \
-        /home/ion/tools/karma-lab/allobj --status <recover.py output>
+        lab/allobj --status <recover.py output>
 ```
 
 It walks the symbol closure from the ENGINE's own object files, resolving each symbol
@@ -1149,7 +1149,7 @@ object changed the object file and changed nothing measurable.
 
 ### Android is half the deliverable, and it is in worse shape than wasm
 
-The Android NDK is installed and `test/ptrwidth_check.sh` is a 13-second gate that needs no
+The Android NDK is installed and `test/standalone/ptrwidth_check.sh` is a 13-second gate that needs no
 device — pointer truncation is a compile-time diagnostic.
 
 | target | compiles | symbols | truncations |
@@ -1165,7 +1165,7 @@ all**, because armv7 works today and a 32-bit Android build may be the whole ans
 
 ### One thing that changed on your side of the fence
 
-`test/wasm_check.sh` compares each object's exported symbols between the wasm32 and i386
+`test/standalone/wasm_check.sh` compares each object's exported symbols between the wasm32 and i386
 builds, and it discards the binding letter — it compares names only. That is how a
 recovered object exporting a **global `putchar`** (weak in the shipped library, so that
 libc's wins) passed every gate for months. The recovery side now has
@@ -1206,7 +1206,7 @@ can see) and the arm64 pointer-truncation table. They change what is worth doing
 
 1. **Prove the recovered collision functions EXECUTE under wasm, in isolation.** Write a
    standalone wasm driver that calls one interaction function directly with hand-built
-   geometry and transforms — the same shape as `test/difftest_pair.c`, which already does
+   geometry and transforms — the same shape as `test/standalone/difftest_pair.c`, which already does
    exactly this natively and needs no solver, no `MstUniverse` stepping, no engine. Run it
    under node. This is the smallest thing that crosses the "never executed" line, and it is
    available today.
@@ -1244,12 +1244,12 @@ can see) and the arm64 pointer-truncation table. They change what is worth doing
    > Steps 1–3 remain the sharper instruments for arbitrating a NUMERICAL difference.
 5. **Feed everything back to the recovery side, continuously.** If a construct is unportable
    it is almost always cheaper to fix the *generator* than to patch the output — §4a. The
-   whole pipeline regenerates in about a minute and `test/wasm_check.sh` tells you in one
+   whole pipeline regenerates in about a minute and `test/standalone/wasm_check.sh` tells you in one
    command whether a generator change kept portability. This is the highest-leverage thing
    you can do while the solver is still being recovered.
 
-Read `karma-decomp/HANDOVER.md` for how the recovery pipeline works, and
-`docs/KARMA-ON-WASM.md` Part I §2 for the full architectural analysis behind §2 above.
+Read `decomp/HANDOVER.md` for how the recovery pipeline works, and
+`../decomp/docs/KARMA-ON-WASM.md` Part I §2 for the full architectural analysis behind §2 above.
 
 ---
 
@@ -1283,7 +1283,7 @@ can. If you build one thing, build that.
 result but it is i386-only, and for some objects the scenes barely execute the code at all
 (`MeMath` runs 1 of 28 functions in `scene_ragdoll`). Where we have stronger evidence we say
 so — a direct A/B against the shipped function over a million random inputs is the strongest
-thing in the project, and `karma-decomp/test/ab_matrix.sh` is the worked example.
+thing in the project, and `decomp/test/standalone/ab_matrix.sh` is the worked example.
 
 ---
 
@@ -1411,13 +1411,13 @@ Full detail in §0; `proven.txt` `WASM-INDIRECT-SIGS` has the evidence.
 
 ### 2026-08-26 (sixth session) — 137 objects, and TWO OF YOUR TARGETS WERE NOT COMPILING
 
-- **READ THIS ONE FIRST, because it is about your side.** `test/ptrwidth_check.sh` counts
+- **READ THIS ONE FIRST, because it is about your side.** `test/standalone/ptrwidth_check.sh` counts
   `warning:` lines, and a file clang REJECTS emits none — so armv7 reported **"0 truncation
   warnings across 0 objects" while two objects were failing outright**, and wasm32's
   "122/122" in the previous entry was really **121 of 122**. The two are `MeDict`
   (`unknown type name 'ulong'`) and `MeSimpleFile_linux` (`use of undeclared identifier
   '__off_t'`) — glibc spellings bionic and emscripten do not extend. Both are now
-  typedef'd in `karma-decomp/include/kd_compat.h`. **If you have an older wasm artefact,
+  typedef'd in `../metoolkit_decomp/include/kd_compat.h`. **If you have an older wasm artefact,
   it is missing `MeSimpleFile_linux`.**
 - **137 objects**, drop-in gap **8 members / 35 symbols** — cut by 76% in one session, and
   25 of the 35 are in members deliberately not attempted. wasm32 **137/137** with
@@ -1573,7 +1573,7 @@ Nothing here changes what the web build does. Two figures move and one is worth 
   sites between them, which is the ordinary rate — nothing special about them.
 - **wasm32 is 112/112 with byte-identical exported symbol sets**, unchanged in character.
 
-There is now a **ninth gate**, `test/vptr_ab.sh`, and it is i386-only by construction — it
+There is now a **ninth gate**, `test/standalone/vptr_ab.sh`, and it is i386-only by construction — it
 compares a vtable dispatch against a devirtualised control by running two physics scenes.
 It is not something the web agent needs to run, but if you re-dump Ghidra output it is on
 the list `HANDOVER.md` §5 says must pass before adopting a new dump directory.
@@ -1592,7 +1592,7 @@ the list `HANDOVER.md` §5 says must pass before adopting a new dump directory.
   stepping loop. Worth knowing when you scope: **the engine reimplements more of Karma
   than the API surface suggests** — collision dispatch for two whole families, the
   safe-time stepper, and the solver driver.
-- **`test/ptrwidth_check.sh` exists and you should run it.** It is the gate §3's warning
+- **`test/standalone/ptrwidth_check.sh` exists and you should run it.** It is the gate §3's warning
   box used to say could not exist. 13 seconds, no arm64 hardware. armv7 reads **0**,
   arm64 reads **2,218 across 66 of 110 objects**. If you ever build for a 64-bit-pointer
   target — memory64 included — this is the number that tells you not to.
@@ -1663,8 +1663,8 @@ was written. Read all five points.
   structural divergences. **For you this is the single biggest win in the file**: it is
   ordinary portable C with no third-party build integration, it compiles for wasm32 with a
   symbol set identical to i386, and it removes 1.4 MB of 1998 global-state C from the link.
-  Stage it with `test/make_hull_lib.sh`. Its acceptance test is `test/hull_probe.sh`
-  (100,633 invariant checks) and `test/hull_ab.sh` (same-solid geometry diff) — **run both
+  Stage it with `test/standalone/make_hull_lib.sh`. Its acceptance test is `test/standalone/hull_probe.sh`
+  (100,633 invariant checks) and `test/standalone/hull_ab.sh` (same-solid geometry diff) — **run both
   if you ever touch it**, because a hull that is subtly wrong does not fail at load; it
   degrades GJK silently, and GJK's support function hill-climbs that structure ~685,000
   times a match.

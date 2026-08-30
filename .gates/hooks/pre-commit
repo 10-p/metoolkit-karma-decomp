@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# metoolkit-karma-decomp pre-commit — see .gates/README.md.
+#   proven-count      [hard]  the release ledger's format is load-bearing
+#   no-abs-paths      [hard]  standalone means standalone
+#   product-in-sync   [hard]  metoolkit_decomp/src is generated, never hand-edited
+#   doc-sync          [hard]  code and its written record move together
+set -uo pipefail
+root="$(git rev-parse --show-toplevel)"
+bash "$root/.gates/proven-count.sh"     || exit 1
+bash "$root/.gates/no-abs-paths.sh"     || exit 1
+bash "$root/.gates/product-in-sync.sh"  || exit 1
+bash "$root/.gates/doc-sync.sh"         || exit 1
+exit 0

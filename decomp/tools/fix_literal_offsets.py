@@ -51,7 +51,13 @@ import re
 import subprocess
 import sys
 
-HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import kd_paths                                             # noqa: E402
+
+# The product root. HERE/include holds kd_compat.h, kd_karma.h and
+# kd_types.h — the three headers every recovered source includes, and the
+# ones the size/offset probes below have to see to measure anything.
+HERE = kd_paths.MD
 I386_WORD = 4      # what a pointer weighed on the shipped target
 WORK = '/tmp/kd_offsets'
 
@@ -782,8 +788,7 @@ def accept_edits(fn, text, edits, build, inc):
 
 def main():
     srcdir, build = sys.argv[1], sys.argv[2]
-    root = sys.argv[3] if len(sys.argv) > 3 else os.path.join(
-        HERE, '..', 'Thirdparty', 'metoolkit')
+    root = sys.argv[3] if len(sys.argv) > 3 else kd_paths.METOOLKIT_DIR
     inc = os.path.join(root, 'include')
     cache = {}
 

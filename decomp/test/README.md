@@ -1,17 +1,47 @@
-# `karma-decomp/test/` — every gate and harness, with the command
+# `decomp/test/` — every gate and harness, with the command
 
 **One block per script: what it answers, and the exact invocation.** `../HANDOVER.md` §4 has the
-nine-gate block you run every time; this file covers all 36 files, including the ones you only reach
+nine-gate block you run every time; this file covers all of them, including the ones you only reach
 for when something is wrong.
 
+## Two tiers, and the split is not cosmetic
+
+```
+test/standalone/   runs from a bare clone. Nothing installed, no game, no engine
+                   checkout, no environment set. This is the tier CI runs.
+test/ut2004/       needs the GAME — a built binary, a run tree, map assets.
+                   Fails loudly with the variable it wants; never guesses a path.
+```
+
+Two runners drive them: `./test/run-standalone.sh` and `./test/run-ut2004.sh`.
+
+⚠ **A GREEN STANDALONE TIER MEANS THE OBJECTS ARE RIGHT ONE AT A TIME, NOT THAT THE PROGRAM IS.**
+Every gate in it is a per-object comparison or an offline scene. `difftest_pair.sh` substitutes the
+INTERACTION object and links the GEOMETRY objects from the shipped library, so a broken
+`McdSphereGetRadius` is never in the loop and reads byte-identical before and after the repair —
+that is a real defect this project shipped, and `../proven.txt` `MCD-GEOM-FLOAT-FIELDS` is the
+record. The gate that compares the trajectory the calls ADD UP TO is `ktrace`, and it is in the
+ut2004 tier because it needs a running match.
+
 ```bash
-cd /home/ion/engines/engine-ut2004/karma-decomp
-MT=../Thirdparty/metoolkit                 # the shipped SDK
+cd decomp
+MT=../metoolkit                 # the shipped SDK
 LIB=$MT/lib.rel/linux_single_gcc3.2        # its i386 archives
 ```
 
+Every harness resolves those itself through `lib/kd-paths.sh`, so the two lines above are for
+reading the commands below, not a prerequisite. Override with `METOOLKIT_DIR`, `KD_LAB_DIR`,
+`UT2004_ENGINE_DIR`, `UT2004_BUILD_DIR`, `UT2004_ASSETS_DIR`, `UT2004_RUN_DIR`.
+
 `/tmp/kd_out/allobj` is the recovered `.c`, `/tmp/kd_build` the compiled `.o`. **`/tmp` is
 volatile.** Copy out anything you want to keep.
+
+⚠ **`KD_OUT` MEANS DIFFERENT THINGS IN DIFFERENT HARNESSES**, and the shim deliberately does not
+default it. `lp64_collide.sh` and `lp64_pipeline.sh` default it to `/tmp/kd_lp64`, the post-passed
+tree they exist to exercise; `ab_contact.sh`, `bisect_static.sh`, `lp64_run.sh` and
+`trace_cylcyl.sh` default it to `/tmp/kd_out`, the raw recovery. `lp64_pipeline.sh` then passes
+`KD_OUT` into `lp64_run.sh` on purpose. One default in one place would silently re-point four
+harnesses at a tree they were never measuring, and every one would still pass.
 
 > **Read the per-object lines, never the summary.** `substitute_test.sh`'s
 > `substituted and ran cleanly : 140` is a CRASH count, not bit-identity — `pass` is incremented in
@@ -25,8 +55,8 @@ volatile.** Copy out anything you want to keep.
 ### `ons_smoke.sh` — does this build survive five minutes of Onslaught?
 
 ```bash
-./test/ons_smoke.sh <binary> <label> [seconds]          # 300 s default
-ONS_MAP=ONS-Adara ONS_RENDERER=-OPENGLRENDERER ./test/ons_smoke.sh ...
+./test/ut2004/ons_smoke.sh <binary> <label> [seconds]          # 300 s default
+ONS_MAP=ONS-Adara ONS_RENDERER=-OPENGLRENDERER ./test/ut2004/ons_smoke.sh ...
 ```
 
 Exit 0 = survived, 1 = crashed or died early. **ONS is the gametype that spawns VEHICLES**, and
@@ -47,19 +77,19 @@ TO, on a real map, against a `legacy-karma` build linking MathEngine's originals
 ```bash
 # 1. the oracle, from the build that links the shipped archives
 KD_FRAMES=600 KD_GAME=Onslaught.ONSOnslaughtGame \
-  ./test/ktrace_run.sh ../build-legacy-karma/Source/SDLLaunch/ut2004-legacykarma-pixo.bin legacy600 120
+  ./test/ut2004/ktrace_run.sh $UT2004_ENGINE_DIR/build-legacy-karma/Source/SDLLaunch/ut2004-legacykarma-pixo.bin legacy600 120
 # 2. the candidate
 KD_FRAMES=600 KD_GAME=Onslaught.ONSOnslaughtGame \
-  ./test/ktrace_run.sh ../build-native/Source/SDLLaunch/ut2004-pixo.bin cand 120
+  ./test/ut2004/ktrace_run.sh $UT2004_ENGINE_DIR/build-native/Source/SDLLaunch/ut2004-pixo.bin cand 120
 # 3. read it
-python3 test/ktrace_diff.py  /tmp/ktrace-legacy600.csv /tmp/ktrace-cand.csv   # per body
-python3 test/ktrace_score.py /tmp/ktrace-legacy600.csv /tmp/ktrace-cand.csv   # MATCH / N MISMATCH
+python3 test/standalone/ktrace_diff.py  /tmp/ktrace-legacy600.csv /tmp/ktrace-cand.csv   # per body
+python3 test/standalone/ktrace_score.py /tmp/ktrace-legacy600.csv /tmp/ktrace-cand.csv   # MATCH / N MISMATCH
 
 # and to LOCALISE — both controls first, then the complement
-./test/ktrace_subst.sh ctl-all  ALL          # must MATCH   — the mechanic works
-./test/ktrace_subst.sh ctl-none NONE         # must MISMATCH — the defect is present
-./test/ktrace_subst.sh keep-mcd ALL '^@Mcd'  # keep OUR Mcd, take the rest from theirs
-./test/ktrace_subst.sh fwd      NONE McdSphere McdTriangleList
+./test/ut2004/ktrace_subst.sh ctl-all  ALL          # must MATCH   — the mechanic works
+./test/ut2004/ktrace_subst.sh ctl-none NONE         # must MISMATCH — the defect is present
+./test/ut2004/ktrace_subst.sh keep-mcd ALL '^@Mcd'  # keep OUR Mcd, take the rest from theirs
+./test/ut2004/ktrace_subst.sh fwd      NONE McdSphere McdTriangleList
 ```
 
 ★ **`-FIXEDFPS` IS NOT OPTIONAL AND THE ENGINE ENFORCES IT.** `KTickLevelKarma` derives its
@@ -89,8 +119,8 @@ the Ix* INTERACTION object and links the GEOMETRY objects from the shipped libra
 ### `gjk_bisect.sh` / `gjk_bisect_complement.sh` — WHICH function of an object is wrong?
 
 ```bash
-./test/gjk_bisect.sh [seconds]              # take F from theirs: does it fix the crash?
-./test/gjk_bisect_complement.sh [seconds]   # keep F of ours: does it break theirs?
+./test/ut2004/gjk_bisect.sh [seconds]              # take F from theirs: does it fix the crash?
+./test/ut2004/gjk_bisect_complement.sh [seconds]   # keep F of ours: does it break theirs?
 ```
 
 The forward form has a blind spot the complement does not: with TWO defective functions, swapping
@@ -111,9 +141,9 @@ Swaps each recovered object into the link in place of the shipped one and runs a
 Cheap and broad: catches crashes, hangs, NaNs and wild divergence across many objects at once.
 
 ```bash
-./test/substitute_test.sh /tmp/kd_build $LIB test/scene_chain.c
-./test/substitute_test.sh /tmp/kd_build $LIB test/scene_boxes_on_plane.c
-./test/substitute_test.sh /tmp/kd_build $LIB test/scene_ragdoll.c
+./test/standalone/substitute_test.sh /tmp/kd_build $LIB test/standalone/scene_chain.c
+./test/standalone/substitute_test.sh /tmp/kd_build $LIB test/standalone/scene_boxes_on_plane.c
+./test/standalone/substitute_test.sh /tmp/kd_build $LIB test/standalone/scene_ragdoll.c
 
 grep -c 'trajectory bit-identical' <output>     # the number that means something
 grep '^  \[ diverg\]'              <output>     # and the ones that do not
@@ -134,11 +164,11 @@ Runs the shipped intersection function and the recovered one side by side on ide
 `McdModelPair`s and compares the whole `McdIntersectResult`, every contact.
 
 ```bash
-./test/difftest_pair.sh /tmp/kd_build $MT                          # all pairs
-./test/difftest_pair.sh /tmp/kd_build $MT McdBoxBoxIntersect
-KD_CORNER=1 ./test/difftest_pair.sh /tmp/kd_build $MT McdCylinderTriangleListIntersect 30000
-KD_GRID=1   ./test/difftest_pair.sh /tmp/kd_build $MT McdCylinderCylinderIntersect
-KD_JITTER=1 ./test/difftest_pair.sh /tmp/kd_build $MT McdCylinderCylinderIntersect
+./test/standalone/difftest_pair.sh /tmp/kd_build $MT                          # all pairs
+./test/standalone/difftest_pair.sh /tmp/kd_build $MT McdBoxBoxIntersect
+KD_CORNER=1 ./test/standalone/difftest_pair.sh /tmp/kd_build $MT McdCylinderTriangleListIntersect 30000
+KD_GRID=1   ./test/standalone/difftest_pair.sh /tmp/kd_build $MT McdCylinderCylinderIntersect
+KD_JITTER=1 ./test/standalone/difftest_pair.sh /tmp/kd_build $MT McdCylinderCylinderIntersect
 ```
 
 - `KD_CORNER=1` is the cylinder–TriangleList repro the DEFAULT mesh cannot see: the 4×2 patch reads
@@ -170,7 +200,7 @@ McdBoxBoxIntersect: 20000 pairs, 3609 touching (18.0%)
 Compiles everything for wasm32 and diffs the exported symbols against the native build. §12 item 6.
 
 ```bash
-./test/wasm_check.sh /tmp/kd_out/allobj /tmp/kd_build $MT
+./test/standalone/wasm_check.sh /tmp/kd_out/allobj /tmp/kd_build $MT
 ```
 
 ### `ptrwidth_check.sh` — the pointer-width gate, no arm64 hardware needed
@@ -178,7 +208,7 @@ Compiles everything for wasm32 and diffs the exported symbols against the native
 Truncation is a compile-time diagnostic, so this needs nothing to execute. ~13 s.
 
 ```bash
-./test/ptrwidth_check.sh /tmp/kd_out/allobj /tmp/kd_build $MT
+./test/standalone/ptrwidth_check.sh /tmp/kd_out/allobj /tmp/kd_build $MT
 ```
 
 Measured on the ninth session's pipeline output, all 145 objects:
@@ -211,7 +241,7 @@ sampling and no mutation of the code under test. This is what separates "the rec
 
 ```bash
 KD_CENSUS_VALIDATED=/tmp/kd_build \
-  ./test/scene_census.sh /tmp/kd_out/allobj $LIB test/scene_chain.c
+  ./test/standalone/scene_census.sh /tmp/kd_out/allobj $LIB test/standalone/scene_chain.c
 ```
 
 **`KD_CENSUS_VALIDATED` is not optional.** Without it this sweeps in the quarantined objects too, and
@@ -225,7 +255,7 @@ Rebuilds the object with float intermediates forced to storage precision and rep
 trajectory then moves — roughly the smallest error the scene could have caught.
 
 ```bash
-./test/gate_sensitivity.sh /tmp/kd_out/allobj $LIB test/scene_ragdoll.c
+./test/standalone/gate_sensitivity.sh /tmp/kd_out/allobj $LIB test/standalone/scene_ragdoll.c
 ```
 
 **Read it as a ONE-SIDED test.** Non-zero proves the gate can see the object. **Zero proves
@@ -240,8 +270,8 @@ observes the dispatch *running*. This devirtualises it and diffs, with a rotated
 address point as controls the scene MUST notice.
 
 ```bash
-./test/vptr_ab.sh /tmp/kd_out/allobj /tmp/kd_build $LIB keaLCPSolver \
-    test/scene_chain.c test/scene_ragdoll.c test/scene_boxes_on_plane.c
+./test/standalone/vptr_ab.sh /tmp/kd_out/allobj /tmp/kd_build $LIB keaLCPSolver \
+    test/standalone/scene_chain.c test/standalone/scene_ragdoll.c test/standalone/scene_boxes_on_plane.c
 ```
 
 ### `make_dropin_metoolkit.sh` — CHECK 2, the deliverable
@@ -250,10 +280,10 @@ A metoolkit tree with **no shipped member in it**: the hull archive swapped whol
 recovered objects substituted, and then every member still MathEngine's `ar d`'d out.
 
 ```bash
-./test/make_dropin_metoolkit.sh /tmp/kd_build $MT /home/ion/karma-run/dropin-metoolkit
-ar t /home/ion/karma-run/dropin-metoolkit/lib.rel/linux_single_gcc3.2/*.a | sort   # zero shipped
-cmake -B ../build-dropin-karma --preset native-karma \
-      -DMETOOLKIT_DIR=/home/ion/karma-run/dropin-metoolkit
+./test/standalone/make_dropin_metoolkit.sh /tmp/kd_build $MT $UT2004_RUN_DIR/dropin-metoolkit
+ar t $UT2004_RUN_DIR/dropin-metoolkit/lib.rel/linux_single_gcc3.2/*.a | sort   # zero shipped
+cmake -B $UT2004_ENGINE_DIR/build-dropin-karma --preset native-karma \
+      -DMETOOLKIT_DIR=$UT2004_RUN_DIR/dropin-metoolkit
 ```
 
 Then play it (§6). Success is "reached `START MATCH`" and ran to the timeout, **against a stock
@@ -267,25 +297,25 @@ reading evidence.
 
 ```bash
 # MeMath's pure matrix functions. Control is the shipped function against itself; must read 0.
-./test/ab_matrix.sh /tmp/kd_out/allobj/MeMath.c $LIB 200000
+./test/standalone/ab_matrix.sh /tmp/kd_out/allobj/MeMath.c $LIB 200000
 
 # keaIntegrate_pc. BOTH code paths — the scenes never set MdtKeaBodyFlagUseFastSpin,
 # so the third argument is not optional.
-./test/ab_integrate.sh /tmp/kd_out/allobj/keaIntegrate_pc.c 100000 0
-./test/ab_integrate.sh /tmp/kd_out/allobj/keaIntegrate_pc.c 100000 1
+./test/standalone/ab_integrate.sh /tmp/kd_out/allobj/keaIntegrate_pc.c 100000 0
+./test/standalone/ab_integrate.sh /tmp/kd_out/allobj/keaIntegrate_pc.c 100000 1
 
 # McdContactSimplify, whole buffer bitwise. Must be 100% bit-identical.
-./test/ab_contact.sh /tmp/kd_build 200000
+./test/standalone/ab_contact.sh /tmp/kd_build 200000
 # KD_SELFTEST drives the SHIPPED function on BOTH sides, so it must report
 # 0 differences — it proves the harness is not inventing agreement.
-KD_SELFTEST=1 ./test/ab_contact.sh /tmp/kd_build 20000
+KD_SELFTEST=1 ./test/standalone/ab_contact.sh /tmp/kd_build 20000
 # The OTHER control is recorded in proven.txt rather than wired in: the seventh
 # session's reverted variant, block base 0x10 high, SEGFAULTS.
 
 # MdtLOD, three settings plus a control. KD_MAXMATRIX lowers the engine's own guard
 # via the PUBLIC MdtWorldSetMaxMatrixSize, so the function can be made to execute.
-./test/ab_lod.sh /tmp/kd_build $MT
-KD_MAXMATRIX=8 ./test/ab_lod.sh /tmp/kd_build $MT
+./test/standalone/ab_lod.sh /tmp/kd_build $MT
+KD_MAXMATRIX=8 ./test/standalone/ab_lod.sh /tmp/kd_build $MT
 ```
 
 Verified, ninth session, all four:
@@ -311,11 +341,11 @@ the arm64 defect executing on hardware you have — every document in this proje
 be done, and the premise ("nothing here can execute arm64") was true and irrelevant.
 
 ```bash
-./test/lp64_run.sh                                   # all three scenes
-./test/lp64_run.sh test/scene_chain.c
-KD_OUT=/tmp/kd_lp64 ./test/lp64_run.sh               # after the tools/ post-passes
-KD_KEEP=1 ./test/lp64_run.sh                         # keep the objects and the ASan reports
-KD_ASAN_TIMEOUT=120 ./test/lp64_run.sh               # the sanitized scenes can SPIN; see below
+./test/standalone/lp64_run.sh                                   # all three scenes
+./test/standalone/lp64_run.sh test/standalone/scene_chain.c
+KD_OUT=/tmp/kd_lp64 ./test/standalone/lp64_run.sh               # after the tools/ post-passes
+KD_KEEP=1 ./test/standalone/lp64_run.sh                         # keep the objects and the ASan reports
+KD_ASAN_TIMEOUT=120 ./test/standalone/lp64_run.sh               # the sanitized scenes can SPIN; see below
 ```
 
 Builds all 145 objects for x86-64 and drives the scenes under AddressSanitizer, **with an i386
@@ -351,8 +381,8 @@ LP64-correct — on a COPY, because they edit in place. Doing it by hand is four
 ways to get the order wrong and one easy way to forget the copy and overwrite `/tmp/kd_out`.
 
 ```bash
-./test/lp64_pipeline.sh                      # all three scenes
-./test/lp64_pipeline.sh test/scene_chain.c
+./test/standalone/lp64_pipeline.sh                      # all three scenes
+./test/standalone/lp64_pipeline.sh test/standalone/scene_chain.c
 ```
 
 It **stops before the harness** if the i386 acceptance test is not clean, because a post-pass that
@@ -450,8 +480,8 @@ object is known wrong: `keaLCPSolver` has fifteen functions and twelve run on th
 drives the same scene with exactly ONE recovered function in the link.
 
 ```bash
-./test/bisect_object.sh /tmp/kd_build/keaLCPSolver.o $LIB test/scene_ragdoll.c
-./test/bisect_object.sh /tmp/kd_build/keaLCPSolver.o $LIB test/scene_ragdoll.c _ZN12keaLCPSolver8solveLCPEv
+./test/standalone/bisect_object.sh /tmp/kd_build/keaLCPSolver.o $LIB test/standalone/scene_ragdoll.c
+./test/standalone/bisect_object.sh /tmp/kd_build/keaLCPSolver.o $LIB test/standalone/scene_ragdoll.c _ZN12keaLCPSolver8solveLCPEv
 ```
 
 ### `bisect_static.sh` — which FILE-STATIC?
@@ -460,9 +490,9 @@ drives the same scene with exactly ONE recovered function in the link.
 This measures file-statics through `difftest_pair.sh`.
 
 ```bash
-./test/bisect_static.sh IxBoxTriList McdBoxTriangleListIntersect --none
-./test/bisect_static.sh IxBoxTriList McdBoxTriangleListIntersect --all
-./test/bisect_static.sh IxBoxTriList McdBoxTriangleListIntersect McdVanillaBoxTriIntersect 50000
+./test/standalone/bisect_static.sh IxBoxTriList McdBoxTriangleListIntersect --none
+./test/standalone/bisect_static.sh IxBoxTriList McdBoxTriangleListIntersect --all
+./test/standalone/bisect_static.sh IxBoxTriList McdBoxTriangleListIntersect McdVanillaBoxTriIntersect 50000
 ```
 
 Found `IxBoxTriList` in one pass: Ghidra had **deleted two of three reciprocal stores** and pointed
@@ -477,7 +507,7 @@ the shipped code on this object: it carries file-static DATA shared with `EndCap
 `CylPerpAndPara`, and globalising and renaming all of it changes which code runs.
 
 ```bash
-./test/trace_cylcyl.sh 2000
+./test/standalone/trace_cylcyl.sh 2000
 ```
 
 The last open pair. **Read `../proven.txt` `CYLCYL-GRIND` before re-opening it** — four candidate
@@ -489,8 +519,8 @@ The 108-object substitution segfaulted in `KCreateAssetDB` before a match starte
 enough that a 60 s run settles it, which makes bisecting 108 objects affordable at ~2 min a cycle.
 
 ```bash
-./test/try_subst.sh /tmp/kd_build                       # all of them
-./test/try_subst.sh /tmp/kd_build MeAssetDBXMLIO MeFAsset   # only these
+./test/ut2004/try_subst.sh /tmp/kd_build                       # all of them
+./test/ut2004/try_subst.sh /tmp/kd_build MeAssetDBXMLIO MeFAsset   # only these
 ```
 
 Prints RUNS or CRASHES plus the top frame, and leaves the engine log in place.
@@ -503,9 +533,9 @@ and an immediate crash on consecutive attempts. Comparing "four runs of A this m
 A,B,A,B and keeps every log at `/tmp/kd_ab_<arm>_<run>.log`.
 
 ```bash
-./test/crash_ab.sh test-karma-1 300 11 \
-    stock=../build-native-karma/Source/SDLLaunch/ut2004-karma-pixo.bin \
-    subst=../build-subst-karma/Source/SDLLaunch/ut2004-karma-pixo.bin
+./test/ut2004/crash_ab.sh test-karma-1 300 11 \
+    stock=$UT2004_ENGINE_DIR/build-native-karma/Source/SDLLaunch/ut2004-karma-pixo.bin \
+    subst=$UT2004_ENGINE_DIR/build-subst-karma/Source/SDLLaunch/ut2004-karma-pixo.bin
 ```
 
 ---
@@ -522,7 +552,7 @@ Renames the shipped function `orig_X` and the recovered one `rec_X`, and defines
 shadow. **Real inputs from a real match**, which is the strongest evidence available here.
 
 ```bash
-./test/make_shadow_metoolkit.sh $MT /tmp/kd_build /tmp/mt_shadow
+./test/ut2004/make_shadow_metoolkit.sh $MT /tmp/kd_build /tmp/mt_shadow
 ```
 
 It cannot prove the recovered code is *usable*: the engine consumes the ORIGINAL's answer, so an
@@ -533,8 +563,8 @@ error that would compound frame to frame never gets the chance to.
 The harder question. Recovered objects replace the shipped ones outright.
 
 ```bash
-./test/make_substituted_metoolkit.sh /tmp/kd_build $MT /tmp/mt_subst
-./test/make_substituted_metoolkit.sh /tmp/kd_build $MT /tmp/mt_subst McdBox McdSphere
+./test/standalone/make_substituted_metoolkit.sh /tmp/kd_build $MT /tmp/mt_subst
+./test/standalone/make_substituted_metoolkit.sh /tmp/kd_build $MT /tmp/mt_subst McdBox McdSphere
 ```
 
 ### `make_hull_lib.sh` — swap qhull for the replacement
@@ -544,7 +574,7 @@ The harder question. Recovered objects replace the shipped ones outright.
 set. A whole-archive swap, because this one is a REPLACEMENT rather than a recovery.
 
 ```bash
-./test/make_hull_lib.sh $MT /tmp/mt_newhull
+./test/standalone/make_hull_lib.sh $MT /tmp/mt_newhull
 ```
 
 ### `hull_probe.sh` / `hull_ab.sh` — is the replacement hull right?
@@ -554,9 +584,9 @@ paired edges, outward normals. Tier 2 proves it is the **same solid**. Equality 
 a test: the hull reindexes, so two correct implementations can disagree about every index.
 
 ```bash
-./test/hull_probe.sh $LIB                                   # the SHIPPED library: ground truth
-KD_HULL_IMPL=src/McdConvexCreateHull/kd_convexhull.c ./test/hull_probe.sh $LIB
-./test/hull_ab.sh src/McdConvexCreateHull/kd_convexhull.c $LIB
+./test/standalone/hull_probe.sh $LIB                                   # the SHIPPED library: ground truth
+KD_HULL_IMPL=src/McdConvexCreateHull/kd_convexhull.c ./test/standalone/hull_probe.sh $LIB
+./test/standalone/hull_ab.sh src/McdConvexCreateHull/kd_convexhull.c $LIB
 ```
 
 ---
@@ -566,8 +596,8 @@ KD_HULL_IMPL=src/McdConvexCreateHull/kd_convexhull.c ./test/hull_probe.sh $LIB
 ### `run_map.sh` — play a map headless under the shadow harness
 
 ```bash
-./test/run_map.sh test-karma-1 300
-./test/run_map.sh DM-Rankin 200 "?Game=XGame.xDeathMatch"
+./test/ut2004/run_map.sh test-karma-1 300
+./test/ut2004/run_map.sh DM-Rankin 200 "?Game=XGame.xDeathMatch"
 ```
 
 Runs under Xvfb, so no GPU or display is needed. The harness rewrites its CSV as the match proceeds,

@@ -1,0 +1,80 @@
+name: gates
+
+# The standalone tier, on every push. The contract this enforces is the one the
+# repository claims: a bare clone, nothing installed, no game, no engine
+# checkout. If a change breaks that, it breaks here rather than on somebody
+# else's machine three weeks later.
+#
+# ⚠ WHAT THIS CANNOT COVER, and it is most of what matters. Every gate here is a
+# per-object comparison or an offline physics scene. None of them runs UT2004,
+# so the integration defects — a recovered geometry accessor that every
+# per-object gate links around — are invisible to CI by construction. That tier
+# is decomp/test/run-ut2004.sh and it runs on the owner's machine against a real
+# match. Green here means the objects are right one at a time.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  standalone:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      # EVERYTHING here is -m32. The recovery targets the shipped i386 archives
+      # and the acceptance test is byte-identity against their members, so a
+      # 64-bit-only toolchain cannot run a single gate in this file.
+      - name: i386 toolchain
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update -qq
+          sudo apt-get install -y gcc-multilib g++-multilib binutils
+
+      - name: The four hard gates
+        run: |
+          set -e
+          bash .gates/proven-count.sh
+          # no-abs-paths, doc-sync and product-in-sync are staged-file gates, so
+          # run their whole-tree equivalents here instead of faking an index.
+          if grep -rInE '(^|[^A-Za-z0-9_$])/home/[a-z]' \
+               --exclude-dir=lab --exclude-dir=metoolkit --exclude-dir=.git \
+               --exclude=no-abs-paths.sh . ; then
+            echo "::error::absolute /home path in a tracked file — see .gates/no-abs-paths.sh"
+            exit 1
+          fi
+          echo "no absolute paths outside lab/ and metoolkit/"
+
+      - name: Recover
+        run: |
+          python3 decomp/tools/recover.py \
+            --out-dir /tmp/kd_out --build-dir /tmp/kd_build
+
+      # The i386 acceptance test lives inside this: all 145 objects must
+      # recompile BYTE-IDENTICAL at -m32, and the post-passes are only allowed
+      # to be no-ops there. It is the gate on every generator change.
+      #
+      # The i386 control runs by default (KD_SKIP_CONTROL unset). Without it
+      # scene_ragdoll's measured-unstable ASan verdict — BLOWN UP 3 of 5 at
+      # LP64, 5 of 5 at i386, zero sanitizer errors either way — is a coin flip
+      # that fails the job for a reason it cannot attribute.
+      - name: LP64 pipeline + i386 acceptance
+        run: ./decomp/test/standalone/lp64_pipeline.sh
+
+      - name: The product is what the generator produces
+        run: python3 decomp/tools/split_libraries.py /tmp/kd_lp64/allobj --check
+
+      # No Android NDK on the runner, so ptrwidth_check reports SKIP. A missing
+      # toolchain is not a defect in this repository.
+      - name: Standalone tier
+        run: ./decomp/test/run-standalone.sh
+
+      - name: metoolkit_decomp builds, and so does its dummy
+        run: |
+          cmake -S metoolkit_decomp -B /tmp/md \
+                -DCMAKE_C_FLAGS=-m32 -DCMAKE_BUILD_TYPE=Release
+          cmake --build /tmp/md -j"$(nproc)"
+          cmake -S metoolkit_decomp_dummy -B /tmp/mdd \
+                -DCMAKE_C_FLAGS=-m32 -DCMAKE_BUILD_TYPE=Release
+          cmake --build /tmp/mdd -j"$(nproc)"

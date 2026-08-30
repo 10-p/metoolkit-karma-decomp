@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# metoolkit-karma-decomp commit-msg — conventional-commits [warn].
+set -uo pipefail
+root="$(git rev-parse --show-toplevel)"
+bash "$root/.gates/conventional-commits.sh" "$1" || true
+exit 0

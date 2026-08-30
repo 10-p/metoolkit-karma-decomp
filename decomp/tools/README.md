@@ -1,4 +1,4 @@
-# `karma-decomp/tools/` — every generator and analyser, with the command
+# `decomp/tools/` — every generator and analyser, with the command
 
 **One block per tool: what it answers, and the exact invocation.** Nothing here is a guess — if a
 command is written down it has been run. Read `../HANDOVER.md` first for what the project is; this
@@ -7,11 +7,18 @@ file is the index you come back to.
 Conventions used throughout:
 
 ```bash
-cd /home/ion/engines/engine-ut2004/karma-decomp
-MT=$(realpath ../Thirdparty/metoolkit)     # the shipped SDK
+cd decomp
+MT=$(realpath ../metoolkit)     # the shipped SDK, IN this repository
 LIB=$MT/lib.rel/linux_single_gcc3.2        # its i386 archives
-LAB=/home/ion/tools/karma-lab              # Ghidra dumps + extracted .o, OUTSIDE this repo
+LAB=../lab                      # Ghidra dumps + the 153 shipped .o
 ```
+
+**You do not have to set those.** Every tool resolves them itself through `kd_paths.py`, which
+finds the repository by walking up for a marker rather than by counting `..` — so a file can move
+without breaking. The variables above exist so the commands below read clearly. Override with
+`METOOLKIT_DIR`, `KD_LAB_DIR`, `KD_DUMP_DIR`, `KD_OBJ_DIR`, `KD_PROTOS`; anything that needs the
+game takes `UT2004_ENGINE_DIR` / `UT2004_BUILD_DIR` / `UT2004_ASSETS_DIR` / `UT2004_RUN_DIR` and
+fails loudly rather than guessing.
 
 `/tmp/kd_out` (recovered `.c`) and `/tmp/kd_build` (compiled `.o`) are the pipeline's outputs.
 **`/tmp` is volatile — a crash wipes it.** Anything you want to survive, copy out. One casualty of
@@ -32,6 +39,58 @@ one. Writing this file caught six invocations that were wrong as transcribed fro
 `reachable.py` has no `--why`; `ghidra_clean` takes `--object`, not `--obj`; the Ghidra dumps are
 named `<object>.o.c`, not `<object>.c`; and `dwarf_structs --type` must be pointed at the object
 that DEFINES the class. **Read the rule, then run it** applies to documentation too.
+
+---
+
+## Where things are — read this before adding a tool
+
+### `kd_paths.py` — the one place a tool learns where anything is
+
+```python
+import kd_paths
+kd_paths.METOOLKIT_DIR   kd_paths.MT_INC   kd_paths.MT_LIB   kd_paths.AMD64_LIB
+kd_paths.MD              kd_paths.MD_INC   kd_paths.MD_SRC
+kd_paths.LAB_DIR         kd_paths.DUMP_DIR kd_paths.OBJ_DIR  kd_paths.PROTOS
+kd_paths.require_metoolkit()  kd_paths.require_lab()  kd_paths.require_ut2004('assets')
+```
+
+`decomp/lib/kd-paths.sh` is the shell half and every name agrees. **Do not hardcode a path and do
+not compute one with `..` arithmetic.** Before stage 2.44 half the harnesses resolved the SDK as
+`$HERE/../Thirdparty` and half as `$HERE/../../Thirdparty`, because `HERE` meant the project root
+in some scripts and the test directory in others; both were right and both broke the moment a file
+moved. These resolve the root by walking up for a marker, so depth is not a variable.
+
+⚠ `HERE` in the `fix_*.py` passes is `kd_paths.MD` — the PRODUCT root, because `HERE/include` is
+where `kd_compat.h`, `kd_karma.h` and `kd_types.h` live and those are what their size and offset
+probes have to see. When the headers moved in 2.44, `fix_baked_sizeof.py` caught it itself:
+`SELF-CHECK FAILED — sizeof(*(MdtWorldID)0) measured None`. That is what the self-checks are for;
+`ghidra_clean.py` had three more references that no self-check covered and 14 objects stopped
+compiling until they were found.
+
+### `split_libraries.py` — lay the recovery out as MathEngine's sixteen libraries
+
+```bash
+python3 tools/split_libraries.py /tmp/kd_lp64/allobj          # refresh metoolkit_decomp/src
+python3 tools/split_libraries.py /tmp/kd_lp64/allobj --check  # the gate: is the tree current?
+python3 tools/split_libraries.py --map                        # object -> archive, from the SDK
+```
+
+The map is **read off the shipped archives** with `ar t`, never guessed. All 145 recovered objects
+map to exactly one, so there is no tie to break.
+
+⚠ **THE BUILD DIRECTORY IS THE AUTHORITY ON WHAT SHIPS.** `recover.py` writes a `.c` for every
+object it attempts, including the three that do not compile (`MeASELoad`,
+`MeFGeometryFromMesh`, `McduDebugDraw`). This iterates the `.o`, not the `.c`, and says out loud
+what it left out — laying out the other three would hand every consumer sources that do not build,
+and the split itself would succeed.
+
+⚠ **SPLIT FROM `/tmp/kd_lp64`, NOT `/tmp/kd_out`.** The raw recovery encodes i386 struct layouts.
+Using it is not a visible mistake: it builds, every 32-bit target is byte-identical, every i386
+gate passes, and only the 64-bit ABIs are wrong.
+
+⚠ `version` is in EVERY archive — MathEngine compiled a per-library version stamp — so "this
+member is in more than one archive" is a normal fact about the SDK. It is only an error for an
+object being laid out, which is where the check lives.
 
 ---
 
@@ -128,7 +187,7 @@ declaration-only DIE with a bogus size (`keaMatrix` is 4 bytes in one object and
 another). This unions the DWARF across all objects and keeps the richest definition.
 
 ```bash
-python3 tools/gen_typedb.py $LAB/allobj --public-headers $MT/include -o include/kd_types.h
+python3 tools/gen_typedb.py $LAB/allobj --public-headers $MT/include -o ../metoolkit_decomp/include/kd_types.h
 ```
 
 Re-run after any DWARF-side change (`../HANDOVER.md` §4, "Regenerate the type database").
@@ -236,12 +295,12 @@ object files, resolving against the recovered build first and the shipped archiv
 **That set is the work**; object counts are not.
 
 ```bash
-python3 tools/dropin_gap.py ../build-native-karma /tmp/kd_build $LAB/allobj
+python3 tools/dropin_gap.py $UT2004_ENGINE_DIR/build-native-karma /tmp/kd_build $LAB/allobj
 #   -> 0 shipped member(s), 0 symbol(s); 134 recovered member(s) in the closure
 
-python3 tools/dropin_gap.py ../build-native-karma /tmp/kd_build $LAB/allobj \
+python3 tools/dropin_gap.py $UT2004_ENGINE_DIR/build-native-karma /tmp/kd_build $LAB/allobj \
         --status /tmp/kd_recover.log            # annotate each gap member with why it is held
-python3 tools/dropin_gap.py ../build-native-karma /tmp/kd_build $LAB/allobj \
+python3 tools/dropin_gap.py $UT2004_ENGINE_DIR/build-native-karma /tmp/kd_build $LAB/allobj \
         --verify-against /tmp/real_link_undefined.txt   # check the walk against a REAL link
 ```
 
@@ -265,7 +324,7 @@ ZERO** and has been checked against a real link twice over.
 > object that touches no Karma symbol. A real closure is **134** recovered members; the count on
 > that line is what tells the two apart.
 >
-> `../../build-native-karma/` is therefore the one build tree deliberately kept in the working
+> `$UT2004_ENGINE_DIR/build-native-karma/` is therefore the one build tree deliberately kept in the working
 > directory. Everything else under `build-*/` is reproducible from `BUILD.md` and was deleted.
 > Rebuild it with `cmake --preset native-karma && cmake --build --preset native-karma -j"$(nproc)"`.
 
@@ -275,7 +334,7 @@ Which Karma objects can UT2004 actually reach, at symbol level. An object nothin
 of scope, not a to-do** — §3b retires 31 permanently on this tool's output.
 
 ```bash
-python3 tools/reachable.py ../build-native-karma /tmp/kd_members
+python3 tools/reachable.py $UT2004_ENGINE_DIR/build-native-karma /tmp/kd_members
 #   -> 543 engine objects, 178 members, 147 reached, 31 NOT reachable at all
 ```
 
@@ -299,7 +358,7 @@ every function-pointer call through it. Free on i386 (the caller cleans the stac
 `call_indirect` trap waiting for the right code path.
 
 ```bash
-python3 tools/code_call_check.py generated/allobj      # 0
+python3 tools/code_call_check.py metoolkit_decomp/src      # 0
 python3 tools/code_call_check.py /tmp/kd_out/allobj
 ```
 
@@ -351,16 +410,16 @@ identical line of output. A whole-library A/B that reads bit-identical proves th
 *on the paths the map exercised* and says nothing whatever about the rest.
 
 ```bash
-cmake --preset native -B ../build-native-census -DKD_CENSUS=ON -DCMAKE_EXE_LINKER_FLAGS=-no-pie
-cmake --build ../build-native-census -j"$(nproc)"
+cmake --preset native -B $UT2004_ENGINE_DIR/build-native-census -DKD_CENSUS=ON -DCMAKE_EXE_LINKER_FLAGS=-no-pie
+cmake --build $UT2004_ENGINE_DIR/build-native-census -j"$(nproc)"
 
-cd /home/ion/karma-run/System && cp <binary> census.bin
+cd $UT2004_RUN_DIR/System && cp <binary> census.bin
 KD_INSTR_OUT=/tmp/c1.txt timeout 150 xvfb-run -a ./census.bin \
   "test-karma-1?game=Onslaught.ONSOnslaughtGame?TimeLimit=0?SpectatorOnly=1?NumBots=2" \
   -SOFTWARERENDERER -nohomedir
 # … repeat per map; the union is what matters
 
-python3 tools/census_report.py /tmp/c1.txt /tmp/c2.txt … ../build-native-census/…/ut2004-pixo.bin
+python3 tools/census_report.py /tmp/c1.txt /tmp/c2.txt … $UT2004_ENGINE_DIR/build-native-census/…/ut2004-pixo.bin
 ```
 
 Reads **555 of 2,025 functions (27.4%)** across four maps and two gametypes today. It names every
@@ -393,8 +452,8 @@ census with `reachable.py`'s symbol closure and reports the number that is actua
 
 ```bash
 python3 tools/cold_triage.py /tmp/cy-*.txt \
-        ../build-native-census/Source/SDLLaunch/ut2004-pixo.bin \
-        --build ../build-native-karma --members /tmp/kd_members
+        $UT2004_ENGINE_DIR/build-native-census/Source/SDLLaunch/ut2004-pixo.bin \
+        --build $UT2004_ENGINE_DIR/build-native-karma --members /tmp/kd_members
 ```
 
 Four verdicts, and the two weak ones are marked weak rather than folded in: **DEAD-OBJECT** (its
@@ -471,7 +530,7 @@ addresses somebody else's memory with nothing truncated and clang silent.
 python3 tools/layout_check.py /tmp/kd_out/allobj /tmp/kd_build
 ```
 
-~1 min, needs no arm64 hardware. It **bounds** the job; `test/lp64_run.sh` names the individual
+~1 min, needs no arm64 hardware. It **bounds** the job; `test/standalone/lp64_run.sh` names the individual
 defects by running them.
 
 ### `assoc_scan.py` — where the association defect can hide
@@ -509,8 +568,8 @@ A clean `cmake --build` says the sources compiled and the archive was offered to
 not say one member is in the binary: a static archive contributes only what something references.
 
 ```bash
-python3 tools/wasm_members.py ../build-wasm-karmadecomp-debug
-python3 tools/wasm_members.py ../build-wasm-karmadecomp-debug -v    # per-member counts
+python3 tools/wasm_members.py $UT2004_ENGINE_DIR/build-wasm-karmadecomp-debug
+python3 tools/wasm_members.py $UT2004_ENGINE_DIR/build-wasm-karmadecomp-debug -v    # per-member counts
 ```
 
 Current answer: **125 of 146 contribute at least one symbol**, 3 define only data (which linking
@@ -526,11 +585,11 @@ XML-output and unused-constraint objects §3b retires.
 ## The arm64 post-passes — NOT part of the 95-second pipeline
 
 They need the NDK, they **edit in place**, and §4's output is not arm64-correct source until they
-have run. **Run them on a copy**, in this order — or just use `test/lp64_pipeline.sh`, which does
+have run. **Run them on a copy**, in this order — or just use `test/standalone/lp64_pipeline.sh`, which does
 the copy, all ten passes, the acceptance test and the harness in the right order.
 
 ```bash
-./test/lp64_pipeline.sh                      # all of the below, gated
+./test/standalone/lp64_pipeline.sh                      # all of the below, gated
 
 # or by hand — THE ORDER IS LOAD-BEARING, see each tool's block below:
 cp -a /tmp/kd_out /tmp/kd_lp64
@@ -546,7 +605,7 @@ python3 tools/fix_align_masks.py     /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/fix_frame_slots.py     /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/fix_pool_reserve.py    /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/check_frame_bounds.py  /tmp/kd_lp64/allobj /tmp/kd_build   # must read 0
-KD_OUT=/tmp/kd_lp64 ./test/lp64_run.sh
+KD_OUT=/tmp/kd_lp64 ./test/standalone/lp64_run.sh
 ```
 
 ⚠ **The last four are ordered and not interchangeable.** `fix_ptrwidth` writes the `kd_iptr`
@@ -557,7 +616,7 @@ the allocations `fix_narrow_pointers` repairs, and before that pass `NAZ` and `N
 identically, so running it early makes it print a clean, wrong zero. It refuses that case.
 
 `fix_ptrwidth.py` and `fix_narrow_pointers.py` need the Android NDK; they default to
-`/home/ion/Android/Sdk/ndk/30.0.14904198/...` and take `KD_NDK` to override.
+`$ANDROID_HOME/ndk/30.0.14904198/...` and take `KD_NDK` to override.
 
 **The acceptance test for each is that all 145 objects recompile BYTE-IDENTICAL at i386** —
 `intptr_t` *is* `int` at 32-bit pointer width, so both are no-ops there by construction. Run it:
@@ -1215,7 +1274,7 @@ slot 5 runs four bytes off the end of a 24-byte array. That is `MstUtils.c:91`; 
 is its consequence one call deeper.
 
 ★ **`proven.txt` called this class unfixable under the byte-identity gate, and that was a
-prediction.** LP64-TWO-REMAIN reasoned: "It is a PIPELINE change, so `generated/allobj` moves and
+prediction.** LP64-TWO-REMAIN reasoned: "It is a PIPELINE change, so `metoolkit_decomp/src` moves and
 byte-identity CANNOT be the gate." True of the repair it had in mind — converting the shape
 upstream in `recover.py` — and not true of scaling the offsets **and the object** together in a
 post-pass:
@@ -1279,7 +1338,7 @@ python3 tools/mk_trace_obj.py /tmp/kd_out/allobj/IxCylinderCylinder.c \
 **No renaming and no mixed link** — an earlier attempt used `objcopy --redefine-sym`, which renames
 the call sites in the same object too, so the shipped caller went straight to the original and the
 wrapper was never reached. It printed nothing and looked like a harness that had run.
-`test/trace_cylcyl.sh` is the worked use.
+`test/standalone/trace_cylcyl.sh` is the worked use.
 
 ### `find_cylinder_geom.py` — does any shipped asset define this geometry?
 
@@ -1289,7 +1348,7 @@ order with **no field names**, so `CylinderElems` appears in no package. This pa
 instead.
 
 ```bash
-python3 tools/find_cylinder_geom.py /home/ion/ut2004-assets
+python3 tools/find_cylinder_geom.py $UT2004_ASSETS_DIR
 #   -> ...  KMeshProps143  {'sphere': 0, 'box': 0, 'cylinder': 1, 'convex': 0}
 ```
 
@@ -1305,21 +1364,21 @@ it).
 
 `ParseKarmaHeaders.java` (preScript, consumes `kd_protos11.h`) and `DumpDecomp.java` (postScript,
 emits the per-function dump, `stats.csv` and `<object>.locals`). Ghidra lives at
-`/home/ion/tools/ghidra_12.1.3_PUBLIC` (Java 21, headless only). `../HANDOVER.md` §5 has the
+`$GHIDRA_HOME` (Java 21, headless only). `../HANDOVER.md` §5 has the
 full-corpus invocation and `KD_GHIDRA_OPTS`. **The scripts must be COPIED to
-`/home/ion/tools/karma-lab/gscripts/`** — Ghidra reads them from there, not from this repo.
+`lab/gscripts/`** — Ghidra reads them from there, not from this repo.
 
 A single-object re-dump, which is the form you actually want when testing a hypothesis:
 
 ```bash
-cd /home/ion/tools/karma-lab
-cp /home/ion/engines/engine-ut2004/karma-decomp/tools/gscripts/*.java gscripts/
+cd lab
+cp decomp/tools/gscripts/*.java gscripts/
 mkdir -p one_obj out_verify gproj_verify && cp allobj/McdSpace.o one_obj/
-export KARMA_PROTOS=/home/ion/tools/karma-lab/kd_protos11.h
-export KARMA_OUTDIR=/home/ion/tools/karma-lab/out_verify
-/home/ion/tools/ghidra_12.1.3_PUBLIC/support/analyzeHeadless \
-  gproj_verify Proj -import /home/ion/tools/karma-lab/one_obj \
-  -scriptPath /home/ion/tools/karma-lab/gscripts \
+export KARMA_PROTOS=lab/kd_protos11.h
+export KARMA_OUTDIR=lab/out_verify
+$GHIDRA_HOME/support/analyzeHeadless \
+  gproj_verify Proj -import lab/one_obj \
+  -scriptPath lab/gscripts \
   -preScript ParseKarmaHeaders.java -postScript DumpDecomp.java -deleteProject
 #   -> out_verify/McdSpace.o.{c,locals} + stats.csv
 ```

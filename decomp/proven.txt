@@ -10,9 +10,9 @@
 #
 # TWO TIERS OF EVIDENCE, and they are not interchangeable:
 #
-#   real   — the shadow harness, driven by a live match (test/run_map.sh).
+#   real   — the shadow harness, driven by a live match (test/ut2004/run_map.sh).
 #            Real inputs, real distributions. The strongest thing available.
-#   synth  — test/difftest_pair.sh, which drives one interaction directly over
+#   synth  — test/standalone/difftest_pair.sh, which drives one interaction directly over
 #            randomised transforms. Far more samples, far more corner cases, but
 #            they are not gameplay. IxBoxBox is the standing reminder: proven on
 #            300,000 synthetic pairs, and the census later showed the game makes
@@ -219,7 +219,7 @@ IxSphylPrimitives     RELEASED. Held back since it was first recovered, on the g
 #                       in-game, 25 min     11 structural divergences in 77,202 -> 1 in 74,921
 #
 #                     SECOND, what remained was measured against the right yardstick instead
-#                     of against zero. test/scene_ragdoll.c drops a nine-capsule ragdoll onto
+#                     of against zero. test/standalone/scene_ragdoll.c drops a nine-capsule ragdoll onto
 #                     a plane and boxes for 15 s, with the recovered code DRIVING rather than
 #                     shadowing — which is the thing the shadow harness structurally cannot
 #                     test, because it feeds the engine the original's answer every frame and
@@ -291,7 +291,7 @@ IxConvexPrimitives    real: 1,685 calls of McdSphylConvexMeshIntersect on ONS-CB
 #                     BOTTOM rather than estimated. Everything below is so nobody repeats it.
 #
 #                     THE DEFECT IS ENTIRELY INSIDE OverlapCylCyl, and that is measured, not
-#                     inferred. test/trace_cylcyl.sh shadows the recovered OverlapCylCyl
+#                     inferred. test/standalone/trace_cylcyl.sh shadows the recovered OverlapCylCyl
 #                     against the SHIPPED one on difftest's own seeded inputs — no renaming,
 #                     no mixed link, because the symbol is a GLOBAL and difftest already
 #                     prefixes the recovered side `rec_`. Over 200,000 calls:
@@ -422,7 +422,7 @@ IxCylinderTriList     RE-RELEASED 2026-08-27 (eighth session) — the live-match
 #                     "0 structural in 71,417" that did not replicate. It reproduces offline
 #                     under KD_CORNER=1 at iteration 23624, count 30/32.
 #
-#                     LOCALISED BY test/bisect_static.sh, in one pass:
+#                     LOCALISED BY test/standalone/bisect_static.sh, in one pass:
 #                       --none                              1 count  FAIL   (the control)
 #                       --all                        30,000/30,000  PASS   (harness sound)
 #                       McdVanillaOverlapCylTri      30,000/30,000  PASS
@@ -703,7 +703,7 @@ IxCylinderTriList     RE-RELEASED 2026-08-27 (eighth session) — the live-match
 #
 #                     FOUND by the acceptance run the owner asked for when the recovered Karma
 #                     became the default on every 32-bit target: a 5-minute ONS-Torlan match per
-#                     build (karma-decomp/test/ons_smoke.sh). ONS is the gametype that spawns
+#                     build (decomp/test/ut2004/ons_smoke.sh). ONS is the gametype that spawns
 #                     VEHICLES, which is most of what Karma exists for; the ut2004 browser suite is
 #                     51/51 and is almost entirely DM, so it never touched this path.
 #
@@ -733,12 +733,12 @@ IxCylinderTriList     RE-RELEASED 2026-08-27 (eighth session) — the live-match
 #
 #                     ── NARROWED TO TWO FUNCTIONS, AND ONE OF THEM DIAGNOSED (same session) ──
 #
-#                     test/gjk_bisect.sh asks "does taking function F from the shipped object fix
+#                     test/ut2004/gjk_bisect.sh asks "does taking function F from the shipped object fix
 #                     it?" — and every one of the nine answered NO while the whole object answered
 #                     YES. That is the signature of MORE THAN ONE defective function: swapping one
 #                     leaves the other, so no single swap can pass.
 #
-#                     test/gjk_bisect_complement.sh asks the complement, which has no such blind
+#                     test/ut2004/gjk_bisect_complement.sh asks the complement, which has no such blind
 #                     spot: keep exactly ONE function of OURS, take the rest from theirs.
 #
 #                       (positive control: nothing of ours)  survived      <- harness is sound
@@ -867,11 +867,11 @@ McdTriangleList       real: same run, same evidence. These two objects account f
 #                     defect in the object it did not substitute, and "145 objects pass" is a
 #                     statement about 145 separate links, not about the program.
 #
-#                     HOW IT WAS FOUND, and the instrument is new: test/ktrace_run.sh records one
+#                     HOW IT WAS FOUND, and the instrument is new: test/ut2004/ktrace_run.sh records one
 #                     CSV row per simulated body per frame from inside KTickLevelKarma, and
-#                     test/ktrace_subst.sh rebuilds the engine with a chosen SET of objects taken
+#                     test/ut2004/ktrace_subst.sh rebuilds the engine with a chosen SET of objects taken
 #                     from the shipped library and scores the result against a `legacy-karma`
-#                     reference (test/ktrace_score.py). Both controls first: ALL 145 from shipped
+#                     reference (test/standalone/ktrace_score.py). Both controls first: ALL 145 from shipped
 #                     scored MATCH, none scored 12 mismatches. Then the COMPLEMENT — keep one family
 #                     of ours, take the rest from theirs:
 #
@@ -982,7 +982,7 @@ McdTriangleList       real: same run, same evidence. These two objects account f
 
 # ASSOC-SURVEY       2026-08-28 (eleventh session): THE ASSOCIATION QUESTION NOW HAS AN ORACLE,
 #                     AND THE ANSWER IS MOSTLY "WE ARE ALREADY RIGHT". Record in
-#                     karma-decomp/assoc-survey.txt, generated by tools/assoc_survey.py.
+#                     decomp/assoc-survey.txt, generated by tools/assoc_survey.py.
 #
 #                     ASSOC-ON-I386 and assoc_scan.py's own docstring both say the association half
 #                     "decides nothing" — Ghidra decompiles the i386 build, x87's 80-bit registers
@@ -1156,7 +1156,7 @@ McdTriangleList       real: same run, same evidence. These two objects account f
 #                     AND ANDROID STILL CRASHES WITH KARMA ON. Two different things, and this
 #                     entry exists so the second is not read as the first coming undone.
 #
-#                     WHAT IS DONE: `generated/allobj` now carries the LP64 post-passes — it used
+#                     WHAT IS DONE: `metoolkit_decomp/src` now carries the LP64 post-passes — it used
 #                     to be the raw `recover.py` output — and `lp64_pipeline.sh` ends `-> PASS`.
 #                     All 145 objects still compile byte-identical at -m32, so wasm32, i686 and
 #                     armeabi-v7a get exactly the object code they had. The CMake UT_PTR_BYTES
@@ -1536,7 +1536,7 @@ McdTriangleList       real: same run, same evidence. These two objects account f
 #                     call deeper, `*resultCount = 0` through a pointer from a clobbered slot.
 #
 #                     ★ WHY THE PREDICTION WAS WRONG, AND IT IS THE FOURTH TIME THIS SESSION.
-#                     LP64-TWO-REMAIN reasoned: "It is a PIPELINE change, so generated/allobj
+#                     LP64-TWO-REMAIN reasoned: "It is a PIPELINE change, so metoolkit_decomp/src
 #                     moves and byte-identity CANNOT be the gate — the repair gives the scratch
 #                     its own storage, which is a different stack layout by construction." True
 #                     of the repair it had in mind — converting the shape upstream in
@@ -2017,7 +2017,7 @@ McdTriangleList       real: same run, same evidence. These two objects account f
 #                     knocked MstUtils out of the build entirely." The shape is 124 sites across 8
 #                     objects, FIVE of them released and validated (IxConvexTriList,
 #                     IxCylinderTriList, IxSphylPrimitives, IxBoxTriList, IxSphereTriList). It is a
-#                     PIPELINE change, so `generated/allobj` moves and byte-identity CANNOT be the
+#                     PIPELINE change, so `metoolkit_decomp/src` moves and byte-identity CANNOT be the
 #                     gate — the repair gives the scratch its own storage, which is a different
 #                     stack layout by construction. Validating it means the nine gates plus the
 #                     behavioural harnesses on those five. Do not attempt it as an increment.
@@ -2610,7 +2610,7 @@ McdTriangleList       real: same run, same evidence. These two objects account f
 #                     in the gate set builds for.
 #
 #                     ⚠ IT IS IN THE 95-SECOND PIPELINE, NOT A POST-PASS. Repairing it changes
-#                     `generated/allobj`, so it needs the full nine gates and a re-check that all
+#                     `metoolkit_decomp/src`, so it needs the full nine gates and a re-check that all
 #                     145 objects still recompile byte-identical — which is why it is recorded
 #                     here rather than done in the same session that found it.
 
@@ -2934,7 +2934,7 @@ McdTriangleList       real: same run, same evidence. These two objects account f
 #                     HAD NEVER BEEN ATTEMPTED. The engine LINKS against a metoolkit that
 #                     contains no MathEngine object code at all, and PLAYS.
 #
-#                     test/make_dropin_metoolkit.sh builds the tree: the qhull archive
+#                     test/standalone/make_dropin_metoolkit.sh builds the tree: the qhull archive
 #                     replaced wholesale by src/McdConvexCreateHull/kd_convexhull.c
 #                     (1,416,194 -> 10,382 bytes, exported symbol set identical), all 145
 #                     recovered objects substituted in place of their shipped members, and
@@ -3039,7 +3039,7 @@ McdTriangleList       real: same run, same evidence. These two objects account f
 #                     lower bound; this is how big the gap is on one object.
 
 # LP64-SIZEOF         2026-08-27 (eighth session): the first LP64 defect class repaired, and
-#                     the iterate-and-fix loop that test/lp64_run.sh makes possible.
+#                     the iterate-and-fix loop that test/standalone/lp64_run.sh makes possible.
 #
 #                     tools/fix_baked_sizeof.py. THE DEFECT is an allocation whose SIZE was
 #                     frozen at the i386 value, in three spellings:
@@ -3125,7 +3125,7 @@ McdTriangleList       real: same run, same evidence. These two objects account f
 #                     across 41 objects in the build.
 #
 #                     THE CONTROL IS WHAT MAKES IT ATTRIBUTABLE, and it is built into
-#                     test/lp64_run.sh so it cannot be skipped by accident:
+#                     test/standalone/lp64_run.sh so it cannot be skipped by accident:
 #
 #                       same sources, same sanitizer, -m32 : 900 steps, exit 0, 0 errors
 #                       same sources, same sanitizer, -m64 : abort, 5 errors
@@ -3227,7 +3227,7 @@ McdTriangleList       real: same run, same evidence. These two objects account f
 #                     offset was derived from a 32-bit layout and no compiler will revisit
 #                     it. SUSPECT is an EXPOSURE — legitimate array indexing lives there too,
 #                     and only per-site judgement separates it from Ghidra indexing a pointer
-#                     through a type it CHOSE. `include/kd_types.h` declares real fields with
+#                     through a type it CHOSE. `../metoolkit_decomp/include/kd_types.h` declares real fields with
 #                     real types, so anything that NAMES a field recompiles correctly at any
 #                     pointer width; that is why SAFE is reported at all.
 #
@@ -3246,8 +3246,8 @@ MdtLOD                RELEASED 2026-08-27 (eighth session), and NOT on the reach
 #                     ABOUT TO SHIP A FUNCTION THAT SEGFAULTS ON ITS FIRST REAL CALL.
 #
 #                     `MdtWorldSetMaxMatrixSize` is a PUBLIC API, so the guard does not have
-#                     to be reasoned about — it can be made true. test/scene_ragdoll_lod.c
-#                     is scene_ragdoll with one line added, and test/ab_lod.sh builds it
+#                     to be reasoned about — it can be made true. test/standalone/scene_ragdoll_lod.c
+#                     is scene_ragdoll with one line added, and test/standalone/ab_lod.sh builds it
 #                     against stock and against a metoolkit with ONLY MdtLOD substituted,
 #                     then diffs the trajectories:
 #
@@ -3319,7 +3319,7 @@ McdContact            RELEASED 2026-08-27 (eighth session). It was ATTEMPTED AND
 #                     different this time is not a better argument, it is an INSTRUMENT that
 #                     can see the defect the gates could not.
 #
-#                     test/ab_contact.sh + test/ab_contact.c drive the recovered
+#                     test/standalone/ab_contact.sh + test/standalone/ab_contact.c drive the recovered
 #                     McdContactSimplify and the SHIPPED one with identical random contact
 #                     sets in one process and compare the WHOLE destination buffer bitwise —
 #                     not `ret` entries, because a write past the count is exactly the smash
@@ -3367,7 +3367,7 @@ IxBoxTriList          RELEASED 2026-08-27 (eighth session), and the reason it wa
 #                       before this session: 1,463 ret/touch, 139,961 count, 12,060 dims.
 #
 #                     THE FRAME ITSELF WAS MEASURED, which is what the nrecon detector asks
-#                     for and what no synthetic run had ever given it. test/bisect_static.sh
+#                     for and what no synthetic run had ever given it. test/standalone/bisect_static.sh
 #                     substitutes ONE file-static at a time by forwarding it to a `sh_`-
 #                     prefixed copy of the shipped object, so inlining cannot defeat it:
 #
@@ -3529,7 +3529,7 @@ IxConvexTriList       RELEASED 2026-08-23, and the tenth and last pair the censu
 # to the opener. It PASSED ALL SEVEN GATES before and after — the offline scenes
 # never open a .ka file, so no gate could see it. Same shape as IxSphereTriList:
 # compiles, gates clean, dies on first real use. Fixed in
-# gen_prelude.static_reloc_definition; test/try_subst.sh is the bisect harness.
+# gen_prelude.static_reloc_definition; test/ut2004/try_subst.sh is the bisect harness.
 
 
 # --- 2026-08-24 (third session): CYLINDER PAIRS ARE LIVE ---------------------
@@ -3913,14 +3913,14 @@ IxConvexTriList       RELEASED 2026-08-23, and the tenth and last pair the censu
 #
 # HANDOVER.md 12 item 4, the qhull half. src/McdConvexCreateHull/kd_convexhull.c
 # provides all 15 exported functions in ~600 lines of plain C, replacing qhull
-# 2.6 (1998). 1,416,194 bytes -> 10,382. Stage it with test/make_hull_lib.sh.
+# 2.6 (1998). 1,416,194 bytes -> 10,382. Stage it with test/standalone/make_hull_lib.sh.
 #
 # This is a REPLACEMENT, so "compare against the shipped output" is not an
 # available test: the hull REINDEXES, and two correct implementations can
 # disagree about every index while describing the same solid. Three tiers
 # instead, all green.
 #
-# TIER 1 -- invariants (test/hull_probe.sh, KD_HULL_IMPL=...):
+# TIER 1 -- invariants (test/standalone/hull_probe.sh, KD_HULL_IMPL=...):
 #   100,633 checks, 0 failures. Identical V/F/E to the shipped library on all
 #   six shapes. Coplanar triangles merge (a cube is 6 quads, not 12 triangles),
 #   interior and redundant coplanar input points are discarded, every edge is
@@ -3934,7 +3934,7 @@ IxConvexTriList       RELEASED 2026-08-23, and the tenth and last pair the censu
 #   checks the return value, so accepting a box the shipped code rejects would
 #   invent collision geometry the game never had.
 #
-# TIER 2 -- same solid (test/hull_ab.sh). Canonical geometry, sorted vertex
+# TIER 2 -- same solid (test/standalone/hull_ab.sh). Canonical geometry, sorted vertex
 #   positions and face planes plus enclosed volume, diffed:
 #     894 lines, ONE differing -- a single face-normal component by 1e-4 on the
 #     200-point cloud -- and ALL SIX VOLUMES IDENTICAL to 5 decimals.
@@ -4020,9 +4020,9 @@ IxConvexTriList       RELEASED 2026-08-23, and the tenth and last pair the censu
 # exact", "the object never executed", or "it executed and nothing it computes
 # is measured". Two instruments now separate those (HANDOVER.md 4):
 #
-#   test/scene_census.sh      counts every function entry, so "never ran" is a
+#   test/standalone/scene_census.sh      counts every function entry, so "never ran" is a
 #                             distinct answer from "ran and agreed"
-#   test/gate_sensitivity.sh  rebuilds the object with intermediates rounded and
+#   test/standalone/gate_sensitivity.sh  rebuilds the object with intermediates rounded and
 #                             reports how far the trajectory then moves — i.e.
 #                             the smallest error the scene could have caught
 #
@@ -4159,7 +4159,7 @@ MdtUtils              Bit-identical on scene_ragdoll with 4.113e+00 m of
 #
 #   * the 19 resolved sites reproduce the 19 dispatches in the old dump
 #     one-for-one -- an exact independent match;
-#   * the slot mapping agrees with test/scene_census.sh's count of
+#   * the slot mapping agrees with test/standalone/scene_census.sh's count of
 #     platformInit / calcJinvMandRHS / calcIworld... / calculateConstraint...
 #     running 900 times each in 900 steps, measured months apart for an
 #     unrelated reason;
@@ -4459,7 +4459,7 @@ MdtUtils              Bit-identical on scene_ragdoll with 4.113e+00 m of
 # is most ambiguous, and it does not flinch. Compare IxCylinderCylinder on the
 # same inputs.
 #
-# Reproduce:  KD_GRID=1 ./test/difftest_pair.sh /tmp/kd_build_dt <metoolkit>
+# Reproduce:  KD_GRID=1 ./test/standalone/difftest_pair.sh /tmp/kd_build_dt <metoolkit>
 # and always with KD_SELFTEST=1 on the same regime first.
 
 # --- 2026-08-25: GJK's WARM CACHE PATH, tested for the first time -------------
@@ -4523,13 +4523,13 @@ MdtUtils              Bit-identical on scene_ragdoll with 4.113e+00 m of
 # not the cold path, not the warm path on these shapes, and not cache
 # maintenance.
 #
-# Reproduce:  KD_WARM=8 ./test/difftest_pair.sh /tmp/kd_build_dt <metoolkit>
+# Reproduce:  KD_WARM=8 ./test/standalone/difftest_pair.sh /tmp/kd_build_dt <metoolkit>
 #             KD_WARM=8 KD_SELFTEST=1 ...   first, always.
 
 
 # --- 2026-08-25: A FRESH LIVE MATCH ON THE out11 BUILD ------------------------
 #
-# test-simple-physics, 300 s, xDeathMatch, KD_RUNTIME=/tmp/kd_runtime.
+# test-simple-physics, 300 s, xDeathMatch, UT2004_RUN_DIR=/tmp/kd_runtime.
 # Shadow harness over /tmp/kd_build as of out11 (109 objects, all .o
 # byte-identical to out9's -- see HANDOVER.md 5b/5c).
 #
@@ -4644,9 +4644,9 @@ MdtUtils              Bit-identical on scene_ragdoll with 4.113e+00 m of
 # until the run is long enough that the next run does not move it.
 #
 # Reproduce:
-#   KD_ONLY=CylinderTriangleList KD_LOGMAX=400 KD_RUNTIME=/tmp/kd_runtime \
+#   KD_ONLY=CylinderTriangleList KD_LOGMAX=400 UT2004_RUN_DIR=/tmp/kd_runtime \
 #   KD_BIN=.../ut2004-karma-pixo.bin KD_SHADOW_OUT=/tmp/x.csv \
-#   KD_SHADOW_DIVERGENCES=/tmp/x.txt ./test/run_map.sh test-simple-physics 420 "$URL"
+#   KD_SHADOW_DIVERGENCES=/tmp/x.txt ./test/ut2004/run_map.sh test-simple-physics 420 "$URL"
 #   and the same with KD_SELFTEST=1 first, always.
 
 # ADDENDUM: THE SYNTHETIC TIER CANNOT REACH THIS DEFECT, and here is what was
@@ -4807,7 +4807,7 @@ MdtUtils              Bit-identical on scene_ragdoll with 4.113e+00 m of
 # second at word scale and the offsets are 48 and 64 in a table whose last slot
 # is 32; read the first at byte scale and `[2]` is not a multiple of four.
 #
-# AND THEN THE PART THAT IS EVIDENCE RATHER THAN ARGUMENT: test/vptr_ab.sh, a
+# AND THEN THE PART THAT IS EVIDENCE RATHER THAN ARGUMENT: test/standalone/vptr_ab.sh, a
 # ninth gate. It rebuilds the object with every repaired dispatch replaced by a
 # DIRECT call to the symbol that slot holds -- taken from vtable_slots.py, i.e.
 # from the relocations in the object that DEFINES the vtable, not read back out
@@ -5089,7 +5089,7 @@ MdtUtils              Bit-identical on scene_ragdoll with 4.113e+00 m of
 # that holds an object on EVIDENCE rather than on a pattern. keaLCPSolver is its
 # first and only entry. Removing it is a release and needs the usual standard.
 #
-# The vptr repair inside it is still measured and still correct -- test/vptr_ab.sh
+# The vptr repair inside it is still measured and still correct -- test/standalone/vptr_ab.sh
 # reads bit-identical against a devirtualised control with both wrong versions
 # crashing. The defect is elsewhere in the object, and the instrument to find it
 # now exists: bisect on the first differing step, not on the maximum.
@@ -5154,7 +5154,7 @@ MdtUtils              Bit-identical on scene_ragdoll with 4.113e+00 m of
 #
 # RELEASED FROM MEASURED_WRONG. Bit-identical on scene_chain, scene_ragdoll and
 # scene_boxes_on_plane, and bit-identical on every one of its FIFTEEN functions
-# taken one at a time (test/bisect_object.sh). 113 objects in the build.
+# taken one at a time (test/standalone/bisect_object.sh). 113 objects in the build.
 #
 # THE DEFECT WAS THREE CASTS, and nothing diagnosed them. Ghidra type-puns a
 # `MeReal *` into a struct pointer and writes through the first member:
@@ -5180,7 +5180,7 @@ MdtUtils              Bit-identical on scene_ragdoll with 4.113e+00 m of
 # changing IxCylinderCylinder, an object with nothing wrong with it. The
 # blast-radius check caught it before anything else could.
 #
-# test/bisect_object.sh IS THE NEW INSTRUMENT and it is what made this findable.
+# test/standalone/bisect_object.sh IS THE NEW INSTRUMENT and it is what made this findable.
 # substitute_test.sh works one OBJECT at a time; this drives the same scene with
 # exactly ONE recovered function in the link -- the shipped member's globals
 # WEAKENED, all but one of the recovered object's LOCALISED -- so a divergence
@@ -5287,7 +5287,7 @@ MdtUtils              Bit-identical on scene_ragdoll with 4.113e+00 m of
 #
 # `keaLCPSolver::solveLCP` and `checkForCycles` are BIT-IDENTICAL to the shipped
 # library on scene_chain, scene_ragdoll AND scene_boxes_on_plane, and
-# bit-identical on each function taken alone (test/bisect_object.sh). The object
+# bit-identical on each function taken alone (test/standalone/bisect_object.sh). The object
 # is held out of the build by the `extraout_EDX` detector; see the end of this
 # entry, which is where a release decision would start.
 #
@@ -5493,7 +5493,7 @@ keaIntegrate_pc       RELEASED 2026-08-25 (fifth session). Bit-identical on all 
 # was written for -- still reports its 30 sites, which is the control.
 #
 #   scene_chain / ragdoll / boxes_on_plane   BIT-IDENTICAL (all three)
-#   per-function (test/bisect_object.sh)     both functions identical
+#   per-function (test/standalone/bisect_object.sh)     both functions identical
 #   scene_census                             solveLCP ran 900 times; it is not
 #                                            a never-ran verdict
 #   blast radius of both releases            all 113 previously-built objects
@@ -5550,7 +5550,7 @@ keaLCP_new            RELEASED 2026-08-25 (fifth session). Bit-identical on all 
 # getting there required fixing the instrument first.
 #
 # THE INSTRUMENT WAS BROKEN AND THE OBJECT IS WHAT SHOWED IT.
-# test/bisect_object.sh reported all six functions with the SAME
+# test/standalone/bisect_object.sh reported all six functions with the SAME
 # `first@0=4.700e-10 max=4.280e-04`, including `allocate`, which does no
 # floating-point arithmetic and therefore cannot produce 4.7e-10. Cause:
 # `objcopy --localize-symbol` does not touch a WEAK OBJECT symbol (nm type
@@ -7590,7 +7590,7 @@ McdSpace              RELEASED 2026-08-26 (seventh session). Sixteen symbols, th
 # exist, which is not the same as being impossible. `difftest_pair.sh` and
 # `ab_integrate.sh` are both this instrument for other objects, and these
 # functions are PURE — inputs in, a transform out — so they are EASIER to A/B
-# than the collision pairs. `test/ab_matrix.sh` is that gate.
+# than the collision pairs. `test/standalone/ab_matrix.sh` is that gate.
 #
 #     control  SELFTEST (shipped vs shipped): 200000 cases, 0 differ
 #     measured recovered vs shipped: 200000 cases, 200000 differ (100.000%),

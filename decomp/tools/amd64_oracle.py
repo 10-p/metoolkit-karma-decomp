@@ -16,12 +16,12 @@ all there was. That is why the recovery encodes 32-BIT STRUCT LAYOUTS and why
 hardcoded offset then addresses somebody else's memory with nothing truncated and
 clang silent.
 
-The owner supplied UT2004 v3369, whose `metoolkit/lib.rel/win_amd64_single/*.lib`
-are a 64-bit build of the same MathEngine source. They are real x86-64 COFF, NOT
-stripped: 1,089 symbols over 189 members in 15 archives. Their field offsets and
-their allocation constants ARE the 64-bit layouts. That converts "discover 128
-layouts by running ASan until it stops crashing" into "read them off a binary
-that has them".
+`metoolkit/lib.rel/win_amd64_single/*.lib` in this repository are a 64-bit build
+of the same MathEngine source, out of the UT2004 v3369 drop. They are real x86-64
+COFF, NOT stripped: 1,089 symbols over 189 members in 15 archives. Their field
+offsets and their allocation constants ARE the 64-bit layouts. That converts
+"discover 128 layouts by running ASan until it stops crashing" into "read them
+off a binary that has them".
 
     McdSphereGetRadius   i386   flds  0x10(%edx)
                          amd64  movss 0x20(%rcx),%xmm0
@@ -71,12 +71,13 @@ import re
 import subprocess
 import sys
 
-# The owner-supplied v3369 tree. Overridable because nothing else in this repo
-# knows where it is, and it is deliberately NOT vendored: it is a 1.4 GB shipped
-# SDK that this public repo must not carry.
-LIBDIR = os.environ.get(
-    'KD_AMD64_LIB',
-    '/home/ion/epic-sources/ut2004-v3369/metoolkit/lib.rel/win_amd64_single')
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import kd_paths
+
+# The 64-bit half of the SDK, which ships in this repository (18 MB — the note
+# that used to sit here calling it an unvendorable 1.4 GB was measuring the whole
+# v3369 tree, not this directory). Overridable all the same.
+LIBDIR = kd_paths.AMD64_LIB
 WORK = os.environ.get('KD_AMD64_WORK', '/tmp/kd_amd64lib')
 
 _CACHE = {}

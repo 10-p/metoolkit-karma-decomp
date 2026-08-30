@@ -40,6 +40,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import ghidra_clean as gc                                   # noqa: E402
+import kd_paths                                             # noqa: E402
 
 BANNER = re.compile(r'(?m)^/\* ---- (\S+)')
 DECL = re.compile(r'(?m)^[ \t]*(?:const\s+)?(?:float|MeReal|double)[ \t]+'
@@ -59,12 +60,11 @@ def main():
         if not os.path.exists(obj):
             continue
         text = open(os.path.join(srcdir, fn), errors='ignore').read()
-        dump = os.path.join(os.path.dirname(srcdir.rstrip('/')), '..')
         locals_table = {}
-        lp = os.path.join('/home/ion/tools/karma-lab/out14', base + '.o.locals')
+        lp = os.path.join(kd_paths.DUMP_DIR, base + '.o.locals')
         if os.path.exists(lp):
             locals_table = gc.read_ghidra_locals(
-                os.path.join('/home/ion/tools/karma-lab/out14', base + '.o.c'))
+                os.path.join(kd_paths.DUMP_DIR, base + '.o.c'))
         parts = BANNER.split(text)
         for i in range(1, len(parts), 2):
             func, region = parts[i], parts[i + 1]

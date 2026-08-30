@@ -49,12 +49,19 @@ import re
 import subprocess
 import sys
 
-HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import kd_paths                                             # noqa: E402
 
-NDK = os.environ.get(
-    'KD_NDK',
-    '/home/ion/Android/Sdk/ndk/30.0.14904198/toolchains/llvm/prebuilt/'
-    'linux-x86_64/bin')
+# The product root. HERE/include holds kd_compat.h, kd_karma.h and
+# kd_types.h — the three headers every recovered source includes, and the
+# ones the size/offset probes below have to see to measure anything.
+HERE = kd_paths.MD
+
+# The Android NDK's llvm bin/ — a real external toolchain, discovered from the
+# standard NDK variables rather than pinned to one version. The old pinned r30
+# path stopped existing on an NDK upgrade and the failure read like a compiler
+# bug rather than a missing directory.
+NDK = kd_paths.NDK_BIN
 
 
 def includes(inc):
@@ -82,7 +89,8 @@ def struct_names(inc):
 # tags (`_McdUserTriangle`) that only the umbrella header brings in, and a probe
 # that does not compile reports "type not resolvable" for the whole corpus and
 # reads like an absence of findings.
-HEAD = '#include "@HERE@/include/kd_compat.h"\n#include "@HERE@/include/kd_karma.h"\n' \
+HEAD = '#include "@HERE@/include/kd_compat.h"\n'\
+       '#include "@HERE@/include/kd_karma.h"\n'\
        '#include "@HERE@/include/kd_types.h"\n'
 
 
@@ -245,8 +253,7 @@ def type_differs(ty, inc, work, cache, here):
 
 def main():
     srcdir, build = sys.argv[1], sys.argv[2]
-    root = sys.argv[3] if len(sys.argv) > 3 else os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), '..', '..', 'Thirdparty', 'metoolkit')
+    root = sys.argv[3] if len(sys.argv) > 3 else kd_paths.METOOLKIT_DIR
     inc = os.path.join(root, 'include')
     work = '/tmp/kd_layout'
     os.makedirs(work, exist_ok=True)
@@ -267,7 +274,7 @@ def main():
         show = ', '.join('%s %d->?' % (n, sizes[n]) for n in bad[:6])
         print('     e.g. %s%s' % (show, ' ...' if len(bad) > 6 else ''))
 
-    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    here = kd_paths.MD          # here/include holds the three kd_*.h
     cache = {}
     # ---- THE SELF-CHECK, and it is here because this tool got it wrong TWICE.
     # `type_differs` builds two probes and compares them. A probe that does not

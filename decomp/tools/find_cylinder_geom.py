@@ -34,6 +34,9 @@ An export whose parse is ambiguous or fails is reported, not silently dropped.
 """
 import os, struct, sys, glob
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import kd_paths                                             # noqa: E402
+
 PACKAGE_FILE_TAG = 0x9E2A83C1
 
 
@@ -186,7 +189,9 @@ def scan(path):
 
 
 def main():
-    roots = sys.argv[1:] or ['/home/ion/ut2004-assets']
+    # No in-repo default: this reads a UT2004 install, which this repository
+    # does not own. Guessing one silently scans the wrong tree and reports zero.
+    roots = sys.argv[1:] or [kd_paths.require_ut2004('assets')[0]]
     files = []
     for root in roots:
         if os.path.isfile(root):

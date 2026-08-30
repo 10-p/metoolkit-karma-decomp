@@ -6,8 +6,19 @@ For each object: generate the prelude, clean the Ghidra dump into C, compile it,
 and classify the outcome. The point is to measure how much of Karma comes back
 with no human intervention, so the remaining manual work can be sized honestly.
 
-  ./recover.py --dump-dir <ghidra-out> --obj-dir <extracted .o> --out-dir src \\
-               --metoolkit ../Thirdparty/metoolkit [--only libMdt]
+  ./recover.py --out-dir /tmp/kd_out --build-dir /tmp/kd_build
+
+Every path defaults to this repository (see tools/kd_paths.py): --dump-dir to
+lab/out14, --obj-dir to lab/allobj, --protos to lab/kd_protos11.h and
+--metoolkit to metoolkit/. Override any of them to point elsewhere.
+
+⚠ --dump-dir AND --protos ARE A PAIR. Mixing one generation's dump with
+another's prototype header gets McdSpace wrong in opposite directions; see
+../proven.txt and lab/README.md.
+
+⚠ --build-dir IS NOT OPTIONAL IN PRACTICE. It defaults to /tmp/kd_build, which
+is the i386 baseline every acceptance test compares against — a run that forgets
+it overwrites the thing it was about to be measured against.
 
 Outcomes:
   OK        compiled, and the generated prelude had no TODOs
@@ -27,6 +38,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import check_frame_bounds
+import kd_paths
 
 # gcc-3.2 C++ static-constructor scaffolding. It only ever runs file-scope
 # initialisers, which the prelude expresses as plain C initialisers instead.
@@ -227,19 +239,24 @@ def prove_inert(csrc, src, names, cflags, build_dir, base):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--dump-dir', required=True, help='Ghidra .c dumps')
-    ap.add_argument('--obj-dir', required=True, help='root of extracted .o files')
+    ap.add_argument('--dump-dir', default=kd_paths.DUMP_DIR,
+                    help='Ghidra .c dumps (default: lab/out14)')
+    ap.add_argument('--obj-dir', default=kd_paths.OBJ_DIR,
+                    help='root of extracted .o files (default: lab/allobj)')
     ap.add_argument('--out-dir', required=True, help='where recovered .c/.prelude.h go')
-    ap.add_argument('--metoolkit', required=True, help='metoolkit root (include/ + lib.*)')
+    ap.add_argument('--metoolkit', default=kd_paths.METOOLKIT_DIR,
+                    help='metoolkit root, include/ + lib.* (default: metoolkit/)')
     ap.add_argument('--only', help='substring filter on the archive directory name')
-    ap.add_argument('--build-dir', default='/tmp/kd_build')
-    ap.add_argument('--protos', help='kd_protos.h — gives C++-mangled imports real signatures')
+    ap.add_argument('--build-dir', default=kd_paths.BUILD)
+    ap.add_argument('--protos', default=kd_paths.PROTOS,
+                    help='kd_protos.h — gives C++-mangled imports real signatures. '
+                         '⚠ PAIRS WITH --dump-dir (default: lab/kd_protos11.h)')
     args = ap.parse_args()
 
     here = os.path.dirname(os.path.abspath(__file__))
     root = os.path.dirname(here)
     inc = os.path.join(args.metoolkit, 'include')
-    iflags = ['-I' + os.path.join(root, 'include'), '-I' + inc] + [
+    iflags = ['-I' + kd_paths.MD_INC, '-I' + inc] + [
         '-I' + os.path.join(inc, d) for d in
         ('McdCommon', 'McdPrimitives', 'McdFrame', 'MeGlobals',
          'MdtBcl', 'MdtKea', 'Mst', 'MeApp')]
@@ -522,7 +539,7 @@ def main():
             cmd = [sys.executable, os.path.join(here, 'gen_prelude.py'), obj,
                    '--include-dir', inc, '--dump', dump, '-o', prelude,
                    '--exports-out', exports,
-                   '--umbrella', os.path.join(root, 'include', 'kd_karma.h')]
+                   '--umbrella', os.path.join(kd_paths.MD_INC, 'kd_karma.h')]
             if args.protos:
                 cmd += ['--protos', args.protos]
             cmd += ['--corpus', args.obj_dir]
@@ -548,7 +565,7 @@ def main():
                  '-o', csrc, '--object', obj, '--prelude', prelude,
                  '--exports', exports, '--vtables', vtables,
                  '--metoolkit-include', inc,
-                 '--field-map', os.path.join(root, 'include',
+                 '--field-map', os.path.join(kd_paths.MD_INC,
                                              'kd_types_fields.json')]
                 + (['--protos', args.protos] if args.protos else [])
                 # `--cflag=-m32`, not `--cflag -m32`: argparse reads a value

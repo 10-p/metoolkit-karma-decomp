@@ -1,13 +1,17 @@
-# karma-decomp — recovering Karma from the shipped binaries
+# `decomp/` — recovering Karma from the shipped binaries
 
 Recovers the proprietary, binary-only Karma (MathEngine `metoolkit`) physics library as portable C,
 so the web (wasm) and Android builds can have real Karma physics instead of `NO_KARMA`.
+
+**This directory is the machinery.** The result is `../metoolkit_decomp/`, and a consumer needs
+nothing here — see its README. What lives here is the toolchain that produces it, the gates that
+judge it, and the written record of how.
 
 **Why this and not an emulator:** the engine and Karma share one address space in both directions —
 the engine holds raw pointers into Karma's heap and Karma holds function pointers into engine code —
 so no out-of-address-space emulator (v86, QEMU-system, blink-as-a-VM) can work without rewriting the
 integration layer. Full analysis, measurements and the rejected alternatives are in
-[`../docs/KARMA-ON-WASM.md`](../docs/KARMA-ON-WASM.md).
+[`docs/KARMA-ON-WASM.md`](docs/KARMA-ON-WASM.md).
 
 **Why it's tractable:** the shipped archives carry **full DWARF-2 debug info** — original file names,
 line tables, parameter names, local names, complete types. Ghidra consumes that directly. Measured
@@ -16,18 +20,35 @@ stack leaks totalling 235 bytes.
 
 ## Start here
 
+- **[`docs/STATE.md`](docs/STATE.md)** — where the work is, newest first. **Read this before
+  resuming anything.**
 - [`STATUS-EXEC.md`](STATUS-EXEC.md) — **progress summary in plain language**: counts,
   what is done, what is left. Start here if you are not going to read the code.
 
 * **[`HANDOVER.md`](HANDOVER.md)** — everything needed to resume the recovery work:
   pipeline, Ghidra invocation, running and instrumenting the game, dead ends, and what
-  "complete" means. Read this first.
+  "complete" means. §4 is the nine-gate block.
 * **[`HANDOVER-WEB.md`](HANDOVER-WEB.md)** — self-contained brief for the wasm/Android
   integration, written for someone with no history on the project.
 * [`proven.txt`](proven.txt) — which objects a real match has validated, with the evidence.
+  ⚠ Its FORMAT is load-bearing: the first word of a non-comment line RELEASES an object.
 * [`tools/README.md`](tools/README.md) — every generator and analyser, one block each, with the
   exact command.
-* [`test/README.md`](test/README.md) — every gate and harness, same form.
+* [`test/README.md`](test/README.md) — every gate and harness, same form, split into the
+  **standalone** tier (runs from a bare clone) and the **ut2004** tier (needs the game).
+
+## The layout, in one block
+
+```
+decomp/tools/     the generators, the post-passes, the analysers
+decomp/test/      standalone/ (CI runs this) + ut2004/ (needs the game)
+decomp/lib/       kd-paths.sh — where anything is, for the shell half
+decomp/src/       the hand-written sources: the convex hull that replaces qhull
+decomp/docs/      STATE.md and the Karma-on-wasm analysis
+../metoolkit/         the SDK drop — the ORACLE. Never edit.
+../metoolkit_decomp/  the product: the recovered sources + the headers + CMake
+../lab/               the Ghidra dumps and the 153 shipped objects
+```
 
 ## Status
 
@@ -102,7 +123,7 @@ Two independent cross-checks corroborate the recovery, which is what makes it tr
 
 ### Milestone 3 status — batch recovery + breadth gate (advanced, not finished)
 
-`tools/recover.py` runs the whole recipe over every object; `test/substitute_test.sh` then swaps each
+`tools/recover.py` runs the whole recipe over every object; `test/standalone/substitute_test.sh` then swaps each
 recovered object into the link and runs a physics scene. Both halves matter, because **compiling is
 not the same as working**.
 
@@ -129,13 +150,13 @@ worked. Fewer compiling and more correct is the right trade.
 > executed and nothing it computes is measured. Measured across all three scenes, **only
 > eight of 103 objects have demonstrated sensitivity on any scene** — for the rest, that
 > line is about the link, not the code. See `HANDOVER.md` §4a, and
-> `test/scene_census.sh` / `test/gate_sensitivity.sh`, which exist to tell the three apart.
+> `test/standalone/scene_census.sh` / `test/standalone/gate_sensitivity.sh`, which exist to tell the three apart.
 > The real evidence for the released collision objects is the shadow harness and
 > `difftest_pair`, recorded in `proven.txt`.
 
 The trajectory check is only this sharp because baseline and substituted build are **both i386/x87**,
 so a correct recovery has no reason to differ at all. It does NOT transfer across builds — see
-[`../docs/KARMA-ON-WASM.md`](../docs/KARMA-ON-WASM.md) §II.3.
+[`docs/KARMA-ON-WASM.md`](docs/KARMA-ON-WASM.md) §II.3.
 
 An object that is itself on the collision path will always diverge on a *collision* scene, because
 contact make/break amplifies a last-bit difference without bound. `IxBoxBox` does exactly that, and
@@ -214,7 +235,7 @@ failing. They need a human.
 
 #### Shadow testing against the real game
 
-`test/kd_shadow.c` + `test/make_shadow_metoolkit.sh` + `test/run_map.sh` run UT2004 headless under
+`test/ut2004/kd_shadow.c` + `test/ut2004/make_shadow_metoolkit.sh` + `test/ut2004/run_map.sh` run UT2004 headless under
 Xvfb with a shadow of the recovered code. Every collision call in real gameplay becomes a test case;
 the engine only ever consumes the ORIGINAL's result, so behaviour is unchanged.
 
@@ -406,7 +427,7 @@ Per object, three automated steps and one small manual one.
 KARMA_OUTDIR=/path/to/out \
   $GHIDRA/support/analyzeHeadless <proj-dir> <proj> \
     -import <object-or-dir> \
-    -scriptPath karma-decomp/tools/gscripts \
+    -scriptPath decomp/tools/gscripts \
     -postScript DumpDecomp.java -deleteProject
 ```
 
@@ -417,7 +438,7 @@ Emits one `.c` per object plus `stats.csv` with per-function quality metrics.
 `tools/gen_prelude.py` produces the skeleton, reading everything it can out of the object:
 
 ```bash
-python3 tools/gen_prelude.py <obj>.o --include-dir ../Thirdparty/metoolkit/include -o <obj>.prelude.h
+python3 tools/gen_prelude.py <obj>.o --include-dir ../metoolkit/include -o <obj>.prelude.h
 ```
 
 It finds which metoolkit header declares each import, emits `KD_MANGLED()` asm labels with the
@@ -451,7 +472,7 @@ A class layout lives only in the CU that **defines** the class, so search across
 ### 3. Clean (automated)
 
 ```bash
-python3 karma-decomp/tools/ghidra_clean.py out/IxBoxBox.o.c \
+python3 decomp/tools/ghidra_clean.py out/IxBoxBox.o.c \
   -o src/McdPrimitives/IxBoxBox.c \
   --object <original>/IxBoxBox.o \
   --prelude src/McdPrimitives/IxBoxBox.prelude.h \
@@ -476,7 +497,7 @@ objcopy --redefine-sym McdBoxBoxIntersect=orig_McdBoxBoxIntersect ... orig.o
 gcc -m32 ... difftest_pair.c recovered.o orig.o -Wl,--start-group <archives> -Wl,--end-group
 ```
 
-`test/difftest_pair.sh` does all of that for you, for any pair — see [`test/README.md`](test/README.md).
+`test/standalone/difftest_pair.sh` does all of that for you, for any pair — see [`test/README.md`](test/README.md).
 
 For `static` functions, `objcopy --globalize-symbol` makes them callable first.
 
@@ -504,11 +525,11 @@ tools/wasm_indirect_check.py         call_indirect sites that can never succeed 
 test/README.md                       every gate and harness, with the command
 test/scene_*.c                       whole-simulation scenes
 test/difftest_pair.{c,sh}            the precision-tier gate, any interaction
-test/kd_shadow.c                     the in-game shadow harness
+test/ut2004/kd_shadow.c                     the in-game shadow harness
 
-include/kd_compat.h                  Ghidra's type/macro vocabulary; the longdouble + ROUND decisions
-include/kd_types.h                   generated by gen_typedb.py — every Karma-internal type
-generated/allobj/*.c                 the 145 recovered objects, CHECKED IN — never hand-edit
+../metoolkit_decomp/include/kd_compat.h   Ghidra's type/macro vocabulary; the longdouble + ROUND decisions
+../metoolkit_decomp/include/kd_types.h    generated by gen_typedb.py — every Karma-internal type
+metoolkit_decomp/src/*/*.c                 the 145 recovered objects, CHECKED IN — never hand-edit
 src/McdConvexCreateHull/kd_convexhull.c   hand-written; replaces qhull
 ```
 
@@ -543,12 +564,12 @@ the current, maintained answer to "what is left"; what follows is kept only wher
 
 - **`-Wno-int-conversion` is required**, and it is not cosmetic. Ghidra types pointer-valued locals
   as `undefined4`. Harmless on any 32-bit-pointer target (i386, wasm32, armv7); on **arm64 it
-  truncates**, and that is now measured rather than suspected — `test/ptrwidth_check.sh` and
+  truncates**, and that is now measured rather than suspected — `test/standalone/ptrwidth_check.sh` and
   `tools/layout_check.py`, HANDOVER.md §6b.
 - **Prelude generation is partly automated.** `gen_prelude.py` handles imports, mangled names and
   `.data` statics; nine objects still carry a TODO, none of them in the way.
 - ~~No project-wide type database~~ — **closed.** `tools/gen_typedb.py` unions the DWARF across every
-  object into `include/kd_types.h`, which is exactly the "obvious Milestone 3 tool" this line asked
+  object into `../metoolkit_decomp/include/kd_types.h`, which is exactly the "obvious Milestone 3 tool" this line asked
   for.
 - ~~`keaMatrix.h` is a layout proof, not a build input~~ — **closed.** `libMdtKea` is recovered
   whole and the engine has run on it (HANDOVER.md §7d).

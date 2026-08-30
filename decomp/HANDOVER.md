@@ -38,7 +38,7 @@ indexed an eight-byte buffer as `count+1` sixteen-byte structs.
 
 **So the disposition of the three remaining gap symbols is: SOLVE THEM, do not hold them.**
 Where the decompilation cannot be made faithful, IMPLEMENT the function and prove it
-bit-exact with an A/B against the shipped one — `test/ab_matrix.sh` is the worked example
+bit-exact with an A/B against the shipped one — `test/standalone/ab_matrix.sh` is the worked example
 and it took `MeMath` from "refused twice" to released in one session.
 
 **And whatever you implement, prove it.** Written-not-recovered code is allowed; unproven
@@ -116,7 +116,7 @@ IxBoxTriList reads its triangle generator from `trilistgeom[3]` — byte 48, and
 byte 96.  Nothing is truncated, clang is silent, and the address is somebody
 else's memory.  128 literal byte offsets across 10 objects, plus 369 sites indexing through a pointer-containing type.
 
-tools/layout_check.py BOUNDS it.  test/lp64_run.sh NAMES it, by RUNNING the
+tools/layout_check.py BOUNDS it.  test/standalone/lp64_run.sh NAMES it, by RUNNING the
 recovered library at 64-bit pointer width on this machine — x86-64 is the same
 LP64 data model as arm64, so every struct that moves there moves here.  First
 run, first statement of the first scene:
@@ -137,7 +137,7 @@ the layout the recovery encodes is the layout they get.
 **Two candidates now, and which one is yours depends on the target.**
 
 **If Android 64-bit is in scope: arm64's layout defect — and start by RUNNING it, not by reading
-it.** `./test/lp64_run.sh` builds all 145 recovered objects for x86-64 and drives the three scenes
+it.** `./test/standalone/lp64_run.sh` builds all 145 recovered objects for x86-64 and drives the three scenes
 under AddressSanitizer, with a built-in i386 control that must read zero. **x86-64 is LP64,
 the same data model as arm64**, so this is the arm64 defect executing on hardware you have —
 every document here said that could not be done, and the premise ("nothing on this machine
@@ -173,8 +173,8 @@ order, then `lp64_run.sh`:
 ```bash
 cp -a /tmp/kd_out /tmp/kd_lp64
 python3 tools/fix_baked_sizeof.py /tmp/kd_lp64/allobj /tmp/kd_build     # 98 sites
-python3 tools/fix_ptrwidth.py    /tmp/kd_lp64/allobj /tmp/kd_build ../Thirdparty/metoolkit
-KD_OUT=/tmp/kd_lp64 ./test/lp64_run.sh
+python3 tools/fix_ptrwidth.py    /tmp/kd_lp64/allobj /tmp/kd_build ../metoolkit
+KD_OUT=/tmp/kd_lp64 ./test/standalone/lp64_run.sh
 ```
 
 **The acceptance test for each is that all 145 objects recompile BYTE-IDENTICAL at i386**,
@@ -198,11 +198,11 @@ nine gates could not**, and all three instruments are now in `test/`:
 
 | new tool | what it answers | what it found |
 |---|---|---|
-| `test/bisect_static.sh` | which FILE-STATIC in an object is wrong — `bisect_object.sh` cannot, it arbitrates globals | `IxBoxTriList` in one pass: Ghidra had DELETED two of three stores |
+| `test/standalone/bisect_static.sh` | which FILE-STATIC in an object is wrong — `bisect_object.sh` cannot, it arbitrates globals | `IxBoxTriList` in one pass: Ghidra had DELETED two of three stores |
 | `test/ab_contact.{c,sh}` | `McdContactSimplify` vs the shipped one on random contact sets, whole buffer bitwise | 1,000,000 calls, 100% identical — and the reverted attempt's exact defect SEGFAULTS |
-| `test/ab_lod.sh` + `scene_ragdoll_lod.c` | `MdtLODLastPartition` with its guard MADE TRUE by the public API | the object segfaulted on its first real call |
+| `test/standalone/ab_lod.sh` + `scene_ragdoll_lod.c` | `MdtLODLastPartition` with its guard MADE TRUE by the public API | the object segfaulted on its first real call |
 | `tools/layout_check.py` | which structs change size at 64-bit, and how many sites bake a layout in | arm64 is not 95% done |
-| `test/make_dropin_metoolkit.sh` | check 2 — a metoolkit with no shipped member in it | the engine links and plays |
+| `test/standalone/make_dropin_metoolkit.sh` | check 2 — a metoolkit with no shipped member in it | the engine links and plays |
 
 **AND `MdtLOD` IS THE ONE TO READ, because it is the standing order paying for itself.** Its
 reachability argument was sound, complete, measured with a breakpoint, and about to ship a
@@ -227,7 +227,7 @@ discards the x87 `fcos`/`fsin` results in two functions and deletes everything b
 and the stores into `eR[3][3]`. Both are now reconstructed and **bit-exact against the
 shipped functions over 1,000,000 random cases**, with controls that fail. It fell to
 SIMULATING THE X87 STACK, not to hypotheses — five guesses got nowhere; reading f55..1042
-gave the answer in one pass. `test/ab_matrix.sh` is the oracle, and §5c's reason for
+gave the answer in one pass. `test/standalone/ab_matrix.sh` is the oracle, and §5c's reason for
 refusing the object was wrong, as was the "no gate could verify it" that replaced it.
 
 **AND `McdSpace` IS THE ONE TO READ, because this file was wrong about it for two
@@ -396,7 +396,7 @@ DISASSEMBLE BEFORE ASSUMING REGRESSION.**
   DOUBLE. The control is not subtle — put those four dispatches back on `code *` and step 0
   of the collision-free scene reads **4.900e+14**. §11 item 2, `proven.txt`.
 - **AND `keaLCPSolver` IS EXACT — the defect was three casts, and finding it needed a new
-  instrument.** It was quarantined the same day on `first@1 = 3.772e+00`; `test/bisect_object.sh`
+  instrument.** It was quarantined the same day on `first@1 = 3.772e+00`; `test/standalone/bisect_object.sh`
   put ONE recovered function in the link at a time and named `PrincipalSubmatrix`, where Ghidra
   had rendered three float stores as int CONVERSIONS — `(&this_00->AinvStride)[k] =
   (int)this->clampedValues[k]`, which destroys the value and compiles without a warning. The
@@ -419,7 +419,7 @@ DISASSEMBLE BEFORE ASSUMING REGRESSION.**
   for several sessions. `proven.txt`.
 - **AND THE VPTR STORE IS WRITTEN, AND `keaLCPSolver` AND `keaMemory` COMPILE.** §11 item 3
   was deferred because "no gate could see whether the rewrite was right or wrong". There is
-  now a gate — `test/vptr_ab.sh`, the ninth — and it does not measure the trajectory, it
+  now a gate — `test/standalone/vptr_ab.sh`, the ninth — and it does not measure the trajectory, it
   measures the DISPATCH: devirtualise every repaired call site and diff. Bit-identical on
   all three scenes; a rotated slot and a +12 address point, built as controls, both segfault
   on the two scenes that reach the dispatch, and on the third — which does not reach it —
@@ -431,7 +431,7 @@ DISASSEMBLE BEFORE ASSUMING REGRESSION.**
   §11 item 3a.
 - **What is left of the solver is NOTHING — this row is discharged.** `keaIntegrate_pc` was
   `first@13 = 1.500e-08`; it is now bit-identical on all three scenes and over 450,000
-  bodies of a per-function A/B on both code paths (`test/ab_integrate.sh`). Expression
+  bodies of a per-function A/B on both code paths (`test/standalone/ab_integrate.sh`). Expression
   reassociation WAS one of the two defects and it was not the one that moved the number —
   see §11 item 2a. `keaLCP_new` is released too, and that took accounting for a **second**
   detector nobody had seen: `GHIDRA_STACK_GUESS` firing on the output of
@@ -495,7 +495,7 @@ DISASSEMBLE BEFORE ASSUMING REGRESSION.**
 - **They compile for wasm32, armv7 AND arm64 — and arm64 is a lie.** Identical symbol sets
   on all three, but arm64 emits **2,436 pointer-truncation diagnostics across 69 of the 115
   objects** where armv7 emits **zero**, because the recovery puns pointers through 4-byte
-  slots. There **is** now a gate for it — `test/ptrwidth_check.sh`, 13 seconds — and §6b's
+  slots. There **is** now a gate for it — `test/standalone/ptrwidth_check.sh`, 13 seconds — and §6b's
   old "920 vs 23" figure was two different diagnostic sets added together. §6b.
 - **`IxCylinderCylinder`'s 925 `dims_diff` is not a defect to fix.** Two independent
   reasons. The shipped library, run against ITSELF with one body moved a ten-millionth of a
@@ -529,7 +529,7 @@ Everything else in this file is detail. This is the work.
 
 | # | what | where | blocked on |
 |---|---|---|---|
-| 0 | **THE DROP-IN GAP: 3 shipped members, 3 symbols — one each.** The goal and the metric. `tools/dropin_gap.py`. `IxBoxTriList`, `McdContact`, `MdtLOD`. **Under the owner's standing order all three are SOLVE, not hold** — every attempt so far compiled and was wrong, which is a reason to prove the repair, not to ship the shipped `.a` forever. The method is `test/ab_matrix.sh`'s: stage the recovered object as `rec_*`, drive it and the shipped one with identical random inputs, compare bitwise, keep a self-test control at 0. That took `MeMath` from twice-refused to released in one session. | §3c | nothing |
+| 0 | **THE DROP-IN GAP: 3 shipped members, 3 symbols — one each.** The goal and the metric. `tools/dropin_gap.py`. `IxBoxTriList`, `McdContact`, `MdtLOD`. **Under the owner's standing order all three are SOLVE, not hold** — every attempt so far compiled and was wrong, which is a reason to prove the repair, not to ship the shipped `.a` forever. The method is `test/standalone/ab_matrix.sh`'s: stage the recovered object as `rec_*`, drive it and the shipped one with identical random inputs, compare bitwise, keep a self-test control at 0. That took `MeMath` from twice-refused to released in one session. | §3c | nothing |
 | 0a | **`prove_inert` is the sixth session's instrument and it is not finished.** It settles "does this unmodelled value reach anything" by compiling the object with the value set to three different constants and diffing. It released four objects outright and unblocked two more. **What it cannot do is decide an argument to a VARIADIC function** — pushing 0 instead of garbage changes the object code even though `sprintf` never reads the word. That is exactly what still holds `MeXMLParser`. | §8, `proven.txt` | an oracle for variadic argument slots |
 | 1 | ~~**The solver.**~~ **DONE. `libMdtKea` is recovered whole and the engine has RUN on it.** Every object in it is bit-identical on all three scenes; `keaIntegrate_pc` and `keaLCP_new` are released, so the build is 115. `build-subst115` executes the recovered `MdtKeaAddConstraintForces` 301 times and `keaLCPSolver::solveLCP` 85 times on `test-karma-1`. | §11 item 2, §7d | — |
 | 1a | **THE ASSOCIATION DEFECT IS NOW BOUNDED — 575 sites across 51 objects, 529 of them in the build, and a 59-site shortlist.** `tools/assoc_scan.py`. Ghidra prints right-leaning float `+` chains flat; on x87 that is EXACTLY inert (0 in 2,000,000), and under storage precision — wasm32, armv7, arm64 — it differs in **31%**. The scan does not decide a site and cannot: the association half has no textual fingerprint. What it does is rank — **66 sites are INDEX-PERMUTED dot products, the exact shape of the one site with ground truth** (`KDynStep.cpp:647`), 59 of them in the build. **No gate on this machine can falsify a repair**, so the shortlist is settled either by a machine-code `fadd` oracle, one site at a time, or by executing on wasm, all at once. | §11 item 2a | the oracle, or wasm execution |
@@ -615,7 +615,7 @@ six functions are exact; `solve` fell to the same dropped-rounding repair as
 0xcc bytes with ZERO float instructions and calls the file-statics `vc_strip_Cholesky` and
 `vc_dstrip_Cholesky`, which gcc inlined in the recovery. Blanket-rounding their 62 float
 stores makes it WORSE (`first@10` → `first@7`) — dead end 17 in miniature. Read them
-statement by statement with `test/bisect_object.sh`'s `factorize` row as the gate, **and
+statement by statement with `test/standalone/bisect_object.sh`'s `factorize` row as the gate, **and
 check that script's TWO controls read identical first** (§4's instrument list).
 
 **MOVE 2 — the association defect, §11 item 2a. IT IS NO LONGER UNQUANTIFIED:
@@ -647,7 +647,7 @@ the same bucket holds floats and array indices in pointer-typed slots. 207 shape
 - **Do not grind objects that are not in §3c's table.** They are out of scope. §3b.
 - **Do not read a max-delta as a verdict on a contact scene** — read the first differing
   step. Believing the maximum cost this project a session.
-- **`MeMath` is DONE** — and it is the only WRITTEN rather than recovered code here, so if a re-dump moves its anchors `X87_RECONSTRUCTIONS` RAISES. Re-verify with `test/ab_matrix.sh`, never patch around it.
+- **`MeMath` is DONE** — and it is the only WRITTEN rather than recovered code here, so if a re-dump moves its anchors `X87_RECONSTRUCTIONS` RAISES. Re-verify with `test/standalone/ab_matrix.sh`, never patch around it.
 - **Do not reach for `-ffloat-store`** — dead end 17 measured it five orders of magnitude
   worse.
 - **Do not trust the offline gates for anything on the `.ka` path.** §3c's warning box:
@@ -700,12 +700,12 @@ Reproduce the whole state in about a minute with §4.
 ## 1. Why this project exists
 
 UT2004's physics is Karma, which ships as **binary-only static libraries**
-(`Thirdparty/metoolkit/lib.rel/...`). There is no source anywhere — the
+(`metoolkit/lib.rel/...`). There is no source anywhere — the
 `sigmaco/metoolkit-karma-v1.2` repo is headers and `.a`/`.lib` only. The web (wasm) and
 Android builds therefore ship with `NO_KARMA` and no vehicle or ragdoll physics.
 
 The full argument for decompilation over emulation is in
-[`../docs/KARMA-ON-WASM.md`](../docs/KARMA-ON-WASM.md) (read at least Part I §2 and Part II).
+[`docs/KARMA-ON-WASM.md`](docs/KARMA-ON-WASM.md) (read at least Part I §2 and Part II).
 One sentence:
 
 > The engine and Karma **share one address space in both directions** — the engine holds raw
@@ -730,7 +730,7 @@ scenes:   142/142 run clean on all three substitute scenes, EVERY ONE of them
           anything into that number
 wasm32:   142/142 compile, exported symbol sets byte-identical to i386
 armv7:    142/142 compile, symbol sets identical — a real 32-bit-pointer port,
-          and 0 pointer-truncation diagnostics (test/ptrwidth_check.sh)
+          and 0 pointer-truncation diagnostics (test/standalone/ptrwidth_check.sh)
 arm64:    142/142 compile, symbol sets identical — 6,981 pointer-truncation
           diagnostics on the raw output, 411 after tools/fix_ptrwidth.py (§6b)
 bindings: 142/142 export what the SHIPPED object exported, binding included (§8)
@@ -743,7 +743,7 @@ difftest: 14 pairs (Cylinder x Cylinder and Cylinder x TriangleList added
           library stops reproducing ITSELF (§11 item 0)
 vptr:     the repaired vtable dispatches are bit-identical to a devirtualised
           control on all three scenes, and both wrong versions of the repair
-          segfault where the dispatch runs (test/vptr_ab.sh, §11 item 3)
+          segfault where the dispatch runs (test/standalone/vptr_ab.sh, §11 item 3)
 review:   11 objects recover.py labels "needs review" — and that label covers
           TWO different states, which matters when quoting it. Most COMPILE
           and are held out of the build by the safety detectors (§8); the rest
@@ -1017,9 +1017,9 @@ validated set for another. **"Validated" is not "load-bearing"** without checkin
 pair**, called or not, so the zero rows are evidence, not absence of evidence.
 
 ```bash
-BIN=/home/ion/engines/engine-ut2004/build-shadow-karma/Source/SDLLaunch/ut2004-karma-pixo.bin
+BIN=$UT2004_ENGINE_DIR/build-shadow-karma/Source/SDLLaunch/ut2004-karma-pixo.bin
 KD_CENSUS=1 KD_BIN=$BIN KD_SHADOW_OUT=/tmp/census_$MAP.csv \
-  timeout 260 ./test/run_map.sh "$MAP" 200 "$COMMON_URL" >/dev/null 2>&1
+  timeout 260 ./test/ut2004/run_map.sh "$MAP" 200 "$COMMON_URL" >/dev/null 2>&1
 awk -F, 'NR>1 && $5+0>0 {print $1"x"$2, $5}' /tmp/census_$MAP.csv
 ```
 
@@ -1129,7 +1129,7 @@ engine reaches, and §3b is emphatic that most are not.
 
 ```bash
 python3 tools/dropin_gap.py <engine-build-dir> /tmp/kd_build \
-        /home/ion/tools/karma-lab/allobj --status <recover.py output>
+        lab/allobj --status <recover.py output>
 ```
 
 It walks the symbol closure from the ENGINE's own object files, resolving each
@@ -1157,7 +1157,7 @@ are a hole in the comparison.)
 ```
 
 **And it is checked against ground truth twice over now.** The walk predicted 0; a metoolkit
-with every shipped member physically `ar d`'d out then LINKED — `test/make_dropin_metoolkit.sh`,
+with every shipped member physically `ar d`'d out then LINKED — `test/standalone/make_dropin_metoolkit.sh`,
 §12 check 2. Prediction and measurement agree, which is the standard this section set for
 itself when it was 20 members.
 
@@ -1166,9 +1166,9 @@ was wrong — read `proven.txt` before re-opening any of them:
 
 | member | how it closed |
 |---|---|
-| `IxBoxTriList` | `test/bisect_static.sh` localised the defect to one file-static in one pass. Ghidra had DELETED two of three reciprocal stores in `McdVanillaBoxTriIntersect` and pointed the vector 8 bytes past the end of `lsVec3 axb[3]`. difftest 1,463/139,961/12,060 → **0/0/0** over 200,000 pairs |
-| `McdContact` | `test/ab_contact.sh` — 1,000,000 calls, 100% bit-identical, with the seventh session's reverted defect (block base 0x10 high) SEGFAULTING as the control. The frame rule reads the base from the MINIMUM constant of the anchor group and tells block from argument area by which one is ASSIGNED |
-| `MdtLOD` | `test/ab_lod.sh` made the engine's own guard TRUE via `MdtWorldSetMaxMatrixSize` and ran `MdtLODLastPartition` 900 times and `ResizeConstraint` 7,200. **The reachability release everyone was about to sign would have shipped a function that segfaults on its first real call** |
+| `IxBoxTriList` | `test/standalone/bisect_static.sh` localised the defect to one file-static in one pass. Ghidra had DELETED two of three reciprocal stores in `McdVanillaBoxTriIntersect` and pointed the vector 8 bytes past the end of `lsVec3 axb[3]`. difftest 1,463/139,961/12,060 → **0/0/0** over 200,000 pairs |
+| `McdContact` | `test/standalone/ab_contact.sh` — 1,000,000 calls, 100% bit-identical, with the seventh session's reverted defect (block base 0x10 high) SEGFAULTING as the control. The frame rule reads the base from the MINIMUM constant of the anchor group and tells block from argument area by which one is ASSIGNED |
+| `MdtLOD` | `test/standalone/ab_lod.sh` made the engine's own guard TRUE via `MdtWorldSetMaxMatrixSize` and ran `MdtLODLastPartition` 900 times and `ResizeConstraint` 7,200. **The reachability release everyone was about to sign would have shipped a function that segfaults on its first real call** |
 
 **Group them by cause, not by size** — that is what has been working. Every member closed
 in the sixth session fell to a GENERATOR fix that also repaired objects nobody was looking
@@ -1222,15 +1222,15 @@ metoolkit .a
 ### Run the whole thing
 
 ```bash
-cd /home/ion/engines/engine-ut2004/karma-decomp
+cd decomp
 rm -rf /tmp/kd_out /tmp/kd_build
 python3 tools/recover.py \
-  --dump-dir /home/ion/tools/karma-lab/out14 \
-  --obj-dir  /home/ion/tools/karma-lab/allobj \
+  --dump-dir lab/out14 \
+  --obj-dir  lab/allobj \
   --out-dir  /tmp/kd_out \
   --build-dir /tmp/kd_build \
-  --metoolkit ../Thirdparty/metoolkit \
-  --protos /home/ion/tools/karma-lab/kd_protos11.h
+  --metoolkit ../metoolkit \
+  --protos lab/kd_protos11.h
 ```
 
 **`out14` and `kd_protos11.h` — BOTH CHANGED IN THE SEVENTH SESSION, and they go
@@ -1261,7 +1261,7 @@ to be bisected against the dumps.
 ### Gate what came out — all NINE, every time
 
 ```bash
-MT=../Thirdparty/metoolkit
+MT=../metoolkit
 LIB=$MT/lib.rel/linux_single_gcc3.2
 
 # breadth: swap each object into a scene, diff the trajectory.
@@ -1277,19 +1277,19 @@ LIB=$MT/lib.rel/linux_single_gcc3.2
 # bit-identity is a mistake that was made HERE, on MdtPartition, and it took a
 # bisect to catch — see proven.txt.
 #     grep -c 'trajectory bit-identical'   and   grep '^  \[ diverg\]'
-./test/substitute_test.sh /tmp/kd_build $LIB test/scene_chain.c
-./test/substitute_test.sh /tmp/kd_build $LIB test/scene_boxes_on_plane.c
-./test/substitute_test.sh /tmp/kd_build $LIB test/scene_ragdoll.c
+./test/standalone/substitute_test.sh /tmp/kd_build $LIB test/standalone/scene_chain.c
+./test/standalone/substitute_test.sh /tmp/kd_build $LIB test/standalone/scene_boxes_on_plane.c
+./test/standalone/substitute_test.sh /tmp/kd_build $LIB test/standalone/scene_ragdoll.c
 
 # depth: drive one interaction, 200k randomised transforms
-./test/difftest_pair.sh /tmp/kd_build $MT            # all pairs
-./test/difftest_pair.sh /tmp/kd_build $MT McdBoxBoxIntersect
+./test/standalone/difftest_pair.sh /tmp/kd_build $MT            # all pairs
+./test/standalone/difftest_pair.sh /tmp/kd_build $MT McdBoxBoxIntersect
 # and the cylinder-TriangleList repro, which the DEFAULT mesh cannot see: the
 # 4x2 patch reads 0 and KD_CORNER=1 found the live defect at iteration 23624.
-KD_CORNER=1 ./test/difftest_pair.sh /tmp/kd_build $MT McdCylinderTriangleListIntersect 30000
+KD_CORNER=1 ./test/standalone/difftest_pair.sh /tmp/kd_build $MT McdCylinderTriangleListIntersect 30000
 
 # portability: §12 item 6, the actual goal
-./test/wasm_check.sh /tmp/kd_out/allobj /tmp/kd_build $MT
+./test/standalone/wasm_check.sh /tmp/kd_out/allobj /tmp/kd_build $MT
 
 # frame bounds: a defect no behavioural test can find, §8. Costs a second.
 # PASS THE BUILD DIR TOO. Without it every held object's violations count as
@@ -1300,13 +1300,13 @@ python3 tools/check_frame_bounds.py /tmp/kd_out/allobj /tmp/kd_build
 
 # interface: does each object export what the SHIPPED one exported — name,
 # BINDING and size? §8. Costs two seconds and caught a global putchar.
-python3 tools/check_symbol_bindings.py /tmp/kd_build /home/ion/tools/karma-lab/allobj
+python3 tools/check_symbol_bindings.py /tmp/kd_build lab/allobj
 
 # the drop-in gap: WHICH SHIPPED MEMBERS DOES THE ENGINE STILL NEED? §3c.
 # This is the metric that measures the goal; object counts do not. Needs an
 # engine build only for its object files, so it costs seconds after the first.
-python3 tools/dropin_gap.py ../build-native-karma /tmp/kd_build \
-        /home/ion/tools/karma-lab/allobj --status <recover.py output>
+python3 tools/dropin_gap.py $UT2004_ENGINE_DIR/build-native-karma /tmp/kd_build \
+        lab/allobj --status <recover.py output>
 
 # pointer width: the gate §6b used to say could not exist. 13 seconds, and it
 # needs no arm64 hardware — truncation is a compile-time diagnostic.
@@ -1317,7 +1317,7 @@ python3 tools/dropin_gap.py ../build-native-karma /tmp/kd_build \
 # that remainder is a LAYOUT defect, not truncation, and tools/layout_check.py is
 # the gate for it. A target that does
 # not COMPILE is reported separately — see §6b.
-./test/ptrwidth_check.sh /tmp/kd_out/allobj /tmp/kd_build
+./test/standalone/ptrwidth_check.sh /tmp/kd_out/allobj /tmp/kd_build
 
 # THE ARM64 POST-PASS, and it is not part of the 95-second pipeline because it
 # needs the NDK. §4's output is NOT the arm64-correct source; this makes it so,
@@ -1326,14 +1326,14 @@ python3 tools/dropin_gap.py ../build-native-karma /tmp/kd_build \
 # pointer width — so the acceptance test is that every object recompiled from
 # the rewritten sources is BYTE-IDENTICAL. Run it on a COPY: it edits in place.
 cp -a /tmp/kd_out /tmp/kd_out_pw
-python3 tools/fix_ptrwidth.py /tmp/kd_out_pw/allobj /tmp/kd_build ../Thirdparty/metoolkit
-./test/ptrwidth_check.sh /tmp/kd_out_pw/allobj /tmp/kd_build      # 6,988 -> 411
+python3 tools/fix_ptrwidth.py /tmp/kd_out_pw/allobj /tmp/kd_build ../metoolkit
+./test/standalone/ptrwidth_check.sh /tmp/kd_out_pw/allobj /tmp/kd_build      # 6,988 -> 411
 
 # the ninth: does the repaired vtable dispatch reach the function it claims?
 # Devirtualise it and diff, with a rotated slot and a +12 address point as
 # controls that the scene MUST notice. §11 item 3.
-./test/vptr_ab.sh /tmp/kd_out/allobj /tmp/kd_build $LIB keaLCPSolver \
-    test/scene_chain.c test/scene_ragdoll.c test/scene_boxes_on_plane.c
+./test/standalone/vptr_ab.sh /tmp/kd_out/allobj /tmp/kd_build $LIB keaLCPSolver \
+    test/standalone/scene_chain.c test/standalone/scene_ragdoll.c test/standalone/scene_boxes_on_plane.c
 
 # where the association defect can hide: 575 sites, 51 objects, 66 of them
 # index-permuted dot products. It DECIDES nothing — on i386 the defect is
@@ -1346,28 +1346,28 @@ python3 tools/assoc_scan.py /tmp/kd_out/allobj /tmp/kd_build          # add -v f
 # objects too, and MdtPartition alone segfaults the scene before any census is
 # written (§4a). A gate that cannot pass is not a gate.
 KD_CENSUS_VALIDATED=/tmp/kd_build \
-  ./test/scene_census.sh   /tmp/kd_out/allobj $LIB test/scene_chain.c
-./test/gate_sensitivity.sh /tmp/kd_out/allobj $LIB test/scene_ragdoll.c
+  ./test/standalone/scene_census.sh   /tmp/kd_out/allobj $LIB test/standalone/scene_chain.c
+./test/standalone/gate_sensitivity.sh /tmp/kd_out/allobj $LIB test/standalone/scene_ragdoll.c
 
 # per-function A/B for MeMath's pure matrix functions. The gate §5c used to say
 # could not exist; these functions are PURE, so an A/B is EASIER for them than
 # for the collision pairs difftest_pair.sh already does this to. Its control is
 # the shipped function against itself and must read 0. §11, proven.txt.
-./test/ab_matrix.sh /tmp/kd_out/allobj/MeMath.c $LIB 200000
+./test/standalone/ab_matrix.sh /tmp/kd_out/allobj/MeMath.c $LIB 200000
 
 # per-function A/B for keaIntegrate_pc: the sharpest instrument here, because it
 # names the FIELD that differs instead of the step. Both code paths — the scenes
 # never set MdtKeaBodyFlagUseFastSpin, so the second argument is not optional.
 # §11 item 2a.
-./test/ab_integrate.sh /tmp/kd_out/allobj/keaIntegrate_pc.c 100000 0
-./test/ab_integrate.sh /tmp/kd_out/allobj/keaIntegrate_pc.c 100000 1
+./test/standalone/ab_integrate.sh /tmp/kd_out/allobj/keaIntegrate_pc.c 100000 0
+./test/standalone/ab_integrate.sh /tmp/kd_out/allobj/keaIntegrate_pc.c 100000 1
 
 # per-function A/B for the two symbols that closed the gap. Both have a
 # deliberate wrong-variant control recorded in proven.txt that SEGFAULTS, which
 # is what makes the clean readings evidence. §3c.
-./test/ab_contact.sh /tmp/kd_build 200000        # McdContactSimplify, must be 100%
-KD_SELFTEST=1 ./test/ab_contact.sh /tmp/kd_build 20000    # the control, must be 0
-./test/ab_lod.sh /tmp/kd_build                   # MdtLOD, three settings + a control
+./test/standalone/ab_contact.sh /tmp/kd_build 200000        # McdContactSimplify, must be 100%
+KD_SELFTEST=1 ./test/standalone/ab_contact.sh /tmp/kd_build 20000    # the control, must be 0
+./test/standalone/ab_lod.sh /tmp/kd_build                   # MdtLOD, three settings + a control
 
 # THE ARM64 LAYOUT GATE, and it is the one that matters now. ptrwidth_check
 # counts TRUNCATION; this counts the defect truncation is a symptom of — the
@@ -1377,17 +1377,17 @@ python3 tools/layout_check.py /tmp/kd_out/allobj /tmp/kd_build
 # the dropped-rounding scan: a float local Ghidra declared and never used, where
 # the SHIPPED code both stores to that slot and reads it back. 229 confirmed, all
 # in the build. Not a wasm-only concern — it changed a CONTACT COUNT on i386.
-python3 tools/spill_scan.py /tmp/kd_out/allobj /tmp/kd_build /home/ion/tools/karma-lab/allobj
+python3 tools/spill_scan.py /tmp/kd_out/allobj /tmp/kd_build lab/allobj
 
 # and CHECK 2, the deliverable: a metoolkit with NO shipped member in it. §12.
-./test/make_dropin_metoolkit.sh /tmp/kd_build ../Thirdparty/metoolkit \
-        /home/ion/karma-run/dropin-metoolkit
+./test/standalone/make_dropin_metoolkit.sh /tmp/kd_build ../metoolkit \
+        $UT2004_RUN_DIR/dropin-metoolkit
 ```
 
 `difftest_pair.sh` **used to** need the quarantined `IxBoxTriList` staged into a **copy** of
 `/tmp/kd_build` or it would not link (`undefined reference to rec_McdBoxTriangleListIntersect`).
 **That is obsolete as of the eighth session** — `IxBoxTriList` was released and is one of the 145, so
-`./test/difftest_pair.sh /tmp/kd_build $MT` links directly. Verified in the ninth session:
+`./test/standalone/difftest_pair.sh /tmp/kd_build $MT` links directly. Verified in the ninth session:
 `McdBoxBoxIntersect`, 20,000 pairs, 0 ret / 0 count / 0 dims, PASS.
 
 The underlying rule has not changed, and applies to any object the detectors are still holding:
@@ -1399,10 +1399,10 @@ cp -a /tmp/kd_build /tmp/kd_build_dt
 INC=$MT/include
 gcc -m32 -O2 -fno-pic -fno-strict-aliasing -std=gnu99 -w \
     -Wno-int-conversion -Wno-incompatible-pointer-types -DLINUX \
-    -Ikarma-decomp/include -I$INC -I$INC/McdCommon -I$INC/McdPrimitives \
+    -Idecomp/include -I$INC -I$INC/McdCommon -I$INC/McdPrimitives \
     -I$INC/McdFrame -I$INC/MeGlobals -I$INC/MdtBcl -I$INC/MdtKea -I$INC/Mst -I$INC/MeApp \
     -c -o /tmp/kd_build_dt/<HELD>.o /tmp/kd_out/allobj/<HELD>.c
-./test/difftest_pair.sh /tmp/kd_build_dt $MT
+./test/standalone/difftest_pair.sh /tmp/kd_build_dt $MT
 ```
 
 ### The pre-passes, and why three of them are not repair rules
@@ -1478,14 +1478,14 @@ meanings and the gate cannot tell them apart:
 For nine decompiled `libMdtKea` objects reproducing 900 steps of a chaotic twelve-body
 chain to the last bit, (1) was not the likeliest reading. Two instruments separate them.
 
-**`test/scene_census.sh`** — `kd_instr.c` counts every function entry through GCC's
+**`test/standalone/scene_census.sh`** — `kd_instr.c` counts every function entry through GCC's
 `-finstrument-functions`, file-local functions included, with no sampling and no mutation
 of the code under test. It is `KD_CENSUS` for the offline scenes, and it answers "ran" vs
 "never ran" exactly. It also links every recovered object at once and diffs the result,
 which is the combined question `substitute_test.sh` (one object at a time, by design)
 never asks.
 
-**`test/gate_sensitivity.sh`** — rebuilds the object with float intermediates forced to
+**`test/standalone/gate_sensitivity.sh`** — rebuilds the object with float intermediates forced to
 storage precision and reports how far the trajectory then moves. That is roughly the
 smallest error the scene could have caught.
 
@@ -1598,16 +1598,16 @@ Adding a pair is one `IX(...)` line and one table row; the geometry factories ar
 
 ```bash
 python3 tools/gen_typedb.py /tmp/karmaprobe/members \
-  --public-headers ../Thirdparty/metoolkit/include \
+  --public-headers ../metoolkit/include \
   --exclude libMeViewer2 --exclude libMeApp --exclude libMcdConvexCreateHull \
   --include MePrecision.h --include MeMath.h --include McdCTypes.h --include MdtTypes.h \
   --include McdModelPairContainer.h --include McdSpace.h --include McdGeometry.h \
   --include MdtKea.h --include MeProfile.h \
-  -o include/kd_types.h
+  -o ../metoolkit_decomp/include/kd_types.h
 ```
 
 `/tmp/karmaprobe/members` is just extracted archive members — the same shape as
-`/home/ion/tools/karma-lab/allobj`, which is what to widen it with if a type is missing.
+`lab/allobj`, which is what to widen it with if a type is missing.
 
 **`kd_types.h` fails GLOBALLY, not locally.** Three times now a change to it took the build
 from 90+ objects to **zero**. Always re-run `recover.py` immediately after touching it, and
@@ -1619,18 +1619,18 @@ derived type was emitted above its base.
 
 ## 5. Ghidra
 
-Installed at `/home/ion/tools/ghidra_12.1.3_PUBLIC`. Java 21. Headless only.
+Installed at `$GHIDRA_HOME`. Java 21. Headless only.
 
 ```bash
-cd /home/ion/tools/karma-lab
-cp /home/ion/engines/engine-ut2004/karma-decomp/tools/gscripts/*.java gscripts/
-export KARMA_PROTOS=/home/ion/tools/karma-lab/kd_protos.h
-export KARMA_OUTDIR=/home/ion/tools/karma-lab/out8      # a NEW directory
+cd lab
+cp decomp/tools/gscripts/*.java gscripts/
+export KARMA_PROTOS=lab/kd_protos.h
+export KARMA_OUTDIR=lab/out8      # a NEW directory
 export KD_CALLSITE_SIG=trilist
 rm -rf gproj8 && mkdir -p gproj8 out8
-timeout 9000 /home/ion/tools/ghidra_12.1.3_PUBLIC/support/analyzeHeadless \
-  gproj8 Proj -import /home/ion/tools/karma-lab/allobj \
-  -scriptPath /home/ion/tools/karma-lab/gscripts \
+timeout 9000 $GHIDRA_HOME/support/analyzeHeadless \
+  gproj8 Proj -import lab/allobj \
+  -scriptPath lab/gscripts \
   -preScript ParseKarmaHeaders.java \
   -postScript DumpDecomp.java -deleteProject
 ```
@@ -1639,10 +1639,10 @@ Takes 1–2 hours for the whole corpus (`out6` about 75 minutes for 153 objects;
 `out10` about the same). **A hypothesis does not need the whole corpus** — eight objects is
 25 seconds, and §5's `KD_GHIDRA_OPTS` block has the harness. Dead end 18 was settled that
 way in three minutes after two sessions of being budgeted at 75–120. Scripts live in
-`tools/gscripts/` and **must be copied** to `/home/ion/tools/karma-lab/gscripts/` —
+`tools/gscripts/` and **must be copied** to `lab/gscripts/` —
 Ghidra reads them from there. **Write to a NEW output directory** and keep the old one
 until the new dumps have passed all **nine** gates (§4 — the eighth is
-`test/ptrwidth_check.sh` and the ninth `test/vptr_ab.sh`); a re-run changes every object at
+`test/standalone/ptrwidth_check.sh` and the ninth `test/standalone/vptr_ab.sh`); a re-run changes every object at
 once — `out6` differs from `out5` in 103 of 153 dumps.
 
 `out5`–`out14` are all on disk. **`out14` is current**; it is `out13`'s dumps with ONE
@@ -1918,7 +1918,7 @@ changed, and Ghidra parses 2,700 FunctionDefinitions instead of 2,503.
 Regenerate with the §5a recipe, substituting `kd_protos10.h`:
 
 ```bash
-python3 tools/gen_protos.py /tmp/kd_allmembers -o /home/ion/tools/karma-lab/kd_protos10_base.h
+python3 tools/gen_protos.py /tmp/kd_allmembers -o lab/kd_protos10_base.h
 cat kd_protos10_base.h /tmp/kd_api_protos10.h > kd_protos10.h    # BOTH halves, §5a
 ```
 
@@ -1929,12 +1929,12 @@ cat kd_protos10_base.h /tmp/kd_api_protos10.h > kd_protos10.h    # BOTH halves, 
 `out8` needs one more variable than §5's recipe. Generate the table first, then export it:
 
 ```bash
-cd /home/ion/tools/karma-lab
+cd lab
 python3 .../tools/gen_vtable_callsites.py allobj \
     -o kd_vtable_callsites9.txt --protos-out /tmp/kd_api_protos.h
 cat kd_protos.h /tmp/kd_api_protos.h > kd_protos9.h      # <-- BOTH halves
-export KARMA_VTABLE_CALLSITES=/home/ion/tools/karma-lab/kd_vtable_callsites9.txt
-export KARMA_PROTOS=/home/ion/tools/karma-lab/kd_protos9.h
+export KARMA_VTABLE_CALLSITES=lab/kd_vtable_callsites9.txt
+export KARMA_PROTOS=lab/kd_protos9.h
 ```
 
 Without the table `DumpDecomp.java` prints `VTABLE: KARMA_VTABLE_CALLSITES not set,
@@ -2014,11 +2014,11 @@ Not previously written down, and there is a trap in it:
 ```bash
 # Extract EVERY archive member first. allobj/ is NOT enough.
 rm -rf /tmp/kd_allmembers && mkdir -p /tmp/kd_allmembers
-for a in ../Thirdparty/metoolkit/lib.rel/linux_single_gcc3.2/*.a; do
+for a in ../metoolkit/lib.rel/linux_single_gcc3.2/*.a; do
     b=$(basename "$a" .a); mkdir -p "/tmp/kd_allmembers/$b"
     (cd "/tmp/kd_allmembers/$b" && ar x "$a")
 done
-python3 tools/gen_protos.py /tmp/kd_allmembers -o /home/ion/tools/karma-lab/kd_protos.h
+python3 tools/gen_protos.py /tmp/kd_allmembers -o lab/kd_protos.h
 ```
 
 **Generating it from `allobj/` alone silently loses 376 prototypes** — almost all qhull
@@ -2093,14 +2093,14 @@ That inverts three whole classes of unresolvable name:
 
 > ### ⚠ CHECK THIS FIRST — the asset tree unmounts on reboot
 >
-> `/home/ion/ut2004-assets` (~19 GB, `$UT_ASSETS_DIR`) is a **mount, and it drops on
-> reboot**, leaving the directory empty. Every bulk-content symlink in `/home/ion/karma-run`
+> `$UT2004_ASSETS_DIR` (~19 GB, `$UT_ASSETS_DIR`) is a **mount, and it drops on
+> reboot**, leaving the directory empty. Every bulk-content symlink in `$UT2004_RUN_DIR`
 > then dangles and **no map run of any kind works** — the census, the shadow harness,
 > `crash_ab.sh`, every in-game measurement in this file. **Only the project owner can
 > remount it.** Ask; do not try to work around it.
 >
 > ```bash
-> ls /home/ion/ut2004-assets      # empty => stop and ask for a remount
+> ls $UT2004_ASSETS_DIR      # empty => stop and ask for a remount
 > ```
 >
 > **The symptom does not look like an asset problem**, which is the reason for this box. The
@@ -2117,7 +2117,7 @@ That inverts three whole classes of unresolvable name:
 > indistinguishable from the "started but never ticked" case below. It is not that. Check
 > `System/UT2004.log` for `Can't find file for package` before anything else.
 >
-> **Do not repoint the symlinks at `/home/ion/epic-sources/ut2004-v3186-assets`.** Tried on
+> **Do not repoint the symlinks at `$UT2004_ASSETS_DIR`.** Tried on
 > 2026-08-24: it gets further — `AS_FX_TX` resolves — but the engine is build 3369 and that
 > tree is 3186, so 3369-era packages are missing (`ONSNewTank-A.ukx` stops it, and it exists
 > nowhere else on disk), and it has no community content, so the CBP2/UCMP maps §3 and §7b
@@ -2125,21 +2125,21 @@ That inverts three whole classes of unresolvable name:
 
 ### Sandbox
 
-`/home/ion/karma-run` — bulk content symlinked from the **read-only**
-`/home/ion/ut2004-assets`, with `System/` and `Maps/` copied so they are writable. Recreate
+`$UT2004_RUN_DIR` — bulk content symlinked from the **read-only**
+`$UT2004_ASSETS_DIR`, with `System/` and `Maps/` copied so they are writable. Recreate
 with the recipe in `README.md` if lost. **Never write to `ut2004-assets`.**
 
 ### Build the instrumented engine
 
 ```bash
-cd /home/ion/engines/engine-ut2004
-./karma-decomp/test/make_shadow_metoolkit.sh Thirdparty/metoolkit /tmp/kd_build \
-    /home/ion/karma-run/shadow-metoolkit
+cd $UT2004_ENGINE_DIR
+./decomp/test/ut2004/make_shadow_metoolkit.sh metoolkit /tmp/kd_build \
+    $UT2004_RUN_DIR/shadow-metoolkit
 cmake -S . -B build-shadow-karma \
   -DCMAKE_C_COMPILER=gcc-13 -DCMAKE_CXX_COMPILER=g++-13 \
   -DCMAKE_BUILD_TYPE=RelWithDebInfo -DUT_GFX_BACKEND=gl4es \
   -DUSE_PIXOMATIC=ON -DBUILD_KARMA_REF=ON \
-  -DMETOOLKIT_DIR=/home/ion/karma-run/shadow-metoolkit
+  -DMETOOLKIT_DIR=$UT2004_RUN_DIR/shadow-metoolkit
 cmake --build build-shadow-karma -j"$(nproc)"
 ```
 
@@ -2150,20 +2150,20 @@ To measure a **quarantined** object, compile it into `/tmp/kd_build/` by hand fi
 deliberately absent), then re-stage:
 
 ```bash
-INC=Thirdparty/metoolkit/include
+INC=metoolkit/include
 gcc -m32 -O2 -fno-pic -fno-strict-aliasing -std=gnu99 -w \
     -Wno-int-conversion -Wno-incompatible-pointer-types -DLINUX \
-    -Ikarma-decomp/include -I$INC -I$INC/McdCommon -I$INC/McdPrimitives \
+    -Idecomp/include -I$INC -I$INC/McdCommon -I$INC/McdPrimitives \
     -I$INC/McdFrame -I$INC/MeGlobals -I$INC/MdtBcl -I$INC/MdtKea -I$INC/Mst -I$INC/MeApp \
     -c -o /tmp/kd_build/IxConvexTriList.o /tmp/kd_out/allobj/IxConvexTriList.c
 ```
 
 Two other build flavours, both used and both worth keeping:
 
-- **stock control** — same engine, `-DMETOOLKIT_DIR=/home/ion/karma-run/stock-metoolkit`
+- **stock control** — same engine, `-DMETOOLKIT_DIR=$UT2004_RUN_DIR/stock-metoolkit`
   (just a copy of the shipped `.a` files). This is how you tell "the harness did it" from
   "the game does it". It settled the `KHandleCollisions` crash, §7.
-- **substituted** — `test/make_substituted_metoolkit.sh` puts recovered objects in the
+- **substituted** — `test/standalone/make_substituted_metoolkit.sh` puts recovered objects in the
   archive *in place of* the shipped ones, so the engine actually runs on them. A different
   and harder question than the shadow harness, which feeds the engine the original's answer
   every frame so an error never gets to compound. Definition-of-done item 7 in miniature.
@@ -2172,7 +2172,7 @@ Two other build flavours, both used and both worth keeping:
 
 > ### ⚠ READ THIS FIRST — THE RENDERER CHANGED UNDER US, 2026-08-25
 >
-> `test/run_map.sh` passes **`-GL4ESRENDERER`**, and in this environment that now faults at
+> `test/ut2004/run_map.sh` passes **`-GL4ESRENDERER`**, and in this environment that now faults at
 > the FIRST HUD frame — `REALLOC FAILED … NewSize=1351188168` in
 > `UCanvas::DrawTileStretched`, from a viewport the renderer creates at **2×1**.
 > `-OPENGLRENDERER` does the same. **The STOCK, unmodified engine does it too**: same map,
@@ -2206,10 +2206,10 @@ Two other build flavours, both used and both worth keeping:
 > is the only reason this was diagnosed in minutes rather than as a regression.
 
 ```bash
-cd /home/ion/engines/engine-ut2004/karma-decomp
-KD_BIN=/home/ion/engines/engine-ut2004/build-shadow-karma/Source/SDLLaunch/ut2004-karma-pixo.bin \
+cd decomp
+KD_BIN=$UT2004_ENGINE_DIR/build-shadow-karma/Source/SDLLaunch/ut2004-karma-pixo.bin \
 KD_SHADOW_OUT=/tmp/kd.csv KD_SHADOW_DIVERGENCES=/tmp/kd_div.txt \
-./test/run_map.sh ONS-CBP2-Tropica 900 \
+./test/ut2004/run_map.sh ONS-CBP2-Tropica 900 \
   '?Name=Player1?Class=Engine.Pawn?Character=Jakob?team=0?NumBots=8?MinPlayers=9?bAutoNumBots=False?QuickStart=True?bPlayerMustBeReady=False'
 ```
 
@@ -2253,7 +2253,7 @@ at any map safely. That is how §3 was produced:
 ```bash
 for m in ONS-CBP2-Yorda DM-BE-Clearing ONS-UCMP-ABC-ECE ...; do
   KD_CENSUS=1 KD_BIN=$BIN KD_SHADOW_OUT=/tmp/sweep_$m.csv \
-    timeout 260 ./test/run_map.sh "$m" 200 "$COMMON_URL" >/dev/null 2>&1
+    timeout 260 ./test/ut2004/run_map.sh "$m" 200 "$COMMON_URL" >/dev/null 2>&1
   awk -F, 'NR>1 && $5+0>0 {print $1"x"$2}' /tmp/sweep_$m.csv | tr '\n' ' '
 done
 ```
@@ -2269,7 +2269,7 @@ The toolchain is the Android NDK, which IS installed — an earlier session wron
 no cross-compiler because it only looked at `/usr/bin` and `/opt`:
 
 ```bash
-NDK=/home/ion/Android/Sdk/ndk/30.0.14904198/toolchains/llvm/prebuilt/linux-x86_64/bin
+NDK=$ANDROID_HOME/ndk/30.0.14904198/toolchains/llvm/prebuilt/linux-x86_64/bin
 $NDK/armv7a-linux-androideabi21-clang   ...   # 32-bit pointers
 $NDK/aarch64-linux-android21-clang      ...   # 64-bit pointers
 ```
@@ -2282,7 +2282,7 @@ with the same flags §4 uses for i386, minus `-m32`.
 | **armv7** | **142/142** | **identical** | **0** across 0 objects |
 | **arm64** | **142/142** | **identical** | **6,988** raw / **411** after `fix_ptrwidth.py`, across 92 / 45 objects |
 
-Measured over **all 145 objects in the build** with `test/ptrwidth_check.sh`, which enables
+Measured over **all 145 objects in the build** with `test/standalone/ptrwidth_check.sh`, which enables
 exactly three clang diagnostics on top of `-Wno-everything` so the count is those three and
 nothing else:
 
@@ -2327,7 +2327,7 @@ nothing else:
 > arm64-only and armv7's zero is what makes the arm64 number mean anything — same source,
 > same compiler, 32-bit pointers, clean.
 >
-> **And "no gate can see it" is no longer true.** `test/ptrwidth_check.sh` takes 13 seconds
+> **And "no gate can see it" is no longer true.** `test/standalone/ptrwidth_check.sh` takes 13 seconds
 > and needs no arm64 hardware, because truncation is a compile-time fact. It also names the
 > 65 affected objects; the other 44 are clean. Worst offenders: `IxSphylPrimitives` 600,
 > `IxConvexTriList` 203, `MdtMainLoop` 139, `McdAggregate` 124, `McdBatch` 112.
@@ -2436,7 +2436,7 @@ recompiles correctly at any pointer width, because the compiler recomputes the o
 is exposed is arithmetic that BAKES a layout in: a hardcoded byte offset, or an index through
 a struct type Ghidra chose.
 
-### And it does not have to be inferred any more — `test/lp64_run.sh` RUNS it
+### And it does not have to be inferred any more — `test/standalone/lp64_run.sh` RUNS it
 
 **This file has said since the fourth session that no gate can execute arm64, and drawn the
 conclusion that only a textual gate is possible. The premise is true and the conclusion is
@@ -2449,8 +2449,8 @@ symbol from our own code, because the shipped metoolkit is i386-only. **Closing 
 gap did not only finish check 2; it unlocked the measurement for check 5.**
 
 ```bash
-./test/lp64_run.sh                      # all three scenes, ~1 min
-KD_FPMATH= ./test/lp64_run.sh           # and again with SSE, to measure the ASSOCIATION
+./test/standalone/lp64_run.sh                      # all three scenes, ~1 min
+KD_FPMATH= ./test/standalone/lp64_run.sh           # and again with SSE, to measure the ASSOCIATION
                                         # defect on its own — see proven.txt ASSOC-ON-I386
 ```
 
@@ -2513,7 +2513,7 @@ They are plain `wasm-debug` / `wasm-perf` plus one cache variable, `USE_KARMA_DE
   defined and all **eleven** `Source/Engine/Src/K*.cpp` bridge files compile, plus metoolkit's public
   headers on the include path. This was the first time `WITH_KARMA=1` had ever been set for a
   non-x86 target and **nothing engine-side broke**;
-* **link side** — a `KarmaDecomp` CMake target built from `generated/allobj/*.c` plus
+* **link side** — a `KarmaDecomp` CMake target built from `metoolkit_decomp/src/*/*.c` plus
   `src/McdConvexCreateHull/kd_convexhull.c`, instead of a glob of gcc-3.2 x86 archives. No
   `--start-group`: the archives' circular dependencies are an artefact of splitting into sixteen
   libraries, and this is one target.
@@ -2592,7 +2592,7 @@ read as moving: it asks for wasm32 and armv7 to build **and RUN**, and only the 
 
 ## 7. Instrumenting the game — the shadow harness
 
-`test/kd_shadow.c`. Every collision call runs the original into the caller's real result
+`test/ut2004/kd_shadow.c`. Every collision call runs the original into the caller's real result
 and, if a recovered implementation exists, the recovered one into a scratch buffer, then
 compares.
 
@@ -2780,7 +2780,7 @@ rewritten statement would have been wrong even where the lookup succeeded.
 
 **Definition-of-done item 7, for the collision layer, done on 2026-08-24.**
 
-`test/make_substituted_metoolkit.sh` replaces archive members outright, so the engine
+`test/standalone/make_substituted_metoolkit.sh` replaces archive members outright, so the engine
 consumes the recovered code's answer every frame with no original to fall back on. All
 eight objects behind the twelve pairs the census says the game calls went in together —
 `IxSphereTriList`, `IxSphylPrimitives`, `IxSphereSphere`, `McdGjk`, `IxConvexPrimitives`,
@@ -2801,7 +2801,7 @@ McdSphylTriangleListIntersect       stock 371         substituted  467
 
 ### The result, and a correction to §7
 
-`test/crash_ab.sh` alternates two builds on the same map and URL, A,B,A,B, and keeps every
+`test/ut2004/crash_ab.sh` alternates two builds on the same map and URL, A,B,A,B, and keeps every
 log. 420 s per run, **two maps**, every run reaching kickoff:
 
 | map | runs/arm | stock crashes | substituted crashes | crash site |
@@ -2856,7 +2856,7 @@ one real fix to get there. Re-link before quoting it; the binary measured below 
 108-object one.
 
 ```bash
-./test/make_substituted_metoolkit.sh /tmp/kd_build ../Thirdparty/metoolkit /tmp/mt_subst
+./test/standalone/make_substituted_metoolkit.sh /tmp/kd_build ../metoolkit /tmp/mt_subst
 cmake --preset native-karma -B build-subst108 -DMETOOLKIT_DIR=/tmp/mt_subst
 cmake --build build-subst108 -j"$(nproc)"
 ```
@@ -2879,7 +2879,7 @@ gave the file-search loop 0, 1, 0xc, 0x1a as directory prefixes. Fixed in
 the offline scenes never open a `.ka` file, so no gate could see it. Same shape as
 `IxSphereTriList`: compiles, gates clean, dies on first real use.
 
-**`test/try_subst.sh`** is the bisect harness that found it — link a chosen subset, run 60 s,
+**`test/ut2004/try_subst.sh`** is the bisect harness that found it — link a chosen subset, run 60 s,
 report. Two things about it are worth keeping:
 
 - its success test is **"reached `START MATCH`"**, not "did it SIGSEGV". The stock engine
@@ -2903,7 +2903,7 @@ runs it on **115, including fourteen of `libMdtKea`'s twenty members** — the d
 `keaLCP_new`, the allocator, the three kernels and `keaIntegrate_pc`.
 
 ```bash
-./test/make_substituted_metoolkit.sh /tmp/kd_build ../Thirdparty/metoolkit /tmp/mt_subst115
+./test/standalone/make_substituted_metoolkit.sh /tmp/kd_build ../metoolkit /tmp/mt_subst115
 cmake --preset native-karma -B build-subst115 -DMETOOLKIT_DIR=/tmp/mt_subst115
 cmake --build build-subst115 -j"$(nproc)"
 ```
@@ -2982,14 +2982,14 @@ exclude, rebuild the tree, re-link, run:
 ```bash
 rm -rf /tmp/kd_sel; cp -a /tmp/kd_build /tmp/kd_sel
 for x in "$@"; do rm -f "/tmp/kd_sel/$x.o"; done      # names to leave SHIPPED
-./test/make_hull_lib.sh ../Thirdparty/metoolkit /tmp/mt_bi
-./test/make_substituted_metoolkit.sh /tmp/kd_sel /tmp/mt_bi /tmp/mt_bisect
+./test/standalone/make_hull_lib.sh ../metoolkit /tmp/mt_bi
+./test/standalone/make_substituted_metoolkit.sh /tmp/kd_sel /tmp/mt_bi /tmp/mt_bisect
 cmake --build build-subst121 -j"$(nproc)"             # cache points at /tmp/mt_bisect
 # then the -SOFTWARERENDERER invocation from §6, and grep for 'START MATCH'
 ```
 
 **Success is "reached `START MATCH`", never "did not SIGSEGV"** — §7c's lesson, and it
-still holds. `test/try_subst.sh` is the older harness for this; it hard-codes
+still holds. `test/ut2004/try_subst.sh` is the older harness for this; it hard-codes
 `-GL4ESRENDERER` and `build-subst108`, so update it or use the recipe above.
 
 **What this does NOT show, and the environment changed under it.** On 2026-08-25 the engine
@@ -3058,7 +3058,7 @@ a crash as yours.**
 >
 > **It is EMPTY, and the entry it briefly held is the point.** `keaLCPSolver` went in on
 > `first@1 = 3.772e+00` and came out the same day, because the measurement that held it also
-> located the defect — `test/bisect_object.sh` named `PrincipalSubmatrix` and the three float
+> located the defect — `test/standalone/bisect_object.sh` named `PrincipalSubmatrix` and the three float
 > stores Ghidra had rendered as int conversions. A quarantine that holds on a measurement is
 > also a place to start looking.
 >
@@ -3230,7 +3230,7 @@ against a callee that takes a `float`. The shipped `CxSmallSort.o` contains **ze
   `'void (*)()'` for a subroutine type used as a struct MEMBER — it has no name to build a
   declarator around. **Checked: zero occurrences in the emitted header today**, because
   every such member in this corpus goes through a named typedef, which `declarator()`
-  handles. It is a latent hazard, not a live bug — `grep -c 'void (\*)()' include/kd_types.h`
+  handles. It is a latent hazard, not a live bug — `grep -c 'void (\*)()' ../metoolkit_decomp/include/kd_types.h`
   should stay at 0, and if it ever does not, a member called through with a float argument
   has exactly this defect.
 
@@ -3542,7 +3542,7 @@ Box × TriangleList at zero calls. Recorded so nobody re-derives the old number.
    `stack0x` sites resolved — and then:
 
    ```
-   ./test/substitute_test.sh /tmp/kd_mw $LIB test/scene_chain.c
+   ./test/standalone/substitute_test.sh /tmp/kd_mw $LIB test/standalone/scene_chain.c
      [ NaN  ] MdtWorld
    ```
 
@@ -3637,10 +3637,10 @@ Ordered by what actually moves the project, not by what is easiest:
    a detector recognises; an object that is simply never measured, and is wrong, walks
    straight in.
 
-   Reproduce with `test/make_shadow_metoolkit.sh` over a copy of `/tmp/kd_build` with
-   `IxCylinderTriList` compiled in, then `KD_RUNTIME=/tmp/kd_runtime ./test/run_map.sh
+   Reproduce with `test/ut2004/make_shadow_metoolkit.sh` over a copy of `/tmp/kd_build` with
+   `IxCylinderTriList` compiled in, then `UT2004_RUN_DIR=/tmp/kd_runtime ./test/ut2004/run_map.sh
    test-simple-physics 300 "$COMMON_URL"`. `KD_RUNTIME` keeps the run off
-   `/home/ion/karma-run`, which matters if someone else is using it.
+   `$UT2004_RUN_DIR`, which matters if someone else is using it.
 
    > ### RE-FRAMED, fifth session: `dims` IS NOT A MEASUREMENT FOR THIS PAIR
    >
@@ -3712,7 +3712,7 @@ Ordered by what actually moves the project, not by what is easiest:
    > ```bash
    > mkdir /tmp/vendor && cd /tmp/vendor
    > ar x .../lib.rel/linux_single_gcc3.1/libMcdPrimitives.a   # + libMcdConvex.a
-   > ./test/difftest_pair.sh /tmp/vendor ../Thirdparty/metoolkit
+   > ./test/standalone/difftest_pair.sh /tmp/vendor ../metoolkit
    > ```
    >
    > It works, and the useful rows are the CONTROLS: gcc3.1 vs gcc3.2 reads **0 count,
@@ -4028,7 +4028,7 @@ Ordered by what actually moves the project, not by what is easiest:
    offsets are 48 and 64 in a table whose last slot is 32; read the first at byte scale and
    `[2]` is not a multiple of four. Either error is refused rather than compiled.
 
-   **And then the measurement, which is `test/vptr_ab.sh` and is the ninth gate.** It
+   **And then the measurement, which is `test/standalone/vptr_ab.sh` and is the ninth gate.** It
    rebuilds the object with every repaired dispatch replaced by a DIRECT call to the symbol
    that slot holds — from `vtable_slots.py`, i.e. from the relocations in the object that
    DEFINES the vtable, not read back out of the rewrite — so the two builds differ in
@@ -4253,13 +4253,13 @@ diffing against the shipped hull.
 
 `src/McdConvexCreateHull/kd_convexhull.c` — ~600 lines of plain C, all 15 exported
 functions, **1,416,194 bytes → 10,382**. Stage it into a metoolkit tree with
-`test/make_hull_lib.sh`, which also asserts the exported symbol set still matches the
+`test/standalone/make_hull_lib.sh`, which also asserts the exported symbol set still matches the
 shipped archive.
 
 | tier | how | result |
 |---|---|---|
-| 1 — is it a valid hull? | `KD_HULL_IMPL=… test/hull_probe.sh` | **100,633 checks, 0 failures**; identical V/F/E to shipped on all six shapes; every degenerate case and the 1e-6/1e-5 cutoff match |
-| 2 — is it the same solid? | `test/hull_ab.sh` | 894 canonical lines, **1 differing** (one normal component by 1e-4), **all six volumes identical** |
+| 1 — is it a valid hull? | `KD_HULL_IMPL=… test/standalone/hull_probe.sh` | **100,633 checks, 0 failures**; identical V/F/E to shipped on all six shapes; every degenerate case and the 1e-6/1e-5 cutoff match |
+| 2 — is it the same solid? | `test/standalone/hull_ab.sh` | 894 canonical lines, **1 differing** (one normal component by 1e-4), **all six volumes identical** |
 | 3 — does collision behave? | full `difftest_pair` A/B, same driver and build | 12 pairs, 2.4 M pairs: **identical except two borderline pairs flipping to touching** |
 
 Tier 3's two differences are `McdGjkCgIntersect` (46983 → 46984 touching, 0 → 1 count) and
@@ -4308,7 +4308,7 @@ iterative algorithm, the regime `proven.txt` already documents for GJK.
 asset loader, which §3b shows is a larger and more load-bearing thing than §11 item 8
 implies.
 
-**Tier 1 exists: `test/hull_probe.sh`.** It runs the SHIPPED `McdComputeHull` and checks
+**Tier 1 exists: `test/standalone/hull_probe.sh`.** It runs the SHIPPED `McdComputeHull` and checks
 every claim the header makes in prose. **98,899 checks, 0 failures**, so the contract above
 is verified rather than assumed, and the same checker is the acceptance test for a
 replacement. What it settled:
@@ -4388,7 +4388,7 @@ asset files once.
 
 Everything else — code, tests, measurement, tooling — is self-service.
 
-**Not an ask, but do the check anyway.** If `/home/ion/ut2004-assets` is empty the tree has
+**Not an ask, but do the check anyway.** If `$UT2004_ASSETS_DIR` is empty the tree has
 unmounted, which happens on reboot and which only the owner can undo. Per the owner
 (2026-08-24) this is expected, unavoidable and rare — **so it is an operational note, not an
 outstanding dependency, and this section is empty without it.** The reason to keep checking
@@ -4410,10 +4410,10 @@ you can run.
 | # | check | how you know | today |
 |---|---|---|---|
 | 1 | **`tools/dropin_gap.py` reports ZERO shipped members.** | §3c. Checked against a real link. | **ZERO. 2026-08-27.** |
-| 2 | **The engine LINKS with every shipped member deleted** and plays a match on i386. | `test/make_dropin_metoolkit.sh`, then §6. Success is "reached `START MATCH`" and ran to the timeout, against a STOCK control on the same map. | **DONE, 2026-08-27.** 145 recovered members, one replacement hull, **33 shipped members `ar d`'d, `ar t` says zero remain**. test-karma-1, 300 s, 0 faults, identical Karma warning profile to the control |
+| 2 | **The engine LINKS with every shipped member deleted** and plays a match on i386. | `test/standalone/make_dropin_metoolkit.sh`, then §6. Success is "reached `START MATCH`" and ran to the timeout, against a STOCK control on the same map. | **DONE, 2026-08-27.** 145 recovered members, one replacement hull, **33 shipped members `ar d`'d, `ar t` says zero remain**. test-karma-1, 300 s, 0 faults, identical Karma warning profile to the control |
 | 3 | **Every pair the census shows the game calling is validated** — 0 `ret_diff`, 0 `count_diff`, 0 `dims_diff`, 0 `overrun`, `KD_SELFTEST` clean, evidence on a line in `proven.txt`. | §3, §7 | **14 of 15, AND THE FIFTEENTH IS MEASURED TO THE BOTTOM — do not re-open it casually.** `IxCylinderTriList` closed 2026-08-27 (three dropped roundings). `IxCylinderCylinder` reads **0 ret, 1 count, 20 dims in 200,000**, all of it inside `OverlapCylCyl` and all of it a near-tie flip downstream of one-ULP arithmetic. **Four candidate fixes and one wholesale lever were tried and every one measured WORSE or made no change** — `proven.txt` `CYLCYL-GRIND` names them so they are not retried. **AND THE NINTH SESSION MEASURED WHAT THAT RESIDUE IS RELATIVE TO: `KD_JITTER=1` runs the SHIPPED library against ITSELF on inputs 1e-7 m apart and it reads 64,033 ret / 9,744 count / 975 dims. The reference is an ORDER OF MAGNITUDE less self-consistent than the replacement, so closing this would demand more consistency than MathEngine has.** Getting to 15 needs bit-exactness in a 10,857-byte function whose remaining precision differences have NO textual fingerprint |
 | 4 | **All nine gates green** on the whole build, every time. | §4's gate list | green at 145 objects |
-| 5 | **wasm32 and armv7 build and RUN**, and arm64 either runs or is retired. | `test/wasm_check.sh`, `test/ptrwidth_check.sh`, **`tools/layout_check.py`**, and the web agent | **HALF, and only half.** The *engine* now builds against the recovered Karma for wasm32 — `wasm-karmadecomp-{debug,perf}`, zero wasm-ld diagnostics, 125 of 146 members verifiably in the `.wasm` (§6c). Objects compile on all three targets (145/145, symbol sets identical). **Still nothing has EXECUTED on any of them**, which is the half this row is actually asking for; and **arm64 would not run** — §6b, the layout defect |
+| 5 | **wasm32 and armv7 build and RUN**, and arm64 either runs or is retired. | `test/standalone/wasm_check.sh`, `test/standalone/ptrwidth_check.sh`, **`tools/layout_check.py`**, and the web agent | **HALF, and only half.** The *engine* now builds against the recovered Karma for wasm32 — `wasm-karmadecomp-{debug,perf}`, zero wasm-ld diagnostics, 125 of 146 members verifiably in the `.wasm` (§6c). Objects compile on all three targets (145/145, symbol sets identical). **Still nothing has EXECUTED on any of them**, which is the half this row is actually asking for; and **arm64 would not run** — §6b, the layout defect |
 | 6 | **The association defect is settled corpus-wide.** | §11 item 2a, and `proven.txt` ASSOC-ON-I386 first | **BOUNDED, not settled, and the framing changed on 2026-08-27**: it is NOT inert on i386 — measured differing on 22% of calls at one site — but an i386 A/B cannot ARBITRATE it either, because the machine-order variant measured worse end to end. A wasm-vs-native A/B is the arbiter |
 | 7 | **No detector suppressed, nothing released without evidence.** | §8, `proven.txt` | **AUDITED 2026-08-27 and holding.** All 8 objects in the build that carry a reconstructed frame have a line of evidence; and this session's prose notes in `proven.txt` are now COMMENTS, because `recover.py` reads the first word of any non-comment line as an object to RELEASE — a note at column zero was a latent trap |
 
@@ -4466,7 +4466,7 @@ moves; if the answer is none, it is out of scope.
   four tiers including a live match (§8a, §8b); the asset loader turned out to be
   RECOVERABLE and is 9 of 9 (§8c).
 - **arm64 — THE BIG ONE NOW, and not for the reason this file used to give.** Truncation is 95% closed (7,714 -> 435). The remainder is a LAYOUT defect: 128 of 151 structs change size at 64-bit pointer width; 128 sites in the build bake a literal byte offset in and 369 more index through a pointer-containing type. `tools/layout_check.py`, §6b.
-  `test/ptrwidth_check.sh`, §6b. The fix is generator-wide, not a flag.
+  `test/standalone/ptrwidth_check.sh`, §6b. The fix is generator-wide, not a flag.
 - **Executing anything on wasm** — the web agent's job. `HANDOVER-WEB.md`.
 - **The tail** — 8 objects (was 12; the three dead-end-9 rows and `MeSimpleFile_linux` were
   recovered on 2026-08-25). **And it is no longer "nothing blocks anything":** five of the

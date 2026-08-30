@@ -204,7 +204,7 @@ MeFAsset * kd_MeAssetDBXMLInputReadFirst(MeAssetDBXMLInput *i,MeStream stream)
       if (*(undefined4 **)((kd_iptr)pvVar1 + ((int)((char *)&((struct PElement *)0)->childHead - (char *)0))) != (undefined4 *)0x0) {
                     
         asset = (*MeFAssetCreateFunc[0])
-                          (i->db,i->IDPool,(PElement *)**(undefined4 **)((kd_iptr)pvVar1 + ((int)((char *)&((struct PElement *)0)->childHead - (char *)0))));
+                          (i->db,i->IDPool,(PElement *)**(kd_uptr **)((kd_iptr)pvVar1 + ((int)((char *)&((struct PElement *)0)->childHead - (char *)0))));
         MeAssetDBInsertAsset(i->db,asset);
       }
       PElementTraverseAll(pvVar1,PElementDestroyChildren,0,(void *)0x0);

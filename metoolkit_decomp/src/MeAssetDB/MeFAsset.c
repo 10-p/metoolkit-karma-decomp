@@ -1867,7 +1867,7 @@ static int _MeFGeometrySortFunc(void *elem1,void *elem2)
   int iVar1;
 
                     
-  iVar1 = strcmp((char *)**(undefined4 **)elem1,(char *)**(undefined4 **)elem2);
+  iVar1 = strcmp((char *)**(kd_uptr **)elem1,(char *)**(kd_uptr **)elem2);
   return iVar1;
 }
 
@@ -1878,7 +1878,7 @@ static int _MeFModelSortFunc(void *elem1,void *elem2)
   int iVar1;
 
                     
-  iVar1 = strcmp((char *)**(undefined4 **)elem1,(char *)**(undefined4 **)elem2);
+  iVar1 = strcmp((char *)**(kd_uptr **)elem1,(char *)**(kd_uptr **)elem2);
   return iVar1;
 }
 
@@ -1889,7 +1889,7 @@ static int _MeFAssetPartSortFunc(void *elem1,void *elem2)
   int iVar1;
 
                     
-  iVar1 = strcmp((char *)**(undefined4 **)elem1,(char *)**(undefined4 **)elem2);
+  iVar1 = strcmp((char *)**(kd_uptr **)elem1,(char *)**(kd_uptr **)elem2);
   return iVar1;
 }
 
@@ -1900,6 +1900,6 @@ static int _MeFJointSortFunc(void *elem1,void *elem2)
   int iVar1;
 
                     
-  iVar1 = strcmp((char *)**(undefined4 **)elem1,(char *)**(undefined4 **)elem2);
+  iVar1 = strcmp((char *)**(kd_uptr **)elem1,(char *)**(kd_uptr **)elem2);
   return iVar1;
 }

@@ -57,13 +57,13 @@ void kd_PrismaticSetAxis(MdtConstraintID c,MeReal px,MeReal py,MeReal pz)
   axis[0] = px;
   uVar2 = ((c->head).tag != 2) - 1 & (kd_uptr)c;
   axis[2] = pz;
-  rel_pos[0] = *(float *)(*(int *)(uVar2 + 0x54) + 0x120);
-  rel_pos[1] = *(float *)(*(int *)(uVar2 + 0x54) + 0x124);
-  rel_pos[2] = *(float *)(*(int *)(uVar2 + 0x54) + 0x128);
+  rel_pos[0] = *(float *)(*(kd_iptr *)(uVar2 + 0x54) + 0x120);
+  rel_pos[1] = *(float *)(*(kd_iptr *)(uVar2 + 0x54) + 0x124);
+  rel_pos[2] = *(float *)(*(kd_iptr *)(uVar2 + 0x54) + 0x128);
   if ((c->head).mdtbody[1] != (MdtBody *)0x0) {
-    rel_pos[0] = rel_pos[0] - *(float *)(*(int *)(uVar2 + 0x58) + 0x120);
-    rel_pos[1] = rel_pos[1] - *(float *)(*(int *)(uVar2 + 0x58) + 0x124);
-    rel_pos[2] = rel_pos[2] - *(float *)(*(int *)(uVar2 + 0x58) + 0x128);
+    rel_pos[0] = rel_pos[0] - *(float *)(*(kd_iptr *)(uVar2 + 0x58) + 0x120);
+    rel_pos[1] = rel_pos[1] - *(float *)(*(kd_iptr *)(uVar2 + 0x58) + 0x124);
+    rel_pos[2] = rel_pos[2] - *(float *)(*(kd_iptr *)(uVar2 + 0x58) + 0x128);
   }
                     
   if (0.001 <= ABS((px * px + py * py + pz * pz) - 1.0)) {

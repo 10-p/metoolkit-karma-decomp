@@ -109,7 +109,7 @@ void kd_McdCylinderSetRadius(McdCylinderID g,MeReal r)
 {
                     
   *(MeReal *)&((McdCylinder *)g)->mR = r;
-  g[1].next = (McdGeometryID)KD_FBITS(SQRT(r * r + *(float *)&(((McdCylinder *)g)->mRz) * *(float *)&(((McdCylinder *)g)->mRz)));
+  (*(MeU32 *)((char *)g + ((int)((char *)&((McdCylinder *)0)->mSphereRadius - (char *)0)))) = (McdGeometryID)KD_FBITS(SQRT(r * r + *(float *)&(((McdCylinder *)g)->mRz) * *(float *)&(((McdCylinder *)g)->mRz)));
   return;
 }
 
@@ -121,7 +121,7 @@ void kd_McdCylinderSetHeight(McdCylinderID g,MeReal h)
 
   pMVar1 = (McdGeometryID)KD_FBITS((h * 0.5));
   ((McdCylinder *)g)->mRz = *(__typeof__(((McdCylinder *)g)->mRz) *)&pMVar1;
-  g[1].next = (McdGeometryID)KD_FBITS(
+  (*(MeU32 *)((char *)g + ((int)((char *)&((McdCylinder *)0)->mSphereRadius - (char *)0)))) = (McdGeometryID)KD_FBITS(
               SQRT((*(float *)&(pMVar1)) * (*(float *)&(pMVar1)) + *(float *)&(((McdCylinder *)g)->mR) * *(float *)&(((McdCylinder *)g)->mR)
                   ));
   return;

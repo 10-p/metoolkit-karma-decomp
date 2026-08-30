@@ -30,6 +30,16 @@ python3 "$KD_ROOT/tools/fix_strides.py"   "$DST/allobj" "$BUILD" "$MT" || exit 2
 python3 "$KD_ROOT/tools/fix_literal_offsets.py" "$DST/allobj" "$BUILD" "$MT" | tail -3 || exit 2
 python3 "$KD_ROOT/tools/fix_literal_offsets.py" "$DST/allobj" "$BUILD" "$MT" | tail -3 || exit 2
 python3 "$KD_ROOT/tools/fix_derived_fields.py" "$DST/allobj" "$BUILD" "$MT" | head -2 || exit 2
+# ⚠ AFTER fix_derived_fields, WHICH IS THE SAME DEFECT CLASS AND MUST GO FIRST.
+# That pass types the base pointer PER FILE and names the concrete field with
+# its own declared type, which is the better repair wherever a file has one
+# geometry in it. What it cannot type it reports, and its own README records why:
+# "44 where the concrete type is genuinely ambiguous — an Ix* function handles
+# TWO geometries, so per-file inference cannot work". Those 44 are where the
+# located defect lives (`trilistgeom[3].mRefCtAndID`, byte 48 here and 96
+# there), so this pass takes the residue and types it PER VARIABLE instead.
+# Running it first would take the sites away from the better repair.
+python3 "$KD_ROOT/tools/fix_index_layout.py" "$DST/allobj" "$BUILD" "$MT" | head -4 || exit 2
 python3 "$KD_ROOT/tools/fix_arena_carve.py" "$DST/allobj" "$BUILD" "$MT" | head -3 || exit 2
 python3 "$KD_ROOT/tools/fix_vtable_offsets.py" "$DST/allobj" "$BUILD" "$MT" | head -2 || exit 2
 python3 "$KD_ROOT/tools/fix_ptrwidth.py"    "$DST/allobj" "$BUILD" "$MT" || exit 2
@@ -45,6 +55,15 @@ python3 "$KD_ROOT/tools/fix_frame_slots.py" "$DST/allobj" "$BUILD" "$MT" | head 
 # until rule G widens one of them — so it would print a clean, wrong zero. It
 # refuses that case rather than printing it.
 python3 "$KD_ROOT/tools/fix_pool_reserve.py" "$DST/allobj" "$BUILD" "$MT" | head -2 || exit 2
+# ---- LAST, AND DELIBERATELY SO. `fix_narrow_loads` reads clang's
+# -Wint-to-pointer-cast diagnostics over the FINISHED text, so running it here
+# gives it the most complete state and stops it from rewriting a shape an
+# earlier pass still has to recognise: it turns `*(int *)p` into `*(kd_iptr *)p`,
+# which is exactly the spelling `fix_narrow_pointers` and `fix_align_masks` key
+# on. It is the other half of the index repair above — that one fixes the
+# ADDRESS a pointer is read from, this one the WIDTH it is read at, and the
+# triangle generator needs both.
+python3 "$KD_ROOT/tools/fix_narrow_loads.py" "$DST/allobj" "$BUILD" "$MT" | head -4 || exit 2
 
 # ---- THE DETECTOR THIS PASS COULD BLIND. check_frame_bounds reads CONSTANT
 # offsets and constant array bounds, and fix_frame_slots replaces both with

@@ -2981,7 +2981,7 @@ void kd_MdtBclAddFixedPath(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
   if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtFixedPath *)0)->head.bodyindex[1] - (char *)0))) == -1) {
     uVar8 = 0;
     do {
-      negc[uVar8] = negc[uVar8] - *(float *)((kd_iptr)constraint + uVar8 * 4 + 0x184);
+      negc[uVar8] = negc[uVar8] - *(float *)((kd_iptr)constraint + uVar8 * 4 + ((int)((char *)&((struct MdtFixedPath *)0)->vel2[0] - (char *)0)));
       uVar8 = uVar8 + 1;
     } while (uVar8 < 3);
   }
@@ -4345,9 +4345,9 @@ void kd_MdtBclAddLinear2(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
   clist->Jbody[clist->num_constraints][1] = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtLinear2 *)0)->head.bodyindex[1] - (char *)0)));
   if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtLinear2 *)0)->head.bodyindex[1] - (char *)0))) == -1) {
     do {
-      vector1[uVar17] = *(MeReal *)((kd_iptr)constraint + uVar17 * 4 + 0x184);
-      vector2[uVar17] = *(MeReal *)((kd_iptr)constraint + uVar17 * 4 + 400);
-      initial_pos[uVar17] = *(MeReal *)((kd_iptr)constraint + uVar17 * 4 + 0x16c);
+      vector1[uVar17] = *(MeReal *)((kd_iptr)constraint + uVar17 * 4 + ((int)((char *)&((struct MdtLinear2 *)0)->vec1[0] - (char *)0)));
+      vector2[uVar17] = *(MeReal *)((kd_iptr)constraint + uVar17 * 4 + ((int)((char *)&((struct MdtLinear2 *)0)->vec2[0] - (char *)0)));
+      initial_pos[uVar17] = *(MeReal *)((kd_iptr)constraint + uVar17 * 4 + ((int)((char *)&((struct MdtLinear2 *)0)->pos2[0] - (char *)0)));
       uVar17 = uVar17 + 1;
     } while (uVar17 < 3);
   }
@@ -6820,8 +6820,8 @@ void kd_MdtBclAddRPROJoint(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
   pMVar20[5] = pMVar20[5] * 0.5;
   iVar25 = 0;
   do {
-    pMVar11[iVar10 + iVar25] = -*(MeReal *)((kd_iptr)constraint + iVar25 * 4 + 0x1cc);
-    fVar1 = *(float *)((kd_iptr)constraint + iVar25 * 4 + 0x1cc);
+    pMVar11[iVar10 + iVar25] = -*(MeReal *)((kd_iptr)constraint + iVar25 * 4 + ((int)((char *)&((struct MdtRPROJoint *)0)->linear_fmax[0] - (char *)0)));
+    fVar1 = *(float *)((kd_iptr)constraint + iVar25 * 4 + ((int)((char *)&((struct MdtRPROJoint *)0)->linear_fmax[0] - (char *)0)));
     pMVar12[iVar10 + iVar25] = fVar1;
     if (fVar1 == 0.0) {
       pMVar18[iVar25] = 0.0;
@@ -6880,8 +6880,8 @@ void kd_MdtBclAddRPROJoint(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
   } while (iVar25 < 3);
   iVar25 = 3;
   do {
-    pMVar11[iVar10 + iVar25] = -*(MeReal *)((kd_iptr)constraint + iVar25 * 4 + 0x1b4);
-    fVar1 = *(float *)((kd_iptr)constraint + iVar25 * 4 + 0x1b4);
+    pMVar11[iVar10 + iVar25] = -*(MeReal *)((kd_iptr)constraint + iVar25 * 4 + ((int)((char *)&((struct MdtRPROJoint *)0)->omega[0] - (char *)0)));
+    fVar1 = *(float *)((kd_iptr)constraint + iVar25 * 4 + ((int)((char *)&((struct MdtRPROJoint *)0)->omega[0] - (char *)0)));
     pMVar12[iVar10 + iVar25] = fVar1;
     if (fVar1 == 0.0) {
       pMVar18[iVar25] = 0.0;

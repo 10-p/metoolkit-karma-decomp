@@ -252,11 +252,46 @@ def type_differs(ty, inc, work, cache, here):
 
 
 def main():
-    srcdir, build = sys.argv[1], sys.argv[2]
-    root = sys.argv[3] if len(sys.argv) > 3 else kd_paths.METOOLKIT_DIR
+    emit = '--emit-sites' in sys.argv[1:]
+    argv = [a for a in sys.argv[1:] if not a.startswith('--')]
+    srcdir, build = argv[0], argv[1]
+    root = argv[2] if len(argv) > 2 else kd_paths.METOOLKIT_DIR
     inc = os.path.join(root, 'include')
     work = '/tmp/kd_layout'
     os.makedirs(work, exist_ok=True)
+    here = kd_paths.MD          # here/include holds the three kd_*.h
+
+    # ---- --emit-sites: the SUSPECT column, one line per site, with the
+    # element type it resolved through. This is what `fix_index_layout.py` was
+    # written against — a count says how much exposure there is and a list says
+    # which sites, which is the difference between a number and a work item.
+    if emit:
+        cache = {}
+        n = 0
+        for fn in sorted(os.listdir(srcdir)):
+            if not fn.endswith('.c') or not os.path.exists(
+                    os.path.join(build, fn[:-2] + '.o')):
+                continue
+            txt = open(os.path.join(srcdir, fn), errors='ignore').read()
+            parts = BANNER.split(txt)
+            for i in range(2, len(parts), 2):
+                region = parts[i]
+                base = txt.index(region)
+                for m in INDEXED.finditer(region):
+                    ty = elem_type(region, m.group(1)) \
+                        or member_type(m.group(1), inc, here)
+                    d = type_differs(ty, inc, work, cache, here) if ty else None
+                    pos = base + m.start()
+                    line = txt.count('\n', 0, pos) + 1
+                    col = pos - (txt.rfind('\n', 0, pos) + 1) + 1
+                    print('%s:%d:%d  %-28s %-22s %s'
+                          % (fn[:-2], line, col, m.group(0), ty or '?',
+                             {True: 'SUSPECT element type moves at LP64',
+                              False: 'SAFE  element type is the same size',
+                              None: '(type not resolvable)'}[d]))
+                    n += 1
+        print('  -> %d indexed site(s)' % n)
+        return 0
 
     names = struct_names(inc)
     sizes = i386_sizes(names, inc, work)
@@ -274,7 +309,6 @@ def main():
         show = ', '.join('%s %d->?' % (n, sizes[n]) for n in bad[:6])
         print('     e.g. %s%s' % (show, ' ...' if len(bad) > 6 else ''))
 
-    here = kd_paths.MD          # here/include holds the three kd_*.h
     cache = {}
     # ---- THE SELF-CHECK, and it is here because this tool got it wrong TWICE.
     # `type_differs` builds two probes and compares them. A probe that does not
@@ -343,8 +377,18 @@ def main():
     print('  kd_types.h declares real fields with real types, so anything that')
     print('  NAMES a field recompiles correctly at any pointer width — which is')
     print('  why SAFE exists and why the exposure is far smaller than the raw')
-    print('  site count. What is NOT in doubt: at least one site is measurably')
-    print('  wrong on arm64 and nothing in the toolchain says so.')
+    print('  site count.')
+    print()
+    print('  ★ THE SUSPECT COLUMN IS NO LONGER ONLY AN EXPOSURE. It was, and this')
+    print('  tool used to end by saying "at least one site is measurably wrong on')
+    print('  arm64 and nothing in the toolchain says so". Something does now:')
+    print('  `tools/fix_index_layout.py` runs in `lp64_pipeline.sh`, resolves the')
+    print('  sites where a base-class pointer is indexed into a derived object,')
+    print('  and MEASURES each one at both widths — it rewrites only those the')
+    print('  index gets wrong and leaves the ones a uniformly-doubling layout')
+    print('  already gets right. `--emit-sites` lists what this column counts.')
+    print('  What remains uncovered is named in that pass\'s own report, and')
+    print('  CxSmallSort\'s reps are the standing example.')
     return 0
 
 

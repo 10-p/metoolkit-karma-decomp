@@ -53,6 +53,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import kd_paths                                             # noqa: E402
+import interaction_types                                    # noqa: E402
 
 # The product root. HERE/include holds kd_compat.h, kd_karma.h and
 # kd_types.h — the three headers every recovered source includes, and the
@@ -104,11 +105,35 @@ BANNER = re.compile(r'(?m)^/\* ---- (\S+)')
 # follow.
 NOCAST = re.compile(r'\((?P<base>[A-Za-z_]\w*)\s*\+\s*(?P<off>0x[0-9a-f]+|\d+)\)')
 
+# ★ AND THE LITERAL IS NOT ALWAYS THE ONLY TERM. An indexed array member puts a
+# variable between the base and the field offset:
+#
+#     si[iVar12 * 2] = (-*(float *)((kd_iptr)pvVar10 + iVar12 * 4 + 0x10) - fVar4) * ...
+#
+# That is `((McdBox *)pvVar10)->mR[iVar12]`: 0x10 is `offsetof(McdBox, mR)` at
+# i386 and **32** at LP64, so at 64-bit the box half-extents are read 16 bytes
+# early — out of `_McdGeometry`'s pointer fields. The element stride `* 4` is
+# `sizeof(MeReal)` and is right at both widths; only the base offset moves, and
+# only the base offset is rewritten.
+#
+# ⚠ MEASURED ON THE RAGDOLL'S OWN PATH. `McdSphylBoxIntersect` reads the box
+# this way, and at LP64 it produced TWO FEWER CONTACTS than the same sources at
+# i386 — the capsule/box pair simply stopped touching. The pattern above cannot
+# see it because it requires the literal to follow the base directly.
+SITE_IDX = re.compile(r'\(\((?:char|int|kd_iptr)\s*\*?\)'
+                      r'(?P<base>[A-Za-z_]\w*(?:->[A-Za-z_]\w*)?)'
+                      r'\s*\+\s*(?P<mid>[A-Za-z_]\w*\s*\*\s*\d+)'
+                      r'\s*\+\s*(?P<off>0x[0-9a-f]+|\d+)\)')
+
 
 def all_sites(text, typed=()):
     """Every baked-offset site, in source order. `typed` admits the cast-less
     form for bases whose concrete type is already established."""
     out = list(SITE.finditer(text))
+    taken = [(m.start(), m.end()) for m in out]
+    for m in SITE_IDX.finditer(text):
+        if not any(s <= m.start() and m.end() <= e for s, e in taken):
+            out.append(m)
     if typed:
         taken = [(m.start(), m.end()) for m in out]
         for m in NOCAST.finditer(text):
@@ -117,7 +142,7 @@ def all_sites(text, typed=()):
             if any(s <= m.start() and m.end() <= e for s, e in taken):
                 continue
             out.append(m)
-        out.sort(key=lambda m: m.start())
+    out.sort(key=lambda m: m.start())
     return out
 
 CFLAGS = ['-m32', '-O2', '-fno-pic', '-fno-strict-aliasing', '-std=gnu99',
@@ -1043,6 +1068,73 @@ def main():
                         '%-26s %s: %s against the registered %s — %d of %d offsets '
                         'do not land, declined'
                         % (fn, func, v, tag,
+                           sum(1 for o in offs if o not in paths), len(offs)))
+
+    # ---- THE INTERACTION THIS FUNCTION IS REGISTERED FOR, which is the one
+    # source that can type an `Ix*` object. The rule above needs a file to
+    # register exactly ONE geometry and deliberately gives up otherwise — an
+    # interaction handles TWO, and this tool's own note recorded 44 sites
+    # declined for exactly that reason. One of them is on the ragdoll's path
+    # 7,298 times a run:
+    #
+    #     McdSphylPlaneIntersect
+    #       pvVar9 = McdModelGetGeometry(p->model1);
+    #       fVar2  = -*(float *)((kd_iptr)pvVar9 + 0x14);
+    #
+    # 0x10 and 0x14 are `McdSphyl::mRadius` and `mHalfHeight` at i386 and 32
+    # and 36 at LP64, so the capsule's radius is read out of the middle of its
+    # own base class — bytes 16..19 of `_McdGeometry`, the low half of the
+    # `prev` POINTER. That value is an ADDRESS read as a float; it changes with
+    # ASLR, and it is the address-dependent read `proven.txt`
+    # LP64-ADDRESS-DEPENDENT measured over eight runs and could not name.
+    #
+    # `tools/interaction_types.py` reads the registration —
+    # `McdFrameworkSetInteractions(frame, 5, 3, &interactions)` plus each
+    # geometry's own `GetTypeId()` — so `model1` is an McdSphyl and `model2` an
+    # McdPlane, with no inference at all. Gated by the same all-offsets-land
+    # test as every other rule here.
+    pairs, _dropped = interaction_types.pair_types(texts)
+    GEOMOF = re.compile(r'(?m)^[ \t]*(?P<v>[A-Za-z_]\w*)\s*=\s*(?:\([^)]*\)\s*)?'
+                        r'(?:kd_)?McdModelGetGeometry\s*\(\s*[A-Za-z_]\w*\s*->\s*'
+                        r'model(?P<n>[12])\s*\)')
+    for fn, text in texts.items():
+        for b in BANNER.finditer(text):
+            func = re.sub(r'^kd_', '', b.group(1))
+            pt = pairs.get(func)
+            if not pt:
+                continue
+            region = region_of(text, b.start())
+            # ⚠ ONE MODEL PER VARIABLE OR NOTHING. Ghidra reuses a name, and a
+            # pointer assigned from model1 in one branch and model2 in another
+            # is evidence about neither.
+            which = {}
+            for m in GEOMOF.finditer(region):
+                v, n = m.group('v'), int(m.group('n'))
+                which[v] = n if which.get(v, n) == n else 0
+            # a plain copy of one of those names the same object; one hop, and
+            # only from a variable this rule has already answered
+            for _ in range(2):
+                for m in re.finditer(r'(?m)^[ \t]*(?P<v>[A-Za-z_]\w*)\s*=\s*'
+                                     r'(?P<w>[A-Za-z_]\w*)\s*;', region):
+                    v, w = m.group('v'), m.group('w')
+                    if w in which and which[w]:
+                        which[v] = which[w] if which.get(v, which[w]) == which[w] else 0
+            for v, n in sorted(which.items()):
+                if not n or (fn, b.group(1), v) in opaque_var:
+                    continue
+                tag = pt[n - 1]
+                paths = offsets_of(tag, inc, cache)
+                offs = {int(m.group('off'), 0) for m in all_sites(region)
+                        if m.group('base') == v}
+                if not offs:
+                    continue
+                if all(o in paths for o in offs):
+                    opaque_var[(fn, b.group(1), v)] = tag
+                else:
+                    notes_early.append(
+                        '%-26s %s: %s is model%d, which the registration says is '
+                        'an %s, but %d of its %d offsets do not land — declined'
+                        % (fn, func, v, n, tag,
                            sum(1 for o in offs if o not in paths), len(offs)))
 
     fixed = declined = skipped = 0

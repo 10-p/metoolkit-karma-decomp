@@ -129,15 +129,15 @@ MeBool kd_McdBoxTriangleListIntersect(McdModelPair *p,McdIntersectResult *result
   McdBoxGetBSphere(boxgeom,boxCentre,&boxRadius);
   pMVar22 = trilistgeom;
   MVar21 = eps;
-  pMVar3 = trilistgeom[2].next;
+  pMVar3 = (*(MeU32 *)((char *)trilistgeom + ((int)((char *)&((struct McdTriangleList *)0)->triangleMaxCount - (char *)0))));
   iVar5 = -((kd_iptr)pMVar3 * 0x18 + 0xfU & (0xfffffff0 | ~(kd_uptr)0xffffffffU));
-  trilistgeom[3].prev = (McdGeometryID)(kd_alloca_iVar5 = (char *)alloca((size_t)(pMVar3) * 0x18 + 0));
+  (*(McdGeometryID *)((char *)trilistgeom + ((int)((char *)&((struct McdTriangleList *)0)->list - (char *)0)))) = (McdGeometryID)(kd_alloca_iVar5 = (char *)alloca((size_t)(pMVar3) * 0x18 + 0));
   *(McdGeometryID *)(&(*kd_argslot_fffffda4)) = pMVar3;
   *(float *)((kd_iptr)&fStackY_260) = MVar21 + boxRadius;
   *(lsVec3 **)((kd_iptr)&iStackY_264) = &boxPosTrans;
-  *(McdGeometryID *)((kd_iptr)&MStackY_268) = pMVar22[3].prev;
+  *(McdGeometryID *)((kd_iptr)&MStackY_268) = (*(McdGeometryID *)((char *)pMVar22 + ((int)((char *)&((struct McdTriangleList *)0)->list - (char *)0))));
   *(McdModelPair **)((kd_iptr)aiStackY_280 + (5 * (int)sizeof(void *))) = p;
-  pcVar4 = (code *)trilistgeom[3].mRefCtAndID;
+  pcVar4 = (code *)(*(kd_uptr *)((char *)trilistgeom + ((int)((char *)&((struct McdTriangleList *)0)->triangleListGenerator - (char *)0))));
   *(undefined4 *)((kd_iptr)aiStackY_280 + (4 * (int)sizeof(void *))) = 0x1018e;
   count = (*(int (*)(void *, void *, void *, float, int))pcVar4)(*(void **)((kd_iptr)aiStackY_280 + (5 * (int)sizeof(void *))),
                     *(void **)((kd_iptr)&MStackY_268),*(void **)((kd_iptr)&iStackY_264),
@@ -172,7 +172,7 @@ MeBool kd_McdBoxTriangleListIntersect(McdModelPair *p,McdIntersectResult *result
       MStack_24c.prev = (McdGeometryID)0x0;
       do {
         paMVar23 = ct.vertices[2];
-        puVar31 = (undefined4 *)((kd_iptr)&(trilistgeom[3].prev)->mRefCtAndID + (kd_iptr)MStack_24c.prev);
+        puVar31 = (undefined4 *)((kd_iptr)&((*(McdGeometryID *)((char *)trilistgeom + ((int)((char *)&((struct McdTriangleList *)0)->list - (char *)0)))))->mRefCtAndID + (kd_iptr)MStack_24c.prev);
         pfVar26 = (float *)*puVar31;
         (*ct.vertices[0])[0] = fVar11 * pfVar26[2] + fVar32 * *pfVar26 + fVar8 * pfVar26[1] + fVar14
         ;

@@ -12,7 +12,80 @@ read before resuming; `../HANDOVER.md` is the depth behind it and `../proven.txt
 
 ---
 
-★★★ **NEWEST: 2026-08-30 (later) — THE LP64 DEFECT IS LOCATED, AND THE LP64 PORT IS NOT DONE.**
+★★★ **NEWEST: 2026-08-30 (later still) — THE LP64 PORT IS DONE, and "done" now means
+something the old gate could not express: with the arithmetic held fixed, `scene_chain` and
+`scene_ragdoll` are BYTE-IDENTICAL at i386 and LP64 over all 901 rows.**
+
+**The located defect was real and it was not the cause.** The entry above named
+`trilistgeom[3].mRefCtAndID` and specified its repair. Both stand — the repair is written and
+landed. But `scene_ragdoll` is capsules on a **plane**; there is no triangle list in it, so that
+site never runs there. Fixing it moved the run-to-run variance from 4 distinct outcomes in 10 to
+9 in 40 and no further. What a census of the scene's own path found instead:
+
+```c
+McdSphylPlaneIntersect                     /* 7,298 calls a run */
+  pvVar9 = McdModelGetGeometry(p->model1);
+  fVar2  = -*(float *)((kd_iptr)pvVar9 + 0x14);
+```
+
+`McdSphyl::mRadius` and `mHalfHeight` are 0x10 and 0x14 here and **32 and 36** at LP64, so at
+64-bit the capsule's radius comes out of the middle of its own base class — bytes 16..19 of
+`_McdGeometry`, the low half of the `prev` **pointer**. An address, read as a float, straight into
+the contact solver.
+
+⚠ **And it had been reported for months**, in a line nobody costed: `fix_literal_offsets`' own
+note, *"44 declined — an `Ix*` function handles TWO geometries, so per-file inference cannot
+work"*. Those 44 were not a tail.
+
+**What landed.**
+
+| | |
+|---|---|
+| `tools/interaction_types.py` | NEW, evidence only. The type is written down in the REGISTRATION: `McdSphylGetTypeId()` returns 5, `McdPlaneGetTypeId()` 3, and `McdSphylPlaneRegisterInteraction` installs `intersectFn` then calls `SetInteractions(frame, 5, 3)`. 26 interaction functions typed with nothing inferred |
+| `fix_literal_offsets.py` | consumes it, and grew one more site shape — `(base + iVar12 * 4 + 0x10)`, an indexed array MEMBER the old pattern could not see. That one is `McdBox::mR[i]`, and at LP64 it made `McdSphylBoxIntersect` produce **two fewer contacts** than i386. 835 → 936 rewrites |
+| `tools/fix_index_layout.py` | NEW — the residue `fix_derived_fields` cannot type, per VARIABLE rather than per file, with a FRAME test and a measurement of whether the index is wrong before touching it. 38 re-spelled, **33 measured as already correct**, 13 declined |
+| `tools/fix_narrow_loads.py` | applied at last, 44 sites in 9 objects, wired in last on purpose |
+
+★ **THE MEASUREMENT THAT REPLACED THE GATE.** `-mfpmath=387` was believed to make the two widths
+compute the same numbers — `lp64_run.sh`'s header said so. **It does not.** It equalises the
+FORMAT, not the EXCESS PRECISION, and an 80-bit x87 register is spilled at different points by the
+two ABIs. The old 1e-5 floor was absorbing that: the same sources at the **same width** differing
+only in `-mfpmath` first differ at 2.0e-07 and reach a worst of **1.97e+02** — the identical worst
+the i386/LP64 pair reached. With `-ffloat-store` at both widths the arithmetic is identical and the
+comparison becomes a bit comparison with no tolerance at all.
+
+**Proven, on the tree this landed with:**
+
+```
+i386 acceptance   145 object(s), 0 compile failure(s), 0 byte difference(s)
+determinism       100 runs of the plain -m64 ragdoll -> ONE distinct output;
+                  setarch -R gives the same one
+-ffloat-store     chain BYTE-IDENTICAL 901 rows · ragdoll BYTE-IDENTICAL 901 rows
+                  boxes differs at line 96  <- LP64-CONTACT-ORDER, pre-existing
+wasm32            all 146 shipped sources compile BYTE-IDENTICALLY before and after
+amd64 oracle      22 of 22 rewritten offsets confirmed against MathEngine's own build
+truncations       181 -> 134 at aarch64, 0 at armv7a
+lp64_pipeline.sh  -> PASS
+```
+
+✅ **The web build is measurably unchanged**, not argued to be: `sizeof(void *)` is 4 on wasm32 and
+every rewritten expression folds back to the constant it replaced, and this time that was compiled
+and compared rather than reasoned about. No re-stamp needed.
+
+⚠ **What is NOT closed.** `scene_boxes_on_plane` is byte-identical for 94 steps and then differs by
+2.0e-04 — an **order**, not a value: the same two contacts arrive swapped at the two widths. It
+predates every pass in this pipeline (the same comparison on the previous tree differs at the same
+line) and is pinned by name in `lp64_run.sh`, so its presence does not fail the gate and any change
+to it does. `proven.txt` `LP64-CONTACT-ORDER`. And `ptrwidth_check` still counts 134 truncations —
+none of them moves any scene, which is a measurement over three scenes, not a proof over the corpus.
+
+Evidence: `../proven.txt` `LP64-CLOSED` and `LP64-CONTACT-ORDER`.
+
+---
+
+★★★ **PREVIOUS: 2026-08-30 (later) — THE LP64 DEFECT IS LOCATED.** ⚠ Its closing claim — "the
+LP64 port is not done" — was right, and its implied claim that THIS site explained the
+nondeterminism was not. See the entry above.
 This contradicts what this file and `HANDOVER.md` have implied since 2026-08-29.
 
 **The site, in the shipped sources:**

@@ -1,4 +1,104 @@
-# LP64-INDEX-LAYOUT  2026-08-30  ⚠ OPEN DEFECT — the mechanism behind
+# LP64-CLOSED  2026-08-30  THE LP64 PORT IS DONE, AND "done" here means something
+#                     stronger than the gate that was in place could express: with the
+#                     ARITHMETIC HELD FIXED, two of the three scenes are BYTE-IDENTICAL at
+#                     i386 and LP64 over all 901 rows. This supersedes LP64-INDEX-LAYOUT and
+#                     LP64-ADDRESS-DEPENDENT, both of which are closed.
+#
+#                     WHAT WAS ACTUALLY WRONG. LP64-INDEX-LAYOUT named ONE defect and
+#                     specified its repair. The defect was real, the repair works, AND IT WAS
+#                     NOT THE CAUSE OF THE NONDETERMINISM — it is on UT2004's path, not on
+#                     `scene_ragdoll`'s. The ragdoll is capsules on a PLANE; there is no
+#                     triangle list in it. Fixing the located site moved the run-to-run
+#                     variance from 4 distinct outcomes in 10 to 9 in 40 and no further.
+#
+#                     THE READ THAT DID IT, found by census rather than by reading:
+#                         McdSphylPlaneIntersect            (7,298 calls a run)
+#                           pvVar9 = McdModelGetGeometry(p->model1);
+#                           fVar2  = -*(float *)((kd_iptr)pvVar9 + 0x14);
+#                     0x10 and 0x14 are `McdSphyl::mRadius` and `mHalfHeight` at i386 and 32
+#                     and 36 at LP64. At 64-bit the capsule's radius comes out of the middle
+#                     of its own base class — bytes 16..19 of `_McdGeometry`, the low half of
+#                     the `prev` POINTER. An address, read as a float, straight into the
+#                     contact solver. THAT is the address dependence.
+#
+#                     ⚠ AND IT HAD BEEN REPORTED FOR MONTHS, in a line nobody costed:
+#                     fix_literal_offsets' own note, "44 declined, an Ix* function handles TWO
+#                     geometries so per-file inference cannot work". Those 44 were not a tail.
+#
+#                     WHAT LANDED, four changes, each with its own evidence:
+#                       * tools/interaction_types.py — NEW, evidence only. The type is written
+#                         down in the REGISTRATION: McdSphylGetTypeId() returns 5,
+#                         McdPlaneGetTypeId() returns 3, and McdSphylPlaneRegisterInteraction
+#                         installs intersectFn then calls SetInteractions(frame, 5, 3). So
+#                         model1 is an McdSphyl and model2 an McdPlane, inferred from nothing.
+#                         26 interaction functions typed this way; two independent confirmations
+#                         that the argument order IS the model order (the sphyl reads model1 at
+#                         0x10/0x14, the trilist reads model2 at 40/48/52).
+#                       * fix_literal_offsets.py — consumes it, and grew one more site shape:
+#                         `(base + iVar12 * 4 + 0x10)`, an indexed array MEMBER, which the old
+#                         pattern could not see because it required the literal to follow the
+#                         base directly. That one is `McdBox::mR[i]`, and at LP64 it made
+#                         McdSphylBoxIntersect produce TWO FEWER CONTACTS than the same sources
+#                         at i386. 835 -> 936 rewrites.
+#                       * tools/fix_index_layout.py — NEW, the residue fix_derived_fields
+#                         cannot type: 38 re-spelled, 33 measured as ALREADY CORRECT at LP64,
+#                         13 declined. It repairs LP64-INDEX-LAYOUT's site and every sibling.
+#                       * tools/fix_narrow_loads.py — applied at last, 44 sites in 9 objects.
+#
+#                     ★ THE MEASUREMENT THAT REPLACED THE GATE. `-mfpmath=387` was believed to
+#                     make the two widths compute the same numbers; lp64_run.sh's header said
+#                     so. IT DOES NOT — it equalises the FORMAT, not the EXCESS PRECISION, and
+#                     an 80-bit x87 register gets spilled at different points by the two ABIs.
+#                     The old 1e-5 floor was absorbing that: the SAME sources at the SAME width
+#                     differing only in -mfpmath first differ at 2.0e-07 and reach a worst of
+#                     1.97e+02, the identical worst the i386/LP64 pair reached. Add
+#                     `-ffloat-store` at both widths and the arithmetic is identical:
+#                         scene_chain    BYTE-IDENTICAL, 901 rows
+#                         scene_ragdoll  BYTE-IDENTICAL, 901 rows
+#                         scene_boxes    differs at line 96 — see LP64-CONTACT-ORDER
+#                     That is the gate now. There is no floor and no tolerance.
+#
+#                     PROVEN, on the tree this landed with:
+#                         i386 acceptance   145 object(s), 0 compile failures, 0 byte differences
+#                         determinism       100 runs of the plain -m64 ragdoll, ONE distinct
+#                                           output; setarch -R gives the same one
+#                         wasm32            all 146 shipped sources compile BYTE-IDENTICALLY
+#                                           before and after — the web build is measurably
+#                                           unchanged, not argued to be
+#                         amd64 oracle      22 of 22 rewritten offsets confirmed against
+#                                           MathEngine's own 64-bit archives
+#                         arm64 control     every tag measures the same at arm64 as at x86-64
+#                         truncations       181 -> 134 at aarch64, 0 at armv7a
+#
+#                     ⚠ WHAT IS NOT CLOSED. LP64-CONTACT-ORDER, below. And ptrwidth_check
+#                     still counts 134 truncations — none of them now moves any scene, which
+#                     is a measurement over three scenes and not a proof over the corpus.
+
+# LP64-CONTACT-ORDER  2026-08-30  ⚠ OPEN, PINNED, AND PRE-EXISTING. With the arithmetic held
+#                     fixed (-ffloat-store) `scene_boxes_on_plane` is byte-identical at i386
+#                     and LP64 for 94 steps and then differs, first by 2.0e-04.
+#
+#                     IT IS AN ORDER, NOT A VALUE. The contact SET is the same at both widths;
+#                     two of them arrive in the opposite ORDER —
+#                         m64 #98  0.131278843 -0.320444286 0.247821286
+#                         m32 #98  0.136381716 -0.330199182 0.243161917
+#                         m64 #100 0.136381716 -0.330199182 0.243161917
+#                         m32 #100 0.131278843 -0.320444286 0.247821286
+#                     — the same two positions, swapped. The solver then sums them in the other
+#                     order, and the box scene amplifies that from step 94 on.
+#
+#                     IT PREDATES EVERY PASS IN THIS PIPELINE: the same comparison on the tree
+#                     BEFORE the 2026-08-30 changes differs at the same line. It is pinned by
+#                     name in lp64_run.sh so that its PRESENCE does not fail the gate and any
+#                     CHANGE to it does.
+#
+#                     ✅ It is not a determinism defect — the 64-bit build is deterministic
+#                     across 100 runs with ASLR on — and no shipping target is 64-bit.
+
+# LP64-INDEX-LAYOUT  2026-08-30  ✅ CLOSED by LP64-CLOSED above: the repair is written,
+#                     landed and confirmed. Read on for the diagnosis, which stands — and
+#                     for the prediction that it explained the nondeterminism, which does not.
+#                     ORIGINALLY FILED AS: ⚠ OPEN DEFECT — the mechanism behind
 #                     LP64-ADDRESS-DEPENDENT, located and confirmed. THE LP64 PORT IS NOT DONE,
 #                     and this contradicts what STATE.md and HANDOVER.md have implied since
 #                     2026-08-29.
@@ -53,7 +153,11 @@
 #                     truncations. Android's two 64-bit ABIs default to NO_KARMA. The 145 objects
 #                     are still byte-identical at -m32 and the browser suite is still 55/55.
 
-# LP64-ADDRESS-DEPENDENT  2026-08-30  ⚠ OPEN DEFECT, NOT A RELEASE. The LP64 build is
+# LP64-ADDRESS-DEPENDENT  2026-08-30  ✅ CLOSED by LP64-CLOSED above. The measurement below
+#                     is exact and the diagnosis was right; the CAUSE was McdSphylPlaneIntersect
+#                     reading a capsule radius out of a pointer, not the site named in
+#                     LP64-INDEX-LAYOUT. ORIGINALLY FILED AS: ⚠ OPEN DEFECT, NOT A RELEASE.
+#                     The LP64 build is
 #                     NONDETERMINISTIC, in the shipping configuration, and every gate in this
 #                     project was blind to it.
 #

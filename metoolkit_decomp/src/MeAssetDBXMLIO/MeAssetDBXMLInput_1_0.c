@@ -1556,7 +1556,7 @@ static MeXMLError AddVertex_1_0(MeXMLElement *elem,void *prim,void *parent)
   void *pvVar3;
   int iVar4;
 
-  puVar1 = (undefined4 *)(*(int *)((kd_iptr)prim + 0x10) + *(int *)((kd_iptr)prim + 0xc) * 0xc);
+  puVar1 = (undefined4 *)(*(kd_iptr *)((kd_iptr)prim + 0x10) + *(int *)((kd_iptr)prim + 0xc) * 0xc);
   *puVar1 = *(undefined4 *)((kd_iptr)prim + 0x18);
   puVar1[1] = *(undefined4 *)((kd_iptr)prim + 0x1c);
   puVar1[2] = *(undefined4 *)((kd_iptr)prim + 0x20);

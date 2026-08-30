@@ -87,14 +87,14 @@ kd_McdTriangleListCreate
     ((McdTriangleList *)pMVar1)->center[1] = (max[1] + min[1]);
     ((McdTriangleList *)pMVar1)->center[2] = (max[2] + min[2]);
     *(float *)&pMVar1[1].mRefCtAndID = (*(float *)&(((McdTriangleList *)pMVar1)->center[0]) * 0.5);
-    pMVar1[1].prev = (McdGeometryID)KD_FBITS((*(float *)&(((McdTriangleList *)pMVar1)->center[1]) * 0.5));
-    pMVar1[1].next = (McdGeometryID)KD_FBITS((*(float *)&(((McdTriangleList *)pMVar1)->center[2]) * 0.5));
+    (*(MeU32 *)((char *)pMVar1 + ((int)((char *)&((struct McdTriangleList *)0)->center[1] - (char *)0)))) = (McdGeometryID)KD_FBITS((*(float *)&(((McdTriangleList *)pMVar1)->center[1]) * 0.5));
+    (*(MeU32 *)((char *)pMVar1 + ((int)((char *)&((struct McdTriangleList *)0)->center[2] - (char *)0)))) = (McdGeometryID)KD_FBITS((*(float *)&(((McdTriangleList *)pMVar1)->center[2]) * 0.5));
     ((McdTriangleList *)pMVar1)->radius[0] = (*max - *min);
     *(MeReal *)&((McdTriangleList *)pMVar1)->radius[1] = (max[1] - min[1]);
     ((McdTriangleList *)pMVar1)->radius[2] = (max[2] - min[2]);
-    pMVar1[1].frame = (McdFrameworkID)KD_FBITS((*(float *)&(((McdTriangleList *)pMVar1)->radius[0]) * 0.5));
-    *(float *)&pMVar1[2].mRefCtAndID = (*(float *)&(((McdTriangleList *)pMVar1)->radius[1]) * 0.5);
-    pMVar1[2].prev = (McdGeometryID)KD_FBITS((*(float *)&(((McdTriangleList *)pMVar1)->radius[2]) * 0.5));
+    (*(MeU32 *)((char *)pMVar1 + ((int)((char *)&((struct McdTriangleList *)0)->radius[0] - (char *)0)))) = (McdFrameworkID)KD_FBITS((*(float *)&(((McdTriangleList *)pMVar1)->radius[0]) * 0.5));
+    *(float *)&(*(MeU32 *)((char *)pMVar1 + ((int)((char *)&((struct McdTriangleList *)0)->radius[1] - (char *)0)))) = (*(float *)&(((McdTriangleList *)pMVar1)->radius[1]) * 0.5);
+    (*(MeU32 *)((char *)pMVar1 + ((int)((char *)&((struct McdTriangleList *)0)->radius[2] - (char *)0)))) = (McdGeometryID)KD_FBITS((*(float *)&(((McdTriangleList *)pMVar1)->radius[2]) * 0.5));
     ((McdTriangleList *)pMVar1)->triangleListGenerator = (kd_uptr)f;
     ((McdTriangleList *)pMVar1)->triangleMaxCount = (McdGeometryID)maxCount;
   }
@@ -110,14 +110,14 @@ void kd_McdTriangleListSetBoundingBox(McdTriangleListID g,MeReal *min,MeReal *ma
   ((McdTriangleList *)g)->center[1] = (max[1] + min[1]);
   ((McdTriangleList *)g)->center[2] = (max[2] + min[2]);
   *(float *)&g[1].mRefCtAndID = (*(float *)&(((McdTriangleList *)g)->center[0]) * 0.5);
-  g[1].prev = (McdGeometryID)KD_FBITS((*(float *)&(((McdTriangleList *)g)->center[1]) * 0.5));
-  g[1].next = (McdGeometryID)KD_FBITS((*(float *)&(((McdTriangleList *)g)->center[2]) * 0.5));
+  (*(MeU32 *)((char *)g + ((int)((char *)&((struct McdTriangleList *)0)->center[1] - (char *)0)))) = (McdGeometryID)KD_FBITS((*(float *)&(((McdTriangleList *)g)->center[1]) * 0.5));
+  (*(MeU32 *)((char *)g + ((int)((char *)&((struct McdTriangleList *)0)->center[2] - (char *)0)))) = (McdGeometryID)KD_FBITS((*(float *)&(((McdTriangleList *)g)->center[2]) * 0.5));
   ((McdTriangleList *)g)->radius[0] = (*max - *min);
   *(MeReal *)&((McdTriangleList *)g)->radius[1] = (max[1] - min[1]);
   ((McdTriangleList *)g)->radius[2] = (max[2] - min[2]);
-  g[1].frame = (McdFrameworkID)KD_FBITS((*(float *)&(((McdTriangleList *)g)->radius[0]) * 0.5));
-  *(float *)&g[2].mRefCtAndID = (*(float *)&(((McdTriangleList *)g)->radius[1]) * 0.5);
-  g[2].prev = (McdGeometryID)KD_FBITS((*(float *)&(((McdTriangleList *)g)->radius[2]) * 0.5));
+  (*(MeU32 *)((char *)g + ((int)((char *)&((struct McdTriangleList *)0)->radius[0] - (char *)0)))) = (McdFrameworkID)KD_FBITS((*(float *)&(((McdTriangleList *)g)->radius[0]) * 0.5));
+  *(float *)&(*(MeU32 *)((char *)g + ((int)((char *)&((struct McdTriangleList *)0)->radius[1] - (char *)0)))) = (*(float *)&(((McdTriangleList *)g)->radius[1]) * 0.5);
+  (*(MeU32 *)((char *)g + ((int)((char *)&((struct McdTriangleList *)0)->radius[2] - (char *)0)))) = (McdGeometryID)KD_FBITS((*(float *)&(((McdTriangleList *)g)->radius[2]) * 0.5));
   return;
 }
 

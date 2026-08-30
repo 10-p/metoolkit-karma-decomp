@@ -130,13 +130,13 @@ static MeDictNode * MePoolxDictNodeAllocate(void *pool)
   pMVar2 = (MeDictNode *)0x0;
   if (*(int *)((kd_iptr)pool + 0xc) != 0) {
     iVar1 = *(int *)((kd_iptr)pool + 0xc) + -1;
-    pMVar2 = (MeDictNode *)(*(int *)pool + *(int *)((kd_iptr)pool + 0x10) * 4);
+    pMVar2 = (MeDictNode *)(*(kd_iptr *)pool + *(int *)((kd_iptr)pool + 0x10) * 4);
     *(int *)((kd_iptr)pool + 0xc) = iVar1;
     if (iVar1 != 0) {
       if (pMVar2->left == (MeDictNode *)0xffffffff) {
         iVar1 = *(int *)((kd_iptr)pool + 0x10) + *(int *)((kd_iptr)pool + 4);
         *(int *)((kd_iptr)pool + 0x10) = iVar1;
-        *(undefined4 *)(*(int *)pool + iVar1 * 4) = 0xffffffff;
+        *(undefined4 *)(*(kd_iptr *)pool + iVar1 * 4) = 0xffffffff;
       }
       else {
         *(MeDictNode **)((kd_iptr)pool + 0x10) = pMVar2->left;

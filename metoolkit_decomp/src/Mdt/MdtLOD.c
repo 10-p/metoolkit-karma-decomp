@@ -689,8 +689,8 @@ int kd_ComparePenetration(void *contact1,void *contact2)
   uint uVar1;
 
   uVar1 = 0xffffffff;
-  if (*(float *)(*(int *)contact2 + 0x178) <= *(float *)(*(int *)contact1 + 0x178)) {
-    uVar1 = (uint)(*(float *)(*(int *)contact2 + 0x178) < *(float *)(*(int *)contact1 + 0x178));
+  if (*(float *)(*(kd_iptr *)contact2 + 0x178) <= *(float *)(*(kd_iptr *)contact1 + 0x178)) {
+    uVar1 = (uint)(*(float *)(*(kd_iptr *)contact2 + 0x178) < *(float *)(*(kd_iptr *)contact1 + 0x178));
   }
   return uVar1;
 }
@@ -828,13 +828,13 @@ static void ResizeConstraint(MdtBaseConstraint *con,MdtPartitionParams *params)
                          (ushort)(fVar4 == fVar1) << 0xe);
         if ((fVar4 < fVar1) || (uVar6 = 0, nFrictionContacts == 0)) {
           iVar8 = 0;
-          if (*(int *)(*(int *)((kd_iptr)(kd_alloca_iVar3)) + 0x194) != 0) goto LAB_00010d30;
+          if (*(int *)(*(kd_iptr *)((kd_iptr)(kd_alloca_iVar3)) + 0x194) != 0) goto LAB_00010d30;
           iVar9 = *(int *)((kd_iptr)(kd_blk2_aiStack_2c));
           while (iVar9 == 1) {
 LAB_00010d30:
             do {
               iVar8 = iVar8 + 1;
-            } while (*(int *)(*(int *)((kd_iptr)(kd_alloca_iVar3) + iVar8 * 4) + 0x194) != 0);
+            } while (*(int *)(*(kd_iptr *)((kd_iptr)(kd_alloca_iVar3) + iVar8 * 4) + 0x194) != 0);
             iVar9 = *(int *)((kd_iptr)(kd_blk2_aiStack_2c) + iVar8 * 4);
           }
           *(undefined4 *)(&(*kd_argslot_ffffffd0)) = uVar6;
@@ -854,7 +854,7 @@ LAB_00010d30:
         }
         else {
           iVar9 = 0;
-          if ((*(int *)(*(int *)((kd_iptr)(kd_alloca_iVar3)) + 0x194) == 0) ||
+          if ((*(int *)(*(kd_iptr *)((kd_iptr)(kd_alloca_iVar3)) + 0x194) == 0) ||
              (*(int *)((kd_iptr)(kd_blk2_aiStack_2c)) == 1)) {
             do {
               do {

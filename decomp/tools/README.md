@@ -531,7 +531,38 @@ python3 tools/layout_check.py /tmp/kd_out/allobj /tmp/kd_build
 ```
 
 ~1 min, needs no arm64 hardware. It **bounds** the job; `test/standalone/lp64_run.sh` names the individual
-defects by running them.
+defects by running them. `--emit-sites` lists what the SUSPECT column counts — object, line, column
+and the element type each site resolves through — which is what `fix_index_layout.py` was written
+against.
+
+### `interaction_types.py` — which two geometries does this `Ix*` function handle?
+
+```bash
+python3 tools/interaction_types.py /tmp/kd_out/allobj
+#   -> 26 interaction functions typed by their registration
+```
+
+Evidence only; it edits nothing. `fix_literal_offsets.py` types an opaque pointer from the geometry
+a **file** registers and gives up when a file has two — which is every `Ix*` object, and which its
+own notes recorded as *"44 declined, an Ix\* function handles TWO geometries"*. One of those 44 is
+`McdSphylPlaneIntersect`, which `scene_ragdoll` runs 7,298 times a step:
+
+```c
+pvVar9 = McdModelGetGeometry(p->model1);
+fVar2  = -*(float *)((kd_iptr)pvVar9 + 0x14);      /* McdSphyl::mHalfHeight */
+```
+
+0x10 and 0x14 are `mRadius` and `mHalfHeight` at i386 and **32 and 36** at LP64, so at 64-bit the
+capsule's radius comes out of the middle of its own base class — bytes 16..19 of `_McdGeometry`,
+the low half of the `prev` **pointer**. It is an address read as a float, it changes with ASLR, and
+it is the read `proven.txt` LP64-ADDRESS-DEPENDENT measured and could not name.
+
+★ **The type is written down, in the registration.** `McdSphylGetTypeId()` returns 5,
+`McdPlaneGetTypeId()` returns 3, and `McdSphylPlaneRegisterInteraction` installs
+`intersectFn = McdSphylPlaneIntersect` then calls
+`McdFrameworkSetInteractions(frame, 5, 3, &interactions)`. So `model1` is an `McdSphyl` and
+`model2` an `McdPlane`, with nothing inferred. `fix_literal_offsets.py` and `fix_index_layout.py`
+both consume this. A function registered for two different pairs is dropped, not arbitrated.
 
 ### `assoc_scan.py` — where the association defect can hide
 
@@ -597,6 +628,7 @@ python3 tools/fix_baked_sizeof.py    /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/fix_strides.py         /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/fix_literal_offsets.py /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/fix_derived_fields.py  /tmp/kd_lp64/allobj /tmp/kd_build $MT
+python3 tools/fix_index_layout.py    /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/fix_arena_carve.py     /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/fix_vtable_offsets.py  /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/fix_ptrwidth.py        /tmp/kd_lp64/allobj /tmp/kd_build $MT
@@ -604,9 +636,18 @@ python3 tools/fix_narrow_pointers.py /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/fix_align_masks.py     /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/fix_frame_slots.py     /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/fix_pool_reserve.py    /tmp/kd_lp64/allobj /tmp/kd_build $MT
+python3 tools/fix_narrow_loads.py    /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/check_frame_bounds.py  /tmp/kd_lp64/allobj /tmp/kd_build   # must read 0
 KD_OUT=/tmp/kd_lp64 ./test/standalone/lp64_run.sh
 ```
+
+⚠ **`fix_index_layout` goes AFTER `fix_derived_fields`, not before.** They are the same defect
+class; the first types the base pointer per FILE and names the concrete field with its own declared
+type, which is the better repair, and the second takes only what it reports as ambiguous. Running
+them the other way round takes the sites away from the better repair.
+
+⚠ **`fix_narrow_loads` goes LAST.** It reads clang's diagnostics over the finished text and writes
+`*(kd_iptr *)p`, which is the spelling `fix_narrow_pointers` and `fix_align_masks` key on.
 
 ⚠ **The last four are ordered and not interchangeable.** `fix_ptrwidth` writes the `kd_iptr`
 that the next two key on; `fix_narrow_pointers` widens the locals whose alignment masks
@@ -615,7 +656,7 @@ match. `fix_pool_reserve` is last for a different reason: it **learns** the elem
 the allocations `fix_narrow_pointers` repairs, and before that pass `NAZ` and `NR` are spelled
 identically, so running it early makes it print a clean, wrong zero. It refuses that case.
 
-`fix_ptrwidth.py` and `fix_narrow_pointers.py` need the Android NDK; they default to
+`fix_ptrwidth.py`, `fix_narrow_pointers.py`, `fix_narrow_loads.py` and `fix_index_layout.py` need the Android NDK; they default to
 `$ANDROID_HOME/ndk/30.0.14904198/...` and take `KD_NDK` to override.
 
 **The acceptance test for each is that all 145 objects recompile BYTE-IDENTICAL at i386** —
@@ -975,7 +1016,38 @@ over `mR[0]`, which is not an assignable lvalue.
 resolved objects declined on byte-identity (`McdAggregate` 28, `McdTriangleList` 12, `McdConvexMesh`
 6, `McdCylinder` 3, `McdBox` 2).
 
-### `fix_arena_carve.py` — one allocation carved into arrays with baked strides
+### `fix_index_layout.py` — the residue `fix_derived_fields.py` cannot type
+
+```bash
+python3 tools/fix_index_layout.py /tmp/kd_lp64/allobj /tmp/kd_build $MT
+#   -> 38 re-spelled, 33 already correct at LP64, 13 declined
+```
+
+Same defect class as `fix_derived_fields.py`, which runs **first** and does the better repair
+wherever a file registers one geometry. This one takes what that pass reports as ambiguous and
+types the pointer **per variable** instead of per file. Three things it adds:
+
+* **the frame.** Knowing the object is a `C` is not knowing the pointer points at its *start*.
+  `CxSmallSort` is full of pointers that do not — `pLVar2 = &pCVar1->mAABBMarkers[2].super_Link`,
+  `pLVar12 = (inMarker->super_Link).mNext` — and every offset used against them lands on a real
+  field of `CxSmallSortRep`, so an all-offsets-land test says "it is a Rep" and it is not. A first
+  version of this tool rewrote them; the rewrite is byte-identical at i386, so the acceptance test
+  could not see it either. The frame must now come from a source that means *a whole object*: a
+  parameter of the base type, a call with a declared return type, an allocation whose `sizeof`
+  names the type, an alias, or a field read whose field is **not** a member of the base type
+  itself — that last clause is what tells `ins->mGeometry` from `x->mNext`.
+* **the registration**, via `interaction_types.py` — the only thing that can type an `Ix*` object.
+* **a measurement before the rewrite.** Half the remaining sites are already RIGHT at LP64:
+  `Link` is 8 bytes here and 16 there and `CxSmallSortMarker`'s fields are 0,4,8,12,16 here and
+  0,8,16,24,32 there — everything doubles, so `pLVar2[1].mPrev` lands on `mRep` at both widths.
+  The geometry family does not scale that way because `MeReal center[3]` does not grow. So the
+  pass computes what the index gives at LP64 and where the field really is, and touches only the
+  sites where those disagree.
+
+⚠ **`CxSmallSort`'s reps are NOT repaired and some of them are wrong.** `mCullingIndex` is at 28
+here and 52 there while the index says 56 — the scaling breaks at the second of two adjacent
+4-byte fields. Those need per-**assignment** typing, not per-variable: Ghidra reuses one `Link *`
+for a marker and then for that marker's rep in the same function. Reported, not skipped silently.
 
 ```bash
 python3 tools/fix_arena_carve.py /tmp/kd_lp64/allobj /tmp/kd_build
@@ -1202,6 +1274,32 @@ them is that a rounded reservation is a **pair of branches** assigning the same 
 `(uVar27 << 2) + uVar27 * ((int)sizeof(void *) - 4)` is. For the addend sites the direct
 rewrite *is* identical. Which one gcc schedules the same way is a property of the surrounding
 function, so each candidate is compiled and the first that reproduces the baseline is kept.
+
+### `fix_narrow_loads.py` — widen the LOAD, not just the address arithmetic
+
+```bash
+python3 tools/fix_narrow_loads.py /tmp/kd_lp64/allobj /tmp/kd_build $MT
+#   -> 44 narrow pointer LOAD(s) widened in 9 object(s)
+```
+
+`fix_ptrwidth.py` widens the casts clang says narrow a pointer and its header predicted that what
+remained would be *"a genuinely integer-valued address (Ghidra's `(code *)0x10074` and the like)"*.
+⚠ **That prediction is wrong, and it was measured wrong.** Of the 151 `-Wint-to-pointer-cast`
+diagnostics left at aarch64, **not one is a literal.** They are the other half of the same round
+trip:
+
+```c
+(float **)(*(int *)((kd_iptr)pvVar22 + 0x34))     /* a 4-byte LOAD of a pointer */
+```
+
+The ADDRESS was widened; the LOAD WIDTH was not, so at LP64 it returns the low half of a stored
+pointer. `kd_iptr` *is* `int` at 32-bit pointer width, so every rewrite is a no-op on i386, wasm32
+and armv7 by construction — verified anyway.
+
+It runs **last** in `lp64_pipeline.sh`, deliberately: it reads diagnostics over the finished text,
+and `*(kd_iptr *)p` is exactly the spelling `fix_narrow_pointers` and `fix_align_masks` key on.
+A narrow struct FIELD is declined rather than patched — that is a layout question, not a load-width
+one, and widening the access would read past the field.
 
 ### `fix_align_masks.py` — an alignment mask frozen at 32 bits
 

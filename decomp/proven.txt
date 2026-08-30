@@ -70,11 +70,49 @@
 #                         arm64 control     every tag measures the same at arm64 as at x86-64
 #                         truncations       181 -> 134 at aarch64, 0 at armv7a
 #
-#                     ⚠ WHAT IS NOT CLOSED. LP64-CONTACT-ORDER, below. And ptrwidth_check
-#                     still counts 134 truncations — none of them now moves any scene, which
-#                     is a measurement over three scenes and not a proof over the corpus.
+#                     ⚠ WHAT IS NOT CLOSED. ptrwidth_check still counts 134 truncations — none of
+#                     them now moves any scene, which is a measurement over three scenes and not a
+#                     proof over the corpus. LP64-CONTACT-ORDER was the last known divergence and
+#                     it closed the same day; ALL THREE scenes are byte-identical at the two widths
+#                     with `-ffloat-store`.
 
-# LP64-CONTACT-ORDER  2026-08-30  ⚠ OPEN, PINNED, AND PRE-EXISTING. With the arithmetic held
+# LP64-CONTACT-ORDER  2026-08-30 (closed the same day)  ✅ CLOSED. ALL THREE SCENES ARE NOW
+#                     BYTE-IDENTICAL at i386 and LP64 with the arithmetic held fixed.
+#
+#                     WHAT IT WAS. `McdContactSimplify` walks the incoming contact array with a
+#                     local Ghidra put in the WRONG STACK SLOT — it merged an `McdContact *` into
+#                     an unrelated `McdContactLink` local and used its `next` field as the cursor:
+#                         MStack_9c.next = (_McdContactLink *)(inContacts + cNum);
+#                         ... *(float *)&((&(MStack_9c.next)->contact)[2]) ...
+#                         MStack_9c.next = (_McdContactLink *)((kd_iptr)MStack_9c.next + 0x28);
+#                     0x28 is 40 is sizeof(McdContact) — ON i386. At LP64 it is 48, because the
+#                     contact's two `element` unions hold pointers, so the cursor walked 40 bytes
+#                     at a time over 48-byte elements. And the index `[2]` steps in units of
+#                     `sizeof(McdContact *)` — four bytes here, EIGHT there — while what it
+#                     dereferences is a four-byte float.
+#
+#                     HOW IT PRESENTED, and why it took an instrument rather than a reading: two
+#                     contacts with EQUAL separation arriving in the opposite order at the two
+#                     widths, and four calls later a simplify returning 3 contacts where i386
+#                     returned 4. Dumping the IN and OUT arrays of every McdContactSimplify call
+#                     at both widths localised it in one run — the INPUTS were identical and only
+#                     the OUTPUT differed, which is what named the function.
+#
+#                     THE REPAIR is `fix_strides.py`'s THIRD SHAPE, and both halves are no-ops at
+#                     i386 by construction:
+#                         + 0x28            ->  + (int)sizeof(*(McdContact *)0)
+#                         &((&(P)->F)[k])   ->  ((char *)&(P)->F + k * (int)sizeof(ACC))
+#                     The element type is not guessed: it comes from what the cursor was ASSIGNED
+#                     FROM before it started stepping, and the literal must equal that type's
+#                     i386 size or the site is declined. Six other self-advancing cursors in the
+#                     corpus are declined by that test, correctly — `poly1 + 4` over an `MeVector3`
+#                     is one float, not one element.
+#
+#                     ⚠ AND THE GATE'S ALLOWLIST IS GONE WITH IT. `lp64_run.sh` carried this scene
+#                     by name for exactly one commit. An exception that outlives its defect is a
+#                     place for the next one to hide.
+#
+#                     ORIGINALLY FILED AS: ⚠ OPEN, PINNED, AND PRE-EXISTING. With the arithmetic held
 #                     fixed (-ffloat-store) `scene_boxes_on_plane` is byte-identical at i386
 #                     and LP64 for 94 steps and then differs, first by 2.0e-04.
 #

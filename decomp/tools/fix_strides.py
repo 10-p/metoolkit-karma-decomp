@@ -156,6 +156,54 @@ ADVANCE = re.compile(
     r'(?m)^(?P<ind>[ \t]*)(?P<p>\w+) = \((?P<ty>[\w ]+) \*\)'
     r'&(?P=p)->(?P<arr>\w+)\[(?P<idx>\d+)\](?P<tail>(?:\s*\.\s*\w+)*)\s*;')
 
+# ---------------------------------------------------------------------------
+# THE THIRD SHAPE: THE ELEMENT TYPE GHIDRA LOST FROM A CURSOR.
+#
+# `McdContactSimplify` walks the incoming contact array with a local Ghidra put
+# in the WRONG stack slot — it merged an `McdContact *` into an unrelated
+# `McdContactLink` local and used its `next` field as the cursor. Every use of
+# it then carries the wrong element type, in two places at once:
+#
+#     MStack_9c.next = (_McdContactLink *)(inContacts + cNum);   /* the real type */
+#     ... *(float *)&((&(MStack_9c.next)->contact)[2]) ...       /* index in POINTER units */
+#     MStack_9c.next = (_McdContactLink *)((kd_iptr)MStack_9c.next + 0x28);
+#
+# 0x28 is 40 is `sizeof(McdContact)` — ON i386. At LP64 it is 48, because the
+# contact's two `element` unions hold pointers, so the cursor walks 40 bytes at
+# a time over 48-byte elements and reads a different contact every step. And the
+# index `[2]` steps in units of `sizeof(McdContact *)`, four bytes here and
+# EIGHT there, while what it dereferences is a four-byte float.
+#
+# ★ MEASURED, AND IT IS THE LAST THING BETWEEN THE THREE SCENES AND BIT
+# IDENTITY. `scene_boxes_on_plane` was byte-identical at i386 and LP64 for 94
+# steps and then diverged; the cause is here, and it presents as two contacts
+# with EQUAL separation arriving in the opposite order — and, four calls later,
+# as a simplify that returns 3 contacts where i386 returns 4.
+#
+# BOTH REPAIRS ARE NO-OPS AT i386 BY CONSTRUCTION and are verified as such:
+#     + 0x28                ->  + (int)sizeof(*(McdContact *)0)
+#     &((&(P)->F)[k])       ->  ((char *)&(P)->F + k * (int)sizeof(ACC))
+# The first needs the element type, which only the cursor's PROVENANCE can give
+# — what it was assigned from before it started stepping. The second needs
+# nothing: it re-spells an index whose unit disagrees with its dereference, and
+# a wrong guess about the member's width is a different address at i386, which
+# the byte-identity check refuses.
+SELF_ADVANCE = re.compile(
+    r'(?m)^[ \t]*(?P<p>[A-Za-z_]\w*(?:(?:->|\.)[A-Za-z_]\w*)*)\s*=\s*'
+    r'\((?P<ty>[\w ]+)\*\)\s*\(\s*\((?:kd_iptr|kd_uptr|int)\)\s*(?P=p)\s*\+\s*'
+    r'(?P<k>0x[0-9a-fA-F]+|\d+)\s*\)\s*;')
+# what the cursor was set from — the only thing that names its element type
+PROVENANCE = (r'(?m)^[ \t]*%s\s*=\s*(?:\([\w ]+\*\)\s*)?\(?\s*'
+              r'(?P<v>[A-Za-z_]\w*)\s*(?:\+[^;]*)?\)?\s*;')
+# `TYPE *name` as a local or as a parameter
+DECL_OF = r'(?<![\w>.])((?:const |struct |unsigned )*[A-Za-z_]\w*)[ \t]*\*[ \t]*%s\b'
+# an index whose UNIT is a pointer and whose dereference is four bytes
+UNIT_MISMATCH = re.compile(
+    r'\*\(\s*(?P<acc>float|MeReal|undefined4|int|uint|MeU32|MeI32)\s*\*\s*\)\s*&\s*'
+    r'\(\s*\(\s*&\s*\(?(?P<base>[A-Za-z_][\w.]*)\)?\s*->\s*(?P<f>[A-Za-z_]\w*)\s*\)'
+    r'\s*\[\s*(?P<k>[1-9]\d*)\s*\]\s*\)')
+
+
 CFLAGS = ['-m32', '-O2', '-fno-pic', '-fno-strict-aliasing', '-std=gnu99',
           '-w', '-Wno-int-conversion', '-Wno-incompatible-pointer-types',
           '-DLINUX']
@@ -428,6 +476,70 @@ def main():
                 declined += 1
                 notes.append('%-26s DECLINED: no spelling of it is '
                              'byte-identical at i386' % fn)
+
+        # ---- THE THIRD SHAPE, both halves. See the block above SELF_ADVANCE.
+        for m in SELF_ADVANCE.finditer(text):
+            cur, k = m.group('p'), int(m.group('k'), 0)
+            # ⚠ THE FUNCTION, NOT THE LOOP. `enclosing_block` deliberately reads
+            # the innermost `{ }` because a Ghidra temporary is reused across a
+            # function — but the cursor's PROVENANCE is by definition outside
+            # the loop that steps it, and so is its declaration.
+            bs = text.rfind('\n/* ---- ', 0, m.start())
+            be = text.find('\n/* ---- ', m.start())
+            region = text[bs if bs >= 0 else 0: be if be >= 0 else len(text)]
+            # the element type is whatever the cursor was set from BEFORE it
+            # started stepping; a cursor with two different sources names
+            # nothing and is declined.
+            srcs = {p.group('v') for p in
+                    re.finditer(PROVENANCE % re.escape(cur), region)
+                    if p.group('v') != cur.split('.')[0]}
+            tys = set()
+            for v in srcs:
+                d = re.search(DECL_OF % re.escape(v), region)
+                if d:
+                    tys.add(d.group(1).strip())
+            if len(tys) != 1:
+                notes.append('%-26s cursor %s steps %d: %d element type(s) from '
+                             '%s — declined'
+                             % (fn, cur, k, len(tys), ', '.join(sorted(srcs)) or 'nothing'))
+                declined += 1
+                continue
+            ety = tys.pop()
+            sz = measure('sizeof(*(%s *)0)' % ety, inc, cache)
+            if sz != k:
+                # K is not the element size, so it is a step INSIDE the element
+                # (`poly1 + 4` over an `MeVector3` is one float) and scales
+                # correctly on its own. Not this defect.
+                continue
+            cand = (text[:m.start('k')] + '(int)sizeof(*(%s *)0)' % ety
+                    + text[m.end('k'):])
+            if compiles_identically(fn, cand, build, inc):
+                text = cand
+                fixed += 1
+                notes.append('%-26s cursor %-14s steps sizeof(%s) = %d, was a literal'
+                             % (fn, cur, ety, sz))
+            else:
+                declined += 1
+                notes.append('%-26s cursor %s: sizeof(%s) is not byte-identical '
+                             'at i386 — declined' % (fn, cur, ety))
+
+        for m in reversed(list(UNIT_MISMATCH.finditer(text))):
+            rep = ('*(%s *)((char *)&(%s)->%s + %s * (int)sizeof(%s))'
+                   % (m.group('acc'), m.group('base'), m.group('f'),
+                      m.group('k'), m.group('acc')))
+            cand = text[:m.start()] + rep + text[m.end():]
+            if compiles_identically(fn, cand, build, inc):
+                text = cand
+                fixed += 1
+                notes.append('%-26s %s->%s[%s] indexed in POINTER units, read as '
+                             '%s — re-spelled in %s units'
+                             % (fn, m.group('base'), m.group('f'), m.group('k'),
+                                m.group('acc'), m.group('acc')))
+            else:
+                declined += 1
+                notes.append('%-26s %s->%s[%s]: not byte-identical at i386 — declined'
+                             % (fn, m.group('base'), m.group('f'), m.group('k')))
+
         if text != text0:
             open(path, 'w').write(text)
     print('  word-counted table loops repaired  : %d' % fixed)

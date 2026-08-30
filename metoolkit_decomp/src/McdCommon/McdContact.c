@@ -536,9 +536,9 @@ LAB_0001084f:
             fVar21 = pMVar23->position[1] - pMVar22->position[1];
             fVar13 = pMVar23->position[0] - pMVar22->position[0];
             fVar12 = pMVar23->position[2] - pMVar22->position[2];
-            fVar21 = ((*(float *)&((&(MStack_9c.next)->contact)[2])) - pMVar22->position[2]) *
+            fVar21 = ((*(float *)((char *)&(MStack_9c.next)->contact + 2 * (int)sizeof(float))) - pMVar22->position[2]) *
                      (local_74 * fVar21 - local_78 * fVar13) +
-                     ((*(float *)&((&(MStack_9c.next)->contact)[1])) - pMVar22->position[1]) *
+                     ((*(float *)((char *)&(MStack_9c.next)->contact + 1 * (int)sizeof(float))) - pMVar22->position[1]) *
                      (fVar13 * local_7c - local_74 * fVar12) +
                      ((*(float *)&((MStack_9c.next)->contact)) - pMVar22->position[0]) *
                      (fVar12 * local_78 - fVar21 * local_7c);
@@ -582,7 +582,7 @@ LAB_0001084f:
               pMVar27->area = fVar21;
               break;
             }
-            MStack_9c.next = (_McdContactLink *)((kd_iptr)MStack_9c.next + 0x28);
+            MStack_9c.next = (_McdContactLink *)((kd_iptr)MStack_9c.next + (int)sizeof(*(McdContact *)0));
             cNum = cNum + 1;
           } while (cNum < inNumContacts);
         }

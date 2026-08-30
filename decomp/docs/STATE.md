@@ -12,7 +12,49 @@ read before resuming; `../HANDOVER.md` is the depth behind it and `../proven.txt
 
 ---
 
-★★★ **NEWEST: 2026-08-30 (later still) — THE LP64 PORT IS DONE, and "done" now means
+★★★ **NEWEST: 2026-08-30 (last) — ALL THREE SCENES ARE BYTE-IDENTICAL AT i386 AND LP64.**
+`LP64-CONTACT-ORDER` closed the same day it was filed, and the gate's one-scene allowlist went
+with it.
+
+`scene_boxes_on_plane` matched for 94 steps and then diverged. The cause was `McdContactSimplify`
+walking the contact array with a local Ghidra had put in the **wrong stack slot** — it merged an
+`McdContact *` into an unrelated `McdContactLink` local and used its `next` field as the cursor:
+
+```c
+MStack_9c.next = (_McdContactLink *)(inContacts + cNum);
+... *(float *)&((&(MStack_9c.next)->contact)[2]) ...
+MStack_9c.next = (_McdContactLink *)((kd_iptr)MStack_9c.next + 0x28);
+```
+
+`0x28` is 40 is `sizeof(McdContact)` — **on i386**. At LP64 it is 48, because the contact's two
+`element` unions hold pointers, so the cursor walked 40 bytes at a time over 48-byte elements. And
+the index `[2]` steps in units of `sizeof(McdContact *)` — four bytes here, **eight** there — while
+what it dereferences is a four-byte float.
+
+★ **THE INSTRUMENT NAMED IT, NOT A READING.** It presented as two contacts with *equal separation*
+arriving in the opposite order, and four calls later as a simplify returning 3 contacts where i386
+returned 4. Dumping the IN and OUT arrays of every `McdContactSimplify` call at both widths
+localised it in one run: the inputs were identical and only the output differed.
+
+**The repair** is `fix_strides.py`'s third shape — the element type comes from what the cursor was
+*assigned from* before it started stepping, and the literal must equal that type's i386 size or the
+site is declined. Six other self-advancing cursors in the corpus are declined by that test,
+correctly: `poly1 + 4` over an `MeVector3` is one float, not one element.
+
+```
+i386 acceptance   145 object(s), 0 compile failure(s), 0 byte difference(s)
+-ffloat-store     chain · boxes · ragdoll — ALL THREE BYTE-IDENTICAL, 901 rows each
+lp64_pipeline.sh  -> PASS, with no allowlist in it
+```
+
+⚠ **The allowlist is gone.** `lp64_run.sh` carried that scene by name for exactly one commit. An
+exception that outlives its defect is a place for the next one to hide.
+
+Evidence: `../proven.txt` `LP64-CONTACT-ORDER`.
+
+---
+
+★★★ **PREVIOUS: 2026-08-30 (later still) — THE LP64 PORT IS DONE, and "done" now means
 something the old gate could not express: with the arithmetic held fixed, `scene_chain` and
 `scene_ragdoll` are BYTE-IDENTICAL at i386 and LP64 over all 901 rows.**
 

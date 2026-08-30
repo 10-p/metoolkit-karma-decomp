@@ -843,6 +843,23 @@ and **not** the cause of the divergence it was found while chasing.
 > to be part of the pattern. Matching only `&p->field` found McdFrame's loop and silently missed
 > the one that actually overruns the `CxSmallSortRep` table by 800 bytes. Three sites total.
 
+★ **A THIRD SHAPE, added 2026-08-30: the element type Ghidra lost from a cursor.**
+`McdContactSimplify` walks the contact array with a local Ghidra put in the wrong stack slot — it
+merged an `McdContact *` into an unrelated `McdContactLink` and used its `next` field:
+
+```c
+MStack_9c.next = (_McdContactLink *)((kd_iptr)MStack_9c.next + 0x28);   /* sizeof(McdContact) */
+... *(float *)&((&(MStack_9c.next)->contact)[2]) ...                    /* index in POINTER units */
+```
+
+40 here and **48** there, and an index that steps 4 bytes here and 8 there while dereferencing a
+four-byte float. It was the last thing between the three scenes and bit-identity: `boxes` matched
+for 94 steps and then diverged, presenting as two contacts with *equal separation* in the opposite
+order. The element type is taken from what the cursor was **assigned from**, and the literal must
+equal that type's i386 size or the site declines — which is what correctly declines the other six
+self-advancing cursors in the corpus (`poly1 + 4` over an `MeVector3` is one float, not one
+element).
+
 ### `fix_literal_offsets.py` — a struct field addressed by a baked byte offset
 
 ```bash

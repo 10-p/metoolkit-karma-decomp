@@ -435,17 +435,17 @@ PY
         # what remains is pointer width and nothing else. There is no floor and
         # no tolerance: the bytes match or they do not.
         #
-        # MEASURED 2026-08-30 on the tree this landed with: `scene_chain` and
-        # `scene_ragdoll` are byte-identical over all 901 rows.
-        # `scene_boxes_on_plane` is NOT, and that is a KNOWN OPEN RESIDUAL
-        # rather than a tolerance: its contact SET is identical and two of them
-        # arrive in the opposite ORDER at the two widths (contacts 98 and 100
-        # swap, same values), which changes the solver's summation order from
-        # step 94 on. It predates every pass in this pipeline — the same
-        # comparison on the tree before them differs at the same line — and it
-        # is pinned here so that a CHANGE to it fails even though its presence
-        # does not. `proven.txt` LP64-CONTACT-ORDER.
-        KNOWN_ORDER_DIFF="scene_boxes_on_plane"
+        # MEASURED 2026-08-30 on the tree this landed with: ALL THREE SCENES
+        # are byte-identical over all 901 rows. `scene_boxes_on_plane` was the
+        # last one out — it matched for 94 steps and then diverged, and the
+        # cause was `McdContactSimplify` walking the contact array with a cursor
+        # Ghidra had put in the wrong stack slot: a 0x28 step that is
+        # sizeof(McdContact) at i386 and 48 at LP64, plus an index in POINTER
+        # units feeding a four-byte read. `fix_strides.py`'s third shape.
+        #
+        # ⚠ THERE IS NO ALLOWLIST HERE ANY MORE AND THERE SHOULD NOT BE ONE.
+        # A scene that differs is a defect; it had a pinned exception for one
+        # commit and closing the defect is what removed it.
         if [ -d "$W/fs64" ]; then
             for w in 64 32; do
                 gcc -m$w $PF $FPMATH -ffloat-store -no-pie -o "$W/fs${w}_$name" \
@@ -457,12 +457,6 @@ PY
             if cmp -s "$W/fs64_$name.csv" "$W/fs32_$name.csv"; then
                 printf '      \033[32mBIT-IDENTICAL to i386\033[0m with the arithmetic held '
                 printf 'fixed (-ffloat-store), %s row(s)\n' "$(wc -l < "$W/fs64_$name.csv")"
-            elif [ "$name" = "$KNOWN_ORDER_DIFF" ]; then
-                d=$(cmp "$W/fs64_$name.csv" "$W/fs32_$name.csv" 2>/dev/null | head -1)
-                echo "      differs from i386 with the arithmetic held fixed ($d)"
-                echo "      KNOWN and pinned: the contact ORDER swaps between widths on this"
-                echo "      scene, same values — see proven.txt LP64-CONTACT-ORDER. It predates"
-                echo "      this pipeline and is the one thing here still to close."
             else
                 status=1
                 d=$(cmp "$W/fs64_$name.csv" "$W/fs32_$name.csv" 2>/dev/null | head -1)

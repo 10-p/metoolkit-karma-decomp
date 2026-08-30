@@ -287,6 +287,38 @@ if [ "${KD_SKIP_PLAIN:-}" != 1 ]; then
                    "$( [ "$rc" -ge 128 ] && echo "SIGNAL $((rc-128)) after $(wc -l < "$W/plain_$name.csv") row(s)" || echo "verdict failed" )"
             sed -n 's/^/      /p' "$W/plain_$name.err" | tail -3
         fi
+
+        # ★★ THE SAME BINARY, TWICE. A rigid-body simulation with fixed inputs is
+        # a pure function: two runs must produce the same bytes. If they do not,
+        # the program is reading something that varies between runs, and with the
+        # inputs fixed the only thing that varies is the ADDRESS SPACE.
+        #
+        # THIS CHECK EXISTS BECAUSE EVERYTHING ELSE HERE MISSED IT. Measured
+        # 2026-08-30 on scene_ragdoll, plain -m64, no sanitizer, shipping flags:
+        # eight runs gave 450 escaped samples four times, 8100 non-finite once,
+        # and three different "motion in last 1 s" values. The same binary at
+        # -m32 gave one identical answer eleven times out of eleven. With ASLR
+        # disabled the 64-bit build became deterministic AND WRONG.
+        #
+        # Every other gate was blind to it: this section only asked "did it exit
+        # 0", the trajectory diff compared ONE 64-bit run against ONE 32-bit run
+        # so run-to-run variance read as a small float difference, and the ASan
+        # section's ragdoll verdict was written off as threshold flakiness.
+        #
+        # ⚠ A FAILURE HERE IS NOT NOISE AND MUST NOT BE RETRIED AWAY. It means a
+        # pointer is being truncated into a 32-bit slot and read back — the class
+        # ptrwidth_check.sh still counts 181 of across 37 objects at aarch64, and
+        # the claim that none of them is on a path the scenes reach is exactly
+        # what this refutes.
+        ( timeout 600 "$W/plain_$name" > "$W/plain_${name}_b.csv" 2>/dev/null ) 2>/dev/null
+        if [ -s "$W/plain_${name}_b.csv" ] && ! cmp -s "$W/plain_$name.csv" "$W/plain_${name}_b.csv"; then
+            status=1
+            first=$(cmp "$W/plain_$name.csv" "$W/plain_${name}_b.csv" 2>/dev/null | head -1)
+            printf '      \033[31mNONDETERMINISTIC\033[0m — the same binary, run twice, differs (%s)\n' \
+                   "${first:-differs}"
+            printf '      A fixed-input rigid-body sim is a pure function. This is an\n'
+            printf '      ADDRESS-DEPENDENT READ, i.e. a truncated pointer. See the note above.\n'
+        fi
         [ -d "$W/p32" ] || continue
         gcc -m32 $PF $FPMATH -no-pie -o "$W/p32_$name" "$s" "$W/p32"/*.o \
             -lstdc++ -lm 2>/dev/null || { echo "      plain control: $name did not link"; continue; }

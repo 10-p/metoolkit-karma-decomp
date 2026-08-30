@@ -1,3 +1,53 @@
+# LP64-ADDRESS-DEPENDENT  2026-08-30  ⚠ OPEN DEFECT, NOT A RELEASE. The LP64 build is
+#                     NONDETERMINISTIC, in the shipping configuration, and every gate in this
+#                     project was blind to it.
+#
+#                     MEASURED, plain -m64 -O0, NO sanitizer, the flags the library ships with,
+#                     scene_ragdoll, the same binary each time:
+#                         ASLR on , 8 runs : escaped 450 (x4) | non-finite 8100 (x1) |
+#                                            escaped 0 with motion 1158.250897 / 1068.705962 /
+#                                            1158.250756 (x3)
+#                         ASLR off, 3 runs : escaped 8100, motion 1.56e15 — identical each time
+#                     and the SAME scene, same sources, at -m32:
+#                         11 runs out of 11 IDENTICAL: escaped 7, motion 1327.174694,
+#                         with ASLR on and off alike.
+#
+#                     A fixed-input rigid-body simulation is a pure function. Two runs differing
+#                     means it read something that varies, and with the inputs fixed the only
+#                     variable is the ADDRESS SPACE. Disabling ASLR makes it deterministic, which
+#                     is the confirmation. This is an address-dependent read at 64-bit pointer
+#                     width and it is absent at 32-bit.
+#
+#                     THE SUSPECT IS NAMED AND COUNTED. `ptrwidth_check.sh` still reports 181
+#                     truncation warnings across 37 objects at aarch64 (armv7a: 0), and its worst
+#                     offenders are McdAggregate 26, MdtWorld 12, IxConvexTriList 11,
+#                     McdTriangleList 10, IxCylinderTriList 10. The ragdoll is capsules on a
+#                     triangle-list floor, so McdTriangleList and the TriList intersections are
+#                     ON ITS PATH. ⚠ THIS REFUTES THE STANDING CLAIM — recorded in HANDOVER.md
+#                     §6b and in the CMake gate note — that "none is on a path the scenes reach".
+#
+#                     WHY EVERY GATE MISSED IT, which is the reusable part:
+#                       * lp64_run.sh's plain section only asked "did it exit 0".
+#                       * its trajectory diff compared ONE 64-bit run against ONE 32-bit run, so
+#                         run-to-run variance presented as a small float difference and was read
+#                         as the float floor.
+#                       * the ASan section's ragdoll verdict WAS failing, and was written off as
+#                         "the scene sits on its escaped>1e3 threshold" — a threshold story that
+#                         the 0-or-8100 bimodality never supported.
+#                       * i386 byte-identity cannot see it by construction: the defect does not
+#                         exist at 32-bit.
+#                     lp64_run.sh now runs each plain scene TWICE and diffs. That check is four
+#                     lines and it fails immediately.
+#
+#                     ⚠ AND THIS IS THE PRIME SUSPECT FOR THE ANDROID SIGSEGV. Both Android
+#                     64-bit ABIs would carry the same read; Android's address space is not
+#                     Linux's, and a truncated pointer that merely perturbs a float here can be
+#                     an unmapped address there. Not yet proven — see LP64-ANDROID-CRASH.
+#
+#                     WHAT THIS DOES NOT CHANGE: every 32-bit target. wasm32, i686 and armeabi-v7a
+#                     are unaffected — the 145 objects are still byte-identical at -m32 and the
+#                     browser suite is still 55/55. The web build was never at risk from this.
+
 # Objects whose recovered code has been measured against the shipped original,
 # with what was actually observed on the line, so the claim can be re-checked
 # rather than trusted.

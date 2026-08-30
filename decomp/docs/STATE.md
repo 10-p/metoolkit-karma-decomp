@@ -12,7 +12,51 @@ read before resuming; `../HANDOVER.md` is the depth behind it and `../proven.txt
 
 ---
 
-★★★ **NEWEST: 2026-08-30 (stage 2.44) — the recovery LEFT engine-ut2004 and is its own repository.**
+★★★ **NEWEST: 2026-08-30 (after the 2.44 move) — THE LP64 BUILD IS NONDETERMINISTIC, and
+that is a real open defect, not a flaky gate.**
+
+Chasing why `lp64_pipeline.sh` reports FAIL intermittently produced a much worse answer than
+"unstable threshold". Measured on `scene_ragdoll`, plain `-m64 -O0`, **no sanitizer**, the flags the
+library ships with, running **the same binary** each time:
+
+```
+-m64, ASLR on , 8 runs : escaped 450 (x4) · non-finite 8100 (x1) · escaped 0 with
+                         "motion in last 1 s" = 1158.250897 / 1068.705962 / 1158.250756
+-m64, ASLR off, 3 runs : escaped 8100, motion 1.56e15 — identical every time
+-m32,           11 runs: escaped 7, motion 1327.174694 — IDENTICAL 11 of 11, ASLR on and off
+```
+
+A fixed-input rigid-body simulation is a pure function; two runs differing means it read something
+that varies, and with the inputs fixed the only variable is the **address space**. Disabling ASLR
+makes it deterministic — that is the confirmation. **The recovered Karma has an address-dependent
+read at 64-bit pointer width, and does not at 32-bit.**
+
+**The suspect is named and counted.** `ptrwidth_check.sh` still reports **181 truncation warnings
+across 37 objects at aarch64** (armv7a: 0), worst `McdAggregate` 26, `MdtWorld` 12,
+`IxConvexTriList` 11, `McdTriangleList` 10, `IxCylinderTriList` 10. The ragdoll is capsules on a
+triangle-list floor, so those TriList objects are **on its path** — which refutes the standing claim,
+in `HANDOVER.md` §6b and in the engine's CMake note, that "none is on a path the scenes reach".
+
+★ **WHY EVERY GATE MISSED IT** — the reusable part. The plain section only asked "did it exit 0";
+the trajectory diff compared ONE 64-bit run against ONE 32-bit run, so run-to-run variance presented
+as a small float difference and was read as the float floor; the ASan ragdoll verdict WAS failing and
+was written off as a threshold; and i386 byte-identity cannot see it by construction, because the
+defect does not exist at 32-bit. `lp64_run.sh` now runs each plain scene **twice and diffs** — four
+lines, and it fails immediately.
+
+⚠ **This is the prime suspect for the Android SIGSEGV.** Both Android 64-bit ABIs carry the same
+read, and Android's address space is not Linux's: a truncated pointer that perturbs a float here can
+be an unmapped address there. Not yet proven.
+
+✅ **No 32-bit target is affected.** wasm32, i686 and armeabi-v7a are untouched — all 145 objects are
+still byte-identical at `-m32` and the browser suite is still 55/55. **The web build was never at
+risk from this**, and the LP64 post-passes remain no-ops there by measurement.
+
+Full evidence: `../proven.txt` `LP64-ADDRESS-DEPENDENT`.
+
+---
+
+★★★ **PREVIOUS: 2026-08-30 (stage 2.44) — the recovery LEFT engine-ut2004 and is its own repository.**
 `10-p/metoolkit-karma-decomp`. Nothing about the recovered code changed: all 145 objects are
 byte-identical to what `engine-ut2004`'s `karma/decompile` carried, and the LP64 gate reproduces the
 same first-difference magnitudes it did there.

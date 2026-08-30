@@ -1,5 +1,23 @@
 # HANDOVER — Karma on the web, for the integration agent
 
+> ## ⚠ READ THIS FIRST — what stage 2.44 (2026-08-30) changed underneath this document
+>
+> The recovery moved out of `engine-ut2004` into its own repository, and two things below are
+> stale as a result. Neither changes a single measurement — the recovered code is byte-identical
+> — but a command that names the wrong path is worse than no command.
+>
+> | this document says | it is now |
+> |---|---|
+> | `libKarmaDecomp.a` | **`libmetoolkit_decomp.a`**, under `<build>/_deps/metoolkitkarmadecomp-build/metoolkit_decomp/` |
+> | the `KarmaDecomp` CMake target | **`metoolkit_decomp::all`**, fetched; `KarmaDecomp` survives as a thin INTERFACE alias |
+> | `karma-decomp/generated/allobj/*.c` | **`metoolkit_decomp/src/<Lib>/*.c`**, grouped by the archive each object shipped in |
+> | the SDK at `Thirdparty/metoolkit` | fetched — `${metoolkitkarmadecomp_SOURCE_DIR}/metoolkit` |
+>
+> The `wasm-karmadecomp-{debug,perf}` presets are unchanged and still correct, and a Karma build
+> now needs the network on first configure. `decomp/docs/STATE.md`'s 2.44 entry has the detail.
+> **Everything below this box is as it was written**, including its numbers; where it quotes a
+> byte count or a symbol table, that is a record of a measurement, not an instruction.
+
 ## WHY THIS EXISTS, in four sentences
 
 UT2004's physics is Karma, which ships as **binary-only x86 static libraries**. The web and

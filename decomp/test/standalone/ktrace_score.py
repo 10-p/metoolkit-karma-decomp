@@ -23,23 +23,47 @@ The three columns:
           world, so a missing row IS the defect rather than missing data.
 
 Exit status is `bodies that do not match`, so it composes into a bisect.
+
+★ IT TRUNCATES TO THE SHORTER TRACE, AND THAT IS NOT A CONVENIENCE.
+Every column above reads the LAST frame of each file. If the two runs captured
+different numbers of frames — and they routinely do, because a match can pause
+itself or hit its time limit early — then "last frame" means a different INSTANT
+in each, and the comparison is meaningless. It does not fail safe: it reads like
+catastrophe. Measured 2026-08-30, a legacy run of 94 frames against a candidate
+of 35, same map, same gametype:
+
+    without truncation   rest 7/15  sleep 15/15  ->  8 MISMATCH
+    truncated to 35      rest 15/15 sleep 15/15  ->  MATCH
+
+Eight bodies "diverging by up to 53 units" were the reference simply having
+fallen further, because it ran for another 59 frames. karma-decomp/test's README
+has warned about this in prose since the harness was written — "read `first`,
+not `restZ`, when the two traces have different lengths" — and the tool still
+required a human to remember it. Now it does the truncation itself and SAYS SO.
+
+`--no-truncate` restores the old behaviour if you genuinely want to compare
+final states of unequal runs.
 """
 import sys
 
 
-def load(path):
-    last, first = {}, {}
+def load(path, upto=None):
+    last, first, maxframe = {}, {}, 0
     for line in open(path):
         if line[0] in '#\n':
             continue
         f = line.rstrip('\n').split(',')
         if f[0] != 'B':
             continue
+        frame = int(f[1])
+        maxframe = max(maxframe, frame)
+        if upto is not None and frame > upto:
+            continue
         key = f[3] if f[4] == '-1' else '%s#%s' % (f[3], f[4])
-        rec = (int(f[1]), int(f[5]), float(f[8]))   # frame, enabled, z
+        rec = (frame, int(f[5]), float(f[8]))       # frame, enabled, z
         last[key] = rec
         first.setdefault(key, rec)
-    return first, last
+    return first, last, maxframe
 
 
 def main():
@@ -47,12 +71,26 @@ def main():
         print(__doc__)
         return 2
     ztol = 1.0
+    truncate = '--no-truncate' not in sys.argv
     for a in sys.argv[3:]:
         if a.startswith('--ztol='):
             ztol = float(a.split('=', 1)[1])
 
-    rf, rl = load(sys.argv[1])
-    cf, cl = load(sys.argv[2])
+    # First pass: how far did each run actually get?
+    _rf, _rl, rmax = load(sys.argv[1])
+    _cf, _cl, cmax = load(sys.argv[2])
+
+    cut = None
+    if truncate and rmax != cmax:
+        cut = min(rmax, cmax)
+        print('# trace lengths differ (reference %d frames, candidate %d) — comparing both\n'
+              '# at frame %d. Without this the columns below would compare DIFFERENT INSTANTS\n'
+              '# and read like catastrophe. --no-truncate to disable.' % (rmax, cmax, cut))
+        if cut == 0:
+            print('# ⚠ one trace has no body rows at all; the verdict below is vacuous.')
+
+    rf, rl, _ = load(sys.argv[1], cut)
+    cf, cl, _ = load(sys.argv[2], cut)
 
     names = sorted(set(rl) | set(cl))
     rest = sleep = gone = 0

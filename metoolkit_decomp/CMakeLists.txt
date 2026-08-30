@@ -118,6 +118,17 @@ foreach(lib IN LISTS MD_LIBRARIES)
   target_include_directories(metoolkit_decomp_${lib} PUBLIC
       "${MD_ROOT}/include" ${MD_METOOLKIT_INCLUDES})
   target_compile_options(metoolkit_decomp_${lib} PRIVATE ${MD_C_FLAGS})
+  # ★ ME_FORCE_CDECL IS PUBLIC ON THE LIBRARY'S OWN OBJECTS, NOT ONLY INTERFACE.
+  # See the long note on the aggregate below for what it does. What it does HERE
+  # is stop the library miscompiling ITSELF: on Windows MinGW predefines WIN32,
+  # so metoolkit's MeCall.h declares the API __stdcall, and kd_types.h's plain
+  # cdecl typedefs then collide with it —
+  #     kd_types.h:136: error: conflicting types for 'CDataFreeFunc'
+  # which is precisely the diagnostic MeCall.h's comment says is "the only
+  # warning anything gives". Relying on the consumer to have defined it before
+  # add_subdirectory() ran is a build-order dependency, and it failed exactly
+  # that way the first time engine-ut2004 built Windows against this package.
+  target_compile_definitions(metoolkit_decomp_${lib} PUBLIC ME_FORCE_CDECL=1)
   target_compile_definitions(metoolkit_decomp_${lib} PRIVATE LINUX=1)
   set_property(TARGET metoolkit_decomp_${lib} PROPERTY POSITION_INDEPENDENT_CODE ON)
   if(METOOLKIT_DECOMP_CENSUS)

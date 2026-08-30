@@ -12,7 +12,57 @@ read before resuming; `../HANDOVER.md` is the depth behind it and `../proven.txt
 
 ---
 
-★★★ **NEWEST: 2026-08-30 (after the 2.44 move) — THE LP64 BUILD IS NONDETERMINISTIC, and
+★★★ **NEWEST: 2026-08-30 (later) — THE LP64 DEFECT IS LOCATED, AND THE LP64 PORT IS NOT DONE.**
+This contradicts what this file and `HANDOVER.md` have implied since 2026-08-29.
+
+**The site, in the shipped sources:**
+
+```c
+IxBoxTriList.c:140   pcVar4 = (code *)trilistgeom[3].mRefCtAndID;
+                     count  = (*(int (*)(...))pcVar4)(...);
+```
+
+`trilistgeom` is an `McdGeometry *`; the object behind it is an `McdTriangleList`, and byte 48 of
+that object is the triangle-generator **callback**. Ghidra rendered `[base + 48]` as an index through
+the type *it* chose. Measured with a probe over the shipped `kd_types.h`:
+
+```
+sizeof(struct _McdGeometry)   i386 16    LP64 32
+trilistgeom[3] starts at      i386 48    LP64 96
+```
+
+So at 64-bit the call target is read from byte 96 — a different field, whose contents depend on what
+the allocator put there. **That is the address dependence**, and it is on the ragdoll's own path
+(`IxSphylPrimitives:1527`, `IxSphereTriList:129` read the same way).
+
+⚠ **This is the example `layout_check.py`'s own header uses, verbatim**, and that tool still ends its
+report with *"What is NOT in doubt: at least one site is measurably wrong on arm64 and nothing in the
+toolchain says so."* It was right. `lp64_pipeline.sh` printed `-> PASS` over the top of it because
+nothing it ran could see a wrong VALUE that did not also crash.
+
+**The repair is mechanical and is not yet written.** `NAME[k].field`, where `k` is non-zero and
+`sizeof(T)` differs between widths, must become `*(FT *)((char *)NAME + K)` with
+`K = k*sizeof_i386(T) + offsetof_i386(field)` — a no-op at i386 by construction, correct at LP64.
+`layout_check.py` already locates the sites and measures both sizes, so the pass has its inputs;
+per this project's own standard each `K` should be confirmed against `amd64_oracle.py` rather than
+computed and trusted.
+
+**What was done, and what it did not achieve.** `tools/fix_narrow_loads.py` is new: it widens the
+LOAD rather than only the address arithmetic (`(T *)(*(int *)addr)` → `*(kd_iptr *)addr`), 44 sites
+in 9 objects. Those are real defects — and `fix_ptrwidth.py`'s header was wrong to predict the
+remainder would be literal addresses; of the 151 remaining diagnostics **not one is a literal.**
+⚠ **It did not fix the nondeterminism** (8 runs after applying it: still 5 distinct outcomes), so the
+pass is **not applied to the shipped tree** — it belongs in the same landing as the index repair.
+
+✅ **NOTHING SHIPPING IS AFFECTED.** Every target that ships Karma today is 32-bit — wasm32, i686
+native, i386 Windows — and armeabi-v7a reports 0 truncations. Android's two 64-bit ABIs default to
+NO_KARMA. All 145 objects are still byte-identical at `-m32`; the browser suite is still 55/55.
+
+Evidence: `../proven.txt` `LP64-INDEX-LAYOUT` and `LP64-ADDRESS-DEPENDENT`.
+
+---
+
+★★★ **PREVIOUS: 2026-08-30 (after the 2.44 move) — THE LP64 BUILD IS NONDETERMINISTIC, and
 that is a real open defect, not a flaky gate.**
 
 Chasing why `lp64_pipeline.sh` reports FAIL intermittently produced a much worse answer than

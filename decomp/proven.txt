@@ -1,3 +1,58 @@
+# LP64-INDEX-LAYOUT  2026-08-30  ⚠ OPEN DEFECT — the mechanism behind
+#                     LP64-ADDRESS-DEPENDENT, located and confirmed. THE LP64 PORT IS NOT DONE,
+#                     and this contradicts what STATE.md and HANDOVER.md have implied since
+#                     2026-08-29.
+#
+#                     THE SITE, IN THE SHIPPED SOURCES:
+#                         IxBoxTriList.c:140   pcVar4 = (code *)trilistgeom[3].mRefCtAndID;
+#                                              count  = (*(int (*)(...))pcVar4)(...);
+#                     `trilistgeom` is an McdGeometry *; the object behind it is an
+#                     McdTriangleList, and byte 48 of that object is the triangle-generator
+#                     CALLBACK. Ghidra rendered `[base + 48]` as an index through the type IT
+#                     chose. MEASURED with a probe over the shipped kd_types.h:
+#                         sizeof(struct _McdGeometry)  i386 16   LP64 32
+#                         trilistgeom[3] starts at     i386 48   LP64 96
+#                     So at 64-bit pointer width the call target is read from byte 96 — a
+#                     different field of a different size, whose contents depend on what the
+#                     allocator put there. That is the address dependence in
+#                     LP64-ADDRESS-DEPENDENT, and it is on the ragdoll's own path
+#                     (IxSphylPrimitives:1527 and IxSphereTriList:129 read the same way).
+#
+#                     ⚠ THIS IS THE EXAMPLE layout_check.py's OWN HEADER USES, verbatim, and the
+#                     tool still ends its report with "What is NOT in doubt: at least one site is
+#                     measurably wrong on arm64 and nothing in the toolchain says so." It was
+#                     right. lp64_pipeline.sh reported `-> PASS` over the top of it because no
+#                     check it ran could see a wrong VALUE that did not also crash.
+#
+#                     THE REPAIR IS MECHANICAL AND IS NOT YET WRITTEN. `NAME[k].field`, where k
+#                     is non-zero and sizeof(T) differs between the widths, must become
+#                         *(FT *)((char *)NAME + K),  K = k*sizeof_i386(T) + offsetof_i386(field)
+#                     which is a no-op at i386 BY CONSTRUCTION — same byte offset — and correct
+#                     at LP64. layout_check.py already locates the sites and already measures
+#                     both sizes, so the pass has its inputs. ⚠ Per this project's own standard a
+#                     layout claim needs the amd64 oracle behind it: tools/amd64_oracle.py reads
+#                     the real 64-bit field offsets out of MathEngine's own build, and every
+#                     rewritten K should be confirmed against it rather than computed and trusted.
+#
+#                     WHAT WAS DONE THIS SESSION, and what it did NOT achieve:
+#                       * tools/fix_narrow_loads.py — NEW. Widens the LOAD, not just the address
+#                         arithmetic: `(T *)(*(int *)addr)` -> `*(kd_iptr *)addr`. 44 sites in 9
+#                         objects. These are real defects of a real class, and fix_ptrwidth.py's
+#                         header was wrong to predict that what remained would be literal
+#                         addresses — of the 151 remaining -Wint-to-pointer-cast diagnostics, NOT
+#                         ONE is a literal.
+#                       * ⚠ IT DID NOT FIX THE NONDETERMINISM. Re-measured after applying it: 8
+#                         runs, still 5 distinct outcomes. The load width was a real defect and
+#                         not this one. The pass is therefore NOT APPLIED to the shipped tree —
+#                         applying it would change what the web compiles and cost a full
+#                         re-verify and re-stamp for no user-visible gain, and it belongs in the
+#                         same landing as the index repair above.
+#
+#                     ✅ NOTHING SHIPPING IS AFFECTED. Every target that ships Karma today is
+#                     32-bit — wasm32, i686 native, i386 Windows — and armeabi-v7a reports 0
+#                     truncations. Android's two 64-bit ABIs default to NO_KARMA. The 145 objects
+#                     are still byte-identical at -m32 and the browser suite is still 55/55.
+
 # LP64-ADDRESS-DEPENDENT  2026-08-30  ⚠ OPEN DEFECT, NOT A RELEASE. The LP64 build is
 #                     NONDETERMINISTIC, in the shipping configuration, and every gate in this
 #                     project was blind to it.

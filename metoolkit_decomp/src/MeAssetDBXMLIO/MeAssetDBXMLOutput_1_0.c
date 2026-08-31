@@ -101,7 +101,7 @@ MeXMLElementID kd_KaFileWriteXML_1_0(MeXMLOutput *op,MeFAsset *fa,MeXMLElementID
   MeFAsset *pMVar15;
   float fVar16;
   undefined4 local_440;
-  void *pvStack_430;
+  void *pvStack_430 [(int)(sizeof(void *) / 4)];
   int local_42c;
   int count;
   kd_iptr i;
@@ -117,7 +117,7 @@ MeXMLElementID kd_KaFileWriteXML_1_0(MeXMLOutput *op,MeFAsset *fa,MeXMLElementID
   pvVar4 = MeFAssetGetReferencePart(fa);
   if (pvVar4 != (void *)0x0) {
     local_440 = 0x10052;
-    pvStack_430 = pvVar4;
+    pvStack_430[0] = pvVar4;
     iVar3 = sprintf(__s," ref_part=\"%s\"");
     __s = __s + iVar3;
   }

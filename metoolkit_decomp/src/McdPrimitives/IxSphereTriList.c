@@ -62,7 +62,7 @@ int kd_McdSphereTriangleListIntersect(McdModelPair *p,McdIntersectResult *result
   int aiStackY_180 [5 * (int)(sizeof(void *) / 4)];
   MeReal aMStackY_16c [2 * (int)(sizeof(void *) / 4)];
   int iStackY_164 [(int)(sizeof(void *) / 4)];
-  float fStackY_160;
+  float fStackY_160 [(int)(sizeof(void *) / 4)];
   int local_144;
   MeReal eps;
   float *local_13c;
@@ -82,17 +82,17 @@ int kd_McdSphereTriangleListIntersect(McdModelPair *p,McdIntersectResult *result
   lsVec3 pos;
   McdUserTriangle ct;
 
-  fStackY_160 = 9.18677e-41;
+  fStackY_160[0] = 9.18677e-41;
   pvVar21 = McdModelGetGeometry(p->model1);
-  fStackY_160 = 9.18845e-41;
+  fStackY_160[0] = 9.18845e-41;
   trilistgeom = McdModelGetGeometry(p->model2);
   fwk = p->model1->frame;
-  fStackY_160 = 9.19182e-41;
+  fStackY_160[0] = 9.19182e-41;
   sphereRadius = McdSphereGetRadius(pvVar21);
-  fStackY_160 = 9.19392e-41;
+  fStackY_160[0] = 9.19392e-41;
   pvVar21 = McdModelGetTransformPtr(p->model1);
   local_13c = (float *)((kd_iptr)pvVar21 + 0x30);
-  fStackY_160 = 9.19686e-41;
+  fStackY_160[0] = 9.19686e-41;
   pfVar22 = McdModelGetTransformPtr(p->model2);
   fVar2 = *pfVar22;
   fVar3 = pfVar22[1];
@@ -106,14 +106,14 @@ int kd_McdSphereTriangleListIntersect(McdModelPair *p,McdIntersectResult *result
   fVar12 = pfVar22[0xc] - *(float *)((kd_iptr)pvVar21 + 0x30);
   fVar13 = pfVar22[0xd] - local_13c[1];
   fVar14 = pfVar22[0xe] - local_13c[2];
-  fStackY_160 = 9.22461e-41;
+  fStackY_160[0] = 9.22461e-41;
   eps = McdModelGetContactTolerance(p->model1);
-  fStackY_160 = 9.22685e-41;
+  fStackY_160[0] = 9.22685e-41;
   fVar26 = McdModelGetContactTolerance(p->model2);
   pMVar17 = trilistgeom;
   eps = fVar26 + eps;
   iVar15 = -((int)(*(MeU32 *)((char *)trilistgeom + ((int)((char *)&((struct McdTriangleList *)0)->triangleMaxCount - (char *)0)))) * 0x18 + 0xfU & 0xfffffff0);
-  (*(McdGeometryID *)((char *)trilistgeom + ((int)((char *)&((struct McdTriangleList *)0)->list - (char *)0)))) = (McdGeometryID)(kd_alloca_iVar15 = (char *)alloca((size_t)((*(MeU32 *)((char *)trilistgeom + ((int)((char *)&((struct McdTriangleList *)0)->triangleMaxCount - (char *)0))))) * 0x18 + 0));
+  (*(McdGeometryID *)((char *)trilistgeom + ((int)((char *)&((struct McdTriangleList *)0)->list - (char *)0)))) = (McdGeometryID)(kd_alloca_iVar15 = (char *)alloca((size_t)((*(MeU32 *)((char *)trilistgeom + ((int)((char *)&((struct McdTriangleList *)0)->triangleMaxCount - (char *)0))))) * (int)sizeof(McdUserTriangle) + 0));
   diff.v[0] = *(float *)((kd_iptr)pvVar21 + 0x30) - pfVar22[0xc];
   diff.v[1] = local_13c[1] - pfVar22[0xd];
   diff.v[2] = local_13c[2] - pfVar22[0xe];
@@ -224,7 +224,7 @@ int kd_McdSphereTriangleListIntersect(McdModelPair *p,McdIntersectResult *result
           result->contactCount = result->contactCount + 1;
         }
         i = i + 1;
-        local_144 = local_144 + 0x18;
+        local_144 = local_144 + (int)sizeof(McdUserTriangle);
       } while ((i < count) && (result->contactCount < 200));
     }
     *(MeReal **)(&(*kd_argslot_fffffea4)) = result->normal;

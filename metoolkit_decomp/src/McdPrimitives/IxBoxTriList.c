@@ -73,7 +73,7 @@ MeBool kd_McdBoxTriangleListIntersect(McdModelPair *p,McdIntersectResult *result
   int aiStackY_280 [6 * (int)(sizeof(void *) / 4)];
   MeReal MStackY_268 [(int)(sizeof(void *) / 4)];
   int iStackY_264 [(int)(sizeof(void *) / 4)];
-  float fStackY_260;
+  float fStackY_260 [(int)(sizeof(void *) / 4)];
   undefined4 uStack_250 [(int)(sizeof(void *) / 4)];
   McdGeometry MStack_24c;
   McdFramework *fwk;
@@ -100,23 +100,23 @@ MeBool kd_McdBoxTriangleListIntersect(McdModelPair *p,McdIntersectResult *result
   MeReal boxCentre [3];
 
   j = 0;
-  fStackY_260 = 9.18817e-41;
+  fStackY_260[0] = 9.18817e-41;
   boxgeom = McdModelGetGeometry(p->model1);
-  fStackY_260 = 9.19042e-41;
+  fStackY_260[0] = 9.19042e-41;
   trilistgeom = McdModelGetGeometry(p->model2);
-  fStackY_260 = 9.19252e-41;
+  fStackY_260[0] = 9.19252e-41;
   eps = McdModelGetContactTolerance(p->model1);
-  fStackY_260 = 9.19476e-41;
+  fStackY_260[0] = 9.19476e-41;
   fVar32 = McdModelGetContactTolerance(p->model2);
   eps = fVar32 + eps;
-  fStackY_260 = 9.1977e-41;
+  fStackY_260[0] = 9.1977e-41;
   pfVar25 = McdModelGetTransformPtr(p->model1);
-  fStackY_260 = 9.19938e-41;
+  fStackY_260[0] = 9.19938e-41;
   pfVar26 = McdModelGetTransformPtr(p->model2);
   fwk = p->model1->frame;
   result->contactCount = 0;
   result->touch = 0;
-  fStackY_260 = 9.20527e-41;
+  fStackY_260[0] = 9.20527e-41;
   boxRadii = McdBoxGetRadii(boxgeom);
   MStack_24c.frame = (McdFrameworkID)(pfVar26 + 0xc);
   diff.v[1] = pfVar25[0xd] - pfVar26[0xd];
@@ -125,7 +125,7 @@ MeBool kd_McdBoxTriangleListIntersect(McdModelPair *p,McdIntersectResult *result
   boxPosTrans.v[0] = diff.v[2] * pfVar26[2] + diff.v[0] * *pfVar26 + diff.v[1] * pfVar26[1];
   boxPosTrans.v[1] = diff.v[2] * pfVar26[6] + diff.v[0] * pfVar26[4] + diff.v[1] * pfVar26[5];
   boxPosTrans.v[2] = diff.v[2] * pfVar26[10] + diff.v[0] * pfVar26[8] + diff.v[1] * pfVar26[9];
-  fStackY_260 = 9.22867e-41;
+  fStackY_260[0] = 9.22867e-41;
   McdBoxGetBSphere(boxgeom,boxCentre,&boxRadius);
   pMVar22 = trilistgeom;
   MVar21 = eps;

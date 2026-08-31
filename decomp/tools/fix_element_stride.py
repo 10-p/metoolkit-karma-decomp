@@ -231,12 +231,22 @@ def rewrite(text, T, F, E, sz, repl):
     # ALREADY typed an access in this file as `((E *)v)->` — an independent pass,
     # with its own frame test and its own two-compiler gate, having concluded that
     # this file walks an array of E. That is why this pass now runs AFTER it.
+    #
+    # ⚠ AND THE `struct` KEYWORD IS THE SAME QUESTION. `IxSphereTriList` writes
+    # `((struct McdTriangleList *)0)->list`, one keyword away from the anchor —
+    # and simply allowing the keyword took the pass from 63 rewrites to 147 and
+    # made `scene_ragdoll` NONDETERMINISTIC and DIFFERENT FROM i386, which is the
+    # one invariant this gate exists to protect. So it goes behind the same
+    # evidence, and behind one more restriction: see `gated` below.
     off = r'\(\(%s \*\)0\)->%s\b' % (re.escape(T), re.escape(F))
+    gated = False
     if not re.search(off, text):
         if not re.search(r'\(\(%s \*\)' % re.escape(E), text):
             return text, 0, 0
-        direct = [r'(?<![\w.])%s->%s\b' % (re.escape(dm.group(1)), re.escape(F))
-                  for dm in re.finditer(
+        gated = True
+        direct = [r'\(\(struct %s \*\)0\)->%s\b' % (re.escape(T), re.escape(F))]
+        direct += [r'(?<![\w.])%s->%s\b' % (re.escape(dm.group(1)), re.escape(F))
+                   for dm in re.finditer(
                       r'(?m)^\s*(?:struct\s+)?%s\s*\*\s*(\w+)\s*;' % re.escape(T),
                       text)]
         if not direct:
@@ -372,6 +382,16 @@ def rewrite(text, T, F, E, sz, repl):
                 q, r = divmod(v, sz)
                 if r not in flds:
                     return mm.group(0)          # not an offset into this table
+                # ⚠ A GATED SPELLING GETS WHOLE ELEMENTS ONLY. "the remainder
+                # lands on a member start" is a strong test for a 68-byte struct
+                # with two members and a VACUOUS one for an 8-byte struct with
+                # two: every 4-aligned value passes. `MeAssetDBXMLIO` reaches
+                # `PElement::childHead -> PElementNode` (sizeof 8) and carries
+                # seventeen bare `8`s that have nothing to do with any table. So
+                # outside the unconditional anchor only q*sizeof(E) counts —
+                # strides, steps and allocations, which is all these files have.
+                if gated and r:
+                    return mm.group(0)
                 n += 1
                 return '+ ' + term(E, flds, q, r, szname)
             new = re.sub(r'\+ (0x[0-9a-fA-F]+|\d+)(?![\w*])', sub, new)
@@ -436,8 +456,14 @@ def main():
             if not re.search(r'\(\(%s \*\)0\)->%s\b' % (re.escape(T), re.escape(F)), cur):
                 if not re.search(r'\(\(%s \*\)' % re.escape(E), cur):
                     continue
-                if not re.search(r'(?m)^\s*(?:struct\s+)?%s\s*\*\s*\w+\s*;'
-                                 % re.escape(T), cur):
+                # either spelling the gated branch of `rewrite` accepts: the
+                # `struct`-keyword offsetof, or a declared `T *` to write `v->F`.
+                # `IxSphereTriList` has the keyword form and NO declaration, so a
+                # pre-filter that knew only the latter kept calling nothing.
+                if not (re.search(r'\(\(struct %s \*\)0\)->%s\b'
+                                  % (re.escape(T), re.escape(F)), cur)
+                        or re.search(r'(?m)^\s*(?:struct\s+)?%s\s*\*\s*\w+\s*;'
+                                     % re.escape(T), cur)):
                     continue
             # ⚠ NO `is the bare literal present` PRECONDITION. The unrolled
             # zeroing loop carries 0x84, 200 and 0x10c — `64 + k*68` — and a

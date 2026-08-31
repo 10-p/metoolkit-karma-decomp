@@ -354,9 +354,32 @@ def slot_edits(text, notes, fn, quiet=False):
             sites = list(site_re(var).finditer(body))
             if not sites:
                 continue
-            # ⚠ USED AS ITSELF ANYWHERE? Then widening it changes a read.
-            covered = len(sites) + 1                      # + its own declaration
-            if len(re.findall(r'\b%s\b' % re.escape(var), body)) != covered:
+            # ⚠ USED AS ITSELF ANYWHERE? Then widening it changes a read —
+            # UNLESS every such use is the bare scalar, in which case `var[0]`
+            # means exactly what `var` meant and the widening is meaning-
+            # preserving. That distinction is the difference between declining
+            # `fStackY_160` and fixing it.
+            #
+            # ★ AND IT IS A REAL DEFECT, NOT TIDYING. `IxSphereTriList` declares
+            # `float fStackY_160;` and stores an EIGHT-BYTE pointer through its
+            # address — `*(MeReal (**) [3])((kd_iptr)&fStackY_160) = edge;` — so
+            # at LP64 the store runs four bytes past a four-byte local and into
+            # whatever the compiler put next. The arm64 tombstone lands two calls
+            # later, in `McdVanillaOverlapSphereTri`, dereferencing an
+            # `inTri->vertices[0]` of 0x7200000072. `check_frame_bounds` cannot
+            # see it: it reads ARRAY bounds, and this slot is a scalar.
+            spans = [(m.start(), m.end()) for m in sites] + [(d.start(), d.end())]
+            extra = [m for m in re.finditer(r'\b%s\b' % re.escape(var), body)
+                     if not any(a <= m.start() < b for a, b in spans)]
+            scalar_uses = []
+            for m in extra:
+                before = body[max(0, m.start() - 1):m.start()]
+                after = body[m.end():m.end() + 1]
+                if before == '&' or after == '[':
+                    scalar_uses = None
+                    break
+                scalar_uses.append(m)
+            if scalar_uses is None:
                 if not quiet:
                     notes.append('%-26s %s::%s is also used outside a frame-slot '
                                  'cast — declined' % (fn, func, var))
@@ -379,6 +402,9 @@ def slot_edits(text, notes, fn, quiet=False):
             edits.append((s + d.end('name'), s + d.end(),
                           ' [%s(int)(sizeof(void *) / 4)];'
                           % ('%s * ' % n if n else '')))
+            # the bare scalar uses become element 0 of the widened slot
+            for m in scalar_uses:
+                edits.append((s + m.start(), s + m.end(), var + '[0]'))
             groups.append(((func, var),
                            '%s::%s (%s[%s], %d slot%s)'
                            % (func, var, d.group('ty').strip(), n or '',

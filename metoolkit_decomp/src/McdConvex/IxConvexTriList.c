@@ -536,7 +536,7 @@ static void GenerateTriangleContact
   MeReal MVar22;
   int aiStackY_150 [3 * (int)(sizeof(void *) / 4)];
   float fStackY_144 [(int)(sizeof(void *) / 4)];
-  float fStackY_140;
+  float fStackY_140 [(int)(sizeof(void *) / 4)];
   float afStack_11c [2];
   int local_114;
   MeReal local_110;
@@ -584,7 +584,7 @@ static void GenerateTriangleContact
   paMVar4 = tri->normal;
   dp = ((*paMVar4)[2] * (*paMVar3)[2] +
        (*paMVar4)[1] * (*paMVar3)[1] + (*paMVar4)[0] * (*paMVar3)[0]) - fatness;
-  fStackY_140 = 9.74631e-41;
+  fStackY_140[0] = 9.74631e-41;
   MVar22 = McdConvexHullMaximumPoint(hull,*paMVar4,-1,3.4028235e+38,&maxVert);
   zeroDisp = -MVar22;
   sep = dp + zeroDisp;
@@ -599,7 +599,7 @@ static void GenerateTriangleContact
     iVar16 = 0;
     do {
                     
-      fStackY_140 = 9.76467e-41;
+      fStackY_140[0] = 9.76467e-41;
       lVar17 = (longdouble)
                SegmentConvexHullSep
                          (*tri->vertices[iVar14 + 1],*paMVar13,0.0,1.0,(McdConvexHull *)hull,ni,&si,

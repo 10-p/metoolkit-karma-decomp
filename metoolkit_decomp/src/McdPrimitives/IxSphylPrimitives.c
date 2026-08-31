@@ -1473,7 +1473,7 @@ int kd_McdSphylTriangleListIntersect(McdModelPair *p,McdIntersectResult *result)
   undefined1 *puVar13;
   float fVar14;
   int aiStackY_80 [4 * (int)(sizeof(void *) / 4)];
-  float fStackY_70;
+  float fStackY_70 [(int)(sizeof(void *) / 4)];
   MeReal aMStack_64 [2 * (int)(sizeof(void *) / 4)];
   int local_5c;
   MeReal *local_58;
@@ -1483,18 +1483,18 @@ int kd_McdSphylTriangleListIntersect(McdModelPair *p,McdIntersectResult *result)
   MeReal relPos [3];
   MeReal relAxis [3];
 
-  fStackY_70 = 1.11302e-40;
+  fStackY_70[0] = 1.11302e-40;
   pvVar6 = McdModelGetTransformPtr(p->model1);
-  fStackY_70 = 1.11323e-40;
+  fStackY_70[0] = 1.11323e-40;
   pfVar7 = McdModelGetTransformPtr(p->model2);
-  fStackY_70 = 1.11343e-40;
+  fStackY_70[0] = 1.11343e-40;
   eps = McdModelGetContactTolerance(p->model1);
-  fStackY_70 = 1.11365e-40;
+  fStackY_70[0] = 1.11365e-40;
   fVar14 = McdModelGetContactTolerance(p->model2);
   eps = fVar14 + eps;
-  fStackY_70 = 1.11391e-40;
+  fStackY_70[0] = 1.11391e-40;
   pvVar8 = McdModelGetGeometry(p->model1);
-  fStackY_70 = 1.11412e-40;
+  fStackY_70[0] = 1.11412e-40;
   pMVar9 = McdModelGetGeometry(p->model2);
   trilistGeom = pMVar9;
   result->contactCount = 0;

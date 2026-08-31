@@ -12,7 +12,57 @@ read before resuming; `../HANDOVER.md` is the depth behind it and `../proven.txt
 
 ---
 
-★★★ **NEWEST: 2026-08-31 (arm64) — THE FIRST ANDROID KARMA BACKTRACE THIS PROJECT HAS EVER
+★★★ **NEWEST: 2026-08-31 (arm64, closed) — ✅ ANDROID arm64 REACHES THE MAIN MENU WITH KARMA
+ON.** `UT2k4MainMenu.Opened()`, 2043 log lines, **zero signals**, still running — against 2039
+for the Karma-OFF control. The open item below is closed.
+
+**Two repairs, and the second is the one that mattered.**
+
+**(1) The `struct` keyword, narrowly.** `IxSphereTriList` writes
+`((struct McdTriangleList *)0)->list`, one keyword away from the anchor — and simply allowing the
+keyword had already been *measured* as unsafe (63 → 147 rewrites, `scene_ragdoll` nondeterministic
+and differing from i386). It is now accepted only behind the same evidence as the direct spelling,
+plus one more restriction:
+
+⚠ **A gated spelling gets whole elements only.** "The remainder lands on a member start" is a
+strong test for a 68-byte struct with two members and a **vacuous** one for an 8-byte struct with
+two — every 4-aligned value passes. `MeAssetDBXMLIO` reaches `PElement::childHead → PElementNode`
+(sizeof 8) carrying seventeen bare `8`s with nothing to do with any table. Result: **+2 sites**,
+exactly the alloca and the cursor — and `MeAssetDBXMLIO` was declined by the byte-identity gate
+on top of that.
+
+**(2) ★★ A frame slot that is a SCALAR, not an array — and this is what was actually crashing.**
+`fix_frame_slots` scales the fabricated argument areas, and it **declined these by its own rule**
+("the name must appear nowhere except inside a frame-slot cast"):
+
+```c
+float fStackY_160;                                  /* four bytes  */
+*(MeReal (**) [3])((kd_iptr)&fStackY_160) = edge;   /* eight bytes */
+```
+
+At LP64 that store runs **four bytes past a four-byte local**, into whatever the compiler put
+next — which was the outgoing `McdUserTriangle ct`. The tombstone landed two calls later in
+`McdVanillaOverlapSphereTri`, dereferencing an `inTri->vertices[0]` of `0x7200000072`.
+
+⚠ **`check_frame_bounds` cannot see it** — it reads *array* bounds, and this slot is a scalar. It
+reported 0 throughout.
+
+The decline rule was right that widening changes what a bare read means; but if **every** other
+use is the bare scalar, `var[0]` means exactly what `var` meant, so those are rewritten with it.
+6 slots across 6 files.
+
+```
+Karma OFF   2039 lines, UT2k4MainMenu.Opened()
+Karma ON    1037 -> 1147 -> 2043 lines, SAME MILESTONE, 0 signals, alive
+i386 145/145 · three scenes BIT-IDENTICAL · 0 ASan · frame bounds 0 · wasm32 146/146
+pipeline PASS · run-standalone 12/12 · gates 6/6
+```
+
+Evidence: `../proven.txt` `LP64-ARM64-MENU`.
+
+---
+
+★★★ **PREVIOUS: 2026-08-31 (arm64) — THE FIRST ANDROID KARMA BACKTRACE THIS PROJECT HAS EVER
 HAD**, and the vehicle was not the x86-64 build in the end — it was a two-line switch.
 
 `UT_NO_FAULT_HANDLER` (engine `b4cd9eb`; on Android `adb shell setprop debug.ut2004.nofault 1`)

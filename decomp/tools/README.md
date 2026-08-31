@@ -638,6 +638,7 @@ python3 tools/fix_frame_slots.py     /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/fix_pool_reserve.py    /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/fix_narrow_loads.py    /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/fix_list_walk.py       /tmp/kd_lp64/allobj /tmp/kd_build $MT
+python3 tools/fix_element_stride.py  /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/fix_block_copy.py      /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/check_frame_bounds.py  /tmp/kd_lp64/allobj /tmp/kd_build   # must read 0
 KD_OUT=/tmp/kd_lp64 ./test/standalone/lp64_run.sh
@@ -1061,8 +1062,17 @@ resolved objects declined on byte-identity (`McdAggregate` 28, `McdTriangleList`
 
 ```bash
 python3 tools/fix_index_layout.py /tmp/kd_lp64/allobj /tmp/kd_build $MT
-#   -> 63 re-spelled, 2 already correct at LP64, 19 declined
+#   -> 65 re-spelled, 2 already correct at LP64, 19 declined
 ```
+
+⚠⚠ **THE ACCEPTANCE GATE COULD NOT EXPRESS THE ANSWER** (2026-08-31). `flo.accept_edits`
+bisects a position-ordered list, so it can only accept a subset that is contiguous in position.
+gcc common-subexpression-eliminates the two loads of `g[1].mRefCtAndID` in
+`McdAggregateDestroy` — *first only* and *second only* both change the object, **both together
+reproduce it exactly** — and four `g[1].prev` edits sit between them, so every subset the
+bisect tried contained one without the other. It declined all six and the table pointer went on
+being read four bytes wide. `accept_by_field` makes the atom a **field** rather than a
+position; sites naming the same field are exactly the ones gcc folds together.
 
 ★ **AN INDEX CAN LAND ON THE RIGHT ADDRESS AND STILL BE A DEFECT** (2026-08-31). The `same`
 short-circuit used to compare only the **offset**, and `mRefCtAndID` is the first member of
@@ -1339,7 +1349,7 @@ function, so each candidate is compiled and the first that reproduces the baseli
 ```bash
 python3 tools/fix_narrow_loads.py /tmp/kd_lp64/allobj /tmp/kd_build $MT
 #   -> 44 narrow pointer LOAD(s) widened in 9 object(s)
-#   -> 2 named-field LOAD(s) widened by measurement (rule C)
+#   -> 7 named-field LOAD(s) widened by measurement (rule C)
 ```
 
 ★ **RULE C — THE EARLIER REPAIR HID THE REMAINING ONE** (2026-08-31). Rules A and B fire on
@@ -1349,8 +1359,16 @@ integer-to-integer and **clang says nothing at all** — the address is right, t
 and the load still takes four bytes of an eight-byte pointer. So rule C is **measured, not
 diagnosed**: the address must be an offsetof naming a real field, the destination must be
 declared pointer-width, and `sizeof(T::F)` must be **4 at i386 and 8 at LP64**. Two sites
-qualify; the other 32 narrow loads into widened locals do not name a field and are left alone,
+qualify; the other narrow loads into widened locals do not name a field and are left alone,
 because widening a load of a genuine `int` field would read four bytes past it.
+
+★ **AND THE DESTINATION IS PROMOTED WHEN IT IS STILL AN `int`.** `MdtBcl3`'s solver holds an
+`MdtBody *` in `iVar15`, a local Ghidra also uses as a row index three statements earlier, so
+`fix_narrow_pointers` will not widen it and the "already pointer-width" test skipped it.
+`kd_iptr` **is** `int` at 32-bit pointer width, so promoting the declaration is a no-op on every
+shipping target by construction. ⚠ Signedness survives it — `uint → kd_iptr` is a *sign change*,
+not a widening, and it cost `MdtBcl` its byte-identity on three otherwise-innocent
+declarations.
 
 `fix_ptrwidth.py` widens the casts clang says narrow a pointer and its header predicted that what
 remained would be *"a genuinely integer-valued address (Ghidra's `(code *)0x10074` and the like)"*.
@@ -1453,6 +1471,48 @@ first and **measured**: the per-field expansion compiles to a different i386 obj
 the preprocessor deletes the new branch on every 4-byte-pointer target, so the shipped 32-bit
 object is byte-identical by construction and **so is wasm32**, where `__SIZEOF_POINTER__` is
 also 4. Verified at **146/146 byte-identical**, not argued.
+
+### `fix_element_stride.py` — a table's ELEMENT SIZE frozen at the i386 value
+
+```bash
+python3 tools/fix_element_stride.py /tmp/kd_lp64/allobj /tmp/kd_build $MT
+#   -> fix_element_stride: 54 site(s) rewritten, 0 declined
+```
+
+A struct holds a pointer to an array of another struct and every walk carries the element size
+as a literal:
+
+```
+McdAggregateElement { MeMatrix4 mRelTM; McdGeometryID mGeometry; }
+    i386  sizeof 68 (0x44)   mGeometry at 64 (0x40)
+    LP64  sizeof 72          mGeometry at 64
+```
+
+★ **THE OFFSET IS RIGHT AT BOTH WIDTHS AND THE STRIDE IS NOT**, which is why this survives
+every pass that checks offsets — sixteen floats do not grow, so only the SIZE moves. This is
+frame (6), and the crash named it in one value: `McdGeometryIncrementReferenceCount` with
+`g = 0x3f800000596203b0`, where `0x3f800000` is **1.0f** — a matrix diagonal in the top half of
+a pointer.
+
+⚠ **IT IS NOT ONLY `i * 0x44`.** `McdAggregateCreate` zeroes the table with gcc's four-at-a-time
+unrolling and every offset in it is baked — `0x40, 0x84, 200, 0x10c`, step `0x110`, which is
+`64 + k·68` and `4·68`. At LP64 the slots are at 64, 136, 208, 280, so the loop zeroed the
+middle of the matrices and left **every** `mGeometry` holding malloc garbage. ★ And
+`undefined4` clears four bytes of an eight-byte pointer, so fixing the stride without the width
+still ships a dangling pointer — the first attempt moved the crash instead of removing it.
+
+**THE DECOMPOSITION IS THE MEASUREMENT.** A literal `L` on the table's additive chain is an
+offset into it only if `L % sizeof_i386(E)` lands on a member **start** of E. `q` elements plus
+that member is the same address at every width; a remainder that is not a member start is
+ordinary arithmetic and is left alone, which keeps loop counters and `+ 4`s out of scope. The
+element type is **declared** — `McdAggregateElement *elementTable;` is in the oracle — and the
+size must actually change at LP64 or there is nothing to repair. 117 fields in the corpus fit
+the shape; exactly one has its i386 element size present as a literal.
+
+⚠ **Signedness is part of the repair.** `*(int *)(...) != 0` widened through `kd_uptr` is a
+different i386 object, and three lines declined the whole file on that alone. `int` widens to
+`kd_iptr`. And only the **outermost** access is widened — these lines carry a second, nested
+`*(int *)` that loads the table pointer itself, which is `fix_narrow_loads`' job.
 
 ### `fix_align_masks.py` — an alignment mask frozen at 32 bits
 

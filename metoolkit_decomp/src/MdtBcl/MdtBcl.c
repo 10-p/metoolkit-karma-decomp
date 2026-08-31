@@ -69,7 +69,7 @@ void kd_MdtBclEndPartition(MdtKeaConstraints *clist)
   int *piVar1;
   int iVar2;
   int iVar3;
-  uint uVar4;
+  kd_uptr uVar4;
   uint uVar5;
   
   uVar5 = clist->num_rows_exc_padding;
@@ -146,7 +146,7 @@ MeReal kd_MdtBclDotJ(MeReal *v,MdtKeaConstraints *clist,int row,int body)
 void kd_MdtBclEndConstraint(MdtKeaConstraints *clist,uint rows_added)
 
 {
-  uint uVar1;
+  kd_uptr uVar1;
   int i;
 
   if (rows_added != 0) {
@@ -262,9 +262,9 @@ void kd_MdtBclAddSphericalRowsWorld
   MdtKeaJBlockPair *paMVar8;
   float *pfVar9;
   int iVar10;
-  int iVar11;
+  kd_iptr iVar11;
   MeReal *pMVar12;
-  int iVar13;
+  kd_iptr iVar13;
   MeReal *pMVar14;
   MeReal *pMVar15;
   MeReal *pMVar16;
@@ -511,7 +511,7 @@ void kd_MdtBclAddBSJoint(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
   MeReal (*paMVar5) [4];
   float *pfVar6;
   MdtKeaTransformation *pMVar7;
-  int iVar8;
+  kd_iptr iVar8;
   MeReal ref2world [4] [4];
   MeReal ref1world [4] [4];
   MeReal *c;
@@ -585,7 +585,7 @@ void kd_MdtBclAddContact(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
   float fVar1;
   float fVar2;
   float fVar3;
-  uint uVar4;
+  kd_uptr uVar4;
   void *pvVar5;
   void *pvVar6;
   int iVar7;
@@ -595,7 +595,7 @@ void kd_MdtBclAddContact(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
   bool bVar11;
   MeReal *pMVar12;
   MeReal MVar13;
-  int iVar14;
+  kd_iptr iVar14;
   MeReal *pMVar15;
   MeReal *pMVar16;
   float *pfVar17;
@@ -963,7 +963,7 @@ void kd_MdtBclAddContactGroup
     *(undefined4 *)((kd_iptr)constraint_00 + ((int)((char *)&((struct MdtContact *)0)->head.bodyindex[0] - (char *)0))) = *(undefined4 *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContactGroup *)0)->head.bodyindex[0] - (char *)0)));
     *(undefined4 *)((kd_iptr)constraint_00 + ((int)((char *)&((struct MdtContact *)0)->head.mdtbody[0] - (char *)0))) = *(undefined4 *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContactGroup *)0)->head.mdtbody[0] - (char *)0)));
     *(undefined4 *)((kd_iptr)constraint_00 + ((int)((char *)&((struct MdtContact *)0)->head.sortKey - (char *)0))) = uVar1;
-    uVar1 = *(undefined4 *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContactGroup *)0)->head.mdtbody[1] - (char *)0)));
+    uVar1 = *(kd_uptr *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContactGroup *)0)->head.mdtbody[1] - (char *)0)));
     *(undefined4 *)((kd_iptr)constraint_00 + ((int)((char *)&((struct MdtContact *)0)->head.bodyindex[1] - (char *)0))) = *(undefined4 *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContactGroup *)0)->head.bodyindex[1] - (char *)0)));
     *(undefined4 *)((kd_iptr)constraint_00 + ((int)((char *)&((struct MdtContact *)0)->head.mdtbody[1] - (char *)0))) = uVar1;
     if (*(int *)((kd_iptr)constraint_00 + ((int)((char *)&((struct MdtContact *)0)->params.model1 - (char *)0))) == 1) {
@@ -998,7 +998,7 @@ void kd_MdtBclAddHinge(MdtKeaConstraints *clist,void *constraint,MdtKeaTransform
   MeReal *pMVar14;
   MdtKeaTransformation *pMVar15;
   MeReal *pMVar16;
-  int iVar17;
+  kd_iptr iVar17;
   MeReal *pMVar18;
   uint uVar19;
   longdouble lVar20;
@@ -1451,7 +1451,7 @@ void kd_MdtBclAddPrismatic(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
   MeReal (*paMVar13) [4];
   MeReal *pMVar14;
   float *pfVar15;
-  int iVar16;
+  kd_iptr iVar16;
   MeReal *pMVar17;
   MdtKeaTransformation *pMVar18;
   int iVar19;
@@ -2098,7 +2098,7 @@ void kd_MdtBclAddCarWheel(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
   MdtKeaTransformation *pMVar14;
   MeReal *pMVar15;
   float *pfVar16;
-  int iVar17;
+  kd_iptr iVar17;
   uint rows_added;
   int z_5;
   int z_4;
@@ -2798,7 +2798,7 @@ void kd_MdtBclAddFixedPath(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
   MeReal *pMVar11;
   MdtKeaTransformation *pMVar12;
   MeReal *pMVar13;
-  int iVar14;
+  kd_iptr iVar14;
   int z_2;
   int z_1;
   int z;
@@ -3015,7 +3015,7 @@ void kd_MdtBclAddUniversal(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
   int iVar5;
   MeReal *pMVar6;
   MeReal *pMVar7;
-  int iVar8;
+  kd_iptr iVar8;
   MeReal *pMVar9;
   MeReal (*paMVar10) [4];
   float *pfVar11;
@@ -3023,7 +3023,7 @@ void kd_MdtBclAddUniversal(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
   MdtKeaTransformation *pMVar13;
   MeReal *pMVar14;
   MeReal *pMVar15;
-  int iVar16;
+  kd_iptr iVar16;
   int z_3;
   int z_2;
   int z_1;
@@ -3301,7 +3301,7 @@ void kd_MdtBclAddSkeletal(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
   MeReal *pMVar14;
   uint uVar15;
   MeReal *pMVar16;
-  int iVar17;
+  kd_iptr iVar17;
   int iVar18;
   kd_iptr iVar19;
   MeReal *pMVar20;
@@ -3468,7 +3468,7 @@ void kd_MdtBclAddSkeletal(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
   clist->Jbody[clist->num_constraints][0] = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.bodyindex[0] - (char *)0)));
   clist->Jbody[clist->num_constraints][1] = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.bodyindex[1] - (char *)0)));
   MeQuaternionFromTM(qaca,(void *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.ref1[0][0] - (char *)0))));
-  iVar19 = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.mdtbody[0] - (char *)0)));
+  iVar19 = *(kd_iptr *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.mdtbody[0] - (char *)0)));
   qacw[0] = ((qaca[0] * *(float *)(iVar19 + 0xb0) - qaca[1] * *(float *)(iVar19 + 0xb4)) -
             qaca[2] * *(float *)(iVar19 + 0xb8)) - qaca[3] * *(float *)(iVar19 + 0xbc);
   qacw[1] = (*(float *)(iVar19 + 0xb8) * qaca[3] +
@@ -3529,7 +3529,7 @@ void kd_MdtBclAddSkeletal(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
   }
   else {
     MeQuaternionFromTM(qbcb,(void *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.ref2[0][0] - (char *)0))));
-    iVar19 = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.mdtbody[1] - (char *)0)));
+    iVar19 = *(kd_iptr *)((kd_iptr)constraint + ((int)((char *)&((struct MdtSkeletal *)0)->head.mdtbody[1] - (char *)0)));
     qbcw[0] = ((qbcb[0] * *(float *)(iVar19 + 0xb0) - qbcb[1] * *(float *)(iVar19 + 0xb4)) -
               qbcb[2] * *(float *)(iVar19 + 0xb8)) - qbcb[3] * *(float *)(iVar19 + 0xbc);
     qbcw[1] = (*(float *)(iVar19 + 0xb8) * qbcb[3] +
@@ -4053,12 +4053,12 @@ void kd_MdtBclAddLinear1(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
   MeReal *pMVar5;
   MeReal *pMVar6;
   MeReal *pMVar7;
-  int iVar8;
+  kd_iptr iVar8;
   int iVar9;
   MeReal *pMVar10;
-  int iVar11;
+  kd_iptr iVar11;
   MeReal *pMVar12;
-  int iVar13;
+  kd_iptr iVar13;
   uint uVar14;
   uint uVar15;
   MeReal *xgamma;
@@ -4239,7 +4239,7 @@ void kd_MdtBclAddLinear2(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
   float fVar13;
   float *pfVar14;
   int iVar15;
-  int iVar16;
+  kd_iptr iVar16;
   uint uVar17;
   uint uVar18;
   int iVar19;
@@ -4484,7 +4484,7 @@ void kd_MdtBclAddAngular3(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
   float fVar11;
   float fVar12;
   MeReal *pMVar13;
-  int iVar14;
+  kd_iptr iVar14;
   kd_iptr iVar15;
   float *pfVar16;
   MeReal *pMVar17;
@@ -4616,7 +4616,7 @@ void kd_MdtBclAddAngular3(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
   clist->Jbody[clist->num_constraints][0] = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtAngular3 *)0)->head.bodyindex[0] - (char *)0)));
   clist->Jbody[clist->num_constraints][1] = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtAngular3 *)0)->head.bodyindex[1] - (char *)0)));
   MeQuaternionFromTM(qaca,(void *)((kd_iptr)constraint + ((int)((char *)&((struct MdtAngular3 *)0)->head.ref1[0][0] - (char *)0))));
-  iVar15 = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtAngular3 *)0)->head.mdtbody[0] - (char *)0)));
+  iVar15 = *(kd_iptr *)((kd_iptr)constraint + ((int)((char *)&((struct MdtAngular3 *)0)->head.mdtbody[0] - (char *)0)));
   qacw[0] = ((qaca[0] * *(float *)(iVar15 + 0xb0) - qaca[1] * *(float *)(iVar15 + 0xb4)) -
             qaca[2] * *(float *)(iVar15 + 0xb8)) - qaca[3] * *(float *)(iVar15 + 0xbc);
   qacw[1] = (*(float *)(iVar15 + 0xb8) * qaca[3] +
@@ -4641,7 +4641,7 @@ void kd_MdtBclAddAngular3(MdtKeaConstraints *clist,void *constraint,MdtKeaTransf
   }
   else {
     MeQuaternionFromTM(qbcb,(void *)((kd_iptr)constraint + ((int)((char *)&((struct MdtAngular3 *)0)->head.ref2[0][0] - (char *)0))));
-    iVar15 = *(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtAngular3 *)0)->head.mdtbody[1] - (char *)0)));
+    iVar15 = *(kd_iptr *)((kd_iptr)constraint + ((int)((char *)&((struct MdtAngular3 *)0)->head.mdtbody[1] - (char *)0)));
     qbcw[0] = ((qbcb[0] * *(float *)(iVar15 + 0xb0) - qbcb[1] * *(float *)(iVar15 + 0xb4)) -
               qbcb[2] * *(float *)(iVar15 + 0xb8)) - qbcb[3] * *(float *)(iVar15 + 0xbc);
     qbcw[1] = (*(float *)(iVar15 + 0xb8) * qbcb[3] +
@@ -4944,7 +4944,7 @@ void kd_MdtBclAddSpring6(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfo
   uint uVar13;
   float *pfVar14;
   float *pfVar15;
-  int iVar16;
+  kd_iptr iVar16;
   MeReal *pMVar17;
   float *pfVar18;
   int iVar19;
@@ -5479,7 +5479,7 @@ void kd_MdtBclAddSpring(MdtKeaConstraints *clist,void *constraint,MdtKeaTransfor
   bool bVar10;
   bool bVar11;
   int iVar12;
-  int iVar13;
+  kd_iptr iVar13;
   MdtBclLimit *limit;
   MeReal *pMVar14;
   int iVar15;
@@ -5709,7 +5709,7 @@ void kd_MdtBclAddConeLimit(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
   float *pfVar13;
   MdtKeaTransformation *pMVar14;
   float *pfVar15;
-  int iVar16;
+  kd_iptr iVar16;
   longdouble lVar17;
   int z;
   MeReal *xgamma;
@@ -6273,10 +6273,10 @@ void kd_MdtBclAddRPROJoint(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
   MeReal *pMVar22;
   int iVar23;
   int iVar24;
-  int iVar25;
+  kd_iptr iVar25;
   int local_244;
   int local_240;
-  int local_238;
+  kd_iptr local_238;
   int j_1;
   int j;
   float local_204;
@@ -6960,9 +6960,9 @@ static void MyMultiplyT2(int p,int q,int r,MeReal *A,MeReal *B,MeReal *C)
   uint uVar11;
   float *pfVar12;
   float *pfVar13;
-  int iVar14;
+  kd_iptr iVar14;
   float *pfVar15;
-  int iVar16;
+  kd_iptr iVar16;
   int local_24;
   int local_20;
   int local_1c;

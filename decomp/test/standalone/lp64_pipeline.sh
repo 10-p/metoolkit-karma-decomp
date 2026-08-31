@@ -73,6 +73,14 @@ python3 "$KD_ROOT/tools/fix_narrow_loads.py" "$DST/allobj" "$BUILD" "$MT" | head
 # preprocessor conditional in it.
 python3 "$KD_ROOT/tools/fix_list_walk.py" "$DST/allobj" "$BUILD" "$MT" | tail -4 || exit 2
 
+# ---- AFTER fix_index_layout, whose output it anchors on. This one keys on the
+# field's offsetof spelling (`((McdAggregate *)0)->elementTable`) and on the
+# widened `*(kd_uptr *)` load, so it has to see the tree those passes leave, not
+# the raw recovery. It repairs the ELEMENT SIZE, which is a different number from
+# every offset the passes above check — `mGeometry` sits at byte 64 at both
+# widths while `sizeof(McdAggregateElement)` goes 68 -> 72.
+python3 "$KD_ROOT/tools/fix_element_stride.py" "$DST/allobj" "$BUILD" "$MT" | tail -3 || exit 2
+
 # ---- AFTER EVEN THAT ONE, and for a reason none of the others have: this pass
 # does not re-spell an expression, it puts the corrected body behind
 # `#if __SIZEOF_POINTER__ == 4` and leaves the i386 text VERBATIM. Every pass

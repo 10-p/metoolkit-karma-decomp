@@ -51,7 +51,7 @@ void kd_MdtLODLastPartition(MdtPartitionOutput *po,MdtPartitionParams *params)
   MdtBaseConstraint *pMVar3;
   int iVar4;
   MdtPartitionInfo *pMVar5;
-  int iVar6;
+  kd_iptr iVar6;
   MdtContactGroupID pMVar7;
   MdtLODPartitionData *pMVar8;
   uint uVar9;
@@ -704,7 +704,7 @@ static MeReal ConstraintCalcImportance(MdtBaseConstraint *con,MdtPartitionParams
   MdtBody *pMVar3;
   void *pvVar4;
   void *pvVar5;
-  int iVar6;
+  kd_iptr iVar6;
   MeReal normVel;
   MeReal pen;
   MeVector3 vel;
@@ -890,7 +890,7 @@ static void MergePartitions(MdtLODPartitionData *pdataArray,int p1Ix,int p2Ix)
   int iVar3;
   MdtBody **ppMVar4;
   MdtBaseConstraint **ppMVar5;
-  int iVar6;
+  kd_iptr iVar6;
   int iVar7;
 
   pMVar1 = pdataArray + p1Ix;

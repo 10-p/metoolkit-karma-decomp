@@ -12,7 +12,68 @@ read before resuming; `../HANDOVER.md` is the depth behind it and `../proven.txt
 
 ---
 
-★★★ **NEWEST: 2026-08-31 (later) — FRAME (5) FIXED. A PASS THAT FIXED HALF A ROUND TRIP MADE
+★★★ **NEWEST: 2026-08-31 — UT2004 RUNS AT 64-BIT.** A four-bot `DM-Rankin` and a **six-bot
+`ONS-Torlan` with vehicles** each ran 200 seconds to the timeout with **zero signals**.
+Onslaught is the strong test: its vehicles *are* Karma rigid bodies, and the stack reached
+`KWorldStepSafeTime → MdtPackPartition → MdtBclAddAngular3` — the constraint solver stepping,
+not initialising.
+
+**Three more defects, and one of them was in a gate.**
+
+**(6) The element SIZE, not the offsets.** `McdAggregateElement` is
+`{MeMatrix4 mRelTM; McdGeometryID mGeometry;}` — 68 bytes here, 72 there, with `mGeometry` at
+**64 in both**, because sixteen floats do not grow. Every offset check passes and every stride
+is wrong. `fix_element_stride.py` is new.
+
+⚠ **And it was not only `i * 0x44`.** `McdAggregateCreate` zeroes the table with gcc's
+four-at-a-time unrolling and every offset in it is baked — `0x40, 0x84, 200, 0x10c`, step
+`0x110`, which is `64 + k·68` and `4·68`. At LP64 the slots are at 64, 136, 208, 280, so the
+loop was zeroing the middle of the matrices and leaving **every** `mGeometry` holding malloc
+garbage. ★ **And the width was wrong too** — `undefined4` clears four bytes of an eight-byte
+pointer. Fixing the stride alone still ships a dangling pointer, which is why the first attempt
+*moved* the crash instead of removing it.
+
+**(7) ⚠⚠ A GATE THAT COULD NOT EXPRESS THE ANSWER — the most interesting failure of the day.**
+`flo.accept_edits` bisects a position-ordered list, so it can only ever accept a subset that is
+contiguous in position. gcc common-subexpression-eliminates the two loads of
+`g[1].mRefCtAndID` in `McdAggregateDestroy`:
+
+```
+first only   byte-identical = False
+second only  byte-identical = False
+both         byte-identical = True
+```
+
+Four `g[1].prev` edits sit between them, so **every subset the bisect tried contained one
+without the other.** It declined all six, and the table pointer went on being read four bytes
+wide. The tool had the right answer and no way to say it. `accept_by_field` makes the atom a
+**field** rather than a position — sites naming the same field are exactly the ones gcc folds
+together. 63 → 65 re-spelled.
+
+**(8) Rule C, widened.** `MdtBcl3`'s solver holds an `MdtBody *` in `iVar15`, an `int` Ghidra
+also uses as a row index three statements earlier, so `fix_narrow_pointers` will not widen it
+and rule C's "destination is already pointer-width" test skipped it. `kd_iptr` **is** `int` at
+32-bit pointer width, so promoting the declaration is a no-op on every shipping target by
+construction. 2 → 7 sites.
+
+⚠ **Signedness survives the promotion.** `uint → kd_iptr` is a *sign change*, not a widening,
+and it cost `MdtBcl` its byte-identity on three declarations that had nothing else wrong with
+them — the same lesson as the access type in `fix_element_stride`, learned twice in one session.
+
+```
+i386 acceptance   145 object(s), 0 compile failure(s), 0 byte difference(s)
+-ffloat-store     all three scenes BIT-IDENTICAL
+wasm32            146/146 byte-identical at the product's own flags
+lp64_pipeline.sh  -> PASS   run-standalone 12/12   .gates 6/6
+DM-Rankin  4 bots            200 s, 0 signals
+ONS-Torlan 6 bots + vehicles 200 s, 0 signals
+```
+
+Evidence: `../proven.txt` `LP64-PLAYS`.
+
+---
+
+★★★ **PREVIOUS: 2026-08-31 (later) — FRAME (5) FIXED. A PASS THAT FIXED HALF A ROUND TRIP MADE
 THE OTHER HALF INVISIBLE.** `fix_narrow_loads` rules A and B fire on clang's
 `-Wint-to-pointer-cast`, so they need the loaded value to be cast to a **pointer**. Once
 `fix_narrow_pointers` has widened the destination local to `kd_iptr`, the assignment is

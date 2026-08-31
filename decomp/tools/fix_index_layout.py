@@ -782,6 +782,60 @@ def oracle_confirm(pairs, inc):
     return out, None
 
 
+def accept_by_field(fn, text0, edits, build, inc):
+    """`flo.accept_edits`, but the ATOM IS A FIELD rather than a single site.
+
+    ⚠ BINARY BISECTION CANNOT EXPRESS "THESE TWO MUST LAND TOGETHER", and that
+    cost the whole of `McdAggregateDestroy`. gcc common-subexpression-eliminates
+    the two loads of `g[1].mRefCtAndID`, so rewriting EITHER one alone changes
+    the object and rewriting BOTH reproduces it exactly:
+
+        first only   byte-identical = False
+        second only  byte-identical = False
+        both         byte-identical = True
+
+    `flo.accept_edits` halves a position-ordered list, so those two are split
+    apart by the four `g[1].prev` edits between them and every subset it tries
+    contains one without the other. It declined all six, and the table pointer
+    kept being read four bytes wide — the crash was in `McdAggregateDestroy`,
+    two passes and a rebuild away from the tool that gave up on it.
+
+    Sites that name the SAME concrete field are exactly the ones gcc folds
+    together, so that is the atom. The whole set is still tried first and is
+    almost always accepted; only a set that changes the object is broken up,
+    and then per field rather than per position.
+
+    ⚠ EVERY CANDIDATE IS BUILT FROM `text0`, never from the last accepted text.
+    The edits carry offsets into the ORIGINAL source, and applying one group
+    then measuring the next against the result silently shifts every position
+    after it."""
+    if not edits:
+        return text0, []
+
+    def build_text(chosen):
+        out = text0
+        for start, end, rep, _n in sorted(chosen, key=lambda e: -e[0]):
+            out = out[:start] + rep + out[end:]
+        return out
+
+    whole = build_text(edits)
+    if flo.compiles_identically(fn, whole, build, inc):
+        return whole, edits
+
+    groups = {}
+    for e in edits:
+        # the note carries `... -> field  i386 ...`; the field is the atom
+        m = re.search(r'-> (\S+)\s+i386', e[3])
+        groups.setdefault(m.group(1) if m else e[3], []).append(e)
+
+    acc = []
+    for key in sorted(groups):
+        cand = acc + groups[key]
+        if flo.compiles_identically(fn, build_text(cand), build, inc):
+            acc = cand
+    return build_text(acc), acc
+
+
 def main():
     srcdir, build = sys.argv[1], sys.argv[2]
     root = sys.argv[3] if len(sys.argv) > 3 else kd_paths.METOOLKIT_DIR
@@ -883,7 +937,7 @@ def main():
     for fn, edits in sorted(edits_by_file.items()):
         edits.sort(key=lambda e: -e[0])
         text0 = texts[fn]
-        text, ok = flo.accept_edits(fn, text0, edits, build, inc)
+        text, ok = accept_by_field(fn, text0, edits, build, inc)
         fixed += len(ok)
         keep = {id(e) for e in ok}
         for e in edits:

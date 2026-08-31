@@ -175,7 +175,7 @@ def fix_file(path, cf, rounds=6):
 NAMED_LOAD = re.compile(
     r'(?P<v>\b\w+)\s*=\s*\*\(\s*(?P<ty>int|uint|undefined4|MeU32|MeI32)\s*\*\)'
     r'\(\((?:kd_iptr|kd_uptr)\)\w+ \+ '
-    r'\(\(int\)\(\(char \*\)&\(\((?:struct )?(?P<T>\w+) \*\)0\)->(?P<F>[\w.]+)'
+    r'\(\(int\)\(\(char \*\)&\(\((?:struct )?(?P<T>\w+) \*\)0\)->(?P<F>[\w.\[\]]+)'
     r' - \(char \*\)0\)\)\)')
 WIDE_DECL = r'(?m)^\s*kd_[iu]ptr\s+%s\s*;'
 _FSZ = re.compile(r'char \(\*\)\[(\d+)\]')
@@ -205,13 +205,27 @@ def field_size(T, F, bits, root):
 
 
 def widen_named_field_loads(path, root):
-    """Rule C. Returns (widened, declined) — declined sites are reported."""
+    """Rule C. Returns (widened, declined) — declined sites are reported.
+
+    ★ THE DESTINATION IS WIDENED TOO WHEN IT IS STILL AN `int`. Ghidra reuses one
+    local for several unrelated things — in `MdtBcl3`'s solver `iVar15` is a row
+    index in one statement and an `MdtBody *` in the next — so
+    `fix_narrow_pointers` will not widen it, and rule C's "destination is already
+    pointer-width" test skips it. But `kd_iptr` IS `int` at 32-bit pointer width,
+    so promoting the DECLARATION is a no-op on every shipping target by
+    construction, and at LP64 it is right for both uses: the index values fit and
+    the pointer stops being truncated. It is still compiled and compared rather
+    than argued."""
     text = open(path, errors='ignore').read()
     out, done, dec = text, 0, []
+    promote = set()
     for m in NAMED_LOAD.finditer(text):
         v, ty, T, F = m.group('v'), m.group('ty'), m.group('T'), m.group('F')
         if not re.search(WIDE_DECL % re.escape(v), text):
-            continue                       # destination is not pointer-width
+            if re.search(r'(?m)^\s*(?:int|uint)\s+%s\s*;' % re.escape(v), text):
+                promote.add(v)             # widen the declaration as well
+            else:
+                continue                   # destination is not pointer-width
         a = field_size(T, F, '-m32', root)
         b = field_size(T, F, '-m64', root)
         if a is None or b is None:
@@ -227,6 +241,14 @@ def widen_named_field_loads(path, root):
         out = out.replace(old_txt, old_txt.replace('*(%s *)' % ty,
                                                    '*(%s *)' % new, 1))
         done += 1
+    # ⚠ SIGNEDNESS SURVIVES THE PROMOTION. `uint -> kd_iptr` is not a widening,
+    # it is a sign change, and it cost MdtBcl its byte-identity on three
+    # declarations that had nothing else wrong with them.
+    for v in sorted(promote):
+        out = re.sub(r'(?m)^(\s*)(int|uint)(\s+%s\s*;)' % re.escape(v),
+                     lambda mm: '%s%s%s' % (mm.group(1),
+                                            'kd_iptr' if mm.group(2) == 'int'
+                                            else 'kd_uptr', mm.group(3)), out)
     if out != text:
         open(path, 'w').write(out)
     return done, dec

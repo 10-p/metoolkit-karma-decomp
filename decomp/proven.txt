@@ -1,3 +1,54 @@
+# LP64-NARROW-LOAD-C  2026-08-31  THE EARLIER REPAIR HID THE REMAINING ONE.
+#                     Frame (5). `fix_narrow_loads` rules A and B both fire on
+#                     clang's -Wint-to-pointer-cast, so they need the loaded value
+#                     to be cast to a POINTER. Once `fix_narrow_pointers` has
+#                     widened the destination local to `kd_iptr`, the assignment is
+#                     integer-to-integer and CLANG SAYS NOTHING AT ALL:
+#
+#                         kd_iptr iVar8;                       /* already widened */
+#                         iVar8 = *(int *)((kd_iptr)pvVar6
+#                                 + KD_OFFSET(McdAggregate, elementTable));
+#
+#                     The address is right and the local is wide; the LOAD still
+#                     takes four bytes of an eight-byte pointer. A pass fixing half
+#                     the round trip made the other half INVISIBLE to the detector.
+#
+#                     RULE C IS MEASURED, NOT DIAGNOSED. It fires only when the
+#                     address is an offsetof naming a real field, the destination is
+#                     declared pointer-width, and sizeof(T::F) is 4 at i386 and 8 at
+#                     LP64 — the field is provably a pointer that grew. TWO sites
+#                     qualify, both McdAggregate::elementTable, both the crash. The
+#                     other 32 narrow loads into widened locals do not name a field,
+#                     so they are not measurable this way and are LEFT ALONE:
+#                     widening a load of a genuine `int` field would read four bytes
+#                     past it, so the measurement is the gate and not the shape.
+#
+#                     i386 145/145 byte-identical; three scenes BIT-IDENTICAL;
+#                     wasm32 146/146 at the product's flags; pipeline PASS;
+#                     run-standalone 12/12.
+#
+#                     ⚠ FRAME (6) IS OPEN, DIAGNOSED, AND ITS REPAIR IS DERIVABLE.
+#                     `McdGeometryIncrementReferenceCount` received
+#                     `g = 0x3f800000596203b0` — a SPLICED pointer: the low half is
+#                     a plausible address and the high half is 0x3f800000, which is
+#                     1.0f. A matrix diagonal is sitting in the top of a pointer.
+#
+#                         McdAggregateElement { MeMatrix4 mRelTM; McdGeometryID mGeometry; }
+#                             i386  sizeof 68 (0x44), mGeometry at 64 (0x40)
+#                             LP64  sizeof 72,        mGeometry at 64
+#
+#                     The OFFSET 0x40 is right at both widths; the STRIDE `i * 0x44`
+#                     is not. 21 occurrences of 0x44 in McdAggregate.c, all of them
+#                     this element stride.
+#
+#                     THE REPAIR IS DECLARED, NOT INFERRED: the oracle says
+#                     `McdAggregateElement *elementTable;`, so any stride applied to
+#                     an address rooted at KD_OFFSET(McdAggregate, elementTable) MUST
+#                     be sizeof(McdAggregateElement). `i * 0x44` becomes
+#                     `i * (int)sizeof(McdAggregateElement)`, which folds to 68 at
+#                     i386 and is byte-identical there by construction. That is
+#                     fix_baked_sizeof's class, not fix_narrow_loads'.
+#
 # LP64-INDEX-WIDTH  2026-08-31  AN INDEX CAN LAND ON THE RIGHT ADDRESS AND STILL
 #                     BE A DEFECT. Frames (3) and (4) of LP64-RUNS-THE-GAME, both
 #                     in `fix_index_layout`, both from the SAME hole: the `same`

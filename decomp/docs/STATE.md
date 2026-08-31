@@ -12,7 +12,56 @@ read before resuming; `../HANDOVER.md` is the depth behind it and `../proven.txt
 
 ---
 
-★★★ **NEWEST: 2026-08-31 — FRAMES (3) AND (4) ARE FIXED, AND THE LEVEL COMES UP.** Boot now
+★★★ **NEWEST: 2026-08-31 (later) — FRAME (5) FIXED. A PASS THAT FIXED HALF A ROUND TRIP MADE
+THE OTHER HALF INVISIBLE.** `fix_narrow_loads` rules A and B fire on clang's
+`-Wint-to-pointer-cast`, so they need the loaded value to be cast to a **pointer**. Once
+`fix_narrow_pointers` has widened the destination local to `kd_iptr`, the assignment is
+integer-to-integer and **clang says nothing at all**:
+
+```c
+kd_iptr iVar8;                                    /* already widened */
+iVar8 = *(int *)((kd_iptr)pvVar6 + KD_OFFSET(McdAggregate, elementTable));
+```
+
+The address is right and the local is wide; the **load** still takes four bytes of an eight-byte
+pointer. Rule C is therefore **measured, not diagnosed**: it fires only when the address is an
+offsetof naming a real field, the destination is declared pointer-width, and `sizeof(T::F)` is
+**4 at i386 and 8 at LP64**. Two sites qualify, both `McdAggregate::elementTable`, both the
+crash. The other 32 narrow loads into widened locals do not name a field and are left alone —
+widening a load of a genuine `int` field would read four bytes past it, so the measurement is
+the gate and not the shape.
+
+```
+i386 acceptance   145 object(s), 0 compile failure(s), 0 byte difference(s)
+-ffloat-store     all three scenes STILL BIT-IDENTICAL
+wasm32            146/146 byte-identical at the product's own flags
+lp64_pipeline.sh  -> PASS   run-standalone 12/12
+```
+
+⚠ **FRAME (6) IS OPEN, FULLY DIAGNOSED, AND ITS REPAIR IS DERIVABLE — it is the next thing to
+do.** `McdGeometryIncrementReferenceCount` received `g = 0x3f800000596203b0`: a **spliced**
+pointer whose low half is a plausible address and whose high half is `0x3f800000`, which is
+**1.0f**. A matrix diagonal is sitting in the top of a pointer.
+
+```
+McdAggregateElement { MeMatrix4 mRelTM; McdGeometryID mGeometry; }
+    i386  sizeof 68 (0x44)   mGeometry at 64 (0x40)
+    LP64  sizeof 72          mGeometry at 64
+```
+
+The **offset** `0x40` is right at both widths; the **stride** `i * 0x44` is not. There are 21
+occurrences of `0x44` in `McdAggregate.c`, all of them this element stride. The repair is
+declared rather than inferred — the oracle says `McdAggregateElement *elementTable;`, so any
+stride on an address rooted at `KD_OFFSET(McdAggregate, elementTable)` **must** be
+`sizeof(McdAggregateElement)`. `i * 0x44` → `i * (int)sizeof(McdAggregateElement)` folds to 68
+at i386 and is byte-identical there by construction. That is **`fix_baked_sizeof`'s class**, not
+`fix_narrow_loads`'.
+
+Evidence: `../proven.txt` `LP64-NARROW-LOAD-C`.
+
+---
+
+★★★ **PREVIOUS: 2026-08-31 — FRAMES (3) AND (4) ARE FIXED, AND THE LEVEL COMES UP.** Boot now
 reaches `Bringing Level NvidiaLogo.myLevel up for play` and the crash has moved into
 `McdModelUpdate` — physics **running**, not initialising. Both frames came from one hole in
 `fix_index_layout`: its `same` short-circuit compared only the **offset**.

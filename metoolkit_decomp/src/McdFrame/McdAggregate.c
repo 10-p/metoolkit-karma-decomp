@@ -295,13 +295,13 @@ void kd_McdAggregateUpdateAABB(McdGeometryInstanceID ins,MeMatrix4Ptr finalTM,Me
   if (0 < iVar10) {
     local_b4 = 0;
     do {
-      iVar8 = *(int *)((kd_iptr)pvVar6 + ((int)((char *)&((McdAggregate *)0)->elementTable - (char *)0)));
+      iVar8 = *(kd_iptr *)((kd_iptr)pvVar6 + ((int)((char *)&((McdAggregate *)0)->elementTable - (char *)0)));
       if (*(int *)(iVar8 + 0x40 + local_b4) != 0) {
         paMVar7 = p_Var11->mTM;
         if (paMVar7 == (MeReal (*) [4])0x0) {
           paMVar7 = elementTM;
           p_Var11->mTM = paMVar7;
-          iVar8 = *(int *)((kd_iptr)pvVar6 + ((int)((char *)&((McdAggregate *)0)->elementTable - (char *)0)));
+          iVar8 = *(kd_iptr *)((kd_iptr)pvVar6 + ((int)((char *)&((McdAggregate *)0)->elementTable - (char *)0)));
         }
                     
         paMVar5 = ins->mTM;

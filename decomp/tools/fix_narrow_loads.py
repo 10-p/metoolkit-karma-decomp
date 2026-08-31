@@ -50,6 +50,28 @@ and widening the access would read past it. Those are reported, not patched —
 they need the field itself widened, which is `kd_types.h`'s business and the
 amd64 oracle's evidence. `KD_FBITS(...)` sites are float bit-punning and are not
 pointers at all; they are counted separately so the remainder is honest.
+
+★ RULE C, AND THE DIAGNOSTIC IS STRUCTURALLY BLIND TO IT. Rules A and B both
+fire on `-Wint-to-pointer-cast`, so they need the loaded value to be cast to a
+POINTER. When `fix_narrow_pointers` has already widened the destination local to
+`kd_iptr`, the assignment is integer-to-integer and **clang says nothing at
+all** — the earlier repair hides the remaining one:
+
+    kd_iptr iVar8;                                     /* already widened */
+    iVar8 = *(int *)((kd_iptr)pvVar6 + KD_OFFSET(McdAggregate, elementTable));
+
+The address is right and the local is wide; the LOAD still takes four bytes of
+an eight-byte pointer. This is frame (5) of `LP64-RUNS-THE-GAME`:
+`McdAggregateUpdateAABB` walking the element table off a half-pointer.
+
+So rule C is MEASURED rather than diagnosed. It fires only when the address is
+spelled as an offsetof naming a real field, the destination is declared
+pointer-width, and `sizeof(T::F)` is **4 at i386 and 8 at LP64** — the field is
+provably a pointer that grew. Two sites in the corpus qualify; the other 32
+narrow loads into widened locals do not name a field, so they are not measurable
+this way and are left alone rather than guessed at. Widening a load of a genuine
+`int` field would read four bytes past it, which is why the measurement is the
+gate and not the shape.
 """
 import os
 import re
@@ -148,6 +170,68 @@ def fix_file(path, cf, rounds=6):
     return total, fld, fbits, other
 
 
+# RULE C. `V = *(NARROW *)((kd_iptr)X + KD_OFFSET(T, F));` where V is declared
+# pointer-width. The diagnostic cannot see this one — see RULE C in the header.
+NAMED_LOAD = re.compile(
+    r'(?P<v>\b\w+)\s*=\s*\*\(\s*(?P<ty>int|uint|undefined4|MeU32|MeI32)\s*\*\)'
+    r'\(\((?:kd_iptr|kd_uptr)\)\w+ \+ '
+    r'\(\(int\)\(\(char \*\)&\(\((?:struct )?(?P<T>\w+) \*\)0\)->(?P<F>[\w.]+)'
+    r' - \(char \*\)0\)\)\)')
+WIDE_DECL = r'(?m)^\s*kd_[iu]ptr\s+%s\s*;'
+_FSZ = re.compile(r'char \(\*\)\[(\d+)\]')
+_FCACHE = {}
+
+
+def field_size(T, F, bits, root):
+    """sizeof(T::F) under one data model, read out of the compiler's own type
+    printer. A field that cannot be measured returns None and the site declines;
+    nothing here invents a number."""
+    key = (T, F, bits)
+    if key in _FCACHE:
+        return _FCACHE[key]
+    inc = os.path.join(root, 'include')
+    os.makedirs('/tmp/kd_narrowload', exist_ok=True)
+    src = '/tmp/kd_narrowload/p.c'
+    head = ('#include "%s/kd_compat.h"\n#include "%s/kd_karma.h"\n'
+            '#include "%s/kd_types.h"\n' % ((kd_paths.MD_INC,) * 3))
+    open(src, 'w').write(head + 'char kd_probe[sizeof(((%s *)0)->%s)];\n'
+                                'int kd_force = &kd_probe;\n' % (T, F))
+    r = subprocess.run(['gcc', bits, '-DLINUX'] + kd_paths.includes(inc)
+                       + ['-I' + kd_paths.MD_INC, '-c', '-o', os.devnull, src],
+                       capture_output=True, text=True)
+    m = _FSZ.search(r.stderr)
+    _FCACHE[key] = int(m.group(1)) if m else None
+    return _FCACHE[key]
+
+
+def widen_named_field_loads(path, root):
+    """Rule C. Returns (widened, declined) — declined sites are reported."""
+    text = open(path, errors='ignore').read()
+    out, done, dec = text, 0, []
+    for m in NAMED_LOAD.finditer(text):
+        v, ty, T, F = m.group('v'), m.group('ty'), m.group('T'), m.group('F')
+        if not re.search(WIDE_DECL % re.escape(v), text):
+            continue                       # destination is not pointer-width
+        a = field_size(T, F, '-m32', root)
+        b = field_size(T, F, '-m64', root)
+        if a is None or b is None:
+            dec.append('%s::%s cannot be measured' % (T, F))
+            continue
+        if not (a == 4 and b == 8):
+            # ⚠ A GENUINE int FIELD. Widening this load would read four bytes
+            # PAST it. The measurement is the gate, not the shape.
+            dec.append('%s::%s is %d/%d, not a pointer that grew' % (T, F, a, b))
+            continue
+        new = WIDEN[ty]
+        old_txt = m.group(0)
+        out = out.replace(old_txt, old_txt.replace('*(%s *)' % ty,
+                                                   '*(%s *)' % new, 1))
+        done += 1
+    if out != text:
+        open(path, 'w').write(out)
+    return done, dec
+
+
 def main():
     srcdir, build = sys.argv[1], sys.argv[2]
     root = sys.argv[3] if len(sys.argv) > 3 else kd_paths.METOOLKIT_DIR
@@ -156,6 +240,7 @@ def main():
         return 2
     cf = cflags(root)
     tot = touched = fld = fbits = other = 0
+    named, named_dec = 0, []
     for fn in sorted(os.listdir(srcdir)):
         if not fn.endswith('.c'):
             continue
@@ -165,7 +250,15 @@ def main():
         n, a, b, c = fix_file(os.path.join(srcdir, fn), cf)
         tot += n; fld += a; fbits += b; other += c
         touched += 1 if n else 0
+        # ---- RULE C, after the diagnostic loop: the sites it cannot see
+        # because fix_narrow_pointers already made the destination an integer.
+        k, d = widen_named_field_loads(os.path.join(srcdir, fn), root)
+        named += k
+        named_dec += ['%-24s %s' % (fn, x) for x in d]
     print(f'  {tot} narrow pointer LOAD(s) widened in {touched} object(s)')
+    print(f'  {named} named-field LOAD(s) widened by measurement (rule C)')
+    for x in named_dec:
+        print(f'    declined: {x}')
     print(f'  declined: {fld} narrow struct field(s) — a LAYOUT question, see kd_types.h')
     print(f'            {fbits} KD_FBITS float bit-pun(s) — not pointers')
     print(f'            {other} unrecognised shape(s) — reported, not guessed')

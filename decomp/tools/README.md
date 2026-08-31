@@ -1339,7 +1339,18 @@ function, so each candidate is compiled and the first that reproduces the baseli
 ```bash
 python3 tools/fix_narrow_loads.py /tmp/kd_lp64/allobj /tmp/kd_build $MT
 #   -> 44 narrow pointer LOAD(s) widened in 9 object(s)
+#   -> 2 named-field LOAD(s) widened by measurement (rule C)
 ```
+
+★ **RULE C — THE EARLIER REPAIR HID THE REMAINING ONE** (2026-08-31). Rules A and B fire on
+clang's `-Wint-to-pointer-cast`, so they need the loaded value cast to a **pointer**. Once
+`fix_narrow_pointers` has widened the destination local to `kd_iptr`, the assignment is
+integer-to-integer and **clang says nothing at all** — the address is right, the local is wide,
+and the load still takes four bytes of an eight-byte pointer. So rule C is **measured, not
+diagnosed**: the address must be an offsetof naming a real field, the destination must be
+declared pointer-width, and `sizeof(T::F)` must be **4 at i386 and 8 at LP64**. Two sites
+qualify; the other 32 narrow loads into widened locals do not name a field and are left alone,
+because widening a load of a genuine `int` field would read four bytes past it.
 
 `fix_ptrwidth.py` widens the casts clang says narrow a pointer and its header predicted that what
 remained would be *"a genuinely integer-valued address (Ghidra's `(code *)0x10074` and the like)"*.

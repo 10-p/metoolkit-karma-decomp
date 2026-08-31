@@ -78,8 +78,13 @@ did not this morning, and that place is fully diagnosed. What follows was all me
 7. **`BUILD.md` DOCUMENTS `UT_NO_FAULT_HANDLER`** (item 7) — engine `BUILD.md`, with the `adb`
    recipe and the provenance note (the handler is Epic's, the switch is ours).
 
-8. **AS-Convoy is no longer reachable as a question.** It now dies in (1a) like the other five, so
-   the engine-side `Engine.HUD.GetFontSizeIndex` runaway loop is masked. Re-ask it after (1a).
+8. **AS-Convoy is not answerable from either side yet, and for two different reasons.** On native it
+   now dies in item 1 like the other five, so the engine-side `Engine.HUD.GetFontSizeIndex` runaway
+   loop is masked. On the **web** a `?map=` boot dies before it loads a level at all:
+   `targets/ut2004/file-manifest.json` (checked in 2026-08-28) promises 10705 bytes of
+   `System/ChaosUT2.ucl` and the asset store holds 9433 since a map-pack install on 2026-08-31 —
+   `FetchFS` `fstat`s the manifest figure and the read comes up short. That is a monorepo data
+   problem, recorded in ufront `docs/migration/STATE.md` (2.45); re-ask this after both.
 
 ---
 

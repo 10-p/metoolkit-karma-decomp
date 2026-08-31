@@ -86,8 +86,8 @@ MeBool kd_McdSphylConvexMeshIntersect(McdModelPair *p,McdIntersectResult *result
   pos[1] = cp[2] * pfVar2[6] + cp[0] * pfVar2[4] + cp[1] * pfVar2[5];
   pos[2] = cp[0] * pfVar2[8] + cp[1] * pfVar2[9] + cp[2] * pfVar2[10];
   lVar5 = (longdouble)
-          ConvexHullNSegment((McdConvexHull *)((kd_iptr)pvVar4 + 0x10),pos,axis,
-                             -*(float *)((kd_iptr)pvVar3 + 0x14),*(float *)((kd_iptr)pvVar3 + 0x14),cp,&s,
+          ConvexHullNSegment((McdConvexHull *)((kd_iptr)pvVar4 + ((int)((char *)&((McdConvexMesh *)0)->mHull - (char *)0))),pos,axis,
+                             -*(float *)((kd_iptr)pvVar3 + ((int)((char *)&((McdSphyl *)0)->mHalfHeight - (char *)0))),*(float *)((kd_iptr)pvVar3 + ((int)((char *)&((McdSphyl *)0)->mHalfHeight - (char *)0))),cp,&s,
                              &regionType);
   lVar6 = (longdouble)s;
   lVar7 = (lVar6 * (longdouble)axis[0] + (longdouble)pos[0]) - (longdouble)cp[0];
@@ -101,8 +101,8 @@ MeBool kd_McdSphylConvexMeshIntersect(McdModelPair *p,McdIntersectResult *result
   if (lVar10 <= lVar9 * lVar9) {
     lVar10 = (longdouble)
              SegmentConvexHullSep
-                       (pos,axis,-*(float *)((kd_iptr)pvVar3 + 0x14),*(float *)((kd_iptr)pvVar3 + 0x14),
-                        (McdConvexHull *)((kd_iptr)pvVar4 + 0x10),n,&s,&regionType);
+                       (pos,axis,-*(float *)((kd_iptr)pvVar3 + ((int)((char *)&((McdSphyl *)0)->mHalfHeight - (char *)0))),*(float *)((kd_iptr)pvVar3 + ((int)((char *)&((McdSphyl *)0)->mHalfHeight - (char *)0))),
+                        (McdConvexHull *)((kd_iptr)pvVar4 + ((int)((char *)&((McdConvexMesh *)0)->mHull - (char *)0))),n,&s,&regionType);
   }
   else {
                     
@@ -112,8 +112,8 @@ MeBool kd_McdSphylConvexMeshIntersect(McdModelPair *p,McdIntersectResult *result
     n[1] = (MeReal)(lVar8 * lVar9);
     n[2] = (MeReal)(lVar6 * lVar9);
   }
-  lVar6 = (longdouble)*(float *)((kd_iptr)pvVar4 + 0x2c);
-  lVar10 = lVar10 - (lVar6 + (longdouble)*(float *)((kd_iptr)pvVar3 + 0x10));
+  lVar6 = (longdouble)*(float *)((kd_iptr)pvVar4 + ((int)((char *)&((McdConvexMesh *)0)->mFatness - (char *)0)));
+  lVar10 = lVar10 - (lVar6 + (longdouble)*(float *)((kd_iptr)pvVar3 + ((int)((char *)&((McdSphyl *)0)->mRadius - (char *)0))));
   if (lVar10 < (longdouble)(fVar12 + fVar11)) {
     cp[0] = (MeReal)(lVar6 * (longdouble)n[0] + (longdouble)cp[0]);
     cp[2] = (MeReal)(lVar6 * (longdouble)n[2] + (longdouble)cp[2]);

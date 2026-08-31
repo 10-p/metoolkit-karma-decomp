@@ -720,7 +720,7 @@ static MeReal ConstraintCalcImportance(MdtBaseConstraint *con,MdtPartitionParams
   }
   iVar6 = *(int *)((kd_iptr)pvVar4 + ((int)((char *)&((struct MdtContactGroup *)0)->count - (char *)0)));
   if (iVar6 != 0) {
-    if (*(int *)((kd_iptr)pvVar4 + ((int)((char *)&((struct MdtContactGroup *)0)->head.mdtbody[1] - (char *)0))) == 0) {
+    if (*(kd_iptr *)((kd_iptr)pvVar4 + ((int)((char *)&((struct MdtContactGroup *)0)->head.mdtbody[1] - (char *)0))) == 0) {
       fVar1 = (params->lodParams).toWorldBonus;
     }
     fVar1 = (float)*(int *)((kd_iptr)pvVar4 + ((int)((char *)&((struct MdtContactGroup *)0)->head.maxRows - (char *)0))) * (params->lodParams).rowCountBias +

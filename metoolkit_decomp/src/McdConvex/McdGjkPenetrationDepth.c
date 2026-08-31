@@ -273,7 +273,7 @@ void kd_McdGjkFaceQueueInit(McdGjkFaceQueue *q,McdGjkSimplex *s)
   q->nump = iVar4 + 1;
   i = 0;
   do {
-    kd_mask = *(int *)((*(kd_iptr *)((char *)&McdGjkBinarySubset + 0x3c)) + 4 + i * 4);
+    kd_mask = *(int *)((*(kd_iptr *)((char *)&McdGjkBinarySubset[15])) + 4 + i * 4);
     iVar4 = McdGjkComputeVector(v,kd_mask,0,s);
     if (iVar4 == 0) {
       if ((kd_mask & 1) != 0) {
@@ -501,7 +501,7 @@ int kd_McdGjkPenetrationDepth(McdCache *c,McdGjkSimplex *s)
       if (((int)MVar5 < 10) && (iVar4 == 0)) {
         i = 0;
         do {
-          MVar6 = *(MeReal *)((*(kd_iptr *)((char *)&McdGjkBinarySubset + 0x3c)) + 4 + i * 4);
+          MVar6 = *(MeReal *)((*(kd_iptr *)((char *)&McdGjkBinarySubset[15])) + 4 + i * 4);
           if ((((uint)MVar6 & s->next_bit) != 0) && ((uVar1 == 0 || ((uVar1 & (uint)MVar6) != 0))))
           {
             iVar4 = McdGjkComputeVector(v,(int)MVar6,0,s);

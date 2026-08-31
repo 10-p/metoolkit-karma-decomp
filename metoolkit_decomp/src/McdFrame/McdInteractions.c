@@ -151,7 +151,7 @@ MeBool kd_McdIntersect(McdModelPair *p,McdIntersectResult *result)
   iVar7 = (int)sVar3;
   pvVar4 = McdFrameworkGetInteractions(frame,type1,iVar7);
   pvVar5 = pvVar4;
-  if ((*(int *)((kd_iptr)pvVar4 + ((int)((char *)&((struct _McdInteractions *)0)->intersectFn - (char *)0))) == 0) &&
+  if ((*(kd_iptr *)((kd_iptr)pvVar4 + ((int)((char *)&((struct _McdInteractions *)0)->intersectFn - (char *)0))) == 0) &&
      (pvVar5 = (void *)McdFrameworkGetInteractionsWarned(frame,type1,iVar7), pvVar5 == (void *)0x0))
   {
     McdFrameworkGetTypeName(frame,iVar7);
@@ -248,7 +248,7 @@ MeBool kd_McdSafeTime(McdModelPair *p,MeReal maxTime,McdSafeTimeResult *result)
   else {
     (**(int (**)(McdModelPair *, MeReal, McdSafeTimeResult *))((kd_iptr)pvVar2 + ((int)((char *)&((struct _McdInteractions *)0)->safetimeFn - (char *)0))))(p,maxTime,result);
   }
-  return (uint)(*(int *)((kd_iptr)pvVar2 + ((int)((char *)&((struct _McdInteractions *)0)->safetimeFn - (char *)0))) != 0);
+  return (uint)(*(kd_iptr *)((kd_iptr)pvVar2 + ((int)((char *)&((struct _McdInteractions *)0)->safetimeFn - (char *)0))) != 0);
 }
 
 /* ---- McdLineSegIntersect (exported as kd_McdLineSegIntersect, asm label "McdLineSegIntersect") ---- */

@@ -564,6 +564,30 @@ it is the read `proven.txt` LP64-ADDRESS-DEPENDENT measured and could not name.
 `model2` an `McdPlane`, with nothing inferred. `fix_literal_offsets.py` and `fix_index_layout.py`
 both consume this. A function registered for two different pairs is dropped, not arbitrated.
 
+⚠⚠ **A SECOND ACCESSOR ON THE SAME TYPE IS NOT A CONFLICT, AND TREATING IT AS ONE COST THE WHOLE
+CONVEX-MESH FAMILY** (2026-08-31). `McdConvexMesh.c` exports both `McdConvexMeshGetTypeId` and
+`McdConvexMeshMeshGetTypeId`, and both return 7. Stripping `GetTypeId` gives the tags
+`McdConvexMesh` and `McdConvexMeshMesh`; the "claimed by two tags is evidence about neither" rule
+read that as a conflict, and **id 7 dropped out of the table entirely** — so
+`McdSphylConvexMeshIntersect` and its seven siblings were never typed, and `fix_literal_offsets`
+left every geometry offset in `IxConvexPrimitives.c` at its i386 value:
+
+```c
+ConvexHullNSegment((McdConvexHull *)((kd_iptr)pvVar4 + 0x10), pos, axis, ...)
+```
+
+`McdConvexMesh::mHull` is at **16 here and 32 there**, so the hull pointer was sixteen bytes short
+and `ConvexHullVoronoiRegion` faulted on the face table. Measured on the LP64 vehicle at frame 27
+of a `ktrace` run. ★ **The tie-break is the TYPE DATABASE, not a name rule**: a tag that names a
+struct the oracle declares is a type, one that does not is an accessor whose name happens to end
+that way. `McdConvexMesh` has a body; `McdConvexMeshMesh` does not. One survivor types the id;
+none or two leaves the conflict standing. 26 → 28 functions typed.
+
+⚠ **AND A LATENT CRASH CAME WITH IT.** `out[fn] = None` is the dropped marker, and a THIRD
+registration of the same function then indexed `None[0]`. Nothing had ever been registered three
+times until the ConvexMesh family started being typed — `McdNullIntersect` is registered against
+every type there is.
+
 ### `assoc_scan.py` — where the association defect can hide
 
 Ghidra prints a right-leaning float `+` chain flat, C parses it left-leaning, and float addition is
@@ -637,9 +661,11 @@ python3 tools/fix_align_masks.py     /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/fix_frame_slots.py     /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/fix_pool_reserve.py    /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/fix_narrow_loads.py    /tmp/kd_lp64/allobj /tmp/kd_build $MT
+python3 tools/fix_global_array_index.py /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/fix_list_walk.py       /tmp/kd_lp64/allobj /tmp/kd_build $MT
-python3 tools/fix_element_stride.py  /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/fix_word_indexed_struct.py /tmp/kd_lp64/allobj /tmp/kd_build $MT
+python3 tools/fix_baked_sizeof.py    /tmp/kd_lp64/allobj /tmp/kd_build $MT --field-allocas-only
+python3 tools/fix_element_stride.py  /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/fix_block_copy.py      /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/check_frame_bounds.py  /tmp/kd_lp64/allobj /tmp/kd_build   # must read 0
 KD_OUT=/tmp/kd_lp64 ./test/standalone/lp64_run.sh
@@ -789,6 +815,85 @@ because MSVC strength-reduces a runtime multiply — `n * 48` comes out as `lea 
 > = 32, right at i386, while the amd64 build passes `0x30`. Same for `McdNull`, `McdConvexMesh`,
 > and `McdCylinder` (whose `McdCylinderID` is 16 and does not even divide 28). The two-build pin
 > names the concrete type and all seven geometry types now allocate their own `sizeof`.
+
+★ **A FIFTH SPELLING — `qsort`'s ELEMENT SIZE, AND IT IS THE ARM64 RAGDOLL CRASH** (2026-08-31).
+
+```c
+qsort(partArray, asset->partCount, 4, _MeFAssetPartSortFunc);   MeFAsset.c:920
+```
+
+`partArray` is `MeFAssetPart **` — an array of POINTERS — so `4` is `sizeof(*partArray)` on i386
+and eight at LP64. qsort walks in four-byte steps over eight-byte elements, so every "element" the
+comparator is handed after the first is the top half of one pointer welded to the bottom half of
+the next. Nothing truncates and no diagnostic fires; the comparator just dereferences a spliced
+address. Measured on a OnePlus 6 loading a ragdoll:
+
+```
+signal 11 (SIGSEGV), SEGV_MAPERR, fault addr 0x6390f87800000073
+#00 <the comparator>  #01 local_qsort+1012  #02 MeFAssetGetPartsSortedByName
+#04 KInitSkeletonKarma  #05 KInitActorKarma  #06 AActor::setPhysics
+```
+
+`libUT2004.so` sits around `0x73_00000000` there, so an element reads `0x00000073_6390f878` and
+the fault address is those two words exchanged. Four sites in `MeFAsset.c` — parts, geometries,
+models and joints — all on the ragdoll-creation path.
+
+⚠ **THE TYPE NEEDS NO LOOKUP AND MUST NOT HAVE ONE.** `sizeof(*partArray)` names the element
+through the array itself: no struct to resolve, no typedef to guess, and the same expression at
+every pointer width. The first argument therefore has to be a plain identifier; `MdtLOD.c`'s
+`qsort(*(void **)(&(*kd_argslot_ffffffc4)), ...)` is not one and is declined and reported rather
+than rewritten through a cast whose pointee is `void`.
+
+⚠⚠ **"ONLY REWRITE WHAT MOVES" NEEDED ITS OWN MEASUREMENT, AND THE FIRST ONE WAS BROKEN BY THIS
+PROJECT'S OWN `STT_FILE` TRAP.** With no type to compare, `moves_at_lp64` compiles the file at
+`-m64` before and after; written as `a_<fn>` and `b_<fn>` the two objects differ **on the source
+name alone**, so it returned True for everything and the test silently stopped testing. It passed
+`McdPolygonSort`, which sorts `MeVector3` — twelve bytes at every pointer width and already
+correct. Two directories, one name; that site is now correctly left alone.
+
+★ **AND `MePoolxInit` IS THE SAME FACT ONE ARGUMENT ALONG**, so it goes through the same code.
+
+```c
+MePoolxInit(&s->nodepool, nodemem, 0x18, maxnode);          MeSet.c
+```
+
+`MePoolxInit(MePoolx *p, void *memory, int recsize, int numrec)` is a **direct call with a
+different argument order** from `MePoolAPI.init`, so neither `POOL_INIT` nor `ALLOC` matches it.
+`0x18` is 24 is `sizeof(MeDictNode)` at i386 and **48** at LP64, so the pool hands out node
+addresses 24 bytes apart over 48-byte nodes and every node overlaps the one before it. Reached from
+`McdConvexMeshPlaneCut` ← `McdGeometryInstanceGetSlice` — a convex mesh being sliced, i.e. a
+**vehicle** — and measured on a OnePlus 6 as `SEGV_ACCERR` inside `MeSetAdd+68` two minutes into an
+Onslaught match, and as `MeDictInsert` on ONS-Torlan at x86-64.
+
+⚠ **Its sibling call is CORRECT and must be left alone.** `McdGjkPenetrationDepth` passes `0x2c`,
+and `McdGjkFace` is 44 bytes at **both** widths — all ints and floats. Two calls in the corpus, one
+moves and one does not, which is exactly what the `-m64` measurement is for.
+
+★ **A SIXTH — THE `alloca` WHOSE TYPE IS ON THE FIELD IT IS STORED INTO** (`--field-allocas-only`).
+
+```c
+(*(McdGeometryID *)((char *)pMVar9 + KD_OFFSET(McdTriangleList, list)))
+    = (McdGeometryID)(kd_alloca_iVar3 = (char *)alloca((size_t)(n) * 0x18 + 0));
+```
+
+`ALLOCA` cannot see this — it wants the statement to open with a variable or a cast, and this one
+opens with a dereferenced offsetof. `0x18` is 24 is `sizeof(McdUserTriangle)` at i386 and **48** at
+LP64, so the triangle array is half the size the generator is about to fill. The type is
+**declared**: `McdUserTriangle *list;` in the oracle — the assignment target names the type exactly
+as it does for `MeMemoryAPI.create`, only spelled as an offsetof — and the literal must equal that
+type's i386 size or the site declines.
+
+⚠ **IT NEEDS A SECOND INVOCATION, LATE.** In the raw recovery that statement reads
+`pMVar9[3].prev = ...`; the field has no NAME until `fix_literal_offsets` and `fix_index_layout`
+have run, which is long after this pass. `--field-allocas-only` switches the other five rules off
+so nothing is re-litigated over text five passes have since rewritten.
+
+⚠ **WHY NOT LEAVE IT TO `fix_element_stride`.** That pass repairs three of the four triangle-list
+allocas and cannot repair the fourth, for a good reason: its anchor is gated on
+`fix_word_indexed_struct` having already typed an access in the same file as `((E *)v)->`, and
+broadening that gate is measured-unsafe (`proven.txt` LP64-ANDROID-ARM64). `IxSphylPrimitives`
+walks its triangles through BYTE cursors, so no such access exists and the gate correctly refuses.
+This rule needs no gate of that kind because it does not infer the type at all.
 
 ### `fix_strides.py` — a table-zeroing loop counting in 4-byte words
 
@@ -1021,6 +1126,25 @@ and a later one routinely answers what an earlier one could not — `pvVar7` is 
 callee-return rule and then typed by the registration rule. Printed as written, the report claimed
 a decline on a site repaired in the same run. Declines are keyed by the variable they are about
 and emitted at the end, only if it is still untyped.
+
+⚠⚠ **AND THE CALLEE-RETURN RULE USED TO READ THE CALLING CONVENTION AS THE RETURN TYPE**
+(2026-08-31). metoolkit's headers put a long return type on its OWN LINE:
+
+```c
+MEPUBLIC
+McdGeometryInstanceID
+                  MEAPI McdModelGetGeometryInstance(McdModelID cm);
+```
+
+The one-line pattern matched the SECOND line and recorded the type as `MEAPI`, which resolves to
+no struct — so the function read as "returns something untypeable" rather than as unmatched, and
+**nothing said so**. Eight accessors were affected and one of them is the arm64 ragdoll crash:
+`IxAggregateLineSegment` keeps its base as `pvVar7 = McdModelGetGeometryInstance(model)` and then
+reads `+ 0x30`, which is `McdGeometryInstance::child` at i386 and **72** at LP64 — so the child
+instance came back NULL and the struct copy two lines later faulted on address 0. Its sibling
+`+ 4` is `mTM`, 4 here and 8 there. Confirmed against MathEngine's own amd64 build, which reads
+`mov 0x48(%rdi),%rbp` and `mov 0x8(%rcx),%rdx` at those two sites. The type may now sit on the line
+above, provided `MEAPI` opens the next one.
 
 ### `fix_derived_fields.py` — a derived struct's field addressed as an index past its base
 
@@ -1390,6 +1514,41 @@ and `*(kd_iptr *)p` is exactly the spelling `fix_narrow_pointers` and `fix_align
 A narrow struct FIELD is declined rather than patched — that is a layout question, not a load-width
 one, and widening the access would read past the field.
 
+★ **RULE E — THE SAME LOAD WITH NO DESTINATION AT ALL** (2026-08-31). Rule C requires the value to
+land in a local declared pointer-width, and that was only ever a PROXY: the justification is the
+measurement — the address names a real field whose size is 4 at i386 and 8 at LP64 — and a field
+that grew is a truncated load wherever it appears. An INLINE one has no destination to inspect:
+
+```c
+*(kd_iptr *)(*(int *)((kd_iptr)pvVar6 + KD_OFFSET(McdAggregate, elementTable))
+             + KD_OFFSET(McdAggregateElement, mGeometry) + local_10c)
+```
+
+**This is the arm64 ragdoll crash after the `qsort` one, and the disassembly says it exactly.**
+`IxAggregateLineSegment+304` on a OnePlus 6:
+
+```
+a0ab30: ldr w8, [x8, #0x20]     <- elementTable, at its CORRECT LP64 offset 32
+a0ab34: add w9, w8, #0x40       <-   ...+ offsetof(mGeometry)
+a0ab3c: ldr x8, [x8, w9, sxtw]  <- FAULT, fault addr 0xffffffffd3b89558
+```
+
+The offset is right — `fix_literal_offsets` fixed that — and the WIDTH is four bytes of an
+eight-byte pointer, sign-extended by `sxtw` into the address the tombstone reports. Reached from
+`KInitSkeletonKarma` → `USkeletalMesh::LineCheck`, so it is on the ragdoll-creation path and
+nothing offline runs it. Ten sites; `IxSphylPrimitives::McdSphyl::mRadius` is 4/4 and declines.
+
+⚠⚠ **AN ASSIGNMENT TARGET IS NOT A LOAD, AND WIDENING ONE ALONE CORRUPTS.** The first version of
+rule E matched both sides of `=` and turned
+`*(undefined4 *)(c + KD_OFFSET(MdtContact, head.mdtbody[1])) = uVar1;` into an EIGHT-byte store of
+a four-byte `uVar1`, zeroing the high half of a pointer that had been valid. **i386 stayed 145/145
+and the three scenes stayed bit-identical**; the LP64 harness went red with an AddressSanitizer
+error in `MdtBodyGetCenterOfMassPosition` and two trajectories that stopped at row 52 and row 0.
+★ The LP64 harness is the only gate that sees this — the third time this project has been told so.
+A store is now widened only when its SOURCE is a load this rule is widening too (that pair is a
+whole-pointer copy and is the complete repair); a store whose source is a narrow local is a
+different defect and is declined and reported.
+
 ### `fix_list_walk.py` — a linked list walked through a four-byte cursor
 
 ```bash
@@ -1473,6 +1632,90 @@ the preprocessor deletes the new branch on every 4-byte-pointer target, so the s
 object is byte-identical by construction and **so is wasm32**, where `__SIZEOF_POINTER__` is
 also 4. Verified at **146/146 byte-identical**, not argued.
 
+### `fix_global_array_index.py` — a GLOBAL array of pointers indexed by a baked byte offset
+
+```bash
+python3 tools/fix_global_array_index.py /tmp/kd_lp64/allobj /tmp/kd_build $MT
+#   -> fix_global_array_index: 3 occurrence(s) repaired, 0 declined, 6 out of scope
+```
+
+Ghidra renders `TABLE[k]` on a file-scope array as byte arithmetic against the symbol, frozen at
+the i386 pointer size:
+
+```c
+kd_mask = *(int *)((*(kd_iptr *)((char *)&McdGjkBinarySubset + 0x3c)) + 4 + i * 4);
+```
+
+`extern const int *McdGjkBinarySubset[16]` is an array of **pointers**. `0x3c` is 60 is element 15
+— the entry for the full four-point simplex, the only one this code wants. At LP64 the elements
+are eight bytes, so byte 60 is not an element at all: an eight-byte load there returns
+`(element[8] & 0xffffffff) << 32 | (element[7] >> 32)`, the low half of one pointer spliced onto
+the high half of another. Both halves are real, so nothing is truncated and no diagnostic fires.
+
+★ **THIS IS THE ARM64 ONSLAUGHT CRASH AND THE FAULT ADDRESS SPELLS IT OUT.** The owner played an
+ONS match on a OnePlus 6; the vehicles landed and then
+
+```
+Fatal signal 11 (SIGSEGV), SEGV_MAPERR, fault addr 0x40546a00000075
+#00 McdGjkFaceQueueInit  #01 McdGjkPenetrationDepth  #02 McdGjkTest ... #05 KIntersect
+```
+
+`libUT2004.so` maps around `0x75_00000000` there, so a table entry reads `0x00000075_0040546a`
+— and the faulting address is those two words the wrong way round.
+
+★★ **CONFIRMED AGAINST MATHENGINE'S OWN 64-BIT BUILD**, not inferred.
+`metoolkit/lib.rel/win_amd64_single/McdConvex.lib` reads `mov rax, QWORD PTR [rip+0x78]` at
+**both** references — `0x78` is 120 is `15 * 8` against our `0x3c` = `15 * 4`, in
+`McdGjkFaceQueueInit` and in `McdGjkPenetrationDepth`, which are exactly the two sites this
+repairs. Two for two, read off a binary.
+
+The repair is the element, not the byte: `(char *)&NAME + K` → `(char *)&NAME[K / 4]`, a no-op at
+i386 and at wasm32 by construction and `K/4 * 8` at LP64. Both gates are run per site (gcc `-m32`
+byte-identity **and** an emcc self-comparison), because gcc alone does not certify the web.
+
+⚠ **THE ARRAY TEST IS NOT OPTIONAL, AND `MeProfile_linux.c` IS WHY.** It carries six sites of the
+same shape — `(char *)&frameTime + 0x4` through `+ 0x14`, and `(char *)&clockSpeed + 0x4` — and
+every one is CORRECT: `frameTime` is a struct of six `MeI32`s and `clockSpeed` is an `MeI64` whose
+`+ 4` is its own high word. A pass keying on the shape rather than on the declaration would have
+"repaired" all six. They are reported as out of scope.
+
+⚠ **THE SECOND SITE IS A VTABLE AND `fix_vtable_offsets` CANNOT SEE IT.** `CxSmallSort.c` writes
+its address point as `#define PTR__CxSmallSort_00011f20 (*(void **)((char *)&kd_ZTV11CxSmallSort
++ 0x8))`. An Itanium vtable's address point is `2 * sizeof(void *)` — 8 here, 16 there — and that
+pass knows the arithmetic; its *discriminator* is a local into which the corpus stores an address
+point, and this one is a macro over the vtable symbol. At LP64 the vptr ended up at `&vtable[1]`,
+the typeinfo pointer, and `CxSmallSort.c:287` calls through it. Latent on x86-64 only because that
+destructor path is not taken.
+
+### `ptrwidth_classify.py` — which of the aarch64 truncation warnings are DEFECTS
+
+```bash
+python3 tools/ptrwidth_classify.py /tmp/kd_lp64/allobj /tmp/kd_build $MT
+#   -> aarch64 truncation diagnostics: 94 across 28 object(s)
+#        fbits-to-4byte  10   medict-key 15   int-return 11   count-to-id 3
+#        UNEXPLAINED     55   <- the ones that are open
+```
+
+`ptrwidth_check.sh` **counts**. It cannot say which of its warnings is a defect, and the count has
+been quoted as if every one were — "98 truncations across 28 objects" reads as ninety-eight bugs.
+It is not, and without this nobody can tell whether a drop from 98 to 94 removed four defects or
+four false alarms. This sorts every site into a NAMED class with a rule behind it and puts
+everything else in `UNEXPLAINED`, which is the number that matters.
+
+| class | why it is benign |
+|---|---|
+| `fbits-to-4byte` | `*(MeU32 *)(...) = (McdGeometryID)KD_FBITS(x)` — a float's four bytes into a four-byte slot. The pointer typedef is a Ghidra artefact; the DESTINATION is `MeU32` at every width |
+| `medict-key` | `MeDict`'s own API takes its key as `void *` (`MeDict.h`) and the engine stores an `MeI32`. At LP64 that WIDENS, and insert and compare use the identical conversion |
+| `int-return` | Ghidra kept a call's return register in a pointer-typed local. The callee returns an int and nothing dereferences it |
+| `count-to-id` | a count through an ID typedef into an `int` field — the same artefact with a different source |
+
+⚠ **`KD_FBITS` ALONE IS NOT A CLASS**, and assuming it was is what this exists to stop.
+`(MStack_24c.next)->prev = (McdGeometryID)KD_FBITS(...)` in `IxBoxTriList` uses the same macro and
+is a REAL defect: `MStack_24c` is a fabricated `McdGeometry` whose `next` holds a `MeVector3 *`, so
+`->prev` is `normal[1]` at i386 and byte **16** — off the end of a three-float vector — at LP64,
+written eight bytes wide. The macro says only that a float's bits are going somewhere; where they
+go is the whole question.
+
 ### `fix_element_stride.py` — a table's ELEMENT SIZE frozen at the i386 value
 
 ```bash
@@ -1552,6 +1795,27 @@ pointer stores and the read-back — which are the three the crash is about.
 its member regex does not parse a comma-separated declarator, and `McdCache` ends
 `McdGeometryInstanceID ins1, ins2;`. The type database has them but without array expansion. The
 union resolves it; the self-check is what proves the union works.
+
+⚠⚠ **THE MEMBER SPELLING IS NOT ALWAYS AVAILABLE, AND `IxBoxTriList` IS WHY** (2026-08-31).
+`((McdUserTriangle *)p)->vertices[1]` is byte-identical under gcc at `-m32` and **not** under
+emcc, so the whole variable declined and four truncated triangle reads stayed in the shipped
+source. Bisected site by site, the three that break it are exactly the three where the rewrite
+turns an INTEGER load into a POINTER load: `p[1]` yields `undefined4` and is converted to
+`float *`, while `->vertices[1]` yields `MeVector3 *` directly. Same address, same width, same
+result — and clang tees one extra local, three bytes of wasm, on a statement four lines away.
+
+★ **SO KEEP THE VALUE AN INTEGER OF POINTER WIDTH.** `((kd_uptr *)p)[1]` is `unsigned int` at
+i386 and wasm32 — exactly what `undefined4` was — so the conversion that follows is the same
+int-to-pointer conversion it always was and nothing downstream moves. Measured: all four sites
+byte-identical under BOTH compilers, where every member spelling tried (`->vertices[1]`,
+`((MeVector3 **)p)[1]`, `*(MeVector3 **)&...`, `(kd_uptr)...->vertices[1]`) failed under emcc.
+
+The pass tries the member spelling first and falls back to this one, so seventeen sites that do
+not need the opaque form do not get it, and the log says which was used (`[member]` /
+`[word-index]`). **The fallback's guard is three measurements, not a shape**: offset `4k` at i386,
+offset `8k` at LP64, and `sizeof` 4 here and 8 there — otherwise `[k]` in pointer units addresses
+something else. `McdUserTriangle::flags` is an `MeU32`, fails the width test, and keeps the member
+spelling, which emcc accepts.
 
 ### `fix_align_masks.py` — an alignment mask frozen at 32 bits
 

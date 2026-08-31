@@ -38,7 +38,7 @@ static int MeSetDefaultCompare(void *item1,void *item2);
 void kd_MeSetInit(MeSet *s,MeDictNode *nodemem,int maxnode,MeDictCompareFn cmp)
 
 {
-  MePoolxInit(&s->nodepool,nodemem,0x18,maxnode);
+  MePoolxInit(&s->nodepool,nodemem,sizeof(*(nodemem)),maxnode);
   if (cmp == (MeDictCompareFn)0x0) {
     cmp = MeSetDefaultCompare;
   }

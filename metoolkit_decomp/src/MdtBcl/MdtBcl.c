@@ -961,7 +961,7 @@ void kd_MdtBclAddContactGroup
       constraint_00 = *(void **)((kd_iptr)constraint_00 + ((int)((char *)&((struct MdtContact *)0)->nextContact - (char *)0)))) {
     uVar1 = *(undefined4 *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContactGroup *)0)->head.sortKey - (char *)0)));
     *(undefined4 *)((kd_iptr)constraint_00 + ((int)((char *)&((struct MdtContact *)0)->head.bodyindex[0] - (char *)0))) = *(undefined4 *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContactGroup *)0)->head.bodyindex[0] - (char *)0)));
-    *(undefined4 *)((kd_iptr)constraint_00 + ((int)((char *)&((struct MdtContact *)0)->head.mdtbody[0] - (char *)0))) = *(undefined4 *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContactGroup *)0)->head.mdtbody[0] - (char *)0)));
+    *(kd_uptr *)((kd_iptr)constraint_00 + ((int)((char *)&((struct MdtContact *)0)->head.mdtbody[0] - (char *)0))) = *(kd_uptr *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContactGroup *)0)->head.mdtbody[0] - (char *)0)));
     *(undefined4 *)((kd_iptr)constraint_00 + ((int)((char *)&((struct MdtContact *)0)->head.sortKey - (char *)0))) = uVar1;
     uVar1 = *(kd_uptr *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContactGroup *)0)->head.mdtbody[1] - (char *)0)));
     *(undefined4 *)((kd_iptr)constraint_00 + ((int)((char *)&((struct MdtContact *)0)->head.bodyindex[1] - (char *)0))) = *(undefined4 *)((kd_iptr)constraint + ((int)((char *)&((struct MdtContactGroup *)0)->head.bodyindex[1] - (char *)0)));

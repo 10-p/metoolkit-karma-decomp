@@ -110,6 +110,16 @@ Truncated: `MATCH 15/15`.
   `IsPaused()`, so a match that pauses itself stops the trace dead while the HUD — which ticks on
   the render path, outside that guard — keeps logging. **HUD output is not evidence the level is
   running.**
+- ⚠⚠ `ktrace_diff.py` **refuses to give a verdict when one trace is under 90% of the other**
+  (2026-08-31). `first` is computed over the frames the two runs SHARE, so a run that CRASHED after
+  twelve frames of two hundred and twenty-three compared twelve and read back
+  *"The two builds are behaviourally IDENTICAL on this map at this tolerance."* That is exactly
+  what happened the first time this was pointed at the LP64 vehicle: it died in
+  `IxAggregateLineSegment` at frame 12 and the tool called the two builds identical. The frame
+  counts were printed at the top of the report and **the verdict did not consult them.** It now
+  says NOT COMPARABLE, names which side stopped early, and prints what percentage of the run the
+  rows above actually cover. ★ Same family as `substitute_test.sh`'s "substituted and ran cleanly"
+  — a summary line that is true of a measurement nobody made.
 
 `packages/e2e/tools/ktrace-probe.cjs` in the monorepo is the wasm side, driving the launcher FORM
 because `?map=` deliberately refuses arbitrary engine switches. Two things cost a run each there:

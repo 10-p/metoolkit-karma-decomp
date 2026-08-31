@@ -113,7 +113,7 @@ int kd_McdSphereTriangleListIntersect(McdModelPair *p,McdIntersectResult *result
   pMVar17 = trilistgeom;
   eps = fVar26 + eps;
   iVar15 = -((int)(*(MeU32 *)((char *)trilistgeom + ((int)((char *)&((struct McdTriangleList *)0)->triangleMaxCount - (char *)0)))) * 0x18 + 0xfU & 0xfffffff0);
-  (*(McdGeometryID *)((char *)trilistgeom + ((int)((char *)&((struct McdTriangleList *)0)->list - (char *)0)))) = (McdGeometryID)(kd_alloca_iVar15 = (char *)alloca((size_t)((*(MeU32 *)((char *)trilistgeom + ((int)((char *)&((struct McdTriangleList *)0)->triangleMaxCount - (char *)0))))) * (int)sizeof(McdUserTriangle) + 0));
+  (*(McdGeometryID *)((char *)trilistgeom + ((int)((char *)&((struct McdTriangleList *)0)->list - (char *)0)))) = (McdGeometryID)(kd_alloca_iVar15 = (char *)alloca((size_t)((*(MeU32 *)((char *)trilistgeom + ((int)((char *)&((struct McdTriangleList *)0)->triangleMaxCount - (char *)0))))) * (int)sizeof(*(McdUserTriangle *)0) + 0));
   diff.v[0] = *(float *)((kd_iptr)pvVar21 + 0x30) - pfVar22[0xc];
   diff.v[1] = local_13c[1] - pfVar22[0xd];
   diff.v[2] = local_13c[2] - pfVar22[0xe];

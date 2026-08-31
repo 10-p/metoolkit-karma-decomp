@@ -160,6 +160,120 @@ GETSTRUCT = re.compile(
     r'(?P<var>[A-Za-z_]\w*)\s*=\s*\(\s*MePool\w*API\s*\.\s*getStruct\s*\)\s*'
     r'\(\s*(?P<pool>[^;]+?)\s*\)\s*;')
 
+# ---------------------------------------------------------------------------
+# THE SAME DEFECT IN `qsort`, AND IT IS THE ARM64 RAGDOLL CRASH.
+#
+#     qsort(partArray, asset->partCount, 4, _MeFAssetPartSortFunc);   MeFAsset.c:920
+#
+# `partArray` is `MeFAssetPart **` — an array of POINTERS — so `4` is
+# `sizeof(*partArray)` ON i386 and eight at LP64. qsort walks the array in
+# four-byte steps over eight-byte elements, so every "element" the comparator is
+# handed after the first is the top half of one pointer welded to the bottom half
+# of the next. Nothing is truncated and no diagnostic fires; the comparator just
+# dereferences a spliced address.
+#
+# ★ MEASURED ON THE DEVICE, 2026-08-31, on a OnePlus 6 loading a ragdoll:
+#
+#     signal 11 (SIGSEGV), SEGV_MAPERR, fault addr 0x6390f87800000073
+#     #00 <the comparator>  #01 local_qsort+1012  #02 MeFAssetGetPartsSortedByName
+#     #04 KInitSkeletonKarma  #05 KInitActorKarma  #06 AActor::setPhysics
+#
+# `libUT2004.so` sits around `0x73_00000000` there, so an element reads
+# `0x00000073_6390f878`; the fault address is those two words exchanged. Four
+# sites in `MeFAsset.c` — parts, geometries, models and joints — and every one of
+# them is on the ragdoll-creation path.
+#
+# ⚠ THE TYPE NEEDS NO LOOKUP AND MUST NOT HAVE ONE. `sizeof(*partArray)` names
+# the element through the array itself, so there is no struct to resolve, no
+# typedef to guess and nothing to get wrong — and it is the same expression at
+# every pointer width by construction. The first argument therefore has to be a
+# plain identifier; `MdtLOD.c`'s `qsort(*(void **)(&(*kd_argslot_ffffffc4)), ...)`
+# is not one, and is declined and reported rather than rewritten through a cast
+# whose pointee is `void`.
+QSORT = re.compile(
+    r'\b(?P<call>qsort|bsearch)\s*\((?P<args>\s*(?P<base>[A-Za-z_]\w*)\s*,'
+    r'\s*[^,;()]+?\s*,\s*(?P<size>0x[0-9a-fA-F]+|\d+)\s*,)')
+# ---- THE SAME FACT IN `MePoolxInit`, WHICH IS NOT THE `MePoolAPI.init` FORM.
+#
+#     MePoolxInit(&s->nodepool, nodemem, 0x18, maxnode);        MeSet.c
+#
+# `MePoolxInit(MePoolx *p, void *memory, int recsize, int numrec)` — a direct
+# call with the size in argument THREE and the array in argument TWO, so neither
+# `POOL_INIT` (a function-POINTER table call, and a different argument order) nor
+# `ALLOC` matches it. `0x18` is 24 is `sizeof(MeDictNode)` at i386 and FORTY-EIGHT
+# at LP64, so the pool hands out node addresses 24 bytes apart over 48-byte nodes
+# and every node it allocates overlaps the one before it.
+#
+# ★ REACHED FROM `McdConvexMeshPlaneCut`, which is `McdGeometryInstanceGetSlice`
+# — a convex mesh being sliced, i.e. a VEHICLE. Measured on a OnePlus 6:
+# `SEGV_ACCERR` inside `MeSetAdd+68`, two minutes into an Onslaught match.
+#
+# ⚠ AND THE SIBLING CALL IS CORRECT AND MUST BE LEFT ALONE.
+# `McdGjkPenetrationDepth` does `MePoolxInit(&qmem.fpool, poolmem, 0x2c, 0x32)`,
+# and `McdGjkFace` is 44 bytes at BOTH widths — all ints and floats. Two calls in
+# the corpus, one moves and one does not, which is exactly what `moves_at_lp64`
+# is for.
+POOLX_INIT = re.compile(
+    r'\bMePoolxInit\s*\(\s*[^,;()]+?\s*,\s*(?P<base>[A-Za-z_]\w*)\s*,'
+    r'\s*(?P<size>0x[0-9a-fA-F]+|\d+)\s*,')
+# …and the same call whose first argument is anything else, so it can be counted
+# rather than silently skipped. A pass that matches nothing reports a clean zero.
+QSORT_ANY = re.compile(r'\b(?:qsort|bsearch)\s*\(')
+
+# ---------------------------------------------------------------------------
+# THE SAME `alloca`, WITH THE TYPE ON THE FIELD IT IS STORED INTO.
+#
+#     (*(McdGeometryID *)((char *)pMVar9 + KD_OFFSET(McdTriangleList, list)))
+#         = (McdGeometryID)(kd_alloca_iVar3 = (char *)alloca((size_t)(n) * 0x18 + 0));
+#
+# `ALLOCA` cannot see this: it wants the statement to open with a variable or a
+# cast, and this one opens with a dereferenced offsetof. `0x18` is 24 is
+# `sizeof(McdUserTriangle)` at i386 and FORTY-EIGHT at LP64, so the triangle
+# array is half the size the generator is about to fill and every element past
+# the midpoint is written off the end of the frame.
+#
+# ★ THE TYPE IS DECLARED, NOT INFERRED, AND IT IS THE STRONGEST EVIDENCE THIS
+# PASS HAS. The block is stored into `McdTriangleList::list`, which the oracle
+# declares `McdUserTriangle *list;` — the assignment target names the type,
+# exactly as it does for `MeMemoryAPI.create`, only spelled as an offsetof. The
+# literal then has to equal that type's i386 size or the site declines, which is
+# the same two-facts-must-agree rule as everywhere else here.
+#
+# ⚠ WHY NOT LEAVE IT TO `fix_element_stride`. That pass repairs three of the
+# four triangle-list allocas and CANNOT repair the fourth, for a good reason:
+# its anchor is gated on `fix_word_indexed_struct` having already typed an
+# access in the same file as `((E *)v)->`, and broadening that gate is
+# measured-unsafe (proven.txt LP64-ANDROID-ARM64: 63 -> 147 rewrites,
+# `scene_ragdoll` nondeterministic). `IxSphylPrimitives` walks its triangles
+# through BYTE cursors (`undefined1 *`), so no such access exists and the gate
+# correctly refuses. This rule needs no gate of that kind because it does not
+# infer the type at all.
+#
+# ★ MEASURED: `McdSphylTriangleListIntersect` is where a ragdoll capsule meets
+# world geometry, and it is the crash the x86-64 vehicle reaches on five of
+# eight gametypes once ragdolls start being created — `GenerateTriangleContact`
+# dereferencing `tri->vertices[0]` of a triangle read past the array.
+ALLOCA_INTO_FIELD = re.compile(
+    r'\(\*\([A-Za-z_][\w ]*\**\)\(\(char \*\)\w+ \+ '
+    r'\(\(int\)\(\(char \*\)&\(\((?:struct )?(?P<T>\w+) \*\)0\)->(?P<F>[\w.\[\]]+)'
+    r' - \(char \*\)0\)\)\)\)\s*=\s*\([A-Za-z_][\w ]*\**\)\s*'
+    r'\((?P<blk>kd_\w+) = \(char \*\)alloca\(\(size_t\)\(.*?\)'
+    r'\s*\*\s*(?P<size>0x[0-9a-f]+|\d+)\s*\+[ \t]*(?P<add>0x[0-9a-f]+|\d+)?')
+_MEMBER_PTR = re.compile(r'([A-Za-z_]\w*)\s*\*\s*%s\s*[;,]')
+
+
+def field_pointee(T, F, inc):
+    """`McdTriangleList::list` is declared `McdUserTriangle *` — read from the
+    ORACLE, which is the yardstick and is never edited."""
+    import fix_literal_offsets as flo
+    bodies = flo.struct_bodies(inc)
+    body = bodies.get(T) or bodies.get('_' + T)
+    if not body:
+        return None
+    m = re.search(_MEMBER_PTR.pattern % re.escape(F),
+                  re.sub(r'/\*.*?\*/', ' ', body, flags=re.S))
+    return (m.group(1) + ' *') if m else None
+
 BANNER = re.compile(r'(?m)^/\* ---- (\S+)')
 
 # ---------------------------------------------------------------------------
@@ -372,6 +486,48 @@ def compiles_identically(fn, text, build, inc):
         return False
 
 
+def moves_at_lp64(fn, before, after, inc):
+    """Does this rewrite change anything AT 64-BIT POINTER WIDTH?
+
+    ★ ONLY REWRITE WHAT IS BROKEN, and for a `sizeof(*p)` there is no type to
+    measure — that is the point of the spelling. So measure the OBJECT instead:
+    compile the file at `-m64` before and after. If the two are identical the
+    literal was already the LP64 element size, the site is not a defect, and
+    rewriting it is churn. If they differ, the literal was an i386 size and this
+    is exactly the class.
+
+    `McdPolygonIntersection.c`'s `qsort(poly, numpoly, 0xc, ...)` is why this
+    exists: twelve bytes is three floats at every pointer width, so that call is
+    already right and must be left alone. The four in `MeFAsset.c` are arrays of
+    pointers and all four move.
+
+    Paired with `compiles_identically`, the two together say the whole thing: no
+    change on the shipped target, a change on the broken one.
+
+    ⚠ BOTH SIDES MUST KEEP THE FILE'S OWN NAME — the same `STT_FILE` trap
+    `compiles_identically` documents, and it bites HARDER here because there is
+    no baseline to notice it against. Written as `a_<fn>` and `b_<fn>` the two
+    objects differ on the name alone, `moves_at_lp64` returns True for
+    everything, and the "only rewrite what moves" test silently stops testing
+    anything: it passed `McdPolygonSort`, which sorts `MeVector3` — twelve bytes
+    at every pointer width and already correct. Two directories, one name."""
+    cf = ['-m64', '-O2', '-fno-pic', '-fno-strict-aliasing', '-std=gnu99', '-w',
+          '-Wno-int-conversion', '-Wno-incompatible-pointer-types', '-DLINUX']
+    objs = []
+    for tag, txt in (('a', before), ('b', after)):
+        d = os.path.join(WORK, 'lp64', tag)
+        os.makedirs(d, exist_ok=True)
+        src = os.path.join(d, fn)
+        open(src, 'w').write(txt)
+        obj = os.path.join(d, fn[:-2] + '.o')
+        if subprocess.run(['gcc'] + cf + ['-I' + os.path.join(HERE, 'include')]
+                          + includes(inc) + ['-c', '-o', obj, src],
+                          capture_output=True).returncode:
+            return False
+        objs.append(open(obj, 'rb').read())
+    return objs[0] != objs[1]
+
+
 def spellings(count, ty):
     """The candidate ways to say `count elements of T`, most-constrained first.
     Both are correct C on every target; only their i386 codegen differs."""
@@ -518,7 +674,17 @@ def pool_elem_types(corpus):
 
 def main():
     srcdir, build = sys.argv[1], sys.argv[2]
-    root = sys.argv[3] if len(sys.argv) > 3 else kd_paths.METOOLKIT_DIR
+    # ★ THE SECOND RUN, AND IT IS NOT BELT-AND-BRACES — the same reason
+    # `fix_literal_offsets` runs twice. `ALLOCA_INTO_FIELD` needs the target
+    # spelled as an offsetof naming a real member, and in the raw recovery that
+    # statement is `pMVar9[3].prev = ...`: the field does not acquire a NAME
+    # until `fix_literal_offsets` and `fix_index_layout` have run, which is long
+    # after this pass. So the pipeline invokes it again, late, with this flag —
+    # and ONLY that rule fires, so nothing else is re-litigated over text five
+    # passes have since rewritten.
+    only_field = '--field-allocas-only' in sys.argv[3:]
+    rest = [a for a in sys.argv[3:] if not a.startswith('--')]
+    root = rest[0] if rest else kd_paths.METOOLKIT_DIR
     inc = os.path.join(root, 'include')
     cache = {}
 
@@ -556,6 +722,9 @@ def main():
     confirmed = unconfirmed = 0
     pooled = pool_declined = 0
     pool_notes = []
+    qsort_fixed = qsort_declined = qsort_same = 0
+    field_allocas = 0
+    qsort_notes = []
     reasons = {}
     for fn in sorted(os.listdir(srcdir)):
         if not fn.endswith('.c') or not os.path.exists(
@@ -564,7 +733,7 @@ def main():
         path = os.path.join(srcdir, fn)
         text = open(path, errors='ignore').read()
         edits = []
-        for m in ALLOC.finditer(text):
+        for m in (() if only_field else ALLOC.finditer(text)):
             raw = re.sub(r'\s+', ' ', m.group('size')).strip()
             scaled = SCALED.match(raw)
             if scaled and scale_unsafe(scaled.group('expr')):
@@ -706,8 +875,31 @@ def main():
                 continue
             edits.append((m.start('size'), m.end('size'), reps, 'alloc', None))
 
+        # ---- the stack allocations whose target is an offsetof-named FIELD.
+        # Run before `ALLOCA` so the two cannot both claim a site; they match
+        # disjoint statement shapes in any case.
+        for m in ALLOCA_INTO_FIELD.finditer(text):
+            lit = int(m.group('size'), 0)
+            T, F = m.group('T'), m.group('F')
+            ty = field_pointee(T, F, inc)
+            if not ty:
+                declined += 1
+                k = 'alloca: %s::%s is not a declared pointer member' % (T, F)
+                reasons[k] = reasons.get(k, 0) + 1
+                continue
+            sz = elem_size(ty, inc, cache)
+            if sz != lit:
+                declined += 1
+                k = ('alloca into %s::%s: %s is %s, the stride is %d'
+                     % (T, F, ty, sz, lit))
+                reasons[k] = reasons.get(k, 0) + 1
+                continue
+            edits.append((m.start('size'), m.end('size'),
+                          ['(int)sizeof(*(%s)0)' % ty], 'alloc', None))
+            field_allocas += 1
+
         # ---- the stack allocations
-        for m in ALLOCA.finditer(text):
+        for m in (() if only_field else ALLOCA.finditer(text)):
             lit = int(m.group('size'), 0)
             ty = m.group('cast')
             if ty:
@@ -759,7 +951,7 @@ def main():
         # ORIGINAL text and applied together below, back to front, so neither
         # invalidates the other's offsets. They cannot overlap in any case:
         # `ALLOC` requires an assignment target and matches the first argument.
-        for m in POOL_INIT.finditer(text):
+        for m in (() if only_field else POOL_INIT.finditer(text)):
             lit = int(m.group('size'), 0)
             raw_pool = m.group('pool')
             fname = enclosing(text, m.start())
@@ -830,6 +1022,44 @@ def main():
                 continue
             edits.append((m.start('size'), m.end('size'), reps, 'pool', note))
 
+        # ---- the qsort/bsearch element size. Same argument position as the
+        # pool form and a stronger fact behind it: the array itself names its
+        # element type, so the replacement needs no type resolution at all.
+        # `MePoolxInit` is the same fact one argument along; both go through
+        # this code because both are "argument three is an element size and
+        # another argument names the array".
+        matched = set()
+        rules = () if only_field else (
+            [m for m in QSORT.finditer(text)]
+            + [m for m in POOLX_INIT.finditer(text)])
+        for m in rules:
+            matched.add(m.start())
+            lit = int(m.group('size'), 0)
+            base = m.group('base')
+            rep = 'sizeof(*(%s))' % base
+            cand = text[:m.start('size')] + rep + text[m.end('size'):]
+            fname = enclosing(text, m.start())
+            if not moves_at_lp64(fn, text, cand, inc):
+                qsort_same += 1
+                qsort_notes.append('%-24s %-28s %s(..., %d, ...) already correct '
+                                   'at LP64 — left alone'
+                                   % (fn, fname,
+                                      m.groupdict().get('call') or 'MePoolxInit',
+                                      lit))
+                continue
+            edits.append((m.start('size'), m.end('size'), [rep], 'qsort',
+                          '%-24s %-28s %s(..., %d, ...) -> sizeof(*%s)'
+                          % (fn, fname,
+                             m.groupdict().get('call') or 'MePoolxInit',
+                             lit, base)))
+        for m in (() if only_field else QSORT_ANY.finditer(text)):
+            if m.start() not in matched:
+                qsort_declined += 1
+                qsort_notes.append(
+                    '%-24s %-28s DECLINED: the array is not a plain identifier, '
+                    'so sizeof(*it) cannot name the element'
+                    % (fn, enclosing(text, m.start())))
+
         # ---- APPLY, back to front, VERIFYING EACH. Every accepted edit must
         # leave the object byte-identical at i386; the candidates differ only in
         # how gcc schedules them and which one survives is a property of the
@@ -844,6 +1074,9 @@ def main():
                     dirty = 1
                     if kind == 'alloc':
                         fixed += 1
+                    elif kind == 'qsort':
+                        qsort_fixed += 1
+                        qsort_notes.append(note)
                     else:
                         pooled += 1
                         pool_notes.append(note)
@@ -853,6 +1086,10 @@ def main():
                     declined += 1
                     reasons['no spelling reproduces the i386 object'] = reasons.get(
                         'no spelling reproduces the i386 object', 0) + 1
+                elif kind == 'qsort':
+                    qsort_declined += 1
+                    qsort_notes.append('%s  DECLINED: sizeof(*array) does not '
+                                       'reproduce the i386 object' % note)
                 else:
                     pool_declined += 1
                     pool_notes.append('%s  DECLINED: no spelling of it reproduces '
@@ -866,6 +1103,14 @@ def main():
     print('  declined (reported, not guessed)                    : %d' % declined)
     for r, c in sorted(reasons.items(), key=lambda kv: -kv[1])[:6]:
         print('     %4d  %s' % (c, r))
+    print('    …of those, alloca sized by the FIELD it is stored into  : %d'
+          % field_allocas)
+    print('  qsort/bsearch element sizes rewritten to sizeof(*array): %d'
+          % qsort_fixed)
+    print('    …already correct at LP64, left alone                : %d' % qsort_same)
+    print('    …declined (reported, not guessed)                   : %d' % qsort_declined)
+    for note in qsort_notes:
+        print('     %s' % note)
     print('  POOL element strides rewritten (arg 3 of MePool init): %d' % pooled)
     print('  pool sites declined                                 : %d' % pool_declined)
     for note in pool_notes:

@@ -917,7 +917,7 @@ void kd_MeFAssetGetPartsSortedByName(MeFAsset *asset,MeFAssetPart **partArray)
     partArray[iVar2] = pMVar1;
     iVar2 = iVar2 + 1;
   }
-  qsort(partArray,asset->partCount,4,_MeFAssetPartSortFunc);
+  qsort(partArray,asset->partCount,sizeof(*(partArray)),_MeFAssetPartSortFunc);
   return;
 }
 
@@ -1586,7 +1586,7 @@ void kd_MeFAssetGetGeometrySortedByName(MeFAsset *asset,MeFGeometry **geomArray)
     geomArray[iVar2] = pMVar1;
     iVar2 = iVar2 + 1;
   }
-  qsort(geomArray,asset->geomCount,4,_MeFGeometrySortFunc);
+  qsort(geomArray,asset->geomCount,sizeof(*(geomArray)),_MeFGeometrySortFunc);
   return;
 }
 
@@ -1606,7 +1606,7 @@ void kd_MeFAssetGetModelsSortedByName(MeFAsset *asset,MeFModel **modelArray)
     modelArray[iVar2] = pMVar1;
     iVar2 = iVar2 + 1;
   }
-  qsort(modelArray,asset->modelCount,4,_MeFModelSortFunc);
+  qsort(modelArray,asset->modelCount,sizeof(*(modelArray)),_MeFModelSortFunc);
   return;
 }
 
@@ -1626,7 +1626,7 @@ void kd_MeFAssetGetJointsSortedByName(MeFAsset *asset,MeFJoint **jointArray)
     jointArray[iVar2] = pMVar1;
     iVar2 = iVar2 + 1;
   }
-  qsort(jointArray,asset->jointCount,4,_MeFJointSortFunc);
+  qsort(jointArray,asset->jointCount,sizeof(*(jointArray)),_MeFJointSortFunc);
   return;
 }
 

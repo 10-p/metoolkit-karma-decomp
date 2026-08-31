@@ -722,8 +722,28 @@ RETURNS = re.compile(r'(?m)^[ \t]*(?:extern[ \t]+)?(?P<ty>[A-Za-z_]\w*(?:[ \t]+\
 # A starless return type is accepted and `tag_of` decides: `int`, `void` and
 # `MeBool` resolve to no struct and drop out on their own. What makes the rest a
 # measurement rather than a guess is the same all-offsets-land test.
-RETURNS_TD = re.compile(r'(?m)^[ \t]*(?:extern[ \t]+)?(?P<ty>[A-Za-z_]\w*)[ \t]+'
-                        r'(?:MEAPI[ \t]+)?(?P<fn>\w+)[ \t]*\(')
+#
+# ⚠⚠ AND IT USED TO READ THE CALLING CONVENTION AS THE RETURN TYPE. metoolkit's
+# headers put a long return type on its OWN LINE:
+#
+#     MEPUBLIC
+#     McdGeometryInstanceID
+#                       MEAPI McdModelGetGeometryInstance(McdModelID cm);
+#
+# The one-line pattern then matched the SECOND line and recorded the type as
+# `MEAPI`, which resolves to no struct — so the function read as "returns
+# something untypeable" rather than as unmatched, and nothing said so. Eight
+# accessors were affected and one of them is the ARM64 RAGDOLL CRASH:
+# `IxAggregateLineSegment` keeps its base as `pvVar7 = McdModelGetGeometryInstance
+# (model)` and then reads `+ 0x30`, which is `McdGeometryInstance::child` at i386
+# and **72** at LP64 — so the child instance came back NULL and the struct copy
+# two lines later faulted on address 0. Its sibling `+ 4` is `mTM`, 4 here and 8
+# there. Confirmed against MathEngine's own amd64 build, which reads
+# `mov 0x48(%rdi),%rbp` and `mov 0x8(%rcx),%rdx` at those two sites.
+# The type may therefore sit on the line above, provided `MEAPI` opens the next.
+RETURNS_TD = re.compile(r'(?m)^[ \t]*(?:extern[ \t]+)?(?P<ty>[A-Za-z_]\w*)'
+                        r'(?:[ \t]+(?:MEAPI[ \t]+)?|[ \t]*\r?\n[ \t]*MEAPI[ \t]+)'
+                        r'(?P<fn>\w+)[ \t]*\(')
 CALL_ASSIGN = re.compile(r'(?m)(?P<var>[A-Za-z_]\w*)\s*=\s*(?P<fn>[A-Za-z_]\w*)\s*\(')
 
 # ★ A FOURTH SOURCE, AND IT IS THIS TOOL'S OWN OUTPUT READ BACK. Once a site is

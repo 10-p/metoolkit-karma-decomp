@@ -1516,7 +1516,7 @@ int kd_McdSphylTriangleListIntersect(McdModelPair *p,McdIntersectResult *result)
   relPos[2] = tmp[2] * pfVar7[10] + tmp[1] * pfVar7[9] + tmp[0] * pfVar7[8];
   pMVar1 = (*(MeU32 *)((char *)pMVar9 + ((int)((char *)&((struct McdTriangleList *)0)->triangleMaxCount - (char *)0))));
   iVar3 = -((kd_iptr)pMVar1 * 0x18 + 0xfU & (0xfffffff0 | ~(kd_uptr)0xffffffffU));
-  (*(McdGeometryID *)((char *)pMVar9 + ((int)((char *)&((struct McdTriangleList *)0)->list - (char *)0)))) = (McdGeometryID)(kd_alloca_iVar3 = (char *)alloca((size_t)(pMVar1) * 0x18 + 0));
+  (*(McdGeometryID *)((char *)pMVar9 + ((int)((char *)&((struct McdTriangleList *)0)->list - (char *)0)))) = (McdGeometryID)(kd_alloca_iVar3 = (char *)alloca((size_t)(pMVar1) * (int)sizeof(*(McdUserTriangle *)0) + 0));
   *(McdGeometryID *)((kd_iptr)(kd_frameslot_tmp_iVar3_m20)) = pMVar1;
   *(float *)((kd_iptr)&fStackY_70) =
        *(float *)((kd_iptr)pvVar8 + ((int)((char *)&((McdSphyl *)0)->mRadius - (char *)0))) + *(float *)((kd_iptr)pvVar8 + ((int)((char *)&((McdSphyl *)0)->mHalfHeight - (char *)0))) + eps;

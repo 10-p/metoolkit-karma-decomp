@@ -182,7 +182,7 @@ MeBool kd_McdConvexMeshTriangleListIntersect(McdModelPair *p,McdIntersectResult 
     char *kd_alloca_iVar17;
 
   code *pcVar1;
-  uint uVar2;
+  kd_uptr uVar2;
   float fVar3;
   float fVar4;
   float fVar5;
@@ -203,7 +203,7 @@ MeBool kd_McdConvexMeshTriangleListIntersect(McdModelPair *p,McdIntersectResult 
   float *pfVar20;
   float *pfVar21;
   void *pvVar22;
-  McdTriangleFlags MVar23;
+  kd_uptr MVar23;
   MeBool MVar24;
   int iVar25;
   float fVar26;
@@ -276,14 +276,14 @@ MeBool kd_McdConvexMeshTriangleListIntersect(McdModelPair *p,McdIntersectResult 
   convexCenterRelative[0] = fVar15 * fVar4 + fVar14 * fVar26 + fVar16 * fVar3;
   convexCenterRelative[1] = fVar14 * fVar5 + fVar16 * fVar6 + fVar15 * fVar7;
   convexCenterRelative[2] = fVar14 * fVar8 + fVar16 * fVar9 + fVar15 * fVar10;
-  iVar17 = -(*(int *)((kd_iptr)pvVar22 + 0x28) * 0x18 + 0xfU & (0xfffffff0 | ~(kd_uptr)0xffffffffU));
-  *(undefined1 **)((kd_iptr)pvVar22 + 0x34) = (kd_alloca_iVar17 = (char *)alloca((size_t)(*(int *)((kd_iptr)pvVar22 + 0x28)) * 0x18 + 0));
-  *(int *)(&(*kd_argslot_fffffec4)) = *(int *)((kd_iptr)pvVar22 + 0x28);
+  iVar17 = -(*(int *)((kd_iptr)pvVar22 + ((int)((char *)&((struct McdTriangleList *)0)->triangleMaxCount - (char *)0))) * 0x18 + 0xfU & (0xfffffff0 | ~(kd_uptr)0xffffffffU));
+  *(undefined1 **)((kd_iptr)pvVar22 + ((int)((char *)&((struct McdTriangleList *)0)->list - (char *)0))) = (kd_alloca_iVar17 = (char *)alloca((size_t)(*(int *)((kd_iptr)pvVar22 + ((int)((char *)&((struct McdTriangleList *)0)->triangleMaxCount - (char *)0)))) * 0x18 + 0));
+  *(int *)(&(*kd_argslot_fffffec4)) = *(int *)((kd_iptr)pvVar22 + ((int)((char *)&((struct McdTriangleList *)0)->triangleMaxCount - (char *)0)));
   *(MeReal *)((kd_iptr)aMStackY_144 + 4) = convexRadius;
   *(MeReal **)((kd_iptr)aMStackY_144) = convexCenterRelative;
-  *(undefined4 *)((kd_iptr)aiStackY_150 + (2 * (int)sizeof(void *))) = *(undefined4 *)((kd_iptr)pvVar22 + 0x34);
+  *(undefined4 *)((kd_iptr)aiStackY_150 + (2 * (int)sizeof(void *))) = *(kd_uptr *)((kd_iptr)pvVar22 + ((int)((char *)&((struct McdTriangleList *)0)->list - (char *)0)));
   *(McdModelPair **)((kd_iptr)aiStackY_150 + (1 * (int)sizeof(void *))) = p;
-  pcVar1 = *(code **)((kd_iptr)pvVar22 + 0x30);
+  pcVar1 = *(code **)((kd_iptr)pvVar22 + ((int)((char *)&((struct McdTriangleList *)0)->triangleListGenerator - (char *)0)));
   *(undefined4 *)((kd_iptr)aiStackY_150) = 0x106a1;
   i = (*(int (*)(void *, void *, void *, float, int))pcVar1)(*(void **)((kd_iptr)aiStackY_150 + (1 * (int)sizeof(void *))),
                 *(void **)((kd_iptr)aiStackY_150 + (2 * (int)sizeof(void *))),*(void **)((kd_iptr)aMStackY_144),
@@ -298,14 +298,14 @@ MeBool kd_McdConvexMeshTriangleListIntersect(McdModelPair *p,McdIntersectResult 
       iVar25 = 0;
       do {
                     
-        MVar23 = *(McdTriangleFlags *)(*(kd_iptr *)((kd_iptr)pvVar22 + 0x34) + 0x14 + iVar25);
+        MVar23 = *(kd_uptr *)(*(kd_iptr *)((kd_iptr)pvVar22 + ((int)((char *)&((struct McdTriangleList *)0)->list - (char *)0))) + 0x14 + iVar25);
         tri.triangleData = *(__typeof__(tri.triangleData) *)
-              (*(int *)((kd_iptr)pvVar22 + 0x34) + 0x10 + iVar25);
+              (*(kd_iptr *)((kd_iptr)pvVar22 + ((int)((char *)&((struct McdTriangleList *)0)->list - (char *)0))) + 0x10 + iVar25);
         tri.vertices[0] = vectors + 1;
         tri.normal = vectors;
         tri.vertices[2] = vectors + 3;
         tri.vertices[1] = vectors + 2;
-        pfVar21 = *(float **)(*(kd_iptr *)((kd_iptr)pvVar22 + 0x34) + 0xc + iVar25);
+        pfVar21 = *(float **)(*(kd_iptr *)((kd_iptr)pvVar22 + ((int)((char *)&((struct McdTriangleList *)0)->list - (char *)0))) + 0xc + iVar25);
         local_f8 = fVar5;
         local_fc = fVar8;
         local_100 = fVar8 * pfVar21[2] + fVar5 * pfVar21[1] + *pfVar21 * fVar26;
@@ -317,7 +317,7 @@ MeBool kd_McdConvexMeshTriangleListIntersect(McdModelPair *p,McdIntersectResult 
         local_110 = fVar7;
         local_114 = fVar10;
         vectors[0][2] = fVar10 * pfVar21[2] + *pfVar21 * fVar4 + fVar7 * pfVar21[1];
-        pfVar21 = *(float **)(*(kd_iptr *)((kd_iptr)pvVar22 + 0x34) + iVar25);
+        pfVar21 = *(float **)(*(kd_iptr *)((kd_iptr)pvVar22 + ((int)((char *)&((struct McdTriangleList *)0)->list - (char *)0))) + iVar25);
         vectors[1][0] = fVar8 * pfVar21[2] + *pfVar21 * fVar26 + fVar5 * pfVar21[1] + fVar11;
         local_118 = fVar11;
         local_11c = fVar13;
@@ -328,28 +328,28 @@ MeBool kd_McdConvexMeshTriangleListIntersect(McdModelPair *p,McdIntersectResult 
            (0.0 <= (convexCenter[0] - vectors[1][0]) * local_100 +
                    (convexCenter[1] - vectors[1][1]) * local_10c +
                    (convexCenter[2] - vectors[1][2]) * vectors[0][2])) {
-          pfVar21 = *(float **)(*(kd_iptr *)((kd_iptr)pvVar22 + 0x34) + 4 + iVar25);
+          pfVar21 = *(float **)(*(kd_iptr *)((kd_iptr)pvVar22 + ((int)((char *)&((struct McdTriangleList *)0)->list - (char *)0))) + 4 + iVar25);
           vectors[3][0] = fVar8 * pfVar21[2] + *pfVar21 * fVar26 + fVar5 * pfVar21[1] + fVar11;
           vectors[3][1] = fVar9 * pfVar21[2] + *pfVar21 * fVar3 + fVar6 * pfVar21[1] + fVar13;
           vectors[3][2] = fVar10 * pfVar21[2] + *pfVar21 * fVar4 + fVar7 * pfVar21[1] + fVar12;
-          pfVar21 = *(float **)(*(kd_iptr *)((kd_iptr)pvVar22 + 0x34) + 8 + iVar25);
+          pfVar21 = *(float **)(*(kd_iptr *)((kd_iptr)pvVar22 + ((int)((char *)&((struct McdTriangleList *)0)->list - (char *)0))) + 8 + iVar25);
           vectors[2][0] = fVar26 * *pfVar21 + fVar5 * pfVar21[1] + fVar8 * pfVar21[2] + fVar11;
           vectors[2][1] = fVar3 * *pfVar21 + fVar6 * pfVar21[1] + fVar9 * pfVar21[2] + fVar13;
           vectors[0][2] = vectors[0][2] * -1.0;
           vectors[0][0] = local_100 * -1.0;
           vectors[2][2] = fVar4 * *pfVar21 + fVar7 * pfVar21[1] + fVar10 * pfVar21[2] + fVar12;
           vectors[0][1] = local_10c * -1.0;
-          uVar2 = *(uint *)(*(kd_iptr *)((kd_iptr)pvVar22 + 0x34) + 0x14 + iVar25);
+          uVar2 = *(kd_uptr *)(*(kd_iptr *)((kd_iptr)pvVar22 + ((int)((char *)&((struct McdTriangleList *)0)->list - (char *)0))) + 0x14 + iVar25);
           pfVar21 = (float *)((int)(uVar2 & 0x10) >> 2);
           MVar23 = MVar23 & ~(kMcdTriangleUseEdge2|kMcdTriangleUseEdge0) | (uVar2 & 4) << 2 |
                    (kd_uptr)pfVar21;
         }
         else {
-          pfVar21 = *(float **)(*(kd_iptr *)((kd_iptr)pvVar22 + 0x34) + 4 + iVar25);
+          pfVar21 = *(float **)(*(kd_iptr *)((kd_iptr)pvVar22 + ((int)((char *)&((struct McdTriangleList *)0)->list - (char *)0))) + 4 + iVar25);
           vectors[2][0] = fVar8 * pfVar21[2] + *pfVar21 * fVar26 + fVar5 * pfVar21[1] + fVar11;
           vectors[2][1] = fVar9 * pfVar21[2] + *pfVar21 * fVar3 + fVar6 * pfVar21[1] + fVar13;
           vectors[2][2] = fVar10 * pfVar21[2] + *pfVar21 * fVar4 + fVar7 * pfVar21[1] + fVar12;
-          pfVar21 = *(float **)(*(kd_iptr *)((kd_iptr)pvVar22 + 0x34) + 8 + iVar25);
+          pfVar21 = *(float **)(*(kd_iptr *)((kd_iptr)pvVar22 + ((int)((char *)&((struct McdTriangleList *)0)->list - (char *)0))) + 8 + iVar25);
           vectors[3][0] = fVar26 * *pfVar21 + fVar5 * pfVar21[1] + fVar8 * pfVar21[2] + fVar11;
           vectors[3][1] = fVar3 * *pfVar21 + fVar6 * pfVar21[1] + fVar9 * pfVar21[2] + fVar13;
           vectors[3][2] = fVar10 * pfVar21[2] + fVar4 * *pfVar21 + fVar7 * pfVar21[1] + fVar12;

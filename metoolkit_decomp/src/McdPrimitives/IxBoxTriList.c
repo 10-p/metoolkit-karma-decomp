@@ -131,7 +131,7 @@ MeBool kd_McdBoxTriangleListIntersect(McdModelPair *p,McdIntersectResult *result
   MVar21 = eps;
   pMVar3 = (*(MeU32 *)((char *)trilistgeom + ((int)((char *)&((struct McdTriangleList *)0)->triangleMaxCount - (char *)0))));
   iVar5 = -((kd_iptr)pMVar3 * 0x18 + 0xfU & (0xfffffff0 | ~(kd_uptr)0xffffffffU));
-  (*(McdGeometryID *)((char *)trilistgeom + ((int)((char *)&((struct McdTriangleList *)0)->list - (char *)0)))) = (McdGeometryID)(kd_alloca_iVar5 = (char *)alloca((size_t)(pMVar3) * 0x18 + 0));
+  (*(McdGeometryID *)((char *)trilistgeom + ((int)((char *)&((struct McdTriangleList *)0)->list - (char *)0)))) = (McdGeometryID)(kd_alloca_iVar5 = (char *)alloca((size_t)(pMVar3) * (int)sizeof(*(McdUserTriangle *)0) + 0));
   *(McdGeometryID *)(&(*kd_argslot_fffffda4)) = pMVar3;
   *(float *)((kd_iptr)&fStackY_260) = MVar21 + boxRadius;
   *(lsVec3 **)((kd_iptr)&iStackY_264) = &boxPosTrans;
@@ -173,30 +173,30 @@ MeBool kd_McdBoxTriangleListIntersect(McdModelPair *p,McdIntersectResult *result
       do {
         paMVar23 = ct.vertices[2];
         puVar31 = (undefined4 *)((kd_iptr)&((*(McdGeometryID *)((char *)trilistgeom + ((int)((char *)&((struct McdTriangleList *)0)->list - (char *)0)))))->mRefCtAndID + (kd_iptr)MStack_24c.prev);
-        pfVar26 = (float *)*puVar31;
+        pfVar26 = (float *)((kd_uptr *)puVar31)[0];
         (*ct.vertices[0])[0] = fVar11 * pfVar26[2] + fVar32 * *pfVar26 + fVar8 * pfVar26[1] + fVar14
         ;
         (*ct.vertices[0])[1] = fVar12 * pfVar26[2] + fVar9 * pfVar26[1] + fVar6 * *pfVar26 + fVar16;
         (*ct.vertices[0])[2] = fVar13 * pfVar26[2] + fVar10 * pfVar26[1] + fVar7 * *pfVar26 + fVar15
         ;
-        pfVar26 = (float *)puVar31[1];
+        pfVar26 = (float *)((kd_uptr *)puVar31)[1];
         (*ct.vertices[1])[0] = fVar11 * pfVar26[2] + fVar8 * pfVar26[1] + fVar32 * *pfVar26 + fVar14
         ;
         (*ct.vertices[1])[1] = fVar12 * pfVar26[2] + fVar9 * pfVar26[1] + fVar6 * *pfVar26 + fVar16;
         (*ct.vertices[1])[2] = fVar13 * pfVar26[2] + fVar10 * pfVar26[1] + fVar7 * *pfVar26 + fVar15
         ;
-        pfVar26 = (float *)puVar31[2];
+        pfVar26 = (float *)((kd_uptr *)puVar31)[2];
         (*ct.vertices[2])[0] = fVar11 * pfVar26[2] + fVar8 * pfVar26[1] + fVar32 * *pfVar26 + fVar14
         ;
         (*ct.vertices[2])[1] = fVar12 * pfVar26[2] + fVar9 * pfVar26[1] + fVar6 * *pfVar26 + fVar16;
         (*ct.vertices[2])[2] = fVar13 * pfVar26[2] + fVar10 * pfVar26[1] + fVar7 * *pfVar26 + fVar15
         ;
-        pfVar26 = (float *)puVar31[3];
+        pfVar26 = (float *)((kd_uptr *)puVar31)[3];
         (*ct.normal)[0] = fVar11 * pfVar26[2] + fVar8 * pfVar26[1] + fVar32 * *pfVar26;
         (*ct.normal)[1] = fVar12 * pfVar26[2] + fVar9 * pfVar26[1] + fVar6 * *pfVar26;
         (*ct.normal)[2] = fVar13 * pfVar26[2] + fVar10 * pfVar26[1] + fVar7 * *pfVar26;
-        ct.flags = puVar31[5];
-        ct.triangleData = *(__typeof__(ct.triangleData) *)(puVar31 + 4);
+        ct.flags = ((McdUserTriangle *)puVar31)->flags;
+        ct.triangleData = *(__typeof__(ct.triangleData) *)((kd_uptr *)puVar31 + 4);
         edge[0][0] = (*ct.vertices[1])[0] - (*ct.vertices[0])[0];
         edge[0][1] = (*ct.vertices[1])[1] - (*ct.vertices[0])[1];
         edge[0][2] = (*ct.vertices[1])[2] - (*ct.vertices[0])[2];
@@ -265,7 +265,7 @@ MeBool kd_McdBoxTriangleListIntersect(McdModelPair *p,McdIntersectResult *result
                    pfVar25[0xe];
               pMVar17->dims = dims;
               pMVar17->separation = separation;
-              pMVar17->element2 = *(__typeof__(pMVar17->element2) *)(puVar31 + 4);
+              pMVar17->element2 = *(__typeof__(pMVar17->element2) *)((kd_uptr *)puVar31 + 4);
               pMVar17->normal[0] = diff.v[0];
               pMVar30 = pMVar17 + 1;
               pMVar17->normal[1] = diff.v[1];

@@ -1,3 +1,194 @@
+# LP64-ARM64-PLAYS  2026-08-31  ★ MAKING ARM64 *PLAY* RATHER THAN BOOT FOUND
+#                     SEVEN MORE LP64 DEFECTS IN ONE SESSION, and the first of
+#                     them was the ONS crash the owner reported.
+#
+#                     THE INSTRUMENT CAME FIRST. `GameActivity` now forwards a
+#                     `com.ut2004.android.ARGS` string extra to the engine's
+#                     command line (engine-ut2004, ufront 2.45), so
+#                         adb shell am start -n com.ut2004.android/.MainActivity \
+#                           --es com.ut2004.android.ARGS 'ONS-Dria?Game=Onslaught.
+#                           ONSOnslaughtGame?bAutoNumBots=True?QuickStart=True?
+#                           bPlayerMustBeReady=False'
+#                     loads a map and STARTS A MATCH with no touch at all — the
+#                     launcher's ten-second countdown does the rest. Before it the
+#                     activity could only ever reach the menu, so "does arm64
+#                     PLAY?" was not a question anyone could ask in a scripted run.
+#                     ⚠ THE URL MUST BE argv[1]. UGameEngine::Init takes the FIRST
+#                     token as the travel URL and, since ufront 2.38, rejects a
+#                     global option in that slot and falls back to DefaultLocalMap
+#                     WITHOUT looking at the next token — so `CPUSPEED=3000
+#                     ONS-Dria?...` reaches the MAIN MENU. Measured on the device
+#                     before the order was swapped.
+#
+#                     (1) `McdGjkBinarySubset + 0x3c` — THE REPORTED ONS CRASH.
+#                     It is `const int *[16]`, so 0x3c is element 15 at i386 and
+#                     nothing at all at LP64: an eight-byte load at byte 60 splices
+#                     the low half of element[8] onto the high half of element[7].
+#                     ★ THE TOMBSTONE IS THAT SPLICE, DIGIT FOR DIGIT. libUT2004.so
+#                     maps around 0x75_00000000, so an entry reads
+#                     0x00000075_0040546a and `fault addr 0x40546a00000075` is
+#                     those two words exchanged.
+#                     ★★ AND MATHENGINE'S OWN amd64 BUILD CONFIRMS THE REPAIR:
+#                     win_amd64_single/McdConvex.lib reads `mov rax,[rip+0x78]` at
+#                     BOTH references — 0x78 = 15*8 against our 0x3c = 15*4, in
+#                     McdGjkFaceQueueInit and McdGjkPenetrationDepth, which are
+#                     exactly the two sites. Two for two, off a binary.
+#                     ⚠ `ptrwidth_check` CANNOT SEE THIS CLASS AT ALL — nothing is
+#                     truncated. Both halves are real addresses.
+#                     ⚠ AND THE SHAPE ALONE IS NOT ENOUGH: MeProfile_linux.c has
+#                     six sites of it and all six are CORRECT (`frameTime` is a
+#                     struct of MeI32, `clockSpeed + 4` is its own high word). The
+#                     rule keys on the DECLARATION being an array of pointers.
+#                     New tool: tools/fix_global_array_index.py. 3 occurrences —
+#                     the third is CxSmallSort's vtable address point, which
+#                     fix_vtable_offsets cannot see because it is a macro over the
+#                     vtable symbol rather than a local.
+#
+#                     (2) `IxBoxTriList`, DECLINED SINCE LP64-TWO-COMPILERS, AND
+#                     THE FIX IS A TYPE RATHER THAN A SPELLING. Bisected site by
+#                     site: 4 of the 7 rewrites are byte-identical under emcc and
+#                     3 are not, and the 3 are exactly those where the repair turns
+#                     an INTEGER load into a POINTER one — `p[1]` yields
+#                     `undefined4` cast to `float *`, `->vertices[1]` yields
+#                     `MeVector3 *` directly, and clang tees one extra local three
+#                     bytes away. ★ KEEP THE VALUE AN INTEGER OF POINTER WIDTH:
+#                     `((kd_uptr *)p)[1]` is `unsigned int` at i386 AND wasm32, so
+#                     the conversion that follows is the one that was always there.
+#                     Every member spelling tried failed emcc; this one passes both.
+#                     Guarded by three MEASUREMENTS — offset 4k here, 8k there,
+#                     sizeof 4/8 — so `flags` (MeU32) keeps the member spelling.
+#                     17 -> 24 sites, 1 decline -> 0.
+#
+#                     (3) `qsort(partArray, n, 4, cmp)` — THE RAGDOLL CRASH.
+#                     4 is `sizeof(*partArray)` at i386 over an array of POINTERS,
+#                     so qsort walks four-byte steps over eight-byte elements and
+#                     the comparator is handed spliced addresses.
+#                     `fault addr 0x6390f87800000073` under local_qsort, from
+#                     MeFAssetGetPartsSortedByName <- KInitSkeletonKarma. Four
+#                     sites in MeFAsset.c, all on ragdoll creation. The repair
+#                     names no type: `sizeof(*partArray)`.
+#                     ⚠⚠ AND "ONLY REWRITE WHAT MOVES" WAS BROKEN BY THIS PROJECT'S
+#                     OWN STT_FILE TRAP. With no type to compare, the test compiles
+#                     the file at -m64 before and after — written as `a_<fn>` and
+#                     `b_<fn>` the two objects differ ON THE NAME ALONE, so it
+#                     returned True for everything and silently stopped testing. It
+#                     passed McdPolygonSort, which sorts MeVector3: twelve bytes at
+#                     every width and already correct.
+#
+#                     (4) RULE E — the same narrow load with NO DESTINATION.
+#                     Rule C's "the destination is declared pointer-width" was only
+#                     ever a PROXY for the measurement. An inline one has nothing to
+#                     inspect, and IxAggregateLineSegment+304 on the device is
+#                         ldr w8, [x8, #0x20]     <- elementTable, CORRECT offset 32
+#                         ldr x8, [x8, w9, sxtw]  <- fault addr 0xffffffffd3b89558
+#                     — the right address, four bytes of an eight-byte pointer,
+#                     sign-extended into the address the tombstone reports.
+#                     ⚠⚠ AND WIDENING AN ASSIGNMENT TARGET ALONE CORRUPTS. The
+#                     first version matched both sides of `=` and made
+#                     `*(undefined4 *)(...mdtbody[1]) = uVar1` an EIGHT-byte store
+#                     of a four-byte local, zeroing the high half of a pointer that
+#                     had been valid. i386 STAYED 145/145 AND THE THREE SCENES
+#                     STAYED BIT-IDENTICAL; the LP64 harness went red with an ASan
+#                     error in MdtBodyGetCenterOfMassPosition and trajectories that
+#                     stopped at row 52 and row 0. ★ THE LP64 HARNESS IS THE ONLY
+#                     GATE THAT SEES THIS — the third time this project has been
+#                     told so. A store is now widened only when its SOURCE is a
+#                     load being widened too.
+#
+#                     (5) ⚠⚠ `fix_literal_offsets` READ THE CALLING CONVENTION AS
+#                     THE RETURN TYPE. metoolkit puts a long return type on its own
+#                     line:
+#                         MEPUBLIC
+#                         McdGeometryInstanceID
+#                                       MEAPI McdModelGetGeometryInstance(...);
+#                     The one-line pattern matched the SECOND line and recorded the
+#                     type as `MEAPI`, which resolves to no struct — so the function
+#                     read as "returns something untypeable" rather than as
+#                     unmatched, AND NOTHING SAID SO. Eight accessors. One of them
+#                     is a ragdoll crash: IxAggregateLineSegment reads `pvVar7 +
+#                     0x30`, which is McdGeometryInstance::child at i386 and 72 at
+#                     LP64, so the child instance came back NULL and the struct copy
+#                     two lines later faulted on address 0. `+ 4` is `mTM`, 4/8.
+#                     Confirmed by the amd64 build: `mov 0x48(%rdi),%rbp`,
+#                     `mov 0x8(%rcx),%rdx`.
+#
+#                     (6) ⚠⚠ A SECOND ACCESSOR ON ONE TYPE IS NOT A CONFLICT, AND
+#                     TREATING IT AS ONE COST THE WHOLE CONVEX-MESH FAMILY.
+#                     McdConvexMesh.c exports McdConvexMeshGetTypeId AND
+#                     McdConvexMeshMeshGetTypeId, both returning 7.
+#                     `interaction_types` read two tags claiming one id as evidence
+#                     about neither, ID 7 LEFT THE TABLE ENTIRELY, and
+#                     McdSphylConvexMeshIntersect and seven siblings were never
+#                     typed — so every geometry offset in IxConvexPrimitives.c
+#                     stayed at its i386 value, including
+#                     `(McdConvexHull *)(geom + 0x10)`: McdConvexMesh::mHull is 16
+#                     here and 32 there, so ConvexHullNSegment got a hull pointer
+#                     sixteen bytes short and ConvexHullVoronoiRegion faulted on the
+#                     face table (LP64 vehicle, frame 27 of a ktrace run).
+#                     ★ THE TIE-BREAK IS THE TYPE DATABASE: a tag naming a struct
+#                     the oracle declares is a type; one that does not is an
+#                     accessor. 26 -> 28 functions typed.
+#                     ⚠ A LATENT CRASH CAME WITH IT: `out[fn] = None` is the
+#                     dropped marker and a THIRD registration then indexed None[0].
+#                     Nothing had been registered three times until now.
+#
+#                     (7) THE `alloca` WHOSE TYPE IS ON THE FIELD IT IS STORED INTO.
+#                     `alloca(n * 0x18)` for McdUserTriangle in IxSphylPrimitives —
+#                     half the array the generator is about to fill. The type is
+#                     DECLARED (`McdUserTriangle *list;`), so nothing is inferred.
+#                     ⚠ IT NEEDS A SECOND, LATE INVOCATION: in the raw recovery the
+#                     statement is `pMVar9[3].prev = ...` and the field has no NAME
+#                     until fix_literal_offsets and fix_index_layout have run.
+#                     `--field-allocas-only` keeps the other five rules off.
+#                     ⚠ fix_element_stride repairs the other three triangle-list
+#                     allocas and CANNOT repair this one: its anchor is gated on
+#                     fix_word_indexed_struct having typed an access in the same
+#                     file, and IxSphylPrimitives walks its triangles through BYTE
+#                     cursors. Broadening that gate is measured-unsafe
+#                     (LP64-ANDROID-ARM64). This rule needs no such gate.
+#
+#                     ★ AND A NINTH THAT IS NOT A RECOVERY DEFECT AT ALL: the
+#                     SDL thread's 1 MB DEFAULT STACK. Karma sizes several arrays
+#                     on the stack from a run-time count — MeDictNode nodemem[200]
+#                     in McdConvexMeshPlaneCut, an alloca of triangleMaxCount
+#                     McdUserTriangles in every Ix*TriList — and at LP64 EVERY ONE
+#                     OF THEM DOUBLES. ★ `code 2 (SEGV_ACCERR)` rather than
+#                     SEGV_MAPERR is what names it: a guard page is mapped
+#                     PROT_NONE, so hitting it is a PERMISSION fault, and that is
+#                     what separates stack exhaustion from a wild pointer.
+#                     SDLActivity now asks for 16 MB (reserved address space, not
+#                     committed memory). CONFIRMED BY THE CRASH CLASS CHANGING,
+#                     not by argument: MeSetAdd/ACCERR disappeared and the device
+#                     moved on to McdSphylTriangleListIntersect/MAPERR — the site
+#                     x86-64 was already stuck at. 120 s -> 140 s.
+#
+#                     ⚠⚠ AND A RED RESULT IS STILL NOT EVIDENCE UNTIL THE BASELINE
+#                     IS CHECKED — four for four now. This session's sweep crashes
+#                     6 of 8 gametypes in IxAggregateLineSegment on the tree the
+#                     previous session called "7 gametypes clean". It is NOT a
+#                     regression: `git show HEAD:...McdAggregate.c` has all five
+#                     narrow `elementTable` loads BYTE-IDENTICALLY, including the
+#                     one that faults. What changed is that ragdolls now get
+#                     created at all — each repair buys the next crash, which is the
+#                     pattern this whole port has followed. The recorded sweep never
+#                     reached KInitSkeletonKarma.
+#
+#                     ⚠ ktrace_diff.py CALLED TWO BUILDS "behaviourally IDENTICAL"
+#                     over TWELVE FRAMES of two hundred and twenty-three, because
+#                     `first` is computed over the frames the runs SHARE and one had
+#                     crashed. The frame counts were printed at the top of its own
+#                     report and the verdict did not consult them. It now refuses
+#                     below 90% overlap. Same family as substitute_test.sh's
+#                     "substituted and ran cleanly".
+#
+#                     ptrwidth_classify.py is new: the 98 aarch64 diagnostics are
+#                     now 91, of which 39 are in four NAMED benign classes
+#                     (KD_FBITS into a 4-byte slot 10, MeDict's own void * key 15,
+#                     a discarded int return 11, a count through an ID typedef 3)
+#                     and **52 are UNEXPLAINED and open**. ⚠ KD_FBITS ALONE IS NOT
+#                     A CLASS: IxBoxTriList's two use the same macro and write
+#                     EIGHT bytes at byte 16 of a three-float vector.
+#
 # LP64-LEAKED-LOOPVAR  2026-08-31  ⚠⚠ A REFACTOR PASSED `E` WHERE THE BLOCK
 #                     NAMES THE TYPE `T`, AND PYTHON DID NOT COMPLAIN. Routing all
 #                     three anchors of `fix_word_indexed_struct` through one helper

@@ -284,7 +284,51 @@ def pointee_of(T, F, root):
     return m.group(1)
 
 
-def rewrite_sites(out, v, E, paths, inc, cache):
+def slot_form(E, pth, k, v, inc, cache, addr):
+    """`((kd_uptr *)v)[k]` — the SAME byte at the SAME width as `((E *)v)->pth`,
+    and the only spelling of it clang schedules identically.
+
+    ⚠⚠ THE MEMBER SPELLING IS NOT ALWAYS AVAILABLE, AND `IxBoxTriList` IS WHY.
+    `((McdUserTriangle *)p)->vertices[1]` is byte-identical under gcc at -m32 and
+    NOT under emcc, so the whole variable declined and the four truncated
+    triangle reads stayed in the shipped source. Bisected site by site, the three
+    that break it are exactly the three where the rewrite turns an INTEGER load
+    into a POINTER load: `p[1]` yields `undefined4` and is converted to `float *`,
+    while `->vertices[1]` yields `MeVector3 *` directly. Same address, same
+    width, same result — and clang tees one extra local, three bytes of wasm, on
+    a statement four lines away. The address is identical at wasm32 either way;
+    what differs is scheduling.
+
+    ★ SO KEEP THE VALUE AN INTEGER OF POINTER WIDTH. `((kd_uptr *)p)[1]` is
+    `unsigned int` at i386 and wasm32 — exactly what `undefined4` was — so the
+    conversion that follows is the same int-to-pointer conversion it always was,
+    and nothing downstream moves. Measured: all four sites byte-identical under
+    BOTH compilers, where every member spelling tried (`->vertices[1]`,
+    `((MeVector3 **)p)[1]`, `*(MeVector3 **)&...`, `(kd_uptr)...->vertices[1]`)
+    failed under emcc.
+
+    THE GUARD IS THREE MEASUREMENTS, NOT A SHAPE. This spelling is only the same
+    access if the member sits at word `k` at BOTH widths and is pointer-width at
+    both — otherwise `[k]` in pointer units addresses something else. So:
+
+        offset at i386 == 4k    offset at LP64 == 8k    sizeof 4 here, 8 there
+
+    all read off the compiler. `McdUserTriangle::flags` is an `MeU32` and fails
+    the width test, so it keeps the member spelling — which is correct, and which
+    emcc accepts."""
+    off = '((char *)&((%s *)0)->%s - (char *)0)' % (E, pth)
+    sz = 'sizeof(((%s *)0)->%s)' % (E, pth)
+    a32, a64 = probe(off, inc, cache, '-m32'), probe(off, inc, cache, '-m64')
+    w32, w64 = probe(sz, inc, cache, '-m32'), probe(sz, inc, cache, '-m64')
+    if None in (a32, a64, w32, w64):
+        return None
+    if a32 != k * 4 or a64 != k * 8 or (w32, w64) != (4, 8):
+        return None
+    return ('((kd_uptr *)%s + %d)' % (v, k)) if addr else \
+           ('((kd_uptr *)%s)[%d]' % (v, k))
+
+
+def rewrite_sites(out, v, E, paths, inc, cache, slot=False):
     """Rewrite every word-indexed access to `v`, returning (text, count).
 
     Three spellings, and missing the third left the ANDROID crash in place:
@@ -293,7 +337,13 @@ def rewrite_sites(out, v, E, paths, inc, cache):
         (V + k)     an ADDRESS handed onward  -> (&((E *)V)->PATH)
     `IxCylinderTriList` takes `*(__typeof__(ct.triangleData) *)(puVar31 + 4)` —
     byte 16 here and THIRTY-TWO there — and it is the only one of the six that a
-    `V[k]`-shaped pattern cannot see."""
+    `V[k]`-shaped pattern cannot see.
+
+    `slot=True` asks for `slot_form` wherever it is available — the same access
+    written as a pointer-width WORD INDEX rather than a member name. The caller
+    tries the member spelling first and falls back to this one, because the
+    member name is the more legible repair and only `IxBoxTriList` needs the
+    other."""
     decl_re = re.compile(r'(?m)^\s*[A-Za-z_]\w*\s*\*\s*%s\s*;' % re.escape(v))
     pat = (r'\((?<![\w.])%s \+ (?P<a>\d+)\)'
            r'|(?<![\w.])%s\[(?P<b>0x[0-9a-fA-F]+|\d+)\]'
@@ -311,10 +361,33 @@ def rewrite_sites(out, v, E, paths, inc, cache):
         pth = paths.get(k * 4)
         if not pth or not actually_moves(E, pth, k, inc, cache):
             continue
-        rep = ('(&((%s *)%s)->%s)' if addr else '((%s *)%s)->%s') % (E, v, pth)
+        rep = None
+        if slot:
+            rep = slot_form(E, pth, k, v, inc, cache, addr)
+        if rep is None:
+            rep = ('(&((%s *)%s)->%s)' if addr else '((%s *)%s)->%s') % (E, v, pth)
         out = out[:st.start()] + rep + out[st.end():]
         n += 1
     return out, n
+
+
+def accepted(fn, out, v, E, paths, inc, cache, build):
+    """The member spelling if both compilers accept it, else the word-index one.
+
+    Returns (text, count, how) or (None, 0, None). ⚠ The order matters and is not
+    a preference: `((E *)p)->field` names what the code is doing and is what
+    every other file gets. The fallback exists for the one file where clang will
+    not reproduce it, and taking it first would spread an opaque spelling over
+    seventeen sites that do not need it."""
+    for how in ('member', 'word-index'):
+        cand, n = rewrite_sites(out, v, E, paths, inc, cache,
+                                slot=(how == 'word-index'))
+        if not n:
+            return None, 0, None          # nothing to do — NOT a decline
+        if compiles_identically(fn, cand, build, inc) \
+                and wasm_unchanged(fn, out, cand, inc):
+            return cand, n, how
+    return None, n, None                  # sites found, no spelling survived
 
 
 def main():
@@ -356,18 +429,18 @@ def main():
             # Python leaks the loop variable, so it silently reused the PREVIOUS
             # file's type and quietly stopped repairing McdCache. The symptom was
             # a regression two commits later with no decline reported.
-            cand, n = rewrite_sites(out, v, T, paths, inc, cache)
+            cand, n, how = accepted(fn, out, v, T, paths, inc, cache, build)
             if not n:
                 continue
-            if compiles_identically(fn, cand, build, inc) \
-                    and wasm_unchanged(fn, out, cand, inc):
+            if cand is not None:
                 out = cand
                 done += n
-                notes.append('%-22s %-10s -> %s  %d site(s)' % (fn, v, T, n))
+                notes.append('%-22s %-10s -> %s  %d site(s) [%s]'
+                             % (fn, v, T, n, how))
             else:
                 declined += 1
-                notes.append('%-22s %-10s -> %s: not byte-identical at i386 — '
-                             'declined' % (fn, v, T))
+                notes.append('%-22s %-10s -> %s: not byte-identical at i386 OR '
+                             'wasm32, in either spelling — declined' % (fn, v, T))
         # ---- the second anchor: a field declared `E *`
         for m in FIELD_PTR.finditer(text):
             v, T, F = m.group('v'), m.group('T'), m.group('F')
@@ -382,19 +455,18 @@ def main():
             # produces a syntax error, which reads back as "not byte-identical"
             # and quietly declined the whole variable — including the five sites
             # that were correct.
-            cand, n = rewrite_sites(out, v, E, paths, inc, cache)
+            cand, n, how = accepted(fn, out, v, E, paths, inc, cache, build)
             if not n:
                 continue
-            if compiles_identically(fn, cand, build, inc) \
-                    and wasm_unchanged(fn, out, cand, inc):
+            if cand is not None:
                 out = cand
                 done += n
-                notes.append('%-22s %-10s -> %s (via %s::%s)  %d site(s)'
-                             % (fn, v, E, T, F, n))
+                notes.append('%-22s %-10s -> %s (via %s::%s)  %d site(s) [%s]'
+                             % (fn, v, E, T, F, n, how))
             else:
                 declined += 1
-                notes.append('%-22s %-10s -> %s: not byte-identical at i386 OR wasm32 — declined'
-                             % (fn, v, E))
+                notes.append('%-22s %-10s -> %s: not byte-identical at i386 OR '
+                             'wasm32, in either spelling — declined' % (fn, v, E))
         # ---- the third anchor: a DIRECT member chain (already-typed C)
         for m in EXPR_PTR.finditer(text):
             v = m.group('v')
@@ -404,19 +476,18 @@ def main():
             paths = field_paths(E, inc, cache)
             if not paths:
                 continue
-            cand, n = rewrite_sites(out, v, E, paths, inc, cache)
+            cand, n, how = accepted(fn, out, v, E, paths, inc, cache, build)
             if not n:
                 continue
-            if compiles_identically(fn, cand, build, inc) \
-                    and wasm_unchanged(fn, out, cand, inc):
+            if cand is not None:
                 out = cand
                 done += n
-                notes.append('%-22s %-10s -> %s (via %s)  %d site(s)'
-                             % (fn, v, E, m.group('expr')[:28], n))
+                notes.append('%-22s %-10s -> %s (via %s)  %d site(s) [%s]'
+                             % (fn, v, E, m.group('expr')[:28], n, how))
             else:
                 declined += 1
                 notes.append('%-22s %-10s -> %s: not byte-identical at i386 OR '
-                             'wasm32 — declined' % (fn, v, E))
+                             'wasm32, in either spelling — declined' % (fn, v, E))
         if out != text:
             open(path, 'w').write(out)
 

@@ -72,6 +72,16 @@ python3 "$KD_ROOT/tools/fix_pool_reserve.py" "$DST/allobj" "$BUILD" "$MT" | head
 # triangle generator needs both.
 python3 "$KD_ROOT/tools/fix_narrow_loads.py" "$DST/allobj" "$BUILD" "$MT" | head -4 || exit 2
 
+# ---- IMMEDIATELY AFTER fix_narrow_loads, BECAUSE IT IS THE OTHER HALF OF THE
+# SAME LOAD. That pass widened `*(int *)((char *)&McdGjkBinarySubset + 0x3c)` to
+# `*(kd_iptr *)` — the right WIDTH at the wrong ADDRESS, because `0x3c` is
+# element 15 of a pointer array only while pointers are four bytes. This pass
+# fixes the address; run it first and there is no narrow load left for the
+# diagnostic above to report. Two sites, both confirmed against MathEngine's own
+# amd64 build (`McdGjkBinarySubset + 0x78` = 15*8), and one of them is the arm64
+# Onslaught SIGSEGV.
+python3 "$KD_ROOT/tools/fix_global_array_index.py" "$DST/allobj" "$BUILD" "$MT" | tail -3 || exit 2
+
 # ---- AFTER the passes above, because it reads what they wrote: the cursor's
 # initialiser has to already be spelled as an offsetof against a NAMED field
 # (`fix_literal_offsets`/`fix_derived_fields`) and cast through `kd_iptr`
@@ -97,6 +107,16 @@ python3 "$KD_ROOT/tools/fix_word_indexed_struct.py" "$DST/allobj" "$BUILD" "$MT"
 # direct spelling counts only where the pass above has already typed an access as
 # `((E *)v)->`: an independent conclusion, with its own frame test and its own
 # two-compiler gate, that this file walks an array of E.
+# ---- `fix_baked_sizeof` A SECOND TIME, and only its FIELD-TYPED alloca rule.
+# That rule sizes a stack triangle array from the member the block is stored
+# into — `McdTriangleList::list`, declared `McdUserTriangle *` in the oracle —
+# and in the raw recovery that statement reads `pMVar9[3].prev = ...`. The field
+# has no NAME until the two passes above have run, so the rule cannot fire on
+# the first invocation and the array stays at 24 bytes per element instead of
+# 48. `--field-allocas-only` keeps the other four rules switched off so nothing
+# is re-litigated over text five passes have since rewritten.
+python3 "$KD_ROOT/tools/fix_baked_sizeof.py" "$DST/allobj" "$BUILD" "$MT" --field-allocas-only | tail -4 || exit 2
+
 python3 "$KD_ROOT/tools/fix_element_stride.py" "$DST/allobj" "$BUILD" "$MT" | tail -3 || exit 2
 
 # ---- AFTER EVEN THAT ONE, and for a reason none of the others have: this pass

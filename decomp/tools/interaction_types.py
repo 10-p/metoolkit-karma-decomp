@@ -81,15 +81,41 @@ def region_of(text, pos):
 
 
 def type_ids(texts):
-    """geometry type id -> the concrete tag, read from each GetTypeId()."""
-    out = {}
+    """geometry type id -> the concrete tag, read from each GetTypeId().
+
+    ⚠⚠ A SECOND ACCESSOR ON THE SAME TYPE IS NOT A CONFLICT, AND TREATING IT AS
+    ONE COST THE WHOLE CONVEX-MESH FAMILY. `McdConvexMesh.c` exports both
+    `McdConvexMeshGetTypeId` and `McdConvexMeshMeshGetTypeId`, and both return 7.
+    Stripping `GetTypeId` gives the tags `McdConvexMesh` and `McdConvexMeshMesh`,
+    the "claimed by two tags" rule read that as evidence about neither, and id 7
+    dropped out of the table entirely — so `McdSphylConvexMeshIntersect` and its
+    seven siblings were never typed and `fix_literal_offsets` left every geometry
+    offset in `IxConvexPrimitives.c` at its i386 value. `McdConvexMesh::mHull` is
+    at 16 here and 32 there, so `ConvexHullNSegment` was handed a hull pointer
+    sixteen bytes short and `ConvexHullVoronoiRegion` faulted on the face table.
+    Measured on the LP64 vehicle, 2026-08-31, frame 27 of a ktrace run.
+
+    ★ THE TIE-BREAK IS THE TYPE DATABASE, NOT A NAME RULE. A tag that names a
+    struct the oracle declares is a type; one that does not is an accessor whose
+    name happens to end that way. `McdConvexMesh` has a body, `McdConvexMeshMesh`
+    does not. If that leaves one candidate the id is typed; if it leaves none or
+    more than one the conflict stands and the id is dropped, as before."""
+    import fix_literal_offsets as flo
+    bodies = flo.struct_bodies(os.path.join(kd_paths.METOOLKIT_DIR, 'include'))
+    claims = {}
     for text in texts.values():
         for m in TYPEID.finditer(text):
             tag = m.group('name')[:-len('GetTypeId')]
-            i = int(m.group('id'))
-            # a type id claimed by two tags is evidence about neither
-            out[i] = tag if out.get(i, tag) == tag else None
-    return {k: v for k, v in out.items() if v}
+            claims.setdefault(int(m.group('id')), set()).add(tag)
+    out = {}
+    for i, tags in claims.items():
+        if len(tags) == 1:
+            out[i] = next(iter(tags))
+            continue
+        real = [t for t in tags if t in bodies or '_' + t in bodies]
+        if len(real) == 1:
+            out[i] = real[0]
+    return out
 
 
 def pair_types(texts):
@@ -111,6 +137,13 @@ def pair_types(texts):
                 if fn in ('0x0',) or not fn:
                     continue
                 prev = out.get(fn, (a, b))
+                # ⚠ ONCE DROPPED, STAY DROPPED. `out[fn] = None` is the marker,
+                # and a THIRD registration of the same function then indexed
+                # `None[0]` and threw. Latent until the ConvexMesh family started
+                # being typed at all — `McdNullIntersect` is registered against
+                # every type there is.
+                if prev is None:
+                    continue
                 if prev != (a, b):
                     dropped[fn] = 'registered for %s/%s and %s/%s' % (
                         prev[0], prev[1], a, b)

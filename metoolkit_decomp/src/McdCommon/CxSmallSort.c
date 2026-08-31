@@ -85,7 +85,7 @@ KD_WEAK_DATA const void *kd_ZTV11CxSmallSort[4]
 
 /* ---- pointer slots Ghidra named by address ---- */
 /* PTR__CxSmallSort_00011f20 -> _ZTV11CxSmallSort + 0x8 */
-#define PTR__CxSmallSort_00011f20 (*(void **)((char *)&kd_ZTV11CxSmallSort + 0x8))
+#define PTR__CxSmallSort_00011f20 (*(void **)((char *)&kd_ZTV11CxSmallSort[2]))
 
 /* ---- exported data symbols (need the declarations above) ---- */
 

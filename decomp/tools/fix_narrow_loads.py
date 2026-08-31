@@ -177,6 +177,33 @@ NAMED_LOAD = re.compile(
     r'\(\((?:kd_iptr|kd_uptr)\)\w+ \+ '
     r'\(\(int\)\(\(char \*\)&\(\((?:struct )?(?P<T>\w+) \*\)0\)->(?P<F>[\w.\[\]]+)'
     r' - \(char \*\)0\)\)\)')
+# ---- RULE E. THE SAME LOAD WITH NO DESTINATION AT ALL.
+#
+# Rule C requires the value to land in a local declared pointer-width, and that
+# was only ever a PROXY: the justification is the measurement below — the address
+# names a real field whose size is 4 at i386 and 8 at LP64 — and a field that
+# grew is a truncated load wherever it appears. An INLINE one has no destination
+# to inspect:
+#
+#     *(kd_iptr *)(*(int *)((kd_iptr)pvVar6 + KD_OFFSET(McdAggregate, elementTable))
+#                  + KD_OFFSET(McdAggregateElement, mGeometry) + local_10c)
+#
+# ★ THIS IS THE ARM64 RAGDOLL CRASH AFTER THE qsort ONE, and the disassembly says
+# it exactly. `IxAggregateLineSegment+304` on a OnePlus 6:
+#
+#     a0ab30: ldr w8, [x8, #0x20]     <- elementTable, at its CORRECT LP64 offset 32
+#     a0ab34: add w9, w8, #0x40       <-   ...+ offsetof(mGeometry)
+#     a0ab3c: ldr x8, [x8, w9, sxtw]  <- FAULT, fault addr 0xffffffffd3b89558
+#
+# The offset is right — `fix_literal_offsets` fixed that — and the WIDTH is four
+# bytes of an eight-byte pointer, sign-extended by `sxtw` into the address the
+# tombstone reports. Reached from `KInitSkeletonKarma` -> `USkeletalMesh::
+# LineCheck`, so it is on the ragdoll-creation path and nothing offline runs it.
+BARE_LOAD = re.compile(
+    r'\*\(\s*(?P<ty>int|uint|undefined4|MeU32|MeI32)\s*\*\)'
+    r'\(\((?:kd_iptr|kd_uptr)\)\w+ \+ '
+    r'\(\(int\)\(\(char \*\)&\(\((?:struct )?(?P<T>\w+) \*\)0\)->(?P<F>[\w.\[\]]+)'
+    r' - \(char \*\)0\)\)\)')
 WIDE_DECL = r'(?m)^\s*kd_[iu]ptr\s+%s\s*;'
 _FSZ = re.compile(r'char \(\*\)\[(\d+)\]')
 _FCACHE = {}
@@ -249,9 +276,67 @@ def widen_named_field_loads(path, root):
                      lambda mm: '%s%s%s' % (mm.group(1),
                                             'kd_iptr' if mm.group(2) == 'int'
                                             else 'kd_uptr', mm.group(3)), out)
+    # ---- RULE E, over what rule C left. A site rule C repaired now spells its
+    # cast `*(kd_iptr *)` and no longer matches, so this sees only the loads with
+    # no pointer-width destination to key on — which is every INLINE one.
+    #
+    # ⚠⚠ AN ASSIGNMENT TARGET IS NOT A LOAD, AND WIDENING ONE ALONE CORRUPTS.
+    # The first version of this rule matched both sides of `=` and turned
+    #     *(undefined4 *)(c + KD_OFFSET(MdtContact, head.mdtbody[1])) = uVar1;
+    # into an EIGHT-byte store of a four-byte `uVar1`, zeroing the high half of a
+    # pointer that had been valid. i386 stayed 145/145 and the three scenes
+    # stayed bit-identical; the LP64 harness went red with an AddressSanitizer
+    # error in `MdtBodyGetCenterOfMassPosition` and two trajectories that stopped
+    # at row 52 and row 0. ★ THE LP64 HARNESS IS THE ONLY GATE THAT SEES THIS —
+    # the third time this project has been told so.
+    #
+    # So a store is widened only when its SOURCE is a load this rule is widening
+    # too: `*(NARROW *)dest = *(NARROW *)src` on two fields that both grow is a
+    # whole-pointer copy and is the complete repair. A store whose source is a
+    # narrow local is a DIFFERENT defect — the local needs widening first — and
+    # is declined and reported rather than half-repaired.
+    bare = 0
+    ok = {}
+    ms = list(BARE_LOAD.finditer(out))
+    for m in ms:
+        T, F, ty = m.group('T'), m.group('F'), m.group('ty')
+        a = field_size(T, F, '-m32', root)
+        b = field_size(T, F, '-m64', root)
+        if a is None or b is None:
+            dec.append('%s::%s cannot be measured (inline)' % (T, F))
+            continue
+        if not (a == 4 and b == 8):
+            # ⚠ THE SAME GUARD AS RULE C, AND IT CARRIES MORE WEIGHT HERE. With
+            # no destination to look at, the measurement is the ONLY thing
+            # separating a truncated pointer from a genuine `int` field — and
+            # widening a load of a genuine int reads four bytes past it.
+            dec.append('%s::%s is %d/%d, not a pointer that grew (inline)'
+                       % (T, F, a, b))
+            continue
+        ok[m.span()] = WIDEN[ty]
+    accept = []
+    for m in ms:
+        if m.span() not in ok:
+            continue
+        if re.match(r'\s*=(?!=)', out[m.end():m.end() + 4]):
+            end = out.find(';', m.end())
+            end = len(out) if end < 0 else end
+            if any(x.span() in ok and m.end() < x.start() < end for x in ms):
+                accept.append(m)           # a whole-pointer copy: both sides
+            else:
+                dec.append('%s::%s is a STORE whose source is not a widened '
+                           'load — the source needs widening first (inline)'
+                           % (m.group('T'), m.group('F')))
+            continue
+        accept.append(m)
+    for m in sorted(accept, key=lambda x: -x.start()):
+        ty = m.group('ty')
+        new = m.group(0).replace('*(%s *)' % ty, '*(%s *)' % ok[m.span()], 1)
+        out = out[:m.start()] + new + out[m.end():]
+        bare += 1
     if out != text:
         open(path, 'w').write(out)
-    return done, dec
+    return done, bare, dec
 
 
 # RULE D. `V = (NARROW *)((kd_iptr)&EXPR.FIELD + ...)` where FIELD is a POINTER
@@ -347,7 +432,7 @@ def main():
         return 2
     cf = cflags(root)
     tot = touched = fld = fbits = other = 0
-    named, named_dec = 0, []
+    named, inline, named_dec = 0, 0, []
     for fn in sorted(os.listdir(srcdir)):
         if not fn.endswith('.c'):
             continue
@@ -359,8 +444,9 @@ def main():
         touched += 1 if n else 0
         # ---- RULE C, after the diagnostic loop: the sites it cannot see
         # because fix_narrow_pointers already made the destination an integer.
-        k, d = widen_named_field_loads(os.path.join(srcdir, fn), root)
+        k, kb, d = widen_named_field_loads(os.path.join(srcdir, fn), root)
         named += k
+        inline += kb
         named_dec += ['%-24s %s' % (fn, x) for x in d]
         # ---- RULE D: a word pointer AT a growing pointer field
         k2, d2 = widen_field_address_pointers(os.path.join(srcdir, fn), root)
@@ -368,6 +454,7 @@ def main():
         named_dec += ['%-24s %s' % (fn, x) for x in d2]
     print(f'  {tot} narrow pointer LOAD(s) widened in {touched} object(s)')
     print(f'  {named} named-field LOAD(s) widened by measurement (rule C)')
+    print(f'  {inline} INLINE named-field LOAD(s), no destination (rule E)')
     for x in named_dec:
         print(f'    declined: {x}')
     print(f'  declined: {fld} narrow struct field(s) — a LAYOUT question, see kd_types.h')

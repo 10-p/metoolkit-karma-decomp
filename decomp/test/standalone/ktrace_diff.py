@@ -112,6 +112,24 @@ def main():
     same = [n for n, f in verdicts if f is None]
     print('%d of %d bodies never differ by more than %g in position or orientation.' %
           (len(same), len(verdicts), tol))
+    # ⚠⚠ A TRACE THAT STOPPED EARLY AGREES WITH EVERYTHING IT NEVER REACHED.
+    # `first` is computed over the frames the two runs SHARE, so a run that
+    # crashed after twelve frames of two hundred and twenty-three compares twelve
+    # and reads back "behaviourally IDENTICAL". That is exactly what happened on
+    # 2026-08-31: the LP64 build died in `IxAggregateLineSegment` at frame 12 and
+    # this line called the two builds identical. The frame counts were printed at
+    # the top and the verdict did not consult them.
+    fa = max((v[-1][0] for v in A.values()), default=0)
+    fb = max((v[-1][0] for v in B.values()), default=0)
+    short, full = min(fa, fb), max(fa, fb)
+    if full and short < full * 0.9:
+        print('*** NOT COMPARABLE: %s ends at frame %d against %s\'s %d. One run '
+              'stopped early —' % ((la, fa, lb, fb) if fa < fb else (lb, fb, la, fa)))
+        print('    check its log for a crash. The rows above compare only the %d '
+              'frames they share,' % short)
+        print('    so "never differ" is a statement about %d%% of the run.'
+              % round(100.0 * short / full))
+        return 2
     if len(same) == len(verdicts):
         print('The two builds are behaviourally IDENTICAL on this map at this tolerance.')
     return 0

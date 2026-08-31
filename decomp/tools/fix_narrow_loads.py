@@ -254,6 +254,91 @@ def widen_named_field_loads(path, root):
     return done, dec
 
 
+# RULE D. `V = (NARROW *)((kd_iptr)&EXPR.FIELD + ...)` where FIELD is a POINTER
+# that grows. The local is a word pointer, so `*V` reads four bytes of it.
+ADDR_OF_FIELD = re.compile(
+    r'(?P<v>\w+) = \((?P<ty>undefined4|int|uint) \*\)\(\(kd_iptr\)&'
+    r'(?P<expr>[A-Za-z_][\w\[\]\.>-]*?)\s*\+')
+
+
+def resolve_member(expr, text, root):
+    """Follow `context->pools[3].contacts` to the member it names.
+
+    ⚠ A MEMBER NAME IS NOT A TYPE. Four structs in this corpus declare a pointer
+    called `contacts` — `McdBatchEntry`, `McdBatchContactPool`,
+    `_McdIntersectResult` and `MstBridge` — so matching on the name alone is a
+    coin toss. The expression says which: `context` is declared
+    `McdBatchContext *`, its `pools` is an `McdBatchContactPool *`, and `[3]` of
+    that is where `.contacts` lives. Each hop is read from the ORACLE, and a hop
+    that cannot be resolved declines the site.
+
+    Returns (owning tag, member name) or None."""
+    import fix_literal_offsets as flo
+    inc = os.path.join(root, 'include')
+    bodies = flo.struct_bodies(inc)
+    parts = [x for x in re.split(r'->|\.', expr) if x]
+    base = re.sub(r'\[[^\]]*\]', '', parts[0])
+    m = re.search(r'(?<![\w])([A-Za-z_]\w*)\s*\*\s*%s\b' % re.escape(base), text)
+    if not m:
+        return None
+    tag = m.group(1)
+    for hop in parts[1:-1]:
+        hop = re.sub(r'\[[^\]]*\]', '', hop)
+        body = bodies.get(tag)
+        if not body:
+            return None
+        mm = re.search(r'([A-Za-z_]\w*)\s*\*?\s*%s\s*[;,\[]' % re.escape(hop),
+                       re.sub(r'/\*.*?\*/', ' ', body, flags=re.S))
+        if not mm:
+            return None
+        tag = mm.group(1)
+    field = re.sub(r'\[[^\]]*\]', '', parts[-1])
+    if tag not in bodies:
+        return None
+    return tag, field
+
+
+def widen_field_address_pointers(path, root):
+    """Rule D. Returns (widened, declined).
+
+    `McdBatchContextDestroy` walks the contact pools and frees the last of every
+    four through `(void *)*puVar1`, where `puVar1` is an `undefined4 *` pointing
+    at a `contacts` POINTER. The other three in the same loop use
+    `*(void **)(...)` and are fine; this one reads four bytes of an eight-byte
+    pointer and hands the half to `free()`. It is the BR-Anubis shutdown SIGSEGV,
+    and it is on every level teardown — the map sweep only surfaced it where the
+    timing let the teardown finish.
+
+    Rule A cannot see it: `(void *)*puVar1` dereferences a VARIABLE, not a
+    `*(T *)` cast, so the `LOAD` pattern does not match and the site is counted
+    as "a field or a plain variable". The repair is to type the POINTER instead
+    of the load — `void **` — which is the same four-byte access at i386."""
+    text = open(path, errors='ignore').read()
+    out, done, dec = text, 0, []
+    for m in ADDR_OF_FIELD.finditer(text):
+        v, ty = m.group('v'), m.group('ty')
+        if not re.search(r'(?m)^\s*%s\s*\*\s*%s\s*;' % (ty, re.escape(v)), out):
+            continue
+        r = resolve_member(m.group('expr'), text, root)
+        if not r:
+            dec.append('cannot resolve %s to a member' % m.group('expr'))
+            continue
+        T, f = r
+        a = field_size(T, f, '-m32', root)
+        b = field_size(T, f, '-m64', root)
+        if not (a == 4 and b == 8):
+            dec.append('%s::%s is %s/%s, not a pointer that grew' % (T, f, a, b))
+            continue
+        out = re.sub(r'(?m)^(\s*)%s(\s*)\*(\s*%s\s*;)' % (ty, re.escape(v)),
+                     r'\1void\2**\3', out)
+        out = out.replace('%s = (%s *)((kd_iptr)&' % (v, ty),
+                          '%s = (void **)((kd_iptr)&' % v)
+        done += 1
+    if out != text:
+        open(path, 'w').write(out)
+    return done, dec
+
+
 def main():
     srcdir, build = sys.argv[1], sys.argv[2]
     root = sys.argv[3] if len(sys.argv) > 3 else kd_paths.METOOLKIT_DIR
@@ -277,6 +362,10 @@ def main():
         k, d = widen_named_field_loads(os.path.join(srcdir, fn), root)
         named += k
         named_dec += ['%-24s %s' % (fn, x) for x in d]
+        # ---- RULE D: a word pointer AT a growing pointer field
+        k2, d2 = widen_field_address_pointers(os.path.join(srcdir, fn), root)
+        named += k2
+        named_dec += ['%-24s %s' % (fn, x) for x in d2]
     print(f'  {tot} narrow pointer LOAD(s) widened in {touched} object(s)')
     print(f'  {named} named-field LOAD(s) widened by measurement (rule C)')
     for x in named_dec:

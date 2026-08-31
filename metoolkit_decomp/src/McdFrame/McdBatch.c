@@ -788,7 +788,7 @@ void kd_McdBatchContextReset(McdBatchContext *context)
 void kd_McdBatchContextDestroy(McdBatchContext *context)
 
 {
-  undefined4 *puVar1;
+  void **puVar1;
   int iVar2;
   int iVar3;
 
@@ -804,7 +804,7 @@ void kd_McdBatchContextDestroy(McdBatchContext *context)
     (MeMemoryAPI.destroy)(*(void **)((kd_iptr)&context->pools->contacts + iVar2));
     (MeMemoryAPI.destroy)(*(void **)((kd_iptr)&context->pools[1].contacts + iVar2));
     (MeMemoryAPI.destroy)(*(void **)((kd_iptr)&context->pools[2].contacts + iVar2));
-    puVar1 = (undefined4 *)((kd_iptr)&context->pools[3].contacts + iVar2);
+    puVar1 = (void **)((kd_iptr)&context->pools[3].contacts + iVar2);
     iVar2 = iVar2 + 4 * (int)sizeof(McdBatchContactPool);
     (MeMemoryAPI.destroy)((void *)*puVar1);
     iVar3 = iVar3 + -4;

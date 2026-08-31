@@ -12,7 +12,40 @@ read before resuming; `../HANDOVER.md` is the depth behind it and `../proven.txt
 
 ---
 
-★★★ **NEWEST: 2026-08-31 (later) — FIVE GAMETYPES CLEAN. A MAP SWEEP IS A BETTER DETECTOR
+★★★ **NEWEST: 2026-08-31 (last) — SIX GAMETYPES CLEAN, AND ⚠⚠ A GATE THAT COULD NOT FAIL.**
+
+**`lp64_pipeline.sh` reported PASS while a pass was crashing.** Every pass is piped into
+`head`/`tail` to keep the log readable, and `|| exit 2` then tests the exit status of **`tail`**,
+which is always 0. A Python `IndexError` went straight through it: the acceptance test ran on a
+tree the pass had not finished editing and printed 145/145, three scenes bit-identical, PASS.
+The only symptom was a summary line missing from the log. `set -o pipefail` is now the second
+line of the script. ★ **The gate that cannot fail is the one to check first.**
+
+**Rule D**, and it is why BR-Anubis now survives its own teardown.
+`McdBatchContextDestroy` frees the last of every four contact pools through `(void *)*puVar1`,
+where `puVar1` is an `undefined4 *` pointing **at** a `contacts` pointer. The other three in the
+same loop use `*(void **)(...)` and are fine; this one read four bytes of an eight-byte pointer
+and handed the half to `free()`. Rule A cannot see it — it dereferences a *variable*, not a
+`*(T *)` cast — so the repair types the **pointer** instead of the load: `void **`, the same
+four-byte access at i386.
+
+⚠ **And a member name is not a type.** Four structs here declare a pointer called `contacts`, so
+the first version matched on the name and correctly declined as ambiguous. `resolve_member`
+follows the **expression**: `context` is declared `McdBatchContext *`, its `pools` is an
+`McdBatchContactPool *`, and `[3]` of that is where `.contacts` lives. Every hop is read from the
+oracle; an unresolvable hop declines the site.
+
+```
+DM-Rankin  DM-DE-Ironic  CTF-FaceClassic  BR-Anubis  ONS-Torlan  VCTF-BE-Dystopia   ALL OK
+ONS-Primeval  still faults, now deeper — McdGjkFaceQueueInit
+AS-Convoy     ENGINE-side, not Karma
+```
+
+Evidence: `../proven.txt` `LP64-PIPEFAIL`.
+
+---
+
+★★★ **PREVIOUS: 2026-08-31 (later) — FIVE GAMETYPES CLEAN. A MAP SWEEP IS A BETTER DETECTOR
 THAN ANY SCENE.** Eight map/gametype combinations, 120 s each:
 
 ```

@@ -10,6 +10,13 @@
 # by hand is four commands with two ways to get the order wrong, and the copy is
 # the one that is easy to forget.
 set -u
+# ⚠ WITHOUT pipefail A PASS CAN CRASH AND THIS SCRIPT REPORTS PASS. Every
+# pass below is piped into `head`/`tail` to keep the log readable, and
+# `|| exit 2` then tests the exit status of `tail`, which is always 0. A
+# Python traceback went straight through it and the acceptance test ran on a
+# tree the pass had not finished editing — 145/145 and PASS, on a repair that
+# had thrown IndexError.
+set -o pipefail
 . "$(cd "$(dirname "$0")" && pwd)/../../lib/kd-paths.sh"
 MT="$METOOLKIT_DIR"
 INC="$KD_MT_INC"

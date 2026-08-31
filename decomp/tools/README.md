@@ -1061,8 +1061,26 @@ resolved objects declined on byte-identity (`McdAggregate` 28, `McdTriangleList`
 
 ```bash
 python3 tools/fix_index_layout.py /tmp/kd_lp64/allobj /tmp/kd_build $MT
-#   -> 38 re-spelled, 33 already correct at LP64, 13 declined
+#   -> 63 re-spelled, 2 already correct at LP64, 19 declined
 ```
+
+★ **AN INDEX CAN LAND ON THE RIGHT ADDRESS AND STILL BE A DEFECT** (2026-08-31). The `same`
+short-circuit used to compare only the **offset**, and `mRefCtAndID` is the first member of
+`McdGeometry`, so `geom[1].mRefCtAndID` is the byte just past the base — 16 here, 32 there — and
+`McdAggregate::elementTable` is at 16 and 32 too. The offset agrees at both widths; the **width**
+does not (4/4 against 4/**8**), so the store kept the low half of a pointer. It now requires the
+width to agree as well. `CxSmallSort` is unaffected: `mPrev` and `mRep` are both pointers, so
+both scale and those sites still skip.
+
+⚠ **AND THE FIRST VERSION OF THAT RULE WAS WORSE THAN THE DEFECT, WITH EVERY GATE GREEN.** A
+field can resolve to a **struct** that begins at the same address — `McdConvexMesh::mHull` — and
+a struct has no access width, so the access type fell through to `MeU32` and wrote four bytes of
+an eight-byte pointer *while widening the matching read* to `kd_uptr`. i386 was 145/145, the
+scenes were bit-identical, the pipeline passed. Only **running the game** caught it: the crash
+moved to `MeBoundingSphereCalc2` with `points = 0x59620c50`. `descend_to_scalar` is the honest
+version — it narrows a struct-typed field to the member that *begins* there (`mHull` →
+`mHull.vertex`), and the caller verifies the offset did not move at either width before using
+it. What it cannot narrow is skipped, not guessed.
 
 Same defect class as `fix_derived_fields.py`, which runs **first** and does the better repair
 wherever a file registers one geometry. This one takes what that pass reports as ambiguous and

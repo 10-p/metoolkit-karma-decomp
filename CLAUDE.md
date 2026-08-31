@@ -87,6 +87,12 @@ web-facing change needs the browser E2E re-run and re-stamped before it is calle
 
 `engine-ut2004` consumes this repository via FetchContent at `main`, unpinned.
 
+⚠ **A wasm32 A/B MUST use the flags the product uses** — `-std=gnu99 -fno-strict-aliasing`
+(`metoolkit_decomp/CMakeLists.txt`'s `MD_C_FLAGS`), plus `-O2 -g0` so DWARF line numbers cannot
+be what differs. The recovery reinterprets storage the way the original machine code did, so a
+**strict-aliasing** probe is not compiling the thing that ships: it reported `McdAggregate.c` as
+one byte difference on a change that is byte-identical under the real flags.
+
 ## Build / test
 
 ```bash

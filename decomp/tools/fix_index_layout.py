@@ -74,7 +74,8 @@ site is only touched when all of the following are true, each of them measured:
   4. the pointer provably points at the START of such an object — see THE FRAME
      below, which is the rule this tool got wrong first and which is the whole
      difference between a repair and a new defect;
-  5. and the naive index is ACTUALLY WRONG at LP64. See below: half are not.
+  5. and the naive index is ACTUALLY WRONG at LP64 — in its OFFSET or in its
+     WIDTH. See below: half are right in both and are left alone.
 
 ★★ HALF THE REMAINDER NEED NO REPAIR, WHICH IS WHY THIS COMPARES RATHER THAN
 REWRITES. `CxSmallSort`'s `Link *` sites index a base class exactly like the
@@ -91,6 +92,38 @@ Every field offset and the size both double, so `pLVar2[1].mPrev` lands on
 and 0,32,44,56,64,72,80 there. So this MEASURES BOTH — what the index computes
 at LP64, and where the field really is at LP64 — and only rewrites where they
 disagree.
+
+★★★ AN INDEX CAN LAND ON THE RIGHT ADDRESS AND STILL BE A DEFECT, and comparing
+only the offset missed a crash for a whole session. `McdAggregateCreate` stores
+its element table through the base class:
+
+    pMVar1[1].mRefCtAndID = (kd_uptr)pvVar2;      /* McdAggregate::elementTable */
+
+`mRefCtAndID` is the FIRST member of `McdGeometry`, so `geom[1].mRefCtAndID` is
+the byte just past the base — 16 here, 32 there — and `elementTable` is at 16
+and 32 too. **The offset agrees at both widths.** But `mRefCtAndID` is four
+bytes at both widths and `elementTable` is four here and EIGHT there, so the
+store keeps the low half of a pointer and every read of it is an address with
+its top 32 bits gone. UT2004 died in `McdAggregateCreate` with the truncation
+visible in the register file — `0x5961f910` where every live pointer was
+`0x5555_5xxxxxxx`.
+
+So the `same` test requires the WIDTH to agree as well. The `CxSmallSort` family
+is unaffected: `mPrev` and `mRep` are both pointers, so both scale together and
+those sites are still skipped. The width was already being measured one line
+later to choose the access type; it simply was not being used to decide whether
+there was anything to repair.
+
+⚠ AND THE WIDTH ONLY DECIDES ANYTHING WHEN IT IS A SCALAR. A field can resolve
+to a STRUCT that begins at the same address — `McdConvexMesh::mHull` does, and
+its first member is the `vertex` pointer — so `w` is the whole struct's size and
+comparing it to a four-byte field means nothing. The first version of this rule
+had no such guard, the access type fell through to `MeU32`, and the store wrote
+FOUR bytes of an eight-byte pointer while the matching read was widened to
+`kd_uptr`. That is strictly worse than leaving the site alone, and it was caught
+by running the game: the crash moved from `McdAggregateCreate` to
+`MeBoundingSphereCalc2` with `points = 0x59620c50`. Non-scalar widths are now
+skipped, which leaves those sites exactly as they were.
 
 ★★★ THE FRAME, AND THIS IS WHERE THE FIRST VERSION OF THIS TOOL WAS WRONG.
 Knowing the object is a `C` is not enough; the pointer has to point at its
@@ -349,6 +382,43 @@ def member_type(tag, field, inc):
                     d[nm[0]] = (base + ' ' + stars).strip()
         _DECLS[tag] = d
     return _DECLS[tag].get(field)
+
+
+def descend_to_scalar(c, path, inc):
+    """Narrow a STRUCT-typed field to the member that begins at the same address.
+
+    A struct has no ACCESS WIDTH. `McdConvexMesh::mHull` is an `McdConvexHull`
+    whose first member is the `vertex` POINTER, so byte 32 is `mHull` and
+    `mHull.vertex` at once — and `offsets_of` hands back the shallower name
+    because `build_paths` walks breadth-first and `setdefault`s the first hit.
+    Naming the struct measures `sizeof(McdConvexHull)`; naming the pointer
+    measures 8, which is the number the access actually needs.
+
+    ⚠ THE ADDRESS MUST NOT MOVE, and the caller checks that rather than trusting
+    it. A first member starts where its struct starts, so this narrows the NAME
+    and nothing else — but "the first member the regex found" is a claim about a
+    parse, and a wrong one would silently retarget the repair one field along.
+
+    Returns (path, lp64 width); the width is None or non-scalar if it could not
+    get there, and every caller declines on that."""
+    bodies = flo.struct_bodies(inc)
+    tag, cur = c, path
+    w = None
+    for _ in range(flo.DEPTH):
+        measure('lp64', [fieldsize_expr(c, cur)], inc)
+        w = _MEAS['lp64'].get(fieldsize_expr(c, cur))
+        if w is None or w in (4, 8):
+            return cur, w
+        last = re.sub(r'\[\d+\]', '', cur.split('.')[-1])
+        ty = member_type(tag, last, inc) or ''
+        base = re.sub(r'^(?:const|struct|unsigned)\s+', '', ty).strip()
+        if '*' in ty or base not in bodies or base == tag:
+            return cur, w
+        m = flo.MEMBER.search(bodies[base])
+        if not m:
+            return cur, w
+        tag, cur = base, '%s.%s' % (cur, m.group('name'))
+    return cur, w
 
 
 def derived_map(inc):
@@ -760,15 +830,36 @@ def main():
             notes.append('%-26s %s[%d].%s: %s::%s does not measure at %d — declined'
                          % (s['fn'], s['v'], s['k'], s['f'], c, path, s['K']))
             continue
-        if real == s['naive']:
-            # ★ THE INDEX IS ALREADY RIGHT — see the header. Rewriting these
-            # would be churn with a byte-identity risk and no defect behind it.
-            same += 1
-            continue
         # the ACCESS WIDTH comes from the CONCRETE field; the SPELLING stays
         # Ghidra's whenever that already has the right width, because a pointer
         # spelling is what keeps `&(v[3].prev)->mRefCtAndID` compiling.
         w = _MEAS['lp64'].get(fieldsize_expr(c, path))
+        if w not in (4, 8):
+            # A struct begins where its first member does, so the address is the
+            # same and only the NAME narrows — but that is checked, not assumed.
+            p2, w2 = descend_to_scalar(c, path, inc)
+            if w2 in (4, 8) and p2 != path:
+                measure('lp64', [offset_expr(c, p2)], inc)
+                measure('i386', [offset_expr(c, p2)], inc)
+                if (_MEAS['lp64'].get(offset_expr(c, p2)) == real
+                        and _MEAS['i386'].get(offset_expr(c, p2)) == s['K']):
+                    path, w = p2, w2
+        if real == s['naive'] and (w not in (4, 8) or s['fw'] == w):
+            # ★ THE INDEX IS ALREADY RIGHT AND SO IS THE WIDTH — see the header.
+            # Rewriting these would be churn with a byte-identity risk and no
+            # defect behind it.
+            #
+            # ⚠ THE WIDTH ONLY DECIDES ANYTHING WHEN IT IS A SCALAR. A field can
+            # resolve to a STRUCT that begins at this address — `McdConvexMesh`'s
+            # `mHull` does — and a struct has no access width. `descend_to_scalar`
+            # above narrows those to the member really being touched; anything it
+            # cannot narrow is skipped, which leaves the site as it was. Guessing
+            # instead fell through to `MeU32` and wrote FOUR bytes of an
+            # eight-byte pointer while widening the matching read to `kd_uptr` —
+            # strictly worse than doing nothing, and only running the game caught
+            # it.
+            same += 1
+            continue
         ft = member_type(s['tag'], s['f'], inc)
         acc = ft if (ft and s['fw'] == w) else ('kd_uptr' if w == 8 else 'MeU32')
         # ⚠ THE WHOLE THING IS PARENTHESISED, and leaving that out declined

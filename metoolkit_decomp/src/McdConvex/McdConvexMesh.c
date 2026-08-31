@@ -249,7 +249,7 @@ McdGeometry * kd_McdConvexMeshCreate(McdFramework *frame,McdConvexHull *poly,MeR
 
   pMVar1 = (MeMemoryAPI.createAligned)((int)sizeof(*(McdConvexMesh *)0),0x10);
   McdGeometryInit(pMVar1,frame,7);
-  pMVar1[1].mRefCtAndID = (kd_uptr)poly->vertex;
+  (*(kd_uptr *)((char *)pMVar1 + ((int)((char *)&((McdConvexMesh *)0)->mHull.vertex - (char *)0)))) = (kd_uptr)poly->vertex;
   ((McdConvexMesh *)pMVar1)->mHull.face = (McdGeometryID)poly->face;
   ((McdConvexMesh *)pMVar1)->mHull.edge = (McdGeometryID)poly->edge;
   ((McdConvexMesh *)pMVar1)->mHull.edgeIndex = (McdFrameworkID)poly->edgeIndex;
@@ -258,7 +258,7 @@ McdGeometry * kd_McdConvexMeshCreate(McdFramework *frame,McdConvexHull *poly,MeR
   ((McdConvexMesh *)pMVar1)->mHull.numEdge = (McdGeometryID)poly->numEdge;
   ((McdConvexMesh *)pMVar1)->mFatness = fatness;
   kd_MeBoundingSphereCalc2
-            ((McdCnvVertex *)pMVar1[1].mRefCtAndID,((McdConvexMesh *)pMVar1)->mHull.numVertex,(MeReal *)&((McdConvexMesh *)pMVar1)->mBoundingSphereCenter[0],
+            ((McdCnvVertex *)(*(kd_uptr *)((char *)pMVar1 + ((int)((char *)&((McdConvexMesh *)0)->mHull.vertex - (char *)0)))),((McdConvexMesh *)pMVar1)->mHull.numVertex,(MeReal *)&((McdConvexMesh *)pMVar1)->mBoundingSphereCenter[0],
              (MeReal *)(pMVar1 + 3));
   *(MeReal *)&(*(MeU32 *)((char *)pMVar1 + ((int)((char *)&((McdConvexMesh *)0)->mBoundingSphereRadius - (char *)0)))) = (fatness + *(float *)&(((McdConvexMesh *)pMVar1)->mBoundingSphereRadius));
   return pMVar1;
@@ -280,7 +280,7 @@ kd_McdConvexMeshCreateHull
                     
     pMVar2 = (MeMemoryAPI.createAligned)((int)sizeof(*(McdConvexMesh *)0),0x10);
     McdGeometryInit(pMVar2,frame,7);
-    pMVar2[1].mRefCtAndID = (kd_uptr)poly.vertex;
+    (*(kd_uptr *)((char *)pMVar2 + ((int)((char *)&((McdConvexMesh *)0)->mHull.vertex - (char *)0)))) = (kd_uptr)poly.vertex;
     ((McdConvexMesh *)pMVar2)->mHull.face = (McdGeometryID)poly.face;
     ((McdConvexMesh *)pMVar2)->mHull.edge = (McdGeometryID)poly.edge;
     ((McdConvexMesh *)pMVar2)->mHull.edgeIndex = (McdFrameworkID)poly.edgeIndex;
@@ -289,7 +289,7 @@ kd_McdConvexMeshCreateHull
     ((McdConvexMesh *)pMVar2)->mHull.numEdge = (McdGeometryID)poly.numEdge;
     ((McdConvexMesh *)pMVar2)->mFatness = fatnessRadius;
     kd_MeBoundingSphereCalc2
-              ((McdCnvVertex *)pMVar2[1].mRefCtAndID,((McdConvexMesh *)pMVar2)->mHull.numVertex,(MeReal *)&((McdConvexMesh *)pMVar2)->mBoundingSphereCenter[0]
+              ((McdCnvVertex *)(*(kd_uptr *)((char *)pMVar2 + ((int)((char *)&((McdConvexMesh *)0)->mHull.vertex - (char *)0)))),((McdConvexMesh *)pMVar2)->mHull.numVertex,(MeReal *)&((McdConvexMesh *)pMVar2)->mBoundingSphereCenter[0]
                ,(MeReal *)(pMVar2 + 3));
     *(MeReal *)&(*(MeU32 *)((char *)pMVar2 + ((int)((char *)&((McdConvexMesh *)0)->mBoundingSphereRadius - (char *)0)))) = (fatnessRadius + *(float *)&(((McdConvexMesh *)pMVar2)->mBoundingSphereRadius));
   }

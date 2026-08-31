@@ -1,3 +1,77 @@
+# LP64-INDEX-WIDTH  2026-08-31  AN INDEX CAN LAND ON THE RIGHT ADDRESS AND STILL
+#                     BE A DEFECT. Frames (3) and (4) of LP64-RUNS-THE-GAME, both
+#                     in `fix_index_layout`, both from the SAME hole: the `same`
+#                     short-circuit compared only the OFFSET.
+#
+#                     ⚠ AND MY FIRST REPORT OF FRAME (3) WAS WRONG. I wrote that
+#                     `fix_index_layout` "already reports this site by name, nine
+#                     times". It does not. Those nine lines are its REPAIRS of
+#                     `geom[1].next -> elementCountMax`, and a grep for "declin"
+#                     had matched the declined-count HEADER and then printed every
+#                     McdAggregate line under it. The surviving sites were the
+#                     `.mRefCtAndID` ones, which the pass never mentioned at all —
+#                     it silently counted them as "already correct". Read a tool's
+#                     output by SECTION, not by grep.
+#
+#                     FRAME (3), McdAggregateCreate. `McdAggregate` is
+#                     `{ McdGeometry m_g; void *elementTable; ... }` and
+#                     `mRefCtAndID` is the FIRST member of `McdGeometry`, so
+#                     `geom[1].mRefCtAndID` is the byte just past the base:
+#                         i386 16 + 0 = 16   LP64 32 + 0 = 32
+#                         elementTable at    16                32
+#                     THE OFFSET AGREES AT BOTH WIDTHS. But `mRefCtAndID` is four
+#                     bytes at both and `elementTable` is four here and EIGHT
+#                     there, so the store kept the low half of a pointer and every
+#                     read of it was an address with its top 32 bits gone —
+#                     `0x5961f910` in the register file where every live pointer
+#                     was `0x5555_5xxxxxxx`.
+#
+#                     THE REPAIR: the `same` test now requires the WIDTH to agree
+#                     as well. `CxSmallSort` is untouched — `mPrev` and `mRep` are
+#                     both pointers, so both scale and those sites still skip.
+#
+#                     ⚠ AND THE FIRST VERSION OF THAT REPAIR WAS WORSE THAN THE
+#                     DEFECT. A field can resolve to a STRUCT that begins at the
+#                     same address — `McdConvexMesh::mHull` does — and a struct has
+#                     no access width, so `w` was its whole SIZE and the access
+#                     type fell through to `MeU32`. It wrote FOUR bytes of an
+#                     eight-byte pointer while widening the matching READ to
+#                     `kd_uptr`: one truncating store became a truncating store
+#                     plus a widened read of it. ONLY RUNNING THE GAME CAUGHT IT —
+#                     every gate was green, i386 145/145, all three scenes
+#                     bit-identical. The crash simply moved to
+#                     MeBoundingSphereCalc2 with `points = 0x59620c50`.
+#
+#                     FRAME (4), the same site done properly: `descend_to_scalar`
+#                     narrows a struct-typed field to the member that BEGINS at
+#                     that address — `mHull` -> `mHull.vertex`, width 8 — and the
+#                     caller VERIFIES the offset did not move at either width
+#                     before using it. Store and read now both say `kd_uptr`.
+#                     Anything that cannot be narrowed is skipped, which leaves
+#                     the site exactly as it was rather than guessing.
+#
+#                     ⚠ A METHOD CORRECTION THAT CHANGED A RESULT. The wasm32 A/B
+#                     must compile with the flags the PRODUCT uses —
+#                     `-std=gnu99 -fno-strict-aliasing` (metoolkit_decomp's
+#                     MD_C_FLAGS). Without them McdAggregate.c came back as ONE
+#                     byte difference; with them it is identical. The recovery
+#                     reinterprets storage, so a strict-aliasing probe is not
+#                     measuring the thing that ships.
+#
+#                     i386 acceptance 145 object(s), 0 compile failure(s),
+#                     0 byte difference(s); all three scenes BIT-IDENTICAL;
+#                     wasm32 146/146 byte-identical at the product's own flags;
+#                     lp64_pipeline.sh -> PASS; run-standalone 12/12; gates 6/6.
+#                     Boot now reaches "Bringing Level NvidiaLogo.myLevel up for
+#                     play" and the crash is in McdModelUpdate — physics RUNNING,
+#                     not initialising.
+#
+#                     ⚠ FRAME (5) IS OPEN and is a different pass's territory:
+#                     McdAggregateUpdateAABB holds the element table in an `int`
+#                     local and reads it with `*(int *)` — the address is right,
+#                     the LOAD is four bytes. That is fix_narrow_loads /
+#                     fix_narrow_pointers, not this one.
+#
 # LP64-RUNS-THE-GAME  2026-08-30  ⚠ THE OFFLINE SCENES WERE NEVER GOING TO FIND
 #                     THESE. `LP64-CLOSED` below is still true — all three scenes
 #                     are byte-identical at both widths — and UT2004 still died at
@@ -28,11 +102,11 @@
 #                         where the top half went. -> LP64-LIST-WALK, fixed.
 #                     (3) SIGSEGV in McdAggregateCreate at
 #                         `*(undefined4 *)(pMVar1[1].mRefCtAndID + 0x40 + iVar5)`.
-#                         ⚠ NOT NEW: `fix_index_layout` ALREADY REPORTS THIS SITE
-#                         BY NAME, nine times — "geom[1].next -> elementCountMax,
-#                         i386 24, LP64 44 (the index said 48)". It declines
-#                         because the index does not land on the field, which is
-#                         the frame test doing its job. STILL OPEN.
+#                         ⚠ FIRST REPORTED HERE as "already reported by name nine
+#                         times by fix_index_layout" — THAT WAS WRONG, see
+#                         LP64-INDEX-WIDTH above; those nine lines were REPAIRS of
+#                         a different site and a grep had run the sections
+#                         together. Fixed in LP64-INDEX-WIDTH.
 #
 #                     ★ THE ORDER MATTERS AND IS THE POINT. Each fix bought the
 #                     next frame; none of them was reachable from the one before.

@@ -12,7 +12,67 @@ read before resuming; `../HANDOVER.md` is the depth behind it and `../proven.txt
 
 ---
 
-★★★ **NEWEST: 2026-08-30 (later still) — THE GAME RUNS AT 64-BIT FURTHER THAN IT EVER HAS,
+★★★ **NEWEST: 2026-08-31 — FRAMES (3) AND (4) ARE FIXED, AND THE LEVEL COMES UP.** Boot now
+reaches `Bringing Level NvidiaLogo.myLevel up for play` and the crash has moved into
+`McdModelUpdate` — physics **running**, not initialising. Both frames came from one hole in
+`fix_index_layout`: its `same` short-circuit compared only the **offset**.
+
+⚠ **AND MY FIRST REPORT OF FRAME (3) WAS WRONG.** The entry below says `fix_index_layout`
+"already reports this site by name, nine times". **It does not.** Those nine lines are its
+*repairs* of `geom[1].next -> elementCountMax`; a grep for `declin` had matched the
+declined-count **header** and then printed every `McdAggregate` line under it. The sites that
+actually survived were the `.mRefCtAndID` ones, which the pass never mentioned at all — it
+silently counted them as *already correct*. **Read a tool's output by section, not by grep.**
+
+**AN INDEX CAN LAND ON THE RIGHT ADDRESS AND STILL BE A DEFECT.** `mRefCtAndID` is the first
+member of `McdGeometry`, so `geom[1].mRefCtAndID` is the byte just past the base:
+
+```
+                       i386        LP64
+geom[1].mRefCtAndID    16 + 0 = 16  32 + 0 = 32
+McdAggregate::elementTable      16          32     <- the offset AGREES at both widths
+sizeof mRefCtAndID               4           4
+sizeof elementTable              4           8     <- the WIDTH does not
+```
+
+So the store kept the low half of a pointer, and `0x5961f910` showed up in the register file
+where every live pointer was `0x5555_5xxxxxxx`.
+
+⚠ **THE FIRST VERSION OF THE REPAIR WAS WORSE THAN THE DEFECT, AND EVERY GATE WAS GREEN.** A
+field can resolve to a **struct** that begins at the same address — `McdConvexMesh::mHull` does
+— and a struct has no access width, so `w` was its whole *size* and the access type fell
+through to `MeU32`. It wrote four bytes of an eight-byte pointer *while widening the matching
+read* to `kd_uptr`: one truncating store became a truncating store plus a widened read of it.
+i386 was 145/145, all three scenes were bit-identical, `lp64_pipeline.sh` passed. **Only running
+the game caught it** — the crash simply moved to `MeBoundingSphereCalc2` with
+`points = 0x59620c50`.
+
+`descend_to_scalar` is the honest version: it narrows a struct-typed field to the member that
+*begins* at that address (`mHull` → `mHull.vertex`, width 8), and the caller **verifies the
+offset did not move at either width** before using it. Store and read now both say `kd_uptr`.
+Anything it cannot narrow is skipped, which leaves the site exactly as it was.
+
+⚠ **A METHOD CORRECTION THAT CHANGED A RESULT.** The wasm32 A/B has to compile with the flags
+the **product** uses — `-std=gnu99 -fno-strict-aliasing`, `metoolkit_decomp`'s `MD_C_FLAGS`.
+Without them `McdAggregate.c` came back as one byte difference; with them it is identical. The
+recovery reinterprets storage, so a strict-aliasing probe is not measuring what ships.
+
+```
+i386 acceptance   145 object(s), 0 compile failure(s), 0 byte difference(s)
+-ffloat-store     chain · boxes · ragdoll — ALL THREE STILL BIT-IDENTICAL
+wasm32            146/146 byte-identical, at the product's own flags
+lp64_pipeline.sh  -> PASS   run-standalone 12/12   .gates 6/6
+```
+
+⚠ **FRAME (5) IS OPEN, and it belongs to a different pass.** `McdAggregateUpdateAABB` holds the
+element table in an `int` local and reads it with `*(int *)` — the address is right, the **load**
+is four bytes. That is `fix_narrow_loads` / `fix_narrow_pointers` territory, not this one.
+
+Evidence: `../proven.txt` `LP64-INDEX-WIDTH`.
+
+---
+
+★★★ **PREVIOUS: 2026-08-30 (later still) — THE GAME RUNS AT 64-BIT FURTHER THAN IT EVER HAS,
 AND THE OFFLINE SCENES WERE NEVER GOING TO GET IT THERE.** The entry below is still true —
 all three scenes are byte-identical at both widths — and UT2004 still died at 64-bit before
 its first frame. Three crashes, each found by RUNNING the game, two of them fixed here.
@@ -41,7 +101,8 @@ Two more, found on the way and both real:
 (2) KaFileCreate_1_0, e = 0x58cabf90 beside parent = 0x555558ce4030
     every pointer here is 0x5555_5xxxxxxx, so that is a measured truncation -> FIXED
 (3) McdAggregateCreate  *(undefined4 *)(pMVar1[1].mRefCtAndID + 0x40 + iVar5)
-    ⚠ NOT NEW — fix_index_layout already reports it BY NAME, nine times      -> OPEN
+    ⚠ this line first said "NOT NEW — already reported by name" — IT WAS WRONG,
+    see the newest entry. Fixed 2026-08-31 by LP64-INDEX-WIDTH.  -> FIXED
 ```
 
 Boot moved from *XML parse* to *asset DB built* to **`UGameEngine::LoadMap` doing per-actor

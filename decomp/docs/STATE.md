@@ -12,6 +12,69 @@ read before resuming; `../HANDOVER.md` is the depth behind it and `../proven.txt
 
 ---
 
+# ⚠⚠ OPEN ITEMS — 2026-08-31, owner-directed. READ THIS BLOCK FIRST.
+
+Ordered by risk. Nothing here is speculative; each line was measured or asked for.
+
+1. **THE WEB ARTIFACT CHANGED AND IS NOT RE-STAMPED.** `UnUnix.cpp` is in the wasm build
+   (`Source/Core/CMakeLists.txt:29`) and the `UT_NO_FAULT_HANDLER` block sits inside
+   `#ifndef _WIN32`, which Emscripten satisfies; `__ANDROID__` is undefined there so it takes the
+   `getenv()` branch, which cannot be folded away. The Karma sources are still 146/146 — the
+   ENGINE's wasm is a different artifact and was never checked.
+   ★ **OWNER DIRECTIVE: do NOT `#ifndef __EMSCRIPTEN__` it.** Write code that works everywhere and
+   ifdef only where behaviour genuinely differs. So: keep the switch universal and **re-stamp the
+   web** — `yarn e2e --target ut2004` from ufront, 55/55, ~41 min.
+
+2. **THE 32-BIT SHIPPING TARGET IS UNVERIFIED** since the CMake `-m32` gating and the signal
+   change. ★ **OWNER DIRECTIVE: use the WEB as ground truth for 32-bit**, not a native i386 sweep.
+
+3. **ANDROID arm64 HAS NEVER LOADED A MAP UNDER TEST** — only start-up and the main menu.
+   ⚠ AND THE OWNER GOT INTO AN ONS MATCH AND IT CRASHED. Vehicles landed correctly first.
+   Tombstone captured 2026-08-31 18:14:
+
+       Fatal signal 11 (SIGSEGV), SEGV_MAPERR, fault addr 0x40546a00000075
+       #00 McdGjkFaceQueueInit(_McdGjkFaceQueue*, _McdGjkSimplex*)+1036
+       #01 McdGjkPenetrationDepth  #02 McdGjkTest  #03 McdGjkCgIntersect2
+       #04 McdGjkCgIntersect       #05 KIntersect
+
+   ★ `0x40546a00` is a FLOAT in the high half of a pointer (same signature as the `0x3f800000`
+   = 1.0f case). This is the GJK penetration-depth path and is NOT any of the defects fixed so
+   far. `armeabi-v7a` and `x86_64` ABIs also remain untested.
+
+4. **REMAINING TRUNCATIONS + `IxBoxTriList`** — the owner's stated priority.
+   `ptrwidth_check.sh`: **98 across 28 objects** at aarch64 (armv7a 0). Worst:
+   `McdTriangleList 10 · MdtBody 9 · MdtConstraint 7 · IxCylinderTriList 6 · IxBoxTriList 6`.
+   Of the 98, ~21 are `KD_FBITS` float bit-puns and ~13 an `MeI32 sortKey` through a `void *`
+   parameter — neither is a real truncation. `IxBoxTriList`'s word-indexed triangle walk is
+   declined by `fix_word_indexed_struct`'s wasm gate (byte-identical under gcc, NOT under clang).
+
+5. **"NO CRASH" IS NOT "PHYSICS CORRECT".** Seven gametypes ran signal-free on x86-64 and the
+   simulation was never compared against 32-bit. `ktrace` exists for exactly this and was not run.
+
+6. **AS-Convoy** — engine-side UnrealScript runaway loop in `Engine.HUD.GetFontSizeIndex`,
+   measured identical on the 32-bit build. ★ **OWNER DIRECTIVE: check the WEB as ground truth** —
+   does AS-Convoy crash there too? Not yet tested.
+
+7. **`BUILD.md` does not document `UT_NO_FAULT_HANDLER`** (0 mentions).
+
+★★ **AND THE ANSWER TO "IS x86-64 MORE LENIENT THAN armv8".** Not architecturally, for this class
+— both allow unaligned normal loads and stores. What differs is that x86-64 is **gcc with the
+SysV layout** and arm64 is **clang with a different one**, so the same overrun or truncation lands
+on a different neighbour. The `float fStackY_160` overrun wrote four bytes past a local: on
+x86-64 that hit padding and nothing happened across seven gametypes; on arm64 it hit the outgoing
+`McdUserTriangle ct` and crashed every run. armv8 *is* genuinely stricter for unaligned
+exclusives/atomics and load-acquire/store-release, which x86 tolerates.
+**So the x86-64 vehicle surfaces the CLASS but not every INSTANCE — it is necessary and not
+sufficient, and the device is the only ground truth for arm64.** Measured: 7 gametypes clean on
+x86-64 while arm64 died three separate times.
+
+★ **PROVENANCE, checked against `/home/ion/epic-sources` per the owner's rule:** the SIGSEGV
+handler (`HandleSignal` + the `sigaction` block) is **Epic's original code** — it is present in
+`epic-sources/ut99-v400/Core/Src/UnUnix.cpp`. `UT_NO_FAULT_HANDLER` / `debug.ut2004.nofault` is
+**ours**, added 2026-08-31 (engine `b4cd9eb`); Epic's source has no such switch.
+
+---
+
 ★★★ **NEWEST: 2026-08-31 (arm64, closed) — ✅ ANDROID arm64 REACHES THE MAIN MENU WITH KARMA
 ON.** `UT2k4MainMenu.Opened()`, 2043 log lines, **zero signals**, still running — against 2039
 for the Karma-OFF control. The open item below is closed.

@@ -12,7 +12,51 @@ read before resuming; `../HANDOVER.md` is the depth behind it and `../proven.txt
 
 ---
 
-★★★ **NEWEST: 2026-08-31 (last) — SIX GAMETYPES CLEAN, AND ⚠⚠ A GATE THAT COULD NOT FAIL.**
+★★★ **NEWEST: 2026-08-31 (final) — SEVEN GAMETYPES CLEAN, AND ⚠⚠ THE i386 GATE CANNOT SPEAK
+FOR wasm32.**
+
+**i386 is compiled by GCC and wasm32 by CLANG**, so "byte identical" has always been a statement
+about *one* code generator — and nothing in this project said so until now. The triangle-list
+repair below is byte-identical under gcc at `-m32` and **not** under emcc: same address, same
+width, different instruction selection. The web artifact **ships**, so a repair only gcc
+certifies is not certified. `fix_word_indexed_struct` now runs emcc over the source it replaces
+and the candidate and requires those to match too. It declined `IxBoxTriList` and kept
+`IxSphereTriList` — the *same* repair, and only one of them survives clang.
+
+**The second anchor**, which is what needed the gate. `IxBoxTriList`/`IxSphereTriList` walk the
+triangle list through an `undefined4 *`; `McdUserTriangle` is
+`{MeVector3 *vertices[3]; MeVector3 *normal; ...}`, so those four words are four **pointers** —
+byte 4 here and **eight** there. The type is declared: `McdUserTriangle *list;` in the oracle.
+★ The cursor is right at both widths **by coincidence** (`&p[1].next` is 24 here and 48 there,
+and so is `sizeof`), so nothing about the stride reveals it. ⚠ And the offline scenes cannot
+reach this at all — `scene_ragdoll` is capsules on a *plane*; there is no triangle list in it.
+
+⚠ **Three mistakes on the way, all the same family**, and each presented as `0 rewritten,
+0 declined` — a clean zero that reads exactly like "there was nothing to do":
+
+- `if not pools: continue` skipped the whole **file**, and the second anchor needs no pool;
+- the site regex matched the **declaration** `undefined4 *puVar31;`, whose rewrite is a syntax
+  error, which reads back as "not byte-identical" and declined the five correct sites with it;
+- `flo` keys structs by **tag** (`_McdUserTriangle`) and the code names the **typedef**, so
+  asking once returned an empty map and `vertices` came back as the array *name*.
+
+⚠ **AS-Convoy is not ours, and that is measured now**: the 32-bit build fails **identically**,
+same runaway loop in `Engine.HUD.GetFontSizeIndex`.
+
+```
+STRESS   16 runs · 8 maps × 2 · Difficulty 7 · 8–10 bots · 150 s each   ALL CLEAN
+SWEEP    DM-Rankin DM-DE-Ironic CTF-FaceClassic BR-Anubis ONS-Torlan
+         ONS-Primeval VCTF-BE-Dystopia                                  ALL OK
+aarch64  truncations 134 -> 98; of the remainder 21 are KD_FBITS float
+         bit-puns and 13 an MeI32 sortKey through a void * parameter
+i386 145/145 · three scenes BIT-IDENTICAL · wasm32 146/146 · gates 6/6
+```
+
+Evidence: `../proven.txt` `LP64-TWO-COMPILERS`.
+
+---
+
+★★★ **PREVIOUS: 2026-08-31 (last) — SIX GAMETYPES CLEAN, AND ⚠⚠ A GATE THAT COULD NOT FAIL.**
 
 **`lp64_pipeline.sh` reported PASS while a pass was crashing.** Every pass is piped into
 `head`/`tail` to keep the log readable, and `|| exit 2` then tests the exit status of **`tail`**,

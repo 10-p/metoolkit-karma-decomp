@@ -73,6 +73,23 @@ POOL_INIT = re.compile(
     r'\(int\)sizeof\(\*\(([A-Za-z_]\w*) \*\)0\)')
 GET = re.compile(r'(\w+) = \(MePool(?:Fixed)?API\.getStruct\)\(\s*([^)]+?)\s*\)')
 
+# ★ THE SECOND ANCHOR: a word pointer derived from a field declared `E *`.
+# `IxBoxTriList` walks the triangle list with
+#     puVar31 = (undefined4 *)((kd_iptr)&(<McdTriangleList::list>)->mRefCtAndID + cursor);
+#     pfVar26 = (float *)*puVar31;      /* vertices[0] */
+#     pfVar26 = (float *)puVar31[1];    /* vertices[1] -- byte 4 here, EIGHT there */
+# `McdUserTriangle` is `{MeVector3 *vertices[3]; MeVector3 *normal; ...}`, so the
+# four words are four POINTERS. The cursor happens to be right at both widths
+# (`&p[1].next` is 24 here and 48 there, and so is sizeof) — only the field
+# indices are wrong, which is why nothing about the stride reveals it.
+#
+# ⚠ THIS IS THE RAGDOLL PATH AND THE OFFLINE SCENES CANNOT REACH IT.
+# `scene_ragdoll` is capsules on a PLANE; there is no triangle list in it. Only a
+# body hitting real world geometry runs this.
+FIELD_PTR = re.compile(
+    r'(?P<v>\w+) = \((?:undefined4|int|uint) \*\)\(\(kd_iptr\)&'
+    r'[^;\n]*?\(\((?:struct )?(?P<T>\w+) \*\)0\)->(?P<F>\w+)\b')
+
 
 def includes(inc):
     out = ['-I' + inc]
@@ -103,6 +120,42 @@ def compiles_identically(fn, text, build, inc):
     return open(ref, 'rb').read() == open(obj, 'rb').read()
 
 
+EMCC = os.path.join(os.path.expanduser('~'), 'emsdk', 'upstream', 'emscripten', 'emcc')
+
+
+def wasm_unchanged(fn, before, after, inc):
+    """Does this rewrite leave the WASM32 object identical too?
+
+    ⚠⚠ THE i386 ACCEPTANCE TEST CANNOT SPEAK FOR wasm32, AND THIS IS THE PASS
+    THAT PROVED IT. i386 is compiled by GCC and wasm32 by CLANG, so "byte
+    identical" is a statement about one code generator. The triangle-list repair
+    below is byte-identical under gcc at -m32 and NOT under emcc — same address,
+    same width, different instruction selection. The web artifact ships, so a
+    repair that only gcc certifies is not certified.
+
+    There is no wasm baseline to compare against, so this compares the candidate
+    against the source it replaces — a no-op check that needs nothing but emcc.
+    If emcc is missing the site is DECLINED, not assumed."""
+    if not os.path.exists(EMCC):
+        return False
+    d = os.path.join(WORK, 'wasm')
+    os.makedirs(d, exist_ok=True)
+    objs = []
+    for tag, txt in (('a', before), ('b', after)):
+        src = os.path.join(d, tag + '_' + fn)
+        open(src, 'w').write(txt)
+        obj = os.path.join(d, tag + '.o')
+        r = subprocess.run(
+            [EMCC, '-O2', '-g0', '-c', '-std=gnu99', '-fno-strict-aliasing', '-w',
+             '-Wno-int-conversion', '-Wno-incompatible-pointer-types', '-DLINUX',
+             '-I' + os.path.join(HERE, 'include')] + includes(inc)
+            + ['-o', obj, src], capture_output=True)
+        if r.returncode:
+            return False
+        objs.append(open(obj, 'rb').read())
+    return objs[0] == objs[1]
+
+
 def field_paths(T, inc, cache):
     """byte offset -> member path, from BOTH sources and for a reason.
 
@@ -112,7 +165,13 @@ def field_paths(T, inc, cache):
     LP64 are exactly the two it cannot see. The type database has them but only
     at top level, with no array expansion. Neither alone can resolve this struct;
     the union can, and the self-check below is what proves it."""
-    out = dict(flo.offsets_of(T, inc, cache))
+    # ⚠ ASK FOR BOTH SPELLINGS. `flo` keys by struct TAG (`_McdUserTriangle`) and
+    # the code names the TYPEDEF (`McdUserTriangle`); asking for the wrong one
+    # returns an empty map, the type-database overlay then supplies only
+    # TOP-LEVEL members, and `vertices` comes back as the array NAME instead of
+    # `vertices[0]`. That decays to `MeVector3 **` and is not what the index
+    # meant. The array expansion is the whole reason flo is consulted first.
+    out = dict(flo.offsets_of(T, inc, cache) or flo.offsets_of('_' + T, inc, cache))
     tf = os.path.join(HERE, 'include', 'kd_types_fields.json')
     if os.path.exists(tf):
         import json
@@ -163,6 +222,27 @@ def actually_moves(T, path, k, inc, cache):
     return a64 != a32 or w64 != w32
 
 
+def pointee_of(T, F, root):
+    """`McdTriangleList::list` is declared `McdUserTriangle *` — the element type
+    of anything reached through it, read from the ORACLE. Returns None unless the
+    member is a pointer to a struct whose size CHANGES at LP64, because a size
+    that does not change is not a defect."""
+    import fix_literal_offsets as flo
+    inc = os.path.join(root, 'include')
+    bodies = flo.struct_bodies(inc)
+    body = bodies.get(T) or bodies.get('_' + T)
+    if not body:
+        return None
+    m = re.search(r'([A-Za-z_]\w*)\s*\*\s*%s\s*[;,]' % re.escape(F),
+                  re.sub(r'/\*.*?\*/', ' ', body, flags=re.S))
+    # ⚠ BOTH SPELLINGS. `typedef struct _McdUserTriangle {...} McdUserTriangle;`
+    # is keyed by its TAG, and the member is declared with the TYPEDEF name, so a
+    # membership test on one of them silently returns nothing.
+    if not m or not (m.group(1) in bodies or '_' + m.group(1) in bodies):
+        return None
+    return m.group(1)
+
+
 def main():
     srcdir, build = sys.argv[1], sys.argv[2]
     root = sys.argv[3] if len(sys.argv) > 3 else kd_paths.METOOLKIT_DIR
@@ -185,10 +265,11 @@ def main():
         path = os.path.join(srcdir, fn)
         text = open(path, errors='ignore').read()
         pools = {m.group(1).strip(): m.group(2) for m in POOL_INIT.finditer(text)}
-        if not pools:
-            continue
         out = text
-        for m in GET.finditer(text):
+        # ⚠ THE POOL GUARD USED TO SKIP THE WHOLE FILE. The second anchor does not
+        # need a pool at all — `IxBoxTriList` has none — so an early `continue`
+        # here silently excluded every triangle-list site in the corpus.
+        for m in (GET.finditer(text) if pools else ()):
             v, pe = m.group(1), m.group(2).strip()
             T = pools.get(pe)
             if not T:
@@ -214,7 +295,8 @@ def main():
                 n += 1
             if not n:
                 continue
-            if compiles_identically(fn, cand, build, inc):
+            if compiles_identically(fn, cand, build, inc) \
+                    and wasm_unchanged(fn, out, cand, inc):
                 out = cand
                 done += n
                 notes.append('%-22s %-10s -> %s  %d site(s)%s'
@@ -225,6 +307,48 @@ def main():
                 declined += 1
                 notes.append('%-22s %-10s -> %s: not byte-identical at i386 — '
                              'declined' % (fn, v, T))
+        # ---- the second anchor: a field declared `E *`
+        for m in FIELD_PTR.finditer(text):
+            v, T, F = m.group('v'), m.group('T'), m.group('F')
+            E = pointee_of(T, F, root)
+            if not E:
+                continue
+            paths = field_paths(E, inc, cache)
+            if not paths:
+                continue
+            # ⚠ THE DECLARATION LOOKS EXACTLY LIKE A DEREFERENCE.
+            # `undefined4 *puVar31;` matches `\*puVar31` and rewriting it
+            # produces a syntax error, which reads back as "not byte-identical"
+            # and quietly declined the whole variable — including the five sites
+            # that were correct.
+            decl_re = re.compile(r'(?m)^\s*[A-Za-z_]\w*\s*\*\s*%s\s*;'
+                                 % re.escape(v))
+            sites = [st for st in re.finditer(
+                r'(?<![\w.])%s\[(0x[0-9a-fA-F]+|\d+)\]|\*(?<![\w.])%s(?![\w\[])'
+                % (re.escape(v), re.escape(v)), out)
+                if not decl_re.match(out, out.rfind('\n', 0, st.start()) + 1)]
+            cand, n = out, 0
+            for st in reversed(sites):
+                k = int(st.group(1), 0) if st.group(1) is not None else 0
+                pth = paths.get(k * 4)
+                if not pth or not actually_moves(E, pth, k, inc, cache):
+                    continue
+                rep = ('((%s *)%s)->%s' % (E, v, pth)) if st.group(1) is not None \
+                    else ('((%s *)%s)->%s' % (E, v, pth))
+                cand = cand[:st.start()] + rep + cand[st.end():]
+                n += 1
+            if not n:
+                continue
+            if compiles_identically(fn, cand, build, inc) \
+                    and wasm_unchanged(fn, out, cand, inc):
+                out = cand
+                done += n
+                notes.append('%-22s %-10s -> %s (via %s::%s)  %d site(s)'
+                             % (fn, v, E, T, F, n))
+            else:
+                declined += 1
+                notes.append('%-22s %-10s -> %s: not byte-identical at i386 OR wasm32 — declined'
+                             % (fn, v, E))
         if out != text:
             open(path, 'w').write(out)
 

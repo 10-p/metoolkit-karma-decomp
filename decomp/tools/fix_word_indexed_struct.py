@@ -351,7 +351,12 @@ def main():
             paths = field_paths(T, inc, cache)
             if not paths:
                 continue
-            cand, n = rewrite_sites(out, v, E, paths, inc, cache)
+            # ⚠ `T` HERE, NOT `E`. The pool block names the type `T` and the two
+            # anchors below name it `E`; passing `E` from here does not raise —
+            # Python leaks the loop variable, so it silently reused the PREVIOUS
+            # file's type and quietly stopped repairing McdCache. The symptom was
+            # a regression two commits later with no decline reported.
+            cand, n = rewrite_sites(out, v, T, paths, inc, cache)
             if not n:
                 continue
             if compiles_identically(fn, cand, build, inc) \

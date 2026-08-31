@@ -1,3 +1,29 @@
+# LP64-LEAKED-LOOPVAR  2026-08-31  ⚠⚠ A REFACTOR PASSED `E` WHERE THE BLOCK
+#                     NAMES THE TYPE `T`, AND PYTHON DID NOT COMPLAIN. Routing all
+#                     three anchors of `fix_word_indexed_struct` through one helper
+#                     left the POOL block calling
+#                         rewrite_sites(out, v, E, paths, ...)
+#                     where that block's type variable is `T`. `E` is not undefined
+#                     — it LEAKS from the loop below it — so the pass silently used
+#                     the PREVIOUS FILE'S type, stopped repairing `McdCache`, and
+#                     reported no decline at all.
+#
+#                     THE SYMPTOM ARRIVED TWO COMMITS LATER AND LOOKED LIKE
+#                     INTERMITTENCY. `ONS-Primeval` had been 3-of-3 clean earlier in
+#                     the session and read as a known flaky map; after this it was
+#                     3-of-3 CRASHING in McdGjkFatness with `ins = 0xfffcf7e8` — the
+#                     truncated stack address the McdCache repair exists to prevent.
+#                     ★ RE-RUN BEFORE CALLING SOMETHING INTERMITTENT, AND RE-RUN
+#                     AGAIN BEFORE CALLING IT FIXED. The same map, the same count,
+#                     opposite verdicts, one refactor apart.
+#
+#                     ⚠ AND NO GATE COULD SEE IT: i386 stayed 145/145, the three
+#                     scenes stayed BIT-IDENTICAL, wasm32 stayed 146/146 and the
+#                     pipeline said PASS — because a repair that never happens is
+#                     byte-identical to not repairing. Only the GAME saw it.
+#                     After the fix: ONS-Primeval 3-of-3 clean, arm64 still reaches
+#                     UT2k4MainMenu.Opened() with 0 signals.
+#
 # LP64-ARM64-MENU  2026-08-31  ✅ ANDROID arm64 REACHES THE MAIN MENU WITH KARMA
 #                     ON. `UT2k4MainMenu.Opened()`, 2043 log lines, ZERO signals,
 #                     still running — against 2039 for the Karma-OFF control. The

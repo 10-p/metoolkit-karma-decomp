@@ -237,6 +237,21 @@ def rewrite(text, T, F, E, sz, repl):
     # end. Iterating to a fixpoint is what makes the pair complete.
     ident = r'(?<![\w.])%s(?![\w])'
     tab = set(re.findall(r'(\w+)\s*=\s*[^;\n]*' + off + r'[^;\n]*;', text))
+    # ⚠ R0: A VARIABLE STORED *INTO* THE FIELD IS THE TABLE TOO, and missing this
+    # left the one statement that matters unfixed. `McdAggregateCreate` keeps the
+    # fresh allocation in a bare `void *pvVar2` and zeroes the FIRST slot through
+    # it — `*(undefined4 *)((kd_iptr)pvVar2 + 0x40) = 0` — before any load of the
+    # field exists to anchor on. Every other slot is reached through the field and
+    # was repaired; slot 0 kept a FOUR-byte clear, so its high half held whatever
+    # the previous tenant left. That tenant was the convex-hull builder, and a
+    # watchpoint caught it writing 0x7fff00000000 — which is exactly the value
+    # `McdGeometryIncrementReferenceCount` then dereferenced.
+    for line in text.split('\n'):
+        if not re.search(off, line):
+            continue
+        m0 = re.search(off + r'[^=]*\)\)\s*=\s*\(?[\w ]*\*?\)?\s*(\w+)\s*;', line)
+        if m0:
+            tab.add(m0.group(1))
     cur = set()
     lines = text.split('\n')
     for _ in range(8):
@@ -259,6 +274,29 @@ def rewrite(text, T, F, E, sz, repl):
                     grew = True
         if not grew:
             break
+
+    # ---- G: a TYPED POINTER stepped by a whole element.
+    #
+    # `McdAggregateAddElement` scans for a free slot with an `int *`:
+    #     piVar1 = piVar1 + 0x11;      /* 17 ints = 68 bytes = sizeof at i386 */
+    # `fix_strides`' self-advancing rule keys on `&p->field`, so it cannot see a
+    # plain `p + K`. The step is a whole element only if `K * sizeof(*p)` equals
+    # the i386 element size, which is measured rather than assumed — and that is
+    # what keeps an honest `p + 1` over an int array out of scope.
+    decl = {}
+    for mm in re.finditer(r'(?m)^\s*([A-Za-z_]\w*)\s*\*\s*(\w+)\s*;', text):
+        decl[mm.group(2)] = mm.group(1)
+    for i, line in enumerate(lines):
+        mm = re.match(r'^(\s*)(\w+) = \2 \+ (0x[0-9a-fA-F]+|\d+)\s*;\s*$', line)
+        if not (mm and mm.group(2) in tab and mm.group(2) in decl):
+            continue
+        ty = decl[mm.group(2)]
+        esz = measure('sizeof(%s)' % ty, INC_G, CACHE_G, '-m32')
+        if not esz or int(mm.group(3), 0) * esz != sz:
+            continue
+        lines[i] = '%s%s = (%s *)((char *)%s + %s);' % (
+            mm.group(1), mm.group(2), ty, mm.group(2), szname)
+        n += 1
 
     for i, line in enumerate(lines):
         touches = re.search(off, line) or any(

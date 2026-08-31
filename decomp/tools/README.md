@@ -639,6 +639,7 @@ python3 tools/fix_pool_reserve.py    /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/fix_narrow_loads.py    /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/fix_list_walk.py       /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/fix_element_stride.py  /tmp/kd_lp64/allobj /tmp/kd_build $MT
+python3 tools/fix_word_indexed_struct.py /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/fix_block_copy.py      /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/check_frame_bounds.py  /tmp/kd_lp64/allobj /tmp/kd_build   # must read 0
 KD_OUT=/tmp/kd_lp64 ./test/standalone/lp64_run.sh
@@ -1476,7 +1477,7 @@ also 4. Verified at **146/146 byte-identical**, not argued.
 
 ```bash
 python3 tools/fix_element_stride.py /tmp/kd_lp64/allobj /tmp/kd_build $MT
-#   -> fix_element_stride: 54 site(s) rewritten, 0 declined
+#   -> fix_element_stride: 56 site(s) rewritten, 0 declined
 ```
 
 A struct holds a pointer to an array of another struct and every walk carries the element size
@@ -1513,6 +1514,44 @@ the shape; exactly one has its i386 element size present as a literal.
 different i386 object, and three lines declined the whole file on that alone. `int` widens to
 `kd_iptr`. And only the **outermost** access is widened — these lines carry a second, nested
 `*(int *)` that loads the table pointer itself, which is `fix_narrow_loads`' job.
+
+### `fix_word_indexed_struct.py` — a struct reached through a WORD-INDEXED pointer
+
+```bash
+python3 tools/fix_word_indexed_struct.py /tmp/kd_lp64/allobj /tmp/kd_build $MT
+#   -> fix_word_indexed_struct: 3 site(s) rewritten, 0 declined
+```
+
+`McdCache` comes out of a pool as a `void *`, Ghidra types the local `undefined4 *`, and every
+field is addressed by **word index** — `puVar3[0xd] = &p->model1->mInstance`.
+
+```
+struct _McdCache { MeVector3 normal, location, offset;
+                   MeReal fat1, fat2, padding, separation;
+                   McdGeometryInstanceID ins1, ins2; }
+    i386   0 12 24 36 40 44 48 52 56
+    LP64   0 12 24 36 40 44 48 56 64
+```
+
+Three floats do not grow, so everything up to `separation` keeps its offset. The two **pointers**
+move — 52→56 and 56→64 — and they are eight bytes wide, so `puVar3[0xd] = ptr` writes half a
+pointer and `puVar3[0xe]` reads it back short. ★ That is the Onslaught crash:
+`McdGjkFatness (ins = 0xfffcf878)`, the low half of the stack address `0x7ffffffcf878`.
+
+**THE TYPE COMES FROM THE POOL.** `m_cachedData` is declared `void *` in the oracle and the rest
+is a *comment*, so `(MePoolFixedAPI.init)(pool, 100, (int)sizeof(*(McdCache *)0), 16)` is the
+only place the type is written down at all — the same evidence chain `fix_baked_sizeof` uses for
+its pool form.
+
+⚠ **ONLY REWRITE WHAT MOVES.** Re-spelling all twelve indices was **not** byte-identical: five
+are `MeReal` fields, and `puVar3[9] = fVar5` through `undefined4` is an *integer* store where
+`->fat1 = fVar5` is a float one. Measuring offset and width first leaves three sites — the two
+pointer stores and the read-back — which are the three the crash is about.
+
+⚠ **AND NEITHER FIELD SOURCE CAN SEE THE POINTERS ALONE.** `flo.offsets_of` expands arrays but
+its member regex does not parse a comma-separated declarator, and `McdCache` ends
+`McdGeometryInstanceID ins1, ins2;`. The type database has them but without array expansion. The
+union resolves it; the self-check is what proves the union works.
 
 ### `fix_align_masks.py` — an alignment mask frozen at 32 bits
 

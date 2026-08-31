@@ -12,7 +12,58 @@ read before resuming; `../HANDOVER.md` is the depth behind it and `../proven.txt
 
 ---
 
-★★★ **NEWEST: 2026-08-31 — UT2004 RUNS AT 64-BIT.** A four-bot `DM-Rankin` and a **six-bot
+★★★ **NEWEST: 2026-08-31 (later) — FIVE GAMETYPES CLEAN. A MAP SWEEP IS A BETTER DETECTOR
+THAN ANY SCENE.** Eight map/gametype combinations, 120 s each:
+
+```
+DM-Rankin   DM-DE-Ironic   CTF-FaceClassic   ONS-Torlan   ONS-Primeval    ALL OK
+BR-Anubis   runs the full 120 s; SIGSEGV in the SHUTDOWN free path
+AS-Convoy   ENGINE-side, not Karma — a runaway loop in Engine.HUD.GetFontSizeIndex
+```
+
+**Three more repairs.** Rule **G** — a *typed pointer* stepped by a whole element
+(`piVar1 = piVar1 + 0x11`, 17 ints = 68 = the i386 element size); `fix_strides`' self-advancing
+rule keys on `&p->field`, so a plain `p + K` is invisible to it.
+
+⚠ **R0 was the one that mattered, and it was a single statement.** A variable stored *into* the
+field is the table too. `McdAggregateCreate` keeps the fresh allocation in a bare `void *pvVar2`
+and zeroes the **first slot** through it, before any load of the field exists to anchor on.
+Every other slot was repaired; slot 0 kept a four-byte clear, so its high half held whatever the
+previous tenant left.
+
+★ **A WATCHPOINT NAMED THE TENANT.** `tri_push`, in the convex-hull builder, writing
+`0x7fff00000000` into memory that later became the element table — exactly the value
+`McdGeometryIncrementReferenceCount` then dereferenced on CTF-Face, BR-Anubis *and* AS-Convoy.
+One unfixed statement out of fifty-six broke three gametypes. When a value is inexplicable, stop
+reading and set a watchpoint.
+
+**`fix_word_indexed_struct.py` is new.** `McdCache` comes out of a pool as a `void *`, Ghidra
+types the local `undefined4 *`, and every field is addressed by word index. Its leading floats
+keep their offsets at both widths; the two **pointers** at the end move 52→56 and 56→64 and are
+eight bytes wide, so `puVar3[0xd] = ptr` wrote half a pointer. That is the Onslaught crash:
+`McdGjkFatness (ins = 0xfffcf878)` — the low half of the stack address `0x7ffffffcf878`. The
+type comes from the **pool**: `m_cachedData` is declared `void *` in the oracle and the rest is
+a comment, so `init(pool, 100, sizeof(*(McdCache *)0), 16)` is the only place it is written down.
+
+⚠ **Only rewrite what moves.** Re-spelling all twelve indices was *not* byte-identical — five
+are `MeReal` fields, and `puVar3[9] = fVar5` through `undefined4` is an **integer** store where
+`->fat1 = fVar5` is a float one. Measuring offset and width first leaves three sites, which are
+the three the crash is about.
+
+⚠ **And `flo.offsets_of` cannot see either pointer**: its member regex does not parse a
+comma-separated declarator, and `McdCache` ends `McdGeometryInstanceID ins1, ins2;`. The type
+database has them but without array expansion. Neither source alone resolves this struct.
+
+```
+i386 145/145 · three scenes BIT-IDENTICAL · wasm32 146/146 · pipeline PASS
+run-standalone 12/12 · .gates 6/6
+```
+
+Evidence: `../proven.txt` `LP64-SWEEP`.
+
+---
+
+★★★ **PREVIOUS: 2026-08-31 — UT2004 RUNS AT 64-BIT.** A four-bot `DM-Rankin` and a **six-bot
 `ONS-Torlan` with vehicles** each ran 200 seconds to the timeout with **zero signals**.
 Onslaught is the strong test: its vehicles *are* Karma rigid bodies, and the stack reached
 `KWorldStepSafeTime → MdtPackPartition → MdtBclAddAngular3` — the constraint solver stepping,

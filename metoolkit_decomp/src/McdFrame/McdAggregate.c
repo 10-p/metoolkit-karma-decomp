@@ -86,7 +86,7 @@ McdAggregateID kd_McdAggregateCreate(McdFramework *frame,int maxChildren)
       if (uVar3 != 0) {
         if (uVar3 < 3) {
           if (uVar3 < 2) {
-            *(undefined4 *)((kd_iptr)pvVar2 + 0x40) = 0;
+            *(kd_uptr *)((kd_iptr)pvVar2 + ((int)((char *)&((McdAggregateElement *)0)->mGeometry - (char *)0))) = 0;
             iVar5 = (int)sizeof(McdAggregateElement);
             maxChildren = maxChildren + -1;
           }
@@ -132,7 +132,7 @@ int kd_McdAggregateAddElement(McdAggregateID g,McdGeometryID element,MeMatrix4Pt
     piVar1 = (int *)((*(kd_uptr *)((char *)g + ((int)((char *)&((McdAggregate *)0)->elementTable - (char *)0)))) + ((int)((char *)&((McdAggregateElement *)0)->mGeometry - (char *)0)));
     do {
       iVar4 = iVar4 + 1;
-      piVar1 = piVar1 + 0x11;
+      piVar1 = (int *)((char *)piVar1 + (int)sizeof(McdAggregateElement));
       if ((kd_iptr)pMVar3 <= iVar4) goto LAB_00010182;
     } while (*piVar1 != 0);
   }

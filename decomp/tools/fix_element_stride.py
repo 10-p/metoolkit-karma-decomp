@@ -147,7 +147,9 @@ def element_fields(inc, cache):
         body = re.sub(r'/\*.*?\*/', ' ', body, flags=re.S)
         for m in MEMBER_PTR.finditer(body):
             E, F = m.group('ty'), m.group('n')
-            if E not in bodies or E == T:
+            # ⚠ TAG OR TYPEDEF: `typedef struct _McdUserTriangle {...} McdUserTriangle;`
+            # is keyed by TAG and declared by TYPEDEF, so one spelling drops it.
+            if E == T or not (E in bodies or '_' + E in bodies):
                 continue
             a = measure('sizeof(%s)' % E, inc, cache, '-m32')
             b = measure('sizeof(%s)' % E, inc, cache, '-m64')
@@ -214,9 +216,32 @@ def rewrite(text, T, F, E, sz, repl):
     START of E. `q` elements plus that member is then the same address at every
     width. A remainder that is not a member start is ordinary arithmetic and is
     left alone, which is what keeps loop counters and `+ 4`s out of scope."""
+    # ★ TWO SPELLINGS, AND THE SECOND IS EVIDENCE-GATED. `fix_derived_fields`
+    # rewrites a base-class read into an offsetof, but a file that already had
+    # the member typed keeps plain C — `triList->list` in `IxCylinderTriList`,
+    # which is where the arm64 tombstone lands.
+    #
+    # ⚠ ACCEPTING THAT SPELLING ON ITS OWN IS TOO BROAD, AND IT WAS MEASURED SO:
+    # it took the pass from 56 rewrites to 262 and the LP64 harness went from
+    # clean to FOUR AddressSanitizer errors with a clean i386 control, plus a
+    # trajectory divergence at step 111. i386 stayed 145/145 the whole time — the
+    # byte-identity gate cannot see a semantic change at the other width.
+    #
+    # So the direct spelling counts only when `fix_word_indexed_struct` has
+    # ALREADY typed an access in this file as `((E *)v)->` — an independent pass,
+    # with its own frame test and its own two-compiler gate, having concluded that
+    # this file walks an array of E. That is why this pass now runs AFTER it.
     off = r'\(\(%s \*\)0\)->%s\b' % (re.escape(T), re.escape(F))
     if not re.search(off, text):
-        return text, 0, 0
+        if not re.search(r'\(\(%s \*\)' % re.escape(E), text):
+            return text, 0, 0
+        direct = [r'(?<![\w.])%s->%s\b' % (re.escape(dm.group(1)), re.escape(F))
+                  for dm in re.finditer(
+                      r'(?m)^\s*(?:struct\s+)?%s\s*\*\s*(\w+)\s*;' % re.escape(T),
+                      text)]
+        if not direct:
+            return text, 0, 0
+        off = '(?:' + '|'.join(direct) + ')'
     L = lit(sz)
     szname = repl
     flds = fields_of(E)
@@ -301,6 +326,25 @@ def rewrite(text, T, F, E, sz, repl):
     for i, line in enumerate(lines):
         touches = re.search(off, line) or any(
             re.search(ident % v, line) for v in tab)
+        # ⚠ C2: A CURSOR CAN LIVE IN A STRUCT MEMBER, NOT A LOCAL. The triangle
+        # walk keeps its byte offset in a UNION and steps it through the other
+        # arm of the same union:
+        #     MStack_26c.triangleData.ptr = (void *)(MStack_26c.triangleData.tag + 0x18);
+        # `V = V + K` cannot see that, and it is the statement that actually walks
+        # the array — the one `McdCylinderTriangleListIntersect` faults in on
+        # arm64. Both sides must be the SAME object, or this is unrelated
+        # arithmetic that happens to add a multiple of the element size.
+        memc = re.match(r'^(\s*)([\w.]+)\s*=\s*\([^)]*\)\s*\(\s*([\w.]+)'
+                        r'\s*\+\s*(0x[0-9a-fA-F]+|\d+)\s*\)\s*;\s*$', line)
+        if memc and '.' in memc.group(2):
+            lhs = memc.group(2).rsplit('.', 1)[0]
+            rhs = memc.group(3).rsplit('.', 1)[0]
+            v0 = int(memc.group(4), 0)
+            if lhs == rhs and v0 and v0 % sz == 0:
+                lines[i] = line.replace(memc.group(4),
+                                        term(E, flds, v0 // sz, 0, szname), 1)
+                n += 1
+                continue
         # C: a cursor's own step — any WHOLE number of elements
         step = re.match(r'^(\s*)(\w+) = \2 \+ (0x[0-9a-fA-F]+|\d+)\s*;\s*$', line)
         seed = re.match(r'^(\s*)(\w+) = (0x[0-9a-fA-F]+|\d+)\s*;\s*$', line)
@@ -386,8 +430,15 @@ def main():
         text = open(path, errors='ignore').read()
         cur = text
         for (T, F), (E, sz) in sorted(fields.items()):
+            # The same two spellings `rewrite` accepts, and the same evidence
+            # gate — a pre-filter that knows only the offsetof form never calls
+            # `rewrite` for the file the arm64 tombstone points at.
             if not re.search(r'\(\(%s \*\)0\)->%s\b' % (re.escape(T), re.escape(F)), cur):
-                continue
+                if not re.search(r'\(\(%s \*\)' % re.escape(E), cur):
+                    continue
+                if not re.search(r'(?m)^\s*(?:struct\s+)?%s\s*\*\s*\w+\s*;'
+                                 % re.escape(T), cur):
+                    continue
             # ⚠ NO `is the bare literal present` PRECONDITION. The unrolled
             # zeroing loop carries 0x84, 200 and 0x10c — `64 + k*68` — and a
             # step of 0x110, none of which is sizeof(E) itself. Gating on the

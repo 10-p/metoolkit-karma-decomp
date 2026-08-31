@@ -118,11 +118,11 @@ MeBool kd_McdCacheHello(McdModelPair *p)
                     
     puVar3[0xb] = p->model2->mPadding + p->model1->mPadding;
     pMVar4 = &p->model1->mInstance;
-    ((McdCache *)puVar3)->ins1 = pMVar4;
-    ((McdCache *)puVar3)->ins2 = &p->model2->mInstance;
+    puVar3[0xd] = pMVar4;
+    puVar3[0xe] = &p->model2->mInstance;
     fVar5 = McdGjkFatness(pMVar4);
     puVar3[9] = fVar5;
-    fVar5 = McdGjkFatness((void *)((McdCache *)puVar3)->ins2);
+    fVar5 = McdGjkFatness((void *)puVar3[0xe]);
     *puVar3 = 0;
     puVar3[0xc] = 0x3f800000;
     puVar3[10] = fVar5;

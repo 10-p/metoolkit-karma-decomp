@@ -80,20 +80,24 @@ python3 "$KD_ROOT/tools/fix_narrow_loads.py" "$DST/allobj" "$BUILD" "$MT" | head
 # preprocessor conditional in it.
 python3 "$KD_ROOT/tools/fix_list_walk.py" "$DST/allobj" "$BUILD" "$MT" | tail -4 || exit 2
 
-# ---- AFTER fix_index_layout, whose output it anchors on. This one keys on the
-# field's offsetof spelling (`((McdAggregate *)0)->elementTable`) and on the
-# widened `*(kd_uptr *)` load, so it has to see the tree those passes leave, not
-# the raw recovery. It repairs the ELEMENT SIZE, which is a different number from
-# every offset the passes above check — `mGeometry` sits at byte 64 at both
-# widths while `sizeof(McdAggregateElement)` goes 68 -> 72.
-python3 "$KD_ROOT/tools/fix_element_stride.py" "$DST/allobj" "$BUILD" "$MT" | tail -3 || exit 2
-
-# ---- Independent of the two above: it anchors on a POOL, not on a field.
-# `(MePoolFixedAPI.init)(pool, n, sizeof(*(McdCache *)0), 16)` is the only
-# place `m_cachedData`'s type is written down at all — the oracle declares it
-# `void *` and says the rest in a comment. Runs here because it needs the
-# `(int)sizeof(*(T *)0)` spelling `fix_baked_sizeof` leaves behind.
+# ---- It anchors on a POOL, not on a field. `(MePoolFixedAPI.init)(pool, n,
+# sizeof(*(McdCache *)0), 16)` is the only place `m_cachedData`'s type is written
+# down at all — the oracle declares it `void *` and says the rest in a comment.
+# It also types the WORD-INDEXED triangle walks, which is the ragdoll path.
 python3 "$KD_ROOT/tools/fix_word_indexed_struct.py" "$DST/allobj" "$BUILD" "$MT" | tail -3 || exit 2
+
+# ---- AFTER fix_word_indexed_struct (moved 2026-08-31), and that ORDER IS THE
+# GATE. This pass keys on the field offsetof spelling
+# (`((McdAggregate *)0)->elementTable`); a file that already had the member typed
+# writes plain C instead — `triList->list` in IxCylinderTriList, where the arm64
+# tombstone lands. Accepting that spelling on its own is TOO BROAD, measured: it
+# took the pass from 56 rewrites to 262 and turned the LP64 harness red — four
+# AddressSanitizer errors against a CLEAN i386 control, plus a trajectory
+# divergence at step 111 — while i386 stayed 145/145 the whole time. So the
+# direct spelling counts only where the pass above has already typed an access as
+# `((E *)v)->`: an independent conclusion, with its own frame test and its own
+# two-compiler gate, that this file walks an array of E.
+python3 "$KD_ROOT/tools/fix_element_stride.py" "$DST/allobj" "$BUILD" "$MT" | tail -3 || exit 2
 
 # ---- AFTER EVEN THAT ONE, and for a reason none of the others have: this pass
 # does not re-spell an expression, it puts the corrected body behind

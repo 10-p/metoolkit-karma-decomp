@@ -333,21 +333,21 @@ LAB_000104e2:
     this->mFreeIDs[uVar8] = (uVar8 ^ 0xffffffff) + this->mModelMax;
     uVar8 = uVar8 + 1;
     *(undefined4 *)((kd_iptr)this->mRepList->mAABBMarkers + iVar9 + -0x18) = 0xffffffff;
-    iVar9 = iVar9 + 0x98;
+    iVar9 = iVar9 + (int)sizeof(CxSmallSortRep);
     if (inNObjects <= (int)uVar8) goto LAB_0001059a;
   }
   else if (uVar5 != 0) {
     if (1 < uVar5) {
       if (2 < uVar5) {
         *this->mFreeIDs = this->mModelMax + -1;
-        iVar9 = 0x98;
+        iVar9 = (int)sizeof(CxSmallSortRep);
         this->mRepList->mID = -1;
       }
       uVar8 = (uint)(2 < uVar5);
       this->mFreeIDs[uVar8] = (uVar8 ^ 0xffffffff) + this->mModelMax;
       uVar8 = uVar8 + 1;
       *(undefined4 *)((kd_iptr)this->mRepList->mAABBMarkers + iVar9 + -0x18) = 0xffffffff;
-      iVar9 = iVar9 + 0x98;
+      iVar9 = iVar9 + (int)sizeof(CxSmallSortRep);
     }
     goto LAB_000104e2;
   }
@@ -362,7 +362,7 @@ LAB_000104e2:
     *(undefined4 *)((kd_iptr)this->mRepList[2].mAABBMarkers + iVar9 + -0x18) = 0xffffffff;
     this->mFreeIDs[uVar5] = (uVar5 ^ 0xffffffff) + this->mModelMax;
     *(undefined4 *)((kd_iptr)this->mRepList[3].mAABBMarkers + iVar9 + -0x18) = 0xffffffff;
-    iVar9 = iVar9 + 0x260;
+    iVar9 = iVar9 + 4 * (int)sizeof(CxSmallSortRep);
   } while ((int)uVar8 < inNObjects);
 LAB_0001059a:
   this->mFreeIDCount = this->mModelMax;
@@ -678,7 +678,7 @@ bool __thiscall kd_CxSmallSort__Remove(CxSmallSort *this,MeI32 inID)
     iVar9 = this->mModelMax;
     if (iVar10 < iVar9) {
       iVar8 = (inID + 2) * iVar10;
-      local_30 = iVar10 * 0x98;
+      local_30 = iVar10 * (int)sizeof(CxSmallSortRep);
       do {
                     
         pMVar6 = (this->mPairState).mArray;

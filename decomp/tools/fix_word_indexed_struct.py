@@ -91,6 +91,47 @@ FIELD_PTR = re.compile(
     r'[^;\n]*?\(\((?:struct )?(?P<T>\w+) \*\)0\)->(?P<F>\w+)\b')
 
 
+# ★ THE THIRD ANCHOR: a DIRECT member chain, already typed by an earlier pass.
+# `IxCylinderTriList` reaches the same triangle array as `IxBoxTriList` but says
+# so in C rather than through an offsetof:
+#     puVar31 = (undefined4 *)((kd_iptr)triList->list->vertices + cursor);
+# Matching only the offsetof spelling missed it, and that file is where the
+# ANDROID arm64 tombstone lands — `McdCylinderTriangleListIntersect+1796`, fault
+# addr 0x7a, under KHandleCollisions/KUpdateContacts/KTickLevelKarma.
+EXPR_PTR = re.compile(
+    r'(?P<v>\w+) = \((?:undefined4|int|uint) \*\)\(\(kd_iptr\)'
+    r'(?P<expr>[A-Za-z_][\w\[\]>.-]*?)\s*\+')
+
+
+def resolve_expr_owner(expr, text, root):
+    """Follow `triList->list->vertices` to the struct that DECLARES the last hop.
+
+    The pointer addresses that struct, so the struct is the element type — but
+    only if the member it names starts at byte 0, because anything else means the
+    cursor is not element-aligned and the word indices would be measured from the
+    wrong place. Every hop is read from the ORACLE; an unresolvable hop declines."""
+    bodies = flo.struct_bodies(os.path.join(root, 'include'))
+    parts = [x for x in re.split(r'->|\.', expr) if x]
+    if len(parts) < 2:
+        return None
+    base = re.sub(r'\[[^\]]*\]', '', parts[0])
+    m = re.search(r'(?<![\w])([A-Za-z_]\w*)\s*\*\s*%s\b' % re.escape(base), text)
+    if not m:
+        return None
+    tag = m.group(1)
+    for hop in parts[1:]:
+        hop = re.sub(r'\[[^\]]*\]', '', hop)
+        body = bodies.get(tag) or bodies.get('_' + tag)
+        if not body:
+            return None
+        mm = re.search(r'([A-Za-z_]\w*)\s*\*?\s*%s\s*[;,\[]' % re.escape(hop),
+                       re.sub(r'/\*.*?\*/', ' ', body, flags=re.S))
+        if not mm:
+            return None
+        owner, tag = tag, mm.group(1)
+    return owner        # the struct declaring the final hop
+
+
 def includes(inc):
     out = ['-I' + inc]
     for d in ('McdCommon', 'McdPrimitives', 'McdFrame', 'MeGlobals',
@@ -243,6 +284,39 @@ def pointee_of(T, F, root):
     return m.group(1)
 
 
+def rewrite_sites(out, v, E, paths, inc, cache):
+    """Rewrite every word-indexed access to `v`, returning (text, count).
+
+    Three spellings, and missing the third left the ANDROID crash in place:
+        V[k]        a field read/write        -> ((E *)V)->PATH
+        *V          the same at index 0       -> ((E *)V)->PATH
+        (V + k)     an ADDRESS handed onward  -> (&((E *)V)->PATH)
+    `IxCylinderTriList` takes `*(__typeof__(ct.triangleData) *)(puVar31 + 4)` —
+    byte 16 here and THIRTY-TWO there — and it is the only one of the six that a
+    `V[k]`-shaped pattern cannot see."""
+    decl_re = re.compile(r'(?m)^\s*[A-Za-z_]\w*\s*\*\s*%s\s*;' % re.escape(v))
+    pat = (r'\((?<![\w.])%s \+ (?P<a>\d+)\)'
+           r'|(?<![\w.])%s\[(?P<b>0x[0-9a-fA-F]+|\d+)\]'
+           r'|\*(?<![\w.])%s(?![\w\[])') % ((re.escape(v),) * 3)
+    sites = [st for st in re.finditer(pat, out)
+             if not decl_re.match(out, out.rfind('\n', 0, st.start()) + 1)]
+    n = 0
+    for st in reversed(sites):
+        if st.group('a') is not None:
+            k, addr = int(st.group('a'), 0), True
+        elif st.group('b') is not None:
+            k, addr = int(st.group('b'), 0), False
+        else:
+            k, addr = 0, False
+        pth = paths.get(k * 4)
+        if not pth or not actually_moves(E, pth, k, inc, cache):
+            continue
+        rep = ('(&((%s *)%s)->%s)' if addr else '((%s *)%s)->%s') % (E, v, pth)
+        out = out[:st.start()] + rep + out[st.end():]
+        n += 1
+    return out, n
+
+
 def main():
     srcdir, build = sys.argv[1], sys.argv[2]
     root = sys.argv[3] if len(sys.argv) > 3 else kd_paths.METOOLKIT_DIR
@@ -277,32 +351,14 @@ def main():
             paths = field_paths(T, inc, cache)
             if not paths:
                 continue
-            sites = list(re.finditer(
-                r'(?<![\w.])%s\[(0x[0-9a-fA-F]+|\d+)\]' % re.escape(v), out))
-            if not sites:
-                continue
-            cand, n, bad = out, 0, []
-            for s in reversed(sites):
-                k = int(s.group(1), 0)
-                p = paths.get(k * 4)
-                if not p:
-                    bad.append(k)
-                    continue
-                if not actually_moves(T, p, k, inc, cache):
-                    continue              # right at both widths — leave it alone
-                cand = (cand[:s.start()] + '((%s *)%s)->%s' % (T, v, p)
-                        + cand[s.end():])
-                n += 1
+            cand, n = rewrite_sites(out, v, E, paths, inc, cache)
             if not n:
                 continue
             if compiles_identically(fn, cand, build, inc) \
                     and wasm_unchanged(fn, out, cand, inc):
                 out = cand
                 done += n
-                notes.append('%-22s %-10s -> %s  %d site(s)%s'
-                             % (fn, v, T, n,
-                                ', %d index(es) not a member start: %s'
-                                % (len(bad), sorted(bad)) if bad else ''))
+                notes.append('%-22s %-10s -> %s  %d site(s)' % (fn, v, T, n))
             else:
                 declined += 1
                 notes.append('%-22s %-10s -> %s: not byte-identical at i386 — '
@@ -321,22 +377,7 @@ def main():
             # produces a syntax error, which reads back as "not byte-identical"
             # and quietly declined the whole variable — including the five sites
             # that were correct.
-            decl_re = re.compile(r'(?m)^\s*[A-Za-z_]\w*\s*\*\s*%s\s*;'
-                                 % re.escape(v))
-            sites = [st for st in re.finditer(
-                r'(?<![\w.])%s\[(0x[0-9a-fA-F]+|\d+)\]|\*(?<![\w.])%s(?![\w\[])'
-                % (re.escape(v), re.escape(v)), out)
-                if not decl_re.match(out, out.rfind('\n', 0, st.start()) + 1)]
-            cand, n = out, 0
-            for st in reversed(sites):
-                k = int(st.group(1), 0) if st.group(1) is not None else 0
-                pth = paths.get(k * 4)
-                if not pth or not actually_moves(E, pth, k, inc, cache):
-                    continue
-                rep = ('((%s *)%s)->%s' % (E, v, pth)) if st.group(1) is not None \
-                    else ('((%s *)%s)->%s' % (E, v, pth))
-                cand = cand[:st.start()] + rep + cand[st.end():]
-                n += 1
+            cand, n = rewrite_sites(out, v, E, paths, inc, cache)
             if not n:
                 continue
             if compiles_identically(fn, cand, build, inc) \
@@ -349,6 +390,28 @@ def main():
                 declined += 1
                 notes.append('%-22s %-10s -> %s: not byte-identical at i386 OR wasm32 — declined'
                              % (fn, v, E))
+        # ---- the third anchor: a DIRECT member chain (already-typed C)
+        for m in EXPR_PTR.finditer(text):
+            v = m.group('v')
+            E = resolve_expr_owner(m.group('expr'), text, root)
+            if not E:
+                continue
+            paths = field_paths(E, inc, cache)
+            if not paths:
+                continue
+            cand, n = rewrite_sites(out, v, E, paths, inc, cache)
+            if not n:
+                continue
+            if compiles_identically(fn, cand, build, inc) \
+                    and wasm_unchanged(fn, out, cand, inc):
+                out = cand
+                done += n
+                notes.append('%-22s %-10s -> %s (via %s)  %d site(s)'
+                             % (fn, v, E, m.group('expr')[:28], n))
+            else:
+                declined += 1
+                notes.append('%-22s %-10s -> %s: not byte-identical at i386 OR '
+                             'wasm32 — declined' % (fn, v, E))
         if out != text:
             open(path, 'w').write(out)
 

@@ -12,7 +12,67 @@ read before resuming; `../HANDOVER.md` is the depth behind it and `../proven.txt
 
 ---
 
-★★★ **NEWEST: 2026-08-31 (final) — SEVEN GAMETYPES CLEAN, AND ⚠⚠ THE i386 GATE CANNOT SPEAK
+★★★ **NEWEST: 2026-08-31 (arm64) — THE FIRST ANDROID KARMA BACKTRACE THIS PROJECT HAS EVER
+HAD**, and the vehicle was not the x86-64 build in the end — it was a two-line switch.
+
+`UT_NO_FAULT_HANDLER` (engine `b4cd9eb`; on Android `adb shell setprop debug.ut2004.nofault 1`)
+leaves the six hardware-fault signals at their default disposition so `debuggerd` runs. Without
+it the engine catches SIGSEGV, writes **one line** and exits — no tombstone, no backtrace. ⚠
+Android has no way to set an env var for an app, which is why the variable that works everywhere
+else is unreachable exactly where it was needed.
+
+```
+Fatal signal 11 (SIGSEGV), fault addr 0x7a   (SDLThread)
+#00 McdCylinderTriangleListIntersect+1796
+#01 KIntersect  #05 KHandleCollisions  #06 KUpdateContacts  #07 KTickLevelKarma
+```
+
+★ **And the static count had been pointing at it all along** — `ptrwidth_check.sh` listed
+`IxCylinderTriList` second-worst (10 truncations). It is the ragdoll-vs-**world** path, which
+`scene_ragdoll` cannot reach: that scene is capsules on a *plane*, with no triangle list in it.
+
+**The defect:** `0x18` is `sizeof(McdUserTriangle)` at i386 and **48** at LP64, in *both* the
+alloca that sizes the triangle array and the cursor that walks it — so the buffer is half what it
+needs and every element after the first is read from the middle of the one before. Two new
+shapes: a direct-member anchor (`triList->list`, not the offsetof spelling) and a cursor living
+in a **union member** rather than a local.
+
+⚠⚠ **THE ANCHOR HAD TO BE EVIDENCE-GATED, TWICE, BECAUSE BROADENING IT BREAKS LP64 WHILE i386
+STAYS PERFECT:**
+
+| broadening | rewrites | LP64 result |
+|---|--:|---|
+| accept `VAR->F` unconditionally | 56 → **262** | 4 ASan errors vs a clean i386 control; divergence at step 111 |
+| also accept the `struct` keyword | 63 → **147** | `scene_ragdoll` **nondeterministic** and **differs from i386** |
+
+**i386 was 145/145 byte-identical through both.** The direct spelling is now accepted only where
+`fix_word_indexed_struct` has already typed an access in that file as `((E *)v)->` — which is why
+that pass now runs **first**.
+
+⚠ **So the `struct` variant is still open, and so is the crash it reaches.** `IxSphereTriList`
+writes `((struct McdTriangleList *)0)->list` and keeps its three `0x18` sites; the device now
+faults in `McdSphereTriangleListIntersect+2228`, fault addr `0x7200000072` — a spliced value, the
+same class one file on. It needs a narrower key than "allow the keyword".
+
+**arm64 progress, on a OnePlus 6 (arm64-v8a, Android 15):**
+
+```
+Karma OFF   2039 lines, reaches UT2k4MainMenu.Opened(), still running
+Karma ON    1037 -> 1147 lines after this repair
+```
+
+Both from the same `-PwithKarma` build, verified by **symbol count in the arm64 .so** rather than
+by the gradle log — it reports "up-to-date" far too readily.
+
+```
+i386 145/145 · three scenes BIT-IDENTICAL · wasm32 146/146 · lp64_pipeline.sh PASS
+```
+
+Evidence: `../proven.txt` `LP64-ANDROID-ARM64`.
+
+---
+
+★★★ **PREVIOUS: 2026-08-31 (final) — SEVEN GAMETYPES CLEAN, AND ⚠⚠ THE i386 GATE CANNOT SPEAK
 FOR wasm32.**
 
 **i386 is compiled by GCC and wasm32 by CLANG**, so "byte identical" has always been a statement

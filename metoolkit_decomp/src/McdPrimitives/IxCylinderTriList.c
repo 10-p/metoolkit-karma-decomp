@@ -133,7 +133,7 @@ int kd_McdCylinderTriangleListIntersect(McdModelPair *p,McdIntersectResult *resu
   cylPosTrans.v[1] = diff.v[2] * pfVar28[6] + diff.v[0] * pfVar28[4] + diff.v[1] * pfVar28[5];
   cylPosTrans.v[2] = diff.v[2] * pfVar28[10] + diff.v[0] * pfVar28[8] + diff.v[1] * pfVar28[9];
   iVar6 = -(triList->triangleMaxCount * 0x18 + 0xfU & 0xfffffff0);
-  triList->list = (McdUserTriangle *)(kd_alloca_iVar6 = (char *)alloca((size_t)(triList->triangleMaxCount) * 0x18 + 0));
+  triList->list = (McdUserTriangle *)(kd_alloca_iVar6 = (char *)alloca((size_t)(triList->triangleMaxCount) * (int)sizeof(McdUserTriangle) + 0));
   *(int *)(&(*kd_argslot_fffffd84)) = triList->triangleMaxCount;
   *(float *)((kd_iptr)&fStackY_280) = MVar21 + cylBSRad;
   *(lsVec3 **)((kd_iptr)aMStackY_288 + (1 * (int)sizeof(void *))) = &cylPosTrans;
@@ -175,33 +175,33 @@ int kd_McdCylinderTriangleListIntersect(McdModelPair *p,McdIntersectResult *resu
       do {
         pMVar24 = fwk;
         puVar31 = (undefined4 *)((kd_iptr)triList->list->vertices + (kd_iptr)MStack_26c.triangleData.ptr);
-        pfVar28 = (float *)*puVar31;
+        pfVar28 = (float *)((McdUserTriangle *)puVar31)->vertices[0];
         (*ct.vertices[0])[0] = fVar12 * pfVar28[2] + fVar32 * *pfVar28 + fVar9 * pfVar28[1] + fVar15
         ;
         (*ct.vertices[0])[1] = fVar13 * pfVar28[2] + fVar10 * pfVar28[1] + fVar7 * *pfVar28 + fVar17
         ;
         (*ct.vertices[0])[2] = fVar14 * pfVar28[2] + fVar11 * pfVar28[1] + fVar8 * *pfVar28 + fVar16
         ;
-        pfVar28 = (float *)puVar31[1];
+        pfVar28 = (float *)((McdUserTriangle *)puVar31)->vertices[1];
         (*ct.vertices[1])[0] = fVar12 * pfVar28[2] + fVar9 * pfVar28[1] + fVar32 * *pfVar28 + fVar15
         ;
         (*ct.vertices[1])[1] = fVar13 * pfVar28[2] + fVar10 * pfVar28[1] + fVar7 * *pfVar28 + fVar17
         ;
         (*ct.vertices[1])[2] = fVar14 * pfVar28[2] + fVar11 * pfVar28[1] + fVar8 * *pfVar28 + fVar16
         ;
-        pfVar28 = (float *)puVar31[2];
+        pfVar28 = (float *)((McdUserTriangle *)puVar31)->vertices[2];
         (*ct.vertices[2])[0] = fVar12 * pfVar28[2] + fVar9 * pfVar28[1] + fVar32 * *pfVar28 + fVar15
         ;
         (*ct.vertices[2])[1] = fVar13 * pfVar28[2] + fVar10 * pfVar28[1] + fVar7 * *pfVar28 + fVar17
         ;
         (*ct.vertices[2])[2] = fVar14 * pfVar28[2] + fVar11 * pfVar28[1] + fVar8 * *pfVar28 + fVar16
         ;
-        pfVar28 = (float *)puVar31[3];
+        pfVar28 = (float *)((McdUserTriangle *)puVar31)->normal;
         (*ct.normal)[0] = fVar12 * pfVar28[2] + fVar9 * pfVar28[1] + fVar32 * *pfVar28;
         (*ct.normal)[1] = fVar13 * pfVar28[2] + fVar10 * pfVar28[1] + fVar7 * *pfVar28;
         (*ct.normal)[2] = fVar14 * pfVar28[2] + fVar11 * pfVar28[1] + fVar8 * *pfVar28;
-        ct.flags = puVar31[5];
-        ct.triangleData = *(__typeof__(ct.triangleData) *)(puVar31 + 4);
+        ct.flags = ((McdUserTriangle *)puVar31)->flags;
+        ct.triangleData = *(__typeof__(ct.triangleData) *)(&((McdUserTriangle *)puVar31)->triangleData);
         edge[0][0] = (*ct.vertices[1])[0] - (*ct.vertices[0])[0];
         edge[0][1] = (*ct.vertices[1])[1] - (*ct.vertices[0])[1];
         edge[0][2] = (*ct.vertices[1])[2] - (*ct.vertices[0])[2];
@@ -279,7 +279,7 @@ int kd_McdCylinderTriangleListIntersect(McdModelPair *p,McdIntersectResult *resu
                    pfVar27[0xe];
               pMVar1->dims = dims;
               pMVar1->separation = separation;
-              pMVar1->element2 = *(__typeof__(pMVar1->element2) *)(puVar31 + 4);
+              pMVar1->element2 = *(__typeof__(pMVar1->element2) *)(&((McdUserTriangle *)puVar31)->triangleData);
               pMVar1->normal[0] = diff.v[0];
               pMVar1->normal[1] = diff.v[1];
               pMVar1->normal[2] = diff.v[2];
@@ -292,7 +292,7 @@ int kd_McdCylinderTriangleListIntersect(McdModelPair *p,McdIntersectResult *resu
           *(float *)(MStack_26c.flags + 8) = diff.v[2] + *(MeReal *)(MStack_26c.flags + 8);
         }
         j = j + 1;
-        MStack_26c.triangleData.ptr = (void *)(MStack_26c.triangleData.tag + 0x18);
+        MStack_26c.triangleData.ptr = (void *)(MStack_26c.triangleData.tag + (int)sizeof(McdUserTriangle));
       } while ((j < count) && (result->contactCount < 400));
     }
     *(McdTriangleFlags *)(&(*kd_argslot_fffffd84)) = MStack_26c.flags;

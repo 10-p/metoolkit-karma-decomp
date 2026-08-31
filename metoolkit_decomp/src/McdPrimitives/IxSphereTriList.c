@@ -170,7 +170,7 @@ int kd_McdSphereTriangleListIntersect(McdModelPair *p,McdIntersectResult *result
         (*paMVar19)[1] = fVar9 * pfVar22[2] + fVar6 * pfVar22[1] + fVar3 * *pfVar22;
         (*paMVar19)[2] = fVar10 * pfVar22[2] + fVar7 * pfVar22[1] + fVar4 * *pfVar22;
         ct.flags = ((McdUserTriangle *)puVar24)->flags;
-        ct.triangleData = *(__typeof__(ct.triangleData) *)(puVar24 + 4);
+        ct.triangleData = *(__typeof__(ct.triangleData) *)(&((McdUserTriangle *)puVar24)->triangleData);
         edge[0][0] = (*ct.vertices[1])[0] - (*ct.vertices[0])[0];
         edge[0][1] = (*ct.vertices[1])[1] - (*ct.vertices[0])[1];
         edge[0][2] = (*ct.vertices[1])[2] - (*ct.vertices[0])[2];
@@ -219,7 +219,7 @@ int kd_McdSphereTriangleListIntersect(McdModelPair *p,McdIntersectResult *result
           result->normal[0] = normal.v[0] + result->normal[0];
           result->normal[1] = normal.v[1] + result->normal[1];
           result->normal[2] = normal.v[2] + result->normal[2];
-          pMVar25->element2 = *(__typeof__(pMVar25->element2) *)(puVar24 + 4);
+          pMVar25->element2 = *(__typeof__(pMVar25->element2) *)(&((McdUserTriangle *)puVar24)->triangleData);
           pMVar25 = pMVar25 + 1;
           result->contactCount = result->contactCount + 1;
         }

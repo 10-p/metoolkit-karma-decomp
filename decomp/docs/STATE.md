@@ -34,8 +34,11 @@ VCTF-BE-Dystopia                     UGUITabControl::PreDraw
    150 s clean one sweep and hit the canvas the next), which is a renderer symptom rather than a
    pointer one. It belongs to `engine-ut2004`, not here.
 
-2. **armeabi-v7a AND x86_64 ARE IN THE APK AND HAVE STILL NEVER BEEN RUN.** arm64 is measured (23
-   minutes, below); armv7 is a 32-bit control and is the cheapest attribution test there is.
+2. **x86_64 IS IN THE APK AND HAS STILL NEVER BEEN RUN.** ✅ arm64 is measured (23 minutes) and
+   ✅ **armeabi-v7a is too** — `adb install --abi armeabi-v7a` puts the 32-bit slice on the same
+   OnePlus 6 (`primaryCpuAbi=armeabi-v7a`), and it played the same spectator ONS-Dria match for
+   **508 s, 0 signals, frame advance verified**. ★ That is the attribution control: arm64 is not
+   passing because 64-bit is lenient — **both widths play**.
 
 3. ✅ **`ktrace` HAS PRODUCED ONE — see below.** ⚠ What is still open is that the comparison is
    200 frames of ONE map (`test-karma-1`, no bots). It is not a statement about ragdolls or
@@ -48,7 +51,12 @@ VCTF-BE-Dystopia                     UGUITabControl::PreDraw
    one class. Worst remaining: `McdBox` 4, `McdConvexMesh` 4, `MdtPartition` 4, `MeXMLParser` 4,
    `CxSmallSort` 3, `IxConvexLineSegment` 3.
 
-5. **THE WEB IS UNBLOCKED AND THE ENGINE ARTEFACT IS UNCHANGED.**
+5. ✅ **THE WEB IS 55/55 AND AS-Convoy BOOTS** — `yarn e2e --target ut2004`, 55 passed, 0 failed,
+   44.9 m, and `PROBE_MAP=AS-Convoy` reaches `Bringing Level AS-Convoy.myLevel up for play` and
+   runs the full 150 s window with 0 abort / 0 `GetFontSizeIndex`. Recorded in the monorepo,
+   `docs/migration/STATE.md` 2.46. ⚠ The AS-Convoy verdict is a BOOT, not a match.
+
+6. **THE WEB ENGINE ARTEFACT IS UNCHANGED.**
    `targets/ut2004/file-manifest.json` was regenerated against the tree as it now is and verified
    entry by entry: **6167 entries, 0 missing, 0 size mismatches**, 174 files on disk correctly
    excluded (executables, logs, user `.ini`s). And `SDLLaunch.wasm` is **byte-identical** through
@@ -72,7 +80,9 @@ VCTF-BE-Dystopia                      UGUITabControl::PreDraw
    32-BIT CONTROL, same maps, same harness:   THE SAME TWO FUNCTIONS
 arm64 device   ONS-Dria Onslaught, bots + vehicles + ragdolls, spectator
                140 s  ->  1397 s (23 MINUTES), 0 signals, still running
+armv7 device   the SAME match on the 32-bit slice: 508 s, 0 signals
 ktrace         i386 vs LP64, 200 frames, 8 bodies:  rest 8/8  sleep 8/8  MATCH
+web            yarn e2e --target ut2004: 55 passed, 0 failed, 44.9m
 ```
 
 ★★ **arm64 PLAYS FOR AS LONG AS IT IS LEFT RUNNING — 1397 s, 0 signals, frame advance verified

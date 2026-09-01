@@ -234,6 +234,25 @@
 #                     is still not a measure of what is left: MePoolx WAS the
 #                     vehicle crash and is on neither list.
 #
+#                     ★ AND armeabi-v7a IS THE ATTRIBUTION CONTROL, RUN AT LAST.
+#                     `adb install --abi armeabi-v7a` puts the 32-bit slice on the
+#                     same OnePlus 6 (primaryCpuAbi=armeabi-v7a) and it played the
+#                     SAME spectator ONS-Dria match for 508 s, 0 signals, frame
+#                     advance verified. So arm64 is not passing because 64-bit is
+#                     lenient — BOTH WIDTHS PLAY.
+#
+#                     ✅ THE WEB IS 55/55 AND AS-Convoy BOOTS. `yarn e2e --target
+#                     ut2004`: 55 passed, 0 failed, 44.9m. PROBE_MAP=AS-Convoy
+#                     reaches `Bringing Level AS-Convoy.myLevel up for play` and
+#                     runs its full 150 s window — 0 abort, 0 RuntimeError,
+#                     0 GetFontSizeIndex. ⚠ A BOOT verdict, not a match.
+#                     ⚠⚠ AND THE FIRST ATTEMPT AT THAT SUITE REPORTED "50 passed,
+#                     1 failed, 4 DID NOT RUN" — the four were MY OWN 75-minute
+#                     `timeout`, not Playwright, which has no maxFailures here. A
+#                     TRUNCATED RUN IS NOT A STAMP. The one failure in it passed in
+#                     isolation and passed again in the full re-run: a flake, seen
+#                     once, recorded rather than retried away.
+#
 #                     i386 145/145 · three scenes BIT-IDENTICAL · frame bounds 0
 #                     lp64_pipeline.sh -> PASS · run-standalone 12/12
 #                     wasm SDLLaunch.wasm sha256 UNCHANGED (compared, not argued)

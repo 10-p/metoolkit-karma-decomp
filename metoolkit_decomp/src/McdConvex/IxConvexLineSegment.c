@@ -85,10 +85,10 @@ int kd_IxConvexMeshLineSegment
   pvVar13 = McdConvexMeshGetPolyhedron(pvVar13);
   tnear = -1e+20;
   fVar6 = fVar5;
-  if (0 < *(int *)((kd_iptr)pvVar13 + 0x14)) {
+  if (0 < *(int *)((kd_iptr)pvVar13 + ((int)((char *)&((McdConvexHull *)0)->numFace - (char *)0)))) {
     do {
                     
-      pfVar16 = (float *)(iVar17 * 0x10 + *(int *)((kd_iptr)pvVar13 + 4));
+      pfVar16 = (float *)(iVar17 * 0x10 + *(kd_iptr *)((kd_iptr)pvVar13 + ((int)((char *)&((McdConvexHull *)0)->face - (char *)0))));
       pfVar15 = McdCnvFaceGetVertexPosition(pvVar13,iVar17,0);
       fVar4 = *pfVar16;
       fVar7 = pfVar16[1];
@@ -124,16 +124,16 @@ int kd_IxConvexMeshLineSegment
         return 0;
       }
       iVar17 = iVar17 + 1;
-    } while (iVar17 < *(int *)((kd_iptr)pvVar13 + 0x14));
+    } while (iVar17 < *(int *)((kd_iptr)pvVar13 + ((int)((char *)&((McdConvexHull *)0)->numFace - (char *)0))));
   }
   if (tnear < 0.0) {
     if (fVar5 <= fVar6) {
       return 0;
     }
-    pfVar15 = (float *)(bnorm_num * 0x10 + *(int *)((kd_iptr)pvVar13 + 4));
+    pfVar15 = (float *)(bnorm_num * 0x10 + *(kd_iptr *)((kd_iptr)pvVar13 + ((int)((char *)&((McdConvexHull *)0)->face - (char *)0))));
   }
   else {
-    pfVar15 = (float *)(fnorm_num * 0x10 + *(int *)((kd_iptr)pvVar13 + 4));
+    pfVar15 = (float *)(fnorm_num * 0x10 + *(kd_iptr *)((kd_iptr)pvVar13 + ((int)((char *)&((McdConvexHull *)0)->face - (char *)0))));
     fVar6 = tnear;
   }
   fVar5 = fVar6 / fVar5;

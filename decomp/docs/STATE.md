@@ -79,13 +79,16 @@ ONS-Torlan  ONS-Primeval  VCTF-BE-Dystopia  AS-Convoy
    **508 s, 0 signals, frame advance verified**. ★ That is the attribution control: arm64 is not
    passing because 64-bit is lenient — **both widths play**.
 
-4. ✅ **`ktrace` HAS PRODUCED TWO — see below.** `test-karma-1` (8 bodies) is a MATCH, and
-   `ONS-Torlan` (15 bodies, five hover bikes, an RV, a Scorpion) is `1 MISMATCH` on one hover
-   bike. ⚠⚠ **THE MISMATCH IS A TOLERANCE VERDICT, NOT A DEFECT** — for eight frames the only
-   differing column is `wz` at `1e-9` magnitude, then `wx` flips sign and the bike tips the other
-   way. What is genuinely open is that **`ktrace` on a game binary has no `-ffloat-store`**, so it
-   cannot separate the arithmetic floor from a pointer-width defect for a body on a threshold.
-   Making it decisive means building both widths with the arithmetic held fixed.
+4. ⚠⚠ **`ONSHoverBike3` DIVERGES AT FRAME 9 AND IT IS NOT THE FLOAT FLOOR — THIS IS THE ONE REAL
+   OPEN DEFECT LEFT.** `ktrace` has produced two comparisons: `test-karma-1` (8 bodies) is a MATCH,
+   and `ONS-Torlan` (15 bodies, five hover bikes, an RV, a Scorpion) is `1 MISMATCH`. This file
+   first called that MISMATCH a tolerance verdict; **that was tested and disproven** — see the
+   entry below. With a 32-bit engine built `-mfpmath=sse` so both sides use the same FP model,
+   14 of 15 bodies are **bit-identical over all 89 frames** and `ONSHoverBike3` is bit-identical
+   for 8 frames and then steps by **1.06**. Exact agreement followed by a step change of order one
+   is not arithmetic. ⚠ It is also **not** `IxConvexLineSegment` (repaired below; the trace is
+   bit-for-bit unchanged). ★ **Next measurement: contacts per body per frame at both widths.**
+   `-KTRACE` records bodies only, so the engine needs a hook it does not have.
 
 5. **WHAT A "TRUNCATION" IS, BECAUSE THE NUMBER GETS QUOTED WITHOUT IT.** It is one of exactly
    three clang diagnostics — `-Wint-to-pointer-cast`, `-Wpointer-to-int-cast`,
@@ -108,8 +111,9 @@ ONS-Torlan  ONS-Primeval  VCTF-BE-Dystopia  AS-Convoy
    clean census is a statement about one shape of one class. **Playing the game is the stronger
    evidence, and that is why the long runs below are the headline and this number is not.**
 
-6. **THE TRUNCATION CENSUS IS 87 / 48 OPEN** (was 91 / 52): the `MStack_26c.flags` repair took
-   `IxCylinderTriList` — the **worst single object**, 6 of 6 — off the list entirely. ⚠ **But that
+6. **THE TRUNCATION CENSUS IS 83 / 44 OPEN** (was 91 / 52 this morning): the `MStack_26c.flags`
+   repair took `IxCylinderTriList` — the worst single object, 6 of 6 — off the list, and the
+   accessor-typed repairs took `IxConvexLineSegment` (3 of 3) and `MdtWorld` (3 of 3) with it. ⚠ **But that
    number is not a measure of how much is left.** `MePoolx` was the vehicle crash and is on NEITHER
    list: nothing there is truncated and no cast is narrowed. `ptrwidth_classify` counts one shape of
    one class. Worst remaining: `McdBox` 4, `McdConvexMesh` 4, `MdtPartition` 4, `MeXMLParser` 4,
@@ -120,7 +124,13 @@ ONS-Torlan  ONS-Primeval  VCTF-BE-Dystopia  AS-Convoy
    runs the full 150 s window with 0 abort / 0 `GetFontSizeIndex`. Recorded in the monorepo,
    `docs/migration/STATE.md` 2.46. ⚠ The AS-Convoy verdict is a BOOT, not a match.
 
-8. **THE WEB ENGINE ARTEFACT IS UNCHANGED.**
+8. ⚠ **THE WEB ARTEFACT CHANGED — BUT NOT BECAUSE OF KARMA.** Every Karma repair in this session
+   is still wasm32-**byte-identical** (both of the last two were compiled at wasm32 before and
+   after and compared). What moved `SDLLaunch.wasm` from `12d70e6c…` to `26f3411e…` is the
+   **engine-side viewport clamp** in `SDL2Drv/Src/SDL2Viewport.cpp`, which is compiled into the web
+   build like any other engine file. That earns a re-stamp on its own account.
+
+9. **THE ORIGINAL WEB ENGINE ARTEFACT CLAIM, FOR THE KARMA HALF.**
    `targets/ut2004/file-manifest.json` was regenerated against the tree as it now is and verified
    entry by entry: **6167 entries, 0 missing, 0 size mismatches**, 174 files on disk correctly
    excluded (executables, logs, user `.ini`s). And `SDLLaunch.wasm` is **byte-identical** through
@@ -182,32 +192,44 @@ KBox_Light   first differs at frame 82;  rest Z  0.884 (i386) vs 0.879 (LP64)
 ktrace_score  rest 8/8  sleep 8/8  gone 0  ->  MATCH
 ```
 
-★★★ **AND A SECOND ktrace, ON ONS-Torlan WITH VEHICLES, IS THE MORE INTERESTING ONE — 15 bodies
-INCLUDING FIVE HOVER BIKES, AN RV AND A SCORPION.** It reports `1 MISMATCH`, and ⚠⚠ **that
-MISMATCH is NOT evidence of a Karma defect.** Both same-width controls are perfect, so the map is
-deterministic and the difference is attributable to width:
+★★★ **AND A SECOND ktrace, ON ONS-Torlan WITH VEHICLES — 15 bodies INCLUDING FIVE HOVER BIKES, AN
+RV AND A SCORPION. ⚠⚠ ITS ONE MISMATCH IS AN OPEN DEFECT, AND THIS FILE CALLED IT THE FLOAT FLOOR
+FIRST, WHICH WAS WRONG.**
 
 ```
-32-bit vs 32-bit   15 of 15 identical      "behaviourally IDENTICAL"
-64-bit vs 64-bit   15 of 15 identical      "behaviourally IDENTICAL"
-32-bit vs 64-bit   12 of 15 identical; ONSHoverBike3 first differs at FRAME 9,
-                   and rests 9.1 units higher      -> 1 MISMATCH
+32-bit vs 32-bit   15 of 15 identical      64-bit vs 64-bit   15 of 15 identical
+x87-32  vs  SSE-64   12/15 identical; ONSHoverBike3 first differs at FRAME 9
+SSE-32  vs  SSE-64   14/15 BIT-IDENTICAL over all 89 frames;
+                     ONSHoverBike3 BIT-IDENTICAL to frame 8, then |diff| 1.06 at frame 9
 ```
 
-★ **Reading the frames is what settles it.** For frames 1–8 the *only* column that differs at all
-is `wz` — the angular velocity about Z — and its **absolute** values are `7e-10` vs `2e-9`. Every
-position, orientation, linear velocity, `wx` and `wy` is identical to the printed precision. Then
-at frame 9 `wx` **flips sign** (`+0.371` vs `−0.054`) and the bike tips one way at i386 and the
-other at LP64: at 32-bit it slides down and falls, at 64-bit it settles where it stood.
+★ **THE FLOAT-FLOOR READING WAS TESTED AND DISPROVEN.** The first reading was that x87's 80-bit
+intermediates on i386 versus SSE at LP64 seeded a difference that a balanced vehicle amplified —
+and the arithmetic supported it: the frame-1 seed was `wz` differing by `1.54e-9`, **0.21 of one
+float32 ULP** of the smallest quantity feeding it. So a 32-bit engine was built with
+`-mfpmath=sse -msse2` to remove the variable (verified in the artefact: `MdtBclAddAngular3` goes
+from **623 x87 / 0 SSE** to **1 x87 / 224 SSE**).
 
-⚠⚠ **SO `ktrace` ON A REAL MAP CANNOT DISTINGUISH A POINTER-WIDTH DEFECT FROM THE ARITHMETIC FLOOR
-FOR A BODY SITTING ON A THRESHOLD.** A truncated pointer shows up as a gross difference in a
-position or a velocity, immediately. This is denormal-scale rotational noise on a vehicle balanced
-on its repulsors, amplified by a contact threshold — the same excess-precision difference
-`lp64_run.sh`'s header documents, which is why the offline scenes need `-ffloat-store` at **both**
-widths before they can be compared as bytes. A game binary has no such control. ★ To make this
-comparison decisive, a future session would have to build both widths with `-ffloat-store`; until
-then `1 MISMATCH` on one hover bike is a **tolerance verdict, not a defect**.
+**It half-worked, and the half that failed is the finding.** With the FP model held fixed the
+frame-1 seed vanishes — SSE-32 and SSE-64 are **bit-identical, all 13 state columns, for 8
+frames** — and then `ONSHoverBike3` jumps by **1.06** at frame 9. **A float floor amplifying looks
+like a small difference growing; this is exact agreement followed by a step change of order one.**
+14 of the 15 bodies stay bit-identical over all 89 frames, including the RV, the Scorpion, four
+other hover bikes and every box.
+
+⚠ **AND IT IS NOT `IxConvexLineSegment` EITHER**, which was the obvious suspect: a hover bike is
+held up by repulsor **line checks**, and that object had `3 of 3` unexplained truncations reading
+`McdConvexHull` at i386 offsets (`+4` is `face` here and the **high half of `vertex`** at LP64;
+`+0x14` is `numFace` here and the high half of `edge` there — measured). It is repaired below, and
+the trace afterwards is **bit-for-bit the same**: still frame 9, still 1.061. Not on this bike's
+path.
+
+**What is left is a tightly bounded lead rather than an explanation:** one body, one frame, with
+the arithmetic proven identical up to it. It is either a discrete decision flipping (a contact
+that exists at one width and not the other) or the first entry into code whose rounding differs at
+the two widths — and the trace cannot separate those, because `-KTRACE` records bodies, not
+contacts. ★ Counting contacts per body per frame at both widths is the next measurement, and it
+needs a hook the engine does not have yet.
 
 ⚠ **The 5 mm on `KBox_Light` is the same thing on `test-karma-1`, and the reason is the one
 `lp64_run.sh` documents**: the shipping 32-bit build computes in x87 with excess

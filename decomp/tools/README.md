@@ -1913,6 +1913,37 @@ typed the record `MeDictNode *` and read `->left`, which is eight bytes at LP64.
 only where the member is 4 bytes here and 8 there, and a constant compared against a re-spelled
 site is cast to the new type so `0xffffffff` stays `-1` rather than becoming 4294967295.
 
+★★ **A SECOND EVIDENCE SOURCE: A `void *` LOCAL TYPED BY THE ACCESSOR IT WAS ASSIGNED FROM.** The
+oracle declares the return type, so nothing is inferred:
+
+```c
+void *pvVar13;
+pvVar13 = McdConvexMeshGetPolyhedron(pvVar13);          /* const McdConvexHull * */
+if (0 < *(int *)((kd_iptr)pvVar13 + 0x14)) {            /* numFace */
+  pfVar16 = (float *)(iVar17 * 0x10 + *(int *)((kd_iptr)pvVar13 + 4));   /* face */
+```
+
+```
+McdConvexHull  i386  vertex 0  face 4   edge 8   edgeIndex 12  numVertex 16  numFace 20
+               LP64  vertex 0  face 8   edge 16  edgeIndex 24  numVertex 32  numFace 36
+```
+
+So at LP64 `+4` is the **high half of `vertex`** — read four bytes wide and used as the base of the
+face array — and `+0x14` is the high half of `edge`. ⚠ `sizeof(McdCnvFace)` is **16 at both widths**
+(three floats and an int), so the `* 0x10` stride is correct and nothing about it looks wrong.
+`IxConvexLineSegment` is the convex-mesh line-segment intersection — the path a hover vehicle's
+repulsor line checks take. `MdtWorld` gets the same treatment through `MdtPartitionOutput`.
+Together they take the census from 87/48 to **83/44**.
+
+⚠⚠ **THE SCOPE IS THE ASSIGNMENT, NOT THE FUNCTION.** `pvVar13` above holds an `McdGeometry *` for
+twenty-five lines and an `McdConvexHull *` afterwards. Typing the whole function from one
+assignment would re-spell the earlier uses against the wrong struct — and several of those offsets
+exist in *both* structs at i386, so the byte-identity gate would not necessarily catch it. Each
+assignment types only the sites between it and the next assignment to the same name.
+
+★ **ONLY REWRITE WHAT MOVES.** A scope where no offset relocates at LP64 is skipped entirely, so a
+struct of pure floats is never touched.
+
 ⚠ **THE GREEDY RETURN TYPE ATE THE NAME — AGAIN.** `^static\s+[A-Za-z_][\w ]*\**\s*(\w+)\s*\(`
 reads `static void MePoolxDictNodeDeallocate(` as a function called **`e`**. Its sibling
 `static MeDictNode * MePoolxDictNodeAllocate(` survives only because the `*` forces the split — so

@@ -217,11 +217,81 @@ def registrations(text):
     return {k: (v, statics[k]) for k, v in out.items() if v}
 
 
+def accessor_scopes(text, root):
+    """★ A SECOND EVIDENCE SOURCE: a `void *` LOCAL TYPED BY THE ACCESSOR IT WAS
+    ASSIGNED FROM. The oracle declares the return type, so nothing is inferred:
+
+        void *pvVar13;
+        pvVar13 = McdModelGetGeometry(model);                 /* McdGeometry *  */
+        ...
+        pvVar13 = McdConvexMeshGetPolyhedron(pvVar13);        /* McdConvexHull *  <- */
+        if (0 < *(int *)((kd_iptr)pvVar13 + 0x14)) {          /* numFace          */
+          pfVar16 = (float *)(iVar17 * 0x10 + *(int *)((kd_iptr)pvVar13 + 4));  /* face */
+
+    ```
+    McdConvexHull  i386  vertex 0  face 4   edge 8   edgeIndex 12  numVertex 16  numFace 20
+                   LP64  vertex 0  face 8   edge 16  edgeIndex 24  numVertex 32  numFace 36
+    ```
+
+    So at LP64 `+4` is the HIGH HALF OF `vertex` — read four bytes wide and used as
+    the base of the face array — and `+0x14` is the high half of `edge`.
+    ⚠ `sizeof(McdCnvFace)` is 16 at BOTH widths (three floats and an int), so the
+    `* 0x10` stride is correct and nothing about it looks wrong. `IxConvexLineSegment`
+    is the convex-mesh LINE-SEGMENT intersection — the path a hover vehicle's
+    repulsor line checks take — and it is the only body that diverges between the
+    two widths on `ONS-Torlan` once the FP model is held fixed.
+
+    ⚠⚠ THE SCOPE IS THE ASSIGNMENT, NOT THE FUNCTION. `pvVar13` above holds an
+    `McdGeometry *` for twenty-five lines and an `McdConvexHull *` afterwards.
+    Typing the whole function from one assignment would re-spell the earlier uses
+    against the wrong struct, and at i386 several of those offsets exist in both —
+    so the byte-identity gate would not necessarily catch it. Each assignment types
+    only the sites between it and the next assignment to the same name.
+
+    Returns [(var, T, start, end)] in text coordinates."""
+    import fix_literal_offsets as _flo
+    bodies = _flo.struct_bodies(INC_G)
+    protos = {}
+    for dp, _, files in os.walk(INC_G):
+        for f in files:
+            if not f.endswith('.h'):
+                continue
+            src = re.sub(r'/\*.*?\*/', ' ',
+                         open(os.path.join(dp, f), errors='ignore').read(), flags=re.S)
+            # `const McdConvexHull * MEAPI McdConvexMeshGetPolyhedron(McdConvexMeshID);`
+            for m in re.finditer(r'(?<![\w])(?:const\s+)?([A-Za-z_]\w*)\s*\*\s*'
+                                 r'(?:MEAPI\s+)?([A-Za-z_]\w*)\s*\([^;]*\)\s*;', src):
+                ty, name = m.group(1), m.group(2)
+                if ty in ('void', 'char', 'struct', 'unsigned', 'const'):
+                    continue
+                if ty in bodies or '_' + ty in bodies:
+                    protos.setdefault(name, ty)
+    out = []
+    for func, s, e in regions(text):
+        body = text[s:e]
+        voids = set(re.findall(r'(?m)^\s*void\s*\*\s*(\w+)\s*;', body))
+        if not voids:
+            continue
+        for v in sorted(voids):
+            asg = [(m.start(), m.group('fn')) for m in re.finditer(
+                r'(?m)^\s*%s\s*=\s*(?:\([^()]*\)\s*)?(?P<fn>[A-Za-z_]\w*)\s*\(' % re.escape(v),
+                body)]
+            for i, (pos, callee) in enumerate(asg):
+                T = protos.get(re.sub(r'^kd_', '', callee)) or protos.get(callee)
+                if not T:
+                    continue
+                stop = asg[i + 1][0] if i + 1 < len(asg) else len(body)
+                out.append((v, T, s + pos, s + stop))
+    return out
+
+
 def plan(text, notes, fn, quiet=False):
     edits, label = [], []
     regs = registrations(text)
-    if not regs:
+    scopes = accessor_scopes(text, None)
+    if not regs and not scopes:
         return None
+    # ---- (a) the registration form: a callback's `void *` context.
     for func, s, e in regions(text):
         base = func.split('(')[0]
         if base not in regs:
@@ -249,28 +319,57 @@ def plan(text, notes, fn, quiet=False):
             continue
         T = fit[0]
         flds = fields_of(T)
-        for m in sites:
-            k = int(m.group('off'), 0) if m.group('off') else 0
-            F, ty = flds[k], m.group('ty').strip()
-            # the address, always
-            if m.group('off') is not None:
-                edits.append((s + m.start('off'), s + m.end('off'), off_expr(T, F)))
-            # the width, only where the member says it must change
-            a = measure('sizeof(((%s *)0)->%s)' % (T, F))
-            b = measure('sizeof(((%s *)0)->%s)' % (T, F), '-m64')
-            w = measure('sizeof(%s)' % ty, '-m64')
-            if None in (a, b, w) or w == b:
-                continue
-            if a != measure('sizeof(%s)' % ty):
-                continue                    # already disagreed at i386 — not ours
-            new = 'int' if b == 4 else 'kd_iptr'
-            edits.append((s + m.start('ty'), s + m.end('ty'), new))
+        edits += respell(text, s, sites, T, flds)
         label.append('%s(%s: %s)' % (base, param, T))
         edits += rule_d(text, s, e, param, T, flds)
+    # ---- (b) the accessor form, scoped to the assignment that types it.
+    for v, T, a, b in scopes:
+        flds = fields_of(T)
+        if not flds:
+            continue
+        sites = [m for m in site_re(v).finditer(text[a:b])]
+        if not sites:
+            continue
+        offs = sorted({int(m.group('off'), 0) if m.group('off') else 0 for m in sites})
+        if not all(o in flds for o in offs):
+            if not quiet:
+                notes.append('%-22s %s as %s: offsets %s are not member starts — declined'
+                             % (fn, v, T, ' '.join(hex(o) for o in offs)))
+            continue
+        # ★ ONLY REWRITE WHAT MOVES. `McdCnvFace` is 16 bytes at both widths, so a
+        # stride over it is already right; only offsets whose member actually
+        # relocates are touched, and a scope where none does is left alone.
+        if not any(measure(off_expr(T, flds[o])) != measure(off_expr(T, flds[o]), '-m64')
+                   for o in offs):
+            continue
+        new = respell(text, a, sites, T, flds)
+        if new:
+            edits += new
+            label.append('%s(%s: %s)' % (v, 'accessor', T))
     if not edits:
         return None
     edits = list({(a, b): (a, b, r) for a, b, r in edits}.values())
     return edits, ' '.join(label)
+
+
+def respell(text, base, sites, T, flds):
+    """The address, always; the access width only where the member demands it."""
+    edits = []
+    for m in sites:
+        k = int(m.group('off'), 0) if m.group('off') else 0
+        F, ty = flds[k], m.group('ty').strip()
+        if m.group('off') is not None:
+            edits.append((base + m.start('off'), base + m.end('off'), off_expr(T, F)))
+        a = measure('sizeof(((%s *)0)->%s)' % (T, F))
+        b = measure('sizeof(((%s *)0)->%s)' % (T, F), '-m64')
+        w = measure('sizeof(%s)' % ty, '-m64')
+        if None in (a, b, w) or w == b:
+            continue
+        if a != measure('sizeof(%s)' % ty):
+            continue                        # already disagreed at i386 — not ours
+        edits.append((base + m.start('ty'), base + m.end('ty'),
+                      'int' if b == 4 else 'kd_iptr'))
+    return edits
 
 
 def rule_d(text, s, e, param, T, flds):

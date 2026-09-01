@@ -40,9 +40,13 @@ VCTF-BE-Dystopia                     UGUITabControl::PreDraw
    **508 s, 0 signals, frame advance verified**. ★ That is the attribution control: arm64 is not
    passing because 64-bit is lenient — **both widths play**.
 
-3. ✅ **`ktrace` HAS PRODUCED ONE — see below.** ⚠ What is still open is that the comparison is
-   200 frames of ONE map (`test-karma-1`, no bots). It is not a statement about ragdolls or
-   vehicles, whose trajectories nothing has yet compared at the two widths.
+3. ✅ **`ktrace` HAS PRODUCED TWO — see below.** `test-karma-1` (8 bodies) is a MATCH, and
+   `ONS-Torlan` (15 bodies, five hover bikes, an RV, a Scorpion) is `1 MISMATCH` on one hover
+   bike. ⚠⚠ **THE MISMATCH IS A TOLERANCE VERDICT, NOT A DEFECT** — for eight frames the only
+   differing column is `wz` at `1e-9` magnitude, then `wx` flips sign and the bike tips the other
+   way. What is genuinely open is that **`ktrace` on a game binary has no `-ffloat-store`**, so it
+   cannot separate the arithmetic floor from a pointer-width defect for a body on a threshold.
+   Making it decisive means building both widths with the arithmetic held fixed.
 
 4. **THE TRUNCATION CENSUS IS 87 / 48 OPEN** (was 91 / 52): the `MStack_26c.flags` repair took
    `IxCylinderTriList` — the **worst single object**, 6 of 6 — off the list entirely. ⚠ **But that
@@ -104,8 +108,35 @@ KBox_Light   first differs at frame 82;  rest Z  0.884 (i386) vs 0.879 (LP64)
 ktrace_score  rest 8/8  sleep 8/8  gone 0  ->  MATCH
 ```
 
-⚠ **The 5 mm on `KBox_Light` is the float floor, not a physics difference, and the reason is the
-same one `lp64_run.sh` documents**: the shipping 32-bit build computes in x87 with excess
+★★★ **AND A SECOND ktrace, ON ONS-Torlan WITH VEHICLES, IS THE MORE INTERESTING ONE — 15 bodies
+INCLUDING FIVE HOVER BIKES, AN RV AND A SCORPION.** It reports `1 MISMATCH`, and ⚠⚠ **that
+MISMATCH is NOT evidence of a Karma defect.** Both same-width controls are perfect, so the map is
+deterministic and the difference is attributable to width:
+
+```
+32-bit vs 32-bit   15 of 15 identical      "behaviourally IDENTICAL"
+64-bit vs 64-bit   15 of 15 identical      "behaviourally IDENTICAL"
+32-bit vs 64-bit   12 of 15 identical; ONSHoverBike3 first differs at FRAME 9,
+                   and rests 9.1 units higher      -> 1 MISMATCH
+```
+
+★ **Reading the frames is what settles it.** For frames 1–8 the *only* column that differs at all
+is `wz` — the angular velocity about Z — and its **absolute** values are `7e-10` vs `2e-9`. Every
+position, orientation, linear velocity, `wx` and `wy` is identical to the printed precision. Then
+at frame 9 `wx` **flips sign** (`+0.371` vs `−0.054`) and the bike tips one way at i386 and the
+other at LP64: at 32-bit it slides down and falls, at 64-bit it settles where it stood.
+
+⚠⚠ **SO `ktrace` ON A REAL MAP CANNOT DISTINGUISH A POINTER-WIDTH DEFECT FROM THE ARITHMETIC FLOOR
+FOR A BODY SITTING ON A THRESHOLD.** A truncated pointer shows up as a gross difference in a
+position or a velocity, immediately. This is denormal-scale rotational noise on a vehicle balanced
+on its repulsors, amplified by a contact threshold — the same excess-precision difference
+`lp64_run.sh`'s header documents, which is why the offline scenes need `-ffloat-store` at **both**
+widths before they can be compared as bytes. A game binary has no such control. ★ To make this
+comparison decisive, a future session would have to build both widths with `-ffloat-store`; until
+then `1 MISMATCH` on one hover bike is a **tolerance verdict, not a defect**.
+
+⚠ **The 5 mm on `KBox_Light` is the same thing on `test-karma-1`, and the reason is the one
+`lp64_run.sh` documents**: the shipping 32-bit build computes in x87 with excess
 precision and the LP64 build in SSE. The offline scenes already establish BIT-identity once the
 arithmetic is held fixed with `-ffloat-store`; here it is not held fixed, so a divergence after
 82 frames is expected. ⚠ **And the FIRST attempt at 600 frames could not be compared at all** —

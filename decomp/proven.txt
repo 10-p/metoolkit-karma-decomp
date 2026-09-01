@@ -217,6 +217,33 @@
 #                         KBox_Light first differs at frame 82; rest Z
 #                                    0.884 (i386) vs 0.879 (LP64)
 #                         ktrace_score  rest 8/8  sleep 8/8  gone 0  ->  MATCH
+#                     ★★★ AND A SECOND ktrace, ON ONS-Torlan WITH VEHICLES — 15
+#                     bodies including five hover bikes, an RV and a Scorpion. It
+#                     reports 1 MISMATCH, and ⚠⚠ THAT IS NOT EVIDENCE OF A KARMA
+#                     DEFECT. Both same-width controls are perfect, so the map IS
+#                     deterministic and the difference IS attributable to width:
+#                         32 vs 32   15/15 identical
+#                         64 vs 64   15/15 identical
+#                         32 vs 64   12/15 identical; ONSHoverBike3 first differs
+#                                    at FRAME 9 and rests 9.1 units higher
+#                     ★ READING THE FRAMES IS WHAT SETTLES IT. For frames 1-8 the
+#                     ONLY column that differs at all is `wz` — angular velocity
+#                     about Z — and its ABSOLUTE values are 7e-10 vs 2e-9. Every
+#                     position, orientation, linear velocity, wx and wy is
+#                     identical to the printed precision. At frame 9 `wx` FLIPS
+#                     SIGN (+0.371 vs -0.054) and the bike tips one way at i386 and
+#                     the other at LP64.
+#                     ⚠⚠ SO ktrace ON A REAL MAP CANNOT DISTINGUISH A POINTER-WIDTH
+#                     DEFECT FROM THE ARITHMETIC FLOOR FOR A BODY ON A THRESHOLD.
+#                     A truncated pointer is a GROSS difference in a position or a
+#                     velocity, immediately. This is denormal-scale rotational noise
+#                     on a vehicle balanced on its repulsors, amplified by a contact
+#                     threshold — the same excess precision lp64_run.sh's header
+#                     documents, which is why the offline scenes need -ffloat-store
+#                     at BOTH widths before they can be compared as bytes. A game
+#                     binary has no such control, and until one exists `1 MISMATCH`
+#                     on one hover bike is a TOLERANCE VERDICT, NOT A DEFECT.
+#
 #                     ⚠ The 5 mm is the float floor, not physics: the shipping
 #                     32-bit build computes in x87 with excess precision and LP64
 #                     in SSE, and the offline scenes already establish BIT-identity

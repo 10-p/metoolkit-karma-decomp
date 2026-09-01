@@ -62,6 +62,32 @@ library-map.txt   object -> library, generated, do not hand-edit
 reads it off `ar t` over the shipped archives. All 145 objects map, none appears
 in two archives, so there was no tie to break.
 
+### The three objects that are DELIBERATELY not here
+
+The SDK ships 148 objects on this path; 145 are recovered. `split_libraries.py`
+reports the other three every run — *"not laid out (no `.o` in kd_build, i.e. did
+not compile)"* — and they are **staying dead**, because they are Karma's
+**authoring-time** tools, not its runtime:
+
+| object | archive | what it is |
+|---|---|---|
+| `MeASELoad` | `libMeGlobals.a` | reads a 3D Studio **ASE** mesh file |
+| `MeFGeometryFromMesh` | `libMeAssetDB.a` | turns such a mesh into a box/sphere/cylinder/convex geometry |
+| `McduDebugDraw` | `libMcdFrame.a` | draws AABBs, models and the broadphase for a debug viewer |
+
+**Measured, not assumed.** Across the whole engine tree the only file that names
+any of their symbols is `Source/UnrealEd/Src/KarmaEditorSupport.cpp`
+(`MeASEObjectLoadParts`, `MeFConvexCreateFromMesh`) — the **editor**, which no
+CMake target in `engine-ut2004` builds. `McduDebugDraw` is named by nothing at
+all. And the linked 64-bit binary has **zero** undefined references to any symbol
+they define, which is why every target links and plays without them.
+
+That is the whole reason: the game loads pre-built `KarmaData/*.ka` assets, so it
+never converts a mesh at run time and never draws a debug overlay. Recovering
+them would add three objects that nothing calls. ⚠ If a future consumer wants to
+*build* `.ka` assets rather than load them, these three are what it needs, and
+they would have to be recovered first.
+
 ```
 McdPrimitives 27   Mdt            26   MeGlobals      23   MdtKea 18
 McdConvex     13   McdFrame       12   MeAssetDB       7   McdCommon 5

@@ -261,6 +261,41 @@
 #                     is still not a measure of what is left: MePoolx WAS the
 #                     vehicle crash and is on neither list.
 #
+#                     ★★ "START A MATCH AND LEAVE IT RUNNING" — THREE OF FOUR
+#                     TARGETS MEET IT, all Onslaught, all with vehicles and
+#                     ragdolls, all as a SPECTATOR so the mid-game GUI cannot
+#                     pause the level, all 0 signals:
+#                         android arm64   ONS-Dria    1397 s (23 min)
+#                         android armv7   ONS-Dria     508 s
+#                         linux x86-64    ONS-Torlan  1500 s (25 min), 0 Critical
+#                                                     Error, 0 REALLOC FAILED
+#                     ⚠ The Windows 64-bit binary is built with Karma and has
+#                     still never been run.
+#                     ⚠ AND THE PLAYER-CONTROLLED LINUX RUN IS THE INSTRUCTIVE
+#                     ONE: it died at 17 m 45 s with SIGFPE — a divide by zero —
+#                     in UGUITabControl::PreDraw <- UGUIMultiComponent::
+#                     PreDrawControls <- UGameEngine::Draw <- USDL2Viewport::
+#                     Repaint, with ZERO Karma frames. The engine's 2D GUI is the
+#                     limiting factor on a long Linux run, not the physics.
+#
+#                     ⚠⚠ AND THE `FCanvasVertex` CRASH IS NOT AN Xvfb ARTEFACT —
+#                     THIS FILE SAID IT WAS AND THAT WAS WRONG. Re-measured:
+#                         64-bit GL4ES  Xvfb                   4 of 4 maps fail
+#                         64-bit GL4ES  REAL GPU (RTX 3090)    3 of 4 fail
+#                         32-bit PIXOMATIC (software) Xvfb     2 of 4 fail
+#                     Renderer-independent, display-independent, width-independent
+#                     and intermittent. Every configuration logs
+#                     `[AutoFOVUI] viewport=2x28`, and every FCanvasVertex death is
+#                     preceded by `REALLOC FAILED: NewSize=2554592016` — a 2.55 GB
+#                     growth of FCanvasUtil::Vertices, the TArray<FCanvasVertex>
+#                     that DrawTile appends to. No Karma frame in any of them.
+#                     ⚠ Pixomatic exists ONLY at 32-bit: pixomatic_linux.a is a
+#                     prebuilt i386 archive and USE_PIXOMATIC=ON is a configure-
+#                     time FATAL_ERROR at 64-bit.
+#                     ★ Real-GPU access from a tty shell:
+#                     DISPLAY=:0 XAUTHORITY=/run/user/1000/xauth_<...>, read off
+#                     the running Xwayland command line.
+#
 #                     ★ AND armeabi-v7a IS THE ATTRIBUTION CONTROL, RUN AT LAST.
 #                     `adb install --abi armeabi-v7a` puts the 32-bit slice on the
 #                     same OnePlus 6 (primaryCpuAbi=armeabi-v7a) and it played the

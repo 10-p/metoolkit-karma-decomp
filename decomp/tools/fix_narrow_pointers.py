@@ -234,6 +234,123 @@ def region_of(text, pos):
 
 DECL = r'(?m)^[ \t]*(?P<ty>%s)[ \t]+(?P<name>%s)[ \t]*;'
 
+# ---------------------------------------------------------------------------
+# ⚠⚠ A LOCAL WHOSE ADDRESS ESCAPES TO A CALLEE CANNOT BE WIDENED, and getting
+# this wrong produced the worst-behaved defect in the project's history.
+#
+#     int start;                                     /* the RAW recovery */
+#     McdConvexMeshMaximumPointLocal(conv,norm,0,dp,&start);
+#     MeSetAdd(&set,(void *)start);
+#     ...
+#     pMVar14 = pMVar3 + (kd_iptr)pvVar9;            /* index by the key */
+#
+# Rule A saw `(void *)start` and widened `int start` to `kd_iptr start`. The
+# CAST is real — the value does become a set key — but the only thing that ever
+# WRITES `start` is the callee, through `int *outIndex`, and that writes FOUR
+# bytes. So at LP64 the top half of `start` is whatever was on the stack, and
+# the set key, and then the vertex index, carry it.
+#
+# ★ IT DOES NOT CRASH; IT MAKES THE PHYSICS DEPEND ON THE STACK. Measured
+# 2026-09-01/02: the same LP64 binary run twice with 20 KB more environment
+# moved ONSHoverBike3's trajectory while the other fourteen bodies stayed
+# BIT-IDENTICAL, and the 32-bit build did not move at all
+# (`test/ut2004/stack_shift.sh`). Under Windows x64 the same garbage read
+# `0xffffffff` and took the process down in `McdConvexMeshPlaneCut`
+# (McdPlaneIntersect.c:213), after 2651 clean physics frames.
+#
+# ⚠ AND NEITHER OF THIS PROJECT'S TWO STANDING GATES CAN SEE IT. The i386
+# acceptance test compiles the same text at 32-bit, where `int` and `kd_iptr`
+# ARE the same type and the object is byte-identical. ASan reports
+# out-of-bounds and use-after-free, not reads of uninitialised memory — it ran
+# this exact binary for fifteen frames and said nothing.
+#
+# So: if `&VAR` is passed to a function, the CALLEE's parameter type fixes
+# VAR's width, and this pass does not get to change it. The parameter is
+# resolved rather than assumed, and a callee whose prototype cannot be found
+# declines too — the safe direction is to leave the recovery as it was.
+ADDR_ARG = re.compile(r'(?P<fn>[A-Za-z_]\w*)\s*\((?P<args>[^;{}]*?)\)')
+NARROW_PARAM = re.compile(r'^\s*(?:const\s+)?(?:struct\s+)?'
+                          r'(?P<ty>int|uint|unsigned int|undefined4|MeI32|MeU32|'
+                          r'MeBool|short|char|float|MeReal)\s*\*\s*\w*\s*$')
+
+
+def _split_args(s):
+    """Top-level commas only — `f(a, g(b, c), &v)` has THREE arguments."""
+    out, depth, cur = [], 0, ''
+    for ch in s:
+        if ch in '([':
+            depth += 1
+        elif ch in ')]':
+            depth -= 1
+        if ch == ',' and depth == 0:
+            out.append(cur)
+            cur = ''
+        else:
+            cur += ch
+    out.append(cur)
+    return out
+
+
+def _prototype_params(text, inc, fn):
+    """The callee's parameter list, from the recovered prelude or the SDK headers."""
+    for pat in (r'(?m)^[\w \t\*]+\bkd_%s\s*\(' % re.escape(fn),
+                r'(?m)^[\w \t\*]+\b%s\s*\(' % re.escape(fn)):
+        m = re.search(pat, text)
+        if m:
+            depth, i = 0, m.end() - 1
+            while i < len(text):
+                if text[i] == '(':
+                    depth += 1
+                elif text[i] == ')':
+                    depth -= 1
+                    if depth == 0:
+                        return _split_args(text[m.end():i])
+                i += 1
+    for dirpath, _d, files in os.walk(inc):
+        for f in sorted(files):
+            if not f.endswith('.h'):
+                continue
+            t = open(os.path.join(dirpath, f), errors='ignore').read()
+            m = re.search(r'\b%s\s*\(' % re.escape(fn), t)
+            if m:
+                depth, i = 0, m.end() - 1
+                while i < len(t):
+                    if t[i] == '(':
+                        depth += 1
+                    elif t[i] == ')':
+                        depth -= 1
+                        if depth == 0:
+                            return _split_args(t[m.end():i])
+                    i += 1
+    return None
+
+
+def address_escapes_narrow(region, text, inc, var):
+    """Is `&var` handed to a callee that writes it through a pointer-to-narrow?
+
+    -> None if not, else a one-line reason for the decline note."""
+    if not re.search(r'&\s*%s\b' % re.escape(var), region):
+        return None
+    for m in ADDR_ARG.finditer(region):
+        args = _split_args(m.group('args'))
+        for i, a in enumerate(args):
+            if not re.fullmatch(r'\s*&\s*%s\s*' % re.escape(var), a):
+                continue
+            params = _prototype_params(text, inc, m.group('fn'))
+            if params is None:
+                return '&%s goes to %s(), whose prototype is not resolvable' \
+                       % (var, m.group('fn'))
+            if i >= len(params):
+                return '&%s is argument %d of %s(), which declares %d' \
+                       % (var, i + 1, m.group('fn'), len(params))
+            p = NARROW_PARAM.match(params[i])
+            if p:
+                return '&%s is argument %d of %s(), declared %s * — the callee ' \
+                       'writes %s bytes and the top half would stay uninitialised' \
+                       % (var, i + 1, m.group('fn'), p.group('ty'), '4')
+    return None
+
+
 
 def declared_type(region, var):
     for m in re.finditer(r'(?m)^[ \t]*((?:const |struct )*[A-Za-z_]\w*[ \t]*\**)'
@@ -846,6 +963,11 @@ def main():
                 if not d:
                     notes.append('%-26s %s (line %d) is %s but has no local '
                                  'declaration here — declined' % (fn, var, ln, ty))
+                    continue
+                why = address_escapes_narrow(region, text0, inc, var)
+                if why:
+                    notes.append('%-26s local  %-14s %-12s NOT widened: %s'
+                                 % (fn, var, ty, why))
                     continue
                 want(base + d.start('ty'), base + d.end('ty'), fix_ptrwidth.WIDEN[ty],
                      '%-26s local  %-14s %-12s -> %s'

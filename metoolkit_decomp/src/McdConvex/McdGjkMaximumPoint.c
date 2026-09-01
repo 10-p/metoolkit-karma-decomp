@@ -40,7 +40,7 @@ MeReal kd_McdGjkFatness(McdGeometryInstanceID ins)
   if (bVar2 == 5) {
 LAB_00010020:
                     
-    MVar1 = *(float *)&(pMVar3[1].mRefCtAndID);
+    MVar1 = *(float *)&(((McdSphyl *)pMVar3)->mRadius);
   }
   else {
     if (bVar2 < 6) {
@@ -48,7 +48,7 @@ LAB_00010020:
     }
     else if (bVar2 == 7) {
                     
-      return *(float *)&(pMVar3[2].frame);
+      return *(float *)&(((McdConvexMesh *)pMVar3)->mFatness);
     }
     MVar1 = 0.0;
   }
@@ -303,7 +303,7 @@ LAB_000104c9:
   if (bVar4 == 5) {
 LAB_00010655:
                     
-    pMVar8 = (McdFrameworkID)pMVar6[1].mRefCtAndID;
+    pMVar8 = (McdFrameworkID)(*(unsigned int *)&((McdSphyl *)pMVar6)->mRadius);
   }
   else {
     if (bVar4 < 6) {
@@ -311,7 +311,7 @@ LAB_00010655:
     }
     else if (bVar4 == 7) {
                     
-      pMVar8 = pMVar6[2].frame;
+      pMVar8 = (*(unsigned int *)&((McdConvexMesh *)pMVar6)->mFatness);
       goto LAB_00010629;
     }
     pMVar8 = (McdFrameworkID)0x0;

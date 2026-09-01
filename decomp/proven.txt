@@ -1,3 +1,125 @@
+# LP64-GJK-CONTACT   2026-09-02  ★★★ THE HOVER BIKE IS A CONTACT ONE WIDTH
+#                     GENERATES AND THE OTHER DOES NOT — measured, not inferred —
+#                     AND THE LP64 BUILD'S PHYSICS DEPENDS ON THE CONTENTS OF THE
+#                     STACK. Two generator repairs landed; NEITHER fixes frame 9,
+#                     and that sentence is here because five sessions running have
+#                     opened by believing a repair on the right path was the repair.
+#
+#                     (1) FRAME 9 IS DISCRETE, NOT ARITHMETIC. `-KTRACECONTACTS`
+#                     (KarmaSupport.cpp) emits contacts per body per frame and
+#                     `ktrace_contacts.py` diffs them. SSE-32 vs LP64, test-karma-1
+#                     under Onslaught, the FP model held fixed on both sides:
+#                         frame 8   32: groups=0 contacts=0    64: groups=0 contacts=0
+#                         frame 9   32: groups=1 contacts=3    64: groups=0 contacts=0
+#                                   n=(0.00195408,-0.707112,0.707099) pen=0, x3
+#                     ★ THE 1.06 THIS PROJECT QUOTED FOR TWO DAYS IS THEIR IMPULSE:
+#                     at frame 9 the 32-bit bike takes vy = -1.06071818 and the
+#                     64-bit one stays at 0. Not a float floor; an impulse one build
+#                     applies and the other does not.
+#                     LOCALISED TO ONE INTERACTION, ENGINE RULED OUT. A sequence
+#                     probe on KIntersect is IDENTICAL for 733 lines and first
+#                     differs at:
+#                         IX ONSHoverBike3(t2) StaticMeshActor2(t7) touch=1 n=3   32
+#                         IX ONSHoverBike3(t2) StaticMeshActor2(t7) touch=0 n=0   64
+#                     t2 Box, t7 ConvexMesh -> McdGjkCgIntersect, the ONLY such pair
+#                     in the map (29 calls; 5 touch at 32-bit, 0 at LP64). Both
+#                     engine contact-group paths (repulsor, wheel) log IDENTICAL
+#                     sequences at both widths and the trilist generator returns
+#                     ntri=0 for this body on both. STILL OPEN.
+#
+#                     (2) THE STACK-DEPENDENCE, AND THE GATE THAT SEES IT.
+#                     `test/ut2004/stack_shift.sh` runs one binary at four
+#                     environment sizes — the environment sits above the initial
+#                     stack pointer, so more of it shifts every frame:
+#                         32-bit (SSE)  15/15 BIT-IDENTICAL at every size
+#                         LP64          ONSHoverBike3 moves; other 14 bit-identical
+#                     ★ NOTHING ELSE HERE CAN SEE THIS. The i386 acceptance test
+#                     compiles the same text at 32-bit where the read is in range and
+#                     the object is byte-identical. ASan reports out-of-bounds and
+#                     use-after-free, NOT uninitialised reads — it ran the failing
+#                     binary 15 frames and said nothing.
+#                     ⚠⚠ AND THE FIRST ATTRIBUTION FROM IT WAS WRONG. A build with
+#                     -ftrivial-auto-var-init=zero on C ONLY passed, which pointed at
+#                     an uninitialised local in the recovery (the engine is C++). That
+#                     was ONE RUN. The same binary failed half an hour later, and
+#                     swapping ALL 146 Karma objects from that build into the plain
+#                     one still failed. ONE SAMPLE THAT AGREES IS SILENCE, NOT
+#                     EVIDENCE — the harness now requires four sizes to agree.
+#
+#                     (3) fix_typeid_dispatch.py (NEW) — GJK'S CONVEX-MESH MARGIN.
+#                     fix_derived_fields declines a POLYMORPHIC function because its
+#                     per-file inference has no answer: "McdGjkMaximumPoint.c 4
+#                     site(s): 38 concrete type(s) fit [16, 44]". But McdGjkFatness
+#                     branches on the type id, so the SOURCE STATES THE TYPE.
+#                         McdConvexMesh i386  mHull 16 mFatness 44 mBSCentre 52
+#                                       LP64  mHull 32 mFatness 80 mBSCentre 88
+#                         pMVar3[2].frame -> i386 byte 44 = mFatness
+#                                            LP64 byte 88 = mBoundingSphereCentre[0]
+#                     GJK shrank every convex mesh by a bounding-sphere coordinate.
+#                     In the artefact: cmpb $0x7 -> add $0x50,%rax.
+#                     ⚠ EVERY REACHING TYPE ID MUST AGREE: Ghidra writes the Sphere
+#                     arm as `if (bVar2 == 1) goto LAB_x` INTO the Sphyl arm, so the
+#                     site has two reaching ids. Both give mRadius at 16/32, measured,
+#                     so it resolves; a brace-less `if` is a guard too and ignoring it
+#                     would have concluded "Sphyl only" on half the evidence.
+#                     ⚠⚠ AND IT DOES NOT MOVE FRAME 9. On this map the hull's fatness
+#                     and its bounding-sphere centre X are both ~0, so the wrong read
+#                     returns the right number. Right path, right function, different
+#                     defect. BISECT BEFORE BELIEVING — five for five.
+#
+#                     (4) fix_narrow_pointers — A LOCAL WHOSE ADDRESS ESCAPES TO A
+#                     CALLEE THAT WRITES IT NARROW. This one IS a crash.
+#                         int start;                          /* the RAW recovery */
+#                         McdConvexMeshMaximumPointLocal(...,&start);  /* int * */
+#                         MeSetAdd(&set,(void *)start);       /* the cast rule A saw */
+#                         pMVar14 = pMVar3 + (kd_iptr)pvVar9; /* index by the key */
+#                     Rule A widened int -> kd_iptr on the cast, but the only WRITER
+#                     is the callee and it writes FOUR bytes; at LP64 the top half is
+#                     stack garbage and the set key carries it. ★ THAT IS THE WINDOWS
+#                     x64 CRASH, DIGIT FOR DIGIT: EXCEPTION_ACCESS_VIOLATION, "Tried
+#                     to READ address 0xffffffff", McdConvexMeshPlaneCut
+#                     (McdPlaneIntersect.c:213) — the line above — after 2651 clean
+#                     physics frames. The pass now RESOLVES the callee's parameter
+#                     type and declines; 39 rule-A widenings became 37; a static sweep
+#                     of the corpus finds 0 of the shape remaining. AFTER: the same
+#                     match ran 7281 frames with 0 faults.
+#
+#                     (5) WINDOWS x64 BUILDS AND PLAYS — THE LAST UNTESTED TARGET.
+#                     ⚠ The artefact previously called "the Windows 64-bit binary,
+#                     built with Karma, never run" was PE32 i386; no x64 build existed.
+#                     Three ENGINE fixes were needed and none is what it first reads:
+#                       PTRINT was 4 bytes with 8-byte pointers — MinGW is LLP64, and
+#                         <windows.h>'s DWORD is `unsigned long` too, so PTRINT and
+#                         DWORD became the SAME TYPE and UnArc.cpp failed with
+#                         "redefinition of operator<<(FArchive&, PTRINT&)".
+#                         ⚠ uintptr_t everywhere would have BROKEN web and i386 Linux,
+#                         where uintptr_t IS unsigned int IS DWORD. Only LLP64 moves.
+#                       UT_MSVC_NO_MMX — three loops guarded on _WIN64 when the real
+#                         question is "is this MSVC?". MSVC x64 dropped the MMX
+#                         intrinsics; GCC did not. MinGW defines _WIN64 and is GCC.
+#                       the crash handler printed %08x — the image base read
+#                         0x40000000 where the PE's is 0x140000000, so all seven
+#                         candidate frames symbolised to "?? ??:0".
+#                     THE RUN, frame advance verified in the DATA not the log:
+#                     ONS-Torlan, Onslaught, 6 bots, spectator, -OPENGLRENDERER,
+#                     -FIXEDFPS=30 -KTRACE. Manta, Hover Bike, PRV and RV all moving
+#                     between frames 1000 and 2600.
+#
+#                     (6) -L/tmp/kd_lib64 IS GONE. SDL2 finds the ARCH-INDEPENDENT
+#                     samplerate.h from libsamplerate0-dev:i386, appends a bare
+#                     -lsamplerate, and the 64-bit link dies with "cannot find
+#                     -lsamplerate" — naming nothing. The workaround was a hand-made
+#                     symlink in a directory a reboot wipes.
+#                     ut_provide_samplerate_linker_name() probes with the compiler and
+#                     provides the linker name from the runtime SONAME inside the
+#                     build tree: no root, no apt, nothing outside CMAKE_BINARY_DIR.
+#
+#                     GATES, all still green: i386 acceptance 145/145 0 byte diffs;
+#                     frame bounds 0; lp64_pipeline.sh PASS; three scenes
+#                     BIT-IDENTICAL with the arithmetic held fixed.
+#                     BLAST RADIUS in the product: 3 files
+#                     (McdGjkMaximumPoint.c, McdPlaneIntersect.c, IxConvexTriList.c).
+
 # LP64-VEHICLE-CLEAN  2026-09-01  ★★ FIVE OF EIGHT GAMETYPES RUN THEIR FULL
 #                     150 s AT x86-64, AND THE THREE THAT DO NOT ARE THE ENGINE'S
 #                     UI, NOT KARMA. The named open item — McdSphylTriangleList-

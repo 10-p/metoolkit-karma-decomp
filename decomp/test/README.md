@@ -68,7 +68,7 @@ entirely DM.
 ⚠ **The renderer is not the same on every target.** Windows has no GLES; passing the default
 `-GL4ESRENDERER` there produces a crash that looks like a physics bug and is not one.
 
-### `ktrace_run.sh` / `ktrace_diff.py` / `ktrace_score.py` / `ktrace_subst.sh` — does it BEHAVE?
+### `ktrace_run.sh` / `ktrace_diff.py` / `ktrace_score.py` / `ktrace_contacts.py` / `ktrace_subst.sh` — does it BEHAVE?
 
 The gate the other twelve could not be. Everything else here compares CALLS — shadow divergences,
 per-pair difftests, per-object scene trajectories. This compares the TRAJECTORY THE CALLS ADD UP
@@ -146,6 +146,74 @@ the Ix* INTERACTION object and links the GEOMETRY objects from the shipped libra
 `McdSphereGetRadius` is never in the loop — it reads byte-identical before and after the repair.
 "145 objects pass" is a statement about 145 separate links, not about the program. See
 `../proven.txt` `MCD-GEOM-FLOAT-FIELDS`.
+
+### `ktrace_contacts.py` — CONTINUOUS difference, or DISCRETE?
+
+```bash
+KD_CONTACTS=1 KD_FRAMES=40 KD_GAME=Onslaught.ONSOnslaughtGame \
+  ./test/ut2004/ktrace_run.sh /tmp/kd_b32_sse/.../ut2004-pixo.bin a 60 test-karma-1
+KD_CONTACTS=1 ... ./test/ut2004/ktrace_run.sh /tmp/kd_b64/.../ut2004.bin b 60 test-karma-1
+python3 test/standalone/ktrace_contacts.py /tmp/ktrace-a.csv /tmp/ktrace-b.csv --frame=9
+```
+
+`-KTRACECONTACTS` adds `C` rows (groups and contacts per body per frame) and `K` rows (each
+contact's position, normal and penetration). ★ **The B rows structurally cannot answer the question
+this does.** State is continuous: two builds whose arithmetic differs in the last bit produce B rows
+that differ in the last digit and then diverge without bound, and `ktrace_diff` reports a difference
+either way. These rows separate *arithmetic amplifying* from *a decision flipping* — a contact that
+one build generates and the other does not.
+
+It found the answer on its first run. `ONSHoverBike3`, SSE-32 against LP64, contact counts equal for
+eight frames and then:
+
+```
+frame 9   32-bit  groups=1 contacts=3      64-bit  groups=0 contacts=0
+          n=(0.00195,-0.707,0.707) pen=0   (three of them, one 45° face)
+```
+
+The 1.06 the trace had been reporting for a day is the y-impulse those three contacts carry.
+
+⚠ **Contact ORDER is not meaningful** — a body's constraints hang off an `MeDict` whose order is an
+allocation artefact — so contacts are paired by NEAREST POSITION, never row against row. Pairing by
+order would manufacture differences out of allocation order, which is the same mistake that made
+`MdtWorld`'s `bodyDict` unusable as a trace key.
+
+★ **The `other` column names the MODEL, not the body**, because `MdtContactGroupGetGenerator` is set
+only by the nearfield path (`CreateContactGroup`) and the generator *is* the `McdModelPair`. A
+contact against level BSP and one against a static mesh actor both have a NULL second body; without
+the generator both read `world` and an extra group looked like it came from nowhere for an hour.
+Repulsor and wheel groups have no generator and read `attached`.
+
+### `stack_shift.sh` — does the PHYSICS depend on the contents of the stack?
+
+```bash
+UT2004_RUN_DIR=/tmp/kd_runkt ./test/ut2004/stack_shift.sh <binary> <label> 60 test-karma-1
+```
+
+Runs the same binary at four environment sizes and diffs the traces. The environment sits above the
+initial stack pointer, so more of it shifts every frame in the process — and a program that only
+reads what it has written cannot notice.
+
+```
+32-bit (SSE)   15 of 15 bodies BIT-IDENTICAL at every size
+LP64           ONSHoverBike3 moves; the other fourteen bit-identical
+```
+
+★ **It is the only gate here that can see a read of uninitialised memory.** The i386 acceptance test
+compiles the same source at 32-bit, where the read is in range and the object is byte-identical.
+ASan reports out-of-bounds and use-after-free, *not* uninitialised reads — it ran the failing binary
+for fifteen frames and reported nothing. A trace against a control reports only that the two widths
+differ, which reads as arithmetic.
+
+⚠⚠ **FOUR SIZES, NOT ONE, AND THAT DIFFERENCE IS THE WHOLE POINT.** The first version compared one
+shifted run against one unshifted one. A build under investigation PASSED, the pass was taken as
+"the defect is in the C locals", an attribution was built on it — and the same binary FAILED the
+same test half an hour later. A shift only exposes the read if it happens to change the bytes that
+get read; **one sample that agrees is silence, not evidence.**
+
+⚠ A PASS is still necessary and not sufficient, and a FAIL is not automatically Karma's: the engine
+has its own uninitialised reads (ASan finds one in `UNameProperty::ImportText` at startup on every
+build). The 32-bit run through the same harness is what makes a FAIL attributable to pointer width.
 
 ### `gjk_bisect.sh` / `gjk_bisect_complement.sh` — WHICH function of an object is wrong?
 

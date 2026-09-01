@@ -37,6 +37,21 @@ python3 "$KD_ROOT/tools/fix_strides.py"   "$DST/allobj" "$BUILD" "$MT" || exit 2
 python3 "$KD_ROOT/tools/fix_literal_offsets.py" "$DST/allobj" "$BUILD" "$MT" | tail -3 || exit 2
 python3 "$KD_ROOT/tools/fix_literal_offsets.py" "$DST/allobj" "$BUILD" "$MT" | tail -3 || exit 2
 python3 "$KD_ROOT/tools/fix_derived_fields.py" "$DST/allobj" "$BUILD" "$MT" | head -2 || exit 2
+# ---- IMMEDIATELY AFTER fix_derived_fields, ON ITS RESIDUE. Same defect class,
+# and it only ever sees sites that pass DECLINED: a derived geometry field
+# addressed as an index past `McdGeometry`, in a function that is POLYMORPHIC so
+# no per-file concrete type exists. `McdGjkMaximumPoint.c` reported "4 site(s):
+# 38 concrete type(s) fit [16, 44]" — the file dispatches on the type id and
+# reads a different struct in each arm. This pass reads the arm's own
+# `if (typeid == N)` instead of inferring, which is why it must run where the
+# better inference has already had its go.
+#
+# ★ IT IS NOT A TIDY-UP: at LP64 `pMVar3[2].frame` lands on byte 88, which is
+# `mBoundingSphereCenter[0]`, where i386's byte 44 is `mFatness`. GJK therefore
+# shrank every convex mesh by a bounding-sphere coordinate, `Box`-vs-`ConvexMesh`
+# stopped reporting contacts at 64-bit, and ONSHoverBike3 lost the impulse that
+# held it up. See `../../docs/STATE.md` and `../../proven.txt` LP64-GJK-FATNESS.
+python3 "$KD_ROOT/tools/fix_typeid_dispatch.py" "$DST/allobj" "$BUILD" "$MT" | head -8 || exit 2
 # ⚠ AFTER fix_derived_fields, WHICH IS THE SAME DEFECT CLASS AND MUST GO FIRST.
 # That pass types the base pointer PER FILE and names the concrete field with
 # its own declared type, which is the better repair wherever a file has one

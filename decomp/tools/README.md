@@ -652,6 +652,7 @@ python3 tools/fix_baked_sizeof.py    /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/fix_strides.py         /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/fix_literal_offsets.py /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/fix_derived_fields.py  /tmp/kd_lp64/allobj /tmp/kd_build $MT
+python3 tools/fix_typeid_dispatch.py /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/fix_index_layout.py    /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/fix_arena_carve.py     /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/fix_vtable_offsets.py  /tmp/kd_lp64/allobj /tmp/kd_build $MT
@@ -1149,6 +1150,48 @@ instance came back NULL and the struct copy two lines later faulted on address 0
 `mov 0x48(%rdi),%rbp` and `mov 0x8(%rcx),%rdx` at those two sites. The type may now sit on the line
 above, provided `MEAPI` opens the next one.
 
+### `fix_typeid_dispatch.py` — the same field, in a function that dispatches on the type id
+
+```bash
+python3 tools/fix_typeid_dispatch.py /tmp/kd_lp64/allobj /tmp/kd_build
+#   -> 4 repaired, 88 declined
+```
+
+`fix_derived_fields` types the base pointer **per file** and declines when more than one concrete
+type fits. In a POLYMORPHIC function there is no per-file answer at all:
+
+```
+McdGjkMaximumPoint.c   4 site(s): 38 concrete type(s) fit [16, 44]  -> DECLINED
+```
+
+`McdGjkFatness` branches on `(byte)g->mRefCtAndID` — the type id — and reads a *different* struct in
+each arm. ★ **The source states the type; this pass reads it instead of inferring.** The innermost
+`if (typeid == N)` enclosing the site names the struct through the `kMcdGeometryType*` enum.
+
+⚠ **Every id that REACHES the site must agree, not just the nearest one.** Ghidra writes the Sphere
+arm as `if (bVar2 == 1) goto LAB_00010020;` into the *Sphyl* arm, so the site is reached by two
+different type ids. The pass finds the label, finds every `goto` to it, resolves each guard, and
+requires the same field name, the same C type and the same LP64 offset from all of them —
+`McdSphere` and `McdSphyl` both put `mRadius` at 16/32, so they agree. A brace-less `if` is a guard
+too; ignoring it would have concluded "Sphyl only" on half the evidence.
+
+★★ **It repaired a real defect, measured at the byte level.** `pMVar3[2].frame` is byte 44 at i386,
+which is `McdConvexMesh::mFatness`, and byte 88 at LP64, which is `mBoundingSphereCenter[0]`:
+
+```
+McdConvexMesh   i386   mHull 16   mFatness 44   mBSRadius 48   mBSCenter 52
+                LP64   mHull 32   mFatness 80   mBSRadius 84   mBSCenter 88
+```
+
+So GJK shrank every convex mesh by a bounding-sphere coordinate instead of by its margin. Verified
+in the artefact: `McdGjkFatness` now emits `cmpb $0x7` → `add $0x50,%rax`.
+
+⚠⚠ **AND IT IS NOT THE HOVER-BIKE DEFECT, WHICH IS WHY THIS PARAGRAPH EXISTS.** It was found while
+chasing `ONSHoverBike3`'s frame-9 divergence, on exactly the right code path — `Box` vs
+`ConvexMesh` is the only such pair on that map — and repairing it did **not** move frame 9. On this
+map the hull's fatness and its bounding-sphere centre X are both ≈ 0, so the wrong read returns the
+right number. **Bisect before believing: that is five for five in this project.**
+
 ### `fix_derived_fields.py` — a derived struct's field addressed as an index past its base
 
 ```bash
@@ -1433,6 +1476,30 @@ pointer. ⚠ And its first run read **zero**, because a file-scope `extern void 
 resolves in no function region, so every candidate was dropped as "not a pointer" — a search
 that could not find anything, reporting nothing to find. The self-check asks the resolver for
 that exact shape now.
+
+⚠⚠ **A LOCAL WHOSE ADDRESS ESCAPES TO A CALLEE IS NOT WIDENED, and the guard was added because
+rule A got one wrong in the worst possible way** (2026-09-02):
+
+```c
+int start;                                          /* the RAW recovery */
+McdConvexMeshMaximumPointLocal(conv,norm,0,dp,&start);   /* writes int *outIndex — FOUR bytes */
+MeSetAdd(&set,(void *)start);                       /* the cast rule A keyed on */
+pMVar14 = pMVar3 + (kd_iptr)pvVar9;                 /* index a vertex array by the key */
+```
+
+The cast is real, so rule A widened `int` to `kd_iptr` — but the only thing that ever *writes*
+`start` is the callee, through an `int *`. At LP64 the top half of `start` is stack garbage, and the
+set key and then the vertex index carry it. **Under Windows x64 that read `0xffffffff` and killed
+the process in `McdConvexMeshPlaneCut` (McdPlaneIntersect.c:213) after 2651 clean physics frames.**
+
+★ Neither standing gate can see it. The i386 acceptance test compiles the same text at 32-bit,
+where `int` and `kd_iptr` **are the same type** and the object is byte-identical. ASan reports
+out-of-bounds and use-after-free, not reads of uninitialised memory — it ran that exact binary for
+fifteen frames and said nothing. `test/ut2004/stack_shift.sh` is the gate that can.
+
+The callee's parameter is **resolved, not assumed** (prelude first, then the SDK headers), and a
+prototype that cannot be found declines too. Blast radius when it was added: 39 rule-A widenings
+became 37.
 
 ### `fix_pool_reserve.py` — a pool reservation frozen at the i386 element size
 

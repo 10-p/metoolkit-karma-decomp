@@ -84,7 +84,7 @@ timeout --signal=TERM "$SECS" xvfb-run -a -s "-screen 0 640x480x24" \
     "${MAP}?game=${GAME}?TimeLimit=0${URLOPTS}${EXTRA}" \
     -SOFTWARERENDERER -nohomedir \
     "-FIXEDFPS=${FPS}" "-KTRACE=${CSV}" "-KTRACEEVERY=${EVERY}" "-KTRACEFRAMES=${FRAMES}" \
-    ${KD_BONES:+-KTRACEBONES} \
+    ${KD_BONES:+-KTRACEBONES} ${KD_CONTACTS:+-KTRACECONTACTS} \
     > "$LOG" 2>&1
 rc=$?
 rm -f "./ktrace-${LABEL}.bin"
@@ -107,6 +107,21 @@ frames=$(grep -c '^F,' "$CSV")
 rows=$(grep -c '^B,' "$CSV")
 bodies=$(awk -F, '/^B,/{print $4"/"$5}' "$CSV" | sort -u | wc -l)
 echo "  frames: $frames   body-rows: $rows   distinct bodies: $bodies"
+
+# KD_CONTACTS=1 adds the C and K rows — the contacts holding each body up. They answer a
+# question the B rows structurally cannot: whether a state divergence is arithmetic amplifying
+# (continuous) or a contact appearing on one side and not the other (discrete). Pair with
+# ktrace_contacts.py, NOT with ktrace_diff.py, which ignores these rows.
+if [ -n "${KD_CONTACTS:-}" ]; then
+    crows=$(grep -c '^C,' "$CSV")
+    krows=$(grep -c '^K,' "$CSV")
+    echo "  contact rows: C=$crows K=$krows"
+    if [ "$krows" -eq 0 ]; then
+        printf '  \033[33m⚠ NO K ROWS\033[0m — every traced body was contact-free for the whole run.\n'
+        printf '    On a vehicle map that is a finding, not a quiet result: a hover bike with no\n'
+        printf '    contacts is not being held up by anything.\n'
+    fi
+fi
 
 # ★ SAY IT WHEN THE RUN FELL SHORT, because everything downstream compares the LAST frame of two
 # files and a short run therefore compares two different INSTANTS.

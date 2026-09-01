@@ -196,7 +196,7 @@ void kd_McdConvexMeshPlaneCut
   int v;
   MeReal dv;
   McdCnvVertex *vert;
-  kd_iptr start;
+  int start;
   MeDictNode nodemem [200];
   MeSet set;
   MeReal temp [3];

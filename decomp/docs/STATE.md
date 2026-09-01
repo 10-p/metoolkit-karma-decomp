@@ -14,42 +14,58 @@ read before resuming; `../HANDOVER.md` is the depth behind it and `../proven.txt
 
 # ⚠⚠ OPEN ITEMS — 2026-09-01. READ THIS BLOCK FIRST.
 
-★★ **THE x86-64 SWEEP HAS NO KARMA FRAME LEFT IN IT.** Four of eight gametypes run their full
-150 s clean, and **all four failures reproduce IDENTICALLY on the shipping 32-bit build** — they
-are `UCanvas`/`UGUI`, not Karma and not 64-bit — ⚠ **and not Xvfb either**, see item 1. The named
-open item from the previous
-block is closed, and closing it uncovered five more, each of which was the next crash. See the
-entry below.
+★★★ **THE x86-64 SWEEP IS 8 OF 8, WITH NO KARMA FRAME IN IT.** The named open item from the
+previous block is closed, and closing it uncovered five more, each of which was the next crash.
+See the entry below. ⚠ **The four "engine UI" failures this block reported for most of the day
+were a poisoned run-tree ini in the harness — see item 1**; with the viewport pinned they are
+gone.
 
 ```
-CTF-FaceClassic  BR-Anubis  ONS-Torlan  ONS-Primeval      150 s, 0 signals
-DM-Rankin  DM-DE-Ironic  AS-Convoy   FCanvasVertex <- UCanvas::DrawTileStretched
-VCTF-BE-Dystopia                     UGUITabControl::PreDraw
-   32-BIT CONTROL, same maps, same harness:  THE SAME TWO FUNCTIONS
+DM-Rankin  DM-DE-Ironic  CTF-FaceClassic  BR-Anubis
+ONS-Torlan  ONS-Primeval  VCTF-BE-Dystopia  AS-Convoy
+    8 of 8, 150 s each, 0 signals, viewport=1280x720
 ```
 
-1. **THE `FCanvasVertex` CRASH IS OPEN, IT IS NOT OURS, AND ⚠ IT IS NOT AN Xvfb ARTEFACT EITHER.**
-   That was this file's first reading and it is wrong; the matrix below was measured 2026-09-01
-   after it was written.
+1. ✅ **THE SWEEP IS 8 OF 8, AND THE "ENGINE UI BUG" WAS MY OWN POISONED RUN TREE.** ⚠⚠ This item
+   said three different things before it was right, and the first two are worth keeping as the
+   lesson: *"the engine's 2D UI under Xvfb"*, then *"not Xvfb — renderer-independent,
+   display-independent, width-independent, intermittent"*. Both were descriptions of a symptom
+   nobody had found the cause of, and **the cause was in the harness, not the engine**:
 
-   | build | renderer | display | result on the 4 maps |
-   |---|---|---|---|
-   | 64-bit | GL4ES | Xvfb | 4 of 4 fail |
-   | 64-bit | GL4ES | **real GPU** (RTX 3090, Xwayland) | 3 of 4 fail |
-   | 32-bit | **pixomatic** (software) | Xvfb | 2 of 4 fail |
+   ```
+   /tmp/kd_run64/System/UT2004.ini   [SDL2Drv.SDL2Client]
+       WindowedViewportX=2
+       WindowedViewportY=28          <- and /tmp/kd_runkt had 2x1
+   ```
 
-   ★ So it is **renderer-independent, display-independent, width-independent and intermittent**.
-   Every configuration also logs the same thing: **`[AutoFOVUI] viewport=2x28`**, and every failure
-   is preceded by **`REALLOC FAILED: NewSize=2554592016`** — a **2.55 GB** growth of
-   `FCanvasUtil::Vertices`, the `TArray<FCanvasVertex>` that `DrawTile` appends to. Something
-   appends canvas vertices without bound until the array cannot grow, and the SIGSEGV is the
-   `FCanvasVertex` constructor writing into the allocation that failed.
-   ⚠ **The asset tree moved under this measurement** — a JB2004 map pack plus ChaosUT2 /
-   BallisticWeapons / AlienSwarm were installed on 2026-08-31, which is new HUD content.
-   ⚠ **Not confirmed:** whether the 2×28 viewport *causes* the runaway or merely accompanies it —
-   `ufrontHudScaleFactor` only logs when the factor *changes*, so `2x28` may be a startup transient.
-   It belongs to `engine-ut2004`, not here. **No backtrace in any of these runs contains a Karma
-   frame.**
+   ★ **The engine WRITES the viewport back on exit**, so one run that came up with a degenerate
+   window poisoned every run after it, and the value drifted (`2x1` → `2x28`) as it fed on itself.
+   Every native measurement I took today was reading it.
+
+   **The two crash families are both consequences of a 2-pixel-wide window, and both are ordinary
+   engine code behaving correctly on absurd input:**
+
+   - `UGUITabControl::PreDraw` `SIGFPE` — `UnGUI.cpp`, `ExtraPerButton = … (BorderOffsets[0] +
+     BorderOffsets[2]) / Count`. `BorderOffsets` is `INT` and `Count` is the buttons-placed-in-this-row
+     counter, so this is an **integer** divide — `idivl -0x8c(%rbp)` in the disassembly. At a
+     RowWidth of 2 **no tab fits in a row**, the row is flushed with `Count == 0`, and the divide
+     traps. ★ Not a float exception, so nothing Karma computes can reach it.
+   - `FCanvasVertex` after `REALLOC FAILED: NewSize=2554592016` — 2.55 GB, and
+     `2554592016 / 24 == 106441334` exactly, i.e. 106 M `FCanvasVertex` of 24 bytes each appended to
+     `FCanvasUtil::Vertices` by `DrawTile`.
+
+   **Re-measured with `WindowedViewportX/Y` pinned to 1280×720, and the whole class is gone:**
+
+   ```
+   DM-Rankin  DM-DE-Ironic  CTF-FaceClassic  BR-Anubis
+   ONS-Torlan  ONS-Primeval  VCTF-BE-Dystopia  AS-Convoy
+       8 of 8, 150 s each, 0 signals, viewport=1280x720
+   ```
+
+   ⚠ **`sweep64.sh` now re-pins the ini before every map**, because the engine will write it back
+   again on the next degenerate exit. ★ And this is why the 32-bit control looked like it
+   "confirmed" an engine bug: both binaries read the *same poisoned ini*. **A control that shares
+   the defect with the thing it is controlling is not a control.**
 
 2. **KARMA IS NOW THE DEFAULT ON EVERY TARGET, INCLUDING ANDROID** (engine-ut2004, 2026-09-01).
    `Android/app/build.gradle` used to force `-DUSE_KARMA_DECOMP=OFF` unless you passed
@@ -122,30 +138,30 @@ are repaired. **Every remaining sweep failure reproduces identically on the ship
 build.**
 
 ```
-CTF-FaceClassic  BR-Anubis  ONS-Torlan  ONS-Primeval    150 s each, 0 signals
-DM-Rankin  DM-DE-Ironic  AS-Convoy    FCanvasVertex <- UCanvas::DrawTileStretched
-VCTF-BE-Dystopia                      UGUITabControl::PreDraw
-   32-BIT CONTROL, same maps, same harness:   THE SAME TWO FUNCTIONS
+ALL EIGHT GAMETYPES          150 s each, 0 signals, viewport=1280x720
+   DM-Rankin  DM-DE-Ironic  CTF-FaceClassic  BR-Anubis
+   ONS-Torlan  ONS-Primeval  VCTF-BE-Dystopia  AS-Convoy
 arm64 device   ONS-Dria Onslaught, bots + vehicles + ragdolls, spectator
                140 s  ->  1397 s (23 MINUTES), 0 signals, still running
 armv7 device   the SAME match on the 32-bit slice: 508 s, 0 signals
-linux x86-64   ONS-Torlan Onslaught, spectator: 1500 s (25 MINUTES), 0 signals,
-               0 Critical Error, 0 REALLOC FAILED
+linux x86-64   ONS-Torlan Onslaught, 1500 s (25 MINUTES), 0 signals, 0 Critical
+               Error, 0 REALLOC FAILED — as a SPECTATOR *and* as a PLAYER
 ktrace         i386 vs LP64, 200 frames, 8 bodies:  rest 8/8  sleep 8/8  MATCH
 web            yarn e2e --target ut2004: 55 passed, 0 failed, 44.9m
 ```
 
 ★★ **"START A MATCH AND LEAVE IT RUNNING" IS THE CRITERION, AND THREE OF THE FOUR TARGETS MEET
 IT.** Android arm64 23 min, Android armv7 8.5 min, Linux x86-64 25 min — all Onslaught, all with
-vehicles and ragdolls, all as a **spectator** so the mid-game GUI can never pause the level, all
-0 signals. ⚠ **The Windows 64-bit binary is built with Karma and has still never been run.**
+vehicles and ragdolls, all 0 signals. ⚠ **The Windows 64-bit binary is built with Karma and has
+still never been run.**
 
-⚠ **AND THE PLAYER-CONTROLLED LINUX RUN IS THE INSTRUCTIVE ONE: it died at 17 m 45 s** — `SIGFPE`,
-a divide by zero, in `UGUITabControl::PreDraw` ← `UGUIMultiComponent::PreDrawControls` ←
-`UGameEngine::Draw` ← `USDL2Viewport::Repaint`. **Zero Karma frames in the backtrace.** That is
-the same `UGUITabControl` site item 1 is about, arriving from a fourth direction, and it is what
-the spectator flag removes. The engine's 2D GUI is the limiting factor on a long Linux run, not
-the physics.
+★ **AND THE LINUX RUN IS CLEAN AS A PLAYER TOO, WHICH IT WAS NOT AN HOUR EARLIER.** The first
+attempt died at **17 m 45 s** with `SIGFPE` in `UGUITabControl::PreDraw` ← `PreDrawControls` ←
+`UGameEngine::Draw` ← `USDL2Viewport::Repaint`, zero Karma frames — and that was the poisoned
+viewport of item 1, not the GUI's fault. Re-run with the ini pinned: **1500 s, 0 signals,
+0 Critical Error, 0 REALLOC FAILED**, player-controlled. So the spectator flag is a convenience on
+Linux, not a requirement; on the *device* it is still what stops the mid-game map GUI pausing the
+level, which is a different problem.
 
 ★★ **arm64 PLAYS FOR AS LONG AS IT IS LEFT RUNNING — 1397 s, 0 signals, frame advance verified
 every 60 s.** ⚠⚠ **AND THE FIRST ATTEMPT AT THAT NUMBER WAS WRONG IN THIS PROJECT'S OWN RECORDED
@@ -334,12 +350,14 @@ before and after: `sizeof(void *) / 8` is 0 at wasm32, `-(k * sizeof(void *))` f
 constant it replaced, `kd_iptr` **is** `int`, and every `sizeof(E)` folds to its literal. The
 existing web stamp still covers the engine; the only web change this session is the manifest.
 
-⚠⚠ **AND A RED SWEEP IS STILL NOT EVIDENCE UNTIL THE BASELINE IS CHECKED — FIVE FOR FIVE NOW.**
-The four maps that fail die in `FCanvasVertex` or `UGUITabControl::PreDraw`, and **the 32-bit
-control dies in the same two functions on the same maps**. ⚠ **And it is not the headless renderer
-either** — re-measured on a real RTX 3090 and with pixomatic, see OPEN ITEMS 1. It is an unbounded
-`TArray<FCanvasVertex>` growth in the engine's 2D UI, and it is intermittent (AS-Convoy ran 150 s
-clean in one configuration and hit the canvas in the next). ⚠ **The asset tree also moved under this
+⚠⚠⚠ **AND A RED SWEEP IS STILL NOT EVIDENCE UNTIL THE BASELINE IS CHECKED — BUT A BASELINE THAT
+SHARES THE DEFECT IS NOT A BASELINE.** For most of this day four maps died in `FCanvasVertex` or
+`UGUITabControl::PreDraw`, **the shipping 32-bit build died in the same two functions on the same
+maps**, and that agreement was read as "the engine, not us". It was not. Both binaries were
+reading the same **poisoned `UT2004.ini`** out of the scratch run tree —
+`WindowedViewportX=2, WindowedViewportY=28`, which the engine had written back itself after an
+earlier degenerate run. With the viewport pinned the sweep is **8 of 8**. ★ The 32-bit control
+only isolates what the two builds do NOT share; it says nothing about what they do. ⚠ **The asset tree also moved under this
 measurement**: a JB2004 map pack plus ChaosUT2 / BallisticWeapons / AlienSwarm were installed on
 2026-08-31, so "7 gametypes clean" and this run are not measurements of the same game. The 32-bit
 control is the only comparable baseline, and it is what says which failures are ours.

@@ -268,27 +268,49 @@
 #                         android arm64   ONS-Dria    1397 s (23 min)
 #                         android armv7   ONS-Dria     508 s
 #                         linux x86-64    ONS-Torlan  1500 s (25 min), 0 Critical
-#                                                     Error, 0 REALLOC FAILED
+#                                                     Error, 0 REALLOC FAILED,
+#                                                     as SPECTATOR *and* as PLAYER
 #                     ⚠ The Windows 64-bit binary is built with Karma and has
 #                     still never been run.
-#                     ⚠ AND THE PLAYER-CONTROLLED LINUX RUN IS THE INSTRUCTIVE
-#                     ONE: it died at 17 m 45 s with SIGFPE — a divide by zero —
-#                     in UGUITabControl::PreDraw <- UGUIMultiComponent::
-#                     PreDrawControls <- UGameEngine::Draw <- USDL2Viewport::
-#                     Repaint, with ZERO Karma frames. The engine's 2D GUI is the
-#                     limiting factor on a long Linux run, not the physics.
+#                     ★ THE FIRST PLAYER-CONTROLLED ATTEMPT DIED AT 17 m 45 s with
+#                     SIGFPE in UGUITabControl::PreDraw <- PreDrawControls <-
+#                     UGameEngine::Draw <- USDL2Viewport::Repaint, zero Karma
+#                     frames — and that was the POISONED VIEWPORT below, not the
+#                     GUI's fault. With the ini pinned it runs the full 25 min.
 #
-#                     ⚠⚠ AND THE `FCanvasVertex` CRASH IS NOT AN Xvfb ARTEFACT —
-#                     THIS FILE SAID IT WAS AND THAT WAS WRONG. Re-measured:
-#                         64-bit GL4ES  Xvfb                   4 of 4 maps fail
-#                         64-bit GL4ES  REAL GPU (RTX 3090)    3 of 4 fail
-#                         32-bit PIXOMATIC (software) Xvfb     2 of 4 fail
-#                     Renderer-independent, display-independent, width-independent
-#                     and intermittent. Every configuration logs
-#                     `[AutoFOVUI] viewport=2x28`, and every FCanvasVertex death is
-#                     preceded by `REALLOC FAILED: NewSize=2554592016` — a 2.55 GB
-#                     growth of FCanvasUtil::Vertices, the TArray<FCanvasVertex>
-#                     that DrawTile appends to. No Karma frame in any of them.
+#                     ⚠⚠⚠ AND THE `FCanvasVertex` / `UGUITabControl::PreDraw`
+#                     CRASHES WERE A POISONED RUN TREE — MINE. This file called
+#                     them "the engine's 2D UI under Xvfb", then "not Xvfb:
+#                     renderer-independent, display-independent, width-independent
+#                     and intermittent". Both were descriptions of a symptom whose
+#                     cause nobody had found, and the cause was in the HARNESS:
+#                         /tmp/kd_run64/System/UT2004.ini [SDL2Drv.SDL2Client]
+#                             WindowedViewportX=2
+#                             WindowedViewportY=28     (kd_runkt had 2x1)
+#                     ★ THE ENGINE WRITES THE VIEWPORT BACK ON EXIT, so one run
+#                     that came up with a degenerate window poisoned every run
+#                     after it and the value FED ON ITSELF (2x1 -> 2x28). Every
+#                     native measurement of the day was reading it.
+#                     BOTH crash families are ordinary engine code behaving
+#                     correctly on absurd input:
+#                       * UGUITabControl::PreDraw SIGFPE is `(BorderOffsets[0] +
+#                         BorderOffsets[2]) / Count` in UnGUI.cpp — BorderOffsets
+#                         is INT, so this is an INTEGER divide (`idivl -0x8c(%rbp)`
+#                         in the disassembly). At RowWidth 2 no tab fits in a row,
+#                         the row flushes with Count == 0, and it traps. NOT a
+#                         float exception, so nothing Karma computes can reach it.
+#                       * FCanvasVertex follows `REALLOC FAILED:
+#                         NewSize=2554592016` — and 2554592016 / 24 == 106441334
+#                         EXACTLY: 106 M FCanvasVertex appended to
+#                         FCanvasUtil::Vertices by DrawTile.
+#                     With WindowedViewportX/Y pinned to 1280x720 the sweep is
+#                     8 OF 8, 150 s each, 0 signals. sweep64.sh re-pins the ini
+#                     before every map, because the engine will write it back
+#                     again on the next degenerate exit.
+#                     ★★ AND THIS IS WHY THE 32-BIT CONTROL "CONFIRMED" AN ENGINE
+#                     BUG: BOTH BINARIES READ THE SAME POISONED INI. A control
+#                     that SHARES the defect with the thing it is controlling is
+#                     not a control — it only isolates what the two do NOT share.
 #                     ⚠ Pixomatic exists ONLY at 32-bit: pixomatic_linux.a is a
 #                     prebuilt i386 archive and USE_PIXOMATIC=ON is a configure-
 #                     time FATAL_ERROR at 64-bit.

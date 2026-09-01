@@ -41,6 +41,37 @@ LOG="/tmp/ktrace-${LABEL}.log"
 [ -x "$BIN" ] || { echo "$LABEL: no such binary: $BIN"; exit 1; }
 [ -f "$RUN/Maps/${MAP}.ut2" ] || { echo "$LABEL: no such map: $RUN/Maps/${MAP}.ut2"; exit 1; }
 
+# ⚠⚠ RE-PIN THE VIEWPORT BEFORE EVERY RUN. THE ENGINE WRITES IT BACK ON EXIT, so one run that came
+# up with a degenerate window poisons every run after it and the value FEEDS ON ITSELF. Measured
+# 2026-09-01: /tmp/kd_run64 had drifted to WindowedViewportX=2 WindowedViewportY=28 and
+# /tmp/kd_runkt to 2x1, and every native sweep of that day was reading it. A 2-pixel row makes
+# `UGUITabControl::PreDraw` divide by a zero button count (INTEGER divide -> SIGFPE) and makes the
+# canvas ask for 2.55 GB of FCanvasVertex. ★ AND THE 32-BIT CONTROL DOES NOT CATCH IT, because
+# both binaries read the SAME ini — a control that shares the defect is not a control.
+kd_pin_viewport() {
+    local ini="$1/System/UT2004.ini"
+    [ -f "$ini" ] || return 0
+    python3 - "$ini" <<'KDPIN'
+import re, sys
+p = sys.argv[1]
+want = {'WindowedViewportX': '1280', 'WindowedViewportY': '720',
+        'FullscreenViewportX': '1280', 'FullscreenViewportY': '720',
+        'MenuViewportX': '1280', 'MenuViewportY': '720'}
+out, sec = [], None
+for line in open(p, encoding='latin-1').read().split('\n'):
+    m = re.match(r'^\[(.+)\]\s*$', line)
+    if m:
+        sec = m.group(1)
+    elif sec in ('SDL2Drv.SDL2Client', 'WinDrv.WindowsClient'):
+        k = line.split('=')[0]
+        if k in want:
+            line = '%s=%s' % (k, want[k])
+    out.append(line)
+open(p, 'w', encoding='latin-1').write('\n'.join(out))
+KDPIN
+}
+kd_pin_viewport "$RUN"
+
 cp -f "$BIN" "$RUN/System/ktrace-${LABEL}.bin"
 cd "$RUN/System" || exit 1
 rm -f "$CSV" "$LOG"

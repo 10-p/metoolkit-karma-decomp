@@ -92,6 +92,17 @@ python3 test/standalone/ktrace_score.py /tmp/ktrace-legacy600.csv /tmp/ktrace-ca
 ./test/ut2004/ktrace_subst.sh fwd      NONE McdSphere McdTriangleList
 ```
 
+⚠⚠ **AND NEITHER IS THE VIEWPORT — `ktrace_run.sh` RE-PINS IT BEFORE EVERY RUN.** The engine
+**writes `WindowedViewportX/Y` back into `System/UT2004.ini` on exit**, so a single run that came
+up with a degenerate window poisons every run after it and the value feeds on itself. Measured
+2026-09-01: `/tmp/kd_run64` had drifted to **2×28** and `/tmp/kd_runkt` to **2×1**, and every
+native sweep taken that day was reading it. A 2-pixel row makes `UGUITabControl::PreDraw` divide
+by a zero button count — an **integer** divide, so `SIGFPE` — and makes the canvas ask for 2.55 GB
+of `FCanvasVertex`. Eight gametypes read as "an engine UI bug" until the ini was pinned; then all
+eight ran clean. ★★ **And the 32-bit control did not catch it, because both binaries read the
+SAME ini.** A control that shares the defect with the thing it is controlling is not a control —
+it only isolates what the two do *not* share.
+
 ★ **`-FIXEDFPS` IS NOT OPTIONAL AND THE ENGINE ENFORCES IT.** `KTickLevelKarma` derives its
 timestep AND its substep count from `DeltaSeconds`, so two runs at different frame rates integrate
 different equations. The hook `appErrorf`s rather than write a trace that would be diffed in good

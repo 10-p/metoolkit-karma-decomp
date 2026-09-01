@@ -160,20 +160,46 @@ by believing a repair on the right code path was the repair.**
    If the runtime library is missing too it disables SDL's use of it and says which package to
    install. Verified on a fresh configure with no `-L` anywhere.
 
-6. **THE TRUNCATION CENSUS — 44 OPEN, AND THE TRIAGE FOUND THE WINDOWS CRASH.** ⚠ The number is
+6. **THE TRUNCATION CENSUS — 85 / 38 OPEN (was 83 / 44), AND THE TRIAGE FOUND THE WINDOWS CRASH.** ⚠ The number is
    still a bound on nothing (`MePoolx` was the vehicle crash and produces zero diagnostics), but
    working through it was not academic: **`McdPlaneIntersect` is the largest single object on the
    list — 16 sites, declined by every pass — and it is where Windows x64 died.** Verdicts so far,
    with the reason rather than a label:
 
-   - **benign, value-preserving** (~20): `McdBox` 4, `McdCylinder` 3, `MeFAsset` 1, `McdContact` 1
-     are `(Ptr)KD_FBITS(float)` into a LOCAL, read back only through `*(float *)&VAR` — an
-     `int`→pointer cast **widens** and cannot truncate, and the bits sit in the low half where the
-     read looks. `MdtPartition` 4, `MeXMLParser` 4 and `IxConvexTriList` 1 are integers carried in
-     pointer-typed locals and converted straight back. `McdConvexMesh` 4 are `int`→ID→`int` field
-     round trips into 4-byte members. `MdtWorld` 2 are a size-returning call parked in a pointer
-     local — the existing `int-return` class, whose rule is a hardcoded name list rather than the
-     prototype lookup its docstring claims.
+   ⚠ **The total went UP, 83 → 85, and that is the `start` repair working**: restoring
+   `int start;` restores the diagnostics that the wrong widening had silenced. A census that only
+   ever falls is measuring the wrong thing.
+
+   **Two new MECHANICAL classes, so the verdicts live in the tool and not in this paragraph**
+   (`ptrwidth_classify.py`, 44 → 38 open):
+
+   - **`fbits-in-local`** (7: `McdBox` 4, `McdCylinder` 3) — `(Ptr)KD_FBITS(float)` into a BARE
+     LOCAL whose every other use is `*(float *)&VAR`. An `int`→pointer cast **widens** and cannot
+     truncate; `KD_FBITS` returns `unsigned int`, so the bits sit in the low four bytes, which is
+     where `*(float *)&` looks on a little-endian target — and every target here is little-endian.
+   - **`int-in-local`** — the same shape with an integer instead of a float. ★ The rule asks the
+     DIAGNOSTIC which direction it is (`-Wint-to-pointer-cast` is a widening) rather than
+     inspecting the right-hand side for things that look like addresses; the first version tested
+     for `&`, `->` and `[` and rejected the commonest shape of the class, where `->` is a member
+     *read*.
+
+   ⚠⚠ **AND BOTH RULES DELIBERATELY LET `IxBoxTriList` THROUGH.** It uses the very same `KD_FBITS`
+   macro and IS a defect, so the "every use" test is what separates them: a local that is
+   dereferenced, indexed through, or handed to a call as a pointer does not qualify. Verified as a
+   unit test on both sites.
+
+   - **benign, still classified by hand**: `MeFAsset` 1 and `McdContact` 1 (same `fbits` shape but
+     into a struct-slot member, which the rule does not cover); `MdtPartition` 4 — integers in
+     pointer locals, and the one use that looks like a dereference, `(kd_iptr)&pMVar9->left`, is
+     the **identity**: `left` is `MeDictNode`'s FIRST member, measured, so the offset is 0 at every
+     width. `MeXMLParser` 4 are a character value and a loop bound carried in `char *`.
+     `McdConvexMesh` 4 are `int`→ID→`int` round trips into 4-byte members — the existing
+     `count-to-id` class, which does not match because the destination is a DOTTED path
+     (`->mHull.numFace`) and whose rule is a regex rather than the size check its docstring claims.
+     `MdtWorld` 2 are `MdtKeaMemoryRequired`, a size-returning call parked in a pointer local —
+     `int-return`, whose rule is a hardcoded name list rather than the prototype lookup its
+     docstring claims. ★ **Those last two are doc-vs-code gaps worth closing**: both classes
+     promise a measurement and implement a pattern match.
    - ★ **REAL, and still open**: `IxBoxTriList` 2 — `MStack_24c.next` holds `result->normal`
      (a `MeReal *`) and `->prev`/`->next` are `normal[1]`/`normal[2]` at i386 but byte 8 and byte
      **16** at LP64, written eight bytes wide, off the end of a three-float vector. On the

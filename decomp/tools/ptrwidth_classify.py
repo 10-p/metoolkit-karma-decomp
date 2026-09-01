@@ -42,6 +42,27 @@ THE BENIGN CLASSES, each with the reason it is benign:
                     Rule: the assignment target is a named field whose size is 4
                     at both widths.
 
+  fbits-in-local    `pMVar3 = (McdGeometryID)KD_FBITS(dy * 0.5);`
+                    ... later ... `*(float *)&(pMVar3)`
+                    A float's bits parked in a POINTER-TYPED LOCAL and read back
+                    only through `*(float *)&VAR`. ★ An int-to-pointer cast
+                    WIDENS and cannot truncate; `KD_FBITS` returns `unsigned
+                    int`, so at LP64 the bits sit in the low four bytes — which
+                    is exactly where `*(float *)&` looks on a little-endian
+                    target, and every target here is little-endian. Rule: the
+                    destination is a bare local (not a member, not a deref), and
+                    every other use of that local in the function is
+                    `*(...)&VAR`. A local that is DEREFERENCED or passed on as a
+                    pointer does not qualify and stays UNEXPLAINED.
+
+  int-in-local      `pMVar9 = (MeDictNode *)(pMVar5->jointCount + 1);`
+                    ... `pMVar5->jointCount = (kd_iptr)pMVar9;`
+                    Integer arithmetic carried in a pointer-typed local and
+                    converted straight back. Widen-then-narrow is
+                    value-preserving. Rule: the RHS contains no pointer operand,
+                    and every use converts back to an integer, indexes an array,
+                    or compares against another such value.
+
 ⚠ `KD_FBITS` ALONE IS NOT A CLASS, and assuming it was is what this tool exists
 to stop. `(MStack_24c.next)->prev = (McdGeometryID)KD_FBITS(...)` in
 `IxBoxTriList` uses the same macro and is a REAL defect: `MStack_24c` is a
@@ -89,8 +110,36 @@ CALL_RHS = re.compile(r'=\s*\((?:void|char|int|float|u?short|u?long)[\w ]*\*+\)\
 COUNT_TO_ID = re.compile(r'->(?P<f>\w+)\s*=\s*\((?:Mcd|Mdt|Me)\w*ID\)\s*'
                          r'(?!KD_FBITS)')
 
-CLASSES = ('fbits-to-4byte', 'medict-key', 'int-return', 'count-to-id',
-           'UNEXPLAINED')
+# A bare local as the destination: `NAME = ...;` with no `->`, `.`, `[` or `*` on the LEFT.
+# ⚠ THE CAST IS NOT PART OF THE PATTERN. Written to require `(TYPE *)` this matched nothing at
+# all, because the corpus casts through POINTER TYPEDEFS — `(McdGeometryID)`, `(MdtBodyID)` —
+# which carry their own `*`. The destination being pointer-typed is not in doubt here anyway:
+# clang has already raised an int-to-pointer diagnostic on this very line, which is why the
+# classifier is looking at it.
+BARE_LOCAL = re.compile(r'^\s*(?P<v>[A-Za-z_]\w*)\s*=\s*(?![=])')
+# Every use of a local that keeps it an integer or reinterprets its storage.
+def _uses_are_value_only(region, var):
+    """Is `var` only ever converted back, indexed with, or reinterpreted — never
+    dereferenced and never passed on as a pointer?
+
+    ⚠ THE CONSERVATIVE DIRECTION IS UNEXPLAINED. This is the difference between
+    "the diagnostic is noise" and "the diagnostic is the defect", and
+    `IxBoxTriList`'s `(MStack_24c.next)->prev` — which IS a defect and uses the
+    very same `KD_FBITS` macro — must not be swept up by it."""
+    for m in re.finditer(r'\b%s\b' % re.escape(var), region):
+        tail = region[m.end():m.end() + 3]
+        head = region[max(0, m.start() - 24):m.start()]
+        if tail.startswith('->') or tail.startswith('['):
+            return False                       # dereferenced or indexed THROUGH
+        if re.search(r'\*\s*$', head) and not re.search(r'\)\s*&\s*$', head):
+            return False                       # `*var`
+        if re.search(r'\w\s*\(\s*$|,\s*$', head) and not re.search(r'\(\s*(?:kd_[iu]ptr|int|uint)\s*\)\s*$', head):
+            return False                       # handed to a call as-is
+    return True
+
+
+CLASSES = ('fbits-to-4byte', 'fbits-in-local', 'medict-key', 'int-return',
+           'count-to-id', 'int-in-local', 'UNEXPLAINED')
 
 
 def includes(inc):
@@ -99,6 +148,26 @@ def includes(inc):
               'MdtBcl', 'MdtKea', 'Mst', 'MeApp'):
         out.append('-I' + os.path.join(inc, d))
     return out
+
+
+BANNER = re.compile(r'(?m)^/\* ---- (\S+)')
+
+
+def region_of(text, line_index):
+    """The `/* ---- name ---- */` block containing this LINE, as text.
+
+    The "every use of this local" rules are statements about one FUNCTION; a
+    whole-file scan would let an unrelated function's use of the same Ghidra
+    name (`pMVar3` appears in most of them) decide the verdict."""
+    pos = sum(len(l) + 1 for l in text.split('\n')[:line_index])
+    start, end = 0, len(text)
+    for m in BANNER.finditer(text):
+        if m.start() <= pos:
+            start = m.start()
+        elif m.start() > pos:
+            end = m.start()
+            break
+    return text[start:end]
 
 
 def statement(lines, i):
@@ -114,7 +183,7 @@ def statement(lines, i):
     return ' '.join(x.strip() for x in lines[j:k + 1])
 
 
-def classify(stmt, line):
+def classify(stmt, line, region='', what=''):
     if FBITS.search(stmt) and FBITS_TO_U32.match(line):
         return 'fbits-to-4byte'
     if MEDICT.search(stmt) or SORTKEY.search(stmt):
@@ -122,6 +191,18 @@ def classify(stmt, line):
     m = CALL_RHS.search(stmt)
     if m and m.group('fn') in INT_RETURN_CALLS:
         return 'int-return'
+    b = BARE_LOCAL.match(line)
+    if b and region and _uses_are_value_only(region, b.group('v')):
+        if FBITS.search(stmt):
+            return 'fbits-in-local'
+        # ★ ASK THE DIAGNOSTIC WHICH DIRECTION IT IS, rather than inspecting the
+        # right-hand side for things that look like addresses. `-Wint-to-pointer-cast`
+        # means an INTEGER became a pointer — that is a WIDENING and cannot lose a
+        # bit. The first version tested the RHS for `&`, `->` and `[` and rejected
+        # `(MeDictNode *)(pMVar5->jointCount + 1)`, which is the commonest shape of
+        # the class: `->` there is a member READ, not an address.
+        if 'int-to-pointer' in what:
+            return 'int-in-local'
     if COUNT_TO_ID.search(stmt) and not FBITS.search(stmt):
         return 'count-to-id'
     return 'UNEXPLAINED'
@@ -167,7 +248,8 @@ def main():
             i = int(m.group('line')) - 1
             if i >= len(lines):
                 continue
-            cls = classify(statement(lines, i), lines[i])
+            cls = classify(statement(lines, i), lines[i],
+                           region_of('\n'.join(lines), i), m.group('what'))
             counts[cls] += 1
             per_obj.setdefault(fn[:-2], {}).setdefault(cls, 0)
             per_obj[fn[:-2]][cls] += 1

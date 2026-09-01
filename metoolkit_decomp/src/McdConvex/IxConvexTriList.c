@@ -678,7 +678,7 @@ static void GenerateTriangleContact
     iVar16 = -(iVar14 * 0xc + 0xfU & 0xfffffff0);
     pfVar15 = (kd_alloca_iVar16 = (char *)alloca((size_t)(iVar14) * 0xc + 0));
     *(VoronoiRegionType *)(&(*kd_argslot_fffffee0)) = featureType;
-    *(int *)(&(*kd_argslot_fffffedc)) = (kd_iptr)(kd_alloca_iVar16);
+    *(kd_iptr *)(&(*kd_argslot_fffffedc)) = (kd_iptr)(kd_alloca_iVar16);
     *(int **)(&(*kd_argslot_fffffed8)) = &cnvVCount;
     *(int *)(&(*kd_argslot_fffffed4)) = iVar14;
     *(undefined4 *)(&(*kd_argslot_fffffed0)) = 1;
@@ -869,11 +869,11 @@ static void GenerateTriangleContact
     } while (iVar14 < 3);
                     
     if (count < result->contactCount) {
-      iVar14 = count * 0x28;
+      iVar14 = count * (int)sizeof(McdContact);
       do {
         count = count + 1;
-        *(__typeof__(tri->triangleData) *)((kd_iptr)result->contacts->normal + iVar14 + 0x18) = tri->triangleData;
-        iVar14 = iVar14 + 0x28;
+        *(__typeof__(tri->triangleData) *)((kd_iptr)result->contacts->normal + iVar14 + (((int)((char *)&((McdContact *)0)->element2 - (char *)0)) - ((int)((char *)&((McdContact *)0)->normal - (char *)0)))) = tri->triangleData;
+        iVar14 = iVar14 + (int)sizeof(McdContact);
       } while (count < result->contactCount);
     }
   }

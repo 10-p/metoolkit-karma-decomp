@@ -128,18 +128,18 @@ static MeDictNode * MePoolxDictNodeAllocate(void *pool)
   MeDictNode *pMVar2;
 
   pMVar2 = (MeDictNode *)0x0;
-  if (*(int *)((kd_iptr)pool + 0xc) != 0) {
-    iVar1 = *(int *)((kd_iptr)pool + 0xc) + -1;
-    pMVar2 = (MeDictNode *)(*(kd_iptr *)pool + *(int *)((kd_iptr)pool + 0x10) * 4);
-    *(int *)((kd_iptr)pool + 0xc) = iVar1;
+  if (*(int *)((kd_iptr)pool + ((int)((char *)&((MePoolx *)0)->numfree - (char *)0))) != 0) {
+    iVar1 = *(int *)((kd_iptr)pool + ((int)((char *)&((MePoolx *)0)->numfree - (char *)0))) + -1;
+    pMVar2 = (MeDictNode *)(*(kd_iptr *)pool + *(int *)((kd_iptr)pool + ((int)((char *)&((MePoolx *)0)->ifree - (char *)0))) * 4);
+    *(int *)((kd_iptr)pool + ((int)((char *)&((MePoolx *)0)->numfree - (char *)0))) = iVar1;
     if (iVar1 != 0) {
-      if (pMVar2->left == (MeDictNode *)0xffffffff) {
-        iVar1 = *(int *)((kd_iptr)pool + 0x10) + *(int *)((kd_iptr)pool + 4);
-        *(int *)((kd_iptr)pool + 0x10) = iVar1;
+      if (*(int *)pMVar2 == (int)0xffffffff) {
+        iVar1 = *(int *)((kd_iptr)pool + ((int)((char *)&((MePoolx *)0)->ifree - (char *)0))) + *(int *)((kd_iptr)pool + ((int)((char *)&((MePoolx *)0)->isize - (char *)0)));
+        *(int *)((kd_iptr)pool + ((int)((char *)&((MePoolx *)0)->ifree - (char *)0))) = iVar1;
         *(undefined4 *)(*(kd_iptr *)pool + iVar1 * 4) = 0xffffffff;
       }
       else {
-        *(MeDictNode **)((kd_iptr)pool + 0x10) = pMVar2->left;
+        *(int*)((kd_iptr)pool + ((int)((char *)&((MePoolx *)0)->ifree - (char *)0))) = *(int *)pMVar2;
       }
     }
   }
@@ -152,9 +152,9 @@ static void MePoolxDictNodeDeallocate(MeDictNode *node,void *pool)
 {
   kd_iptr iVar1;
 
-  iVar1 = (kd_iptr)node - *(int *)pool >> 2;
-  *(undefined4 *)(*(int *)pool + iVar1 * 4) = *(undefined4 *)((kd_iptr)pool + 0x10);
-  *(int *)((kd_iptr)pool + 0x10) = iVar1;
-  *(int *)((kd_iptr)pool + 0xc) = *(int *)((kd_iptr)pool + 0xc) + 1;
+  iVar1 = (kd_iptr)node - *(kd_iptr *)pool >> 2;
+  *(undefined4 *)(*(kd_iptr *)pool + iVar1 * 4) = *(undefined4 *)((kd_iptr)pool + ((int)((char *)&((MePoolx *)0)->ifree - (char *)0)));
+  *(int *)((kd_iptr)pool + ((int)((char *)&((MePoolx *)0)->ifree - (char *)0))) = iVar1;
+  *(int *)((kd_iptr)pool + ((int)((char *)&((MePoolx *)0)->numfree - (char *)0))) = *(int *)((kd_iptr)pool + ((int)((char *)&((MePoolx *)0)->numfree - (char *)0))) + 1;
   return;
 }

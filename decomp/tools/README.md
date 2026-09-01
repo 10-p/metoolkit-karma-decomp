@@ -666,6 +666,9 @@ python3 tools/fix_list_walk.py       /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/fix_word_indexed_struct.py /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/fix_baked_sizeof.py    /tmp/kd_lp64/allobj /tmp/kd_build $MT --field-allocas-only
 python3 tools/fix_element_stride.py  /tmp/kd_lp64/allobj /tmp/kd_build $MT
+python3 tools/fix_member_base_walk.py /tmp/kd_lp64/allobj /tmp/kd_build $MT
+python3 tools/fix_callback_context.py /tmp/kd_lp64/allobj /tmp/kd_build $MT
+python3 tools/fix_alloca_elem.py     /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/fix_block_copy.py      /tmp/kd_lp64/allobj /tmp/kd_build $MT
 python3 tools/check_frame_bounds.py  /tmp/kd_lp64/allobj /tmp/kd_build   # must read 0
 KD_OUT=/tmp/kd_lp64 ./test/standalone/lp64_run.sh
@@ -1758,6 +1761,217 @@ different i386 object, and three lines declined the whole file on that alone. `i
 `kd_iptr`. And only the **outermost** access is widened — these lines carry a second, nested
 `*(int *)` that loads the table pointer itself, which is `fix_narrow_loads`' job.
 
+★ **A SECOND SOURCE OF EVIDENCE FOR THE GATED ANCHOR, AND A MODE THAT GOES WITH IT.**
+`McdSphylTriangleListIntersect` walks its triangles through **byte cursors**, so
+`fix_word_indexed_struct` has nothing to type in it and the `((E *)v)->` evidence never appears
+— while its stride `local_5c + 0x18` is `sizeof(McdUserTriangle)` at i386 and **48** at LP64.
+The file does carry `alloca(n * (int)sizeof(*(McdUserTriangle *)0))`, which
+`fix_baked_sizeof --field-allocas-only` wrote only because the field the block is stored into is
+declared `McdUserTriangle *` in the oracle. That is another pass's measured conclusion, so it
+counts as evidence — `element_evidence()`, asked in `rewrite()` **and** in `main()`'s pre-filter,
+because the last time those two spellings disagreed the pre-filter silently refused the one file
+the rule existed for.
+
+⚠⚠ **AND THAT EVIDENCE LICENCES EXACTLY ONE RULE — MEASURED, NOT ASSUMED.** `alloca(n *
+sizeof(E))` says the **block** is an array of E and nothing about any other pointer in the file.
+Run without that restriction, the table/cursor fixpoint flooded to fifty names — every float on
+a line that mentioned the anchor — and rules B and D rewrote **twelve reads of a transform
+matrix**:
+
+```c
+*(float *)((kd_iptr)pvVar7 + 0x30)   /* McdModelGetTransformPtr, translation row */
+    ->  *(float *)((kd_iptr)pvVar7 + 2 * (int)sizeof(McdUserTriangle))
+```
+
+`0x30` is 48 is `2 * 24`, so it survives "whole elements only"; at LP64 it becomes 96 and reads
+off the end of the transform. ★ **All sixteen sites passed the i386 byte-identity gate**, because
+`2 * sizeof(E)` *is* `0x30` there. So in this mode the pass runs rule **C** only — a cursor's own
+step and seed — and the cursor is whatever is added to the table expression **after** the anchor's
+own match, never the fixpoint.
+
+### `fix_member_base_walk.py` — an array addressed from the MIDDLE of its first element
+
+```bash
+python3 tools/fix_member_base_walk.py /tmp/kd_lp64/allobj /tmp/kd_build $MT
+#   -> fix_member_base_walk: 14 edit(s) in 5 file(s), 0 declined
+```
+
+gcc keeps the contact array in a register pointing at the first element's `normal`, not at the
+element, and Ghidra writes every later field as an offset from **that**:
+
+```c
+iVar31 = iVar32 * 0x28;                                    /* 40 = sizeof at i386 */
+*(__typeof__(tri->triangleData) *)
+    ((kd_iptr)result->contacts->normal + iVar31 + 0x18) = tri->triangleData;
+iVar31 = iVar31 + 0x28;
+```
+
+```
+McdContact   i386  sizeof 40   normal 12  separation 24  element1 32  element2 36
+             LP64  sizeof 48   normal 12  separation 24  element1 32  element2 40
+```
+
+★ **SO THE OFFSET IS RELATIVE TO A MEMBER, AND THAT CHANGES THE ARITHMETIC.** `+ 0x18` is byte
+36 of the element, which is `element2` here and the **high half of `element1`** there — and the
+write is eight bytes wide at LP64, so it lands across two fields and corrupts both. That is
+`KPerContactCB` faulting in **six of eight gametypes**, and it is what
+`McdSphylTriangleListIntersect`'s own repair made reachable.
+
+⚠⚠ **THE OBVIOUS DECOMPOSITION IS WRONG IN A WAY i386 CANNOT SHOW YOU.** `fix_element_stride`'s
+rule D reads a literal as `q*sizeof(E) + offsetof(member at L % sizeof(E))`. Here `L` is 24 and
+byte 24 of `McdContact` is `separation` — a real member, at 24 at **both** widths. That
+decomposition compiles to the same 24 it replaced, passes the byte-identity gate, and is still
+four bytes short at LP64. The remainder has to be taken from `b + L`, where `b` is the offset of
+the member the chain is **rooted** at.
+
+★ **ONLY REWRITE WHAT MOVES — 4 of the 8 offset sites.** The same shape carries `+ 0xc` (byte 24,
+`separation`) and `+ 0x14` (byte 32, `element1`) and both are already right, because neither
+member moves. `McdBatch.c` writes `+ 0x14` and `+ 0x18` four lines apart. The LP64 value is
+computed for every site and one that does not move is left exactly as it was.
+
+⚠ **THE LITERAL IS OPTIONAL, AND THE PITCH IS THE POINT.** `McdGjk` and `McdPlaneIntersect` write
+`normal` at `+ cur`, `+ cur + 4`, `+ cur + 8`, `+ cur + 0xc` — every one correct at LP64. Their
+only defect is `cur = cur + 0x28`, walking 40 bytes over 48-byte elements. A rule that needed an
+offset to move before it looked at the stride skipped both files and reported a clean nothing.
+And `McdPlaneIntersect` advances its cursor inside the loop's own **condition**, so a `^…;$`
+pattern finds it not at all.
+
+⚠ **ONE FILE CAN WALK TWO ARRAYS THIS WAY.** `McdBatch.c` steps `pMVar1->start->normal` over
+`McdBatchEntry` (sizeof 96 → 168) and `pMVar3->contacts->normal` over `McdContact` in the same
+function, with different cursors. Sites are grouped by element type so the second array cannot
+be given the first one's `sizeof`.
+
+⚠ **A MEMBER NAME IS NOT A TYPE, AND THE ORACLE KEYS BY TAG.** Four structs here declare a
+pointer called `contacts`, so each hop is resolved through the oracle — and
+`typedef struct _McdIntersectResult {…} McdIntersectResult;` is stored under the **tag** while the
+recovered source names the **typedef**, so asking once with the spelling in front of you returns
+nothing. `fix_narrow_loads.resolve_member` asks once and answers `None` for every site in
+`IxSphylPrimitives`; that is why this pass resolves the chain itself, trying both spellings at
+every hop.
+
+### `fix_callback_context.py` — a callback's `void *` context, read at i386 offsets
+
+```bash
+python3 tools/fix_callback_context.py /tmp/kd_lp64/allobj /tmp/kd_build $MT
+#   -> fix_callback_context: 18 edit(s), 0 declined
+```
+
+A callback takes its state as a `void *`, so Ghidra has no type for it and addresses every field
+by a baked byte offset:
+
+```c
+static MeDictNode *MePoolxDictNodeAllocate(void *pool)
+{
+  if (*(int *)((kd_iptr)pool + 0xc) != 0) {                          /* numfree */
+    pMVar2 = (MeDictNode *)(*(kd_iptr *)pool +
+                            *(int *)((kd_iptr)pool + 0x10) * 4);     /* ifree   */
+    ...
+    *(MeDictNode **)((kd_iptr)pool + 0x10) = pMVar2->left;
+```
+
+```
+MePoolx   i386  mem 0  isize 4  numrec 8   numfree 12  ifree 16   sizeof 20
+          LP64  mem 0  isize 8  numrec 12  numfree 16  ifree 20   sizeof 24
+```
+
+⚠⚠ **NO STATIC GATE IN THIS PROJECT CAN SEE THIS CLASS.** Nothing is truncated and no cast is
+narrowed, so `ptrwidth_check` and `ptrwidth_classify` report the file as clean — `MePoolx` is on
+neither the 91 aarch64 diagnostics nor the 52 open ones. **Only running the game finds it.**
+
+★ **THE TOMBSTONE IS THE DEFECT, FIELD BY FIELD.** gdb at the `SIGSEGV` in `MeDictInsert` ←
+`MeSetAdd` ← `McdConvexMeshPlaneCut` — a convex mesh being sliced, i.e. a **vehicle**:
+
+```
+nodemem      = 0x7ffffffc66d0                 (MeDictNode[200], 8-aligned)
+set.nodepool = { mem = 0x7ffffffc66d0, isize = 12,
+                 numrec = 196, numfree = 32767, ifree = -235024 }
+```
+
+`numrec` should be 200 and is 196 — decremented four times by the code that means `numfree`.
+`numfree` should be 200 and is **32767**, the high half of a stack address, because
+`*(MeDictNode **)(pool + 0x10)` stores eight bytes into a four-byte index. The node handed back
+is `0x…cc`, which a `MeDictNode` can never be.
+
+**THE TYPE IS DECLARED — IN THE REGISTRATION**, the same evidence chain `interaction_types` uses:
+`MeDictSetAllocator(d, MePoolxDictNodeAllocate, MePoolxDictNodeDeallocate, p)` passes the
+function's address and its context in one call, so the candidates are that call's typed pointer
+arguments. ⚠ There are **two** and position does not say which — `d` is an `MeDict *`. The
+tie-break is a measurement: every offset used against the parameter must land on a top-level
+member **start** of the candidate at i386. `MeDict`'s members are 0, 24, 28, … so `4` lands inside
+`nilnode` and it is refused. Exactly one survivor, or the site is declined.
+
+⚠⚠ **AND THE MEMBER SPELLING IS NOT BYTE-IDENTICAL, WHICH IS WHY THIS RE-SPELLS THE ADDRESS.**
+Measured: `((MePoolx *)pool)->numfree` alone is identical, `->ifree` alone is identical, and the
+two **together** are not — gcc schedules the member form differently once both loads are visible
+as fields of one object. A typed local (`MePoolx *p = pool;`) does not rescue it either. The
+address form keeps every expression's *type* exactly as it was and changes only how the address is
+computed, which is `fix_literal_offsets`' own rule and the reason it survives the gate.
+
+**RULE D — THE POOL'S OWN MEMORY IS DECLARED, SO THE LINK IN IT IS TOO.** `MePoolx::mem` is
+`int *`, so a record handed out of it holds a four-byte free-list index in its first word. Ghidra
+typed the record `MeDictNode *` and read `->left`, which is eight bytes at LP64. Only offset zero,
+only where the member is 4 bytes here and 8 there, and a constant compared against a re-spelled
+site is cast to the new type so `0xffffffff` stays `-1` rather than becoming 4294967295.
+
+⚠ **THE GREEDY RETURN TYPE ATE THE NAME — AGAIN.** `^static\s+[A-Za-z_][\w ]*\**\s*(\w+)\s*\(`
+reads `static void MePoolxDictNodeDeallocate(` as a function called **`e`**. Its sibling
+`static MeDictNode * MePoolxDictNodeAllocate(` survives only because the `*` forces the split — so
+one callback was typed, the other silently was not, and **no decline was printed for the one it
+dropped**. Same family as `fix_frame_slots`' `aiStack_9cb0` → `iStack_9cb0`. There is a self-check
+over both spellings now.
+
+### `fix_alloca_elem.py` — an `alloca`'d ARRAY OF POINTERS, strided at four bytes
+
+```bash
+python3 tools/fix_alloca_elem.py /tmp/kd_lp64/allobj /tmp/kd_build $MT
+#   -> fix_alloca_elem: 28 edit(s), 0 declined
+```
+
+This is `LP64-ARM64-PLAYS` item (3) in the two files that entry could not reach:
+
+```c
+kd_alloca_iVar3 = (char *)alloca((size_t)(group->count) * 4 + 0);        /* MdtLOD.c */
+*(MdtContactID *)((kd_iptr)(kd_alloca_iVar3) + iVar8 * 4) = pMVar2;
+*(undefined4 *)(&(*kd_argslot_ffffffcc)) = 4;                            /* qsort's size */
+qsort(*(void **)(&(*kd_argslot_ffffffc4)), …, *(size_t *)(&(*kd_argslot_ffffffcc)), …);
+```
+
+`MdtContactID` is `MdtContact *`, so the block is an array of **pointers**: `4` is
+`sizeof(element)` here and **eight** at LP64. The allocation is half the size it needs, every
+stride lands mid-element, and `qsort` is told its elements are four bytes — so the comparator is
+handed the top half of one pointer welded to the bottom half of the next.
+
+★ **`fix_baked_sizeof` DECLINED THIS BY NAME AND SAID SO**, which is why it is a separate pass:
+its `QSORT` rule requires a plain identifier as the base, and *"`MdtLOD.c`'s
+`qsort(*(void **)(&(*kd_argslot_ffffffc4)), …)` is not one, and is declined and reported rather
+than rewritten through a cast whose pointee is `void`"*. That was right — `void` has no size. The
+missing piece was never a better guess at the cast; it was the **element type**, written down
+elsewhere.
+
+**THE ORACLE IS ASKED FIRST.** `MeAssetFactory.c` casts everything to `void *`, and the block is
+argument two of `MeFAssetGetPartsSortedByName(const MeFAsset *const, MeFAssetPart **)` — the
+signature in the oracle, matched through the argslot the block travels in.
+
+⚠⚠ **AN ARGSLOT IS NOT EVIDENCE.** `kd_argslot_ffffffa8` is cast to `MeHash **`, `MeFJoint **`,
+`char **`, `void **` *and* `MeFAssetPart **` inside one function, because outgoing slots are
+reused; taking the first cast off one picks a type at random — measured, it chose
+`MeAssetFactory *`. ★ And Ghidra's own element cast is not authoritative either: it reads that
+same array as `MeAssetFactory **`. Both are pointers, so the rewrite is numerically right under
+either — the **name** is not, and a pass that writes down the wrong type has recorded a wrong
+reason for a right answer.
+
+⚠ **`(\w+)\s*\(([^();]*)\)` CANNOT SEE THESE CALLS AT ALL.** Every argument in the recovered
+sources is itself parenthesised, so a character class that excludes `(` matches nothing, the
+oracle evidence never fires, and the pass falls through to Ghidra's guess **with no decline
+printed**. That cost `MeAssetFactory` its correct element type twice. The scanner balances
+parentheses now.
+
+⚠ **AND `* 4` IS NOT A CLASS.** Eight `alloca`s in the corpus carry a literal 4 and several are
+honest `int` arrays — `keaMatrix_PcSparse_vanilla`'s `numClamped * 4` is one. The element type has
+to be *found*, its i386 `sizeof` has to equal the literal, and its LP64 `sizeof` has to differ, or
+the site is left exactly as it was. Four bases are declined and reported for want of a declared
+type.
+
 ### `fix_word_indexed_struct.py` — a struct reached through a WORD-INDEXED pointer
 
 ```bash
@@ -1924,6 +2138,88 @@ this pass both are constant expressions. A deliberate `+ 0x400` into `aiStack_9c
 before the post-pass and **missed** after it. The gate has been taught both spellings, re-checked
 against the same deliberate violation, and `lp64_pipeline.sh` now runs it after the post-passes
 so the zero is stated rather than assumed.
+
+★ **A FOURTH SPELLING: THE AREA BELOW AN `alloca`, REACHED THROUGH A CURSOR.** gcc puts the
+allocated block immediately *above* the outgoing argument area, so Ghidra spells the area as
+NEGATIVE offsets from the allocation:
+
+```c
+kd_alloca_iVar3 = (char *)alloca(n * (int)sizeof(*(McdUserTriangle *)0) + 0);
+puVar12 = (undefined1 *)kd_alloca_iVar3;
+*(int *)    (puVar12 + -0x20) = (kd_iptr)&(triList->list)->mRefCtAndID + i;   /* tri  */
+*(MeReal **)(puVar12 + -0x1c) = relPos;
+GenerateTriangleContact(*(McdUserTriangle **)(puVar12 + -0x20), …);
+```
+
+`ghidra_clean.py`'s `materialise_alloca_relative_slots` gives that shape real storage where the
+offsets hang off `kd_alloca_*` **directly**; here the pointer is copied into a local first, so it
+never matched. It is two defects at LP64: the slots **overlap** (`-0x1c` and `-0x20` are four
+bytes apart and the pointers written into them are eight), and `tri` is stored through
+`*(int *)` and read through `*(McdUserTriangle **)` — four bytes of eight, then an eight-byte
+read of the truncation. `GenerateTriangleContact` dereferences `tri->vertices[0]`, which is
+`McdSphylTriangleListIntersect`'s `SEGV_MAPERR` on the device and 6 of 8 gametypes at x86-64.
+
+★ **THE STORAGE IS THE HARD HALF, AND THE `alloca` IS WHERE IT COMES FROM.** Scaling the offsets
+alone doubles the area to 72 bytes below a block whose base is where the allocation *starts* —
+below it is not ours at either width. So the allocation grows by the scaled area and the base
+walks up past it, on one statement:
+
+```
+alloca(SIZE)   ->   alloca(SIZE + PAD) + PAD
+PAD = (int)(sizeof(void *) / 8) * (nslots * (int)sizeof(void *))
+```
+
+`4 / 8` is zero in integer arithmetic, so `PAD` is **0 at i386 and on wasm32** and the statement
+folds back to `alloca(SIZE) + 0` on every shipping target — the byte-identity gate is what says
+so. At LP64 it is 72 bytes and the area moves inside the allocation. In the artefact:
+`add $0x48,%rax`, twice.
+
+⚠ **THE CURSOR MUST BE A CURSOR AND NOTHING ELSE.** The block itself is real memory handed to
+callees — here the triangle array the generator fills — so a positive offset or a bare use means
+the name is the ARRAY, and the site is declined rather than guessed at.
+
+★ **A FIFTH SPELLING: A FRAME SLOT'S MEMBER HOLDING A POINTER.** Where Ghidra's invented local is
+a **struct**, one of its members can be the spill slot for a pointer — and the struct is a real
+declared type, so the member cannot be widened the way an `int aiStack_9cb0[6]` can:
+
+```c
+McdUserTriangle MStack_26c;
+MStack_26c.flags = (McdTriangleFlags)result->normal;
+*(float *)(MStack_26c.flags + 4) = diff.v[1] + *(MeReal *)(MStack_26c.flags + 4);
+```
+
+`McdUserTriangle::flags` is four bytes at **both** widths, so at LP64 the address of
+`result->normal` is cut in half. It is `ptrwidth_classify`'s worst single object —
+`IxCylinderTriList` **6 of 6 UNEXPLAINED** — and it is on the ragdoll-vs-**world** path, where the
+first Android Karma tombstone landed. ★ The repair is **storage, not a re-spelling**, and that was
+measured: rewriting the reads as `result->normal[1]` is exact — the line right above them already
+does — and is *not* byte-identical, with or without the now-dead store. Giving the member its own
+`kd_iptr` local and leaving every expression otherwise verbatim **is**. ⚠ Only if `&NAME` is never
+taken; otherwise a callee reads the member and splitting it out silently stops updating it.
+
+★ **A SIXTH SPELLING: A SLOT STORED NARROWER THAN THE NEXT READ OF IT**, which the fifth exposes.
+An argument slot is *reused* across calls, so the same address carries an `int` for one call and a
+pointer for the next:
+
+```c
+*(int *)             (&(*kd_argslot_fffffd84)) = triList->triangleMaxCount;
+… McdCylinderIntersect(…, *(int *)(&(*kd_argslot_fffffd84)));            /* fine  */
+*(McdTriangleFlags *)(&(*kd_argslot_fffffd84)) = kd_slot_MStack_26c_flags;
+MeVector3Normalize(  *(MeReal **)(&(*kd_argslot_fffffd84)));             /* FOUR  */
+```
+
+⚠ **GROUPING BY ADDRESS WOULD BE WRONG** — widening every access to that slot takes the
+`triangleMaxCount` store with it, and that one is a genuine `int` read back as a genuine `int`.
+The pairing is a **store and the next read of the same address with no store in between**, which
+is the only thing that makes the two widths comparable. Six sites across five functions, including
+22 in `MeFAssetCreateCopy` — the ragdoll asset loader — where an `alloca` pointer was stored four
+bytes wide into a slot read as a pointer.
+
+⚠ **AND THE TYPE GROUP HAS TO ADMIT ITS OWN `*`s.** Written `[\w ]*?` the site pattern matches
+`*(int *)` and **not** `*(McdUserTriangle **)`, so the pass sees the four-byte stores, misses
+every pointer load, concludes no slot carries a pointer and widens nothing — the one access the
+rule exists for. It found zero sites in the file it was written for and reported **no decline**,
+because a group that never forms has nothing to decline.
 ---
 
 ## The investigative tools — reach for these when something is wrong

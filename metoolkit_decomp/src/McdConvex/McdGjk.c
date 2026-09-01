@@ -1114,7 +1114,7 @@ LAB_00011b45:
       unaff_ESI = unaff_ESI + 1;
       pMVar11[2] = pMVar10[2];
       *(MeReal *)((kd_iptr)result->contacts->normal + iVar13 + 0xc) = c->separation;
-      iVar13 = iVar13 + 0x28;
+      iVar13 = iVar13 + (int)sizeof(McdContact);
       i = i + 1;
       if (numIntersect <= i) break;
     } while (i < result->contactMaxCount);

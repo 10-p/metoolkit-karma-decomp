@@ -371,9 +371,9 @@ LAB_00010772:
             iVar12 = 0;
             do {
               iVar11 = iVar11 + 1;
-              *(McdBatchPairData **)((kd_iptr)pMVar1->start->normal + iVar12 + 0x2c) = pMVar1;
-              *(int *)((kd_iptr)pMVar1->start->normal + iVar12 + 0x20) = iVar10;
-              iVar12 = iVar12 + 0x60;
+              *(McdBatchPairData **)((kd_iptr)pMVar1->start->normal + iVar12 + (((int)((char *)&((McdBatchEntry *)0)->pairData - (char *)0)) - ((int)((char *)&((McdBatchEntry *)0)->normal - (char *)0)))) = pMVar1;
+              *(int *)((kd_iptr)pMVar1->start->normal + iVar12 + (((int)((char *)&((McdBatchEntry *)0)->pool - (char *)0)) - ((int)((char *)&((McdBatchEntry *)0)->normal - (char *)0)))) = iVar10;
+              iVar12 = iVar12 + (int)sizeof(McdBatchEntry);
             } while (iVar11 < pMVar1->entries);
           }
         }
@@ -562,7 +562,7 @@ void kd_McdBatchUnflattenAggregate
                 uVar4 = pMVar3->flags;
               }
               if ((uVar4 & 4) != 0) {
-                *(McdGeometryInstance **)((kd_iptr)pMVar3->contacts->normal + iVar5 + 0x18) =
+                *(McdGeometryInstance **)((kd_iptr)pMVar3->contacts->normal + iVar5 + (((int)((char *)&((McdContact *)0)->element2 - (char *)0)) - ((int)((char *)&((McdContact *)0)->normal - (char *)0)))) =
                      pMVar3->ins2;
               }
             }
@@ -576,7 +576,7 @@ void kd_McdBatchUnflattenAggregate
                    *(float *)((kd_iptr)pMVar1->normal + iVar5 + 8) * -1.0;
               uVar4 = pMVar3->flags;
               if ((uVar4 & 2) != 0) {
-                *(McdGeometryInstance **)((kd_iptr)pMVar3->contacts->normal + iVar5 + 0x18) =
+                *(McdGeometryInstance **)((kd_iptr)pMVar3->contacts->normal + iVar5 + (((int)((char *)&((McdContact *)0)->element2 - (char *)0)) - ((int)((char *)&((McdContact *)0)->normal - (char *)0)))) =
                      pMVar3->ins1;
                 uVar4 = pMVar3->flags;
               }
@@ -586,7 +586,7 @@ void kd_McdBatchUnflattenAggregate
               }
             }
             iVar7 = iVar7 + 1;
-            iVar5 = iVar5 + 0x28;
+            iVar5 = iVar5 + (int)sizeof(McdContact);
           } while (iVar7 < pMVar3->contactCount);
         }
         ir->normal[0] = pMVar3->normal[0] + ir->normal[0];

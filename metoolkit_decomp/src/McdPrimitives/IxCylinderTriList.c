@@ -74,6 +74,7 @@ int kd_McdCylinderTriangleListIntersect(McdModelPair *p,McdIntersectResult *resu
   float fStackY_280 [(int)(sizeof(void *) / 4)];
   int iStack_270 [(int)(sizeof(void *) / 4)];
   McdUserTriangle MStack_26c;
+  kd_iptr kd_slot_MStack_26c_flags;
   float *local_254;
   MeReal cylHH;
   MeReal cylRadius;
@@ -144,7 +145,7 @@ int kd_McdCylinderTriangleListIntersect(McdModelPair *p,McdIntersectResult *resu
   count = (*p_Var4)(*(void **)((kd_iptr)aiStackY_2a0 + (5 * (int)sizeof(void *))),
                     *(void **)((kd_iptr)aMStackY_288),*(void **)((kd_iptr)aMStackY_288 + (1 * (int)sizeof(void *))),
                     *(float *)((kd_iptr)&fStackY_280),*(int *)(&(*kd_argslot_fffffd84)));
-  MStack_26c.flags = (McdTriangleFlags)result->normal;
+  kd_slot_MStack_26c_flags = (McdTriangleFlags)result->normal;
   result->normal[0] = 0.0;
   result->normal[1] = 0.0;
   result->normal[2] = 0.0;
@@ -288,14 +289,14 @@ int kd_McdCylinderTriangleListIntersect(McdModelPair *p,McdIntersectResult *resu
             }
           }
           result->normal[0] = diff.v[0] + result->normal[0];
-          *(float *)(MStack_26c.flags + 4) = diff.v[1] + *(MeReal *)(MStack_26c.flags + 4);
-          *(float *)(MStack_26c.flags + 8) = diff.v[2] + *(MeReal *)(MStack_26c.flags + 8);
+          *(float *)(kd_slot_MStack_26c_flags + 4) = diff.v[1] + *(MeReal *)(kd_slot_MStack_26c_flags + 4);
+          *(float *)(kd_slot_MStack_26c_flags + 8) = diff.v[2] + *(MeReal *)(kd_slot_MStack_26c_flags + 8);
         }
         j = j + 1;
         MStack_26c.triangleData.ptr = (void *)(MStack_26c.triangleData.tag + (int)sizeof(McdUserTriangle));
       } while ((j < count) && (result->contactCount < 400));
     }
-    *(McdTriangleFlags *)(&(*kd_argslot_fffffd84)) = MStack_26c.flags;
+    *(kd_iptr *)(&(*kd_argslot_fffffd84)) = kd_slot_MStack_26c_flags;
     *(undefined4 *)((kd_iptr)&fStackY_280) = 0x10890;
     MeVector3Normalize(*(MeReal **)(&(*kd_argslot_fffffd84)));
     uVar29 = (uint)(0 < result->contactCount);

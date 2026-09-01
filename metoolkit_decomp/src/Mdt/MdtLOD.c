@@ -796,22 +796,22 @@ static void ResizeConstraint(MdtBaseConstraint *con,MdtPartitionParams *params)
     uVar7 = group->count * 4 + 0xfU & 0xfffffff0;
     kd_blk2_aiStack_2c = (char *)alloca((size_t)(group->count) * 4 + 0);
     iVar3 = -uVar7;
-    kd_alloca_iVar3 = (char *)alloca((size_t)(group->count) * 4 + 0);
+    kd_alloca_iVar3 = (char *)alloca((size_t)(group->count) * (int)sizeof(MdtContactID) + 0);
     nFrictionContacts = 0;
     for (pMVar2 = group->first; pMVar2 != (MdtContactID)0x0; pMVar2 = pMVar2->nextContact)
     {
       if ((pMVar2->params).type != MdtContactTypeFrictionZero) {
         nFrictionContacts = nFrictionContacts + 1;
       }
-      *(MdtContactID *)((kd_iptr)(kd_alloca_iVar3) + iVar8 * 4) = pMVar2;
+      *(MdtContactID *)((kd_iptr)(kd_alloca_iVar3) + iVar8 * (int)sizeof(MdtContactID)) = pMVar2;
       *(undefined4 *)((kd_iptr)(kd_blk2_aiStack_2c) + iVar8 * 4) = 0;
       iVar8 = iVar8 + 1;
     }
     *(code **)(&(*kd_argslot_ffffffd0)) = kd_ComparePenetration;
     iVar8 = initialNContacts;
-    *(undefined4 *)(&(*kd_argslot_ffffffcc)) = 4;
-    *(int *)(&(*kd_argslot_ffffffc8)) = iVar8;
-    *(int *)(&(*kd_argslot_ffffffc4)) = kd_alloca_iVar3;
+    *(kd_iptr *)(&(*kd_argslot_ffffffcc)) = (int)sizeof(MdtContactID);
+    *(kd_iptr *)(&(*kd_argslot_ffffffc8)) = iVar8;
+    *(kd_iptr *)(&(*kd_argslot_ffffffc4)) = kd_alloca_iVar3;
     *(undefined4 *)((kd_iptr)kd_scratch2_sStackY_40) = 0x10ce8;
     qsort(*(void **)(&(*kd_argslot_ffffffc4)),*(size_t *)(&(*kd_argslot_ffffffc8)),
           *(size_t *)(&(*kd_argslot_ffffffcc)),
@@ -834,14 +834,14 @@ static void ResizeConstraint(MdtBaseConstraint *con,MdtPartitionParams *params)
 LAB_00010d30:
             do {
               iVar8 = iVar8 + 1;
-            } while (*(int *)(*(kd_iptr *)((kd_iptr)(kd_alloca_iVar3) + iVar8 * 4) + 0x194) != 0);
+            } while (*(int *)(*(kd_iptr *)((kd_iptr)(kd_alloca_iVar3) + iVar8 * (int)sizeof(MdtContactID)) + 0x194) != 0);
             iVar9 = *(int *)((kd_iptr)(kd_blk2_aiStack_2c) + iVar8 * 4);
           }
           *(undefined4 *)(&(*kd_argslot_ffffffd0)) = uVar6;
           *(undefined4 *)(&(*kd_argslot_ffffffcc)) = uVar6;
           pMVar5 = group;
-          *(undefined4 *)(&(*kd_argslot_ffffffc8)) =
-               *(undefined4 *)((kd_iptr)(kd_alloca_iVar3) + iVar8 * 4);
+          *(kd_iptr *)(&(*kd_argslot_ffffffc8)) =
+               *(undefined4 *)((kd_iptr)(kd_alloca_iVar3) + iVar8 * (int)sizeof(MdtContactID));
           *(MdtContactGroupID *)(&(*kd_argslot_ffffffc4)) = pMVar5;
           *(undefined4 *)((kd_iptr)kd_scratch2_sStackY_40) = 0x10d53;
           MdtContactGroupDestroyContact
@@ -859,7 +859,7 @@ LAB_00010d30:
             do {
               do {
                 iVar9 = iVar9 + 1;
-                iVar8 = *(int *)((kd_iptr)(kd_alloca_iVar3) + iVar9 * 4);
+                iVar8 = *(int *)((kd_iptr)(kd_alloca_iVar3) + iVar9 * (int)sizeof(MdtContactID));
               } while (*(int *)(iVar8 + 0x194) == 0);
             } while (*(int *)((kd_iptr)(kd_blk2_aiStack_2c) + iVar9 * 4) == 1);
           }

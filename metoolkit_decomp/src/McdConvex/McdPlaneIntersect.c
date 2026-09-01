@@ -751,7 +751,7 @@ int kd_McdPlaneIntersectTest
         iVar9 = iVar9 + 1;
         outVert = outVert + 1;
         *(float *)((kd_iptr)result->contacts->normal + iVar11 + 0xc) = fVar8;
-      } while ((iVar9 < numv) && (iVar11 = iVar11 + 0x28, iVar9 < result->contactMaxCount));
+      } while ((iVar9 < numv) && (iVar11 = iVar11 + (int)sizeof(McdContact), iVar9 < result->contactMaxCount));
     }
     pMVar10 = result->contacts;
     pMVar10[iVar9].normal[0] = norm[0];

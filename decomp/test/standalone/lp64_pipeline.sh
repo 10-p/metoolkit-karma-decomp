@@ -119,6 +119,34 @@ python3 "$KD_ROOT/tools/fix_baked_sizeof.py" "$DST/allobj" "$BUILD" "$MT" --fiel
 
 python3 "$KD_ROOT/tools/fix_element_stride.py" "$DST/allobj" "$BUILD" "$MT" | tail -3 || exit 2
 
+# ---- AND ITS SIBLING, for the array gcc addresses from the MIDDLE of its first
+# element. `result->contacts->normal + cur + 0x18` is byte 36 of an `McdContact`,
+# which is `element2` at i386 and the high half of `element1` at LP64 — an
+# eight-byte write across two fields. It is `KPerContactCB` faulting in SIX of
+# eight gametypes, and it is what `McdSphylTriangleListIntersect`'s repair made
+# reachable. It runs after `fix_element_stride` because it is the same question
+# asked from a member's address rather than the element's, and the two must not
+# both claim a literal.
+python3 "$KD_ROOT/tools/fix_member_base_walk.py" "$DST/allobj" "$BUILD" "$MT" | tail -8 || exit 2
+
+# ---- AND THE OTHER PLACE A LAYOUT HIDES: a callback's `void *` CONTEXT, which
+# Ghidra has no type for at all, so every field of it is a baked byte offset.
+# ⚠ NO STATIC GATE IN THIS PROJECT CAN SEE THAT CLASS — nothing is truncated and
+# no cast is narrowed, so `MePoolx.c` is on neither the 91 aarch64 diagnostics nor
+# the 52 open ones while `MePoolxDictNodeAllocate` reads `numfree` out of
+# `numrec` and stores eight bytes into a four-byte index. It is the vehicle
+# crash: `MeDictInsert` <- `MeSetAdd` <- `McdConvexMeshPlaneCut`.
+python3 "$KD_ROOT/tools/fix_callback_context.py" "$DST/allobj" "$BUILD" "$MT" | tail -6 || exit 2
+
+# ---- AND THE `alloca`'d ARRAY OF POINTERS, which `fix_baked_sizeof` DECLINED BY
+# NAME: its qsort rule needs the base to be a plain identifier, and `MdtLOD`'s
+# travels in an argslot. The missing piece was never a better guess at the cast,
+# it was the ELEMENT TYPE — and that is declared, in the callee's signature.
+# ⚠ AFTER `fix_frame_slots`, whose sixth rule widens the slot qsort's size
+# argument travels in: a size stored four bytes wide and read as a `size_t` is a
+# SECOND defect on the same line, and fixing either alone leaves the other.
+python3 "$KD_ROOT/tools/fix_alloca_elem.py" "$DST/allobj" "$BUILD" "$MT" | tail -10 || exit 2
+
 # ---- AFTER EVEN THAT ONE, and for a reason none of the others have: this pass
 # does not re-spell an expression, it puts the corrected body behind
 # `#if __SIZEOF_POINTER__ == 4` and leaves the i386 text VERBATIM. Every pass

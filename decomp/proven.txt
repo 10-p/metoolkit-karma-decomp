@@ -1,3 +1,243 @@
+# LP64-VEHICLE-CLEAN  2026-09-01  ★★ FIVE OF EIGHT GAMETYPES RUN THEIR FULL
+#                     150 s AT x86-64, AND THE THREE THAT DO NOT ARE THE ENGINE'S
+#                     UI, NOT KARMA. The named open item — McdSphylTriangleList-
+#                     Intersect -> GenerateTriangleContact, 6 of 8 gametypes and
+#                     the arm64 device at 140 s — is CLOSED, and closing it
+#                     uncovered four more, each of which was the next crash.
+#
+#                     (1) THE OUTGOING ARGUMENT AREA BELOW AN `alloca`, REACHED
+#                     THROUGH A CURSOR. `fix_frame_slots`' fourth spelling.
+#                         kd_alloca_iVar3 = (char *)alloca(n * sizeof(McdUserTriangle) + 0);
+#                         puVar12 = (undefined1 *)kd_alloca_iVar3;
+#                         *(int *)    (puVar12 + -0x20) = (kd_iptr)&tri;
+#                         *(MeReal **)(puVar12 + -0x1c) = relPos;
+#                         GenerateTriangleContact(*(McdUserTriangle **)(puVar12 + -0x20), ...);
+#                     TWO defects at LP64: the slots OVERLAP (-0x1c and -0x20 are
+#                     four bytes apart and hold eight-byte pointers), and `tri` is
+#                     STORED through `*(int *)` and READ through
+#                     `*(McdUserTriangle **)`. The callee dereferences
+#                     `tri->vertices[0]` — the SEGV_MAPERR, digit for digit.
+#                     ★ THE STORAGE IS THE HARD HALF. Scaling the offsets alone
+#                     doubles the area to 72 bytes BELOW a block whose base is
+#                     where the allocation starts, which is nobody's memory at
+#                     either width. So the allocation grows by the scaled area and
+#                     the base walks up past it, on ONE statement:
+#                         alloca(SIZE)  ->  alloca(SIZE + PAD) + PAD
+#                         PAD = (int)(sizeof(void *) / 8) * (9 * (int)sizeof(void *))
+#                     `4 / 8` is ZERO in integer arithmetic, so PAD is 0 at i386
+#                     AND on wasm32 and the statement folds back to `alloca(SIZE)
+#                     + 0` on every shipping target. In the artefact:
+#                     `add $0x48,%rax`, twice.
+#                     ⚠ AND THE TYPE GROUP HAS TO ADMIT ITS OWN `*`s. Written
+#                     `[\w ]*?` the site pattern matches `*(int *)` and NOT
+#                     `*(McdUserTriangle **)`, so the pass saw the four-byte
+#                     stores, missed every pointer load, concluded no slot carried
+#                     a pointer and widened nothing — the one access the rule
+#                     exists for. Zero sites, NO decline: a group that never forms
+#                     has nothing to decline.
+#
+#                     (2) THE SAME FUNCTION'S TRIANGLE STRIDE, and the evidence
+#                     for it is another pass's own conclusion.
+#                     `local_5c + 0x18` is sizeof(McdUserTriangle) at i386 and 48
+#                     at LP64. `fix_element_stride` could not see the file:
+#                     `IxSphylPrimitives` walks its triangles through BYTE cursors
+#                     so `fix_word_indexed_struct` has nothing to type in it. But
+#                     the file carries `alloca(n * (int)sizeof(*(McdUserTriangle
+#                     *)0))`, which `fix_baked_sizeof --field-allocas-only` wrote
+#                     ONLY because the field the block is stored into is declared
+#                     `McdUserTriangle *`. That is a measured conclusion, so it
+#                     counts as evidence.
+#                     ⚠⚠ AND IT LICENCES EXACTLY ONE RULE — MEASURED, NOT
+#                     ASSUMED. Run without that restriction the table/cursor
+#                     fixpoint flooded to FIFTY names and rules B and D rewrote
+#                     TWELVE READS OF A TRANSFORM MATRIX:
+#                         *(float *)((kd_iptr)pvVar7 + 0x30)   /* translation row */
+#                      -> *(float *)((kd_iptr)pvVar7 + 2 * (int)sizeof(McdUserTriangle))
+#                     0x30 is 48 is 2*24, so it survives "whole elements only"; at
+#                     LP64 it becomes 96 and reads off the end of the transform.
+#                     ★ ALL SIXTEEN SITES PASSED THE i386 BYTE-IDENTITY GATE,
+#                     because 2*sizeof(E) IS 0x30 there. FIFTH time 32-bit
+#                     byte-identity could not see a semantic change at 64 — the
+#                     rule is only ever as wide as the evidence, and the gate
+#                     cannot narrow it for you.
+#
+#                     (3) `KPerContactCB`, IN ALL SIX REMAINING GAMETYPES AT ONE
+#                     ADDRESS, and it is what (1) made reachable.
+#                     `fix_member_base_walk.py` is new. gcc keeps the contact
+#                     array in a register pointing at the first element's
+#                     `normal`, not at the element:
+#                         *(...)((kd_iptr)result->contacts->normal + cur + 0x18)
+#                     `McdContact` i386 sizeof 40, normal 12, element1 32,
+#                     element2 36; LP64 sizeof 48, normal 12, element1 32,
+#                     element2 **40**. So `+ 0x18` is byte 36, which is `element2`
+#                     here and the HIGH HALF OF `element1` there — and the write is
+#                     eight bytes wide, so it lands across two fields.
+#                     ⚠⚠ THE OBVIOUS DECOMPOSITION IS WRONG IN A WAY i386 CANNOT
+#                     SHOW YOU. `fix_element_stride`'s rule D reads a literal as
+#                     `q*sizeof(E) + offsetof(member at L % sizeof(E))`; L is 24
+#                     and byte 24 of McdContact is `separation`, a REAL member, at
+#                     24 at BOTH widths. That compiles to the same 24 it replaced,
+#                     passes the gate, and is still four bytes short at LP64. The
+#                     remainder has to be taken from `b + L`, where b is the offset
+#                     of the member the chain is ROOTED at.
+#                     ★ ONLY REWRITE WHAT MOVES — 4 of the 8 offset sites. The
+#                     same shape carries `+ 0xc` (byte 24, `separation`) and
+#                     `+ 0x14` (byte 32, `element1`) and BOTH are already right.
+#                     `McdBatch.c` writes `+ 0x14` and `+ 0x18` four lines apart.
+#                     ⚠ AND THE LITERAL IS OPTIONAL: `McdGjk` and
+#                     `McdPlaneIntersect` have no offset that moves at all — their
+#                     only defect is `cur = cur + 0x28`, walking 40 bytes over
+#                     48-byte elements. A rule that needed an offset to move before
+#                     it looked at the stride skipped both and reported nothing.
+#                     `McdPlaneIntersect` advances its cursor inside the loop's own
+#                     CONDITION, so a `^...;$` pattern finds it not at all.
+#
+#                     (4) ★★ A CALLBACK'S `void *` CONTEXT, AND NO STATIC GATE IN
+#                     THIS PROJECT CAN SEE THE CLASS. `fix_callback_context.py` is
+#                     new. `MePoolxDictNodeAllocate(void *pool)` addresses every
+#                     field by a baked byte offset:
+#                         MePoolx i386 mem 0 isize 4 numrec 8  numfree 12 ifree 16
+#                                 LP64 mem 0 isize 8 numrec 12 numfree 16 ifree 20
+#                     so `0xc` is `numrec` there, `0x10` is `numfree`, and `4` is
+#                     the HIGH HALF OF `mem`. Nothing is truncated and no cast is
+#                     narrowed: `MePoolx` is on NEITHER the 91 aarch64 diagnostics
+#                     NOR the 52 open ones. Only running the game found it.
+#                     ★ THE TOMBSTONE IS THE DEFECT, FIELD BY FIELD. gdb at the
+#                     SIGSEGV in MeDictInsert <- MeSetAdd <- McdConvexMeshPlaneCut
+#                     — a convex mesh being sliced, i.e. a VEHICLE:
+#                         nodemem      = 0x7ffffffc66d0   (MeDictNode[200])
+#                         set.nodepool = { mem = 0x7ffffffc66d0, isize = 12,
+#                                          numrec = 196, numfree = 32767,
+#                                          ifree = -235024 }
+#                     `numrec` should be 200 and is 196, decremented four times by
+#                     the code that means `numfree`. `numfree` should be 200 and is
+#                     **32767** — the high half of a stack address, because
+#                     `*(MeDictNode **)(pool + 0x10)` stores EIGHT bytes into a
+#                     four-byte index. The node handed back is 0x...cc, which a
+#                     MeDictNode can never be.
+#                     THE TYPE IS DECLARED IN THE REGISTRATION —
+#                     `MeDictSetAllocator(d, alloc, free, p)` — and ⚠ THERE ARE TWO
+#                     CANDIDATES AND POSITION DOES NOT SAY WHICH. The tie-break is
+#                     a measurement: every offset must land on a top-level member
+#                     START at i386, and `MeDict` has none at 4.
+#                     ⚠⚠ AND THE MEMBER SPELLING IS NOT BYTE-IDENTICAL, WHICH IS
+#                     WHY THIS RE-SPELLS THE ADDRESS. `->numfree` alone is
+#                     identical, `->ifree` alone is identical, and the TWO TOGETHER
+#                     are not — gcc schedules the member form differently once both
+#                     loads are visible as fields of one object. A typed local does
+#                     not rescue it. The address form keeps every expression's TYPE
+#                     and changes only how the address is computed.
+#                     ⚠ AND THE GREEDY RETURN TYPE ATE THE NAME AGAIN:
+#                     `static void MePoolxDictNodeDeallocate(` read as a function
+#                     called `e`. Its sibling survived only because a `*` forced the
+#                     split — so ONE callback was typed, the other silently was not,
+#                     and no decline was printed. Same family as `aiStack_9cb0` ->
+#                     `iStack_9cb0`. There is a self-check over both spellings now.
+#
+#                     (5) A FRAME SLOT'S MEMBER HOLDING A POINTER, and a SLOT
+#                     STORED NARROWER THAN THE NEXT READ OF IT.
+#                     `MStack_26c.flags = (McdTriangleFlags)result->normal;` —
+#                     `McdUserTriangle::flags` is four bytes at BOTH widths, so the
+#                     address is cut in half. `ptrwidth_classify`'s worst single
+#                     object, `IxCylinderTriList` 6 of 6 UNEXPLAINED, on the
+#                     ragdoll-vs-WORLD path.
+#                     ★ THE REPAIR IS STORAGE, NOT A RE-SPELLING, AND THAT WAS
+#                     MEASURED: rewriting the reads as `result->normal[1]` is EXACT
+#                     — the line above them already does — and is NOT
+#                     byte-identical, with or without the now-dead store. Its own
+#                     `kd_iptr` local IS.
+#                     ⚠ AND GROUPING BY ADDRESS WOULD BE WRONG for the sixth rule:
+#                     an argument slot is REUSED, so the same address carries an
+#                     `int` for one call and a pointer for the next. The pairing is
+#                     a STORE and the NEXT READ with no store between. 6 sites, one
+#                     of them 22 in `MeFAssetCreateCopy` — the ragdoll loader.
+#
+#                     (6) THE `alloca`'d ARRAY OF POINTERS, which
+#                     `fix_baked_sizeof` DECLINED BY NAME. Its qsort rule needs a
+#                     plain identifier and `MdtLOD`'s base travels in an argslot;
+#                     it said so and was right — `void` has no size. The missing
+#                     piece was the ELEMENT TYPE, and `fix_alloca_elem.py` finds it
+#                     written down. `alloca(group->count * 4)` holding
+#                     `MdtContactID`, and `qsort(..., 4, ...)` over it.
+#                     ⚠⚠ AN ARGSLOT IS NOT EVIDENCE: `kd_argslot_ffffffa8` is cast
+#                     to `MeHash **`, `MeFJoint **`, `char **`, `void **` AND
+#                     `MeFAssetPart **` in ONE function. Taking the first cast off
+#                     it chose `MeAssetFactory *`. The ORACLE is asked first —
+#                     `MeFAssetGetPartsSortedByName(const MeFAsset *const,
+#                     MeFAssetPart **)`.
+#                     ⚠ AND `(\w+)\s*\(([^();]*)\)` CANNOT SEE THESE CALLS AT
+#                     ALL — every argument is itself parenthesised, so the oracle
+#                     evidence never fired and the pass fell through to Ghidra's
+#                     guess with NO DECLINE PRINTED. Twice.
+#                     ⚠ `* 4` IS NOT A CLASS: eight allocas carry a literal 4 and
+#                     `keaMatrix_PcSparse_vanilla`'s `numClamped * 4` is an honest
+#                     int array. Four bases are declined for want of a declared
+#                     type.
+#
+#                     ★★ THE WEB ARTEFACT IS BYTE-IDENTICAL THROUGH ALL SIX,
+#                     MEASURED UNDER CLANG RATHER THAN ARGUED: SDLLaunch.wasm is
+#                     sha256 12d70e6c44d951af73d8acc407db15db95ebbcdbeaeb3642448ad
+#                     2448444da07 before and after. `sizeof(void *) / 8` is 0 at
+#                     wasm32, `-(k * sizeof(void *))` folds to the constant it
+#                     replaced, `kd_iptr` IS `int`, and every `sizeof(E)` folds to
+#                     the literal. The existing web stamp still covers the engine.
+#
+#                     ⚠⚠ AND A RED SWEEP IS STILL NOT EVIDENCE UNTIL THE BASELINE
+#                     IS CHECKED — FIVE FOR FIVE NOW. DM-Rankin and DM-DE-Ironic
+#                     die in `FCanvasVertex` <- `UCanvas::DrawTileStretched`, and
+#                     THE 32-BIT CONTROL DIES IN THE SAME FUNCTION on the same two
+#                     maps. That is the software renderer under Xvfb, which
+#                     STATE.md already recorded from the i386 ktrace run. It is not
+#                     Karma and it is not 64-bit.
+#                     ⚠ AND THE ASSET TREE MOVED UNDER THIS SWEEP. A JB2004 map
+#                     pack was installed on 2026-08-31, so "7 gametypes clean" and
+#                     this run are not measurements of the same game. The 32-bit
+#                     control is the only comparable baseline, and it is what says
+#                     which failures are ours.
+#
+#                     ★★ arm64 PLAYS FOR AS LONG AS IT IS LEFT RUNNING — ONS-Dria
+#                     Onslaught with bots, vehicles and ragdolls, **1397 s** and
+#                     still going, 0 signals, against a 140 s ceiling before this.
+#                     ⚠⚠ AND THE FIRST ATTEMPT AT THAT NUMBER WAS WRONG IN THIS
+#                     PROJECT'S OWN RECORDED WAY. A player run read "9+ minutes
+#                     signal-free" and the screenshot at 13 minutes was
+#                     PIXEL-IDENTICAL to the one before it: the player had died,
+#                     the Onslaught map GUI had opened, and `ULevel::Tick` guards
+#                     Karma with `IsPaused()`. The logcat kept growing throughout.
+#                     ★ HUD OUTPUT IS NOT EVIDENCE THE LEVEL IS RUNNING —
+#                     test/README.md says so about ktrace_run.sh and it is just as
+#                     true of a device run. The number above is a SPECTATOR
+#                     (?SpectatorOnly=1, so nothing can open that GUI) with a
+#                     two-screenshot frame-advance check at every 60 s sample.
+#
+#                     ★★ AND ktrace HAS FINALLY COMPARED THE TWO WIDTHS — the
+#                     first 64-bit-vs-32-bit trajectory this project has ever had.
+#                     test-karma-1, no bots, 200 frames, 8 bodies, 100% overlap:
+#                         7 of 8 bodies never differ by more than 0.0001
+#                         KBox_Light first differs at frame 82; rest Z
+#                                    0.884 (i386) vs 0.879 (LP64)
+#                         ktrace_score  rest 8/8  sleep 8/8  gone 0  ->  MATCH
+#                     ⚠ The 5 mm is the float floor, not physics: the shipping
+#                     32-bit build computes in x87 with excess precision and LP64
+#                     in SSE, and the offline scenes already establish BIT-identity
+#                     once -ffloat-store holds the arithmetic fixed.
+#                     ⚠ AND THE FIRST ATTEMPT AT 600 FRAMES COULD NOT BE COMPARED:
+#                     the **32-bit** side stopped at 223 (37%) in FCanvasVertex
+#                     under Xvfb and ktrace_diff.py correctly refused a verdict
+#                     below 90% overlap. Same renderer crash as the sweep, from a
+#                     third direction — and note which side is short: the LP64 run
+#                     captured all 600.
+#
+#                     aarch64 truncations 91 -> 87, UNEXPLAINED 52 -> 48: the
+#                     MStack_26c.flags repair took IxCylinderTriList — the worst
+#                     single object, 6 of 6 — off the list entirely. ⚠ That number
+#                     is still not a measure of what is left: MePoolx WAS the
+#                     vehicle crash and is on neither list.
+#
+#                     i386 145/145 · three scenes BIT-IDENTICAL · frame bounds 0
+#                     lp64_pipeline.sh -> PASS · run-standalone 12/12
+#                     wasm SDLLaunch.wasm sha256 UNCHANGED (compared, not argued)
+#
 # LP64-ARM64-PLAYS  2026-08-31  ★ MAKING ARM64 *PLAY* RATHER THAN BOOT FOUND
 #                     SEVEN MORE LP64 DEFECTS IN ONE SESSION, and the first of
 #                     them was the ONS crash the owner reported.

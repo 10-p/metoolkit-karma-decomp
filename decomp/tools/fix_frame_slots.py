@@ -142,6 +142,112 @@ MATBASE = re.compile(r'(?m)^[ \t]*[A-Za-z_][\w ]*\**\s*\w+\s*=\s*\([^()]*\)\s*\(
                      r'[ \t]*/\* KD_MATERIALISED_BASE')
 FRAME_OFF = re.compile(r'\bkd_frame\w*\s*\+\s*(?P<n>\d+)\b')
 
+# ★ A FOURTH SPELLING: THE AREA BELOW AN `alloca`, REACHED THROUGH A CURSOR —
+# and the last thing standing between arm64 and a clean Onslaught match.
+#
+#     kd_alloca_iVar3 = (char *)alloca(n * (int)sizeof(*(McdUserTriangle *)0) + 0);
+#     puVar12 = (undefined1 *)kd_alloca_iVar3;
+#     ...
+#     *(int *)          (puVar12 + -0x20) = (kd_iptr)&(triList->list)->mRefCtAndID + i;
+#     *(MeReal **)      (puVar12 + -0x1c) = relPos;
+#     *(undefined4 *)   (puVar12 + -0x10) = ((McdSphyl *)geom)->mRadius;
+#     GenerateTriangleContact(*(McdUserTriangle **)(puVar12 + -0x20),
+#                             *(MeReal **)(puVar12 + -0x1c), ...);
+#
+# gcc puts the alloca'd block immediately ABOVE the outgoing argument area, so
+# Ghidra spells the area as NEGATIVE offsets from the allocation — nine words at
+# -4 … -0x24. `ghidra_clean.py`'s `materialise_alloca_relative_slots` gives that
+# shape real storage where the offsets hang off `kd_alloca_*` directly; here the
+# pointer is COPIED into a local first, so it never matched and the area stayed
+# where it was.
+#
+# ⚠⚠ IT IS TWO DEFECTS AT LP64, AND HALF OF IT IS WORSE THAN NONE.
+#   * the SLOTS OVERLAP. `-0x1c` and `-0x20` are four bytes apart and the
+#     pointers written into them are eight, so `relPos` lands on top of the
+#     `tri` argument's high half;
+#   * and `tri` is STORED through `*(int *)` and READ through
+#     `*(McdUserTriangle **)` — four bytes of eight, then an eight-byte read of
+#     the truncation. `GenerateTriangleContact` dereferences `tri->vertices[0]`
+#     and that is `McdSphylTriangleListIntersect`'s `SEGV_MAPERR` on the device
+#     and 6 of 8 gametypes at x86-64.
+#
+# ★ THE STORAGE IS THE HARD HALF, AND THE `alloca` IS WHERE IT COMES FROM.
+# Scaling the offsets alone doubles the area to 72 bytes below a block whose
+# base is where the allocation STARTS — below it is not ours at either width. So
+# the allocation is grown by the scaled area and the base is walked up past it,
+# on ONE statement:
+#
+#     alloca(SIZE)   ->   alloca(SIZE + PAD) + PAD
+#
+# `PAD` is `(int)(sizeof(void *) / 8) * (nslots * (int)sizeof(void *))`, which is
+# **0 at i386 and on wasm32** — `4 / 8` is zero in integer arithmetic — so the
+# statement folds back to `alloca(SIZE) + 0` on every shipping target and the
+# byte-identity gate is the thing that says so. At LP64 it is 72 bytes, the area
+# moves inside the allocation, and what was an out-of-bounds write on a doubled
+# area becomes an in-bounds one.
+#
+# ⚠ THE CURSOR MUST BE A CURSOR AND NOTHING ELSE. The block itself is real
+# memory handed to callees — here it is the triangle array the generator fills —
+# so a positive offset or a bare use means the name is the ARRAY, not the
+# argument area, and the site is declined rather than guessed at.
+ALLOCA_DECL = re.compile(r'(?P<name>kd_alloca_\w+)[ \t]*=[ \t]*\(char \*\)[ \t]*'
+                         r'alloca\((?P<size>(?:[^()]|\([^()]*(?:\([^()]*\))?'
+                         r'[^()]*\))*)\)')
+# `V = (undefined1 *)kd_alloca_iVar3;` and the plain copy `V = W;` that follows it.
+CURSOR_ASSIGN = re.compile(r'(?m)^[ \t]*(?P<var>[A-Za-z_]\w*)[ \t]*=[ \t]*'
+                           r'(?:\((?:undefined1|char|uchar|byte|undefined) \*\)[ \t]*)?'
+                           r'(?P<src>[A-Za-z_]\w*)[ \t]*;')
+# `*(McdUserTriangle **)(puVar12 + -0x20)` — the access type and the slot together.
+# ⚠ THE TYPE GROUP HAS TO ADMIT ITS OWN `*`s. Written `[\w ]*?` it matches
+# `*(int *)` and NOT `*(McdUserTriangle **)`, so the pass sees the four-byte
+# stores, misses every pointer load, concludes no slot carries a pointer and
+# widens nothing — the one access this rule exists for. It found zero sites in
+# the file it was written for and reported no decline, because a group that
+# never forms has nothing to decline.
+CURSOR_SITE = (r'\*\((?P<ty>[A-Za-z_][\w *]*?)[ \t]*\*\)[ \t]*\([ \t]*%s[ \t]*\+[ \t]*'
+               r'(?P<off>-(?:0x[0-9a-fA-F]+|\d+))[ \t]*\)')
+# What a four-byte access widens to when its slot also carries a pointer. A
+# FLOAT cannot: widening it would change the value, not just the width, so a
+# slot that mixes a float with a pointer is declined and reported.
+WIDEN = {'int': 'kd_iptr', 'MeI32': 'kd_iptr', 'long': 'kd_iptr',
+         'undefined4': 'kd_uptr', 'uint': 'kd_uptr', 'MeU32': 'kd_uptr',
+         'ulong': 'kd_uptr', 'undefined': 'kd_uptr'}
+
+
+def argpad(nslots):
+    """The headroom an `alloca`-relative argument area needs at LP64, and
+    exactly zero on every target that ships. `sizeof(void *) / 8` is 0 at four
+    bytes and 1 at eight — the mirror of the `/ 4` this file already uses to
+    widen a declaration."""
+    return ('((int)(sizeof(void *) / 8) * (%d * (int)sizeof(void *)))' % nslots)
+
+
+# ★ A FIFTH SPELLING: A FRAME SLOT'S MEMBER HOLDING A POINTER. Where Ghidra's
+# invented local is a STRUCT, one of its members can be the spill slot for a
+# pointer — and the struct is a real declared type, so the member cannot be
+# widened the way an `int aiStack_9cb0[6]` can:
+#
+#     McdUserTriangle MStack_26c;
+#     MStack_26c.flags = (McdTriangleFlags)result->normal;
+#     *(float *)(MStack_26c.flags + 4) = diff.v[1] + *(MeReal *)(MStack_26c.flags + 4);
+#
+# `McdUserTriangle::flags` is four bytes at BOTH widths, so at LP64 the address
+# of `result->normal` is cut in half and the two writes land wherever the low
+# word points. It is `ptrwidth_classify`'s worst single object —
+# `IxCylinderTriList` 6 of 6 UNEXPLAINED — and it is on the ragdoll-vs-WORLD
+# path, which is where the first Android Karma tombstone landed.
+#
+# ★ THE REPAIR IS STORAGE, NOT A RE-SPELLING, AND THAT WAS MEASURED. Rewriting
+# the reads as `result->normal[1]` is exact — line 290 right above them already
+# writes `result->normal[0]` that way — and it is NOT byte-identical, with or
+# without the now-dead store. Giving the member its own pointer-width local and
+# leaving every expression otherwise verbatim IS.
+#
+# ⚠ ONLY IF THE STRUCT NEVER ESCAPES. If `&NAME` is taken, a callee can read the
+# member and splitting it out silently stops updating what that callee sees.
+SLOTMEMBER = re.compile(r'(?m)^(?P<ind>[ \t]+)(?P<ty>[A-Za-z_]\w*)[ \t]+'
+                        r'(?P<name>[A-Za-z]{1,4}Stack[Y]?_[0-9a-f]+)[ \t]*;')
+
 
 def frame_trailing_addends(body, name):
     """Every `(<frame group>) + K` — the argument word written OUTSIDE the
@@ -236,6 +342,218 @@ def kdframe_edits(text, notes, fn, quiet=False):
                           '' if len(edits) == 1 else 's'),
                        edits))
     return groups
+
+
+def alloca_cursor_edits(text, notes, fn, quiet=False):
+    """The outgoing area BELOW an `alloca`, reached through a cursor copy.
+
+    All-or-nothing per allocation: the offsets, the access widths and the
+    allocation's own headroom move together or none of them do. See
+    ALLOCA_DECL for what the shape is and why the padding is the hard half."""
+    groups = []
+    for func, s, e in regions(text):
+        body = text[s:e]
+        for d in ALLOCA_DECL.finditer(body):
+            base = d.group('name')
+            if 'sizeof(void *) / 8' in d.group(0):
+                continue                                  # already padded
+            # ---- who is a cursor: the copies of the base, transitively.
+            cursors, grew = set(), True
+            while grew:
+                grew = False
+                for m in CURSOR_ASSIGN.finditer(body):
+                    v, src = m.group('var'), m.group('src')
+                    if v == base or v in cursors:
+                        continue
+                    if src == base or src in cursors:
+                        cursors.add(v)
+                        grew = True
+            if not cursors:
+                continue
+            edits, offs, bad, byslot, ok = [], [], [], {}, True
+            for cur in sorted(cursors):
+                rx = re.compile(CURSOR_SITE % re.escape(cur))
+                sites = list(rx.finditer(body))
+                if not sites:
+                    continue
+                # ⚠ USED AS ANYTHING BUT A CURSOR? Then it is the ARRAY. A
+                # positive offset or a bare pass hands the block to a callee,
+                # and moving the base under it would corrupt a real allocation.
+                spans = [(m.start(), m.end()) for m in sites]
+                spans += [(m.start(), m.end()) for m in CURSOR_ASSIGN.finditer(body)
+                          if cur in (m.group('var'), m.group('src'))]
+                spans += [(m.start(), m.end()) for m in re.finditer(
+                    r'(?m)^[ \t]*[A-Za-z_][\w ]*\**[ \t]*%s[ \t]*;' % re.escape(cur),
+                    body)]
+                stray = [m for m in re.finditer(r'\b%s\b' % re.escape(cur), body)
+                         if not any(a <= m.start() < b for a, b in spans)]
+                if stray:
+                    if not quiet:
+                        notes.append('%-26s %s::%s is used outside a negative '
+                                     'cursor slot — declined' % (fn, func, cur))
+                    ok = False
+                    break
+                for m in sites:
+                    k = -int(m.group('off'), 0)
+                    offs.append(k)
+                    if k <= 0 or k % I386_PTR:
+                        bad.append(k)
+                        continue
+                    byslot.setdefault(k // I386_PTR, []).append(
+                        (s + m.start('ty'), s + m.end('ty'), m.group('ty').strip()))
+                    edits.append((s + m.start('off'), s + m.end('off'),
+                                  '-(%d * (int)sizeof(void *))' % (k // I386_PTR)))
+            if not ok or not edits:
+                continue
+            if bad:
+                if not quiet:
+                    notes.append('%-26s %s::%s has offsets that are not argument '
+                                 'words (%s) — declined'
+                                 % (fn, func, base,
+                                    ' '.join(hex(x) for x in sorted(set(bad)))))
+                continue
+            # ---- F: THE ACCESS WIDTH, PER SLOT. A slot that carries a pointer
+            # anywhere is a pointer-width slot everywhere, or the store and the
+            # load disagree by four bytes — which is the `tri` argument, and the
+            # crash. `int` becomes `kd_iptr` and `undefined4` becomes `kd_uptr`,
+            # both of which ARE the type they replace at 32-bit pointer width.
+            for k, uses in sorted(byslot.items()):
+                if not any(t.endswith('*') for _, _, t in uses):
+                    continue
+                for st, en, t in uses:
+                    if t.endswith('*'):
+                        continue
+                    if t not in WIDEN:
+                        bad.append(k)
+                        if not quiet:
+                            notes.append('%-26s %s::%s slot -%#x mixes %r with a '
+                                         'pointer — declined'
+                                         % (fn, func, base, k * I386_PTR, t))
+                        break
+                    edits.append((st, en, WIDEN[t]))
+                if bad:
+                    break
+            if bad:
+                continue
+            # ---- the allocation grows by the scaled area and the base walks up
+            # past it, so what the offsets now reach is inside the block.
+            nslots = max(offs) // I386_PTR
+            pad = argpad(nslots)
+            edits.append((s + d.end('size'), s + d.end('size'), ' + ' + pad))
+            edits.append((s + d.end(), s + d.end(), ' + ' + pad))
+            edits = list({(a, b): (a, b, r) for a, b, r in edits}.values())
+            groups.append(((func, base),
+                           '%s::%s (alloca cursor, %d slot%s, %d word area)'
+                           % (func, base, len(set(offs)),
+                              '' if len(set(offs)) == 1 else 's', nslots),
+                           edits))
+    return groups
+
+
+def slotmember_edits(text, notes, fn, quiet=False):
+    """A frame slot's MEMBER used as an address. See SLOTMEMBER."""
+    groups = []
+    for func, s, e in regions(text):
+        body = text[s:e]
+        for d in SLOTMEMBER.finditer(body):
+            name, ty = d.group('name'), d.group('ty')
+            if re.search(r'&[ \t]*\(?[ \t]*%s\b' % re.escape(name), body):
+                continue                     # the struct escapes — not ours
+            used = {m.group(1) for m in re.finditer(
+                r'\*\([A-Za-z_][\w *]*\*\)[ \t]*\([ \t]*%s\.(\w+)[ \t]*[+)]'
+                % re.escape(name), body)}
+            for M in sorted(used):
+                a = size_of('((%s *)0)->%s' % (ty, M), '-m32')
+                b = size_of('((%s *)0)->%s' % (ty, M), '-m64')
+                if not (a == 4 and b == 4):
+                    continue                 # already wide enough there
+                new = 'kd_slot_%s_%s' % (name, M)
+                edits = [(s + m.start(), s + m.end(), new) for m in re.finditer(
+                    r'(?<![\w.])%s\.%s\b' % (re.escape(name), re.escape(M)), body)]
+                if not edits:
+                    continue
+                edits.append((s + d.end(), s + d.end(),
+                              '\n%skd_iptr %s;' % (d.group('ind'), new)))
+                groups.append(((func, name + '.' + M),
+                               '%s::%s.%s (slot member -> kd_iptr, %d use%s)'
+                               % (func, name, M, len(edits) - 1,
+                                  '' if len(edits) == 2 else 's'),
+                               edits))
+    return groups
+
+
+def slotpair_edits(text, notes, fn, quiet=False):
+    """A slot STORED narrower than the very next read of it.
+
+    ★ A SIXTH SPELLING, and it is the one the fifth exposes. An argument slot is
+    REUSED across calls, so the same address carries an `int` for one call and a
+    pointer for the next:
+
+        *(int *)             (&(*kd_argslot_fffffd84)) = triList->triangleMaxCount;
+        ... McdCylinderIntersect(..., *(int *)(&(*kd_argslot_fffffd84)));   /* fine  */
+        *(McdTriangleFlags *)(&(*kd_argslot_fffffd84)) = kd_slot_MStack_26c_flags;
+        MeVector3Normalize(  *(MeReal **)(&(*kd_argslot_fffffd84)));        /* FOUR  */
+
+    The last pair stores four bytes and reads eight, so `MeVector3Normalize`
+    normalises through half an address. ⚠ GROUPING BY ADDRESS WOULD BE WRONG —
+    widening every access to that slot would take the `triangleMaxCount` store
+    with it, and that one is a genuine `int` read back as a genuine `int`. The
+    pairing is a STORE and the NEXT READ of the same address with no store in
+    between, which is the only thing that makes the two widths comparable."""
+    groups = []
+    ADDR = (r'\*\((?P<ty>[A-Za-z_][\w *]*?)[ \t]*\*\)[ \t]*'
+            r'(?P<addr>\(&\(\*[A-Za-z_]\w*\)\)|\((?:kd_iptr|kd_uptr)\)'
+            r'[ \t]*&?[A-Za-z_]\w*\))')
+    for func, s, e in regions(text):
+        body = text[s:e]
+        seq = list(re.finditer(ADDR, body))
+        edits = []
+        for i, m in enumerate(seq):
+            after = body[m.end():m.end() + 4]
+            if not re.match(r'\s*=[^=]', after):
+                continue                                  # not a store
+            for n in seq[i + 1:]:
+                if n.group('addr') != m.group('addr'):
+                    continue
+                if re.match(r'\s*=[^=]', body[n.end():n.end() + 4]):
+                    break                                 # stored again first
+                a = size_of(m.group('ty').strip(), '-m32')
+                b = size_of(m.group('ty').strip(), '-m64')
+                c = size_of(n.group('ty').strip(), '-m64')
+                if a == 4 and b == 4 and c == 8:
+                    edits.append((s + m.start('ty'), s + m.end('ty'), 'kd_iptr'))
+                break
+        if edits:
+            edits = list({(a, b): (a, b, r) for a, b, r in edits}.values())
+            groups.append(((func, 'slotpair'),
+                           '%s (slot stored narrower than read, %d site%s)'
+                           % (func, len(edits), '' if len(edits) == 1 else 's'),
+                           edits))
+    return groups
+
+
+_SIZES = {}
+
+
+def size_of(expr, bits):
+    """`sizeof(expr)` off the compiler — the member widths this rule turns on."""
+    key = (expr, bits)
+    if key in _SIZES:
+        return _SIZES[key]
+    os.makedirs(WORK, exist_ok=True)
+    src = os.path.join(WORK, 'sz.c')
+    open(src, 'w').write(
+        '#include "%s/include/kd_compat.h"\n#include "%s/include/kd_karma.h"\n'
+        '#include "%s/include/kd_types.h"\nchar kd_probe[sizeof(%s)];\n'
+        'int kd_force = &kd_probe;\n' % (HERE, HERE, HERE, expr))
+    r = subprocess.run(['gcc', bits, '-DLINUX'] + includes(INC_G or '')
+                       + ['-c', '-o', os.devnull, src], capture_output=True, text=True)
+    m = re.search(r'char \(\*\)\[(\d+)\]', r.stderr)
+    _SIZES[key] = int(m.group(1)) if m else None
+    return _SIZES[key]
+
+
+INC_G = None
 
 
 def includes(inc):
@@ -436,6 +754,8 @@ def main():
     srcdir, build = sys.argv[1], sys.argv[2]
     root = sys.argv[3] if len(sys.argv) > 3 else kd_paths.METOOLKIT_DIR
     inc = os.path.join(root, 'include')
+    global INC_G
+    INC_G = inc
     selftest_trailing()
 
     fixed = declined = 0
@@ -449,7 +769,10 @@ def main():
         text0 = open(path, errors='ignore').read()
         if not slot_edits(text0, [], fn, quiet=True) \
                 and not argarea_edits(text0, [], fn, quiet=True) \
-                and not kdframe_edits(text0, [], fn, quiet=True):
+                and not kdframe_edits(text0, [], fn, quiet=True) \
+                and not alloca_cursor_edits(text0, [], fn, quiet=True) \
+                and not slotmember_edits(text0, [], fn, quiet=True) \
+                and not slotpair_edits(text0, [], fn, quiet=True):
             continue
         text, tried, first = text0, set(), True
         # ⚠ RECOMPUTE AFTER EVERY ACCEPTED GROUP. The areas INTERLEAVE — MstUtils
@@ -462,7 +785,13 @@ def main():
         while True:
             groups = (slot_edits(text, notes if first else [], fn, quiet=not first)
                       + argarea_edits(text, notes if first else [], fn, quiet=not first)
-                      + kdframe_edits(text, notes if first else [], fn, quiet=not first))
+                      + kdframe_edits(text, notes if first else [], fn, quiet=not first)
+                      + alloca_cursor_edits(text, notes if first else [], fn,
+                                            quiet=not first)
+                      + slotmember_edits(text, notes if first else [], fn,
+                                         quiet=not first)
+                      + slotpair_edits(text, notes if first else [], fn,
+                                       quiet=not first))
             first = False
             todo = [g for g in groups if g[0] not in tried]
             if not todo:

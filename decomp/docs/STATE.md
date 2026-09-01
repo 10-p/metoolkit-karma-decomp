@@ -12,79 +12,248 @@ read before resuming; `../HANDOVER.md` is the depth behind it and `../proven.txt
 
 ---
 
-# ⚠⚠ OPEN ITEMS — 2026-08-31 (evening). READ THIS BLOCK FIRST.
+# ⚠⚠ OPEN ITEMS — 2026-09-01. READ THIS BLOCK FIRST.
 
-**The arm64 device does not yet play an Onslaught match signal-free.** It reaches the match, plays,
-and dies — 40 s → 80 s → 120 s → **140 s** across this session's repairs. That is the headline and
-it is not done. ★ **But the device and the x86-64 vehicle now fail in the SAME PLACE**, which they
-did not this morning, and that place is fully diagnosed. What follows was all measured.
+★★ **THE x86-64 SWEEP HAS NO KARMA FRAME LEFT IN IT.** Four of eight gametypes run their full
+150 s clean, and **all four failures reproduce IDENTICALLY on the shipping 32-bit build** — they
+are `UCanvas`/`UGUI` under Xvfb, not Karma and not 64-bit. The named open item from the previous
+block is closed, and closing it uncovered five more, each of which was the next crash. See the
+entry below.
 
-1. **THE ONE REMAINING KARMA DEFECT — `McdSphylTriangleListIntersect` → `GenerateTriangleContact`.**
-   6 of 8 gametypes at x86-64, and the device at 140 s (`SEGV_MAPERR`, a wild pointer).
-   ★ **ITS REPAIR IS A PASS CHANGE, NOT A SITE.** `IxSphylPrimitives` builds its outgoing argument
-   area on a BYTE CURSOR derived from the triangle `alloca`, in four-byte slots:
+```
+CTF-FaceClassic  BR-Anubis  ONS-Torlan  ONS-Primeval      150 s, 0 signals
+DM-Rankin  DM-DE-Ironic  AS-Convoy   FCanvasVertex <- UCanvas::DrawTileStretched
+VCTF-BE-Dystopia                     UGUITabControl::PreDraw
+   32-BIT CONTROL, same maps, same harness:  THE SAME TWO FUNCTIONS
+```
 
-   ```c
-   *(int *)(puVar12 + -0x20) = (kd_iptr)&(triList->list)->mRefCtAndID + iVar3;   /* the `tri` arg */
-   *(MeReal **)(puVar12 + -0x1c) = relPos;
-   *(undefined4 *)(puVar12 + -0x10) = ((McdSphyl *)pvVar8)->mRadius;
-   ```
+1. **THE UI CRASH UNDER Xvfb IS OPEN AND IS NOT OURS.** `FCanvasVertex` /
+   `UGUITabControl::PreDraw`, at both widths. ⚠ **The asset tree moved under this measurement** —
+   a JB2004 map pack plus ChaosUT2 / BallisticWeapons / AlienSwarm were installed on 2026-08-31,
+   which adds menu content the UI had not been walking before. It is intermittent (AS-Convoy ran
+   150 s clean one sweep and hit the canvas the next), which is a renderer symptom rather than a
+   pointer one. It belongs to `engine-ut2004`, not here.
 
-   The `tri` pointer is stored through `*(int *)` — four bytes of eight — and
-   `GenerateTriangleContact` then dereferences `tri->vertices[0]`. `fix_frame_slots` scales exactly
-   this kind of fabricated argument area and **cannot see this one**: its slots are named frame
-   variables and these are offsets off an `alloca`-derived `undefined1 *`. That pass needs the
-   cursor shape, and **the whole area has to be rescaled together** — half of it is worse than none.
+2. **armeabi-v7a AND x86_64 ARE IN THE APK AND HAVE STILL NEVER BEEN RUN.** arm64 is measured (23
+   minutes, below); armv7 is a 32-bit control and is the cheapest attribution test there is.
 
-   ✅ **CLOSED THIS SESSION, and both were real:**
-   - `MeSetAdd` ← `McdConvexMeshPlaneCut` ← `McdGeometryInstanceGetSlice` — a convex mesh being
-     sliced, i.e. a **vehicle**. Two separate causes, and the second was not a recovery defect at
-     all: `MePoolxInit(&s->nodepool, nodemem, 0x18, maxnode)` (`sizeof(MeDictNode)` 24 → 48), **and
-     the SDL thread's 1 MB default stack**. ★ `SEGV_ACCERR` rather than `SEGV_MAPERR` is what
-     distinguishes them — a guard page is mapped `PROT_NONE`, so hitting it is a PERMISSION fault.
-     Karma sizes several arrays on the stack from a run-time count and every one of them doubles at
-     LP64. `SDLActivity` now asks for 16 MB (reserved address space, not committed memory).
-   - `IxAggregateLineSegment` — two defects, `fix_narrow_loads` rule E and the `MEAPI` return type.
+3. ✅ **`ktrace` HAS PRODUCED ONE — see below.** ⚠ What is still open is that the comparison is
+   200 frames of ONE map (`test-karma-1`, no bots). It is not a statement about ragdolls or
+   vehicles, whose trajectories nothing has yet compared at the two widths.
 
-2. **THE x86-64 SWEEP IS 2/8, NOT 7/8, AND THAT IS NOT A REGRESSION.** ⚠ Check the baseline before
-   believing a red result — four for four in this project now. `git show HEAD:...McdAggregate.c`
-   carries all five narrow `elementTable` loads **byte-identically**, including the one that faults.
-   What changed is that **ragdolls now get created at all**: the `qsort` repair below is on the
-   asset-loading path, and until it landed `KInitSkeletonKarma` never completed. The recorded
-   "7 gametypes clean" sweep never reached that code. This session's sweep is a strictly stronger
-   detector and the two numbers are not comparable. Both clean maps (CTF-FaceClassic, BR-Anubis)
-   ran their full 150 s.
+4. **THE TRUNCATION CENSUS IS 87 / 48 OPEN** (was 91 / 52): the `MStack_26c.flags` repair took
+   `IxCylinderTriList` — the **worst single object**, 6 of 6 — off the list entirely. ⚠ **But that
+   number is not a measure of how much is left.** `MePoolx` was the vehicle crash and is on NEITHER
+   list: nothing there is truncated and no cast is narrowed. `ptrwidth_classify` counts one shape of
+   one class. Worst remaining: `McdBox` 4, `McdConvexMesh` 4, `MdtPartition` 4, `MeXMLParser` 4,
+   `CxSmallSort` 3, `IxConvexLineSegment` 3.
 
-3. **`ktrace` HAS STILL NOT PRODUCED A PHYSICS COMPARISON**, and the first attempt is a lesson:
-   `ktrace_diff.py` reported *"the two builds are behaviourally IDENTICAL"* over **12 frames of
-   223**, because the LP64 run had crashed and `first` is computed over the frames the two runs
-   share. It now refuses below 90% overlap. The i386 side runs 223 frames cleanly (its own crash is
-   in `FCanvasVertex`/`UCanvas::DrawTileStretched` — the renderer under Xvfb, not physics); the
-   LP64 side needs (1a) before the comparison means anything.
+5. **THE WEB IS UNBLOCKED AND THE ENGINE ARTEFACT IS UNCHANGED.**
+   `targets/ut2004/file-manifest.json` was regenerated against the tree as it now is and verified
+   entry by entry: **6167 entries, 0 missing, 0 size mismatches**, 174 files on disk correctly
+   excluded (executables, logs, user `.ini`s). And `SDLLaunch.wasm` is **byte-identical** through
+   all six repairs — `sha256 12d70e6c…` before and after, measured under **clang**. So the browser
+   suite tests the manifest fix, not a new engine.
 
-4. **THE REMAINING TRUNCATIONS ARE NOW CLASSIFIED**, which they never were. 98 → **91**, of which
-   **39 are benign in four named classes** and **52 are UNEXPLAINED and open** —
-   `tools/ptrwidth_classify.py`. ⚠ The prior estimate ("~21 KD_FBITS + ~13 sortKey are not real")
-   was close on the total and wrong on the composition: only 10 of the KD_FBITS sites store into a
-   four-byte slot. The rest write a float's bits into a POINTER field of a fabricated struct, which
-   at LP64 is both the wrong offset and an eight-byte store — `IxBoxTriList` 279/280 writes at byte
-   16 of a three-float vector. **`KD_FBITS` is not a class.**
+---
 
-5. **`IxBoxTriList` IS REPAIRED** (item 4 of the previous block). It needed a spelling identical
-   under gcc *and* clang, and the answer was a TYPE rather than a spelling — see below.
 
-6. **THE WEB IS RE-STAMPED** (item 1 of the previous block) — see the entry below for the run.
+★★★ **NEWEST: 2026-09-01 — THE x86-64 SWEEP HAS NO KARMA FRAME LEFT IN IT, AND arm64 PLAYS AN
+ONSLAUGHT MATCH FOR AS LONG AS IT IS LEFT RUNNING.** The named open item —
+`McdSphylTriangleListIntersect` → `GenerateTriangleContact`, 6 of 8 gametypes and the device at
+140 s — is closed. Closing it uncovered five more, each of which was the next crash, and all six
+are repaired. **Every remaining sweep failure reproduces identically on the shipping 32-bit
+build.**
 
-7. **`BUILD.md` DOCUMENTS `UT_NO_FAULT_HANDLER`** (item 7) — engine `BUILD.md`, with the `adb`
-   recipe and the provenance note (the handler is Epic's, the switch is ours).
+```
+CTF-FaceClassic  BR-Anubis  ONS-Torlan  ONS-Primeval    150 s each, 0 signals
+DM-Rankin  DM-DE-Ironic  AS-Convoy    FCanvasVertex <- UCanvas::DrawTileStretched
+VCTF-BE-Dystopia                      UGUITabControl::PreDraw
+   32-BIT CONTROL, same maps, same harness:   THE SAME TWO FUNCTIONS
+arm64 device   ONS-Dria Onslaught, bots + vehicles + ragdolls, spectator
+               140 s  ->  1397 s (23 MINUTES), 0 signals, still running
+ktrace         i386 vs LP64, 200 frames, 8 bodies:  rest 8/8  sleep 8/8  MATCH
+```
 
-8. **AS-Convoy is not answerable from either side yet, and for two different reasons.** On native it
-   now dies in item 1 like the other five, so the engine-side `Engine.HUD.GetFontSizeIndex` runaway
-   loop is masked. On the **web** a `?map=` boot dies before it loads a level at all:
-   `targets/ut2004/file-manifest.json` (checked in 2026-08-28) promises 10705 bytes of
-   `System/ChaosUT2.ucl` and the asset store holds 9433 since a map-pack install on 2026-08-31 —
-   `FetchFS` `fstat`s the manifest figure and the read comes up short. That is a monorepo data
-   problem, recorded in ufront `docs/migration/STATE.md` (2.45); re-ask this after both.
+★★ **arm64 PLAYS FOR AS LONG AS IT IS LEFT RUNNING — 1397 s, 0 signals, frame advance verified
+every 60 s.** ⚠⚠ **AND THE FIRST ATTEMPT AT THAT NUMBER WAS WRONG IN THIS PROJECT'S OWN RECORDED
+WAY.** A player run reached "9+ minutes signal-free" and the screenshot at 13 minutes was
+**pixel-identical** to the one before it: the player had died, the Onslaught map GUI had opened,
+and `ULevel::Tick` guards Karma with `IsPaused()`. The log kept growing the whole time. **HUD
+output is not evidence the level is running** — `test/README.md` says so about `ktrace_run.sh`, and
+it is just as true of a device run. The measurement above is a **spectator** (`?SpectatorOnly=1`,
+so nothing can open that GUI) with a two-screenshot frame-advance check at every sample.
+
+★★ **AND `ktrace` HAS FINALLY COMPARED THE TWO WIDTHS — the first time this project has had a
+64-bit-vs-32-bit trajectory at all.** `test-karma-1`, no bots, 200 frames, 8 bodies, **100 %
+overlap**:
+
+```
+7 of 8 bodies never differ by more than 0.0001 in position or orientation
+KBox_Light   first differs at frame 82;  rest Z  0.884 (i386) vs 0.879 (LP64)
+ktrace_score  rest 8/8  sleep 8/8  gone 0  ->  MATCH
+```
+
+⚠ **The 5 mm on `KBox_Light` is the float floor, not a physics difference, and the reason is the
+same one `lp64_run.sh` documents**: the shipping 32-bit build computes in x87 with excess
+precision and the LP64 build in SSE. The offline scenes already establish BIT-identity once the
+arithmetic is held fixed with `-ffloat-store`; here it is not held fixed, so a divergence after
+82 frames is expected. ⚠ **And the FIRST attempt at 600 frames could not be compared at all** —
+the **32-bit** side stopped at 223 (37 %), in `FCanvasVertex` under Xvfb, and `ktrace_diff.py`
+correctly refused a verdict below 90 % overlap. That is the same renderer crash the sweep is
+attributing, arriving from a third direction. ★ Note which side is short: the LP64 run captured
+all 600.
+
+**THE SIX REPAIRS.** Each bought the next; none was reachable from the one before.
+
+| | | |
+|---|---|---|
+| 1 | the outgoing argument area BELOW an `alloca`, through a cursor | `fix_frame_slots`, 4th spelling |
+| 2 | the same function's triangle stride, `local_5c + 0x18` | `fix_element_stride`, new evidence |
+| 3 | `McdContact::element2` at `contacts->normal + 0x18` | `fix_member_base_walk.py` (NEW) |
+| 4 | `MePoolx` read at i386 offsets through a `void *` | `fix_callback_context.py` (NEW) |
+| 5 | a frame slot's MEMBER holding a pointer; a slot stored narrower than read | `fix_frame_slots`, 5th + 6th |
+| 6 | an `alloca`'d array of POINTERS, and `qsort`'s element size | `fix_alloca_elem.py` (NEW) |
+
+★★ **(1) THE STORAGE WAS THE HARD HALF, AND THE `alloca` IS WHERE IT COMES FROM.** The area is
+nine four-byte words at `puVar12 + -4 … -0x24`, below a block whose base is where the allocation
+*starts* — so scaling the offsets alone doubles it to 72 bytes of nobody's memory. The allocation
+grows by the scaled area and the base walks up past it, on one statement:
+
+```
+alloca(SIZE)  ->  alloca(SIZE + PAD) + PAD
+PAD = (int)(sizeof(void *) / 8) * (9 * (int)sizeof(void *))
+```
+
+`4 / 8` is **zero** in integer arithmetic, so `PAD` is 0 at i386 *and on wasm32* and the statement
+folds back to `alloca(SIZE) + 0` on every shipping target. In the artefact: `add $0x48,%rax`,
+twice. ⚠ And the type group has to admit its own `*`s — written `[\w ]*?` the site pattern matches
+`*(int *)` and **not** `*(McdUserTriangle **)`, so the pass saw the four-byte stores, missed every
+pointer load, concluded no slot carried a pointer and widened nothing. Zero sites, **no decline**:
+a group that never forms has nothing to decline.
+
+⚠⚠ **(2) THE EVIDENCE LICENCES EXACTLY ONE RULE, AND THAT IS A MEASUREMENT.**
+`fix_element_stride` could not see `IxSphylPrimitives` — it walks its triangles through byte
+cursors, so `fix_word_indexed_struct` has nothing to type in it. The file *does* carry
+`alloca(n * (int)sizeof(*(McdUserTriangle *)0))`, which `fix_baked_sizeof --field-allocas-only`
+wrote only because the field the block is stored into is declared `McdUserTriangle *`. Run without
+restricting that evidence to rule C, the table/cursor fixpoint flooded to **fifty names** and rules
+B and D rewrote **twelve reads of a transform matrix**:
+
+```c
+*(float *)((kd_iptr)pvVar7 + 0x30)   /* McdModelGetTransformPtr, translation row */
+    ->  *(float *)((kd_iptr)pvVar7 + 2 * (int)sizeof(McdUserTriangle))
+```
+
+`0x30` is 48 is `2 * 24`, so it survives "whole elements only"; at LP64 it becomes 96 and reads off
+the end of the transform. ★ **All sixteen sites passed the i386 byte-identity gate**, because
+`2 * sizeof(E)` *is* `0x30` there. **Fifth time** 32-bit byte-identity could not see a semantic
+change at 64 — a rule is only ever as wide as its evidence, and the gate cannot narrow it for you.
+
+★★ **(3) ONE DEFECT, SIX GAMETYPES, ONE ADDRESS.** With (1) repaired, all six remaining maps died
+at `KPerContactCB+0x57c` ← `KHandleCollisions` ← `KUpdateContacts` — the engine reading the
+contacts Karma had just produced, which (1) made it produce for the first time.
+
+```
+McdContact   i386  sizeof 40   normal 12  separation 24  element1 32  element2 36
+             LP64  sizeof 48   normal 12  separation 24  element1 32  element2 40
+```
+
+gcc keeps the array in a register pointing at the first element's `normal`, so `+ 0x18` is byte 36
+— `element2` here, the **high half of `element1`** there — and the write is eight bytes wide, so it
+lands across two fields. ⚠⚠ **The obvious decomposition is wrong in a way i386 cannot show you**:
+`fix_element_stride`'s rule D reads `L` as `q*sizeof(E) + offsetof(member at L % sizeof(E))`, and
+byte 24 of `McdContact` is `separation` — a *real* member, at 24 at **both** widths. That compiles
+to the same 24 it replaced, passes the gate, and is still four bytes short. The remainder has to be
+taken from `b + L`, where `b` is the member the chain is rooted at. ★ **Only 4 of the 8 offset
+sites move**: `+ 0xc` (`separation`) and `+ 0x14` (`element1`) are already right, and `McdBatch.c`
+writes `+ 0x14` and `+ 0x18` four lines apart. ⚠ And the literal is optional — `McdGjk` and
+`McdPlaneIntersect` have no offset that moves at all; their only defect is `cur = cur + 0x28`,
+walking 40 bytes over 48-byte elements, and `McdPlaneIntersect` advances its cursor inside the
+loop's own **condition**.
+
+★★★ **(4) NO STATIC GATE IN THIS PROJECT CAN SEE THE CLASS THAT WAS CRASHING THE VEHICLES.**
+`MePoolxDictNodeAllocate(void *pool)` has no type for its context, so every field is a baked byte
+offset:
+
+```
+MePoolx   i386  mem 0  isize 4  numrec 8   numfree 12  ifree 16   sizeof 20
+          LP64  mem 0  isize 8  numrec 12  numfree 16  ifree 20   sizeof 24
+```
+
+`0xc` is `numrec` there, `0x10` is `numfree`, and `4` is the **high half of `mem`**. Nothing is
+truncated and no cast is narrowed: **`MePoolx` is on neither the 91 aarch64 diagnostics nor the 52
+open ones.** Only running the game found it. ★ And the tombstone is the defect field by field —
+gdb at the `SIGSEGV` in `MeDictInsert` ← `MeSetAdd` ← `McdConvexMeshPlaneCut`, a convex mesh being
+sliced, i.e. a **vehicle**:
+
+```
+nodemem      = 0x7ffffffc66d0                      (MeDictNode[200], 8-aligned)
+set.nodepool = { mem = 0x7ffffffc66d0, isize = 12,
+                 numrec = 196, numfree = 32767, ifree = -235024 }
+```
+
+`numrec` should be 200 and is 196 — decremented four times by the code that means `numfree`.
+`numfree` should be 200 and is **32767**, the high half of a stack address, because
+`*(MeDictNode **)(pool + 0x10)` stores eight bytes into a four-byte index. The node handed back is
+`0x…cc`, which a `MeDictNode` can never be. ⚠ **A bigger stack is not the fix** — `ulimit -s
+262144` moved ONS-Torlan past it and AS-Convoy still faulted in `MeSetAdd`, which is what ruled
+out the `SEGV_ACCERR` explanation from the previous session.
+
+The type is declared **in the registration** — `MeDictSetAllocator(d, alloc, free, p)` — and ⚠
+there are two candidates and position does not say which; the tie-break is a measurement (every
+offset must land on a top-level member start at i386, and `MeDict` has none at 4). ⚠⚠ **And the
+member spelling is NOT byte-identical, which is why this re-spells the address instead**:
+`->numfree` alone is identical, `->ifree` alone is identical, and the two *together* are not — gcc
+schedules the member form differently once both loads are visible as fields of one object, and a
+typed local does not rescue it. ⚠ The greedy return type ate the name **again**: `static void
+MePoolxDictNodeDeallocate(` read as a function called **`e`**, so one callback was typed and the
+other silently was not, with no decline printed. Same family as `aiStack_9cb0` → `iStack_9cb0`.
+
+★ **(5) THE REPAIR IS STORAGE, NOT A RE-SPELLING, AND THAT WAS MEASURED.**
+`MStack_26c.flags = (McdTriangleFlags)result->normal` — four bytes at *both* widths, so the address
+is cut in half. It is `ptrwidth_classify`'s worst single object (`IxCylinderTriList` 6 of 6
+UNEXPLAINED) and it is on the ragdoll-vs-**world** path. Rewriting the reads as `result->normal[1]`
+is exact — the line above them already does — and is **not** byte-identical, with or without the
+now-dead store; its own `kd_iptr` local **is**. ⚠ And for the sixth rule, grouping by address would
+be wrong: an argument slot is *reused*, so the same address carries an `int` for one call and a
+pointer for the next. The pairing is a store and the **next** read with no store in between.
+
+⚠ **(6) `fix_baked_sizeof` DECLINED THIS BY NAME AND WAS RIGHT TO.** Its `qsort` rule needs a plain
+identifier as the base and `MdtLOD`'s travels in an argslot — `void` has no size. The missing piece
+was never a better guess at the cast, it was the **element type**, and the oracle has it:
+`MeFAssetGetPartsSortedByName(const MeFAsset *const, MeFAssetPart **)`. ⚠⚠ **An argslot is not
+evidence**: `kd_argslot_ffffffa8` is cast to `MeHash **`, `MeFJoint **`, `char **`, `void **` *and*
+`MeFAssetPart **` inside one function, and taking the first cast off it chose `MeAssetFactory *`.
+⚠ And `(\w+)\s*\(([^();]*)\)` cannot see these calls at all — every argument is itself
+parenthesised — so the oracle evidence never fired and the pass fell through to Ghidra's guess
+**with no decline printed**, twice.
+
+★★ **THE WEB ARTEFACT IS BYTE-IDENTICAL THROUGH ALL SIX, MEASURED UNDER CLANG RATHER THAN ARGUED.**
+`SDLLaunch.wasm` is `sha256 12d70e6c44d951af73d8acc407db15db95ebbcdbeaeb3642448ad2448444da07`
+before and after: `sizeof(void *) / 8` is 0 at wasm32, `-(k * sizeof(void *))` folds to the
+constant it replaced, `kd_iptr` **is** `int`, and every `sizeof(E)` folds to its literal. The
+existing web stamp still covers the engine; the only web change this session is the manifest.
+
+⚠⚠ **AND A RED SWEEP IS STILL NOT EVIDENCE UNTIL THE BASELINE IS CHECKED — FIVE FOR FIVE NOW.**
+The four maps that fail die in `FCanvasVertex` or `UGUITabControl::PreDraw`, and **the 32-bit
+control dies in the same two functions on the same maps**. That is the engine's 2D UI under Xvfb —
+which `STATE.md` already recorded from the i386 `ktrace` run — and it is intermittent (AS-Convoy
+ran 150 s clean one sweep and hit the canvas the next). ⚠ **The asset tree also moved under this
+measurement**: a JB2004 map pack plus ChaosUT2 / BallisticWeapons / AlienSwarm were installed on
+2026-08-31, so "7 gametypes clean" and this run are not measurements of the same game. The 32-bit
+control is the only comparable baseline, and it is what says which failures are ours.
+
+```
+i386 acceptance   145 object(s), 0 compile failure(s), 0 byte difference(s)
+-ffloat-store     chain · boxes · ragdoll — ALL THREE BIT-IDENTICAL, 901 rows each
+frame bounds      0 out-of-range reference(s)
+lp64_pipeline.sh  -> PASS
+wasm              SDLLaunch.wasm sha256 UNCHANGED (12d70e6c…), compared not argued
+manifest          6167 entries, 0 missing, 0 size mismatch, 174 correctly excluded
+```
+
+Evidence: `../proven.txt` `LP64-VEHICLE-CLEAN`.
 
 ---
 

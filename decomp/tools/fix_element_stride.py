@@ -94,6 +94,26 @@ CACHE_G = {}
 MEMBER_PTR = re.compile(r'(?P<ty>\w+)\s*\*\s*(?P<n>\w+)\s*;')
 
 
+def element_evidence(text, E):
+    """Has an INDEPENDENT pass already concluded that this file walks an array
+    of `E`? Two sources, and both are another tool's measured output rather
+    than a new inference here:
+
+      * `fix_word_indexed_struct` typing an access as `((E *)v)->`;
+      * `fix_baked_sizeof --field-allocas-only` rewriting an `alloca` literal to
+        `sizeof(E)`, which it does only where the field the block is STORED INTO
+        is declared `E *` in the oracle.
+
+    ⚠ IT IS ASKED IN TWO PLACES AND THEY MUST NOT DRIFT. `main()` pre-filters on
+    the same question to avoid calling `rewrite` for every field of every file,
+    and the last time those two spellings disagreed the pre-filter silently
+    refused the one file the rule had been written for — `rewrite` was correct
+    and never called. One function, both callers."""
+    return bool(re.search(r'\(\(%s \*\)' % re.escape(E), text)
+                or re.search(r'alloca\([^;]*sizeof\((?:\*\(%s \*\)0|%s)\)'
+                             % (re.escape(E), re.escape(E)), text))
+
+
 def includes(inc):
     out = ['-I' + inc]
     for d in ('McdCommon', 'McdPrimitives', 'McdFrame', 'MeGlobals',
@@ -241,7 +261,19 @@ def rewrite(text, T, F, E, sz, repl):
     off = r'\(\(%s \*\)0\)->%s\b' % (re.escape(T), re.escape(F))
     gated = False
     if not re.search(off, text):
-        if not re.search(r'\(\(%s \*\)' % re.escape(E), text):
+        # ★ A SECOND, INDEPENDENT SOURCE FOR THE SAME EVIDENCE, and it is
+        # another pass's own measured conclusion rather than a new inference.
+        # `fix_baked_sizeof --field-allocas-only` rewrites an `alloca` literal
+        # to `sizeof(E)` only where the field it is STORED INTO is declared
+        # `E *` in the oracle — so a file carrying that spelling has already
+        # been shown, by a pass with its own byte-identity gate, to allocate an
+        # array of E. `McdSphylTriangleListIntersect` is the case that needs it:
+        # it walks its triangles through BYTE cursors, so `fix_word_indexed_struct`
+        # has nothing to type in it and the `((E *)v)->` evidence never appears.
+        # Its stride `local_5c + 0x18` is `sizeof(McdUserTriangle)` at i386 and
+        # 48 at LP64, so every triangle after the first is addressed at half the
+        # array's real pitch.
+        if not element_evidence(text, E):
             return text, 0, 0
         gated = True
         direct = [r'\(\(struct %s \*\)0\)->%s\b' % (re.escape(T), re.escape(F))]
@@ -256,6 +288,53 @@ def rewrite(text, T, F, E, sz, repl):
     szname = repl
     flds = fields_of(E)
     n = 0
+
+    # ★★ WHAT THE ALLOCA EVIDENCE ACTUALLY LICENCES, AND IT IS ONE RULE.
+    #
+    # `alloca(n * sizeof(E))` says the BLOCK is an array of E. It says nothing
+    # about any other pointer in the file — so in this mode the pass may rewrite
+    # a cursor's own step (rule C) and nothing else.
+    #
+    # ⚠⚠ AND THAT IS NOT A PRECAUTION, IT IS A MEASUREMENT. Run without it on
+    # `IxSphylPrimitives`, the table/cursor fixpoint flooded to fifty names —
+    # every float on a line that mentioned the anchor — and rules B and D then
+    # rewrote TWELVE reads of a TRANSFORM MATRIX:
+    #
+    #     *(float *)((kd_iptr)pvVar7 + 0x30)   /* McdModelGetTransformPtr, row 3 */
+    #  -> *(float *)((kd_iptr)pvVar7 + 2 * (int)sizeof(McdUserTriangle))
+    #
+    # 0x30 is 48 is 2 * 24, so it survives "whole elements only"; at LP64 it
+    # becomes 96 and reads off the end of the transform. ★ AND THE i386 GATE
+    # ACCEPTED ALL SIXTEEN SITES AS BYTE-IDENTICAL, because 2 * sizeof(E) IS 0x30
+    # there. Fifth time in this project that byte-identity at 32 bits has been
+    # unable to see a semantic change at 64 — the rule is only ever as wide as
+    # the evidence, and the gate cannot narrow it for you.
+    alloca_only = gated and not re.search(r'\(\(%s \*\)' % re.escape(E), text)
+    if alloca_only:
+        lines = text.split('\n')
+        # The cursor is what is added to the table expression, and only that:
+        # `... &(triList->list)->mRefCtAndID + local_5c;`. Taken AFTER the
+        # anchor's own match, so nothing to its left — the model transforms, the
+        # contact scratch — is ever mistaken for one.
+        cur = set()
+        for line in lines:
+            for a in re.finditer(off, line):
+                cur |= set(re.findall(r'\+\s*([A-Za-z_]\w*)(?![\w(])',
+                                      line[a.end():]))
+        for i, line in enumerate(lines):
+            step = re.match(r'^(\s*)(\w+) = \2 \+ (0x[0-9a-fA-F]+|\d+)\s*;\s*$', line)
+            seed = re.match(r'^(\s*)(\w+) = (0x[0-9a-fA-F]+|\d+)\s*;\s*$', line)
+            for m in (step, seed):
+                if not (m and m.group(2) in cur):
+                    continue
+                v = int(m.group(3), 0)
+                if v == 0 or v % sz:
+                    continue
+                lines[i] = line.replace(m.group(3), term(E, flds, v // sz, 0, szname), 1)
+                n += 1
+                break
+        out = '\n'.join(lines)
+        return out, n, len(re.findall(L, out))
 
     # ---- WHO IS A TABLE BASE AND WHO IS A CURSOR, TO A FIXPOINT.
     #
@@ -454,7 +533,7 @@ def main():
             # gate — a pre-filter that knows only the offsetof form never calls
             # `rewrite` for the file the arm64 tombstone points at.
             if not re.search(r'\(\(%s \*\)0\)->%s\b' % (re.escape(T), re.escape(F)), cur):
-                if not re.search(r'\(\(%s \*\)' % re.escape(E), cur):
+                if not element_evidence(cur, E):
                     continue
                 # either spelling the gated branch of `rewrite` accepts: the
                 # `struct`-keyword offsetof, or a declared `T *` to write `v->F`.

@@ -26,11 +26,20 @@ jobs:
       # EVERYTHING here is -m32. The recovery targets the shipped i386 archives
       # and the acceptance test is byte-identity against their members, so a
       # 64-bit-only toolchain cannot run a single gate in this file.
-      - name: i386 toolchain
+      #
+      # Plus ONE cross compiler that is not optional: `fix_baked_sizeof` measures
+      # LLP64 sizes with MinGW-w64 to pin a
+      # type against the shipped amd64 build — `long` is 4 bytes there and 8 on
+      # Linux, so the two measurements together are what identify a struct.
+      # ⚠ Without it that pass makes DIFFERENT repairs, so it is fatal rather
+      # than skipped: a runner missing it would otherwise build a different tree
+      # that every gate below would still pass.
+      - name: i386 + MinGW-w64 toolchains
         run: |
           sudo dpkg --add-architecture i386
           sudo apt-get update -qq
-          sudo apt-get install -y gcc-multilib g++-multilib binutils
+          sudo apt-get install -y gcc-multilib g++-multilib binutils \
+                                  gcc-mingw-w64-x86-64
 
       - name: The hard gates
         run: |

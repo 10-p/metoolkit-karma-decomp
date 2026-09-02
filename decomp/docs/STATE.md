@@ -13,6 +13,46 @@ read before resuming; `../HANDOVER.md` is the depth behind it and `../proven.txt
 
 ---
 
+# ⚠⚠ CI HAD NOT RUN A SINGLE GATE IN WEEKS — 2026-09-02, found while closing out
+
+**Every push had been red, and it was the FIRST step, so `Recover`, the LP64 pipeline, the i386
+acceptance test, the product check and the whole standalone tier were SKIPPED.** A red CI nobody
+can act on is a CI that runs nothing, and "the standalone tier runs on every push" had been false
+for the entire LP64 effort.
+
+★ **THE STEP REIMPLEMENTED A GATE INSTEAD OF CALLING IT.** `no-abs-paths` is a staged-file gate, so
+the workflow inlined "its whole-tree equivalent" — a flat `grep -rInE '/home/[a-z]'`. It was not
+equivalent, in two ways the real gate documents at length:
+
+```
+the real gate    .md/.txt: FENCED CODE BLOCKS ONLY. The record legitimately quotes paths that
+                 no longer exist, and rewriting history to please a linter is not a fix.
+                 Other people's homes are exempt — KARMA-ON-WASM.md quotes
+                 `DW_AT_comp_dir: /home/icculus/projects/...` out of MathEngine's own DWARF.
+the CI copy      everything, everywhere, including prose and including /home/icculus.
+```
+
+Four documentation lines, none of them a defect. ★★ **The gate now takes `--all` and CI calls it.
+One definition.** ⚠ `git ls-files`, not a `find` walk, so an untracked scratch file cannot fail a run.
+
+⚠⚠ **AND WITH THAT FIXED, THE PIPELINE FAILED FOR A SECOND, REAL REASON:**
+`x86_64-w64-mingw32-gcc` is not on a GitHub runner, and `fix_baked_sizeof` died with a bare
+`FileNotFoundError` out of `subprocess` that named the binary and nothing about why the pipeline
+wanted it. It uses MinGW to measure **LLP64** sizes and pin a type against the shipped amd64 build —
+`long` is 4 bytes there and 8 on Linux, so the two measurements *together* are what identify a
+struct. The workflow installs it now.
+
+★★★ **AND `win_elem_size` DOES NOT DEGRADE TO `None`, DELIBERATELY.** `None` already means "the
+oracle cannot confirm this type" and **changes which repairs land**. Had a missing compiler also
+returned `None`, a runner without MinGW would have quietly produced a **different tree** and every
+gate downstream would have passed on it. That is this project's oldest failure mode — a zero from a
+search that means nothing — so it exits with an actionable message instead. `ptrwidth_check` is
+allowed to SKIP on a missing Android NDK; the difference is that **its result is not an input to a
+repair**.
+
+---
+
+
 # ✅✅ THE KARMA PORT IS COMPLETE FOR UT2004 — 2026-09-02. READ THIS FIRST.
 
 **Every code path UT2004 exercises is recovered, repaired and measured. Every target the game ships

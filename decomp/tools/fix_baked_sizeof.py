@@ -65,6 +65,7 @@ place. `test/lp64_pipeline.sh` does the copy, both passes and the gate in order.
 """
 import os
 import re
+import shutil
 import subprocess
 import sys
 
@@ -401,10 +402,33 @@ _WINSZ = re.compile(r'char \(\*\)\[(\d+)\]')
 
 
 def win_elem_size(ty, inc, cache):
-    """sizeof(*(ty)0) at Windows x86-64 (LLP64). None if unavailable."""
+    """sizeof(*(ty)0) at Windows x86-64 (LLP64). None if unavailable.
+
+    ⚠⚠ A MISSING CROSS-COMPILER IS A FAILURE, NOT A `None`, AND THE DIFFERENCE MATTERS.
+    The docstring says "None if unavailable" and every caller treats `None` as "the oracle cannot
+    confirm this type", which changes which repairs land. So if `None` also meant "mingw is not
+    installed", a runner without it would quietly produce a DIFFERENT tree from a developer's and
+    every gate downstream would pass on it. That is this project's oldest failure mode — a zero
+    from a search that means nothing — and it is why this raises instead.
+
+    It cost a CI outage to find: `x86_64-w64-mingw32-gcc` is not on the GitHub runner, and this
+    function died with a bare `FileNotFoundError` traceback out of `subprocess` that named the
+    binary and nothing about why the pipeline wanted it. (`ptrwidth_check` handles its missing
+    Android NDK by reporting SKIP; the difference is that its result is not an input to a repair.)
+    """
     key = 'win:' + ty
     if key in cache:
         return cache[key]
+    if not shutil.which(WINCC):
+        sys.exit(
+            'fix_baked_sizeof: no %s on PATH.\n'
+            '  The amd64 oracle cross-check needs a MinGW-w64 cross compiler to measure LLP64\n'
+            '  sizes (`long` is 4 bytes there and 8 on Linux, so a type cannot be pinned without\n'
+            '  it). Install it — Debian/Ubuntu: `apt-get install gcc-mingw-w64-x86-64` — or point\n'
+            '  KD_WINCC at one.\n'
+            '  ⚠ This is deliberately fatal rather than degrading to "unconfirmed": without the\n'
+            '  measurement this pass makes DIFFERENT repairs, so a silent skip would produce a\n'
+            '  different tree that every gate downstream would still pass.' % WINCC)
     os.makedirs(WORK, exist_ok=True)
     src = os.path.join(WORK, 'w.c')
     open(src, 'w').write(HEAD + 'char kd_probe[sizeof(*(' + ty + ')0)];\n'

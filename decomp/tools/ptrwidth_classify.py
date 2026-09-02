@@ -167,7 +167,7 @@ def _offsetof(cast, member, inc, bits):
             'char kd_probe[((char *)&((%s)0)->%s - (char *)0) + 1];\n'
             'int kd_force = &kd_probe;\n' % (HERE, HERE, HERE, cast, member))
         r = subprocess.run(['gcc', '-m%d' % bits, '-DLINUX'] + includes(inc)
-                           + ['-w', '-c', '-o', os.devnull, src],
+                           + ['-Werror=int-conversion', '-c', '-o', os.devnull, src],
                            capture_output=True, text=True)
         m = _FIELD_SZ.search(r.stderr)
         _SIZE_CACHE[key] = (int(m.group(1)) - 1) if m else None
@@ -243,7 +243,7 @@ def _field_size(cast, path, inc, bits):
             'char kd_probe[sizeof(((%s)0)->%s) + 1];\nint kd_force = &kd_probe;\n'
             % (HERE, HERE, HERE, cast, path))
         r = subprocess.run(['gcc', '-m%d' % bits, '-DLINUX'] + includes(inc)
-                           + ['-w', '-c', '-o', os.devnull, src],
+                           + ['-Werror=int-conversion', '-c', '-o', os.devnull, src],
                            capture_output=True, text=True)
         m = _FIELD_SZ.search(r.stderr)
         _SIZE_CACHE[key] = (int(m.group(1)) - 1) if m else None

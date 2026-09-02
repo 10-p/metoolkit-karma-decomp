@@ -13,6 +13,41 @@ read before resuming; `../HANDOVER.md` is the depth behind it and `../proven.txt
 
 ---
 
+# ⚠⚠⚠ AND THE THIRD CI FAILURE IS THE ONE THAT MATTERED: THE PROBES NEED gcc 14+
+
+`fix_setter_typed_slot`'s SELF-CHECK fired on the runner and not here, and the reason is a
+**toolchain assumption nobody had written down**: this box runs **gcc 15.2**, `ubuntu-24.04` runs
+**gcc 13**.
+
+Every measurement in this project is taken by the same trick — emit `char kd_probe[N];
+int kd_force = &kd_probe;`, let the compiler complain, and read `N` out of `char (*)[N]` in the
+diagnostic. **That depends on `-Wint-conversion` being an ERROR, which is GCC 14 behaviour.** Under
+gcc 13 it is a warning, four probe helpers passed `-w`, and `-w` beats `-Werror=` — measured:
+
+```
+gcc-13  -w                              0 diagnostics   <- probe returns None
+gcc-13  -w -Werror=int-conversion       0 diagnostics   <- -w still wins
+gcc-13     -Werror=int-conversion       1               <- this is the fix
+gcc-15  any of the above                1
+```
+
+★★ **AND `None` IS NOT A HARMLESS ANSWER HERE — IT IS "THE ORACLE CANNOT CONFIRM THIS TYPE", WHICH
+CHANGES WHICH REPAIRS LAND.** On a gcc-13 machine those four helpers returned `None` for every
+measurement, so `fix_setter_typed_slot` and `fix_slot_pointer_walk` would have repaired **nothing**
+and `ptrwidth_classify` would have reported a clean census — and the only reason anyone found out
+is that one of the two has a self-check. The other did not fail; it would have quietly produced a
+different tree.
+
+⚠ **THE FIRST ATTEMPT AT THIS FIX WAS WRONG AND IS WORTH RECORDING.** `-w` also appears in a
+module-level `CFLAGS` in eleven of these tools — and there it is the **i386 acceptance compile**,
+where `-Wno-int-conversion` is deliberate because the recovered sources are full of exactly that.
+Swapping it there would have turned the byte-identity gate into a compile error. Only four tools
+passed `-w` to a *probe*; the other seven build their probe command separately and were already
+safe. ★ **Grep for the flag, then check what the flag belongs to.**
+
+---
+
+
 # ⚠⚠ CI HAD NOT RUN A SINGLE GATE IN WEEKS — 2026-09-02, found while closing out
 
 **Every push had been red, and it was the FIRST step, so `Recover`, the LP64 pipeline, the i386

@@ -94,7 +94,7 @@ def probe(body, bits, inc):
     src = os.path.join(WORK, 'p%d.c' % bits)
     open(src, 'w').write(HEAD + body)
     r = subprocess.run(['gcc', '-m%d' % bits, '-DLINUX'] + includes(inc)
-                       + ['-w', '-c', '-o', os.devnull, src],
+                       + ['-Werror=int-conversion', '-c', '-o', os.devnull, src],
                        capture_output=True, text=True)
     m = _SZ.search(r.stderr)
     _CACHE[key] = (int(m.group(1)) - 1) if m else None

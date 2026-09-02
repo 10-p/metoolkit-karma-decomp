@@ -112,8 +112,8 @@ int kd_McdSphereTriangleListIntersect(McdModelPair *p,McdIntersectResult *result
   fVar26 = McdModelGetContactTolerance(p->model2);
   pMVar17 = trilistgeom;
   eps = fVar26 + eps;
-  iVar15 = -((int)(*(MeU32 *)((char *)trilistgeom + ((int)((char *)&((struct McdTriangleList *)0)->triangleMaxCount - (char *)0)))) * 0x18 + 0xfU & 0xfffffff0);
-  (*(McdGeometryID *)((char *)trilistgeom + ((int)((char *)&((struct McdTriangleList *)0)->list - (char *)0)))) = (McdGeometryID)(kd_alloca_iVar15 = (char *)alloca((size_t)((*(MeU32 *)((char *)trilistgeom + ((int)((char *)&((struct McdTriangleList *)0)->triangleMaxCount - (char *)0))))) * (int)sizeof(*(McdUserTriangle *)0) + 0));
+  iVar15 = -((int)((McdTriangleList *)trilistgeom)->triangleMaxCount * 0x18 + 0xfU & 0xfffffff0);
+  ((McdTriangleList *)trilistgeom)->list = (McdGeometryID)(kd_alloca_iVar15 = (char *)alloca((size_t)(((McdTriangleList *)trilistgeom)->triangleMaxCount) * (int)sizeof(*(McdUserTriangle *)0) + 0));
   diff.v[0] = *(float *)((kd_iptr)pvVar21 + 0x30) - pfVar22[0xc];
   diff.v[1] = local_13c[1] - pfVar22[0xd];
   diff.v[2] = local_13c[2] - pfVar22[0xe];
@@ -121,12 +121,12 @@ int kd_McdSphereTriangleListIntersect(McdModelPair *p,McdIntersectResult *result
   fVar26 = sphereRadius + eps;
   transPos.v[1] = diff.v[2] * pfVar22[6] + diff.v[0] * pfVar22[4] + diff.v[1] * pfVar22[5];
   transPos.v[2] = diff.v[0] * pfVar22[8] + diff.v[1] * pfVar22[9] + diff.v[2] * pfVar22[10];
-  *(McdGeometryID *)(&(*kd_argslot_fffffea4)) = (*(MeU32 *)((char *)trilistgeom + ((int)((char *)&((struct McdTriangleList *)0)->triangleMaxCount - (char *)0))));
+  *(McdGeometryID *)(&(*kd_argslot_fffffea4)) = ((McdTriangleList *)trilistgeom)->triangleMaxCount;
   *(float *)((kd_iptr)&fStackY_160) = fVar26;
   *(lsVec3 **)((kd_iptr)&iStackY_164) = &transPos;
-  *(McdGeometryID *)((kd_iptr)aMStackY_16c + (1 * (int)sizeof(void *))) = (*(McdGeometryID *)((char *)pMVar17 + ((int)((char *)&((struct McdTriangleList *)0)->list - (char *)0))));
+  *(McdGeometryID *)((kd_iptr)aMStackY_16c + (1 * (int)sizeof(void *))) = ((McdTriangleList *)pMVar17)->list;
   *(McdModelPair **)((kd_iptr)aMStackY_16c) = p;
-  pcVar11 = (code *)(*(kd_uptr *)((char *)pMVar17 + ((int)((char *)&((struct McdTriangleList *)0)->triangleListGenerator - (char *)0))));
+  pcVar11 = (code *)((McdTriangleList *)pMVar17)->triangleListGenerator;
   *(undefined4 *)((kd_iptr)aiStackY_180 + (4 * (int)sizeof(void *))) = 0x1020f;
   count = (*(int (*)(void *, void *, void *, float, int))pcVar11)(*(void **)((kd_iptr)aMStackY_16c),
                      *(void **)((kd_iptr)aMStackY_16c + (1 * (int)sizeof(void *))),

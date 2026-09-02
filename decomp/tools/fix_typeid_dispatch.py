@@ -700,36 +700,123 @@ def already_repaired(text, pos):
     return bool(REPAIRED.search(text[a:b if b > 0 else len(text)]))
 
 
-# ⚠⚠ QUARANTINE, WITH THE MEASUREMENT THAT PUT IT HERE.
+# ⚠⚠ QUARANTINE — EMPTY SINCE 2026-09-02, AND THE TWO GUARDS BELOW ARE WHY.
 #
-# `IxSphereTriList.c` is excluded from this pass's NEW evidence sources. Landing
-# its repairs makes the LP64 build NON-DETERMINISTIC — two runs of one binary
-# gave ktrace md5 a0d45750bf40 (K=1933) and 766866acdb8a (K=1351) where the
-# 32-bit control is c31ed77b7323 (K=1396) — while the other eight files this
-# pass touches are byte-identical to that control, twice, with it excluded.
+# `IxSphereTriList.c` sat here because landing its repairs made the LP64 build
+# NON-DETERMINISTIC — two runs of one binary gave ktrace md5 a0d45750bf40
+# (K=1933) and 766866acdb8a (K=1351) where the 32-bit control is c31ed77b7323
+# (K=1396) — while the other eight files this pass touches were byte-identical to
+# that control, twice, with it excluded.
 #
-# TWO THINGS ARE WRONG THERE AND ONLY ONE IS THIS PASS'S:
+# ★★★ THE QUARANTINE WAS TREATING A SYMPTOM. Run with it lifted, this pass makes
+# TWELVE edits in that file and SIX OF THEM ARE WRONG, in two classes — and
+# neither class is specific to this file, so both were latent everywhere:
 #
-#   1. `(float *)((kd_iptr)pvVar21 + 0x30)` is matched as
-#      `McdTriangleList::triangleListGenerator`, which is byte 48 at i386 — the
-#      right BYTE and the wrong TYPE: the site dereferences it as a FLOAT and
-#      the field is a function pointer. A displacement match is not a type match.
-#   2. `alloca(n * (int)sizeof(*(McdUserTriangle *)0))` comes out as `n * 0x18`.
-#      That is 24 — `sizeof(McdUserTriangle)` at i386 and HALF of it at LP64, so
-#      the triangle list is under-allocated and the physics runs on a heap
-#      overrun. ★ THIS PASS DOES NOT WRITE THAT LINE. Editing the file at all
-#      makes a LATER pass, which accepts its edits ALL-OR-NOTHING PER FILE, fail
-#      byte-identity on its bundle and drop the whole thing — taking its good
-#      `sizeof` repair with it.
+#   A  THE BASE HAS BEEN REASSIGNED AWAY FROM THE GEOMETRY.
+#        pvVar21 = McdModelGetGeometry(p->model1);      /* a geometry */
+#        pvVar21 = McdModelGetTransformPtr(p->model1);  /* a 4x4 MATRIX */
+#        local_13c = (float *)((int)pvVar21 + 0x30);    <- byte 48 of the MATRIX
+#      The pass typed it `McdTriangleList` and re-spelled byte 48 as
+#      `triangleListGenerator`. The right BYTE and the wrong OBJECT: `+0x30` is
+#      `mTM[3][0]`, the translation, and the site reads it as the float it is.
+#      ⚠ `evidence()` is WHOLE-FUNCTION and Ghidra reuses one local for several
+#      unrelated things — a limitation `census-verdicts.md` already names for
+#      `MdtPartition` 143 and `keaDebug` 665. Nothing was asking whether the base
+#      still HELD a geometry at the site. 3 sites.
 #
-# So the hazard is a pipeline INTERACTION, not a bad rule, and fixing it properly
-# means making that acceptance per-edit rather than per-file. Until then this one
-# file is left to the passes that already handle it correctly.
+#   B  THE BASE IS NOT A GEOMETRY AT ALL — IT IS A STACK AREA.
+#        int aiStackY_180 [5 * (int)(sizeof(void *) / 4)];
+#        *(MeI16 **)((int)aiStackY_180 + 0x10) = &dims;
+#      `OFFSITE` matched it and the whole-function dispatcher supplied
+#      `McdSphere`, so byte 16 became `offsetof(McdSphere, mRadius)` — which is
+#      32 at LP64, moving an ARGUMENT WORD to a different slot. ★★ AND THAT IS
+#      THE PIPELINE HAZARD ITSELF, not a separate problem: `fix_frame_slots`
+#      recognises `aiStackY_180 + 0x10` as argument word four and scales it, and
+#      it cannot recognise an offsetof. Its group declines, and the chain that
+#      depends on those slots being typed collapses — which is how
+#      `alloca(n * sizeof(*(McdUserTriangle *)0))` came out `n * 0x18`, i386's 24
+#      and HALF of LP64's 48. 3 sites.
+#
+# The two guards below are `base_disqualified()`. With them the file is left
+# EXACTLY as the later passes produce it today, so the quarantine has nothing to
+# hold and is empty. ⚠ It stays in the source as a named, working mechanism: a
+# file put here is skipped, and the reason belongs next to it.
 #
 # ⚠ Neither the i386 acceptance test (145/145, 0 byte differences) nor the -m64
 # compile check can see any of this. The ktrace against the 32-bit control is
 # what caught it, and it is why that run is not optional before landing.
-QUARANTINE = {'IxSphereTriList.c'}
+QUARANTINE = set()
+
+
+# ---- GUARD DATA: what each API is DECLARED to return a pointer to, with one
+# level of typedef resolved (`McdGeometryID` -> `McdGeometry`, `MeMatrix4Ptr` ->
+# `MeVector4`). Without the typedef hop this map answers for about half the
+# corpus and the guard silently allows everything it cannot see.
+_RETS = {}
+
+
+def api_pointer_returns(inc):
+    """{function -> the tag it is declared to return a POINTER to}.
+
+    ⚠ SELF-CHECKED, because an empty map disqualifies nothing and reads exactly
+    like "no base is ever reassigned away"."""
+    if _RETS:
+        return _RETS
+    txts = []
+    for dp, _, files in os.walk(inc):
+        for f in files:
+            if f.endswith('.h'):
+                txts.append(re.sub(
+                    r'/\*.*?\*/', ' ',
+                    open(os.path.join(dp, f), errors='ignore').read(), flags=re.S))
+    ptr_typedef = {}
+    for t in txts:
+        for m in re.finditer(r'typedef\s+(?:struct\s+)?(\w+)\s*\*\s*(\w+)\s*;', t):
+            ptr_typedef.setdefault(m.group(2), m.group(1))
+    for t in txts:
+        for m in re.finditer(r'(?<![\w*])(?:struct\s+)?(\w+)\s*\*\s*(?:MEAPI\s+)?(\w+)\s*\(', t):
+            _RETS.setdefault(m.group(2), m.group(1))
+        for m in re.finditer(r'(?<![\w*])(\w+)\s+MEAPI\s+(\w+)\s*\(', t):
+            if m.group(1) in ptr_typedef:
+                _RETS.setdefault(m.group(2), ptr_typedef[m.group(1)])
+    for fn, want in (('McdModelGetGeometry', 'McdGeometry'),
+                     ('McdModelGetTransformPtr', 'MeVector4')):
+        if _RETS.get(fn) != want:
+            sys.exit('fix_typeid_dispatch: SELF-CHECK FAILED — the headers declare '
+                     '%s as returning %r *, want %r *. The return-type map is '
+                     'broken and the live-range guard would allow everything.'
+                     % (fn, _RETS.get(fn), want))
+    return _RETS
+
+
+def base_disqualified(text, region, rel, base, rets, geomtags):
+    """Why this base cannot be the geometry the evidence is about, or None.
+
+    Both tests are POSITIVE DISQUALIFICATIONS — a shape this pass can read and
+    knows is wrong — never "it does not look right to me". Anything unrecognised
+    passes, so the guards cannot quietly delete a repair that was working."""
+    # A — a declared ARRAY is a stack area, not a geometry pointer.
+    if re.search(r'(?m)^\s*[A-Za-z_][\w ]*[\s*]%s\s*\[' % re.escape(base), text):
+        return ('%s is declared as an ARRAY here — a stack area, not a geometry'
+                % base)
+    # B — the LIVE RANGE. The last assignment before the site decides what the
+    # base holds AT the site, whatever the function says about it elsewhere.
+    last = None
+    for m in re.finditer(r'(?<![\w.>])%s\s*=(?!=)' % re.escape(base), region[:rel]):
+        last = m
+    if last is None:
+        return None                       # never assigned here — a parameter
+    tail = region[last.end():]
+    end = tail.find(';')
+    stmt = tail[:end if end >= 0 else len(tail)]
+    c = re.match(r'\s*(?:\(\s*[\w ]*\*+\s*\)\s*)?([A-Za-z_]\w*)\s*\(', stmt)
+    if not c:
+        return None                       # not a call — this guard says nothing
+    T = rets.get(c.group(1))
+    if T is None or T in geomtags:
+        return None
+    return ('%s was last assigned from %s(), declared to return %s * — it does '
+            'not hold a geometry at this site' % (base, c.group(1), T))
 
 
 def evidence(region, rel, blks, base, disp, fnname, ifdisp={}, types=None):
@@ -851,6 +938,10 @@ def main():
     SITE = re.compile(r'(?P<base>[A-Za-z_]\w*)\[(?P<k>[1-9]\d*)\]\s*\.\s*'
                       r'(?P<f>' + '|'.join(base_fields) + r')\b')
 
+    # The live-range guard's evidence, and what counts as "still a geometry".
+    rets = api_pointer_returns(inc)
+    geomtags = set(types.values()) | {'McdGeometry', '_McdGeometry', 'void'}
+
     fixed = declined = 0
     notes, declines, oracle_used = [], [], []
     for fn in sorted(os.listdir(srcdir)):
@@ -883,6 +974,12 @@ def main():
             rel = m.start() - rs
             blks = blocks(region)
             fnname = region_fn(text, rs)
+
+            why = base_disqualified(text, region, rel, base, rets, geomtags)
+            if why:
+                declined += 1
+                declines.append('%-26s +%-4d %s' % (fn, m.start(), why))
+                continue
 
             got, why = evidence(region, rel, blks, base, disp, fnname, ifdisp, types)
             if got is None:
@@ -986,6 +1083,19 @@ def main():
             rel = m.start() - rs
             blks = blocks(region)
             fnname = region_fn(text, rs)
+
+            why = base_disqualified(text, region, rel, base, rets, geomtags)
+            if why:
+                # ⚠ SAME REPORTING RULE AS THE `no evidence` BRANCH BELOW.
+                # OFFSITE matches baked offsets against every kind of base in the
+                # corpus, so reporting every disqualified one is noise — but a
+                # base that LOOKS like a geometry and is disqualified anyway is a
+                # site this pass nearly got wrong, and it has to say so.
+                if any(g.group('b') == base
+                       for pat in GEOM_OF for g in pat.finditer(region)):
+                    declined += 1
+                    declines.append('%-26s +%-4d %s' % (fn, m.start(), why))
+                continue
 
             got, why = evidence(region, rel, blks, base, disp, fnname, ifdisp, types)
             if got is None:

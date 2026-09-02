@@ -1,3 +1,58 @@
+# LP64-QUARANTINE-OFF 2026-09-02 ★★★ THE QUARANTINE IS EMPTY, AND IT WAS
+#                     HIDING A LIVE HEAP OVERRUN IN TWO OTHER FILES.
+#                     Run with IxSphereTriList.c unquarantined,
+#                     fix_typeid_dispatch makes TWELVE edits there and SIX ARE
+#                     WRONG, in two classes, NEITHER specific to that file:
+#                     (A) THE BASE WAS REASSIGNED AWAY FROM THE GEOMETRY.
+#                         pvVar21 = McdModelGetGeometry(p->model1);
+#                         pvVar21 = McdModelGetTransformPtr(p->model1);
+#                         local_13c = (float *)((int)pvVar21 + 0x30);
+#                       typed McdTriangleList, byte 48 respelled as
+#                       triangleListGenerator. ⚠ The old write-up called this
+#                       "a displacement match is not a type match" — that is the
+#                       SYMPTOM. The CAUSE is that pvVar21 is not a geometry at
+#                       all there: +0x30 is mTM[3][0], the translation, read as
+#                       exactly the float it is. evidence() is WHOLE-FUNCTION
+#                       and nothing asked whether the base still HELD one.
+#                     (B) THE BASE WAS A STACK ARRAY.
+#                         int aiStackY_180 [5 * (int)(sizeof(void *) / 4)];
+#                         *(MeI16 **)((int)aiStackY_180 + 0x10) = &dims;
+#                       became offsetof(McdSphere, mRadius) — 32 at LP64, so an
+#                       ARGUMENT WORD moves. Never named before.
+#                     ★★★ AND (B) IS THE "PIPELINE HAZARD", WHICH WAS NOT WHAT
+#                     WE THOUGHT. The recorded theory was a later pass accepting
+#                     ALL-OR-NOTHING PER FILE and dropping its bundle. MEASURED:
+#                     NOT ONE PASS DECLINED ANYTHING (fix_word_indexed_struct:
+#                     "24 site(s) rewritten, 0 declined"). The real mechanism:
+#                       fix_index_layout      (*(T *)((char *)v + OFFSETOF(..)))
+#                       fix_typeid_dispatch   ((T *)v)->F
+#                     are TWO SPELLINGS OF ONE STATEMENT and fix_baked_sizeof's
+#                     field-alloca rule knew only the first. Let the earlier
+#                     pass type the file and the regex stops matching, the size
+#                     stays 0x18, and A REGEX THAT STOPS MATCHING HAS NOTHING TO
+#                     REPORT. The repair depended on WHICH EARLIER PASS GOT
+#                     THERE FIRST. ALLOCA_INTO_MEMBER now matches both.
+#                     ★★★ THAT GAP WAS COSTING TWO UNQUARANTINED FILES, both
+#                     shipping the triangle list at HALF the size:
+#                       IxBoxTriList.c       alloca(n * 0x18) -> n * sizeof(...)
+#                       IxSphylPrimitives.c  same, + 3 cursor strides
+#                                            (0x18 -> sizeof, 0x60 -> 4*sizeof)
+#                     sizeof(McdUserTriangle) is 24 at i386 and 48 at LP64. Box
+#                     vs TriangleList is every vehicle on level geometry;
+#                     McdSphylTriangleListIntersect is a ragdoll capsule on the
+#                     world. The quarantine protected the ONE file where the
+#                     offsetof spelling happened to survive.
+#                     ⚠ THE GUARDS ARE POSITIVE DISQUALIFICATIONS: a base
+#                     DECLARED AS AN ARRAY, and a base whose last assignment
+#                     before the site is a call the headers declare returns a
+#                     non-geometry pointer. Anything unrecognised passes, so
+#                     they cannot quietly delete a working repair. MEASURED:
+#                     71 -> 65 repairs and the ONLY notes that disappear are the
+#                     six wrong ones.
+#                     GATES: i386 145/145 · run-standalone 12/12 · ktrace
+#                     c31ed77b7323 K=1396 3/3 · wasm 6a380872… unchanged ·
+#                     ZERO "geometry base" declines.
+#
 # LP64-DECL-RETTYPE  2026-09-02  ✅ McdInteractions 104 IS CLOSED, AND THE
 #                     EVIDENCE WAS NEVER IN A BINARY.
 #                       puVar4 = McdFrameworkGetInteractions(frame, t1, t2);

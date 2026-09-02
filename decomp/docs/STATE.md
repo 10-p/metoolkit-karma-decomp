@@ -13,6 +13,92 @@ read before resuming; `../HANDOVER.md` is the depth behind it and `../proven.txt
 ---
 
 
+# ★★★ THE QUARANTINE IS EMPTY, AND IT WAS HIDING A LIVE HEAP OVERRUN IN TWO OTHER FILES
+
+**2026-09-02 (LATEST). READ THIS BLOCK FIRST.**
+
+`IxSphereTriList.c` had been excluded from `fix_typeid_dispatch` since the ktrace caught it making
+the LP64 build non-deterministic. **The quarantine was treating a symptom.** Run with it lifted, the
+pass makes TWELVE edits in that file and **SIX ARE WRONG, IN TWO CLASSES — AND NEITHER CLASS IS
+SPECIFIC TO THAT FILE, SO BOTH WERE LATENT EVERYWHERE.**
+
+**A — THE BASE HAD BEEN REASSIGNED AWAY FROM THE GEOMETRY.**
+
+```
+pvVar21 = McdModelGetGeometry(p->model1);        /* a geometry */
+pvVar21 = McdModelGetTransformPtr(p->model1);    /* …and now a 4x4 MATRIX */
+local_13c = (float *)((int)pvVar21 + 0x30);      /* byte 48 of the MATRIX */
+```
+
+The pass typed it `McdTriangleList` and re-spelled byte 48 as `triangleListGenerator`. ⚠ The earlier
+write-up called this *"a displacement match is not a type match"*. That is the symptom. **The cause
+is that `pvVar21` is not a geometry at all at that point** — `+0x30` is `mTM[3][0]`, the
+translation, and the site reads it as exactly the float it is. `evidence()` is WHOLE-FUNCTION and
+Ghidra reuses one local for several unrelated things; nothing was asking whether the base still
+*held* a geometry at the site. It is the same limitation `census-verdicts.md` already names for
+`MdtPartition` 143 and `keaDebug` 665, and here it was not a near-miss.
+
+**B — THE BASE WAS NOT A GEOMETRY AT ALL. IT WAS A STACK ARRAY.**
+
+```
+int aiStackY_180 [5 * (int)(sizeof(void *) / 4)];
+*(MeI16 **)((int)aiStackY_180 + 0x10) = &dims;   ->  … + offsetof(McdSphere, mRadius)
+```
+
+`OFFSITE` matched it and the whole-function dispatcher supplied `McdSphere`, so byte 16 became a
+field that is at **32** at LP64 — moving an ARGUMENT WORD to a different slot. Three sites, and
+nobody had named this class before.
+
+★★★ **AND B IS THE "PIPELINE HAZARD" ITSELF — WHICH WAS NOT WHAT THIS PROJECT THOUGHT IT WAS.**
+The recorded theory was "a later pass accepts its edits ALL-OR-NOTHING PER FILE, fails byte-identity
+on its bundle and drops the whole thing". **Measured: NOT ONE PASS DECLINED ANYTHING.**
+`fix_word_indexed_struct` reported `24 site(s) rewritten, 0 declined`. What actually happened is
+smaller and much easier to miss:
+
+```
+fix_index_layout writes   (*(McdGeometryID *)((char *)trilistgeom + OFFSETOF(McdTriangleList, list))) = alloca(...)
+fix_typeid_dispatch writes ((McdTriangleList *)trilistgeom)->list                                     = alloca(...)
+```
+
+Same statement, same evidence, same repair — **two spellings**, and `fix_baked_sizeof`'s
+field-typed-alloca rule knew only the first. Let the earlier pass type the file and the regex stops
+matching, the size stays `0x18`, and **a regex that stops matching has nothing to report.** The
+repair therefore depended on WHICH EARLIER PASS GOT THERE FIRST, which is not a property anything
+downstream can see. `ALLOCA_INTO_MEMBER` now matches the second spelling too.
+
+★★★ **AND THAT SPELLING GAP WAS COSTING TWO FILES THAT WERE NOT QUARANTINED AT ALL.** Both were
+shipping with the triangle list allocated at **half** the size the generator fills:
+
+```
+IxBoxTriList.c        alloca(n * 0x18)  ->  alloca(n * sizeof(*(McdUserTriangle *)0))
+IxSphylPrimitives.c   alloca(n * 0x18)  ->  alloca(n * sizeof(*(McdUserTriangle *)0))
+                      and 3 triangle cursor strides: 0x18 -> sizeof, 0x60 -> 4 * sizeof
+```
+
+`sizeof(McdUserTriangle)` is 24 at i386 and **48** at LP64. Box-vs-TriangleList is every vehicle on
+level geometry; `McdSphylTriangleListIntersect` is where a ragdoll capsule meets the world. The
+quarantine had been protecting the one file where the offsetof spelling happened to survive, while
+the same defect sat unremarked in the two beside it.
+
+⚠ **THE GUARDS ARE POSITIVE DISQUALIFICATIONS, NOT TASTE.** `base_disqualified()` declines only two
+shapes it can read and knows are wrong — a base *declared as an array*, and a base whose last
+assignment before the site is a call the oracle headers declare returns a non-geometry pointer.
+Anything unrecognised passes, so they cannot quietly delete a repair that was working. Measured:
+71 → 65 repairs, and **the only notes that disappear are the six wrong ones**.
+
+```
+i386 acceptance 145/145 · 0 byte differences · lp64_pipeline EXIT=0 · run-standalone 12/12
+LP64 ktrace vs the SSE-32 control: c31ed77b7323, K=1396, 3 of 3 runs
+wasm 6a380872… unchanged — sizeof(void *) is 4 on wasm32, so the rewritten sizes fold back
+fix_typeid_dispatch: ZERO "geometry base" declines; the 40 remaining are all the
+  BASE[k].FIELD value shape, and the six that survive to the output are sites whose
+  i386 index arithmetic SCALES — measured: g[1].prev is 20/40 and McdAggregate::elementCount
+  is 20/40; pMVar6[1].mRefCtAndID is 16/32 and McdCylinder::mR is 16/32
+```
+
+---
+
+
 # ✅ McdInteractions 104 — THE ORACLE DECLINED; THE HEADER ANSWERED. 2026-09-02 (LATER STILL).
 
 ★★ **THE ONE SITE THIS PROJECT HAD WRITTEN OFF AS UNRESOLVABLE IS RESOLVED, AND THE EVIDENCE WAS

@@ -131,7 +131,7 @@ MeBool kd_McdBoxTriangleListIntersect(McdModelPair *p,McdIntersectResult *result
   MVar21 = eps;
   pMVar3 = ((McdTriangleList *)trilistgeom)->triangleMaxCount;
   iVar5 = -((kd_iptr)pMVar3 * 0x18 + 0xfU & (0xfffffff0 | ~(kd_uptr)0xffffffffU));
-  ((McdTriangleList *)trilistgeom)->list = (McdGeometryID)(kd_alloca_iVar5 = (char *)alloca((size_t)(pMVar3) * 0x18 + 0));
+  ((McdTriangleList *)trilistgeom)->list = (McdGeometryID)(kd_alloca_iVar5 = (char *)alloca((size_t)(pMVar3) * (int)sizeof(*(McdUserTriangle *)0) + 0));
   *(McdGeometryID *)(&(*kd_argslot_fffffda4)) = pMVar3;
   *(float *)((kd_iptr)&fStackY_260) = MVar21 + boxRadius;
   *(lsVec3 **)((kd_iptr)&iStackY_264) = &boxPosTrans;

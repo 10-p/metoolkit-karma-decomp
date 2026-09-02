@@ -261,6 +261,32 @@ ALLOCA_INTO_FIELD = re.compile(
     r'\s*\*\s*(?P<size>0x[0-9a-f]+|\d+)\s*\+[ \t]*(?P<add>0x[0-9a-f]+|\d+)?')
 _MEMBER_PTR = re.compile(r'([A-Za-z_]\w*)\s*\*\s*%s\s*[;,]')
 
+# ★★ THE SAME STATEMENT, SPELLED AS PLAIN C — AND WITHOUT THIS THE RULE IS ONE
+# EARLIER PASS AWAY FROM SILENTLY NOT FIRING.
+#
+#     ((McdTriangleList *)trilistgeom)->list
+#         = (McdGeometryID)(kd_alloca_iVar15 = (char *)alloca((size_t)(n) * 0x18 + 0));
+#
+# A file where `fix_typeid_dispatch` has already typed the base writes the member
+# DIRECTLY; one where it has not gets `fix_word_indexed_struct`'s offsetof form
+# above. Same statement, same evidence, same repair — and keying on only one of
+# the two spellings makes the repair depend on WHICH EARLIER PASS GOT THERE
+# FIRST, which is not a property anything downstream can see.
+#
+# ⚠⚠ THIS IS THE `IxSphereTriList` PIPELINE HAZARD, AND IT IS THIS, NOT
+# "all-or-nothing acceptance". Measured 2026-09-02: with `fix_typeid_dispatch`
+# allowed to type that file, `fix_word_indexed_struct` finds its sites already
+# named and correctly does nothing, this rule's regex no longer matches, and the
+# alloca stays at `n * 0x18` — 24, `sizeof(McdUserTriangle)` at i386 and HALF of
+# LP64's 48. The triangle list is then under-allocated and the physics runs on a
+# heap overrun, with i386 145/145 green throughout. Nothing reported it because
+# a regex that stops matching has nothing to report.
+ALLOCA_INTO_MEMBER = re.compile(
+    r'\(\((?:struct )?(?P<T>\w+) \*\)\w+\)->(?P<F>[\w.\[\]]+)'
+    r'\s*=\s*\([A-Za-z_][\w ]*\**\)\s*'
+    r'\((?P<blk>kd_\w+) = \(char \*\)alloca\(\(size_t\)\(.*?\)'
+    r'\s*\*\s*(?P<size>0x[0-9a-f]+|\d+)\s*\+[ \t]*(?P<add>0x[0-9a-f]+|\d+)?')
+
 
 def field_pointee(T, F, inc):
     """`McdTriangleList::list` is declared `McdUserTriangle *` — read from the
@@ -875,10 +901,13 @@ def main():
                 continue
             edits.append((m.start('size'), m.end('size'), reps, 'alloc', None))
 
-        # ---- the stack allocations whose target is an offsetof-named FIELD.
+        # ---- the stack allocations whose target is a FIELD — named by an
+        # offsetof (`fix_word_indexed_struct`'s spelling) or written directly
+        # (`fix_typeid_dispatch`'s). BOTH, deliberately: see ALLOCA_INTO_MEMBER.
         # Run before `ALLOCA` so the two cannot both claim a site; they match
         # disjoint statement shapes in any case.
-        for m in ALLOCA_INTO_FIELD.finditer(text):
+        for m in list(ALLOCA_INTO_FIELD.finditer(text)) \
+                + list(ALLOCA_INTO_MEMBER.finditer(text)):
             lit = int(m.group('size'), 0)
             T, F = m.group('T'), m.group('F')
             ty = field_pointee(T, F, inc)

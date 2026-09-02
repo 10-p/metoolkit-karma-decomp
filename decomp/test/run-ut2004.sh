@@ -69,13 +69,19 @@ $KD_T_UT/ons_smoke.sh "$BIN" candidate 300
 # Read 'first', not 'restZ', when the traces differ in length: restZ is the LAST
 # frame of each file, so a 600-frame run against an 85-frame one compares
 # different instants and reads like catastrophe.
-KD_FRAMES=600 KD_GAME=Onslaught.ONSOnslaughtGame \\
-  $KD_T_UT/ktrace_run.sh \\
-    "$UT2004_BUILD_DIR/../build-legacy-karma/Source/SDLLaunch/ut2004-legacykarma-pixo.bin" \\
-    legacy600 120
-KD_FRAMES=600 KD_GAME=Onslaught.ONSOnslaughtGame \\
-  $KD_T_UT/ktrace_run.sh "$BIN" cand 120
-python3 $KD_T_STD/ktrace_score.py /tmp/ktrace-legacy600.csv /tmp/ktrace-cand.csv
+KD_TOL_LIBM=1 $KD_T_UT/ktrace_gate.sh "$BIN" \\
+    "$UT2004_ENGINE_DIR/build-native/Source/SDLLaunch/ut2004-pixo.bin"
+
+# ★ ktrace_gate.sh is the WHOLE of step 2 now, and it RUNS rather than being remembered. It takes
+# two runs of the candidate (non-determinism is the signature this project keeps meeting, and a
+# single run cannot see it), one run of the 32-bit control, and asserts the trace is non-degenerate
+# before it asserts anything about agreement. A `.exe` candidate goes through wine, so the Windows
+# x64 target uses this same gate.
+#
+# ⚠ THE CONTROL IS A POINTER-WIDTH CONTROL — the same recovered sources built 32-bit, so the only
+# variable is the width. The implementation A/B (recovered vs MathEngine) lives in the standalone
+# tier, links the SDK archives this repository vendors, and needs no engine at all; the engine-side
+# `BUILD_KARMA_REF` path that used to duplicate it was removed on 2026-09-02.
 
 # to LOCALISE — both controls first, then the complement
 $KD_T_UT/ktrace_subst.sh ctl-all  ALL        # must MATCH   — the mechanic works

@@ -213,7 +213,7 @@ def main():
     if not engine_objs:
         sys.exit('cold_triage: no engine objects under %s. An engine built WITHOUT Karma\n'
                  '  imports none of these symbols, the closure is empty, and every\n'
-                 '  function would be reported dead. Point at build-native-karma.' % build)
+                 '  function would be reported dead. Point at a USE_KARMA_DECOMP build.' % build)
 
     verdicts = {'DEAD-OBJECT': [], 'DEAD-SYMBOL': [], 'FILE-LOCAL': [], 'UNVALIDATED': []}
     total = entered = thunks = 0

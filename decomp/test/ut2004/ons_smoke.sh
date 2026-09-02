@@ -28,8 +28,31 @@ GAME="Onslaught.ONSOnslaughtGame"
 RENDERER="${ONS_RENDERER:--GL4ESRENDERER}"
 LOG="/tmp/ons-${LABEL}.log"
 
+# ---- WINDOWS, THROUGH THE SAME HARNESS AND DELIBERATELY NOT A SECOND SCRIPT.
+#
+# The Windows x64 build with Karma is the one target that had never been RUN, and the reason it
+# stayed that way for so long is that "run it" meant "write another harness". It does not: the
+# match URL, the pass criterion, the crash grep and the Karma-did-something check are identical on
+# every target, and only the LAUNCHER differs. So a `.exe` argument selects `wine` and everything
+# below is shared.
+#
+# ⚠ THE RENDERER DEFAULT FLIPS HERE, and the comment above is why: Windows has no GLES, so
+# `-GL4ESRENDERER` produces a crash that reads exactly like a physics fault. The default for a PE
+# binary is the legacy OpenGL device.
+# ⚠ AND IT NEEDS ITS OWN RUN TREE. The engine writes the viewport back into `System/UT2004.ini` on
+# exit, so a Windows run and a Linux run sharing one tree poison each other — the same defect that
+# produced two "engine UI bugs" that were neither (see ../../docs/STATE.md, the poisoned run tree).
+case "$BIN" in
+    *.exe)
+        command -v wine >/dev/null || { echo "$LABEL: no wine on PATH"; exit 2; }
+        IS_PE=1; EXT=exe
+        RENDERER="${ONS_RENDERER:--OPENGLRENDERER}"
+        ;;
+    *)  IS_PE=0; EXT=bin ;;
+esac
+
 [ -x "$BIN" ] || { echo "$LABEL: no such binary: $BIN"; exit 1; }
-cp -f "$BIN" "$RUN/System/ons-smoke-${LABEL}.bin"
+cp -f "$BIN" "$RUN/System/ons-smoke-${LABEL}.${EXT}"
 cd "$RUN/System" || exit 1
 rm -f "$LOG"
 
@@ -38,13 +61,19 @@ start=$(date +%s)
 # -nohomedir keeps logs/User.ini/saves in System/ instead of ~/.ut2004/ (ufront rule).
 # bAutoNumBots + QuickStart + bPlayerMustBeReady=False are what actually make the match TICK:
 # a URL with only ?game= loads the level, burns CPU and never leaves the pre-match state.
-timeout --signal=TERM "$SECS" xvfb-run -a -s "-screen 0 640x480x24" \
-    "./ons-smoke-${LABEL}.bin" \
-    "$MAP?game=$GAME?TimeLimit=0?bAutoNumBots=True?QuickStart=True?bPlayerMustBeReady=False" \
-    "$RENDERER" -nohomedir > "$LOG" 2>&1
+URL="$MAP?game=$GAME?TimeLimit=0?bAutoNumBots=True?QuickStart=True?bPlayerMustBeReady=False"
+if [ "$IS_PE" = 1 ]; then
+    # WINEDEBUG=-all keeps wine's own chatter out of a log this script greps for `Critical Error`.
+    WINEDEBUG="${WINEDEBUG:--all}" timeout --signal=TERM "$SECS" \
+        xvfb-run -a -s "-screen 0 640x480x24" \
+        wine "./ons-smoke-${LABEL}.exe" "$URL" "$RENDERER" -nohomedir > "$LOG" 2>&1
+else
+    timeout --signal=TERM "$SECS" xvfb-run -a -s "-screen 0 640x480x24" \
+        "./ons-smoke-${LABEL}.bin" "$URL" "$RENDERER" -nohomedir > "$LOG" 2>&1
+fi
 rc=$?
 elapsed=$(( $(date +%s) - start ))
-rm -f "./ons-smoke-${LABEL}.bin"
+rm -f "./ons-smoke-${LABEL}.${EXT}"
 
 echo "  exit=$rc after ${elapsed}s (124 = hit the time limit, which is the PASS case)"
 echo "  gametype: $(grep -oE "Game class is '[^']+'" "$LOG" | tail -1 || echo '?')"

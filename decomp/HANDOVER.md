@@ -45,7 +45,10 @@ and it took `MeMath` from "refused twice" to released in one session.
 code is not. See `X87_RECONSTRUCTIONS` for how to mark it so a re-dump cannot silently
 invalidate it.
 
-Branch: **`karma/decompile`**. `main` is untouched. **Do not merge.**
+⚠ **THAT BRANCH LINE IS GONE (corrected 2026-09-02).** This is its own repository now —
+`10-p/metoolkit-karma-decomp`, on `main`, and `engine-ut2004` FetchContents it. The instruction
+below said "Branch: `karma/decompile`. `main` is untouched. Do not merge." for the four weeks after
+the split, which is the second file `CLAUDE.md` sends you to.
 
 **If you want the non-technical picture — read [`STATUS-EXEC.md`](STATUS-EXEC.md).** It is
 one page, written for someone who knows the product and not the internals. Keep it in step
@@ -200,7 +203,6 @@ nine gates could not**, and all three instruments are now in `test/`:
 |---|---|---|
 | `test/standalone/bisect_static.sh` | which FILE-STATIC in an object is wrong — `bisect_object.sh` cannot, it arbitrates globals | `IxBoxTriList` in one pass: Ghidra had DELETED two of three stores |
 | `test/ab_contact.{c,sh}` | `McdContactSimplify` vs the shipped one on random contact sets, whole buffer bitwise | 1,000,000 calls, 100% identical — and the reverted attempt's exact defect SEGFAULTS |
-| `test/standalone/ab_lod.sh` + `scene_ragdoll_lod.c` | `MdtLODLastPartition` with its guard MADE TRUE by the public API | the object segfaulted on its first real call |
 | `tools/layout_check.py` | which structs change size at 64-bit, and how many sites bake a layout in | arm64 is not 95% done |
 | `test/standalone/make_dropin_metoolkit.sh` | check 2 — a metoolkit with no shipped member in it | the engine links and plays |
 
@@ -1367,7 +1369,6 @@ KD_CENSUS_VALIDATED=/tmp/kd_build \
 # is what makes the clean readings evidence. §3c.
 ./test/standalone/ab_contact.sh /tmp/kd_build 200000        # McdContactSimplify, must be 100%
 KD_SELFTEST=1 ./test/standalone/ab_contact.sh /tmp/kd_build 20000    # the control, must be 0
-./test/standalone/ab_lod.sh /tmp/kd_build                   # MdtLOD, three settings + a control
 
 # THE ARM64 LAYOUT GATE, and it is the one that matters now. ptrwidth_check
 # counts TRUNCATION; this counts the defect truncation is a symptom of — the

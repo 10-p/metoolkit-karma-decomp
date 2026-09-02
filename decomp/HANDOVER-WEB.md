@@ -145,7 +145,8 @@ between optimisation levels anyway.
 ### 2026-08-27, later: KARMA IS THE DEFAULT ON EVERY 32-BIT TARGET, AND ONSLAUGHT RUNS
 
 `USE_KARMA_DECOMP` is ON by default — `native`, `windows`, `wasm`, `wasm-debug`, `wasm-perf`.
-`legacy-karma` links MathEngine's originals for A/B and the `*-nokarma` presets are the controls.
+the `*-nokarma` presets are the controls. (`legacy-karma`, which linked MathEngine's originals,
+was removed from the engine on 2026-09-02 — that A/B lives in `test/standalone/difftest_pair.sh`.)
 A `UT_PTR_BYTES` gate makes a 64-bit-pointer Karma build a hard CMake error, which is what keeps
 Android's LP64 ABIs honest while the layout work waits.
 
@@ -467,7 +468,7 @@ UT2004's physics engine is **Karma** (MathEngine `metoolkit`, 2003). It ships as
 The web and Android builds of this engine therefore currently define `NO_KARMA` and have no
 vehicle or ragdoll physics at all.
 
-A separate effort (`decomp/`, branch `karma/decompile`) is recovering Karma as
+A separate effort (this repository's `decomp/`) is recovering Karma as
 **portable C** from those binaries, using the DWARF-2 debug information the shipped
 libraries happen to contain. That effort produces ordinary `.c` files.
 

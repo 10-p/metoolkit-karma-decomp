@@ -72,12 +72,13 @@ entirely DM.
 
 The gate the other twelve could not be. Everything else here compares CALLS — shadow divergences,
 per-pair difftests, per-object scene trajectories. This compares the TRAJECTORY THE CALLS ADD UP
-TO, on a real map, against a `legacy-karma` build linking MathEngine's originals.
+TO, on a real map, against the 32-bit control — the same recovered sources at 32-bit, so the
+only variable is the pointer width.
 
 ```bash
 # 1. the oracle, from the build that links the shipped archives
 KD_FRAMES=600 KD_GAME=Onslaught.ONSOnslaughtGame \
-  ./test/ut2004/ktrace_run.sh $UT2004_ENGINE_DIR/build-legacy-karma/Source/SDLLaunch/ut2004-legacykarma-pixo.bin legacy600 120
+  ./test/ut2004/ktrace_gate.sh $BIN $UT2004_ENGINE_DIR/build-native/Source/SDLLaunch/ut2004-pixo.bin
 # 2. the candidate
 KD_FRAMES=600 KD_GAME=Onslaught.ONSOnslaughtGame \
   ./test/ut2004/ktrace_run.sh $UT2004_ENGINE_DIR/build-native/Source/SDLLaunch/ut2004-pixo.bin cand 120
@@ -394,40 +395,15 @@ Sharper than any scene, because they name the FIELD that differs instead of the 
 deliberate wrong-variant control recorded in `../proven.txt`, and the control is what makes the clean
 reading evidence.
 
-```bash
-# MeMath's pure matrix functions. Control is the shipped function against itself; must read 0.
-./test/standalone/ab_matrix.sh /tmp/kd_out/allobj/MeMath.c $LIB 200000
-
-# keaIntegrate_pc. BOTH code paths — the scenes never set MdtKeaBodyFlagUseFastSpin,
-# so the third argument is not optional.
-./test/standalone/ab_integrate.sh /tmp/kd_out/allobj/keaIntegrate_pc.c 100000 0
-./test/standalone/ab_integrate.sh /tmp/kd_out/allobj/keaIntegrate_pc.c 100000 1
-
-# McdContactSimplify, whole buffer bitwise. Must be 100% bit-identical.
-./test/standalone/ab_contact.sh /tmp/kd_build 200000
-# KD_SELFTEST drives the SHIPPED function on BOTH sides, so it must report
-# 0 differences — it proves the harness is not inventing agreement.
-KD_SELFTEST=1 ./test/standalone/ab_contact.sh /tmp/kd_build 20000
-# The OTHER control is recorded in proven.txt rather than wired in: the seventh
-# session's reverted variant, block base 0x10 high, SEGFAULTS.
-
-# MdtLOD, three settings plus a control. KD_MAXMATRIX lowers the engine's own guard
-# via the PUBLIC MdtWorldSetMaxMatrixSize, so the function can be made to execute.
-./test/standalone/ab_lod.sh /tmp/kd_build $MT
-KD_MAXMATRIX=8 ./test/standalone/ab_lod.sh /tmp/kd_build $MT
-```
-
-Verified, ninth session, all four:
-
-```
-ab_matrix     control (shipped vs shipped) 50,000 cases, 0 differ · recovered vs shipped 0 differ
-ab_contact    50,000 calls bit-identical, 0 return / 0 contact differences · KD_SELFTEST 100%
-ab_integrate  90,000 bodies, qrot=0 vel=0 velrot=0 T=0
-ab_lod        KD_MAXMATRIX 128 / 40 / 8 — all three trajectory bit-identical, PASS
-```
-
-`ab_lod.sh` is the one to read: `MdtLOD` had a complete, correct, breakpoint-measured
-unreachability argument and this found that the object **segfaults on its first real call**.
+> ⚠ **`ab_lod.sh` and `scene_ragdoll_lod.c` were RETIRED on 2026-09-02**, and the reason is the
+> scope rule rather than a fault in them: `MdtLODLastPartition` is the only symbol the engine
+> imports from `MdtLOD`, and the engine's one call site is guarded by
+> `rowCount > params->maxMatrixSize` with `maxMatrixSize = 0x7ffffffc` and nothing anywhere
+> lowering it — a breakpoint fires **zero** times in a 235 s match. The harness made that guard
+> true through the public API and proved the object bit-identical over 7,200 calls, which was
+> worth doing once and is not worth carrying: it is `-m32` only, so it cannot see the two LP64
+> defects that function does contain, and it gated code the engine never enters. Those two
+> defects are recorded as OUT OF SCOPE in `../docs/census-verdicts.md` for the same reason.
 
 ---
 
@@ -721,7 +697,6 @@ says.
 | `scene_chain.c` | 12-body articulated chain on joints, **collision-free** — the authoritative *trajectory* signal. Not solver-free: it drives `keaLCPSolver::solveLCP` 900 times, `MdtKeaAddConstraintForces` 900 and `keaPoolAlloc` 14,400, measured with gdb breakpoint counts on the stock build |
 | `scene_boxes_on_plane.c` | boxes tumbling, bouncing, settling. Diverges by design, but exercises the geometry dispatch — it caught the `__regparm` parameter shift after the collision-free scene had passed it |
 | `scene_ragdoll.c` | nine capsules on ball-socket joints dropped onto a plane and boxes. Exists because the other two make **not one Sphyl call** between them, and `IxSphylPrimitives` is 463,782 calls of the real game's load |
-| `scene_ragdoll_lod.c` | `scene_ragdoll` with the level-of-detail path forced on, for `ab_lod.sh` |
 | `difftest_pair.c` | the precision-tier driver `difftest_pair.sh` builds |
 | `ab_matrix.c`, `ab_integrate.c`, `ab_contact.c` | the per-function A/B drivers |
 | `hull_probe.c` | the convex-hull contract, every invariant `McdQHullTypes.h` claims in prose |
@@ -753,7 +728,6 @@ the difference more than once.
 | `ab_matrix.sh` | 50,000 cases, 0 differ; control (shipped vs shipped) 0 differ |
 | `ab_contact.sh` | 50,000 calls bit-identical; `KD_SELFTEST` 100% |
 | `ab_integrate.sh` | 90,000 bodies, qrot=0 vel=0 velrot=0 T=0 |
-| `ab_lod.sh` | `KD_MAXMATRIX` 128 / 40 / 8 — all three trajectory bit-identical |
 | `bisect_object.sh` | keaLCPSolver, every function `identical` |
 | `bisect_static.sh` `--none` / `--all` | both PASS |
 | `trace_cylcyl.sh` | 500 calls, 340 diverged (ret 0, dims 0) — the residue §12 check 3 records |

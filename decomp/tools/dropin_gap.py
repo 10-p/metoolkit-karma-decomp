@@ -151,15 +151,15 @@ def main():
     # ZERO IS THIS PROJECT'S HEADLINE NUMBER, SO IT HAS TO BE EARNED.
     #
     # The seed is "every symbol the ENGINE's objects import that metoolkit
-    # defines". An engine built WITHOUT Karma — the default for every preset
-    # except native-karma/karma-ref — imports none of them, so the seed is
+    # defines". An engine built WITHOUT Karma — `native-nokarma`, or any wasm
+    # preset before Karma was the default — imports none of them, so the seed is
     # empty, the walk visits nothing, and this prints
     #
     #     0 shipped member(s), 0 symbol(s); 0 recovered member(s) in the closure
     #
     # which is indistinguishable at a glance from the goal being met. Point it
-    # at build-native (NO_KARMA=1) instead of build-native-karma and the metric
-    # that measures the whole deliverable congratulates you.
+    # at a NO_KARMA tree instead of a Karma one and the metric that measures the
+    # whole deliverable congratulates you.
     #
     # A real closure is ~134 recovered members. Refuse anything that did not
     # reach the library at all.
@@ -168,8 +168,10 @@ def main():
             f'\n  REFUSING TO REPORT: the engine build at {args.engine_build}\n'
             f'  imports NOTHING that metoolkit defines, so the walk had no seed and\n'
             f'  the zero above is vacuous. That is what a NO_KARMA engine looks like.\n'
-            f'  Use a build configured with BUILD_KARMA_REF=ON — the `native-karma`\n'
-            f'  or `karma-ref` preset — not `native` or a wasm one.')
+            f'  Use a build configured with USE_KARMA_DECOMP=ON — the `native`\n'
+            f'  preset, or any of the LP64/32-bit control trees — not `native-nokarma`\n'
+            f'  and not a wasm one. (Measured against build-native: 13 shipped\n'
+            f'  member(s), 134 recovered member(s) in the closure.)')
 
     if args.verify_against:
         real = {l.strip() for l in open(args.verify_against) if l.strip()}

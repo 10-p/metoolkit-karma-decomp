@@ -1,3 +1,72 @@
+# LP64-WIN64-AND-GATES 2026-09-02 ★★★ THE LAST UNTESTED TARGET IS TESTED AND
+#                     THE SECOND KARMA IS GONE.
+#                     (1) WINDOWS x64 WITH KARMA RUNS, AND ITS PHYSICS IS THE
+#                     CONTROL'S. ons_smoke ONS-Torlan 300 s, 0 faults, START
+#                     MATCH. ktrace test-karma-1: 40 frames, 600 body-rows, 15
+#                     bodies, K=1396 — the SAME K as Linux; two runs identical
+#                     to each other; vs the 32-bit control 8 rows of 600 differ,
+#                     ONE body, ONE column.
+#                     ⚠ "300 s NO FAULT" WAS NOT ENOUGH: the engine does not log
+#                     per frame, so a hung run and a playing run look identical.
+#                     Same mistake as the Android 13-minute screenshot.
+#                     ★ THE 8 ROWS ARE libm, MEASURED: ONSRV0 qx is
+#                     6.12303177e-17 (mingw) vs 6.12323426e-17 (glibc) —
+#                     cos(pi/2) in the last digits — for frames 1-7 while the
+#                     body is AT REST, plus one vx at -3.16e-18 on frame 8. From
+#                     frame 9 every column agrees for the remaining 32 frames.
+#                     IT DOES NOT AMPLIFY, IT DISAPPEARS. Positions identical.
+#                     ★★ win64 is LLP64 (long 4, pointers 8) — the only target
+#                     exercising that combination, and it now does.
+#                     (2) SAME HARNESSES, NOT NEW ONES: ons_smoke.sh and
+#                     ktrace_run.sh take a .exe and use wine. ⚠ Two traps handled
+#                     where they are PRODUCED: the trace path must be `Z:\...`
+#                     or the file lands in the wine prefix and the harness says
+#                     "no trace" for a run that worked; and the Windows CRT
+#                     writes CRLF, which alone makes every line differ and reads
+#                     as a total divergence. New `windows64` preset — that build
+#                     dir had been configured BY HAND, which is much of why
+#                     "never run" survived: there was nothing to re-run.
+#                     (3) ★★ ktrace_gate.sh — THE ONLY GATE THAT HAS EVER CAUGHT
+#                     ANYTHING NOW RUNS. run-ut2004.sh PRINTS a runbook, so the
+#                     trajectory comparison was a paragraph you had to remember
+#                     and type correctly three times per commit. It asserts four
+#                     things, each of which has been the real failure: the trace
+#                     exists; it has CONTACT rows (a hover bike in free fall
+#                     agrees with itself perfectly); it matches the control byte
+#                     for byte; and IT MATCHES ITSELF ACROSS TWO RUNS — non-
+#                     determinism is the signature and one run cannot see it.
+#                     (4) BUILD_KARMA_REF REMOVED FROM engine-ut2004: 4 presets,
+#                     a mutual-exclusion FATAL_ERROR, the -legacykarma suffix, a
+#                     40-line link block and KarmaGlibcCompat.c. ★ THE A/B IS
+#                     NOT LOST — difftest_pair.sh and substitute_test.sh link
+#                     the SDK archives THIS repo vendors, per object, no engine
+#                     needed. The engine kept the POINTER-WIDTH control, which
+#                     is the variable that matters. ⚠ Checked BEFORE removing:
+#                     dropin_gap.py works off any USE_KARMA_DECOMP build — 134
+#                     recovered members in the closure against build-native,
+#                     its own definition of a real one.
+#                     ⚠⚠ AND TWO FAULTS IN THE GATES THEMSELVES:
+#                     lp64_pipeline.sh WAS HIDING ~300 DECLINED SITES — every
+#                     pass piped into head/tail, and what that cuts is the
+#                     per-site decline list. McdBatch's three sat in it for two
+#                     sessions. Full output now always goes to /tmp/kd_passes.log
+#                     and each pass prints its decline COUNT.
+#                     stack_shift.sh DOCUMENTED ITS OWN TRAP AND STILL WALKED
+#                     INTO IT: its headline result was ASLR, the correction was
+#                     written into the header, the harness was left unchanged.
+#                     It pins `setarch --addr-no-randomize` itself now.
+#                     ★★ DOCUMENTING A TRAP IS NOT CLOSING IT.
+#                     ★ ab_lod.sh + scene_ragdoll_lod.c RETIRED on the scope
+#                     rule: MdtLODLastPartition is guarded by maxMatrixSize =
+#                     0x7ffffffc and a breakpoint fires ZERO times in a 235 s
+#                     match — the engine links it and never enters it. The
+#                     harness was -m32 so it could not see the two LP64 defects
+#                     that function does contain; those are OUT OF SCOPE now,
+#                     which empties the open-defect list.
+#                     GATES: i386 145/145 · lp64_pipeline EXIT=0 ·
+#                     run-standalone 12/12 · ktrace_gate LP64 and win64 both
+#                     PASS · wasm 6a380872… unchanged after the engine change.
+#
 # LP64-QUARANTINE-OFF 2026-09-02 ★★★ THE QUARANTINE IS EMPTY, AND IT WAS
 #                     HIDING A LIVE HEAP OVERRUN IN TWO OTHER FILES.
 #                     Run with IxSphereTriList.c unquarantined,

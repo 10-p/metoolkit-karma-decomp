@@ -13,6 +13,94 @@ read before resuming; `../HANDOVER.md` is the depth behind it and `../proven.txt
 ---
 
 
+# ★★★ THE LAST UNTESTED TARGET IS TESTED, AND THE SECOND KARMA IS GONE — 2026-09-02 (LATEST)
+
+**READ THIS BLOCK FIRST.** Four changes, and the theme is that a gate you have to remember is not a
+gate and a second implementation you no longer use is not a control.
+
+**1 — WINDOWS x64 WITH KARMA RUNS, AND ITS PHYSICS IS THE CONTROL'S.** It had been "built, never
+run" since it first compiled. It is not a smoke result:
+
+```
+ons_smoke   ONS-Torlan, 300 s, 0 faults, START MATCH reached
+ktrace      test-karma-1, 40 frames, 600 body-rows, 15 bodies, K=1396 — the SAME K as Linux
+            two runs of the binary: IDENTICAL to each other
+            vs the 32-bit control: 8 rows of 600 differ, ONE body, ONE column
+```
+
+⚠ **AND "IT RAN 300 s WITH NO FAULT" WAS NOT ENOUGH, WHICH IS WHY THE TRACE IS THE ANSWER.** The
+engine does not log per frame, so the smoke log stopped growing after precache and a hung run and a
+playing run look identical. This project already recorded that mistake once, on an Android device
+where a 13-minute screenshot was pixel-identical to the one before it.
+
+★ **THE EIGHT DIFFERING ROWS ARE libm, MEASURED, NOT ASSUMED.** `ONSRV0`'s `qx` is
+`6.12303177e-17` under mingw and `6.12323426e-17` under glibc — `cos(pi/2)` in the last digits —
+for frames 1–7 while the body is at REST, and one `vx` at `-3.16e-18` on frame 8. From frame 9 the
+body moves and every column agrees to the last digit for the remaining 32 frames. **It does not
+amplify; it disappears.** Positions are byte-identical throughout.
+★★ Windows x64 is **LLP64** — `long` is 4 bytes where Linux's is 8, pointers are 8 on both — so it
+is the only target exercising that combination, and it now does.
+
+**2 — THE WINDOWS TARGET GOES THROUGH THE SAME HARNESSES, NOT NEW ONES.** `ons_smoke.sh` and
+`ktrace_run.sh` take a `.exe` and run it under wine; the match URL, the pass criterion and the
+checks are shared. ⚠ Two traps are handled where they are produced, not where they are read: the
+trace path must be a `Z:\` Windows path or the file lands inside the wine prefix and the harness
+reports "no trace" for a run that worked, and the Windows CRT writes **CRLF**, which alone makes
+every line differ and reads exactly like a total divergence. There is now a `windows64` preset —
+the build directory had been configured by hand, which is a large part of why "never run" survived
+so long: there was nothing to re-run.
+
+**3 — ★★ `ktrace_gate.sh`: THE ONLY GATE THAT HAS EVER CAUGHT ANYTHING NOW RUNS.** `run-ut2004.sh`
+PRINTS a runbook — it says so in its own header — so the trajectory comparison was a paragraph you
+had to read, remember and type correctly three times before every commit. Everything in
+`run-standalone.sh` is per-object, and `145/145 · 0 byte differences` has been green for a crash,
+an uncompilable branch, a doubled stride and a heap under-allocation. The gate asserts four things,
+each of which has been the real failure at least once: the trace exists, it has contact rows (a
+hover bike in free fall agrees with itself perfectly), it matches the control byte for byte, and
+**it matches ITSELF across two runs** — non-determinism is this project's signature and a single
+run structurally cannot see it.
+
+**4 — `BUILD_KARMA_REF` IS REMOVED FROM `engine-ut2004`.** It linked MathEngine's prebuilt i386
+archives as a second implementation of the same API: four presets, a mutual-exclusion
+`FATAL_ERROR`, a `-legacykarma` binary suffix, a 40-line link block and `KarmaGlibcCompat.c`. It
+existed to be the A/B reference while the recovery was unproven. ★ **That comparison is not lost —
+it is where it belongs and it is stronger there**: `test/standalone/difftest_pair.sh` and
+`substitute_test.sh` link the SDK archives THIS repository vendors, per object, needing no engine
+at all. What the engine kept was a pointer-width control (`/tmp/kd_b32_sse`, the same recovered
+sources at 32-bit), which is the variable that actually matters.
+⚠ Checked before removing rather than after: `dropin_gap.py` needed a Karma build and its message
+named the deleted presets. Measured against `build-native`: 134 recovered members in the closure —
+the tool's own definition of a real one. Its message and `cold_triage.py`'s now say so.
+
+**AND TWO THINGS THE AUDIT FOUND IN THE GATES THEMSELVES:**
+
+⚠⚠ **`lp64_pipeline.sh` WAS HIDING ~300 DECLINED SITES.** Every pass was piped into `head`/`tail`
+to keep the log readable, and what those filters cut is the per-site decline list. `McdBatch`'s
+three `elementTable` reads sat in it for two sessions; finding out *why* they declined took a
+separate manual run. Full output now always goes to `/tmp/kd_passes.log` and each pass prints its
+decline COUNT, so a number that moves is visible without opening it.
+
+⚠⚠ **`stack_shift.sh` DOCUMENTED ITS OWN TRAP AND STILL WALKED INTO IT.** Its headline result —
+"the LP64 physics depends on the contents of the stack" — was ASLR, the correction was written into
+the header, and the harness was left unchanged, so it could produce the same wrong answer the same
+way. It now pins `setarch --addr-no-randomize` itself. **Documenting a trap is not closing it.**
+
+★ **AND `ab_lod.sh` + `scene_ragdoll_lod.c` ARE RETIRED**, on the scope rule rather than a fault:
+`MdtLODLastPartition` is guarded by `maxMatrixSize = 0x7ffffffc` and a breakpoint fires zero times
+in a 235 s match — the engine links that code and never enters it. The harness was `-m32`, so it
+could not see the two LP64 defects that function does contain; those are now recorded OUT OF SCOPE
+rather than open, which empties the open-defect list.
+
+```
+i386 145/145 · 0 byte differences · lp64_pipeline EXIT=0 · run-standalone 12/12
+ktrace_gate LP64 vs control : self-consistent, BYTE-IDENTICAL (c31ed77b7323, K=1396)
+ktrace_gate win64 vs control: self-consistent, differs only at the 1e-17 floor
+wasm 6a380872… unchanged after the engine change · sources byte-identical
+```
+
+---
+
+
 # ★★★ THE QUARANTINE IS EMPTY, AND IT WAS HIDING A LIVE HEAP OVERRUN IN TWO OTHER FILES
 
 **2026-09-02 (LATEST). READ THIS BLOCK FIRST.**

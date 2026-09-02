@@ -24,19 +24,55 @@ SRC="${KD_OUT_SRC:-/tmp/kd_out}"
 DST="${KD_OUT:-/tmp/kd_lp64}"
 BUILD="${KD_BUILD:-/tmp/kd_build}"
 
+# ---- EVERY PASS'S FULL OUTPUT GOES TO A FILE, AND THAT IS NOT TIDINESS.
+#
+# Each pass below used to be piped straight into `head`/`tail` to keep the log readable, and what
+# those filters cut is the DECLINE LIST — the per-site record of what the pass looked at and
+# refused. Measured 2026-09-02: the chain declines about 300 sites, and not one of them was
+# visible in this script's output. `McdBatch`'s three `elementTable` reads sat in that hidden list
+# for two sessions; finding out WHY they declined took a separate manual run of the pass.
+#
+# A gate that reports "56 repaired" and hides "40 declined, and here is each one" is reporting
+# half. The console still shows the same summary — this file is long enough — but the full text is
+# always written, the path is printed once, and the per-pass decline COUNT is shown so a number
+# that moves is visible without opening it.
+KD_PASSLOG="${KD_PASSLOG:-/tmp/kd_passes.log}"
+: > "$KD_PASSLOG"
+
+kd_pass() {   # kd_pass <tool> [args...] [-- head|tail N]
+    local show=head n=0 tool="$1"; shift
+    local args=()
+    while [ $# -gt 0 ]; do
+        if [ "$1" = "--" ]; then show="$2"; n="$3"; shift 3; continue; fi
+        args+=("$1"); shift
+    done
+    local out; out=$(mktemp)
+    python3 "$KD_ROOT/tools/$tool.py" "${args[@]}" > "$out" 2>&1
+    local rc=$?
+    { echo "########## $tool ##########"; cat "$out"; } >> "$KD_PASSLOG"
+    if [ "$n" -gt 0 ]; then "$show" -"$n" "$out"; else cat "$out"; fi
+    local dec
+    dec=$(grep -icE '^ *(- )?[A-Za-z0-9_]+\.c .*declin|declined \(reported' "$out" || true)
+    dec=$(grep -oE 'declined[^:]*: *[0-9]+' "$out" | grep -oE '[0-9]+$' |
+          awk '{s+=$1} END {print s+0}')
+    [ "${dec:-0}" -gt 0 ] && echo "     ($dec declined — full list in $KD_PASSLOG)"
+    rm -f "$out"
+    [ $rc -eq 0 ] || { echo "  -> $tool FAILED (rc=$rc); see $KD_PASSLOG"; exit 2; }
+}
+
 [ -d "$SRC/allobj" ] || { echo "  no recovery at $SRC — run tools/recover.py first"; exit 2; }
 rm -rf "$DST" && cp -a "$SRC" "$DST" || exit 2
 echo "== post-passes on a COPY ($DST) =="
-python3 "$KD_ROOT/tools/fix_baked_sizeof.py" "$DST/allobj" "$BUILD" "$MT" || exit 2
-python3 "$KD_ROOT/tools/fix_strides.py"   "$DST/allobj" "$BUILD" "$MT" || exit 2
+kd_pass fix_baked_sizeof "$DST/allobj" "$BUILD" "$MT"
+kd_pass fix_strides "$DST/allobj" "$BUILD" "$MT"
 # ⚠ TWICE, AND THE SECOND RUN IS NOT BELT-AND-BRACES. Each run resolves one
 # more link of a type chain: a call names `pvVar2`, `pvVar2` names the field
 # `first`, and only then can the local that READS `first` be typed. The pass is
 # idempotent — a repaired site has no literal left to match — so the second run
 # sees only what the first could not resolve.
-python3 "$KD_ROOT/tools/fix_literal_offsets.py" "$DST/allobj" "$BUILD" "$MT" | tail -3 || exit 2
-python3 "$KD_ROOT/tools/fix_literal_offsets.py" "$DST/allobj" "$BUILD" "$MT" | tail -3 || exit 2
-python3 "$KD_ROOT/tools/fix_derived_fields.py" "$DST/allobj" "$BUILD" "$MT" | head -2 || exit 2
+kd_pass fix_literal_offsets "$DST/allobj" "$BUILD" "$MT" -- tail 3
+kd_pass fix_literal_offsets "$DST/allobj" "$BUILD" "$MT" -- tail 3
+kd_pass fix_derived_fields "$DST/allobj" "$BUILD" "$MT" -- head 2
 # ---- IMMEDIATELY AFTER fix_derived_fields, ON ITS RESIDUE. Same defect class,
 # and it only ever sees sites that pass DECLINED: a derived geometry field
 # addressed as an index past `McdGeometry`, in a function that is POLYMORPHIC so
@@ -51,7 +87,7 @@ python3 "$KD_ROOT/tools/fix_derived_fields.py" "$DST/allobj" "$BUILD" "$MT" | he
 # shrank every convex mesh by a bounding-sphere coordinate, `Box`-vs-`ConvexMesh`
 # stopped reporting contacts at 64-bit, and ONSHoverBike3 lost the impulse that
 # held it up. See `../../docs/STATE.md` and `../../proven.txt` LP64-GJK-FATNESS.
-python3 "$KD_ROOT/tools/fix_typeid_dispatch.py" "$DST/allobj" "$BUILD" "$MT" | head -8 || exit 2
+kd_pass fix_typeid_dispatch "$DST/allobj" "$BUILD" "$MT" -- head 8
 # ⚠ AFTER fix_derived_fields, WHICH IS THE SAME DEFECT CLASS AND MUST GO FIRST.
 # That pass types the base pointer PER FILE and names the concrete field with
 # its own declared type, which is the better repair wherever a file has one
@@ -61,22 +97,22 @@ python3 "$KD_ROOT/tools/fix_typeid_dispatch.py" "$DST/allobj" "$BUILD" "$MT" | h
 # located defect lives (`trilistgeom[3].mRefCtAndID`, byte 48 here and 96
 # there), so this pass takes the residue and types it PER VARIABLE instead.
 # Running it first would take the sites away from the better repair.
-python3 "$KD_ROOT/tools/fix_index_layout.py" "$DST/allobj" "$BUILD" "$MT" | head -4 || exit 2
-python3 "$KD_ROOT/tools/fix_arena_carve.py" "$DST/allobj" "$BUILD" "$MT" | head -3 || exit 2
-python3 "$KD_ROOT/tools/fix_vtable_offsets.py" "$DST/allobj" "$BUILD" "$MT" | head -2 || exit 2
-python3 "$KD_ROOT/tools/fix_ptrwidth.py"    "$DST/allobj" "$BUILD" "$MT" || exit 2
+kd_pass fix_index_layout "$DST/allobj" "$BUILD" "$MT" -- head 4
+kd_pass fix_arena_carve "$DST/allobj" "$BUILD" "$MT" -- head 3
+kd_pass fix_vtable_offsets "$DST/allobj" "$BUILD" "$MT" -- head 2
+kd_pass fix_ptrwidth "$DST/allobj" "$BUILD" "$MT"
 # AFTER fix_ptrwidth: it widens the CASTS, and these two key on what it wrote.
 # fix_narrow_pointers first — it widens the locals whose masks the next pass has
 # to recognise, and a mask on a widened local has no cast in it to match.
-python3 "$KD_ROOT/tools/fix_narrow_pointers.py" "$DST/allobj" "$BUILD" "$MT" | head -4 || exit 2
-python3 "$KD_ROOT/tools/fix_align_masks.py" "$DST/allobj" "$BUILD" "$MT" | head -2 || exit 2
-python3 "$KD_ROOT/tools/fix_frame_slots.py" "$DST/allobj" "$BUILD" "$MT" | head -2 || exit 2
+kd_pass fix_narrow_pointers "$DST/allobj" "$BUILD" "$MT" -- head 4
+kd_pass fix_align_masks "$DST/allobj" "$BUILD" "$MT" -- head 2
+kd_pass fix_frame_slots "$DST/allobj" "$BUILD" "$MT" -- head 2
 # AFTER fix_narrow_pointers TOO, and for a different reason: this one LEARNS the
 # element size from the allocations that pass repairs. Run it earlier and every
 # pool name reads as a four-byte array — `NAZ` and `NR` are spelled identically
 # until rule G widens one of them — so it would print a clean, wrong zero. It
 # refuses that case rather than printing it.
-python3 "$KD_ROOT/tools/fix_pool_reserve.py" "$DST/allobj" "$BUILD" "$MT" | head -2 || exit 2
+kd_pass fix_pool_reserve "$DST/allobj" "$BUILD" "$MT" -- head 2
 # ---- LAST, AND DELIBERATELY SO. `fix_narrow_loads` reads clang's
 # -Wint-to-pointer-cast diagnostics over the FINISHED text, so running it here
 # gives it the most complete state and stops it from rewriting a shape an
@@ -85,7 +121,7 @@ python3 "$KD_ROOT/tools/fix_pool_reserve.py" "$DST/allobj" "$BUILD" "$MT" | head
 # on. It is the other half of the index repair above — that one fixes the
 # ADDRESS a pointer is read from, this one the WIDTH it is read at, and the
 # triangle generator needs both.
-python3 "$KD_ROOT/tools/fix_narrow_loads.py" "$DST/allobj" "$BUILD" "$MT" | head -4 || exit 2
+kd_pass fix_narrow_loads "$DST/allobj" "$BUILD" "$MT" -- head 4
 
 # ---- IMMEDIATELY AFTER fix_narrow_loads, BECAUSE IT IS THE OTHER HALF OF THE
 # SAME LOAD. That pass widened `*(int *)((char *)&McdGjkBinarySubset + 0x3c)` to
@@ -95,7 +131,7 @@ python3 "$KD_ROOT/tools/fix_narrow_loads.py" "$DST/allobj" "$BUILD" "$MT" | head
 # diagnostic above to report. Two sites, both confirmed against MathEngine's own
 # amd64 build (`McdGjkBinarySubset + 0x78` = 15*8), and one of them is the arm64
 # Onslaught SIGSEGV.
-python3 "$KD_ROOT/tools/fix_global_array_index.py" "$DST/allobj" "$BUILD" "$MT" | tail -3 || exit 2
+kd_pass fix_global_array_index "$DST/allobj" "$BUILD" "$MT" -- tail 3
 
 # ---- AFTER the passes above, because it reads what they wrote: the cursor's
 # initialiser has to already be spelled as an offsetof against a NAMED field
@@ -103,13 +139,13 @@ python3 "$KD_ROOT/tools/fix_global_array_index.py" "$DST/allobj" "$BUILD" "$MT" 
 # (`fix_ptrwidth`) before this one can tell which field a list head came from.
 # Before `fix_block_copy` because this repair is a plain re-spelling with no
 # preprocessor conditional in it.
-python3 "$KD_ROOT/tools/fix_list_walk.py" "$DST/allobj" "$BUILD" "$MT" | tail -4 || exit 2
+kd_pass fix_list_walk "$DST/allobj" "$BUILD" "$MT" -- tail 4
 
 # ---- It anchors on a POOL, not on a field. `(MePoolFixedAPI.init)(pool, n,
 # sizeof(*(McdCache *)0), 16)` is the only place `m_cachedData`'s type is written
 # down at all — the oracle declares it `void *` and says the rest in a comment.
 # It also types the WORD-INDEXED triangle walks, which is the ragdoll path.
-python3 "$KD_ROOT/tools/fix_word_indexed_struct.py" "$DST/allobj" "$BUILD" "$MT" | tail -3 || exit 2
+kd_pass fix_word_indexed_struct "$DST/allobj" "$BUILD" "$MT" -- tail 3
 
 # ---- AFTER fix_word_indexed_struct (moved 2026-08-31), and that ORDER IS THE
 # GATE. This pass keys on the field offsetof spelling
@@ -130,9 +166,9 @@ python3 "$KD_ROOT/tools/fix_word_indexed_struct.py" "$DST/allobj" "$BUILD" "$MT"
 # the first invocation and the array stays at 24 bytes per element instead of
 # 48. `--field-allocas-only` keeps the other four rules switched off so nothing
 # is re-litigated over text five passes have since rewritten.
-python3 "$KD_ROOT/tools/fix_baked_sizeof.py" "$DST/allobj" "$BUILD" "$MT" --field-allocas-only | tail -4 || exit 2
+kd_pass fix_baked_sizeof "$DST/allobj" "$BUILD" "$MT" --field-allocas-only -- tail 4
 
-python3 "$KD_ROOT/tools/fix_element_stride.py" "$DST/allobj" "$BUILD" "$MT" | tail -3 || exit 2
+kd_pass fix_element_stride "$DST/allobj" "$BUILD" "$MT" -- tail 3
 
 # ---- AND ITS SIBLING, for the array gcc addresses from the MIDDLE of its first
 # element. `result->contacts->normal + cur + 0x18` is byte 36 of an `McdContact`,
@@ -142,7 +178,7 @@ python3 "$KD_ROOT/tools/fix_element_stride.py" "$DST/allobj" "$BUILD" "$MT" | ta
 # reachable. It runs after `fix_element_stride` because it is the same question
 # asked from a member's address rather than the element's, and the two must not
 # both claim a literal.
-python3 "$KD_ROOT/tools/fix_member_base_walk.py" "$DST/allobj" "$BUILD" "$MT" | tail -8 || exit 2
+kd_pass fix_member_base_walk "$DST/allobj" "$BUILD" "$MT" -- tail 8
 
 # ---- AND THE OTHER PLACE A LAYOUT HIDES: a callback's `void *` CONTEXT, which
 # Ghidra has no type for at all, so every field of it is a baked byte offset.
@@ -151,7 +187,7 @@ python3 "$KD_ROOT/tools/fix_member_base_walk.py" "$DST/allobj" "$BUILD" "$MT" | 
 # the 52 open ones while `MePoolxDictNodeAllocate` reads `numfree` out of
 # `numrec` and stores eight bytes into a four-byte index. It is the vehicle
 # crash: `MeDictInsert` <- `MeSetAdd` <- `McdConvexMeshPlaneCut`.
-python3 "$KD_ROOT/tools/fix_callback_context.py" "$DST/allobj" "$BUILD" "$MT" | tail -6 || exit 2
+kd_pass fix_callback_context "$DST/allobj" "$BUILD" "$MT" -- tail 6
 
 # ---- IMMEDIATELY AFTER IT, AND FOR THE SAME REASON ONE STEP FURTHER OUT: a
 # `void *` whose type is not in ANY declaration, only in the single call that
@@ -161,7 +197,7 @@ python3 "$KD_ROOT/tools/fix_callback_context.py" "$DST/allobj" "$BUILD" "$MT" | 
 # and that types every read of the slot. At LP64 `piVar4[1]` was the HIGH HALF of
 # `model1` rather than `model2`, so `McdModelSetBody` dropped contact groups whose
 # SECOND model was the one being re-parented.
-python3 "$KD_ROOT/tools/fix_setter_typed_slot.py" "$DST/allobj" "$BUILD" "$MT" | tail -8 || exit 2
+kd_pass fix_setter_typed_slot "$DST/allobj" "$BUILD" "$MT" -- tail 8
 
 # ---- AND THE FABRICATED STACK AGGREGATE. Ghidra models unrelated stack slots as
 # one `McdGeometry` local and then walks whatever each slot holds through THAT
@@ -169,7 +205,7 @@ python3 "$KD_ROOT/tools/fix_setter_typed_slot.py" "$DST/allobj" "$BUILD" "$MT" |
 # `->prev` is `normal[1]` at i386 and `normal[2]` at LP64, and `->next` is byte 16
 # — off the end of a three-float vector, written eight bytes wide. Box vs
 # TriangleList is every vehicle on level geometry.
-python3 "$KD_ROOT/tools/fix_slot_pointer_walk.py" "$DST/allobj" "$BUILD" "$MT" | tail -6 || exit 2
+kd_pass fix_slot_pointer_walk "$DST/allobj" "$BUILD" "$MT" -- tail 6
 
 # ---- AND THE `alloca`'d ARRAY OF POINTERS, which `fix_baked_sizeof` DECLINED BY
 # NAME: its qsort rule needs the base to be a plain identifier, and `MdtLOD`'s
@@ -178,7 +214,7 @@ python3 "$KD_ROOT/tools/fix_slot_pointer_walk.py" "$DST/allobj" "$BUILD" "$MT" |
 # ⚠ AFTER `fix_frame_slots`, whose sixth rule widens the slot qsort's size
 # argument travels in: a size stored four bytes wide and read as a `size_t` is a
 # SECOND defect on the same line, and fixing either alone leaves the other.
-python3 "$KD_ROOT/tools/fix_alloca_elem.py" "$DST/allobj" "$BUILD" "$MT" | tail -10 || exit 2
+kd_pass fix_alloca_elem "$DST/allobj" "$BUILD" "$MT" -- tail 10
 
 # ---- AFTER EVEN THAT ONE, and for a reason none of the others have: this pass
 # does not re-spell an expression, it puts the corrected body behind
@@ -186,7 +222,7 @@ python3 "$KD_ROOT/tools/fix_alloca_elem.py" "$DST/allobj" "$BUILD" "$MT" | tail 
 # above reads the sources as plain C; running this one earlier would hand them a
 # preprocessor conditional to parse and a second, hand-written copy of each
 # repaired loop to "repair" again. Last means nothing else has to know about it.
-python3 "$KD_ROOT/tools/fix_block_copy.py" "$DST/allobj" "$BUILD" "$MT" | tail -4 || exit 2
+kd_pass fix_block_copy "$DST/allobj" "$BUILD" "$MT" -- tail 4
 
 # ---- THE DETECTOR THIS PASS COULD BLIND. check_frame_bounds reads CONSTANT
 # offsets and constant array bounds, and fix_frame_slots replaces both with

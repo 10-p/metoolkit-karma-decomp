@@ -38,6 +38,24 @@ URLOPTS="${KD_URLOPTS:-?NumBots=0?QuickStart=True?bPlayerMustBeReady=False}"
 CSV="/tmp/ktrace-${LABEL}.csv"
 LOG="/tmp/ktrace-${LABEL}.log"
 
+# ---- WINDOWS, THROUGH THE SAME HARNESS. A `.exe` selects `wine`; everything else — the fixed
+# step, the trace hook, the CSV, the checks below — is identical, which is the point. The Windows
+# x64 build is LLP64 (`long` is 4 where Linux's is 8) and pointers are eight bytes on both, so a
+# trace that MATCHES the 32-bit control is the strongest statement available about that target:
+# not "it started", but "its physics is the same trajectory".
+#
+# ⚠ "IT RAN 300 s WITH NO FAULT" IS NOT EVIDENCE THAT IT SIMULATED ANYTHING. This project has
+# already recorded that mistake once, on an Android device where the screenshot at 13 minutes was
+# pixel-identical to the one before it while the log kept growing. The engine does not log per
+# frame, so a smoke run that hangs and a smoke run that plays look the same. The trace is what
+# distinguishes them, and it is why the Windows target is validated here and not there.
+case "$BIN" in
+    *.exe)
+        command -v wine >/dev/null || { echo "$LABEL: no wine on PATH"; exit 2; }
+        IS_PE=1; EXT=exe ;;
+    *)  IS_PE=0; EXT=bin ;;
+esac
+
 [ -x "$BIN" ] || { echo "$LABEL: no such binary: $BIN"; exit 1; }
 [ -f "$RUN/Maps/${MAP}.ut2" ] || { echo "$LABEL: no such map: $RUN/Maps/${MAP}.ut2"; exit 1; }
 
@@ -72,22 +90,43 @@ KDPIN
 }
 kd_pin_viewport "$RUN"
 
-cp -f "$BIN" "$RUN/System/ktrace-${LABEL}.bin"
+cp -f "$BIN" "$RUN/System/ktrace-${LABEL}.${EXT}"
 cd "$RUN/System" || exit 1
 rm -f "$CSV" "$LOG"
 
 echo "=== $LABEL: $MAP for ${SECS}s at ${FPS} fixed fps -> $CSV ==="
 # NumBots=0 deliberately: the owner's vehicle/box defects are scripted-actor behaviour, and a bot
 # spawning ragdolls on top of them adds bodies whose indices churn between runs.
-timeout --signal=TERM "$SECS" xvfb-run -a -s "-screen 0 640x480x24" \
-    "./ktrace-${LABEL}.bin" \
+#
+# ⚠ THE TRACE PATH GOES TO THE ENGINE AS A COMMAND-LINE ARGUMENT, and under wine the engine sees
+# a Windows path. `Z:` is wine's mapping of the Linux root, so `/tmp/x` is `Z:\tmp\x` — passing the
+# bare Linux path writes the trace somewhere inside the wine prefix instead, and the harness would
+# report "NO TRACE WRITTEN" for a run that worked perfectly.
+KCSV="$CSV"
+[ "$IS_PE" = 1 ] && KCSV="Z:$(echo "$CSV" | tr '/' '\\')"
+LAUNCH="./ktrace-${LABEL}.${EXT}"
+[ "$IS_PE" = 1 ] && LAUNCH="wine $LAUNCH"
+# KD_LAUNCH_PREFIX lets a caller put something in front of the binary — `setarch
+# --addr-no-randomize` is the one that matters, and `stack_shift.sh` sets it so its measurement
+# varies the ONE thing it claims to vary. Empty by default; a normal ktrace run is unaffected.
+WINEDEBUG="${WINEDEBUG:--all}" timeout --signal=TERM "$SECS" \
+    xvfb-run -a -s "-screen 0 640x480x24" \
+    ${KD_LAUNCH_PREFIX:-} $LAUNCH \
     "${MAP}?game=${GAME}?TimeLimit=0${URLOPTS}${EXTRA}" \
     -SOFTWARERENDERER -nohomedir \
-    "-FIXEDFPS=${FPS}" "-KTRACE=${CSV}" "-KTRACEEVERY=${EVERY}" "-KTRACEFRAMES=${FRAMES}" \
+    "-FIXEDFPS=${FPS}" "-KTRACE=${KCSV}" "-KTRACEEVERY=${EVERY}" "-KTRACEFRAMES=${FRAMES}" \
     ${KD_BONES:+-KTRACEBONES} ${KD_CONTACTS:+-KTRACECONTACTS} \
     > "$LOG" 2>&1
 rc=$?
-rm -f "./ktrace-${LABEL}.bin"
+rm -f "./ktrace-${LABEL}.${EXT}"
+
+# ⚠ THE WINDOWS CRT WRITES CRLF, AND THAT ALONE MAKES EVERY LINE DIFFER. Every comparison
+# downstream — `md5sum`, `cmp`, `ktrace_diff.py` — would report a total divergence for a trace that
+# agrees to the last digit, which is the most misleading possible failure: it looks like the port
+# is broken and it is a line ending. Normalise here, once, where the file is produced.
+if [ "$IS_PE" = 1 ] && [ -s "$CSV" ]; then
+    tr -d '\r' < "$CSV" > "$CSV.lf" && mv -f "$CSV.lf" "$CSV"
+fi
 
 echo "  exit=$rc (124 = hit the time limit, which is the normal case)"
 echo "  gametype: $(grep -oE "Game class is '[^']+'" "$LOG" | tail -1 || echo '?')"

@@ -65,7 +65,31 @@ export KD_FRAMES KD_GAME
 # later. A shift only exposes the read if it happens to change the BYTES that get read; one
 # sample that agrees is silence, not evidence.
 SHIFTS="0 4096 20000 65536"
-echo "=== $LABEL: $(basename "$BIN") at $(echo $SHIFTS | wc -w) environment sizes ==="
+
+# ★★ ASLR IS PINNED HERE, BY THE HARNESS, AND THAT IS NOT A CONVENIENCE.
+#
+# The header above records that this tool's headline result — "the LP64 physics depends on the
+# contents of the stack" — was WRONG, and that what it had actually measured was address-space
+# randomisation. The correction was written down and the harness was left unchanged, so it could
+# still produce the same wrong answer the same way: with ASLR on, the same binary flips between two
+# outcomes at ANY shift, and whichever way the coin lands becomes "the result".
+#
+# Documenting a trap is not the same as closing it. `setarch --addr-no-randomize` turns this back
+# into a measurement of the one variable it claims to vary. To ask the OTHER question — does an
+# address leak into the arithmetic — set KD_ASLR=1 and compare the two runs, which is the shape the
+# corrected note describes.
+SETARCH=""
+if [ "${KD_ASLR:-0}" = 0 ]; then
+    if command -v setarch >/dev/null && setarch --addr-no-randomize true >/dev/null 2>&1; then
+        SETARCH="setarch --addr-no-randomize"
+    else
+        echo "  ⚠ no usable setarch — ASLR is ON and this run is a coin toss, not a measurement."
+    fi
+fi
+export KD_LAUNCH_PREFIX="$SETARCH"
+
+echo "=== $LABEL: $(basename "$BIN") at $(echo $SHIFTS | wc -w) environment sizes"\
+"${SETARCH:+, ASLR off}${SETARCH:+}${KD_ASLR:+, ASLR ON (deliberate)} ==="
 
 i=0
 FILES=""

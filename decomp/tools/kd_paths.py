@@ -134,7 +134,7 @@ def includes(inc=None):
 
 _UT_VARS = {
     'engine': ('UT2004_ENGINE_DIR', 'an engine-ut2004 checkout'),
-    'build': ('UT2004_BUILD_DIR', 'a configured build tree (e.g. .../build-native-karma)'),
+    'build': ('UT2004_BUILD_DIR', 'a configured build tree (e.g. .../build-native)'),
     'assets': ('UT2004_ASSETS_DIR', 'the game data (Maps/, Textures/, ...)'),
     'run': ('UT2004_RUN_DIR', 'a run tree with System/ and a drop-in metoolkit'),
 }

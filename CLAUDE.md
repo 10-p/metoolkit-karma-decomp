@@ -5,6 +5,37 @@ source-level recovery of it. Karma shipped as binary-only 32-bit x86 archives, w
 UT2004's web and Android ports had no vehicles and no ragdolls. `metoolkit_decomp/` is 145 of
 those objects recovered to portable C.
 
+---
+
+## ✅ THE PORT IS COMPLETE FOR UT2004 — 2026-09-02
+
+**If you are here to find out the state of Karma: it is done for UT2004.** Every code path the
+game exercises is recovered, repaired and measured; every target it ships on runs on the rebuilt
+physics; and MathEngine's original object code can no longer be linked at all, because that build
+path was removed rather than merely switched off.
+
+```
+web (wasm32) ships 55/55 · linux 32 + 64 · windows x64 · android arm64 + armv7 — all PLAY
+i386 acceptance 145/145, 0 byte differences   ·   run-standalone 12/12
+LP64 trajectory byte-identical to the 32-bit control (c31ed77b7323, K=1396), self-consistent
+execution census: 660 functions entered, 111 of 147 objects — open defects in that set: ZERO
+```
+
+⚠ **"COMPLETE FOR UT2004" IS A PRECISE CLAIM, NOT A VAGUE ONE, AND THE DIFFERENCE MATTERS.** This
+is a **UT2004 physics backend**, not a validated general-purpose Karma. What is still open is
+listed in `decomp/STATUS-EXEC.md` and every item is beyond this game: **36 recovered objects the
+game never enters** (five constraint types it never instantiates, the XML writer, the profiler,
+debug draw, `MdtLOD`) which compile and have never executed; **`MdtLOD`'s two known 64-bit
+defects**, unreachable only because `maxMatrixSize` is `0x7ffffffc` and a breakpoint fires zero
+times in a 235 s match; **three objects that do not compile** whose symbols the engine dead-strips;
+and **a convex hull that is a replacement rather than a recovery**. ★ Do not let any of those be
+read as "Karma is unfinished" — and do not let "Karma is done" be read as covering them.
+
+Completion was decided by measuring which code the game **enters** (`KD_CENSUS` +
+`-finstrument-functions`) and closing that set, not by counting objects.
+
+---
+
 ```
 metoolkit/              the v3369 SDK drop, verbatim — the ORACLE, never edit
 metoolkit_decomp/       the product: include/ + src/<Lib>/ + a CMake package

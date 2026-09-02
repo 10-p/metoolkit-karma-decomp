@@ -1,3 +1,42 @@
+# KARMA-COMPLETE-UT2004 2026-09-02 ✅✅ THE PORT IS COMPLETE FOR UT2004.
+#                     Every code path the game exercises is recovered, repaired
+#                     and measured; every target it ships on runs on the rebuilt
+#                     physics; and MathEngine's object code CANNOT BE LINKED AT
+#                     ALL any more — that build path was REMOVED, not switched
+#                     off, so check 2 of the definition of done is structural
+#                     rather than a test.
+#                       web wasm32 ships 55/55 · linux 32 (drop-in, every
+#                       original piece deleted) · linux 64 (25-min match, 8/8
+#                       gametypes) · windows x64 (physics == the 32-bit control)
+#                       · android arm64 (23 min on a device) · armv7
+#                       i386 145/145 0 byte diffs · run-standalone 12/12 ·
+#                       ktrace_gate LP64 byte-identical to the control
+#                       (c31ed77b7323, K=1396) and self-consistent · wasm
+#                       6a380872…
+#                     ★★ COMPLETION WAS DECIDED BY MEASUREMENT, not by "we fixed
+#                     everything we found": KD_CENSUS + -finstrument-functions
+#                     over two Onslaught matches gives 660 functions entered,
+#                     111 of 147 objects, and the entered set has ZERO open
+#                     defects and ZERO declined-but-unrepaired sites.
+#                     ⚠⚠ THE BOUNDARY IS THE POINT. This is a UT2004 PHYSICS
+#                     BACKEND, not a validated general-purpose Karma SDK. Open,
+#                     and all of it BEYOND UT2004 (see STATUS-EXEC.md):
+#                       - 36 objects the game NEVER ENTERS (5 constraint types
+#                         it never instantiates, XML writer, profiler, debug
+#                         draw, MdtLOD) — compile, never executed
+#                       - MdtLOD's two 64-bit defects, unreachable ONLY because
+#                         maxMatrixSize is 0x7ffffffc (breakpoint fires zero
+#                         times in 235 s). MdtWorldSetMaxMatrixSize with a real
+#                         bound makes both live.
+#                       - 3 objects that do not compile + 5 with no dump; the
+#                         engine's refs are dead-stripped (no MeASEObject* in
+#                         the linked binary at all)
+#                       - the convex hull is a REPLACEMENT, not a recovery
+#                       - 9 preludes with TODOs; 2 census rows closed as
+#                         near-miss on a whole-function limitation
+#                     ★ Do not read those as "Karma is unfinished", and do not
+#                     read "Karma is done" as covering them.
+#
 # LP64-EXEC-CENSUS   2026-09-02  ✅ THE ~328 DECLINED SITES ARE NOT WORK, AND
 #                     THE INSTRUMENT THAT SAYS SO IS AN EXECUTION CENSUS.
 #                     ★ "VISIBLE" IS NOT "EXERCISED". They became visible only

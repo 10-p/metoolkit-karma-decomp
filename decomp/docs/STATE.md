@@ -10,6 +10,57 @@ read before resuming; `../HANDOVER.md` is the depth behind it and `../proven.txt
 > are as they were written: `engine-ut2004/karma-decomp/` is this repository's `decomp/`,
 > `Thirdparty/metoolkit` is `../metoolkit`, and `/home/ion/tools/karma-lab` is `../lab`.
 
+
+---
+
+# ✅✅ THE KARMA PORT IS COMPLETE FOR UT2004 — 2026-09-02. READ THIS FIRST.
+
+**Every code path UT2004 exercises is recovered, repaired and measured. Every target the game ships
+on runs on the rebuilt physics. MathEngine's original object code can no longer be linked at all.**
+
+```
+web (wasm32)  ships, 55/55 browser suite      linux 32-bit  the drop-in, every original piece deleted
+linux 64-bit  25-min match, 8/8 gametypes     windows x64   plays; physics == the 32-bit control
+android arm64 23-min match on a device        android armv7 the same match, 32-bit slice
+
+i386 acceptance   145 objects, 0 compile failures, 0 byte differences
+run-standalone    12 passed, 0 failed
+ktrace_gate       LP64 byte-identical to the 32-bit control (c31ed77b7323, K=1396),
+                  identical across two runs of the same binary; win64 differs only at 1e-17
+wasm artefact     sha256 6a380872…, the file the 55/55 suite passed on
+```
+
+★★ **HOW COMPLETION WAS DECIDED, because "we fixed everything we found" is not a criterion.** By
+measuring which code the game ENTERS (`KD_CENSUS` + `-finstrument-functions`, two Onslaught
+matches) and closing that set:
+
+```
+660 functions entered · 111 of 147 objects entered · 36 never entered
+open defects in the entered set                              0
+declined-but-unrepaired sites in the entered set             0
+```
+
+⚠⚠ **"COMPLETE FOR UT2004" IS PRECISE AND ITS BOUNDARY IS THE POINT.** This is a UT2004 physics
+backend, not a validated general-purpose Karma SDK. Everything still open is BEYOND this game, and
+is enumerated in `../STATUS-EXEC.md`:
+
+1. **36 recovered objects the game never enters** — five constraint types it never instantiates,
+   the XML asset writer, the profiler, debug draw, `MdtLOD`. They compile, they are byte-identical
+   at i386, and **they have never executed**.
+2. **`MdtLOD`'s two 64-bit defects** — a 4-byte read of an 8-byte field, and a cursor stepping the
+   i386 element size. Unreachable only because `maxMatrixSize` is `0x7ffffffc`; a breakpoint fires
+   zero times in a 235 s match. ★ `MdtWorldSetMaxMatrixSize` with a real bound makes both live.
+3. **Three objects that do not compile** (`McduDebugDraw`, `MeASELoad`, `MeFGeometryFromMesh`) plus
+   five with no usable dump. The engine's references are dead-stripped — the linked binary has no
+   `MeASEObject*` symbol at all.
+4. **The convex hull is a replacement, not a recovery** — 13 qhull members stood in for by
+   `kd_convexhull.c`, correct for what UT2004 asks and not qhull.
+5. Nine preludes carry `TODO`s; two census rows are closed as "near-miss" on a whole-function
+   limitation the 2026-09-02 live-range guard could now revisit.
+
+★ **Do not let any of those be read as "Karma is unfinished", and do not let "Karma is done" be
+read as covering them.** The claim is exactly: *complete for UT2004.*
+
 ---
 
 

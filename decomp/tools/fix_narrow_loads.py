@@ -72,6 +72,23 @@ narrow loads into widened locals do not name a field, so they are not measurable
 this way and are left alone rather than guessed at. Widening a load of a genuine
 `int` field would read four bytes past it, which is why the measurement is the
 gate and not the shape.
+
+★ RULE F, AND IT IS THE ONE THE amd64 ORACLE DECLINED TO ANSWER. At offset ZERO
+there is no offsetof to key on and no `*(T *)` cast to match, so C, E, A and B
+are all structurally blind:
+
+    undefined4 *puVar4;
+    puVar4 = McdFrameworkGetInteractions(frame, t1, t2);
+    if ((code *)*puVar4 != (code *)0x0)               <- FOUR bytes
+        (**(MeBool (**)(McdModelPair *))(puVar4))(p); <- the SAME word, at EIGHT
+
+The evidence is the CALLEE'S DECLARED RETURN TYPE, which is in the oracle
+headers: `McdInteractions *MEAPI McdFrameworkGetInteractions(...)`, and offset 0
+of that struct is `McdHelloFn helloFn`. ⚠ The shipped 64-bit build could not
+settle this — `census-verdicts.md` had it as "unresolved" because amd64 `McdHello`
+uses BOTH `mov (%rax),%rax` and `mov (%rax),%eax` at displacement 0. Both are
+correct: the narrow one is `McdGeometry::mRefCtAndID`, a genuine `MeU32` at
+offset 0 of a DIFFERENT object. A displacement is not an object; a declaration is.
 """
 import os
 import re
@@ -490,6 +507,183 @@ def widen_field_address_pointers(path, root):
     return done, dec
 
 
+# ★ RULE F. THE CALLEE'S DECLARED RETURN TYPE NAMES THE OBJECT, AND THAT IS
+# EVIDENCE THE amd64 BUILD DECLINED TO GIVE.
+#
+#     undefined4 *puVar4;
+#     puVar4 = McdFrameworkGetInteractions(frame, t1, t2);
+#     ...
+#     if ((code *)*puVar4 != (code *)0x0) {                  <- FOUR bytes
+#         (**(MeBool (**)(McdModelPair *))(puVar4))(p);      <- called at EIGHT
+#
+# `McdFrame.h` declares `McdInteractions *MEAPI McdFrameworkGetInteractions(...)`
+# and `McdCTypes.h` puts `McdHelloFn helloFn` at offset 0 of that struct, so `*V`
+# is a FUNCTION POINTER: four bytes at i386, eight at LP64. The null test reads
+# half of it while the call two lines down reads all of it.
+#
+# ⚠⚠ THE ORACLE CANNOT ANSWER THIS ONE AND SAID SO. `census-verdicts.md` recorded
+# it "unresolved": the shipped amd64 `McdHello` uses BOTH `mov (%rax),%rax` and
+# `mov (%rax),%eax` at displacement 0, so the disassembly cannot say which read
+# this site is. Both are right — the four-byte one is
+# `((...)->mGeometry)->mRefCtAndID`, `McdGeometry`'s first member, which is a
+# genuine `MeU32` at offset 0 of a DIFFERENT object. A displacement is not an
+# object, and the disassembly has no way to say whose. The HEADER does.
+#
+# ⚠ Rules A and B are structurally blind to it for the reason their own report
+# names: `(code *)*puVar4` dereferences a VARIABLE, not a `*(T *)` cast, so the
+# `LOAD` pattern cannot match and the site is counted as "a field or a plain
+# variable". Rule C/E need the address spelled as an offsetof, and offset ZERO
+# has no offsetof in it.
+#
+# THE GUARD IS THAT `V` STILL POINTS AT WHAT THE CALL RETURNED. Only the bare
+# `*V` is rewritten, so arithmetic that does not store back to `V` is irrelevant;
+# a second assignment or a `++` is not, and declines. The same 4-at-i386 /
+# 8-at-LP64 measurement as every other rule here gates it, so a first member that
+# is a genuine `int` (or an `MeVector3`, which is what `McdGjkNextAvailablePoint`
+# returns into the corpus's other candidate) is declined rather than widened.
+RETDECL = re.compile(r'(?<![\w*])(?:struct\s+)?(\w+)\s*\*\s*(?:MEAPI\s+)?(\w+)\s*\(')
+NARROW_PTR_DECL = re.compile(
+    r'(?m)^\s*(?P<ty>int|uint|undefined4|MeU32|MeI32)\s*\*\s*(?P<v>\w+)\s*;')
+_RETS = {}
+_FIRST = {}
+
+
+def api_returns(root):
+    """{function -> the struct tag it is declared to return a pointer to}.
+
+    ⚠ SELF-CHECKED. A header walk that stops matching returns an empty map, and
+    an empty map declines every site while printing the same clean zero as "there
+    was nothing to find". Two known-positive declarations have to be in it."""
+    if _RETS:
+        return _RETS
+    inc = os.path.join(root, 'include')
+    for dp, _, files in os.walk(inc):
+        for f in files:
+            if not f.endswith('.h'):
+                continue
+            t = open(os.path.join(dp, f), errors='ignore').read()
+            t = re.sub(r'/\*.*?\*/', ' ', t, flags=re.S)
+            for m in RETDECL.finditer(t):
+                _RETS.setdefault(m.group(2), m.group(1))
+    for fn, want in (('McdFrameworkGetInteractions', 'McdInteractions'),
+                     ('McdGjkNextAvailablePoint', 'McdGjkPoint')):
+        if _RETS.get(fn) != want:
+            sys.exit('fix_narrow_loads: SELF-CHECK FAILED — the oracle headers '
+                     'declare %s as returning %r, want %r. The return-type scan '
+                     'is broken and rule F would decline everything silently.'
+                     % (fn, _RETS.get(fn), want))
+    return _RETS
+
+
+def first_member(T, root):
+    """The name of `T`'s member at offset 0, or None.
+
+    The name is PROPOSED by parsing the oracle's struct body and then CONFIRMED
+    by the compiler: a candidate whose offset does not measure zero, or which
+    does not exist, is dropped. So a mis-parse declines instead of naming the
+    wrong field."""
+    if T in _FIRST:
+        return _FIRST[T]
+    import fix_literal_offsets as flo
+    bodies = flo.struct_bodies(os.path.join(root, 'include'))
+    # ⚠ THE ORACLE INDEXES BY STRUCT TAG, THE HEADER RETURNS THE TYPEDEF NAME.
+    # `McdInteractions*  MEAPI McdFrameworkGetInteractions(...)` names the
+    # typedef; the body is filed under `_McdInteractions`. Looking up only the
+    # spelling in the declaration finds NOTHING and declines every site while
+    # printing a clean zero — which is the failure mode this project keeps
+    # meeting. Both spellings are tried, and the compiler confirms whichever hits.
+    body = bodies.get(T) or bodies.get('_' + T)
+    _FIRST[T] = None
+    if body:
+        b = re.sub(r'/\*.*?\*/', ' ', body, flags=re.S)
+        b = re.sub(r'//[^\n]*', ' ', b)
+        m = re.search(r'([A-Za-z_]\w*)\s*(?:\[[^\]]*\])?\s*[;,]', b)
+        if m and offset_zero(T, m.group(1), root):
+            _FIRST[T] = m.group(1)
+    return _FIRST[T]
+
+
+def offset_zero(T, F, root):
+    """`offsetof(T, F) == 0`, measured, at BOTH data models."""
+    inc = os.path.join(root, 'include')
+    os.makedirs('/tmp/kd_narrowload', exist_ok=True)
+    src = '/tmp/kd_narrowload/o.c'
+    head = ('#include "%s/kd_compat.h"\n#include "%s/kd_karma.h"\n'
+            '#include "%s/kd_types.h"\n' % ((kd_paths.MD_INC,) * 3))
+    open(src, 'w').write(
+        head + 'char kd_probe[((char *)&((%s *)0)->%s - (char *)0) + 1];\n'
+               'int kd_force = &kd_probe;\n' % (T, F))
+    for bits in ('-m32', '-m64'):
+        r = subprocess.run(['gcc', bits, '-DLINUX'] + kd_paths.includes(inc)
+                           + ['-I' + kd_paths.MD_INC, '-c', '-o', os.devnull, src],
+                           capture_output=True, text=True)
+        m = _FSZ.search(r.stderr)
+        if not m or int(m.group(1)) != 1:
+            return False
+    return True
+
+
+def widen_returned_object_loads(path, root):
+    """Rule F. Returns (widened, declined)."""
+    text = open(path, errors='ignore').read()
+    rets = api_returns(root)
+    out, done, dec = text, 0, []
+    for d in NARROW_PTR_DECL.finditer(text):
+        v, ty = d.group('v'), d.group('ty')
+        asgn = re.findall(r'(?<![\w])%s\s*=(?!=)' % re.escape(v), text)
+        call = re.search(r'(?<![\w])%s\s*=\s*(\w+)\s*\(' % re.escape(v), text)
+        if not call or len(asgn) != 1:
+            continue                    # re-assigned: `*V` is not what it returned
+        if re.search(r'(?<![\w])%s\s*(?:\+\+|--)|(?:\+\+|--)\s*%s(?![\w])'
+                     % (re.escape(v), re.escape(v)), text):
+            continue
+        T = rets.get(call.group(1))
+        if not T:
+            continue
+        F = first_member(T, root)
+        if not F:
+            dec.append('%s returns %s *, whose first member cannot be named'
+                       % (call.group(1), T))
+            continue
+        a = field_size(T, F, '-m32', root)
+        b = field_size(T, F, '-m64', root)
+        if a is None or b is None:
+            dec.append('%s::%s cannot be measured (returned object)' % (T, F))
+            continue
+        if not (a == 4 and b == 8):
+            dec.append('%s::%s is %s/%s, not a pointer that grew (returned object)'
+                       % (T, F, a, b))
+            continue
+        # ⚠ ONLY THE BARE DEREF, AND `*` IS ALSO MULTIPLICATION. `(code *)*V` is
+        # a cast applied to a load; `pfVar1[2]*V` would be a product, and a
+        # pattern that cannot tell them apart would corrupt arithmetic. So each
+        # `*V` is classified by what precedes it — a cast to a pointer type, or
+        # an operator/opening bracket — and anything else is REPORTED, never
+        # rewritten.
+        CAST = re.compile(r'\(\s*(?:struct\s+)?[A-Za-z_][\w ]*\*+\s*\)$')
+        hits = []
+        for m in re.finditer(r'\*\s*%s\b' % re.escape(v), out):
+            if d.start() <= m.start() < d.end():
+                continue                 # the declaration `undefined4 *V;`
+            head = out[:m.start()].rstrip()
+            if CAST.search(head) or (head and head[-1] in '(,=!&|^+-<>?:;{}'):
+                hits.append(m)
+            else:
+                dec.append('%s: `*%s` at %d is not a classifiable deref '
+                           '(could be a product) — left alone' % (v, v, m.start()))
+        if hits:
+            for m in sorted(hits, key=lambda x: -x.start()):
+                out = (out[:m.start()] + '*(%s *)%s' % (WIDEN[ty], v)
+                       + out[m.end():])
+            done += len(hits)
+            dec.append('%-24s -> %s::%s is 4/8, %d bare load(s) widened to %s'
+                       % (v + ' = ' + call.group(1) + '()', T, F,
+                          len(hits), WIDEN[ty]))
+    if out != text:
+        open(path, 'w').write(out)
+    return done, dec
+
+
 def main():
     srcdir, build = sys.argv[1], sys.argv[2]
     root = sys.argv[3] if len(sys.argv) > 3 else kd_paths.METOOLKIT_DIR
@@ -499,6 +693,7 @@ def main():
     cf = cflags(root)
     tot = touched = fld = fbits = other = 0
     named, inline, named_dec = 0, 0, []
+    retobj = 0
     for fn in sorted(os.listdir(srcdir)):
         if not fn.endswith('.c'):
             continue
@@ -518,9 +713,14 @@ def main():
         k2, d2 = widen_field_address_pointers(os.path.join(srcdir, fn), root)
         named += k2
         named_dec += ['%-24s %s' % (fn, x) for x in d2]
+        # ---- RULE F: the CALLEE's declared return type names the object
+        k3, d3 = widen_returned_object_loads(os.path.join(srcdir, fn), root)
+        retobj += k3
+        named_dec += ['%-24s %s' % (fn, x) for x in d3]
     print(f'  {tot} narrow pointer LOAD(s) widened in {touched} object(s)')
     print(f'  {named} named-field LOAD(s) widened by measurement (rule C)')
     print(f'  {inline} INLINE named-field LOAD(s), no destination (rule E)')
+    print(f'  {retobj} LOAD(s) at offset 0 of a call\'s DECLARED return type (rule F)')
     for x in named_dec:
         print(f'    declined: {x}')
     print(f'  declined: {fld} narrow struct field(s) — a LAYOUT question, see kd_types.h')

@@ -1,3 +1,36 @@
+# LP64-DECL-RETTYPE  2026-09-02  ✅ McdInteractions 104 IS CLOSED, AND THE
+#                     EVIDENCE WAS NEVER IN A BINARY.
+#                       puVar4 = McdFrameworkGetInteractions(frame, t1, t2);
+#                       if ((code *)*puVar4 != 0)              FOUR bytes
+#                         (**(MeBool (**)(McdModelPair *))(puVar4))(p);  EIGHT
+#                     McdFrame.h declares `McdInteractions *MEAPI
+#                     McdFrameworkGetInteractions(...)` and McdCTypes.h puts
+#                     `McdHelloFn helloFn` at offset 0 — 4 at i386, 8 at LP64.
+#                     The null test reads half of what the call reads whole.
+#                     ⚠⚠ THE ORACLE DECLINED AND THAT WAS NOT A DEAD END. amd64
+#                     McdHello uses BOTH `mov (%rax),%rax` and `mov (%rax),%eax`
+#                     at displacement 0, and BOTH ARE RIGHT: the narrow one is
+#                     McdGeometry::mRefCtAndID, a genuine MeU32 at offset 0 of a
+#                     DIFFERENT OBJECT. ★ A DISPLACEMENT IS NOT AN OBJECT and
+#                     the disassembly cannot say whose; the DECLARATION can.
+#                     "The oracle declines" != "there is no evidence".
+#                     Rule F: a narrow local assigned from a call whose oracle
+#                     header declares a `T *` return, same 4/8 measurement as
+#                     every other rule, guarded by "V still holds what the call
+#                     returned" (one assignment, no ++). Rules A/B are blind —
+#                     `(code *)*puVar4` derefs a VARIABLE so `*(T *)` cannot
+#                     match; C/E need an offsetof and OFFSET ZERO HAS NONE.
+#                     ⚠ SELF-CHECKED BOTH WAYS: the header walk asserts two
+#                     known declarations, and the proposed first-member name is
+#                     CONFIRMED by measuring its offset at both widths, so a
+#                     mis-parse declines instead of naming the wrong field. The
+#                     corpus has three candidates and the measurement disposes
+#                     of the other two: McdGjkPoint's first member is an
+#                     MeVector3 (12/12) and MdtContactGroupGetGenerator returns
+#                     void *, which has no first member.
+#                     GATES: i386 145/145 · run-standalone 12/12 · ktrace
+#                     c31ed77b7323 K=1396 3/3 · wasm 6a380872… unchanged.
+#
 # LP64-SLOT-BLINDSPOTS 2026-09-02 ✅ MdtLOD 224, MdtLOD 517 and
 #                     IxCylinderTriList 148 ARE ONE RULE'S BLIND SPOTS, NOT
 #                     THREE PROBLEMS. fix_frame_slots' slot-member rule already

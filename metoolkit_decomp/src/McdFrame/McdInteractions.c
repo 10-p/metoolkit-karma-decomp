@@ -101,7 +101,7 @@ void kd_McdHello(McdModelPair *p)
   if (p_Var3 != (McdHelloCallbackFnPtr)0x0) {
     (*p_Var3)(p);
   }
-  if ((code *)*puVar4 != (code *)0x0) {
+  if ((code *)*(kd_uptr *)puVar4 != (code *)0x0) {
     (**(MeBool (**)(McdModelPair *))(puVar4))(p);
   }
   return;

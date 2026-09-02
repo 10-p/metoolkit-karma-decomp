@@ -13,6 +13,53 @@ read before resuming; `../HANDOVER.md` is the depth behind it and `../proven.txt
 ---
 
 
+# ✅ McdInteractions 104 — THE ORACLE DECLINED; THE HEADER ANSWERED. 2026-09-02 (LATER STILL).
+
+★★ **THE ONE SITE THIS PROJECT HAD WRITTEN OFF AS UNRESOLVABLE IS RESOLVED, AND THE EVIDENCE WAS
+NEVER IN A BINARY.**
+
+```
+undefined4 *puVar4;
+puVar4 = McdFrameworkGetInteractions(frame, t1, t2);
+if ((code *)*puVar4 != (code *)0x0)                  <- FOUR bytes
+    (**(MeBool (**)(McdModelPair *))(puVar4))(p);    <- the SAME word, at EIGHT
+```
+
+`McdFrame.h` declares `McdInteractions *MEAPI McdFrameworkGetInteractions(...)`, and `McdCTypes.h`
+puts `McdHelloFn helloFn` at offset 0 of that struct. It is 4 bytes at i386 and 8 at LP64, so the
+null test reads half of a pointer the call one line down reads whole.
+
+⚠⚠ **WHY THE amd64 BUILD COULD NOT SAY SO, AND WHY THAT WAS NOT A DEAD END.** The previous block
+recorded this "unresolved" because the shipped `McdHello` uses **both** `mov (%rax),%rax` and
+`mov (%rax),%eax` at displacement 0. Both are correct: the four-byte one is
+`((...->mGeometry))->mRefCtAndID`, `McdGeometry`'s first member, a genuine `MeU32` at offset 0 of a
+**different object**. ★ **A DISPLACEMENT IS NOT AN OBJECT, AND THE DISASSEMBLY HAS NO WAY TO SAY
+WHOSE.** The declaration does. The oracle is one evidence source, not the only one, and "the oracle
+declines" is not the same claim as "there is no evidence".
+
+**Rule F** in `fix_narrow_loads` is that source: a narrow local assigned from a call whose oracle
+header declares a `T *` return, with the same 4-at-i386 / 8-at-LP64 measurement every other rule
+here uses, and the guard that `V` still holds what the call returned (one assignment, no `++`).
+Rules A/B are structurally blind — `(code *)*puVar4` dereferences a VARIABLE, so their `*(T *)`
+pattern cannot match and the site is counted as "a field or a plain variable"; C and E need an
+offsetof, and **offset zero has no offsetof in it**.
+
+⚠ It is SELF-CHECKED both ways. The header walk asserts two known declarations before it is
+believed, and the proposed first-member name is CONFIRMED by measuring its offset at both widths, so
+a mis-parse declines rather than naming the wrong field. The corpus has three candidates and the
+measurement disposes of the other two by itself: `McdGjkNextAvailablePoint` returns `McdGjkPoint *`
+whose first member is an `MeVector3` (12/12), and `MdtContactGroupGetGenerator` returns `void *`,
+which has no first member to name.
+
+```
+i386 acceptance 145/145 · 0 byte differences · run-standalone 12/12
+LP64 ktrace vs the SSE-32 control: c31ed77b7323, K=1396, 3 of 3 runs
+wasm 6a380872… unchanged
+```
+
+---
+
+
 # ✅ THREE FABRICATED-SLOT SITES — 2026-09-02 (LATER STILL). THE RULE WAS ALREADY RIGHT.
 
 ★ **`MdtLOD` 224, `MdtLOD` 517 AND `IxCylinderTriList` 148 ARE ALL ONE RULE'S BLIND SPOTS, NOT

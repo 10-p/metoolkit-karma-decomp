@@ -16,7 +16,11 @@
 #                       transferContactGroups
 #                         amd64 mov (%rax),%rax              model1 EIGHT
 #                         ours  (McdModelID)*piVar4, int *   FOUR — truncated
-#                     ⚠⚠ THE SECOND EXPOSES A FLAW IN OUR OWN RULE. "the member
+#                     ✅ THE SECOND IS NOW CLOSED: clause 5 tests the WIDTH as
+#                     well as the offset, `*piVar4` becomes
+#                     `((McdModelPair *)piVar4)->model1`, i386 byte-identical
+#                     with no guard, ktrace c31ed77b7323 3/3.
+#                     ⚠⚠ AND IT EXPOSED A FLAW IN OUR OWN RULE. "the member
 #                     must actually MOVE" is about OFFSETS; model1 is byte 0 at
 #                     BOTH widths, which is why it was left alone and written up
 #                     as correct. THE OFFSET DOES NOT MOVE AND THE WIDTH DOES.

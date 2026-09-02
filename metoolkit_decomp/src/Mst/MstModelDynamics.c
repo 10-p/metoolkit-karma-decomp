@@ -147,7 +147,7 @@ static void transferContactGroups(MdtConstraintID c,void *ccbdata)
   if (piVar4 == (int *)0x0) {
     return;
   }
-  otherModel = (McdModelID)*piVar4;
+  otherModel = (McdModelID)((McdModelPair *)piVar4)->model1;
   pMVar1 = *(McdModelID *)((kd_iptr)ccbdata + ((int)((char *)&((BodyData *)0)->model - (char *)0)));
 #if __SIZEOF_POINTER__ == 4
   if ((otherModel != pMVar1) && ((McdModelID)piVar4[1] != pMVar1)) {

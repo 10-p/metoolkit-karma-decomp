@@ -123,6 +123,12 @@ def members(tag, inc):
     return out
 
 
+def field_width(tag, field, bits, inc):
+    """sizeof of `((TAG *)0)->FIELD` at `bits` — the other half of clause 5."""
+    return probe('char kd_probe[sizeof(((%s *)0)->%s) + 1];\n'
+                 'int kd_force = &kd_probe;\n' % (tag, field), bits, inc)
+
+
 def member_at(tag, off, bits, inc):
     for name in members(tag, inc):
         if offset_of(tag, name, bits, inc) == off:
@@ -306,8 +312,20 @@ def main():
                         declines.append('%-24s %s[%d]: i386 byte %d is not a member '
                                         'start of %s' % (fn, var, k, off, tag))
                         continue
-                    if offset_of(tag, name, 32, inc) == offset_of(tag, name, 64, inc):
-                        continue                    # (5) nothing moves
+                    # ⚠⚠ (5) IS ABOUT THE OFFSET **AND** THE WIDTH, AND IT USED
+                    # TO BE ABOUT ONLY THE OFFSET. `McdModelPair::model1` is
+                    # byte 0 at BOTH widths, so "nothing moves" was true and
+                    # `*piVar4` was skipped and written up as correct — while
+                    # `piVar4` is an `int *`, so the read is FOUR bytes and the
+                    # member is an eight-byte pointer. MathEngine's own amd64
+                    # build settles it: `mov (%rax),%rax`, eight bytes.
+                    # ★ A field at a fixed offset can still need a wider load.
+                    moved = offset_of(tag, name, 32, inc) != offset_of(tag, name, 64, inc)
+                    w32 = field_width(tag, name, 32, inc)
+                    w64 = field_width(tag, name, 64, inc)
+                    widened = (w32 is not None and w64 is not None and w32 != w64)
+                    if not moved and not widened:
+                        continue                    # (5) neither the byte nor the width
                     st = a.end() + s.start()
                     edits.append((st, a.end() + s.end(),
                                   ['((%s *)%s)->%s' % (tag, var, name)],

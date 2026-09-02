@@ -1,3 +1,39 @@
+# LP64-BATCH-ELEMTAB 2026-09-02  ✅ McdBatch's THREE elementTable reads are
+#                     CLOSED, and the fix is ONE EXTRA REP — no new rule.
+#                     fix_typeid_dispatch had ALREADY typed the base (it
+#                     repairs +0x18 -> elementCountMax in the same function);
+#                     +0x10 declined three times with "no spelling reproduced
+#                     the i386 object (a width change, not an offset change)".
+#                     ★ THAT DECLINE IS RIGHT ABOUT THE SPELLINGS AND WRONG
+#                     ABOUT THE CONCLUSION. Naming a member changes the
+#                     expression's TYPE, gcc schedules the load differently and
+#                     the object stops matching — so a POINTER field can never
+#                     take `&((T *)b)->F`. Rep 3 is fix_literal_offsets' own
+#                     output text, byte-identical BY CONSTRUCTION (the offsetof
+#                     folds to the literal it replaces, nothing's type changes):
+#                       ((int)b + ((int)((char *)&((T *)0)->F - (char *)0)))
+#                     ★★ AND IT CASCADES. That one edit let the chain resolve
+#                     +0x40 as McdAggregateElement::mGeometry, fix_narrow_loads
+#                     rule E widen BOTH loads on the 4/8 measurement, and
+#                     fix_element_stride recognise 0x44 as the element size —
+#                     two defects nobody had listed:
+#                       before  *(int *)(*(int *)((int)p + 0x10) + 0x40 + cur)
+#                               cur = cur + 0x44                 68, i386's
+#                       amd64   mov 0x20(%rcx),%rcx              EIGHT
+#                               cmpq $0x0,0x40(%rcx,%rax,1)      EIGHT
+#                               imul $0x48,%rax,%rax             stride 72
+#                               mov 0x2c(%rax),%eax  countMax    FOUR, already ok
+#                     ⚠ THE REP IS LAST DELIBERATELY: it re-spells the ADDRESS
+#                     and leaves the narrow load, so on a field that does not
+#                     grow it would steal a site from the two tighter spellings.
+#                     Last means it only sees what already declined — MEASURED:
+#                     the corpus diff is McdBatch.c and nothing else, and the
+#                     other 39 declines (all BASE[k].FIELD, a value not an
+#                     address) are untouched.
+#                     GATES: i386 145/145 · 0 byte diffs · lp64_pipeline EXIT=0 ·
+#                     run-standalone 12/12 · ktrace c31ed77b7323 K=1396 3/3 ·
+#                     wasm 6a380872… unchanged (ufront 2.48's 55/55 by hash).
+#
 # LP64-CENSUS-TRIAGE  2026-09-02  ★ THE 30 CENSUS SITES ARE NOT 30 BUGS. Every
 #                     entry is an aarch64 CLANG DIAGNOSTIC (int-to-pointer,
 #                     pointer-to-int, void-pointer-to-int), and NONE is a

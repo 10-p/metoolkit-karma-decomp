@@ -1044,8 +1044,40 @@ def main():
                 continue
 
             fp, tag = cands[0][1], types[first]
+            # ★ THE THIRD SPELLING IS THE ONE THE REST OF THE PIPELINE CAN READ,
+            # AND IT IS WHY McdBatch's ELEMENT WALK WAS STUCK.
+            #
+            # `&((T *)b)->F` is the tightest repair and it is tried first, but on
+            # a POINTER field it fails i386 byte-identity: naming the member
+            # changes the expression's type, gcc schedules the load differently
+            # and the object stops matching. Both existing spellings then fail
+            # and the site declines as "a width change, not an offset change" —
+            # which is true, and leaves it unrepaired because nothing downstream
+            # can see a raw `0x10` either.
+            #
+            # `((int)b + ((int)((char *)&((T *)0)->F - (char *)0)))` is
+            # `fix_literal_offsets`' own output spelling. It is byte-identical
+            # BY CONSTRUCTION — the offsetof folds to the literal it replaces and
+            # nothing's type changes — and it hands the site to the passes that
+            # key on that idiom. Measured on `McdBatchFlattenAggregate`, where
+            # this one edit cascades into the whole walk:
+            #
+            #   ours before   *(int *)(*(int *)((int)pvVar8 + 0x10) + 0x40 + local_70)
+            #                 local_70 = local_70 + 0x44
+            #   ours after    *(kd_iptr *)(*(kd_iptr *)((kd_iptr)pvVar8 + OFF(McdAggregate,
+            #                   elementTable)) + OFF(McdAggregateElement, mGeometry) + local_70)
+            #                 local_70 = local_70 + (int)sizeof(McdAggregateElement)
+            #   amd64 build   mov 0x20(%rcx),%rcx          elementTable, EIGHT
+            #                 cmpq $0x0,0x40(%rcx,%rax,1)  mGeometry,    EIGHT
+            #                 imul $0x48,%rax,%rax         stride 72, not 68
+            #
+            # ⚠ It is LAST deliberately. It re-spells the ADDRESS and leaves the
+            # narrow load in place, so on a field that does NOT grow it would
+            # take a site away from the two tighter spellings above for no gain.
             reps = ['(&((%s *)%s)->%s)' % (tag, base, fp),
-                    '((kd_iptr)&((%s *)%s)->%s)' % (tag, base, fp)]
+                    '((kd_iptr)&((%s *)%s)->%s)' % (tag, base, fp),
+                    '((int)%s + ((int)((char *)&((%s *)0)->%s - (char *)0)))'
+                    % (base, tag, fp)]
             edits.append((m.start(), m.end(), reps,
                           '%-26s %-16s +%-3d %-18s ids %-9s -> %s'
                           % (fn, tag, off, '(baked offset)',

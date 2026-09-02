@@ -67,5 +67,5 @@ The census cannot see these at all, because nothing is truncated.
 
 | site | status |
 |---|---|
-| `McdBatch` ×3 | `*(int *)(p + elementTable)` reads a pointer four bytes wide; the oracle says `mov 0x20(%rcx),%rcx` — **eight**. Needs the LOAD WIDTH changed, not the offset. |
+| `McdBatch` ×3 | ✅ **CLOSED** (`fix_typeid_dispatch` OFFSITE rep 3 — the offsetof spelling). The pass had already typed the base and repaired `+0x18`; `+0x10` declined because neither offered spelling reproduces the i386 object on a POINTER field. Emitting `fix_literal_offsets`' idiom instead is byte-identical by construction and cascades: `mGeometry` gets named, both loads widen to `kd_iptr`, and the `0x44` stride becomes `sizeof(McdAggregateElement)`. amd64: `mov 0x20(%rcx),%rcx` · `cmpq $0x0,0x40(%rcx,%rax,1)` · `imul $0x48,%rax,%rax`. |
 | `IxSphereTriList` ×3 | Quarantined in `fix_typeid_dispatch`. Two faults: a displacement match that is **not** a type match, and a pipeline hazard — editing the file makes a later all-or-nothing-per-file pass drop its whole bundle, losing a `sizeof` repair and under-allocating the triangle list. |

@@ -83,7 +83,7 @@ MeBool kd_McdBatchFlattenAggregate
   if (0 < iVar14) {
     local_70 = 0;
     do {
-      if (*(int *)(*(int *)((kd_iptr)pvVar8 + 0x10) + 0x40 + local_70) != 0) {
+      if (*(kd_iptr *)(*(kd_iptr *)((kd_iptr)pvVar8 + ((int)((char *)&((McdAggregate *)0)->elementTable - (char *)0))) + ((int)((char *)&((McdAggregateElement *)0)->mGeometry - (char *)0)) + local_70) != 0) {
         McdGeometryInstanceGetAABB(pMVar15,min1,max1);
         if ((((min1[0] <= max2[0]) && (min1[1] <= max2[1])) && (min1[2] <= max2[2])) &&
            (((min2[0] <= max1[0] && (min2[1] <= max1[1])) && (min2[2] <= max1[2])))) {
@@ -94,7 +94,7 @@ MeBool kd_McdBatchFlattenAggregate
                     
             paMVar9 = pMVar15->mTM;
             paMVar6 = ins1->mTM;
-            pfVar12 = (float *)(local_70 + *(int *)((kd_iptr)pvVar8 + 0x10));
+            pfVar12 = (float *)(local_70 + *(kd_iptr *)((kd_iptr)pvVar8 + ((int)((char *)&((McdAggregate *)0)->elementTable - (char *)0))));
             i = 3;
             do {
               (*paMVar9)[0] =
@@ -121,7 +121,7 @@ MeBool kd_McdBatchFlattenAggregate
               i = i + -1;
             } while (-1 < i);
           }
-          bVar5 = **(byte **)(*(int *)((kd_iptr)pvVar8 + 0x10) + 0x40 + local_70);
+          bVar5 = **(byte **)(*(kd_iptr *)((kd_iptr)pvVar8 + ((int)((char *)&((McdAggregate *)0)->elementTable - (char *)0))) + ((int)((char *)&((McdAggregateElement *)0)->mGeometry - (char *)0)) + local_70);
           flags_00 = flags;
           ins1_00 = pMVar15;
           ins2_00 = ins2;
@@ -191,7 +191,7 @@ LAB_00010300:
         iVar14 = *(int *)(&((McdAggregate *)pvVar8)->elementCountMax);
       }
       iVar16 = iVar16 + 1;
-      local_70 = local_70 + 0x44;
+      local_70 = local_70 + (int)sizeof(McdAggregateElement);
       pMVar15 = pMVar15->next;
     } while (iVar16 < iVar14);
   }

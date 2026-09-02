@@ -13,6 +13,59 @@ read before resuming; `../HANDOVER.md` is the depth behind it and `../proven.txt
 ---
 
 
+# ✅ McdBatch's THREE ELEMENT-TABLE READS ARE CLOSED — 2026-09-02 (LATER). ONE REP.
+
+★ **THE SITE DID NOT NEED A NEW RULE, IT NEEDED A SPELLING THE REST OF THE PIPELINE CAN READ.**
+`fix_typeid_dispatch` had already proved the base: it types `pvVar8` as `McdAggregate` in
+`McdBatchFlattenAggregate` and repairs `+0x18` to `elementCountMax` in the same function. `+0x10` —
+`elementTable` — declined, three times, with **"no spelling reproduced the i386 object (a width
+change, not an offset change)"**. That decline is accurate about both offered spellings and wrong
+about the conclusion: naming the member changes the expression's type, gcc schedules the load
+differently and the object stops matching, so a POINTER field can never take either of them.
+
+The third rep is `fix_literal_offsets`' own output text, which is byte-identical **by construction**
+(the offsetof folds to the literal it replaces; nothing's type changes) and which every downstream
+pass keys on:
+
+```
+((int)pvVar8 + ((int)((char *)&((McdAggregate *)0)->elementTable - (char *)0)))
+```
+
+★★ **AND IT CASCADES — ONE EDIT REPAIRED THE WHOLE WALK, INCLUDING TWO DEFECTS NOBODY HAD LISTED.**
+Naming `elementTable` lets `fix_literal_offsets`' chain resolve `+0x40` as
+`McdAggregateElement::mGeometry`, `fix_narrow_loads` rule E measure both fields as 4/8 and widen
+both loads, and `fix_element_stride` recognise `0x44` as the element size:
+
+```
+before   *(int *)(*(int *)((int)pvVar8 + 0x10) + 0x40 + local_70)     four bytes, offset 16
+         local_70 = local_70 + 0x44                                   68 — i386's stride
+after    *(kd_iptr *)(*(kd_iptr *)((kd_iptr)pvVar8 + OFF(McdAggregate, elementTable))
+                      + OFF(McdAggregateElement, mGeometry) + local_70)
+         local_70 = local_70 + (int)sizeof(McdAggregateElement)
+amd64    mov 0x20(%rcx),%rcx           elementTable, EIGHT
+         cmpq $0x0,0x40(%rcx,%rax,1)   mGeometry,    EIGHT
+         mov 0x40(%rcx,%rax,1),%rax    and again, EIGHT
+         imul $0x48,%rax,%rax          stride 72, NOT 68
+         mov 0x2c(%rax),%eax           elementCountMax, FOUR — already right
+```
+
+Every line of the repair is confirmed instruction-for-instruction by the shipped 64-bit build.
+
+⚠ **THE REP IS LAST IN THE LIST DELIBERATELY.** It re-spells the ADDRESS and leaves the narrow load
+in place, so on a field that does not grow it would take a site away from the two tighter spellings
+for no gain. Being last means it only ever sees what already declined — measured: the corpus diff
+for this change is **`McdBatch.c` and nothing else**, and the other 39 declines (all of them the
+`BASE[k].FIELD` shape, which is a value not an address) are untouched.
+
+```
+i386 acceptance 145/145 · 0 byte differences · lp64_pipeline EXIT=0 · run-standalone 12/12
+LP64 ktrace vs the SSE-32 control: c31ed77b7323, K=1396, 3 of 3 runs
+wasm SDLLaunch.wasm sha256 6a380872… — UNCHANGED, so ufront 2.48's 55/55 carries by hash
+```
+
+---
+
+
 # ⚠⚠ THE CENSUS, TRIAGED — 2026-09-02 (LATE NIGHT). READ WITH THE BLOCK BELOW.
 
 ★ **THE 30 ARE NOT 30 BUGS, AND SAYING SO PRECISELY IS OVERDUE.** Every census entry is one of

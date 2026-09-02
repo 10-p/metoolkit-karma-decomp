@@ -1,3 +1,58 @@
+# LP64-BOX-I386-OFF   2026-09-02  ★★★★★ THE HOVER BIKE IS FIXED, AND THE LP64 TRACE
+#                     IS NOW BYTE-IDENTICAL TO THE 32-BIT CONTROL — not "equal at a
+#                     tolerance", the same file:
+#                         SSE-32 control            md5 c31ed77b7323   K=1396
+#                         LP64 + repair, runs 1-3   md5 c31ed77b7323   K=1396
+#                     15 of 15 bodies agree in STATE and in CONTACTS over 40 frames
+#                     of test-karma-1 under Onslaught.
+#
+#                     (1) THE DEFECT IS A CONCRETE GEOMETRY'S OWN FIELDS READ AT
+#                     i386 OFFSETS. offsetof, measured at both widths:
+#                         McdGeometry  i386 sizeof 16      LP64 sizeof 32
+#                         McdBox.mR    i386 16 / 20 / 24   LP64 32 / 36 / 40
+#                     `McdGjkMaximumPoint`'s Box arm reads
+#                         fVar10 = *(float *)((kd_iptr)pvVar9 + 0x10);
+#                     so at LP64 the box half-extents come out of `McdGeometry`'s
+#                     `next` and `frame` POINTERS. ★ mR[1] is a pointer's HIGH half,
+#                     a denormal that MOVES WITH ASLR — the build was not merely
+#                     wrong, it was not the same twice. `McdBoxGetSlice` has the same
+#                     defect spelled `pMVar5[1].prev/.next`, and `.next` lands at LP64
+#                     offset 48, PAST the end of a 48-byte McdBox. Box-vs-ConvexMesh
+#                     is the ONLY pair reaching either, which is why exactly one body
+#                     of fifteen misbehaved.
+#
+#                     (2) ⚠⚠⚠ "THE PHYSICS DEPENDS ON THE STACK" WAS WRONG, AND
+#                     stack_shift.sh WAS MEASURING ASLR. With ASLR OFF, 64 KB of
+#                     environment padding changes NOTHING (4/4 identical); with ASLR
+#                     ON and no padding at all, the same binary flips between exactly
+#                     TWO outcomes. The variable was never the stack, and the two
+#                     outcomes are why "frame 9" moved to frame 1 and back between
+#                     sessions — every earlier measurement was one toss of a coin.
+#                     ⚠⚠ AND THE RECORDED MISTAKE HAPPENED AGAIN INSIDE THE HOUR:
+#                     -ftrivial-auto-var-init=zero and =pattern gave BYTE-IDENTICAL
+#                     traces, which reads as "no uninitialised auto var is consumed".
+#                     One run each, both landing on the same side. Four repeats showed
+#                     BOTH builds flipping between the SAME two hashes.
+#                     ONE SAMPLE THAT AGREES IS SILENCE, NOT EVIDENCE.
+#
+#                     (3) THE REPAIR IS IN THE GENERATOR, and it found more than it
+#                     was aimed at. `fix_typeid_dispatch` gains a baked-offset site
+#                     shape and two more evidence sources: the type id read through an
+#                     INSTANCE (`b = McdGeometryInstanceGetGeometry(ins)` beside
+#                     `v = (byte)ins->mGeometry->mRefCtAndID`), and a FILE-LOCAL
+#                     DISPATCHER (`switch((char)ins->mGeometry->mRefCtAndID)` whose
+#                     `case '\x02':` calls `kd_McdBoxGetSlice(ins,...)`, with any
+#                     unguarded caller of the same name disqualifying it).
+#                     18 sites repaired, every one i386 byte-identical — including 11
+#                     in `McdCylinderGetSlice` that nothing had looked at.
+#                     ⚠ STILL OPEN, REPORTED RATHER THAN SKIPPED: the 3 box reads in
+#                     `McdBoxMaximumPointNew`. Nothing in the corpus calls it and no
+#                     branch encloses it, so there is no evidence and the pass
+#                     declines — and so do FIVE MORE of the same shape in McdBatch.c,
+#                     which the pass now REPORTS instead of skipping silently.
+#                     Gates: i386 145/145 · lp64_pipeline PASS ·
+#                     run-standalone 12/12 · stack_shift PASS.
+#
 # LP64-GJK-CONTACT   2026-09-02  ★★★ THE HOVER BIKE IS A CONTACT ONE WIDTH
 #                     GENERATES AND THE OTHER DOES NOT — measured, not inferred —
 #                     AND THE LP64 BUILD'S PHYSICS DEPENDS ON THE CONTENTS OF THE

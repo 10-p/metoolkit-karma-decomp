@@ -1154,7 +1154,8 @@ above, provided `MEAPI` opens the next one.
 
 ```bash
 python3 tools/fix_typeid_dispatch.py /tmp/kd_lp64/allobj /tmp/kd_build
-#   -> 4 repaired, 88 declined
+#   -> 4 in the BASE[k].FIELD class, 18 in the baked-offset class (below),
+#      every one of the 22 verified i386 byte-identical
 ```
 
 `fix_derived_fields` types the base pointer **per file** and declines when more than one concrete
@@ -1191,6 +1192,47 @@ chasing `ONSHoverBike3`'s frame-9 divergence, on exactly the right code path —
 `ConvexMesh` is the only such pair on that map — and repairing it did **not** move frame 9. On this
 map the hull's fatness and its bounding-sphere centre X are both ≈ 0, so the wrong read returns the
 right number. **Bisect before believing: that is five for five in this project.**
+
+★★★★★ **THE HOVER-BIKE DEFECT WAS FOUND LATER, AND IT LIVES IN THIS PASS TOO** (2026-09-02). It is
+the same idea one step further out: a concrete geometry's own fields read at **i386 offsets**, where
+the base carries no type at all.
+
+```
+McdGeometry   i386 sizeof 16                LP64 sizeof 32
+McdBox.mR     i386 16 / 20 / 24             LP64 32 / 36 / 40
+```
+
+`McdGjkMaximumPoint`'s Box arm reads `*(float *)((kd_iptr)pvVar9 + 0x10)`, so at LP64 the box's
+half-extents come out of `McdGeometry`'s `next` and `frame` **pointers**. ★ `mR[1]` is a pointer's
+**high half** — a denormal that moves with ASLR — which is why that build's physics was not merely
+wrong but **not the same twice**. `McdBoxGetSlice` has it as `pMVar5[1].prev` / `.next`, and
+`.next` resolves to LP64 offset 48, past the end of a 48-byte `McdBox`.
+
+⚠ **`fix_literal_offsets` matches that site exactly and declines it** — its base is a `void *` from
+an accessor and the "which struct do all this file's offsets land on" inference is ambiguous
+(`{0x10,0x14,0x18}` fits dozens). The missing ingredient was never the pattern; it was the type. So
+this pass grew a **baked-offset site shape** and two more evidence sources:
+
+- **the type id through an INSTANCE** — `b = McdGeometryInstanceGetGeometry(ins)` beside
+  `v = (byte)ins->mGeometry->mRefCtAndID`. ⚠ `TYPEVAR` cannot see that: its `(\w+)->mRefCtAndID`
+  captures `mGeometry`, a *field* name, so the site's base never matched and the arm declined
+  silently.
+- **a file-local DISPATCHER** — `switch((char)ins->mGeometry->mRefCtAndID)` whose `case '\x02':`
+  calls `kd_McdBoxGetSlice(ins,...)`. The callee's `ins` *is* a box, because that is the only way
+  control reaches it. ⚠ Any caller of the same name outside a case arm disqualifies it: one
+  unguarded caller makes the whole claim false.
+
+**18 sites, every one i386 byte-identical — including 11 in `McdCylinderGetSlice`** that nothing had
+looked at. The repair is an **address re-spelling** (`&((McdBox *)p)->mR[0]`), never a member read,
+for `fix_callback_context`'s measured reason: naming two members of one object lets gcc schedule the
+loads differently and the i386 object stops matching.
+
+⚠ **Declined, and reported rather than skipped:** the three box reads in `McdBoxMaximumPointNew`.
+Nothing in the corpus calls it and no branch encloses it, so there is no evidence — and a name-based
+rule was deliberately not invented to cover it.
+
+**Result:** the LP64 trace and the SSE-32 trace of `test-karma-1` under Onslaught are now the **same
+file**, md5 `c31ed77b7323`, 15/15 bodies over 40 frames. See `decomp/proven.txt` `LP64-BOX-I386-OFF`.
 
 ### `fix_derived_fields.py` — a derived struct's field addressed as an index past its base
 

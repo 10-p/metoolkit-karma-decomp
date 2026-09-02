@@ -73,15 +73,15 @@ void kd_McdBoxGetSlice(McdGeometryInstanceID ins,MeReal *normal,MeReal dist,int 
     norm[1] = norm[1] * -1.0;
     norm[2] = norm[2] * -1.0;
   }
-  fVar12 = *(float *)&(pMVar5[1].mRefCtAndID);
+  fVar12 = *(float *)&(((McdBox *)pMVar5)->mR[0]);
   if (norm[0] < 0.0) {
     fVar12 = -fVar12;
   }
-  pMVar13 = pMVar5[1].prev;
+  pMVar13 = KD_FBITS(((McdBox *)pMVar5)->mR[1]);
   if (norm[1] < 0.0) {
     pMVar13 = (McdGeometryID)((kd_uptr)pMVar13 ^ 0x80000000);
   }
-  pMVar14 = pMVar5[1].next;
+  pMVar14 = KD_FBITS(((McdBox *)pMVar5)->mR[2]);
   if (norm[2] < 0.0) {
     pMVar14 = (McdGeometryID)((kd_uptr)pMVar14 ^ 0x80000000);
   }
@@ -374,13 +374,13 @@ void kd_McdCylinderGetSlice(McdGeometryInstanceID ins,MeReal *normal,MeReal dist
   fVar9 = fVar4 * paMVar7[1][2] + fVar2 * paMVar7[1][0] + fVar3 * paMVar7[1][1];
   fVar8 = fVar4 * paMVar7[2][2] + fVar3 * paMVar7[2][1] + fVar2 * paMVar7[2][0];
   if (ABS(fVar8) < 0.001) {
-    if (*(float *)&(pMVar6[1].mRefCtAndID) + 1e-06 < ABS(fVar11)) {
+    if (*(float *)&(((McdCylinder *)pMVar6)->mR) + 1e-06 < ABS(fVar11)) {
       return;
     }
     fVar2 = fVar2 * fVar11 + paMVar7[3][0];
     fVar3 = fVar3 * fVar11 + paMVar7[3][1];
     fVar4 = paMVar7[3][2] + fVar11 * fVar4;
-    pMVar5 = pMVar6[1].prev;
+    pMVar5 = KD_FBITS(((McdCylinder *)pMVar6)->mRz);
     (*outVert)[0] = (*(float *)&(pMVar5)) * paMVar7[2][0] + fVar2;
     (*outVert)[1] = (*(float *)&(pMVar5)) * paMVar7[2][1] + fVar3;
     (*outVert)[2] = (*(float *)&(pMVar5)) * paMVar7[2][2] + fVar4;
@@ -389,7 +389,7 @@ void kd_McdCylinderGetSlice(McdGeometryInstanceID ins,MeReal *normal,MeReal dist
     if (maxVert <= iVar15) {
       return;
     }
-    fVar8 = -*(float *)&(pMVar6[1].prev);
+    fVar8 = -*(float *)&(((McdCylinder *)pMVar6)->mRz);
     paMVar1 = outVert + iVar15;
     paMVar7 = ins->mTM;
     (*paMVar1)[0] = fVar8 * paMVar7[2][0] + fVar2;
@@ -407,22 +407,22 @@ void kd_McdCylinderGetSlice(McdGeometryInstanceID ins,MeReal *normal,MeReal dist
     fVar3 = *(float *)&(pMVar6[1].mRefCtAndID);
   }
   else {
-    fVar3 = -*(float *)&(pMVar6[1].mRefCtAndID);
+    fVar3 = -*(float *)&(((McdCylinder *)pMVar6)->mR);
   }
   fVar3 = fVar3 / fVar8;
   major[2] = fVar3 * fVar2;
   major[1] = (fVar8 * minor[0] - minor[2] * fVar10) * fVar3;
   major[0] = (minor[2] * fVar9 - minor[1] * fVar8) * fVar3;
-  fVar2 = *(float *)&(pMVar6[1].mRefCtAndID);
+  fVar2 = *(float *)&(((McdCylinder *)pMVar6)->mR);
   fVar4 = minor[0] * fVar2;
   fVar3 = minor[1] * fVar2;
   fVar2 = fVar2 * minor[2];
   fVar11 = (1.0 / fVar8) * fVar11;
   if (major[2] < 1e-06) {
-    if (*(float *)&(pMVar6[1].prev) + 1e-06 < ABS(fVar11)) {
+    if (*(float *)&(((McdCylinder *)pMVar6)->mRz) + 1e-06 < ABS(fVar11)) {
       return;
     }
-    fVar2 = *(float *)&(pMVar6[1].mRefCtAndID);
+    fVar2 = *(float *)&(((McdCylinder *)pMVar6)->mR);
     paMVar1 = outVert + *numVert;
     paMVar7 = ins->mTM;
     (*paMVar1)[0] =
@@ -436,7 +436,7 @@ void kd_McdCylinderGetSlice(McdGeometryInstanceID ins,MeReal *normal,MeReal dist
     if (maxVert <= iVar15) {
       return;
     }
-    fVar2 = *(float *)&(pMVar6[1].mRefCtAndID);
+    fVar2 = *(float *)&(((McdCylinder *)pMVar6)->mR);
     fVar3 = -fVar2;
     paMVar1 = outVert + iVar15;
     paMVar7 = ins->mTM;
@@ -451,7 +451,7 @@ void kd_McdCylinderGetSlice(McdGeometryInstanceID ins,MeReal *normal,MeReal dist
     if (maxVert <= iVar15) {
       return;
     }
-    fVar2 = *(float *)&(pMVar6[1].mRefCtAndID);
+    fVar2 = *(float *)&(((McdCylinder *)pMVar6)->mR);
     fVar3 = -fVar2;
     paMVar1 = outVert + iVar15;
     paMVar7 = ins->mTM;
@@ -466,7 +466,7 @@ void kd_McdCylinderGetSlice(McdGeometryInstanceID ins,MeReal *normal,MeReal dist
     if (maxVert <= iVar15) {
       return;
     }
-    fVar2 = -*(float *)&(pMVar6[1].mRefCtAndID);
+    fVar2 = -*(float *)&(((McdCylinder *)pMVar6)->mR);
     paMVar1 = outVert + iVar15;
     paMVar7 = ins->mTM;
     (*paMVar1)[0] =
@@ -477,7 +477,7 @@ void kd_McdCylinderGetSlice(McdGeometryInstanceID ins,MeReal *normal,MeReal dist
          fVar2 * (*paMVar7)[2] + fVar2 * paMVar7[1][2] + fVar11 * paMVar7[2][2] + paMVar7[3][2];
     goto LAB_00010b19;
   }
-  pMVar5 = pMVar6[1].prev;
+  pMVar5 = (*(unsigned int *)&((McdCylinder *)pMVar6)->mRz);
   fVar8 = (1.0 / major[2]) * ((*(float *)&(pMVar5)) - fVar11);
   if (fVar8 < 1.0) {
     if (-1.0 < fVar8) {
@@ -532,7 +532,7 @@ LAB_00010f33:
     if (maxVert <= iVar15 + 1) {
       return;
     }
-    pMVar5 = pMVar6[1].prev;
+    pMVar5 = KD_FBITS(((McdCylinder *)pMVar6)->mRz);
   }
   fVar9 = ((*(float *)&(pMVar5)) + fVar11) * (1.0 / major[2]);
   if (fVar9 < 1.0) {

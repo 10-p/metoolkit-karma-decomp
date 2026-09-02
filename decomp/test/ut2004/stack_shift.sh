@@ -22,6 +22,22 @@
 #     32-bit (SSE)   15 of 15 bodies BIT-IDENTICAL across the shift
 #     LP64           ONSHoverBike3 diverges at frame 4; the other 14 bit-identical
 #
+# ⚠⚠⚠ AND THAT FAILURE WAS NOT THE STACK — corrected 2026-09-02. It was ASLR, and this harness
+# was reading it because it varies the environment WITHOUT pinning the address space. Measured:
+#
+#     ASLR OFF, environment padded 0 / 4 KB / 20 KB / 64 KB   4 of 4 IDENTICAL
+#     ASLR ON,  no padding at all, same binary, 4 runs        flips between TWO outcomes
+#
+# The real defect was `McdBox.mR` read at i386 offsets (16/20/24 against LP64's 32/36/40), so
+# `mR[1]` came out of a POINTER'S HIGH HALF and moved with the heap. The environment size was
+# never the variable — it was a proxy that happened to move addresses.
+#
+# ★ THE HARNESS IS STILL WORTH RUNNING, and it is still the only one here that fails on an
+# address-dependent result — but read a FAIL as "this build's physics depends on something that
+# is not its own inputs", not as "an uninitialised stack read". To tell the two apart, re-run
+# under `setarch --addr-no-randomize`: if the shift alone still moves it, it is the stack; if
+# only ASLR moves it, it is an address leaking into arithmetic. See proven.txt LP64-BOX-I386-OFF.
+#
 # ⚠ A PASS IS NECESSARY, NOT SUFFICIENT. It only sees a read whose VALUE changes with the shift.
 # A read of memory that happens to hold the same bytes either way passes and is still a defect.
 #

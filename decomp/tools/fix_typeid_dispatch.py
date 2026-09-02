@@ -263,6 +263,210 @@ def reaching_ids(region, pos, tyvar, blks):
     return sorted(ids), first
 
 
+# ---------------------------------------------------------------------------
+# A SECOND SITE SHAPE, AND TWO MORE WAYS TO KNOW THE TYPE.
+#
+# ★★ THE SITES BELOW ARE THE ONES THAT PUT A POINTER'S BYTES WHERE A BOX'S HALF
+# EXTENTS BELONG, and they are the frame-9 defect this project chased for three
+# sessions. `McdGjkMaximumPoint`'s Box arm reads
+#
+#     fVar10 = *(float *)((kd_iptr)pvVar9 + 0x10);      /* McdBox::mR[0] at i386 */
+#
+# and `McdBox.mR` is at 16/20/24 at i386 and **32/36/40** at LP64 — measured,
+# not argued — so at 64-bit those three loads come out of `McdGeometry`'s `next`
+# and `frame` POINTERS. `mR[1]` is a pointer's HIGH half, which is a tiny
+# denormal that MOVES WITH ASLR, so the build's physics was not merely wrong, it
+# was not even the same twice. Box-vs-ConvexMesh is the only pair that reaches
+# this arm, which is why exactly one body of fifteen misbehaved.
+#
+# ⚠ NEITHER EXISTING PASS COULD SEE IT, AND NOT FOR WANT OF A PATTERN.
+# `fix_literal_offsets` matches this site exactly and declines it, because the
+# base is a `void *` from an accessor and its "which struct do all the offsets
+# in this file land on" inference is ambiguous ({0x10,0x14,0x18} fits dozens).
+# `fix_derived_fields` and this pass's own SITE want `BASE[k].FIELD`. The
+# missing ingredient was never the shape — it was the TYPE, and the type is
+# stated twice over in the source.
+# ---------------------------------------------------------------------------
+
+# `V = (byte)INS->mGeometry->mRefCtAndID;` — the type id taken through a
+# geometry INSTANCE rather than off a geometry directly. ⚠ TYPEVAR cannot see
+# this: its `(?P<b>\w+)->mRefCtAndID` captures `mGeometry`, a FIELD name, so the
+# site's base never matches it and every such arm declined silently.
+TYPEVAR_INS = re.compile(
+    r'(?P<v>[A-Za-z_]\w*)\s*=\s*\(\s*(?:byte|char|unsigned char|uchar)\s*\)\s*'
+    r'(?P<ins>[A-Za-z_]\w*)\s*->\s*mGeometry\s*->\s*mRefCtAndID\s*;')
+
+# The same question as a `switch`, which is how the slice dispatcher spells it.
+SWITCH_INS = re.compile(
+    r'switch\s*\(\s*\(\s*(?:byte|char|unsigned char|uchar)\s*\)\s*'
+    r'(?P<ins>[A-Za-z_]\w*)\s*->\s*mGeometry\s*->\s*mRefCtAndID\s*\)')
+
+# `B = McdGeometryInstanceGetGeometry(INS);` / `B = INS->mGeometry;` — the two
+# spellings of "the geometry of this instance". The accessor returns `void *`,
+# which is exactly what leaves the base untyped.
+GEOM_OF = [
+    re.compile(r'(?P<b>[A-Za-z_]\w*)\s*=\s*McdGeometryInstanceGetGeometry\s*'
+               r'\(\s*(?P<ins>[A-Za-z_]\w*)\s*\)\s*;'),
+    re.compile(r'(?P<b>[A-Za-z_]\w*)\s*=\s*(?P<ins>[A-Za-z_]\w*)\s*->\s*mGeometry\s*;'),
+]
+
+# fix_literal_offsets' SITE, restated. The deref and the cast are deliberately
+# NOT part of the match: only the ADDRESS is re-spelled, so the expression's
+# type is untouched and i386 stays byte-identical by construction.
+OFFSITE = re.compile(r'\(\((?:char|int|kd_iptr)\s*\*?\)'
+                     r'(?P<base>[A-Za-z_]\w*)\s*\+\s*(?P<off>0x[0-9a-f]+|\d+)\)')
+
+CASE = re.compile(r"case\s+'(?P<lit>\\x[0-9a-fA-F]{1,2}|\\[0-7]{1,3}|\\.|.)'\s*:")
+
+# A FUNCTION's banner, as opposed to `/* ---- forward declarations ---- */` and
+# the prelude, which `BANNER` also matches.
+DEFN_BANNER = re.compile(r'(?m)^/\* ---- (\S+) \(exported as')
+
+
+def case_value(lit):
+    """The integer a C character literal denotes. `'\\x02'`, `'\\0'`, `'\\a'`,
+    `'\\b'` all appear in the switch this reads, and Python's own escape rules
+    agree with C's on every one of them."""
+    try:
+        return ord(('"%s"' % lit).encode().decode('unicode_escape')[1:-1])
+    except (UnicodeDecodeError, IndexError, TypeError):
+        return None
+
+
+def dispatch_ids(text):
+    """function name -> the ONE geometry type id it is reached for, file-local.
+
+    ★ THE DISPATCHER IS THE PROOF, and it is a statement in the source rather
+    than an inference about it:
+
+        switch((char)ins->mGeometry->mRefCtAndID) {
+        case '\\x02': kd_McdBoxGetSlice(ins,normal,dist,maxVert,numVert,outVert); return;
+
+    `kd_McdBoxGetSlice`'s `ins` IS a box, because that is the only way control
+    reaches it. ⚠ AND THE FUNCTION MUST BE REACHED NO OTHER WAY: a name called
+    from anywhere outside a case arm is dropped, because one unguarded caller is
+    enough to make the whole claim false.
+
+    ⚠ FILE-LOCAL ON PURPOSE. Both dispatchers this repairs sit in the same
+    translation unit as the function they dispatch to. A cross-file version
+    would need the whole corpus's call graph to be sure of the "no other
+    caller" half, and a rule that is sure of half of itself is not a rule."""
+    ids, seen_elsewhere = {}, set()
+    for sw in SWITCH_INS.finditer(text):
+        ins = sw.group('ins')
+        o = text.find('{', sw.end())
+        if o < 0:
+            continue
+        depth, i, n = 0, o, len(text)
+        while i < n:                                    # the switch's own block
+            if text[i] == '{':
+                depth += 1
+            elif text[i] == '}':
+                depth -= 1
+                if depth == 0:
+                    break
+            i += 1
+        body, base = text[o:i], o
+        marks = [(m.start(), case_value(m.group('lit')), m.end())
+                 for m in CASE.finditer(body)]
+        for k, (s, val, e) in enumerate(marks):
+            if val is None:
+                continue
+            end = marks[k + 1][0] if k + 1 < len(marks) else len(body)
+            for c in re.finditer(r'\b(kd_[A-Za-z_]\w*)\s*\(\s*' + ins + r'\s*[,)]',
+                                 body[e:end]):
+                ids.setdefault(c.group(1), set()).add(val)
+                seen_elsewhere.add((c.group(1), base + e + c.start()))
+    # ⚠⚠ AND THE "NO OTHER CALLER" HALF IS STRUCTURAL, NOT A TEXT HEURISTIC.
+    # i386 byte-identity CANNOT validate a type — any field at the same offset
+    # compiles the same — so this claim is load-bearing and a brittle way of
+    # making it would be a wrong repair that every gate waves through. Two
+    # things in the file mention the name and are not calls: the forward
+    # DECLARATION, which lives above the first function, and the function's own
+    # DEFINITION, which follows its banner. Both are located by structure.
+    # Anything else outside a case arm disqualifies the name.
+    #
+    # ⚠ `BANNER` IS NOT THE RIGHT MARKER HERE and using it silently emptied this
+    # map: `/* ---- hand-written prelude ---- */` and
+    # `/* ---- forward declarations ---- */` match it too, so the declarations
+    # landed *after* the "first banner" and every name read as strayed. A
+    # function's banner is the one that says `(exported as`.
+    fnb = list(DEFN_BANNER.finditer(text))
+    decls_end = fnb[0].start() if fnb else len(text)
+    defn = {m.group(1): m.end() for m in fnb}
+    out = {}
+    for name, vals in ids.items():
+        if len(vals) != 1:
+            continue
+        own = defn.get(name[3:] if name.startswith('kd_') else name, defn.get(name))
+        guarded = {p for n, p in seen_elsewhere if n == name}
+        stray = False
+        for m in re.finditer(r'\b' + re.escape(name) + r'\s*\(', text):
+            p = m.start()
+            if p < decls_end:                       # the forward declaration
+                continue
+            if own is not None and own <= p <= own + 400:
+                continue                            # its own definition header
+            if any(abs(p - g) < 2 for g in guarded):
+                continue                            # a dispatcher case arm
+            stray = True
+            break
+        if not stray:
+            out[name] = next(iter(vals))
+    return out
+
+
+def region_fn(text, start):
+    """The `/* ---- name ---- */` banner name for the region beginning at start."""
+    m = BANNER.search(text, start)
+    return m.group(1) if m and m.start() == start else None
+
+
+def evidence(region, rel, blks, base, disp, fnname):
+    """Every geometry type id that can reach this site, and which one names the
+    field. -> ((ids, first), None)  or  (None, reason).
+
+    Three sources, in the order they are believed — and each is a STATEMENT in
+    the source, not an inference about it:
+
+      1  a type-id branch on the site's own base                    TYPEVAR
+      2  a type-id branch on the INSTANCE whose geometry the base is
+         (`b = McdGeometryInstanceGetGeometry(ins)` + `v = (byte)ins->
+         mGeometry->mRefCtAndID`)                                   TYPEVAR_INS
+      3  the file-local dispatcher that can only reach this function
+         for one type                                               dispatch_ids
+    """
+    for pat in TYPEVAR:
+        for t in pat.finditer(region):
+            if t.group('b') == base:
+                got = reaching_ids(region, rel, t.group('v'), blks)
+                if got is None:
+                    return None, ('%s is compared, but the site is not inside a '
+                                  'resolvable branch' % t.group('v'))
+                return got, None
+    for pat in GEOM_OF:
+        for g in pat.finditer(region):
+            if g.group('b') != base:
+                continue
+            for t in TYPEVAR_INS.finditer(region):
+                if t.group('ins') != g.group('ins'):
+                    continue
+                got = reaching_ids(region, rel, t.group('v'), blks)
+                if got is None:
+                    return None, ('%s is compared, but the site is not inside a '
+                                  'resolvable branch' % t.group('v'))
+                return got, None
+    # ⚠ THE BANNER AND THE CALL SPELL THE SAME FUNCTION DIFFERENTLY. The region
+    # header is `/* ---- McdBoxGetSlice ... */` and the dispatcher calls
+    # `kd_McdBoxGetSlice` — the `kd_` prefix every recovered definition carries.
+    # Matching on one spelling finds nothing and looks exactly like "there was
+    # no dispatcher", which is the failure mode this whole pass is about.
+    for cand in ((fnname, 'kd_' + fnname) if fnname else ()):
+        if cand in disp:
+            return ([disp[cand]], disp[cand]), None
+    return None, 'no type-id evidence reaches %s' % base
+
+
 def main():
     srcdir, build = sys.argv[1], sys.argv[2]
     root = sys.argv[3] if len(sys.argv) > 3 else kd_paths.METOOLKIT_DIR
@@ -281,11 +485,22 @@ def main():
     # how this class of pass fails silently.
     cm = field_paths('McdConvexMesh', inc, cache32)
     sp = field_paths('McdSphere', inc, cache32)
+    bx = field_paths('McdBox', inc, cache32)
     if bsz != 16 or boff.get('frame') != 12 or cm.get(44) != 'mFatness' or sp.get(16) != 'mRadius':
         sys.exit('fix_typeid_dispatch: SELF-CHECK FAILED — sizeof(McdGeometry) %r, '
                  'offsetof(frame) %r, McdConvexMesh+44 %r, McdSphere+16 %r; want '
                  '16 / 12 / mFatness / mRadius.'
                  % (bsz, boff.get('frame'), cm.get(44), sp.get(16)))
+    # ★ THE BOX IS CHECKED BY NAME AND BY BOTH WIDTHS, because it is the type
+    # the baked-offset half of this pass exists for and the one whose i386
+    # offsets (16/20/24) land on `McdGeometry`'s POINTERS at LP64 (32/36/40).
+    # A run that could not measure that must not report "0 repaired".
+    if bx.get(16) != 'mR[0]' or bx.get(24) != 'mR[2]' or \
+            offset_at('McdBox', 'mR[0]', inc, 64, offcache) != 32:
+        sys.exit('fix_typeid_dispatch: SELF-CHECK FAILED — McdBox+16 %r, +24 %r, '
+                 'LP64 offsetof(mR[0]) %r; want mR[0] / mR[2] / 32.'
+                 % (bx.get(16), bx.get(24),
+                    offset_at('McdBox', 'mR[0]', inc, 64, offcache)))
     if types.get(1) != 'McdSphere' or types.get(7) != 'McdConvexMesh':
         sys.exit('fix_typeid_dispatch: SELF-CHECK FAILED — type id 1 is %r and 7 is %r, '
                  'want McdSphere and McdConvexMesh. The enum is not being read.'
@@ -302,8 +517,9 @@ def main():
             continue
         path = os.path.join(srcdir, fn)
         text = open(path, errors='ignore').read()
-        if not SITE.search(text):
+        if not SITE.search(text) and not OFFSITE.search(text):
             continue
+        disp = dispatch_ids(text)
 
         edits = []
         for m in SITE.finditer(text):
@@ -312,26 +528,12 @@ def main():
             region = text[rs:re_]
             rel = m.start() - rs
             blks = blocks(region)
+            fnname = region_fn(text, rs)
 
-            tyvar = None
-            for pat in TYPEVAR:
-                for t in pat.finditer(region):
-                    if t.group('b') == base:
-                        tyvar = t.group('v')
-                        break
-                if tyvar:
-                    break
-            if tyvar is None:
-                declined += 1
-                declines.append('%-26s +%-4d no type-id variable derived from %s'
-                                % (fn, m.start(), base))
-                continue
-
-            got = reaching_ids(region, rel, tyvar, blks)
+            got, why = evidence(region, rel, blks, base, disp, fnname)
             if got is None:
                 declined += 1
-                declines.append('%-26s +%-4d %s is compared, but the site is not inside a '
-                                'resolvable branch' % (fn, m.start(), tyvar))
+                declines.append('%-26s +%-4d %s' % (fn, m.start(), why))
                 continue
             ids, first = got
 
@@ -389,6 +591,75 @@ def main():
             edits.append((m.start(), m.end(), reps,
                           '%-26s %-16s [%s].%-13s +%-3d ids %-9s -> %s'
                           % (fn, tag, m.group('k'), m.group('f'), off,
+                             ','.join(str(i) for i in ids), fp)))
+
+        # ---- THE BAKED-OFFSET SITES, with the same evidence and the same
+        # backstop. ★ THE REPAIR IS AN ADDRESS RE-SPELLING, NOT A MEMBER READ:
+        # `fix_callback_context` measured that naming two members of one object
+        # lets gcc schedule the loads differently and the i386 object stops
+        # matching, while `&p->FIELD` keeps every expression's type exactly as
+        # it was and changes only how the address is computed. The cast outside
+        # the match is untouched for the same reason.
+        for m in OFFSITE.finditer(text):
+            base = m.group('base')
+            rs, re_ = region_bounds(text, m.start())
+            region = text[rs:re_]
+            rel = m.start() - rs
+            blks = blocks(region)
+            fnname = region_fn(text, rs)
+
+            got, why = evidence(region, rel, blks, base, disp, fnname)
+            if got is None:
+                # ⚠ SILENCE HERE WOULD BE THE BUG. OFFSITE matches baked offsets
+                # against every kind of base in the corpus, so reporting all of
+                # them is noise — but a base that IS a geometry and still has no
+                # type evidence is a site this pass looked at and could not
+                # repair, and it has to say so. `McdBoxMaximumPointNew` is one:
+                # nothing in the corpus calls it and no branch encloses it, so
+                # its three box reads stay wrong at LP64 and are recorded rather
+                # than quietly skipped.
+                if any(g.group('b') == base
+                       for pat in GEOM_OF for g in pat.finditer(region)):
+                    declined += 1
+                    declines.append('%-26s +%-4d geometry base %s: %s'
+                                    % (fn, m.start(), base, why))
+                continue
+            ids, first = got
+
+            off = int(m.group('off'), 0)
+            # ⚠ ONLY THE CONCRETE TYPE'S OWN FIELDS. An offset inside
+            # `McdGeometry` itself is the base class and does not move relative
+            # to the base, so rewriting it would be noise at best.
+            if off < bsz:
+                continue
+            cands, ok = [], True
+            for tid in ids:
+                tag = types.get(tid)
+                fp = field_paths(tag, inc, cache32).get(off) if tag else None
+                off64 = offset_at(tag, fp, inc, 64, offcache) if fp else None
+                if not tag or not fp or off64 is None:
+                    ok = False
+                    break
+                cands.append((tag, fp, off64))
+            if ok and len(cands) > 1:
+                t0, f0, o0 = cands[0]
+                for tag, fp, off64 in cands[1:]:
+                    if fp != f0 or off64 != o0 or not type_compatible(
+                            t0, f0, tag, fp, inc, tycache):
+                        ok = False
+                        break
+            if not ok:
+                declined += 1
+                declines.append('%-26s +%-4d ids %s do not agree on the field at +%d'
+                                % (fn, m.start(), ids, off))
+                continue
+
+            fp, tag = cands[0][1], types[first]
+            reps = ['(&((%s *)%s)->%s)' % (tag, base, fp),
+                    '((kd_iptr)&((%s *)%s)->%s)' % (tag, base, fp)]
+            edits.append((m.start(), m.end(), reps,
+                          '%-26s %-16s +%-3d %-18s ids %-9s -> %s'
+                          % (fn, tag, off, '(baked offset)',
                              ','.join(str(i) for i in ids), fp)))
 
         n0 = fixed

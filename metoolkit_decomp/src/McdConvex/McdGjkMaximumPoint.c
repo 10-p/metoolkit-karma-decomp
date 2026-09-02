@@ -245,15 +245,15 @@ void kd_McdGjkMaximumPoint(McdGeometryInstanceID ins,MeReal *v,MeReal *out)
     fVar1 = *v;
     fVar2 = v[1];
     fVar3 = v[2];
-    fVar10 = *(float *)((kd_iptr)pvVar9 + 0x10);
+    fVar10 = *(float *)(&((McdBox *)pvVar9)->mR[0]);
     if (fVar3 * pfVar7[2] + fVar1 * *pfVar7 + fVar2 * pfVar7[1] < 0.0) {
       fVar10 = -fVar10;
     }
-    fVar11 = *(float *)((kd_iptr)pvVar9 + 0x14);
+    fVar11 = *(float *)(&((McdBox *)pvVar9)->mR[1]);
     if (fVar3 * pfVar7[6] + fVar1 * pfVar7[4] + fVar2 * pfVar7[5] < 0.0) {
       fVar11 = -fVar11;
     }
-    fVar12 = *(float *)((kd_iptr)pvVar9 + 0x18);
+    fVar12 = *(float *)(&((McdBox *)pvVar9)->mR[2]);
     if (fVar1 * pfVar7[8] + fVar2 * pfVar7[9] + fVar3 * pfVar7[10] < 0.0) {
       fVar12 = -fVar12;
     }

@@ -13,7 +13,120 @@ read before resuming; `../HANDOVER.md` is the depth behind it and `../proven.txt
 ---
 
 
-# ⚠⚠ OPEN ITEMS — 2026-09-02. READ THIS BLOCK FIRST.
+# ⚠⚠ OPEN ITEMS — 2026-09-02 (EVENING). READ THIS BLOCK FIRST.
+
+★★★★★ **THE HOVER BIKE IS FIXED, AND THE LP64 TRACE IS NOW BYTE-IDENTICAL TO THE 32-BIT
+CONTROL.** Not "behaviourally identical at a tolerance" — the same file, md5 `c31ed77b7323`, on
+the SSE-32 build and on three consecutive ASLR-on LP64 runs.
+
+```
+SSE-32 control            md5 c31ed77b7323   K=1396      15/15 bodies, STATE and CONTACTS
+LP64 + repair, runs 1-3   md5 c31ed77b7323   K=1396      40 frames, test-karma-1, Onslaught
+i386 acceptance 145/145 · lp64_pipeline PASS · run-standalone 12/12 · stack_shift PASS
+web E2E 55/55, 45.0m, on serve-web SDLLaunch.wasm sha256 6a380872… (ufront 2.48)
+```
+
+⚠ **THE WEB HALF IS STAMPED, AND IT NEEDED AN IDLE MACHINE.** Two E2E runs failed the file-browser
+spec on a 15 s UI timeout while this session was compiling the engine and re-running the pipeline
+on the same box; the third, with the machine idle, is 55/55. Do not run the browser suite and a
+build at the same time and then reason about the result.
+
+1. ★★★ **THE DEFECT WAS A CONCRETE GEOMETRY'S OWN FIELDS READ AT i386 OFFSETS — and it is a
+   class, not a site.** `offsetof`, measured at both widths rather than argued:
+
+   ```
+   McdGeometry   i386 sizeof 16                LP64 sizeof 32
+   McdBox.mR     i386 16 / 20 / 24             LP64 32 / 36 / 40
+   ```
+
+   `McdGjkMaximumPoint`'s Box arm reads `fVar10 = *(float *)((kd_iptr)pvVar9 + 0x10);`, so **at
+   LP64 the box's half-extents come out of `McdGeometry`'s `next` and `frame` pointers.**
+
+   ★ **That is why the build was not merely wrong but not the same twice.** `mR[1]` lands on a
+   pointer's **high half** — a tiny denormal that changes with the heap layout. `McdBoxGetSlice`
+   carries the same defect spelled `pMVar5[1].prev` / `.next`, and `.next` resolves to LP64 offset
+   **48 — past the end of a 48-byte `McdBox`**. Box-vs-ConvexMesh is the only pair in the map that
+   reaches either function, which is exactly why one body of fifteen misbehaved and fourteen did
+   not.
+
+2. ⚠⚠⚠ **"THE PHYSICS DEPENDS ON THE CONTENTS OF THE STACK" WAS WRONG, AND `stack_shift.sh` WAS
+   MEASURING ASLR.** The previous block made stack-dependence a headline finding and a new gate.
+   The gate is useful; its stated mechanism was not the one operating.
+
+   ```
+   ASLR OFF, environment padded 0 / 4 KB / 20 KB / 64 KB    4 of 4 IDENTICAL
+   ASLR ON,  no padding at all, same binary, 4 runs         flips between TWO outcomes
+   ```
+
+   The environment size was never the variable — it was a proxy that moved addresses. ★ **And the
+   two outcomes are why "frame 9" was frame 9 in one session and frame 1 in the next**: every
+   measurement this project took of that body was one toss of a coin, including the `-KTRACECONTACTS`
+   run the last block built its headline on. The *kind* of finding (a discrete contact difference)
+   survived; the frame number never meant anything.
+
+   ⚠⚠ **AND THE RECORDED MISTAKE REPEATED INSIDE THE HOUR.** `-ftrivial-auto-var-init=zero` and
+   `=pattern` produced **byte-identical traces**, which reads cleanly as "no uninitialised
+   automatic variable is consumed" — and it was one run each, both landing on the same side of the
+   coin. Four repeat runs showed *both* builds flipping between *the same two hashes*.
+   **ONE SAMPLE THAT AGREES IS SILENCE, NOT EVIDENCE** — and knowing the rule is not the same as
+   applying it.
+
+   ★ The method that actually worked: **`setarch --addr-no-randomize` makes the LP64 build
+   deterministic**, which turns a coin toss into a repeatable measurement. Every native A/B in this
+   project should be taken under it.
+
+3. ✅ **THE REPAIR IS IN THE GENERATOR, AND IT FOUND MORE THAN IT WAS AIMED AT.**
+   `fix_typeid_dispatch.py` gains a second **site shape** and two more **evidence sources**:
+
+   - **the baked-offset site** — `*(T *)((kd_iptr)BASE + K)`. ⚠ `fix_literal_offsets` matches this
+     exactly and declines it: the base is a `void *` from an accessor, and its "which struct do all
+     this file's offsets land on" inference is ambiguous ({0x10,0x14,0x18} fits dozens). The
+     missing ingredient was never the pattern — it was the type.
+   - **the type id through an INSTANCE** — `b = McdGeometryInstanceGetGeometry(ins)` beside
+     `v = (byte)ins->mGeometry->mRefCtAndID`. ⚠ The existing `TYPEVAR` cannot see that: its
+     `(\w+)->mRefCtAndID` captures `mGeometry`, a *field* name, so the site's base never matched
+     and every such arm declined silently.
+   - **a file-local DISPATCHER** — `switch((char)ins->mGeometry->mRefCtAndID)` whose `case '\x02':`
+     calls `kd_McdBoxGetSlice(ins,...)`. The callee's `ins` *is* a box because that is the only way
+     control reaches it. ⚠ Any caller of the same name outside a case arm disqualifies it; one
+     unguarded caller makes the whole claim false.
+
+   **18 sites repaired, every one i386 byte-identical — including 11 in `McdCylinderGetSlice`**
+   that nothing had ever looked at. The repair is an **address re-spelling**, never a member read:
+   `fix_callback_context` measured that naming two members of one object lets gcc schedule the
+   loads differently and the i386 object stops matching.
+
+   ⚠ **STILL OPEN, AND REPORTED RATHER THAN SKIPPED**: the three box reads in
+   `McdBoxMaximumPointNew`, and **five more of the same shape in `McdBatch.c`**. Nothing in the
+   corpus calls `McdBoxMaximumPointNew` and no branch encloses it, so there is no evidence and the
+   pass declines — deliberately, rather than inventing a name-based rule. ★ Those eight sites are
+   *visible* now: the pass reports "geometry base X: no type-id evidence" instead of skipping
+   silently, which is how this class stayed invisible for three sessions. `McdBatch`'s are the next
+   thing to look at, and a cross-file dispatcher rule is what would resolve them.
+
+4. **WHAT THE PREVIOUS BLOCK GOT RIGHT, AND SHOULD BE KEPT.** The `-KTRACECONTACTS` instrument and
+   `ktrace_contacts.py` are what turned "the trajectories differ" into "one width generates a
+   contact the other does not", and that framing is what made the geometry offsets worth looking
+   at. `KD_IXPROBE` localised it to one interaction out of 733. Both stay.
+
+   ⚠ `ktrace_contacts.py --body NAME` crashed with a `TypeError`: the parser only accepts
+   `--body=NAME`, and the space-separated form its own docstring documents became an ignored
+   positional. Fixed, because a tool that silently compares *all* bodies when asked for one is
+   worse than a tool that crashes.
+
+5. **STILL OPEN, UNCHANGED FROM THE BLOCK BELOW** — the truncation census (item 6 there):
+   `IxBoxTriList` 2 and `MstModelDynamics` 3 both have evidence gathered and are REAL; then
+   `CxSmallSort` 3, `IxCylinderTriList` 148, `MdtLOD` 2, `McdAggregate`, `McdInteractions`,
+   `MePool`, `keaLCPSolver`, `keaMatrix_tester` 2. Plus the two doc-vs-code gaps, `count-to-id` and
+   `int-return`, which promise a measurement and implement a regex.
+
+---
+
+# ⚠⚠ OPEN ITEMS — 2026-09-02 (SUPERSEDED by the block above; kept for its measurements)
+
+> ★ Items 1 and 2 of this block are the ones the evening block corrects: frame 9 is **fixed**, and
+> the "stack dependence" it reports was **ASLR**. The measurements are real; the mechanism named
+> for them was not. Item 3's two repairs stand and remain byte-identical.
 
 ★★★ **THE HOVER BIKE IS NOW A LOCATED DEFECT RATHER THAN A NUMBER, AND THERE IS A SECOND ONE
 UNDERNEATH IT THAT NOTHING IN THIS PROJECT COULD PREVIOUSLY SEE.** Two generator repairs landed,

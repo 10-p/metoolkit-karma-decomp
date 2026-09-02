@@ -2,6 +2,7 @@
 """ktrace_contacts.py — compare the CONTACTS in two Karma traces recorded with -KTRACECONTACTS.
 
     ktrace_contacts.py A.csv B.csv [--body NAME] [--frame N] [--tol 1e-4]
+    (--body=NAME also works; a valueless --body is refused rather than ignored)
 
 WHY THIS IS A SEPARATE INSTRUMENT FROM ktrace_diff.py.
 
@@ -21,6 +22,14 @@ WHY THIS IS A SEPARATE INSTRUMENT FROM ktrace_diff.py.
   BIT-identical over all 89 frames and ONSHoverBike3 is bit-identical for eight frames and then
   steps by 1.06 at frame 9. Exact agreement followed by a step change of order one is the
   signature of the second kind, and this tool is what can see it.
+
+  ⚠⚠ AND "FRAME 9" WAS ONE TOSS OF A COIN — corrected 2026-09-02. The LP64 build of the day
+  read a pointer's high half as a box half-extent, so its answer moved with ASLR and the same
+  binary flipped between two outcomes: one diverging at frame 9, one at frame 1. The KIND of
+  finding above was right and is what led to the defect; the frame NUMBER never meant anything.
+  ★ Take every native A/B under `setarch --addr-no-randomize`, which makes the run repeatable,
+  and repeat it — one sample that agrees is silence. See decomp/proven.txt LP64-BOX-I386-OFF.
+  With the repair in, the two traces are the SAME FILE (md5 c31ed77b7323).
 
 WHAT IT REPORTS
 
@@ -112,12 +121,30 @@ def fmt(c):
 
 
 def main():
-    args = [a for a in sys.argv[1:] if not a.startswith('--')]
-    opts = {}
-    for a in sys.argv[1:]:
+    # ⚠ BOTH SPELLINGS, BECAUSE THE DOCSTRING DOCUMENTS THE ONE THE PARSER DID
+    # NOT ACCEPT. `--body=NAME` worked; `--body NAME` — which is what the usage
+    # line above says — put NAME in the POSITIONALS, where it was silently
+    # ignored, and left `body` holding True. `True not in b` then raised a
+    # TypeError deep in the loop. A tool that compares every body when it was
+    # asked for one is worse than a tool that crashes, so both forms parse now
+    # and a valueless option is refused by name.
+    VALUED = ('body', 'frame', 'tol')
+    args, opts, argv = [], {}, sys.argv[1:]
+    i = 0
+    while i < len(argv):
+        a = argv[i]
         if a.startswith('--'):
-            k, _, v = a[2:].partition('=')
+            k, eq, v = a[2:].partition('=')
+            if not eq and k in VALUED:
+                if i + 1 >= len(argv) or argv[i + 1].startswith('--'):
+                    print('ktrace_contacts: --%s needs a value' % k)
+                    return 2
+                i += 1
+                v = argv[i]
             opts[k] = v or True
+        else:
+            args.append(a)
+        i += 1
     if len(args) < 2:
         print(__doc__)
         return 2

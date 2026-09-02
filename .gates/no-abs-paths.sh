@@ -18,9 +18,26 @@
 #                 it as $HOME/... or $UT2004_*, or move it out of the fence.
 # Bypass:         git commit --no-verify  (say why in the body).
 # Removal:        never, while the standalone claim is made.
+#
+# ⚠⚠ `--all` EXISTS BECAUSE CI USED TO REIMPLEMENT THIS GATE AND GOT IT WRONG.
+#                 The workflow could not use a staged-file gate, so it inlined "its whole-tree
+#                 equivalent": a flat `grep -rInE '/home/[a-z]'` over the tree. That is not this
+#                 gate. It checked PROSE, which this one deliberately does not, and it matched
+#                 `/home/icculus` — MathEngine's own build directory, quoted out of their DWARF —
+#                 which this one deliberately exempts. So CI failed on four documentation lines,
+#                 every push, for weeks; and because it was the FIRST step, `Recover`, the LP64
+#                 pipeline, the i386 acceptance test and the whole standalone tier were SKIPPED.
+#                 A red CI that nobody could act on is a CI that runs nothing.
+#                 ★ There is now ONE definition of this gate and CI calls it.
 set -uo pipefail
 root="$(git rev-parse --show-toplevel)"
-staged="$(git diff --cached --name-only --diff-filter=ACMR)"
+if [ "${1:-}" = "--all" ]; then
+    # Every TRACKED file — the form CI wants. `git ls-files` and not a find(1)
+    # walk, so an untracked scratch file in the working tree cannot fail the run.
+    staged="$(git -C "$root" ls-files)"
+else
+    staged="$(git diff --cached --name-only --diff-filter=ACMR)"
+fi
 [ -z "$staged" ] && exit 0
 
 # ⚠ THE TARGET IS THIS MACHINE'S HOME, NOT EVERY /home PATH. A path under

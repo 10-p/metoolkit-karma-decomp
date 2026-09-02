@@ -32,19 +32,20 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y gcc-multilib g++-multilib binutils
 
-      - name: The four hard gates
+      - name: The hard gates
         run: |
           set -e
           bash .gates/proven-count.sh
-          # no-abs-paths, doc-sync and product-in-sync are staged-file gates, so
-          # run their whole-tree equivalents here instead of faking an index.
-          if grep -rInE '(^|[^A-Za-z0-9_$])/home/[a-z]' \
-               --exclude-dir=lab --exclude-dir=metoolkit --exclude-dir=.git \
-               --exclude=no-abs-paths.sh . ; then
-            echo "::error::absolute /home path in a tracked file — see .gates/no-abs-paths.sh"
-            exit 1
-          fi
-          echo "no absolute paths outside lab/ and metoolkit/"
+          # ⚠ CALL THE GATE, DO NOT REIMPLEMENT IT. This step used to inline "a
+          # whole-tree equivalent" of no-abs-paths — a flat grep for /home/[a-z]
+          # — and it was not equivalent: it checked PROSE, which that gate
+          # deliberately does not, and it matched /home/icculus, MathEngine's own
+          # build directory quoted out of their DWARF, which that gate
+          # deliberately exempts. It failed on four documentation lines on every
+          # push for weeks, and because this is the FIRST step everything below
+          # it was SKIPPED — so the recovery, the i386 acceptance test and the
+          # standalone tier had not actually run in CI at all.
+          bash .gates/no-abs-paths.sh --all
 
       - name: Recover
         run: |

@@ -148,19 +148,23 @@ static void transferContactGroups(MdtConstraintID c,void *ccbdata)
     return;
   }
   otherModel = (McdModelID)*piVar4;
-  pMVar1 = *(McdModelID *)((kd_iptr)ccbdata + 8);
+  pMVar1 = *(McdModelID *)((kd_iptr)ccbdata + ((int)((char *)&((BodyData *)0)->model - (char *)0)));
+#if __SIZEOF_POINTER__ == 4
   if ((otherModel != pMVar1) && ((McdModelID)piVar4[1] != pMVar1)) {
+#else
+  if ((otherModel != pMVar1) && ((McdModelID)((McdModelPair *)piVar4)->model2 != pMVar1)) {
+#endif
     return;
   }
-  if ((*(int *)((kd_iptr)ccbdata + 4) != 0) && (*(int *)((kd_iptr)ccbdata + 0xc) != 0)) {
+  if ((*(kd_iptr *)((kd_iptr)ccbdata + ((int)((char *)&((BodyData *)0)->newBody - (char *)0))) != 0) && (*(kd_iptr *)((kd_iptr)ccbdata + ((int)((char *)&((BodyData *)0)->space - (char *)0))) != 0)) {
     if (otherModel == pMVar1) {
-      otherModel = (McdModelID)piVar4[1];
+      otherModel = (McdModelID)((McdModelPair *)piVar4)->model2;
     }
     pvVar5 = McdModelGetSpace(otherModel);
-    if (pvVar5 == *(void **)((kd_iptr)ccbdata + 0xc)) {
+    if (pvVar5 == *(void **)((kd_iptr)ccbdata + ((int)((char *)&((BodyData *)0)->space - (char *)0)))) {
       pMVar8 = kd_McdModelGetBody(otherModel);
-      if (pMVar8 != *(MdtBodyID *)((kd_iptr)ccbdata + 4)) goto LAB_000102ca;
-      iVar9 = McdSpacePairIsEnabled(*(void **)((kd_iptr)ccbdata + 8),otherModel);
+      if (pMVar8 != *(MdtBodyID *)((kd_iptr)ccbdata + ((int)((char *)&((BodyData *)0)->newBody - (char *)0)))) goto LAB_000102ca;
+      iVar9 = McdSpacePairIsEnabled(*(void **)((kd_iptr)ccbdata + ((int)((char *)&((BodyData *)0)->model - (char *)0))),otherModel);
       if (iVar9 != 0) {
         MeFatalError(1,
                      "McdModelSetBody: Attempt to assign model A to a body\nwhich has an associated model B which is not pairwise disabled with A"
@@ -191,10 +195,10 @@ LAB_000102ca:
   pvVar7 = MdtContactGroupQuaConstraint(pvVar3);
   pvVar7 = MdtConstraintGetBody(pvVar7,uVar10);
   if (pvVar7 == *(void **)ccbdata) {
-    pvVar6 = *(void **)((kd_iptr)ccbdata + 4);
+    pvVar6 = *(void **)((kd_iptr)ccbdata + ((int)((char *)&((BodyData *)0)->newBody - (char *)0)));
   }
   else {
-    pvVar5 = *(void **)((kd_iptr)ccbdata + 4);
+    pvVar5 = *(void **)((kd_iptr)ccbdata + ((int)((char *)&((BodyData *)0)->newBody - (char *)0)));
   }
   pvVar7 = MdtContactGroupQuaConstraint(pvVar3);
   MdtConstraintSetBodies(pvVar7,pvVar6,pvVar5);

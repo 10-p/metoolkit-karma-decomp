@@ -206,6 +206,23 @@ def registrations(text):
             continue
         cands = []
         for a in args:
+            # ★ THE CONTEXT IS USUALLY PASSED BY ADDRESS, and requiring a bare
+            # identifier missed every one of those. `MdtBodyForAllConstraints(
+            # pMVar1, transferContactGroups, &bp)` hands a STACK STRUCT as the
+            # `void *`, which is the commonest shape there is — and because the
+            # rule never saw the call, `transferContactGroups` reading `BodyData`
+            # at i386 offsets (+4 `newBody`, +8 `model`, +0xc `space`, which are
+            # +8/+16/+24 at LP64) was not merely unrepaired, it was never
+            # reported. The declared type of a `&VAR` argument is `VAR`'s own,
+            # taken from its VALUE declaration rather than a pointer one.
+            amp = re.fullmatch(r'&\s*([A-Za-z_]\w*)', a)
+            if amp:
+                d = re.search(r'(?<![\w])([A-Za-z_]\w*)\s+%s\s*;'
+                              % re.escape(amp.group(1)), text)
+                if d and d.group(1) not in ('void', 'char', 'unsigned', 'return',
+                                            'struct', 'const', 'static'):
+                    cands.append(d.group(1))
+                continue
             if not re.fullmatch(r'[A-Za-z_]\w*', a) or a in statics:
                 continue
             d = re.search(r'(?<![\w])([A-Za-z_]\w*)\s*\*\s*(?:const\s+)?%s\b'

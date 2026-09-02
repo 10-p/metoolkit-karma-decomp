@@ -13,6 +13,110 @@ read before resuming; `../HANDOVER.md` is the depth behind it and `../proven.txt
 ---
 
 
+# ⚠⚠ OPEN ITEMS — 2026-09-02 (LATE). READ THIS BLOCK FIRST.
+
+★★★ **THE CENSUS'S TWO NAMED REAL DEFECTS ARE REPAIRED, AND THE TWO DOC-VS-CODE GAPS ARE CLOSED.**
+The block below closed the hover bike; this one closes the list it left behind.
+
+```
+truncation census   UNEXPLAINED 38 -> 30      i386 acceptance 145/145
+run-standalone 12/12 · lp64_pipeline PASS · stack_shift PASS
+LP64 ktrace still BYTE-IDENTICAL to the SSE-32 control, 3/3 runs (md5 c31ed77b7323)
+```
+
+1. ✅ **`IxBoxTriList` — A POINTER PARKED IN A FABRICATED STACK AGGREGATE.** Ghidra models unrelated
+   stack slots as one `McdGeometry MStack_24c;` and then walks whatever each slot holds through
+   *that* struct's members. `MStack_24c.next` holds `result->normal`:
+
+   ```
+   McdGeometry   i386  prev 4   next  8        LP64  prev 8   next 16
+   ```
+
+   so `->prev`/`->next` are `normal[1]`/`normal[2]` at i386 and `normal[2]`/**off the end of a
+   three-float vector** at LP64 — written EIGHT bytes wide, because the lvalue is pointer-typed.
+   Box-vs-TriangleList is every vehicle on level geometry. New pass
+   `fix_slot_pointer_walk.py`, 2 sites, i386 byte-identical.
+
+   ★ **AND ITS SIBLING SLOT IS NOT A DEFECT, WHICH IS WHY THE RULE MEASURES.** `MStack_24c.frame`
+   is walked the same way, and `McdFramework::geometryRegisteredCount` is byte 4 and `firstModel`
+   byte 8 at **both** widths. Rewriting those would have turned two correct statements into
+   expressions that merely agree at i386 — `fix_member_base_walk`'s lesson, applied before it cost
+   anything this time.
+
+2. ✅ **`MstModelDynamics` / `MstUtils` — A `void *` SLOT WHOSE TYPE ONLY ITS SETTER KNOWS.**
+   `MdtContactGroup::generator` is declared `void *`, so no accessor can type it. The evidence is
+   the single call that stores into it: `MdtContactGroupSetGenerator(pMVar5, pair)` in `MstUtils.c`,
+   inside `createContactGroup(MdtWorldID w, McdModelPairID pair)`.
+
+   ```
+   McdModelPair   i386  model1 0  model2 4  …  responseData 24
+                  LP64  model1 0  model2 8  …  responseData 48
+   ```
+
+   So `piVar4[1]` was the **high half of `model1`**, not `model2`, and `c->generator + 0x18` was
+   `request` rather than `responseData`. ★ The first means `McdModelSetBody` silently dropped every
+   contact group whose **second** model was the one being re-parented. New pass
+   `fix_setter_typed_slot.py`, 3 sites, and it typed a second slot on the way
+   (`MeXMLInput::userdata` is an `MeAssetDBXMLInput *`).
+
+   ⚠ **ONE OF THE THREE NEEDED A WIDTH GUARD, AND THAT IS A MEASUREMENT.** No spelling of
+   `(McdModelID)piVar4[1] != pMVar1` reproduces the i386 object — member, address, `&`, and operand
+   swap were all tried — because the i386 original genuinely performs a **four**-byte load where
+   LP64 needs an **eight**-byte one. `fix_block_copy`'s precedent applies: the i386 text is kept
+   verbatim under `#if __SIZEOF_POINTER__ == 4`. ★ That is stronger than an argument about the web
+   build — `__SIZEOF_POINTER__` is 4 on wasm32 too, so the shipped artefact keeps the original text
+   **by construction**.
+
+3. ✅ **`fix_callback_context` NEVER SAW THE COMMONEST CONTEXT SHAPE.** Its registration rule
+   required the context argument to be a bare identifier, so
+   `MdtBodyForAllConstraints(pMVar1, transferContactGroups, &bp)` — a **stack struct passed by
+   address**, which is how most of them are written — was not merely unrepaired, it was never
+   reported. With `&VAR` admitted, `transferContactGroups` types its `ccbdata` as `BodyData` and
+   takes 10 edits; the pass goes 0 → 50 corpus-wide.
+
+   ```
+   BodyData   i386  oldBody 0  newBody 4  model 8  space 12
+              LP64  oldBody 0  newBody 8  model 16 space 24
+   ```
+
+4. ✅ **THE TWO DOC-VS-CODE GAPS ARE CLOSED — both promised a measurement and implemented a
+   pattern match.**
+
+   - **`int-return`** claimed "a function whose recovered prototype returns a non-pointer" and was a
+     hardcoded list of eleven names. It now reads the prototype — the file's own prelude first, then
+     the SDK headers, stripping `MEAPI`. ⚠ An unresolvable callee stays UNEXPLAINED; `None` is not
+     "benign". ★ **And the class's OTHER half — "and nothing dereferences it" — was never checked at
+     all.** It is now, with a measured exception: `&VAR->M` where `M` is at offset 0 at both widths
+     is the IDENTITY, not a dereference (`MdtPartition`'s `&pMVar9->left`).
+   - **`count-to-id`** claimed "a named field whose size is 4 at both widths" and was a regex that
+     could not even parse a dotted path, so `->mHull.numFace` never matched. It now resolves the
+     destination and asks the compiler for `sizeof` at both widths.
+
+   ⚠ **THE CAST SPELLING WAS SILENTLY GATING THE LOOKUP.** While the rule was a name list,
+   restricting `CALL_RHS` to `(void|char|int|…) *` was harmless; once the verdict came from the
+   prototype it suppressed it — which is what kept
+   `ppMVar7 = (MdtBody **)MdtKeaMemoryRequired(...)` open while `MdtKea.h` declared it `int MEAPI`.
+
+   ★ **AND THE NEAR-MISSES ARE PRINTED NOW.** Three sites are a rule away from benign and say so
+   inline (`keaDebug`'s `piVar15` is `printf`'s return here and a real `int *` sixty lines down —
+   Ghidra reuses one name for two live ranges, and a whole-function rule cannot separate them).
+   A number with reasons attached is triage; a bare 30 is not.
+
+5. **STILL OPEN — 30, and none of them is known to be a defect.** `MdtPartition` 4 and `keaDebug` 2
+   are the near-misses above. `MeXMLParser` 4 are a character value and a loop bound in `char *`.
+   `MstModelDynamics` 150 is `*piVar4` = `model1`, which is byte 0 at **both** widths — correct, and
+   deliberately left alone by the "only rewrite what moves" rule. The rest —
+   `CxSmallSort` 3, `IxConvexTriList` 2, `IxCylinderTriList` 2, `MdtLOD` 2, `McdAggregate`,
+   `McdContact`, `McdInteractions`, `McdPlaneIntersect`, `MdtConstraint`, `MeFAsset`, `MePool`,
+   `keaLCPSolver`, `keaMatrix_tester` 2 — still need a verdict each, one at a time.
+
+   ⚠ **AND THE GEOMETRY-OFFSET CLASS HAS 8 KNOWN-UNREPAIRED SITES** that the census cannot see at
+   all, because nothing is truncated: 3 in `McdBoxMaximumPointNew` (no caller in the corpus, no
+   enclosing branch) and 5 in `McdBatch.c`. `fix_typeid_dispatch` reports them by name now. A
+   **cross-file** dispatcher rule is what would resolve them, and that is the next thing to build.
+
+---
+
 # ⚠⚠ OPEN ITEMS — 2026-09-02 (EVENING). READ THIS BLOCK FIRST.
 
 ★★★★★ **THE HOVER BIKE IS FIXED, AND THE LP64 TRACE IS NOW BYTE-IDENTICAL TO THE 32-BIT

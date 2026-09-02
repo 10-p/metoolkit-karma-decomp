@@ -153,6 +153,24 @@ python3 "$KD_ROOT/tools/fix_member_base_walk.py" "$DST/allobj" "$BUILD" "$MT" | 
 # crash: `MeDictInsert` <- `MeSetAdd` <- `McdConvexMeshPlaneCut`.
 python3 "$KD_ROOT/tools/fix_callback_context.py" "$DST/allobj" "$BUILD" "$MT" | tail -6 || exit 2
 
+# ---- IMMEDIATELY AFTER IT, AND FOR THE SAME REASON ONE STEP FURTHER OUT: a
+# `void *` whose type is not in ANY declaration, only in the single call that
+# stores into it. `MdtContactGroup::generator` is declared `void *`, so the
+# accessor tells you nothing; `MdtContactGroupSetGenerator(pMVar5, pair)` in
+# MstUtils.c — the only call in the corpus — declares `pair` an `McdModelPairID`,
+# and that types every read of the slot. At LP64 `piVar4[1]` was the HIGH HALF of
+# `model1` rather than `model2`, so `McdModelSetBody` dropped contact groups whose
+# SECOND model was the one being re-parented.
+python3 "$KD_ROOT/tools/fix_setter_typed_slot.py" "$DST/allobj" "$BUILD" "$MT" | tail -8 || exit 2
+
+# ---- AND THE FABRICATED STACK AGGREGATE. Ghidra models unrelated stack slots as
+# one `McdGeometry` local and then walks whatever each slot holds through THAT
+# struct's members: `IxBoxTriList`'s `MStack_24c.next` holds `result->normal`, so
+# `->prev` is `normal[1]` at i386 and `normal[2]` at LP64, and `->next` is byte 16
+# — off the end of a three-float vector, written eight bytes wide. Box vs
+# TriangleList is every vehicle on level geometry.
+python3 "$KD_ROOT/tools/fix_slot_pointer_walk.py" "$DST/allobj" "$BUILD" "$MT" | tail -6 || exit 2
+
 # ---- AND THE `alloca`'d ARRAY OF POINTERS, which `fix_baked_sizeof` DECLINED BY
 # NAME: its qsort rule needs the base to be a plain identifier, and `MdtLOD`'s
 # travels in an argslot. The missing piece was never a better guess at the cast,

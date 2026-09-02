@@ -1,3 +1,69 @@
+# LP64-SLOT-TYPES     2026-09-02  ★★★ THE CENSUS'S TWO NAMED REAL DEFECTS ARE
+#                     REPAIRED AND ITS TWO DOC-VS-CODE GAPS ARE CLOSED.
+#                         truncation census   UNEXPLAINED 38 -> 30
+#                         i386 145/145 · run-standalone 12/12 · stack_shift PASS
+#                         LP64 ktrace STILL byte-identical to SSE-32, 3/3 runs
+#
+#                     (1) IxBoxTriList — A POINTER IN A FABRICATED STACK
+#                     AGGREGATE. Ghidra models unrelated slots as one
+#                     `McdGeometry MStack_24c;` and walks each slot's contents
+#                     through THAT struct. `MStack_24c.next` holds
+#                     `result->normal`, and
+#                         McdGeometry  i386 prev 4 next 8   LP64 prev 8 next 16
+#                     so ->prev/->next are normal[1]/normal[2] at i386 and
+#                     normal[2]/OFF THE END at LP64, written EIGHT bytes wide.
+#                     Box vs TriangleList is every vehicle on level geometry.
+#                     New pass fix_slot_pointer_walk.py, 2 sites.
+#                     ★ ITS SIBLING SLOT IS NOT A DEFECT: `MStack_24c.frame` is
+#                     walked identically and McdFramework's fields are byte 4 and
+#                     byte 8 at BOTH widths. The rule measures before rewriting.
+#
+#                     (2) MstModelDynamics/MstUtils — A `void *` SLOT TYPED ONLY
+#                     BY ITS SETTER. `MdtContactGroup::generator` is declared
+#                     `void *`; the single call that stores into it,
+#                     `MdtContactGroupSetGenerator(pMVar5, pair)` inside
+#                     `createContactGroup(MdtWorldID, McdModelPairID pair)`,
+#                     declares the type.
+#                         McdModelPair i386 model1 0 model2 4 responseData 24
+#                                      LP64 model1 0 model2 8 responseData 48
+#                     So `piVar4[1]` was model1's HIGH HALF and `generator+0x18`
+#                     was `request`. ★ McdModelSetBody therefore DROPPED every
+#                     contact group whose SECOND model was being re-parented.
+#                     New pass fix_setter_typed_slot.py, 3 sites; it also typed
+#                     MeXMLInput::userdata as MeAssetDBXMLInput *.
+#                     ⚠ ONE SITE NEEDED A WIDTH GUARD, AS A MEASUREMENT: no
+#                     spelling of `(McdModelID)piVar4[1] != pMVar1` reproduces
+#                     the i386 object (member, address, &, operand swap all
+#                     tried) because i386 does a FOUR-byte load where LP64 needs
+#                     EIGHT. fix_block_copy's precedent — the i386 text is kept
+#                     under `#if __SIZEOF_POINTER__ == 4`, which also keeps the
+#                     WASM artefact unchanged BY CONSTRUCTION.
+#
+#                     (3) fix_callback_context NEVER SAW THE COMMONEST CONTEXT
+#                     SHAPE. Its rule required a bare identifier, so
+#                     `MdtBodyForAllConstraints(b, fn, &bp)` — a stack struct
+#                     passed BY ADDRESS — was never even reported. With `&VAR`
+#                     admitted it types `ccbdata` as BodyData (i386 0/4/8/12,
+#                     LP64 0/8/16/24) and the pass goes 0 -> 50 edits.
+#
+#                     (4) THE TWO DOC-VS-CODE GAPS. `int-return` promised "a
+#                     prototype that returns a non-pointer" and was a list of
+#                     eleven names; it reads the prototype now, and ALSO checks
+#                     the half it never checked — "nothing dereferences it" —
+#                     with a measured identity exception for `&VAR->M` at offset
+#                     0. `count-to-id` promised "a field 4 bytes at both widths"
+#                     and was a regex that could not parse `->mHull.numFace`; it
+#                     asks the compiler now. ⚠ The CAST SPELLING was silently
+#                     gating the lookup once the verdict moved to the prototype.
+#                     ★ Near-misses print their reason inline: three sites are one
+#                     rule away and say so (Ghidra reuses one local for two live
+#                     ranges, which a whole-function rule cannot separate).
+#
+#                     ⚠ STILL OPEN: 30 census sites, none known to be a defect,
+#                     plus 8 GEOMETRY-OFFSET sites the census cannot see at all
+#                     (McdBoxMaximumPointNew 3, McdBatch 5) — no caller, no
+#                     branch. A CROSS-FILE dispatcher rule is what resolves those.
+#
 # LP64-BOX-I386-OFF   2026-09-02  ★★★★★ THE HOVER BIKE IS FIXED, AND THE LP64 TRACE
 #                     IS NOW BYTE-IDENTICAL TO THE 32-BIT CONTROL — not "equal at a
 #                     tolerance", the same file:

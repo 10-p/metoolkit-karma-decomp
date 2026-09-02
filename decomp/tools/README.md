@@ -1804,9 +1804,31 @@ destructor path is not taken.
 ```bash
 python3 tools/ptrwidth_classify.py /tmp/kd_lp64/allobj /tmp/kd_build $MT
 #   -> aarch64 truncation diagnostics: 94 across 28 object(s)
-#        fbits-to-4byte  10   medict-key 15   int-return 11   count-to-id 3
-#        UNEXPLAINED     55   <- the ones that are open
+#        fbits-to-4byte  10   medict-key 15   int-return 11   count-to-id 7
+#        UNEXPLAINED     30   <- the ones that are open
 ```
+
+★★ **TWO OF THESE CLASSES PROMISED A MEASUREMENT AND IMPLEMENTED A PATTERN MATCH** — closed
+2026-09-02, and closing them moved six sites out of UNEXPLAINED:
+
+- **`int-return`** said "a function whose *recovered prototype* returns a non-pointer" and was a
+  hardcoded list of eleven names. It reads the prototype now — the file's own prelude first, then
+  the SDK headers, stripping `MEAPI`. ⚠ An unresolvable callee stays UNEXPLAINED: `None` is not
+  "benign". ⚠⚠ **The cast spelling was silently gating the lookup** — while the rule was a name
+  list, restricting `CALL_RHS` to `(void|char|int|…) *` was harmless; once the verdict came from
+  the prototype it suppressed it, which is what kept
+  `ppMVar7 = (MdtBody **)MdtKeaMemoryRequired(...)` open while `MdtKea.h` declared it `int MEAPI`.
+  ★ **And the class's other half — "and nothing dereferences it" — was never checked at all.** It
+  is now, with a measured exception: `&VAR->M` where `M` is at offset 0 at *both* widths is the
+  IDENTITY, not a dereference (`MdtPartition`'s `&pMVar9->left`).
+- **`count-to-id`** said "a named field whose size is 4 at both widths" and was a regex that could
+  not parse a dotted path, so `((McdConvexMesh *)p)->mHull.numFace` never matched. It resolves the
+  destination and asks the compiler for `sizeof` at both widths now.
+
+★ **Near-misses print their reason inline.** Three sites are one rule away from benign and say so —
+`keaDebug`'s `piVar15` is `printf`'s return at line 665 and a real `int *` at line 719, because
+Ghidra reuses one name for two live ranges and a whole-function rule cannot separate them. A number
+with reasons attached is a triage list; a bare 30 is not.
 
 `ptrwidth_check.sh` **counts**. It cannot say which of its warnings is a defect, and the count has
 been quoted as if every one were — "98 truncations across 28 objects" reads as ninety-eight bugs.
@@ -2441,3 +2463,68 @@ $GHIDRA_HOME/support/analyzeHeadless \
 > cache rather than an irreplaceable artefact. Full corpus is 75–120 minutes; one object is under a
 > minute.
 
+
+### `fix_slot_pointer_walk.py` — a pointer parked in a FABRICATED stack aggregate
+
+```bash
+python3 tools/fix_slot_pointer_walk.py /tmp/kd_lp64/allobj /tmp/kd_build
+#   -> 2 repaired, 0 declined
+```
+
+Ghidra models a group of unrelated stack slots as one local of a real struct type and then walks
+whatever each slot holds through **that** struct's members. `IxBoxTriList` declares
+`McdGeometry MStack_24c;` and puts `result->normal` — a `MeReal[3]` — in `.next`:
+
+```
+McdGeometry   i386  prev 4  next  8            LP64  prev 8  next 16
+```
+
+so `(MStack_24c.next)->prev` and `->next` are `normal[1]` and `normal[2]` at i386, and `normal[2]`
+and **byte 16, off the end of a three-float vector**, at LP64 — written eight bytes wide, because
+the lvalue is pointer-typed. Box-vs-TriangleList is every vehicle on level geometry.
+
+★ **The sibling slot is NOT a defect, and that is why clause 5 exists.** `MStack_24c.frame` is
+walked the same way and `McdFramework`'s two fields are byte 4 and byte 8 at **both** widths.
+Rewriting them would turn correct statements into expressions that merely agree at i386 —
+`fix_member_base_walk`'s lesson, applied before it cost anything.
+
+⚠ The **assignment** is rewritten whole, not just the address inside it: once the lvalue is a
+`MeReal` again, `(McdGeometryID)KD_FBITS(...)` will not compile — C has no float-to-pointer
+conversion. ⚠ And the reads inside the kept expression are resolved at their **absolute** positions;
+rewriting the extracted fragment on its own looks equivalent and silently declines every one of
+them, because `region_bounds` finds no banner in a detached string.
+
+### `fix_setter_typed_slot.py` — a `void *` slot whose type only its SETTER knows
+
+```bash
+python3 tools/fix_setter_typed_slot.py /tmp/kd_lp64/allobj /tmp/kd_build
+#   -> 2 slots typed, 3 repaired, 0 declined
+```
+
+`MdtContactGroup::generator` is declared `void *`, so `accessor_scopes` — which reads the accessor's
+declared return type — gets `void *` and stops. The type is in the one call that STORES into it:
+
+```
+MstUtils.c   createContactGroup(MdtWorldID w, McdModelPairID pair)
+             MdtContactGroupSetGenerator(pMVar5, pair);
+
+McdModelPair  i386  model1 0  model2 4  …  responseData 24
+              LP64  model1 0  model2 8  …  responseData 48
+```
+
+So `piVar4[1]` was the **high half of `model1`** rather than `model2`, and `c->generator + 0x18`
+was `request` rather than `responseData`. ★ The first means `McdModelSetBody` silently dropped
+every contact group whose **second** model was the one being re-parented.
+
+⚠ **Every call to the setter must resolve to the same tag**; one that resolves to something else,
+or not at all, drops the slot. ⚠⚠ **And comments are blanked before that scan** — every recovered
+function carries `/* ---- NAME (exported as kd_…) ---- */`, which `NAME\s*\(...\)` reads as a call
+whose argument is `exported as kd_NAME`. That does not resolve, the slot is dropped, and it looks
+exactly like "there was nothing here". The self-check is what caught it.
+
+⚠ **One site needed a width guard, and that is a measurement.** No spelling of
+`(McdModelID)piVar4[1] != pMVar1` reproduces the i386 object — member, address, `&` and operand
+swap were all tried — because the i386 original genuinely performs a **four**-byte load where LP64
+needs an **eight**-byte one. `fix_block_copy`'s precedent: the i386 text is kept verbatim under
+`#if __SIZEOF_POINTER__ == 4`, which is also what keeps the **wasm32** artefact unchanged by
+construction.

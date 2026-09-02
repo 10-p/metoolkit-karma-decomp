@@ -276,8 +276,8 @@ MeBool kd_McdBoxTriangleListIntersect(McdModelPair *p,McdIntersectResult *result
             } while (plVar29 != verts);
           }
           result->normal[0] = diff.v[0] + result->normal[0];
-          (MStack_24c.next)->prev = (McdGeometryID)KD_FBITS((diff.v[1] + (*(float *)&((MStack_24c.next)->prev))));
-          (MStack_24c.next)->next = (McdGeometryID)KD_FBITS((diff.v[2] + (*(float *)&((MStack_24c.next)->next))));
+          ((__typeof__(((McdIntersectResult *)0)->normal[0]) *)MStack_24c.next)[1] = (diff.v[1] + (*(float *)&(((__typeof__(((McdIntersectResult *)0)->normal[0]) *)MStack_24c.next)[1])));
+          ((__typeof__(((McdIntersectResult *)0)->normal[0]) *)MStack_24c.next)[2] = (diff.v[2] + (*(float *)&(((__typeof__(((McdIntersectResult *)0)->normal[0]) *)MStack_24c.next)[2])));
         }
         j = j + 1;
         MStack_24c.prev = (McdGeometryID)&MStack_24c.prev[1].next;

@@ -694,7 +694,7 @@ void kd_DestroyContactGroupReferences(MdtContactGroupID c)
 {
                     
   if (c->generator != (void *)0x0) {
-    *(undefined4 *)((kd_iptr)c->generator + 0x18) = 0;
+    *(undefined4 *)((kd_iptr)c->generator + ((int)((char *)&((McdModelPair *)0)->responseData - (char *)0))) = 0;
   }
   return;
 }

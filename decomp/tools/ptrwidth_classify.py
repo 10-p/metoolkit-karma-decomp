@@ -83,6 +83,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import kd_paths                                             # noqa: E402
+from fix_derived_fields import declared_type                # noqa: E402
 
 HERE = kd_paths.MD
 
@@ -104,11 +105,173 @@ INT_RETURN_CALLS = (
     'MeOpen', 'McdCnvVertexGetNeighbor', 'MeFAssetPartIsCollisionEnabled',
     'McdSpaceDisablePair', 'McdFrameworkGetInteractionsWarned',
 )
-CALL_RHS = re.compile(r'=\s*\((?:void|char|int|float|u?short|u?long)[\w ]*\*+\)\s*'
+# ⚠ THE CAST SPELLING MUST NOT GATE THIS ANY MORE. While the rule was a name
+# list, restricting the cast to `(void|char|int|...) *` was harmless. Now that
+# the verdict comes from the CALLEE'S PROTOTYPE, a cast the list does not
+# recognise silently suppresses the lookup — which is exactly what kept
+# `ppMVar7 = (MdtBody **)MdtKeaMemoryRequired(...)` in UNEXPLAINED while
+# `MdtKea.h` declared it `int MEAPI` two directories away.
+CALL_RHS = re.compile(r'=\s*\(\s*(?:[A-Za-z_][\w \t]*\*+|(?:Mcd|Mdt|Me|kea)\w*ID)\s*\)\s*'
                       r'(?P<fn>[A-Za-z_]\w*)\s*\(')
+
+# ---- `int-return`, AS THE DOCSTRING ALWAYS DESCRIBED IT --------------------
+# ⚠⚠ THIS RULE USED TO BE THE TUPLE ABOVE, AND THE DOCSTRING PROMISED "a
+# function whose recovered prototype returns a non-pointer". A hardcoded list of
+# eleven names is not that: it cannot answer for the twelfth caller, and it
+# quietly leaves real sites in UNEXPLAINED where they look like open defects.
+# The prototype IS available — every recovered file declares what it calls in
+# its own prelude, and the SDK headers declare the rest — so the rule now READS
+# it, which is what makes the class a measurement instead of a memory.
+RET = re.compile(r'(?m)^(?P<ret>[A-Za-z_][\w \t]*?[\w \t\*]*?)\b(?:kd_)?%s\s*\(')
+_PROTO_CACHE = {}
+
+
+def _returns_pointer(text, inc, fn):
+    """Does `fn` return a pointer? -> True / False / None (not resolvable).
+
+    Looked up in the recovered file's own prelude first — that is the
+    *recovered* prototype, and it is the one the compiler saw — then in the SDK
+    headers. ⚠ `MEAPI` sits between the return type and the name in the oracle
+    (`MeReal * MEAPI McdBoxGetRadii(...)`), so it is stripped rather than being
+    allowed to read as the type."""
+    if fn in _PROTO_CACHE:
+        return _PROTO_CACHE[fn]
+    verdict = None
+    pat = re.compile(RET.pattern % re.escape(fn))
+    for src in (text,) + tuple(_header_texts(inc)):
+        m = pat.search(src)
+        if not m:
+            continue
+        ret = re.sub(r'\b(?:MEAPI|MEAPI_INLINE|static|extern|inline|__inline)\b',
+                     ' ', m.group('ret')).strip()
+        if not ret or ret in ('return', 'else', 'if', 'while', 'for', 'switch'):
+            continue
+        verdict = '*' in ret
+        break
+    _PROTO_CACHE[fn] = verdict
+    return verdict
+
+
+_HEADERS = []
+
+
+def _offsetof(cast, member, inc, bits):
+    """offsetof of `((CAST)0)->MEMBER` at `bits`, or None."""
+    key = ('off', cast, member, bits)
+    if key not in _SIZE_CACHE:
+        os.makedirs('/tmp/kd_ptrsz', exist_ok=True)
+        src = '/tmp/kd_ptrsz/o%d.c' % bits
+        open(src, 'w').write(
+            '#include "%s/include/kd_compat.h"\n#include "%s/include/kd_karma.h"\n'
+            '#include "%s/include/kd_types.h"\n'
+            'char kd_probe[((char *)&((%s)0)->%s - (char *)0) + 1];\n'
+            'int kd_force = &kd_probe;\n' % (HERE, HERE, HERE, cast, member))
+        r = subprocess.run(['gcc', '-m%d' % bits, '-DLINUX'] + includes(inc)
+                           + ['-w', '-c', '-o', os.devnull, src],
+                           capture_output=True, text=True)
+        m = _FIELD_SZ.search(r.stderr)
+        _SIZE_CACHE[key] = (int(m.group(1)) - 1) if m else None
+    return _SIZE_CACHE[key]
+
+
+def _int_return_safe(region, var, inc):
+    """The OTHER HALF of this class's own justification — "and nothing
+    dereferences it" — which the rule never checked.
+
+    ⚠ WITHOUT THIS, THE CLASS MOVES A POTENTIAL DEFECT INTO A BENIGN BUCKET,
+    which is the one direction this tool must never fail in. A count parked in a
+    pointer local is harmless only while it stays a number.
+
+    ★ `&VAR->M` WHERE M IS AT OFFSET 0 AT BOTH WIDTHS IS THE IDENTITY, NOT A
+    DEREFERENCE, and that is measured rather than assumed. `MdtPartition` writes
+    `pMVar5->rowCount = (kd_iptr)&pMVar9->left + pMVar5->rowCount;` where `left`
+    is `MeDictNode`'s first member — so the expression is the count itself. Had
+    it been `&pMVar9->right`, 4 at i386 and 8 at LP64, this returns False and
+    the site stays open."""
+    ty = declared_type(region, var)
+    for m in re.finditer(r'\b%s\b' % re.escape(var), region):
+        tail = region[m.end():m.end() + 2]
+        head = region[max(0, m.start() - 8):m.start()]
+        if tail == '->':
+            mem = re.match(r'->\s*(\w+)', region[m.end():])
+            if not (mem and re.search(r'&\s*$', head) and ty
+                    and _offsetof(ty.strip(), mem.group(1), inc, 32) == 0
+                    and _offsetof(ty.strip(), mem.group(1), inc, 64) == 0):
+                return False
+        elif tail.startswith('['):
+            return False
+    return True
+
+
+def _header_texts(inc):
+    if not _HEADERS:
+        for dirpath, _d, files in os.walk(inc):
+            for f in sorted(files):
+                if f.endswith('.h'):
+                    _HEADERS.append(
+                        open(os.path.join(dirpath, f), errors='ignore').read())
+    return _HEADERS
+
 # `X->field = (SomeID)expr;` / `((T *)p)->field = (SomeID)expr;`
 COUNT_TO_ID = re.compile(r'->(?P<f>\w+)\s*=\s*\((?:Mcd|Mdt|Me)\w*ID\)\s*'
                          r'(?!KD_FBITS)')
+
+# ---- `count-to-id`, AS THE DOCSTRING ALWAYS DESCRIBED IT -------------------
+# ⚠⚠ THE RULE ABOVE IS A PATTERN AND THE DOCSTRING PROMISES A MEASUREMENT —
+# "the assignment target is a named field whose size is 4 at both widths". It
+# does not check any size, and `->(\w+)\s*=` cannot even parse a DOTTED path, so
+# `((McdConvexMesh *)pMVar1)->mHull.numFace = (McdGeometryID)poly->numFace;`
+# never matched and four sites sat in UNEXPLAINED reading like open defects.
+# This is the promised rule: resolve the destination to a struct and a member
+# path, then ask the compiler for `sizeof` at BOTH widths.
+DEST = re.compile(
+    r'(?:\(\s*\(\s*(?P<tag>\w+)\s*\*\s*\)\s*(?P<cv>[A-Za-z_]\w*)\s*\)|(?P<v>[A-Za-z_]\w*))'
+    r'\s*->\s*(?P<path>\w+(?:\s*\.\s*\w+)*)\s*=\s*\((?:Mcd|Mdt|Me)\w*ID\)\s*(?!KD_FBITS)')
+_FIELD_SZ = re.compile(r'char \(\*\)\[(\d+)\]')
+_SIZE_CACHE = {}
+
+
+def _field_size(cast, path, inc, bits):
+    """sizeof of `((CAST)0)->PATH` at `bits`, or None if it will not compile."""
+    key = (cast, path, bits)
+    if key not in _SIZE_CACHE:
+        os.makedirs('/tmp/kd_ptrsz', exist_ok=True)
+        src = '/tmp/kd_ptrsz/p%d.c' % bits
+        open(src, 'w').write(
+            '#include "%s/include/kd_compat.h"\n#include "%s/include/kd_karma.h"\n'
+            '#include "%s/include/kd_types.h"\n'
+            'char kd_probe[sizeof(((%s)0)->%s) + 1];\nint kd_force = &kd_probe;\n'
+            % (HERE, HERE, HERE, cast, path))
+        r = subprocess.run(['gcc', '-m%d' % bits, '-DLINUX'] + includes(inc)
+                           + ['-w', '-c', '-o', os.devnull, src],
+                           capture_output=True, text=True)
+        m = _FIELD_SZ.search(r.stderr)
+        _SIZE_CACHE[key] = (int(m.group(1)) - 1) if m else None
+    return _SIZE_CACHE[key]
+
+
+def _count_to_id(stmt, region, inc):
+    """The measured form of the rule. -> True when the destination member is
+    four bytes at BOTH widths, i.e. nothing can widen or truncate into it.
+
+    ⚠ The cast is used VERBATIM rather than reduced to a struct tag, because the
+    corpus addresses these objects through POINTER TYPEDEFS (`McdGeometryID`)
+    as often as through a struct name, and `(McdGeometryID *)` would be a
+    pointer-to-pointer and measure the wrong thing."""
+    m = DEST.search(stmt)
+    if not m:
+        return False
+    if m.group('tag'):
+        cast = '%s *' % m.group('tag')
+    else:
+        ty = declared_type(region, m.group('v')) if region else None
+        if not ty:
+            return False
+        cast = ty.strip()
+    path = re.sub(r'\s+', '', m.group('path'))
+    return (_field_size(cast, path, inc, 32) == 4
+            and _field_size(cast, path, inc, 64) == 4)
+
 
 # A bare local as the destination: `NAME = ...;` with no `->`, `.`, `[` or `*` on the LEFT.
 # ⚠ THE CAST IS NOT PART OF THE PATTERN. Written to require `(TYPE *)` this matched nothing at
@@ -183,14 +346,37 @@ def statement(lines, i):
     return ' '.join(x.strip() for x in lines[j:k + 1])
 
 
-def classify(stmt, line, region='', what=''):
+NEAR = []          # near-miss reasons for the site being classified, cleared per site
+
+
+def classify(stmt, line, region='', what='', text='', inc=''):
     if FBITS.search(stmt) and FBITS_TO_U32.match(line):
         return 'fbits-to-4byte'
     if MEDICT.search(stmt) or SORTKEY.search(stmt):
         return 'medict-key'
     m = CALL_RHS.search(stmt)
-    if m and m.group('fn') in INT_RETURN_CALLS:
-        return 'int-return'
+    if m:
+        # ★ THE PROTOTYPE, NOT A NAME LIST. `_returns_pointer` returns None when
+        # it cannot find a declaration, and None is NOT "benign" — an
+        # unresolvable callee stays UNEXPLAINED, which is the conservative
+        # direction and the whole point of the class.
+        int_ret = (_returns_pointer(text, inc, m.group('fn')) is False
+                   or m.group('fn') in INT_RETURN_CALLS)
+        if int_ret:
+            dest = BARE_LOCAL.match(line)
+            if not dest or not region or not inc:
+                return 'int-return'
+            if _int_return_safe(region, dest.group('v'), inc):
+                return 'int-return'
+            # ⚠ NEAR-MISS, AND SAYING SO IS THE POINT. The callee does return an
+            # int, but the local is dereferenced elsewhere in the function —
+            # Ghidra reuses one name for two live ranges (`keaDebug`'s
+            # `piVar15` is `printf`'s return here and a real `int *` sixty lines
+            # down). A whole-function rule cannot separate those, so the site
+            # stays open with the reason attached rather than being counted
+            # benign on half the evidence.
+            NEAR.append('%s is dereferenced elsewhere in the function; '
+                        '%s() does return an int' % (dest.group('v'), m.group('fn')))
     b = BARE_LOCAL.match(line)
     if b and region and _uses_are_value_only(region, b.group('v')):
         if FBITS.search(stmt):
@@ -204,6 +390,8 @@ def classify(stmt, line, region='', what=''):
         if 'int-to-pointer' in what:
             return 'int-in-local'
     if COUNT_TO_ID.search(stmt) and not FBITS.search(stmt):
+        return 'count-to-id'
+    if inc and _count_to_id(stmt, region, inc):
         return 'count-to-id'
     return 'UNEXPLAINED'
 
@@ -241,6 +429,7 @@ def main():
             broke.append(fn)
             continue
         lines = open(path, errors='ignore').read().splitlines()
+        whole = '\n'.join(lines)
         for ln in r.stderr.splitlines():
             m = WARN.match(ln)
             if not m:
@@ -248,14 +437,16 @@ def main():
             i = int(m.group('line')) - 1
             if i >= len(lines):
                 continue
+            del NEAR[:]
             cls = classify(statement(lines, i), lines[i],
-                           region_of('\n'.join(lines), i), m.group('what'))
+                           region_of(whole, i), m.group('what'), whole, inc)
+            near = ('   [near-miss: %s]' % NEAR[0]) if NEAR else ''
             counts[cls] += 1
             per_obj.setdefault(fn[:-2], {}).setdefault(cls, 0)
             per_obj[fn[:-2]][cls] += 1
             if cls == 'UNEXPLAINED':
-                unexplained.append('%-26s %-5d %s'
-                                   % (fn[:-2], i + 1, lines[i].strip()[:104]))
+                unexplained.append('%-26s %-5d %s%s'
+                                   % (fn[:-2], i + 1, lines[i].strip()[:104], near))
 
     total = sum(counts.values())
     print('  aarch64 truncation diagnostics: %d across %d object(s)'

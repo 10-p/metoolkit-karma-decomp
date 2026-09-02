@@ -1,3 +1,44 @@
+# LP64-SLOT-BLINDSPOTS 2026-09-02 ✅ MdtLOD 224, MdtLOD 517 and
+#                     IxCylinderTriList 148 ARE ONE RULE'S BLIND SPOTS, NOT
+#                     THREE PROBLEMS. fix_frame_slots' slot-member rule already
+#                     had the idea and the guards; it missed two on SPELLING and
+#                     HALF-APPLIED the third.
+#                     (1) THE NAME. Ghidra says `auStack_78` for a fabricated
+#                     stack object it models as an array and `local_6c` for one
+#                     it models as a struct; the pattern knew only the first.
+#                     MdtLODLastPartition's local_6c.rowCount holds
+#                     (kd_iptr)(ppMVar18 + 1) — a stack ADDRESS in a four-byte
+#                     field named for a count — then is dereferenced. The real
+#                     array of that type is pdataArray, a separate alloca.
+#                     ⚠ THE NAME IS NOT WHAT MAKES IT SAFE: no escape, member
+#                     measures 4 AT BOTH WIDTHS, member used as an ADDRESS.
+#                     MEASURED: broadening the name adds exactly ONE group.
+#                     (2) THE DEREF WITH NO ARITHMETIC. The use-pattern wanted
+#                     `*(T *)(NAME.M + k)` and could not see
+#                     `*(MdtBaseConstraint **)local_6c.rowCount` — no `(` in it.
+#                     One extra spelling, one extra member in the whole corpus.
+#                     (3) ★★ THE PROMOTION WAS ONLY EVER HALF-APPLIED, and
+#                     IxCylinderTriList is this rule's OWN worked example:
+#                       kd_iptr kd_slot_MStack_26c_flags;          widened, ok
+#                       kd_slot_... = (McdTriangleFlags)result->normal;  FOUR
+#                       *(float *)(kd_slot_... + 4) = ...          reads EIGHT
+#                     McdTriangleFlags is an ENUM — four bytes at both widths —
+#                     so the storage was wide and the value was still cut in
+#                     half going in. Byte-identity is blind: at i386 an enum IS
+#                     four bytes. The test is the CAST'S WIDTH, not a guess at
+#                     the source.
+#                     ⚠ MdtLOD 517 IS NOT A DEFECT (an int cursor in a POINTER
+#                     field, read back — a WIDENING) AND THE FUNCTION AROUND IT
+#                     STILL HAS TWO THE CENSUS CANNOT SEE:
+#                       *(int *)((kd_iptr)&pdataArray->bodyArray + cur)  4/8
+#                       cur = (int)(cur + 0x14)   sizeof at i386, HALF at LP64
+#                     OPEN with a named reason: the cursor is a struct MEMBER
+#                     used as an ADDEND, not a base, so the slot rule cannot
+#                     reach it and fix_element_stride has no local to key on.
+#                     The LOD path is not exercised by test-karma-1.
+#                     GATES: i386 145/145 · run-standalone 12/12 · ktrace
+#                     c31ed77b7323 K=1396 3/3 · wasm 6a380872… unchanged.
+#
 # LP64-BATCH-ELEMTAB 2026-09-02  ✅ McdBatch's THREE elementTable reads are
 #                     CLOSED, and the fix is ONE EXTRA REP — no new rule.
 #                     fix_typeid_dispatch had ALREADY typed the base (it

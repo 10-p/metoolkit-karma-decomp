@@ -245,8 +245,24 @@ def argpad(nslots):
 #
 # ⚠ ONLY IF THE STRUCT NEVER ESCAPES. If `&NAME` is taken, a callee can read the
 # member and splitting it out silently stops updating what that callee sees.
+#
+# ★ `local_XX` IS THE SAME THING UNDER A DIFFERENT NAME, and leaving it out cost
+# `MdtLOD` 224. Ghidra names a stack object `auStack_78` when it models it as an
+# array and `local_6c` when it models it as a struct, and the second spelling is
+# no less fabricated: `MdtLODPartition`'s `local_6c` is an `MdtLODPartitionData`
+# whose `rowCount` holds `(kd_iptr)(ppMVar18 + 1)` — a stack ADDRESS in a field
+# named for a count — and is then dereferenced as `*(MdtBaseConstraint **)`. The
+# real array of that type is `pdataArray`, a separate `alloca`; this one is five
+# unrelated spill slots wearing a struct's clothes.
+#
+# ⚠ THE NAME IS NOT WHAT MAKES IT SAFE — the three tests below are: the object
+# must not escape, the member must measure FOUR BYTES AT BOTH WIDTHS (so it
+# provably cannot hold an LP64 pointer), and the member must be used as an
+# ADDRESS, which is a thing no genuine `int` field is ever used as. Measured over
+# the corpus, broadening the name adds exactly ONE group: MdtLOD.c's `local_6c`.
 SLOTMEMBER = re.compile(r'(?m)^(?P<ind>[ \t]+)(?P<ty>[A-Za-z_]\w*)[ \t]+'
-                        r'(?P<name>[A-Za-z]{1,4}Stack[Y]?_[0-9a-f]+)[ \t]*;')
+                        r'(?P<name>[A-Za-z]{1,4}Stack[Y]?_[0-9a-f]+'
+                        r'|local_[0-9a-f]+)[ \t]*;')
 
 
 def frame_trailing_addends(body, name):
@@ -459,8 +475,19 @@ def slotmember_edits(text, notes, fn, quiet=False):
             name, ty = d.group('name'), d.group('ty')
             if re.search(r'&[ \t]*\(?[ \t]*%s\b' % re.escape(name), body):
                 continue                     # the struct escapes — not ours
+            # ★ BOTH SPELLINGS OF "USED AS AN ADDRESS". The parenthesised one is
+            # the address-arithmetic form, `*(float *)(NAME.M + 4)`; the bare one
+            # is the plain load, `*(MdtBaseConstraint **)NAME.M`. Reading only the
+            # first left `MdtLOD`'s `rowCount` unrepaired — it is dereferenced
+            # with no arithmetic at all, so there is no `(` for the pattern to
+            # find. Measured over the corpus, the bare form adds exactly one
+            # member (that one); every other slot member is reached with an
+            # offset on it.
             used = {m.group(1) for m in re.finditer(
                 r'\*\([A-Za-z_][\w *]*\*\)[ \t]*\([ \t]*%s\.(\w+)[ \t]*[+)]'
+                % re.escape(name), body)}
+            used |= {m.group(1) for m in re.finditer(
+                r'\*\([A-Za-z_][\w *]*\*\)[ \t]*%s\.(\w+)\b'
                 % re.escape(name), body)}
             for M in sorted(used):
                 a = size_of('((%s *)0)->%s' % (ty, M), '-m32')
@@ -472,14 +499,55 @@ def slotmember_edits(text, notes, fn, quiet=False):
                     r'(?<![\w.])%s\.%s\b' % (re.escape(name), re.escape(M)), body)]
                 if not edits:
                     continue
+                nuse = len(edits)
                 edits.append((s + d.end(), s + d.end(),
                               '\n%skd_iptr %s;' % (d.group('ind'), new)))
+                narrowed = narrowing_store_edits(body, s, name, M)
+                edits += narrowed
                 groups.append(((func, name + '.' + M),
-                               '%s::%s.%s (slot member -> kd_iptr, %d use%s)'
-                               % (func, name, M, len(edits) - 1,
-                                  '' if len(edits) == 2 else 's'),
+                               '%s::%s.%s (slot member -> kd_iptr, %d use%s%s)'
+                               % (func, name, M, nuse,
+                                  '' if nuse == 1 else 's',
+                                  ', %d narrowing store cast(s) widened'
+                                  % len(narrowed) if narrowed else ''),
                                edits))
     return groups
+
+
+# ★★ THE OTHER HALF OF THE PROMOTION, AND WITHOUT IT THE STORAGE IS WIDE AND THE
+# VALUE IS STILL CUT IN HALF. `IxCylinderTriList` is this rule's own worked
+# example and it has been shipping HALF-REPAIRED since the rule landed:
+#
+#     kd_iptr kd_slot_MStack_26c_flags;                     <- widened, correct
+#     kd_slot_MStack_26c_flags = (McdTriangleFlags)result->normal;   <- FOUR bytes
+#     *(float *)(kd_slot_MStack_26c_flags + 4) = ...        <- reads the wide slot
+#
+# `McdTriangleFlags` is an ENUM: four bytes at both widths, so the cast truncates
+# `result->normal` on the way in and the slot faithfully stores half an address.
+# The census sees it (`IxCylinderTriList` 148, pointer-to-int) and every gate
+# except the trace is blind to it, because at i386 an enum IS four bytes and the
+# object is byte-identical.
+#
+# ⚠ THE TEST IS THE CAST'S WIDTH, NOT A GUESS AT THE SOURCE. Any cast that
+# measures four bytes at BOTH widths provably cannot carry an LP64 pointer, and
+# the slot was promoted precisely because something puts one there. On a store
+# whose source really is an `int` the rewrite is a value-preserving widening, so
+# the rule does not have to decide which kind of store it is looking at — and
+# `kd_iptr` IS the cast it replaces at 32-bit pointer width, so i386 is
+# unchanged by construction and the group's byte-identity check proves it.
+NARROWING_STORE = r'(?<![\w.])%s\.%s\b[ \t]*=[ \t]*\((?P<cast>[A-Za-z_][\w ]*?)\)'
+
+
+def narrowing_store_edits(body, s, name, M):
+    """`NAME.M = (FOUR_BYTE_TYPE)expr;` -> `(kd_iptr)expr`."""
+    out = []
+    for m in re.finditer(NARROWING_STORE % (re.escape(name), re.escape(M)), body):
+        cast = m.group('cast').strip()
+        if cast in ('kd_iptr', 'kd_uptr') or cast.endswith('*'):
+            continue
+        if size_of(cast, '-m32') == 4 and size_of(cast, '-m64') == 4:
+            out.append((s + m.start('cast'), s + m.end('cast'), 'kd_iptr'))
+    return out
 
 
 def slotpair_edits(text, notes, fn, quiet=False):

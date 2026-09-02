@@ -13,6 +13,68 @@ read before resuming; `../HANDOVER.md` is the depth behind it and `../proven.txt
 ---
 
 
+# ✅ THREE FABRICATED-SLOT SITES — 2026-09-02 (LATER STILL). THE RULE WAS ALREADY RIGHT.
+
+★ **`MdtLOD` 224, `MdtLOD` 517 AND `IxCylinderTriList` 148 ARE ALL ONE RULE'S BLIND SPOTS, NOT
+THREE PROBLEMS.** `fix_frame_slots`' slot-member rule — "a frame slot's MEMBER holding a pointer,
+given its own `kd_iptr` local" — already had the right idea and the right guards. It missed two of
+these on SPELLING and half-applied the third.
+
+**1 — the name.** Ghidra calls a fabricated stack object `auStack_78` when it models it as an array
+and `local_6c` when it models it as a struct, and the pattern only knew the first spelling.
+`MdtLODLastPartition`'s `local_6c` is an `MdtLODPartitionData` whose `rowCount` holds
+`(kd_iptr)(ppMVar18 + 1)` — a stack ADDRESS in a four-byte field named for a count — and is then
+dereferenced as `*(MdtBaseConstraint **)`. It is not the real array of that type; `pdataArray`, a
+separate `alloca`, is. ⚠ The name is not what makes the rewrite safe and the comment now says so:
+the object must not escape, the member must measure FOUR BYTES AT BOTH WIDTHS, and it must be used
+as an ADDRESS — which is a thing no genuine `int` field is ever used as. **Measured over the corpus,
+broadening the name adds exactly ONE group.**
+
+**2 — the deref with no arithmetic on it.** The use-pattern wanted `*(T *)(NAME.M + k)`, so it could
+not see `*(MdtBaseConstraint **)local_6c.rowCount`: there is no `(` in it. One extra spelling, and —
+measured — exactly one extra member in the corpus, that one.
+
+**3 — ★★ THE PROMOTION WAS ONLY EVER HALF-APPLIED, AND `IxCylinderTriList` IS THE RULE'S OWN WORKED
+EXAMPLE.** It has been shipping like this since the rule landed:
+
+```
+kd_iptr kd_slot_MStack_26c_flags;                            <- widened, correct
+kd_slot_MStack_26c_flags = (McdTriangleFlags)result->normal; <- FOUR bytes
+*(float *)(kd_slot_MStack_26c_flags + 4) = ...               <- reads the wide slot
+```
+
+`McdTriangleFlags` is an **enum**: four bytes at both widths. The storage was widened and the value
+was still cut in half on the way in. Every gate but the trace is blind to it — at i386 an enum *is*
+four bytes and the object is byte-identical. The test is the CAST'S WIDTH, not a guess at the
+source: a cast that measures 4/4 provably cannot carry an LP64 pointer, and the slot was promoted
+precisely because something puts one there.
+
+⚠ **`MdtLOD` 517 IS NOT A DEFECT AND THE FUNCTION AROUND IT STILL HAS TWO.**
+`local_6c.conArray = (MdtBaseConstraint **)local_6c.bodyCount` is a byte cursor carried in a POINTER
+field and read straight back — a WIDENING, and the eight-byte slot round-trips it unchanged. But
+`MdtLODLastPartition` also does this, and **nothing in the census can see either**:
+
+```
+*(int *)((kd_iptr)&pdataArray->bodyArray + cur)   bodyArray is 4 at i386 and 8 at LP64 — truncated
+local_6c.bodyCount = (int)(local_6c.bodyCount + 0x14)
+                                                  0x14 is sizeof(MdtLODPartitionData) at i386
+                                                  and HALF of it at LP64 (40)
+```
+
+Neither truncates a cast, so neither is a diagnostic. They are OPEN, with a named reason: the cursor
+is a struct MEMBER used as an addend rather than as a base, so the slot rule does not reach it and
+`fix_element_stride` has no plain local to key on. The LOD partition path is not exercised by
+`test-karma-1`, which is why the trace is silent about them too.
+
+```
+i386 acceptance 145/145 · 0 byte differences · lp64_pipeline EXIT=0 · run-standalone 12/12
+LP64 ktrace vs the SSE-32 control: c31ed77b7323, K=1396, 3 of 3 runs
+wasm 6a380872… unchanged
+```
+
+---
+
+
 # ✅ McdBatch's THREE ELEMENT-TABLE READS ARE CLOSED — 2026-09-02 (LATER). ONE REP.
 
 ★ **THE SITE DID NOT NEED A NEW RULE, IT NEEDED A SPELLING THE REST OF THE PIPELINE CAN READ.**

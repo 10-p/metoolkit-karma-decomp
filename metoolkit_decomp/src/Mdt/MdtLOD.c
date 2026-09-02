@@ -69,6 +69,7 @@ void kd_MdtLODLastPartition(MdtPartitionOutput *po,MdtPartitionParams *params)
   int aiStack_90 [6 * (int)(sizeof(void *) / 4)];
   uint auStack_78 [3 * (int)(sizeof(void *) / 4)];
   MdtLODPartitionData local_6c;
+  kd_iptr kd_slot_local_6c_rowCount;
   int b0PIx;
   MdtBody *b1;
   MdtBody *b0;
@@ -206,7 +207,7 @@ LAB_000100f8:
         MeHeapPush(*(void **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)),
                    *(void **)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p0)));
       }
-      local_6c.rowCount = (kd_iptr)(ppMVar18 + 1);
+      kd_slot_local_6c_rowCount = (kd_iptr)(ppMVar18 + 1);
       (ppMVar18[1]->head).LODpartIndex = -1;
       (ppMVar18[1]->head).rowBudget = 0;
       *(MdtBaseConstraint **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)) = ppMVar18[1];
@@ -220,8 +221,8 @@ LAB_000100f8:
         iVar16 = MdtConstraintGetRowCount(*(void **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)));
         (pMVar3->head).maxRows = iVar16;
       }
-      iVar15 = local_6c.rowCount;
-      pMVar3 = *(MdtBaseConstraint **)local_6c.rowCount;
+      iVar15 = kd_slot_local_6c_rowCount;
+      pMVar3 = *(MdtBaseConstraint **)kd_slot_local_6c_rowCount;
       *(int *)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p8)) = iVar16;
       *(int *)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p4)) = iVar16;
       *(MdtPartitionParams **)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p0)) = params;
@@ -231,7 +232,7 @@ LAB_000100f8:
       MVar19 = ConstraintCalcImportance
                          (*(MdtBaseConstraint **)((kd_iptr)(kd_frameslot_aiStack_90_iVar2_iVar6_p14)),
                           *(MdtPartitionParams **)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p0)));
-      iVar16 = local_6c.rowCount;
+      iVar16 = kd_slot_local_6c_rowCount;
       (pMVar3->head).importance = MVar19;
       if ((group == (MdtContactGroupID)0x0) || (0 < (group->head).maxRows)) {
         *(undefined4 *)((kd_iptr)(kd_frameslot_auStack_78_iVar2_iVar6_p8)) = extraout_EDX;

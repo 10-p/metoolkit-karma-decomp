@@ -145,7 +145,7 @@ int kd_McdCylinderTriangleListIntersect(McdModelPair *p,McdIntersectResult *resu
   count = (*p_Var4)(*(void **)((kd_iptr)aiStackY_2a0 + (5 * (int)sizeof(void *))),
                     *(void **)((kd_iptr)aMStackY_288),*(void **)((kd_iptr)aMStackY_288 + (1 * (int)sizeof(void *))),
                     *(float *)((kd_iptr)&fStackY_280),*(int *)(&(*kd_argslot_fffffd84)));
-  kd_slot_MStack_26c_flags = (McdTriangleFlags)result->normal;
+  kd_slot_MStack_26c_flags = (kd_iptr)result->normal;
   result->normal[0] = 0.0;
   result->normal[1] = 0.0;
   result->normal[2] = 0.0;

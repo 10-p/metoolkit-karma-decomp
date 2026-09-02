@@ -13,6 +13,53 @@ read before resuming; `../HANDOVER.md` is the depth behind it and `../proven.txt
 ---
 
 
+# ⚠⚠ THE CENSUS, TRIAGED — 2026-09-02 (LATE NIGHT). READ WITH THE BLOCK BELOW.
+
+★ **THE 30 ARE NOT 30 BUGS, AND SAYING SO PRECISELY IS OVERDUE.** Every census entry is one of
+three aarch64 CLANG DIAGNOSTICS (`-Wint-to-pointer-cast`, `-Wpointer-to-int-cast`,
+`-Wvoid-pointer-to-int-cast`). None of them is a measured divergence: the LP64 ktrace is
+byte-identical to the SSE-32 control over 40 frames **with all 30 present**.
+
+```
+provably harmless   ~24   int->pointer is a WIDENING and cannot truncate (CxSmallSort 3,
+                          keaLCPSolver, IxConvexTriList, McdPlaneIntersect, MdtConstraint);
+                          float bits in the low four bytes on a little-endian target
+                          (MeFAsset, McdContact); the identity at offset 0, measured
+                          (MdtPartition); a char value and a loop bound (MeXMLParser 4);
+                          printf's return in a reused local (keaDebug 2)
+real truncations      ~6   McdAggregate 486 · MstModelDynamics 150 · McdInteractions 104 ·
+                          MdtLOD 224/517 · IxCylinderTriList 148
+```
+
+★★★ **TWO ARE NOW CONFIRMED AGAINST THE SHIPPED 64-BIT BUILD, WITH THE DISASSEMBLY:**
+
+```
+McdAggregateGetMassProperties   mov 0x20(%rcx),%rcx          elementTable, 8 bytes
+                                mov 0x40(%rcx,%rax,1),%rax   mGeometry -> %rax = EIGHT
+   ours: puVar1 = (undefined4 *)(...);  (void *)*puVar1      FOUR — truncates a geometry ptr
+
+transferContactGroups           mov (%rax),%rax              model1 at 0, EIGHT
+                                mov 0x8(%rax),%rax           model2 at 8, eight
+   ours: otherModel = (McdModelID)*piVar4;  piVar4 is int *  FOUR — truncates a model ptr
+```
+
+⚠⚠ **AND THE SECOND ONE EXPOSES A FLAW IN THIS PROJECT'S OWN RULE.** `fix_setter_typed_slot`
+clause 5 — "the member must actually MOVE" — is about OFFSETS, and it is why `*piVar4` was left
+alone and written up as correct: `model1` is byte 0 at both widths. **The offset does not move and
+the WIDTH does.** A field at a fixed offset can still need a wider load, and no rule here was
+asking that question. The oracle is what asked it.
+
+⚠ `McdHello` is UNRESOLVED rather than confirmed: the amd64 build uses BOTH `mov (%rax),%rax` and
+`mov (%rax),%eax` at that displacement, so the oracle declines to say which this site is.
+`MdtLOD` 224/517 and `IxCylinderTriList` 148 are not yet examined.
+
+★ **THE CENSUS IS ALSO THE WRONG SCOREBOARD**, and this session is the proof: the hover bike's box
+extents, `McdBatchFlattenAggregate`, `IxBoxTriList`'s slot walk and the `generator` slot were all
+real defects and all produced **ZERO** census diagnostics, because nothing is truncated. The
+instrument that tracks correctness is the ktrace against the 32-bit control.
+
+---
+
 # ⚠⚠ OPEN ITEMS — 2026-09-02 (NIGHT). READ THIS BLOCK FIRST.
 
 ★★★★★ **THE SDK SHIPS A 64-BIT BUILD OF THESE SOURCES AND THIS PROJECT HAD NEVER ASKED IT

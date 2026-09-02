@@ -13,6 +13,33 @@ read before resuming; `../HANDOVER.md` is the depth behind it and `../proven.txt
 
 ---
 
+# ⚠ CI: THREE FAILURES FIXED, ONE OPEN — the i386 ASan CONTROL is dirty on the runner
+
+After the three fixes below, CI runs the whole generator chain and **passes the i386 acceptance
+test — `145 object(s), 0 compile failure(s), 0 byte difference(s)`** — which it had never reached.
+It then stops here:
+
+```
+CONTROL scene_boxes_on_plane: 1 error(s) at i386
+  <- THE CONTROL IS DIRTY; nothing below is attributable to pointer width
+```
+
+★ **THAT IS THE HARNESS WORKING, NOT A NEW DEFECT.** `lp64_run.sh` refuses to attribute anything to
+pointer width when its own i386 control is dirty — the rule this project added after a coin-flip in
+`scene_ragdoll` became a FAIL in the headline gate. The control is clean on this box (gcc 15.2) and
+dirty on `ubuntu-24.04` (gcc 13), so it is an **environment difference in the ASan arm**, and the
+honest reading is that CI covers everything up to and including i386 byte-identity and does not yet
+cover the LP64 sanitiser tier.
+
+⚠ **DO NOT "FIX" THIS WITH `KD_SKIP_CONTROL=1`.** That flag exists, it makes the job green, and
+skipping the control is precisely the mistake this file already records: it removes the only
+evidence that could excuse an unstable scene and turns a coin flip into an unattributable FAIL.
+Whatever the runner's ASan is unhappy about, the answer is to find it — start by reproducing under
+gcc-13 locally, which is installed.
+
+---
+
+
 # ⚠⚠⚠ AND THE THIRD CI FAILURE IS THE ONE THAT MATTERED: THE PROBES NEED gcc 14+
 
 `fix_setter_typed_slot`'s SELF-CHECK fired on the runner and not here, and the reason is a

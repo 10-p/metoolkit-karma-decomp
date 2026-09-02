@@ -421,7 +421,7 @@ void kd_McdAggregateMaximumPoint(McdGeometryInstanceID ins,MeReal *inDir,MeReal 
 MeI16 kd_McdAggregateGetMassProperties(McdGeometry *g,MeVector4 *relTM,MeVector3 *m,MeReal *volume)
 
 {
-  undefined4 *puVar1;
+  void **puVar1;
   float fVar2;
   MeReal MVar3;
   MeReal MVar4;
@@ -481,7 +481,7 @@ MeI16 kd_McdAggregateGetMassProperties(McdGeometry *g,MeVector4 *relTM,MeVector3
     iVar13 = 0;
     do {
                     
-      puVar1 = (undefined4 *)((*(kd_uptr *)((char *)g + ((int)((char *)&((McdAggregate *)0)->elementTable - (char *)0)))) + ((int)((char *)&((McdAggregateElement *)0)->mGeometry - (char *)0)) + iVar13);
+      puVar1 = (void **)((*(kd_uptr *)((char *)g + ((int)((char *)&((McdAggregate *)0)->elementTable - (char *)0)))) + ((int)((char *)&((McdAggregateElement *)0)->mGeometry - (char *)0)) + iVar13);
       iVar13 = iVar13 + (int)sizeof(McdAggregateElement);
       McdGeometryGetMassProperties((void *)*puVar1,subTM,subI,&subVol);
       *volume = subVol + *volume;

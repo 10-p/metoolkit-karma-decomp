@@ -54,7 +54,7 @@ Each row is closed by a rule, not by inspection-and-a-shrug. The three recurring
 
 | site | status | evidence |
 |---|---|---|
-| `McdAggregate` 486 | **CONFIRMED defect** | `McdGeometryGetMassProperties((void *)*puVar1, …)` reads `McdAggregateElement::mGeometry` through an `undefined4 *`. The shipped amd64 build: `mov 0x20(%rcx),%rcx` then `mov 0x40(%rcx,%rax,1),%rax` — **eight** bytes. Ours reads four: a truncated geometry pointer. |
+| `McdAggregate` 486 | ✅ **CLOSED** (`fix_narrow_loads` rule D, second shape) | `McdGeometryGetMassProperties((void *)*puVar1, …)` reads `McdAggregateElement::mGeometry` through an `undefined4 *`. The shipped amd64 build: `mov 0x20(%rcx),%rcx` then `mov 0x40(%rcx,%rax,1),%rax` — **eight** bytes. Ours reads four: a truncated geometry pointer. |
 | `MstModelDynamics` 150 | ✅ **CLOSED** (`fix_setter_typed_slot` clause 5 now tests WIDTH as well as offset) | `otherModel = (McdModelID)*piVar4` with `piVar4` an `int *`. amd64: `mov (%rax),%rax` — **eight** bytes. ⚠⚠ Left alone earlier by `fix_setter_typed_slot` clause 5, *"the member must actually move"* — which is about OFFSETS. `model1` is byte 0 at both widths and the **WIDTH still changes**. No rule here was asking that question. |
 | `McdInteractions` 104 | **unresolved** | `(code *)*puVar4 != 0` — a four-byte read of a function pointer. The oracle declines: `McdHello` uses **both** `mov (%rax),%rax` and `mov (%rax),%eax` at that displacement, so it cannot say which this site is. |
 | `MdtLOD` 224 | open | `*(MdtBaseConstraint **)local_6c.rowCount` — an `int` field used as an **address**. |

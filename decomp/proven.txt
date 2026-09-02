@@ -9,7 +9,9 @@
 #                       ~6  real truncations: McdAggregate 486, MstModelDynamics
 #                           150, McdInteractions 104, MdtLOD 224/517,
 #                           IxCylinderTriList 148.
-#                     ★★★ TWO CONFIRMED AGAINST THE SHIPPED 64-BIT BUILD:
+#                     ★★★ TWO CONFIRMED AGAINST THE SHIPPED 64-BIT BUILD, AND
+#                     BOTH ARE NOW CLOSED (McdAggregate via fix_narrow_loads
+#                     rule D's second shape; MstModelDynamics via clause 5):
 #                       McdAggregateGetMassProperties
 #                         amd64 mov 0x40(%rcx,%rax,1),%rax   mGeometry EIGHT
 #                         ours  (void *)*puVar1, undefined4 * FOUR — truncated

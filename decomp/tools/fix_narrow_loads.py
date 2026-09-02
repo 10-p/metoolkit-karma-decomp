@@ -346,6 +346,28 @@ ADDR_OF_FIELD = re.compile(
     r'(?P<expr>[A-Za-z_][\w\[\]\.>-]*?)\s*\+')
 
 
+
+# ★ RULE D, SECOND SHAPE: THE MEMBER IS NAMED BY THE offsetof IDIOM, NOT BY `&`.
+# `ADDR_OF_FIELD` wants `(undefined4 *)((kd_iptr)&EXPR + ...)`, so it cannot see
+# an address built by ARITHMETIC — which is how the aggregate walk is written:
+#
+#   puVar1 = (undefined4 *)((*(kd_uptr *)((char *)g + OFFSETOF(McdAggregate,elementTable)))
+#                           + OFFSETOF(McdAggregateElement,mGeometry) + iVar13);
+#   McdGeometryGetMassProperties((void *)*puVar1, ...);
+#
+# There is nothing to infer: `((char *)&((T *)0)->F - (char *)0)` NAMES the type
+# and the field. `McdAggregateElement::mGeometry` is 4 at i386 and 8 at LP64, so
+# `*puVar1` hands HALF a geometry pointer to `McdGeometryGetMassProperties`.
+# MathEngine's own amd64 build reads it eight bytes wide —
+# `mov 0x40(%rcx,%rax,1),%rax` — which is the confirmation, not the argument.
+#
+# ⚠ The same 4/8 measurement gates it as the first shape, so a field that does
+# not grow is declined exactly as before.
+OFFSETOF_FIELD = re.compile(
+    r'(?P<v>\w+) = \((?P<ty>undefined4|int|uint) \*\)\('
+    r'(?=[^;]*\(\(char \*\)&\(\((?P<T>\w+) \*\)0\)->(?P<F>[\w.]+) - \(char \*\)0\))')
+
+
 def resolve_member(expr, text, root):
     """Follow `context->pools[3].contacts` to the member it names.
 
@@ -418,6 +440,50 @@ def widen_field_address_pointers(path, root):
                      r'\1void\2**\3', out)
         out = out.replace('%s = (%s *)((kd_iptr)&' % (v, ty),
                           '%s = (void **)((kd_iptr)&' % v)
+        done += 1
+    # the second shape: the member named by the offsetof idiom
+    for m in OFFSETOF_FIELD.finditer(text):
+        v, ty, T, F = m.group('v'), m.group('ty'), m.group('T'), m.group('F')
+        if not re.search(r'(?m)^\s*%s\s*\*\s*%s\s*;' % (ty, re.escape(v)), out):
+            continue
+        a = field_size(T, F, '-m32', root)
+        b = field_size(T, F, '-m64', root)
+        if not (a == 4 and b == 8):
+            dec.append('%s::%s is %s/%s, not a pointer that grew (offsetof)'
+                       % (T, F, a, b))
+            continue
+        # ⚠⚠ RETYPING A LOCAL RESCALES EVERY PIECE OF POINTER ARITHMETIC ON IT,
+        # AND THAT IS HOW THIS SHAPE FIRST WENT WRONG. `McdAggregate` has a
+        # SECOND local matching this pattern which is also stepped along the
+        # array:
+        #     piVar1 = (int *)((char *)piVar1 + (int)sizeof(McdAggregateElement));
+        # Retyping it to `void **` let a later pass re-derive that step as
+        # `piVar1 + 0x11` — 0x11 * 4 = 68 = sizeof at i386, so BYTE-IDENTICAL,
+        # and 0x11 * 8 = 136 at LP64 where the element is 72. A repair that
+        # doubles a stride is worse than the truncation it fixes.
+        # ★ So the local's every use must be the assignment itself or a plain
+        # `*VAR`. Anything additive, indexed, or re-cast declines — which is
+        # exactly the hand check that made `puVar1` safe.
+        uses = [u for u in re.finditer(r'(?<![\w>])%s\b' % re.escape(v), out)]
+        ok = True
+        for u in uses:
+            head = out[max(0, u.start() - 12):u.start()]
+            tail = out[u.end():u.end() + 12]
+            if re.search(r'\*\s*$', head):
+                continue                      # *VAR
+            if re.match(r'\s*=\s*\(', tail):
+                continue                      # VAR = (cast)...
+            if re.search(r'\*\s*\*\s*$|\bundefined4\s*\*\s*$|\bint\s*\*\s*$|\buint\s*\*\s*$', head):
+                continue                      # the declaration
+            ok = False
+            break
+        if not ok:
+            dec.append('%s: not retyped — it is used in pointer arithmetic, and '
+                       'retyping rescales it' % v)
+            continue
+        out = re.sub(r'(?m)^(\s*)%s(\s*)\*(\s*%s\s*;)' % (ty, re.escape(v)),
+                     r'\1void\2**\3', out)
+        out = out.replace('%s = (%s *)(' % (v, ty), '%s = (void **)(' % v)
         done += 1
     if out != text:
         open(path, 'w').write(out)

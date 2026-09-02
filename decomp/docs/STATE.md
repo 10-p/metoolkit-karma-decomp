@@ -13,7 +13,63 @@ read before resuming; `../HANDOVER.md` is the depth behind it and `../proven.txt
 ---
 
 
-# ★★★ THE LAST UNTESTED TARGET IS TESTED, AND THE SECOND KARMA IS GONE — 2026-09-02 (LATEST)
+# ✅ BUCKET 2 IS CLOSED, AND THE INSTRUMENT IS AN EXECUTION CENSUS — 2026-09-02 (LATEST)
+
+★ **"VISIBLE" WAS NOT "EXERCISED", AND CONFLATING THEM WOULD HAVE BOUGHT A LOT OF WORK.** The 328
+declined sites became visible because `lp64_pipeline.sh` stopped piping every pass through
+`head`/`tail` — the counts always existed, the per-site lists were cut. That says nothing whatever
+about whether UT2004 runs the code. Measured instead of assumed, with `KD_CENSUS` +
+`-finstrument-functions` over two Onslaught matches (`test-karma-1`, and `ONS-Torlan` with bots as
+a spectator):
+
+```
+660 distinct recovered functions entered
+111 of 147 recovered objects entered      36 never entered
+```
+
+⚠ `MdtLOD` is in the never-entered 36 — the independent confirmation of the reachability argument
+that put its two LP64 defects out of scope. So is `CxSmallSort`, whose 3 census rows and 209
+`SUSPECT` sites are the biggest single block in every report this project produces.
+
+**THE TRIAGE, and it collapses:**
+
+```
+398  decline lines naming an object
+368  …in objects the game ENTERS
+262  …of those already carry a MEASURED verdict — "the field is N/M, not a pointer
+     that grew" (260) or "already correct at LP64" (2). Not work by construction.
+```
+
+★★ **AND THE RESIDUAL LAYOUT EXPOSURE IS NOT EXPOSURE.** `layout_check` reports 105 `SUSPECT`
+sites — its own header warns that "legitimate array indexing lives in the same column" — of which
+**47 are in objects the game enters**. Every one was checked against the base's DECLARATION:
+
+```
+McdContact       22   McdContact *pMVar26;        indexed [1],[2],[3]
+MstBridge         9   …                           MeAssetDBXMLInput_1_0  9
+McdBatch          3   McdBatchContactPool *pMVar7;
+MdtMainLoop       2   MdtKeaConstraints *pMVar3;   MdtPartition 1   McdPlaneIntersect 1
+```
+
+Every base is declared a pointer to **exactly the type it indexes**, so the stride is the
+compiler's and is right at any pointer width. `McdPlaneIntersect`'s `pMVar6[1].mRefCtAndID` is the
+same story arithmetically — 16 at i386 and 32 at LP64, which is where `McdCylinder::mR` is at both.
+
+★ **SO THE EXERCISED OPEN-WORK SET IS EMPTY**, and the ktrace agrees from the other direction: it
+is byte-identical to the 32-bit control over a match that enters `McdContact` and `McdBatch`
+thousands of times. The 328 was a number about a log, not about the port.
+
+⚠ **AND THE CENSUS TOOL HAD A SILENT MISPARSE, which is why this took two attempts.**
+`census_report.py` recognised only `--objdir=DIR`, so the space-separated form ITS OWN DOCSTRING
+teaches left the directory in the positional list, `binary = args[-1]` picked up the directory, and
+the real binary was read as a census file. It fails with a `UnicodeDecodeError` inside
+`load_counts`, which says nothing about the actual mistake. Fixed. **The form the docs teach was
+the form that did not work.**
+
+---
+
+
+# ★★★ THE LAST UNTESTED TARGET IS TESTED, AND THE SECOND KARMA IS GONE — 2026-09-02
 
 **READ THIS BLOCK FIRST.** Four changes, and the theme is that a gate you have to remember is not a
 gate and a second implementation you no longer use is not a control.

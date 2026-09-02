@@ -1,3 +1,46 @@
+# LP64-EXEC-CENSUS   2026-09-02  ✅ THE ~328 DECLINED SITES ARE NOT WORK, AND
+#                     THE INSTRUMENT THAT SAYS SO IS AN EXECUTION CENSUS.
+#                     ★ "VISIBLE" IS NOT "EXERCISED". They became visible only
+#                     because lp64_pipeline.sh stopped piping every pass through
+#                     head/tail; the counts always existed, the per-site lists
+#                     were cut. That says nothing about what UT2004 runs.
+#                     MEASURED with KD_CENSUS + -finstrument-functions over two
+#                     Onslaught matches (test-karma-1; ONS-Torlan with bots,
+#                     spectator):
+#                       660 distinct recovered functions entered
+#                       111 of 147 recovered objects entered, 36 never
+#                     ⚠ MdtLOD is in the never-entered 36 — independent
+#                     confirmation of the reachability argument that put its two
+#                     LP64 defects OUT OF SCOPE. So is CxSmallSort, whose 209
+#                     SUSPECT sites are the biggest block in every report here.
+#                     TRIAGE:
+#                       398 decline lines naming an object
+#                       368 in objects the game ENTERS
+#                       262 of those already carry a MEASURED verdict — "is N/M,
+#                           not a pointer that grew" (260), "already correct at
+#                           LP64" (2). Not work by construction.
+#                     ★★ AND THE RESIDUAL LAYOUT EXPOSURE IS NOT EXPOSURE.
+#                     layout_check reports 105 SUSPECT (its own header warns
+#                     legitimate array indexing lives in that column); 47 are in
+#                     entered objects, and EVERY base is declared a pointer to
+#                     exactly the type it indexes — McdContact *pMVar26 indexed
+#                     [1][2][3], McdBatchContactPool *pMVar7, MdtKeaConstraints
+#                     *pMVar3 — so the stride is the compiler's and is right at
+#                     any width. McdPlaneIntersect pMVar6[1].mRefCtAndID is 16 at
+#                     i386 and 32 at LP64, which is where McdCylinder::mR is at
+#                     both.
+#                     ★ THE EXERCISED OPEN-WORK SET IS EMPTY, and the ktrace
+#                     agrees from the other side: byte-identical to the 32-bit
+#                     control over a match entering McdContact and McdBatch
+#                     thousands of times. 328 was a number about a LOG.
+#                     ⚠ census_report.py HAD A SILENT MISPARSE: only
+#                     `--objdir=DIR` was recognised, so the space-separated form
+#                     ITS OWN DOCSTRING teaches left the dir in the positional
+#                     list, binary = args[-1] picked up the DIRECTORY and the
+#                     real binary was read as a census file — failing with a
+#                     UnicodeDecodeError that says nothing about the mistake.
+#                     THE FORM THE DOCS TEACH WAS THE FORM THAT DID NOT WORK.
+#
 # LP64-WIN64-AND-GATES 2026-09-02 ★★★ THE LAST UNTESTED TARGET IS TESTED AND
 #                     THE SECOND KARMA IS GONE.
 #                     (1) WINDOWS x64 WITH KARMA RUNS, AND ITS PHYSICS IS THE

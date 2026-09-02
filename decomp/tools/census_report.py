@@ -79,11 +79,24 @@ def object_functions(objdir):
 
 
 def main():
-    args = [a for a in sys.argv[1:] if not a.startswith('--')]
-    objdir = None
-    for a in sys.argv[1:]:
+    # ⚠ BOTH SPELLINGS OF --objdir, and the space-separated one used to be
+    # SILENTLY MISPARSED: only `--objdir=DIR` was recognised, so `--objdir DIR`
+    # left DIR in the positional list, `binary = args[-1]` picked up the
+    # DIRECTORY, and the real binary was read as a census file. The failure is a
+    # UnicodeDecodeError deep in load_counts, which says nothing about the actual
+    # mistake. The docstring shows `[--objdir DIR]`, so the form the docs teach
+    # was the form that did not work.
+    argv, args, objdir = sys.argv[1:], [], None
+    i = 0
+    while i < len(argv):
+        a = argv[i]
+        if a == '--objdir' and i + 1 < len(argv):
+            objdir = argv[i + 1]; i += 2; continue
         if a.startswith('--objdir='):
-            objdir = a.split('=', 1)[1]
+            objdir = a.split('=', 1)[1]; i += 1; continue
+        if not a.startswith('--'):
+            args.append(a)
+        i += 1
     if len(args) < 2:
         print(__doc__)
         return 2

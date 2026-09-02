@@ -416,13 +416,103 @@ def dispatch_ids(text):
     return out
 
 
+def if_dispatch_ids(text):
+    """function -> {parameter index: type id}, from `if (V == N) { … FN(…,ins,…) }`.
+
+    ★ THE SWITCH IS NOT THE ONLY DISPATCHER, AND THE INSTANCE IS NOT ALWAYS THE
+    FIRST ARGUMENT. `McdBatch` guards with a plain `if` and passes the geometry
+    instance THIRD:
+
+        bVar3 = (byte)ins1_00->mGeometry->mRefCtAndID;
+        if (bVar3 == 8) {                       kMcdGeometryTypeAggregate
+          … kd_McdBatchFlattenAggregate(context, 0, ins1_00, ins2_00, …);
+
+    and inside that callee `McdGeometryInstanceGetGeometry(ins1)` is read at
+    `+0x10` and `+0x18` — `McdAggregate::elementTable` and `elementCountMax` at
+    i386, and `McdGeometry`'s `next` and `frame` POINTERS at LP64. An element
+    table and a loop bound taken out of two pointers.
+
+    ⚠⚠ SELF-RECURSION IS EXCLUDED FROM THE "no other caller" TEST, AND THAT IS AN
+    ASSUMPTION, NOT A MEASUREMENT. `McdBatchFlattenAggregate` calls itself, and
+    both recursive paths are reached through INVERTED guards (`if (bVar5 != 8)`
+    with the interesting work in the complement) that this pass deliberately does
+    not try to read — a complement is where control-flow subtleties bite, and a
+    rule that is sure of half of itself is not a rule. What is relied on instead:
+    the callee dereferences the aggregate's element table UNCONDITIONALLY, so a
+    non-aggregate reaching it would already crash the i386 build, which runs.
+    That is empirical, it is stated here rather than buried, and the ktrace and
+    ONS smoke runs are what stand behind it."""
+    out = {}
+    params_of = {}
+    for m in DEFN_BANNER.finditer(text):
+        sig = text[m.end():m.end() + 600]
+        p = re.search(r'\(([^)]*)\)', sig)
+        if p:
+            params_of[m.group(1)] = [
+                re.sub(r'.*[\s\*](\w+)\s*$', r'\1', a.strip())
+                for a in p.group(1).split(',')]
+
+    for tv in TYPEVAR_INS.finditer(text):
+        v, ins = tv.group('v'), tv.group('ins')
+        rs, re_ = region_bounds(text, tv.start())
+        region, blks = text[rs:re_], blocks(text[rs:re_])
+        for c in re.finditer(r'\b(?:kd_)?(?P<fn>[A-Za-z_]\w*)\s*\((?P<args>[^();]*)\)', region):
+            args = [a.strip() for a in c.group('args').split(',')]
+            if ins not in args:
+                continue
+            g = guard_of(region, c.start(), v, blks)
+            if not g:
+                continue
+            fn = re.sub(r'^kd_', '', c.group('fn'))
+            if fn not in params_of:
+                continue
+            out.setdefault(fn, {})[args.index(ins)] = g[0]
+
+    # every non-recursive, unguarded call of the same name disqualifies it.
+    # ⚠ THE FORWARD DECLARATION IS NOT A CALL, and counting it as one drops
+    # every function here — its "arguments" are the parameter list, which is
+    # guarded by nothing. Same structural marker as `dispatch_ids`.
+    fnb = list(DEFN_BANNER.finditer(text))
+    decls_end = fnb[0].start() if fnb else len(text)
+    final = {}
+    for fn, idx in out.items():
+        if len(idx) != 1:
+            continue
+        i, tid = next(iter(idx.items()))
+        bad = False
+        for c in re.finditer(r'\b(?:kd_)?%s\s*\((?P<args>[^();]*)\)' % re.escape(fn), text):
+            if c.start() < decls_end:
+                continue                        # the forward declaration
+            crs, _ = region_bounds(text, c.start())
+            if region_fn(text, crs) == fn:
+                continue                        # self-recursion: see the docstring
+            args = [a.strip() for a in c.group('args').split(',')]
+            if len(args) <= i:
+                continue
+            rr, re2 = region_bounds(text, c.start())
+            reg2 = text[rr:re2]
+            ok = False
+            for tv in TYPEVAR_INS.finditer(reg2):
+                if tv.group('ins') != args[i]:
+                    continue
+                g = guard_of(reg2, c.start() - rr, tv.group('v'), blocks(reg2))
+                if g and g[0] == tid:
+                    ok = True
+            if not ok:
+                bad = True
+                break
+        if not bad:
+            final[fn] = (i, tid, params_of[fn][i] if i < len(params_of[fn]) else None)
+    return final
+
+
 def region_fn(text, start):
     """The `/* ---- name ---- */` banner name for the region beginning at start."""
     m = BANNER.search(text, start)
     return m.group(1) if m and m.start() == start else None
 
 
-def evidence(region, rel, blks, base, disp, fnname):
+def evidence(region, rel, blks, base, disp, fnname, ifdisp={}):
     """Every geometry type id that can reach this site, and which one names the
     field. -> ((ids, first), None)  or  (None, reason).
 
@@ -464,6 +554,16 @@ def evidence(region, rel, blks, base, disp, fnname):
     for cand in ((fnname, 'kd_' + fnname) if fnname else ()):
         if cand in disp:
             return ([disp[cand]], disp[cand]), None
+    # (4) the file-local `if` dispatcher, where the instance is an ARGUMENT at a
+    # known position and the site's base is the geometry OF that parameter.
+    got = ifdisp.get(fnname) if fnname else None
+    if got:
+        _i, tid, pname = got
+        if pname:
+            for pat in GEOM_OF:
+                for g in pat.finditer(region):
+                    if g.group('b') == base and g.group('ins') == pname:
+                        return ([tid], tid), None
     return None, 'no type-id evidence reaches %s' % base
 
 
@@ -520,6 +620,7 @@ def main():
         if not SITE.search(text) and not OFFSITE.search(text):
             continue
         disp = dispatch_ids(text)
+        ifdisp = if_dispatch_ids(text)
 
         edits = []
         for m in SITE.finditer(text):
@@ -530,7 +631,7 @@ def main():
             blks = blocks(region)
             fnname = region_fn(text, rs)
 
-            got, why = evidence(region, rel, blks, base, disp, fnname)
+            got, why = evidence(region, rel, blks, base, disp, fnname, ifdisp)
             if got is None:
                 declined += 1
                 declines.append('%-26s +%-4d %s' % (fn, m.start(), why))
@@ -608,7 +709,7 @@ def main():
             blks = blocks(region)
             fnname = region_fn(text, rs)
 
-            got, why = evidence(region, rel, blks, base, disp, fnname)
+            got, why = evidence(region, rel, blks, base, disp, fnname, ifdisp)
             if got is None:
                 # ⚠ SILENCE HERE WOULD BE THE BUG. OFFSITE matches baked offsets
                 # against every kind of base in the corpus, so reporting all of

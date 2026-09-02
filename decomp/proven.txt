@@ -59,10 +59,32 @@
 #                     rule away and say so (Ghidra reuses one local for two live
 #                     ranges, which a whole-function rule cannot separate).
 #
+#                     (5) McdBatch — THE AGGREGATE'S ELEMENT TABLE AND LOOP
+#                     BOUND AT i386 OFFSETS. An `if` is a dispatcher too, and the
+#                     instance is not always argument one:
+#                         bVar3 = (byte)ins1_00->mGeometry->mRefCtAndID;
+#                         if (bVar3 == 8)  kd_McdBatchFlattenAggregate(ctx,0,ins1_00,..)
+#                         McdAggregate i386 elementTable 16 elementCountMax 24
+#                                      LP64 elementTable 32 elementCountMax 44
+#                     so +0x10/+0x18 were McdGeometry's `next` and `frame`
+#                     POINTERS at LP64. fix_typeid_dispatch grew an if-dispatcher
+#                     rule tracking the ARGUMENT POSITION; 2 of 5 repaired.
+#                     ⚠⚠ The other 3 need the LOAD WIDTH changed, not the offset
+#                     (`*(int *)(p+0x10)` reads a pointer four bytes wide and the
+#                     value then feeds another deref) — fix_narrow_loads' ground,
+#                     and no spelling reproduces the i386 object. The partial
+#                     repair is strictly LESS wrong: the loop bound was a
+#                     pointer's low half and is now the real count.
+#                     ⚠ Self-recursion is excluded from the "no other caller"
+#                     test BY ASSUMPTION: the recursive calls sit behind INVERTED
+#                     guards this pass will not read, and what is relied on is
+#                     that the callee derefs the element table unconditionally,
+#                     so a non-aggregate would already break the i386 build.
+#
 #                     ⚠ STILL OPEN: 30 census sites, none known to be a defect,
-#                     plus 8 GEOMETRY-OFFSET sites the census cannot see at all
-#                     (McdBoxMaximumPointNew 3, McdBatch 5) — no caller, no
-#                     branch. A CROSS-FILE dispatcher rule is what resolves those.
+#                     plus 6 GEOMETRY-OFFSET sites the census cannot see at all —
+#                     McdBoxMaximumPointNew 3 (no caller, no branch; dead in this
+#                     corpus) and McdBatch 3 (need a width change, above).
 #
 # LP64-BOX-I386-OFF   2026-09-02  ★★★★★ THE HOVER BIKE IS FIXED, AND THE LP64 TRACE
 #                     IS NOW BYTE-IDENTICAL TO THE 32-BIT CONTROL — not "equal at a

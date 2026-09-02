@@ -79,7 +79,7 @@ MeBool kd_McdBatchFlattenAggregate
   iVar16 = 0;
   McdGeometryInstanceGetAABB(ins2,min2,max2);
   MVar7 = McdGeometryInstanceGetGeometryType(ins2);
-  iVar14 = *(int *)((kd_iptr)pvVar8 + 0x18);
+  iVar14 = *(int *)(&((McdAggregate *)pvVar8)->elementCountMax);
   if (0 < iVar14) {
     local_70 = 0;
     do {
@@ -188,7 +188,7 @@ MeBool kd_McdBatchFlattenAggregate
           }
         }
 LAB_00010300:
-        iVar14 = *(int *)((kd_iptr)pvVar8 + 0x18);
+        iVar14 = *(int *)(&((McdAggregate *)pvVar8)->elementCountMax);
       }
       iVar16 = iVar16 + 1;
       local_70 = local_70 + 0x44;

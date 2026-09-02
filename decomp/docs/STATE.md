@@ -20,6 +20,7 @@ The block below closed the hover bike; this one closes the list it left behind.
 
 ```
 truncation census   UNEXPLAINED 38 -> 30      i386 acceptance 145/145
+geometry-offset class: 8 known-unrepaired -> 6, and the 6 have named reasons
 run-standalone 12/12 · lp64_pipeline PASS · stack_shift PASS
 LP64 ktrace still BYTE-IDENTICAL to the SSE-32 control, 3/3 runs (md5 c31ed77b7323)
 ```
@@ -110,10 +111,39 @@ LP64 ktrace still BYTE-IDENTICAL to the SSE-32 control, 3/3 runs (md5 c31ed77b73
    `McdContact`, `McdInteractions`, `McdPlaneIntersect`, `MdtConstraint`, `MeFAsset`, `MePool`,
    `keaLCPSolver`, `keaMatrix_tester` 2 — still need a verdict each, one at a time.
 
-   ⚠ **AND THE GEOMETRY-OFFSET CLASS HAS 8 KNOWN-UNREPAIRED SITES** that the census cannot see at
-   all, because nothing is truncated: 3 in `McdBoxMaximumPointNew` (no caller in the corpus, no
-   enclosing branch) and 5 in `McdBatch.c`. `fix_typeid_dispatch` reports them by name now. A
-   **cross-file** dispatcher rule is what would resolve them, and that is the next thing to build.
+6. ✅ **`McdBatch` — THE AGGREGATE'S ELEMENT TABLE AND LOOP BOUND, AT i386 OFFSETS.** The `if`
+   dispatcher is a dispatcher too, and the instance is not always the first argument:
+
+   ```
+   bVar3 = (byte)ins1_00->mGeometry->mRefCtAndID;
+   if (bVar3 == 8) { … kd_McdBatchFlattenAggregate(context, 0, ins1_00, ins2_00, …); }
+
+   McdAggregate  i386  elementTable 16  elementCount 20  elementCountMax 24
+                 LP64  elementTable 32  elementCount 40  elementCountMax 44
+   ```
+
+   so `+0x10` and `+0x18` were `McdGeometry`'s `next` and `frame` **pointers** at LP64 — an element
+   table and a loop bound taken out of two addresses. `fix_typeid_dispatch` grew an `if`-dispatcher
+   rule that tracks the ARGUMENT POSITION and maps it to the callee's parameter; **2 of the 5 sites
+   repaired** (the `elementCountMax` loop bound), i386 byte-identical.
+
+   ⚠⚠ **THE OTHER 3 ARE STILL OPEN AND NEED A DIFFERENT REPAIR.** `*(int *)(pvVar8 + 0x10)` reads a
+   POINTER four bytes wide; fixing the offset alone is not enough, the LOAD WIDTH has to change and
+   the value then feeds `*(int *)(<that> + 0x40 + cursor)`. That is `fix_narrow_loads`' territory,
+   not an address re-spelling, and no spelling of it reproduces the i386 object — the same wall as
+   `piVar4[1]`. ★ The partial repair is strictly less wrong, not more: the loop bound was a
+   pointer's low half and is now the real count.
+
+   ⚠ **AND SELF-RECURSION IS EXCLUDED FROM THE "no other caller" TEST BY ASSUMPTION, NOT
+   MEASUREMENT.** `McdBatchFlattenAggregate` calls itself through INVERTED guards (`if (bVar5 != 8)`
+   with the work in the complement) that the pass deliberately does not read. What is relied on
+   instead: the callee dereferences the element table unconditionally, so a non-aggregate reaching
+   it would already break the i386 build, which runs. That is empirical and it is stated in the
+   pass's docstring rather than buried.
+
+7. ⚠ **STILL OPEN IN THE GEOMETRY-OFFSET CLASS: 3 + 3.** `McdBoxMaximumPointNew`'s three box reads
+   (nothing in the corpus calls it and no branch encloses it — it is dead here, and a name-based
+   rule was deliberately not invented), and `McdBatch`'s three `elementTable` reads above.
 
 ---
 

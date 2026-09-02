@@ -13,6 +13,85 @@ read before resuming; `../HANDOVER.md` is the depth behind it and `../proven.txt
 ---
 
 
+# ⚠⚠ OPEN ITEMS — 2026-09-02 (NIGHT). READ THIS BLOCK FIRST.
+
+★★★★★ **THE SDK SHIPS A 64-BIT BUILD OF THESE SOURCES AND THIS PROJECT HAD NEVER ASKED IT
+ANYTHING.** `decomp/tools/amd64_oracle.py` existed and its API was referenced by
+`fix_index_layout.oracle_confirm` — which had been **dead for months**, because that call sat
+behind an `except Exception` and the module it wanted was never importable in that context. It is
+live now, and it answers the one question `CLAUDE.md` says i386 byte-identity structurally cannot:
+**which byte at 64-bit, and how wide the load.**
+
+```
+McdBoxMaximumPointNew   ours   *(float *)((kd_iptr)pvVar4 + 0x10)      i386 16/20/24
+                        amd64  mulss 0x20 / 0x24 / 0x28                LP64 32/36/40
+McdAggregate            amd64  mov 0x2c(%rax),%eax   elementCountMax, FOUR bytes
+                        amd64  mov 0x20(%rcx),%rcx   elementTable,    EIGHT bytes
+```
+
+`fix_typeid_dispatch` gained it as evidence source (5), plus (0) "the file already casts this base"
+and an `if`-dispatcher that tracks the ARGUMENT POSITION. **8 files repaired, i386 145/145,
+run-standalone 12/12, stack_shift PASS, and the LP64 ktrace is byte-identical to the SSE-32 control
+on 3 of 3 runs (md5 c31ed77b7323, K=1396).** The wasm artefact is `6a380872…` for the fourth time —
+unchanged — so ufront 2.48's 55/55 carries by hash.
+
+1. ✅ **`McdBoxMaximumPointNew` IS CLOSED, AND IT IS THE PROOF THE ORACLE WORKS.** It has no caller
+   in the corpus and no enclosing type-id branch, so every rule in this pass declined it and the
+   previous block recorded it as unrepairable-for-want-of-evidence. The shipped amd64 build simply
+   *says* the answer. ⚠ `McdNull`, `McdBox` and `McdCylinder` all put three floats at 16/20/24 and
+   all move them to 32/36/40, so several candidates fit; the ADDRESS is not in doubt and only the
+   spelling is, and the tie-break is the oracle's own mangled symbol.
+
+2. ⚠⚠⚠ **AND THE ORACLE ALMOST SHIPPED THREE REGRESSIONS. THE ktrace IS WHAT CAUGHT ALL THREE,
+   AND `145/145 · 0 byte differences` WAS GREEN FOR EVERY ONE OF THEM.**
+
+   - **A crash in `McdAggregateCreate`.** `reps` spelling (c),
+     `*(unsigned int *)&x->elementTable`, reads FOUR bytes — byte-identical at i386 where a pointer
+     *is* four bytes, and a truncation at LP64. It had been safe only because nothing had ever made
+     it reachable on a POINTER field. ★ Now offered only for a field measured at four bytes at
+     **both** widths.
+   - **An uncompilable LP64 branch that passed the acceptance gate.** A `#if __SIZEOF_POINTER__ == 4`
+     fallback keeps the ORIGINAL text on the i386 side, so byte-identity passes **by construction**
+     while the `#else` branch is whatever was proposed — here
+     `((McdTriangleList *)t)->list)->mRefCtAndID`, a member that does not exist. ★ Every accepted
+     edit is now compiled at `-m64` as well, and that fallback is **gone from this pass**: it is
+     line-based, C is not, and it produced an EMPTY i386 branch on a statement spanning lines.
+   - **A heap under-allocation, from a pass that never touched the line.**
+     `alloca(n * sizeof(*(McdUserTriangle *)0))` came out `n * 0x18` — 24, which is i386's and
+     HALF of LP64's. ★★ **This pass does not write that line.** Editing the file at all made a
+     LATER pass, which accepts its edits ALL-OR-NOTHING PER FILE, fail byte-identity on its bundle
+     and drop the whole thing, taking its good `sizeof` repair with it.
+
+   ★★ **THE GENERAL LESSON: AN EARLY PASS'S EXTRA EDIT CAN SILENTLY DELETE A LATER PASS'S
+   REPAIRS.** Nothing reports it. The only instrument that saw any of this is the trace against the
+   32-bit control, and the failure signature was the one this project already knows —
+   **non-determinism**: two runs of one binary giving md5 a0d45750bf40 (K=1933) and 766866acdb8a
+   (K=1351) against the control's c31ed77b7323 (K=1396).
+
+3. ⚠ **`IxSphereTriList.c` IS QUARANTINED IN THIS PASS, WITH THE MEASUREMENT IN THE SOURCE.** It
+   carries both of the last two faults above. Bisected file by file: the other eight are
+   byte-identical to the control twice over, and adding this one alone reinstates the
+   non-determinism. Its second fault also shows a rule limit worth naming — a **displacement match
+   is not a TYPE match**: `(float *)(p + 0x30)` is byte 48, which is
+   `McdTriangleList::triangleListGenerator`, and the site dereferences it as a float while the
+   field is a function pointer. Fixing the pipeline hazard properly means making that later pass's
+   acceptance per-EDIT rather than per-FILE.
+
+4. ✅ **THE CENSUS IS BACK TO 30 AND THE TEN NEW SITES ARE CLASSIFIED, NOT EXCUSED.** The repairs
+   raised it 30 → 40 because they emit
+   `(*(unsigned int *)&((McdCylinder *)g)->mSphereRadius) = KD_FBITS(...)`, which is
+   `fbits-to-4byte` with the destination written as a named field rather than `*(MeU32 *)`. The
+   rule now recognises that spelling **and measures the field at both widths** rather than
+   trusting it.
+
+5. ⚠ **STILL OPEN — 30 census sites and 3 geometry-offset sites**, unchanged in kind from the
+   block below: `McdBatch`'s three `elementTable` reads need the LOAD WIDTH changed (the oracle
+   says eight bytes; `fix_narrow_loads`' ground), and `IxSphereTriList`'s three are quarantined
+   above. ★ Of the 30, the oracle can now speak for **every** file involved — all 21 have an
+   amd64 object — so the remaining work is per-site verdicts, not a search for evidence.
+
+---
+
 # ⚠⚠ OPEN ITEMS — 2026-09-02 (LATE). READ THIS BLOCK FIRST.
 
 ★★★ **THE CENSUS'S TWO NAMED REAL DEFECTS ARE REPAIRED, AND THE TWO DOC-VS-CODE GAPS ARE CLOSED.**

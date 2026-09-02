@@ -75,15 +75,15 @@ void kd_McdBoxMaximumPointNew(McdGeometryInstanceID ins,MeReal *inDir,MeReal *ou
   fVar1 = *inDir;
   fVar2 = inDir[1];
   fVar3 = inDir[2];
-  fVar6 = *(float *)((kd_iptr)pvVar4 + 0x10);
+  fVar6 = *(float *)(&((McdBox *)pvVar4)->mR[0]);
   if (fVar3 * pfVar5[2] + fVar1 * *pfVar5 + fVar2 * pfVar5[1] < 0.0) {
     fVar6 = -fVar6;
   }
-  fVar7 = *(float *)((kd_iptr)pvVar4 + 0x14);
+  fVar7 = *(float *)(&((McdBox *)pvVar4)->mR[1]);
   if (fVar3 * pfVar5[6] + fVar1 * pfVar5[4] + fVar2 * pfVar5[5] < 0.0) {
     fVar7 = -fVar7;
   }
-  fVar8 = *(float *)((kd_iptr)pvVar4 + 0x18);
+  fVar8 = *(float *)(&((McdBox *)pvVar4)->mR[2]);
   if (fVar1 * pfVar5[8] + fVar2 * pfVar5[9] + fVar3 * pfVar5[10] < 0.0) {
     fVar8 = -fVar8;
   }

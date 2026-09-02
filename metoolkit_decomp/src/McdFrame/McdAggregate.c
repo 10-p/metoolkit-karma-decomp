@@ -244,7 +244,7 @@ void kd_McdAggregateDestroy(McdGeometry *g)
         pvVar1 = *(void **)(MVar2 + 0x40 + iVar4);
         if (pvVar1 != (void *)0x0) {
           McdGeometryDecrementReferenceCount(pvVar1);
-          pMVar3 = (*(MeU32 *)((char *)g + ((int)((char *)&((McdAggregate *)0)->elementCountMax - (char *)0))));
+          pMVar3 = (*(unsigned int *)&((McdAggregate *)g)->elementCountMax);
         }
         iVar5 = iVar5 + (int)sizeof(McdAggregateElement);
         i = i + 1;

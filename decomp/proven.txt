@@ -1,3 +1,64 @@
+# LP64-AMD64-ORACLE   2026-09-02  ★★★★★ THE SDK SHIPS A 64-BIT BUILD OF THESE
+#                     SOURCES AND THIS PROJECT HAD NEVER ASKED IT ANYTHING.
+#                     decomp/tools/amd64_oracle.py existed and fix_index_layout
+#                     referenced its API behind an `except Exception` — DEAD for
+#                     months. Live now, it answers the one question CLAUDE.md
+#                     says i386 byte-identity structurally cannot: WHICH BYTE at
+#                     64-bit, and HOW WIDE the load.
+#                       McdBoxMaximumPointNew  ours  *(float *)(p + 0x10)  16/20/24
+#                                              amd64 mulss 0x20/0x24/0x28  32/36/40
+#                       McdAggregate  amd64 mov 0x2c(%rax),%eax  countMax, 4 bytes
+#                                     amd64 mov 0x20(%rcx),%rcx  Table,    8 bytes
+#                     fix_typeid_dispatch gains it as evidence (5), plus (0) "the
+#                     file already casts this base" and an `if`-dispatcher that
+#                     tracks the ARGUMENT POSITION. 8 files; i386 145/145,
+#                     run-standalone 12/12, stack_shift PASS, LP64 ktrace
+#                     BYTE-IDENTICAL to the SSE-32 control 3/3 (c31ed77b7323),
+#                     wasm 6a380872… unchanged for the fourth time.
+#                     ★ McdBoxMaximumPointNew is CLOSED — no caller, no branch,
+#                     every other rule declines it, and the shipped binary simply
+#                     says the answer.
+#
+#                     ⚠⚠⚠ AND IT ALMOST SHIPPED THREE REGRESSIONS. THE ktrace
+#                     CAUGHT ALL THREE AND `145/145 · 0 byte differences` WAS
+#                     GREEN FOR EVERY ONE.
+#                     (a) CRASH in McdAggregateCreate: the spelling
+#                     `*(unsigned int *)&x->elementTable` reads FOUR bytes —
+#                     byte-identical at i386 where a pointer IS four bytes, a
+#                     truncation at LP64. Now offered only for a field MEASURED
+#                     at 4 bytes at BOTH widths.
+#                     (b) AN UNCOMPILABLE LP64 BRANCH THAT PASSED ACCEPTANCE. A
+#                     `#if __SIZEOF_POINTER__ == 4` fallback keeps the ORIGINAL
+#                     text on the i386 side, so byte-identity passes BY
+#                     CONSTRUCTION while the #else branch is anything at all.
+#                     Every edit is compiled at -m64 now, and that fallback is
+#                     GONE from this pass: it is line-based, C is not, and it
+#                     emitted an EMPTY i386 branch on a multi-line statement.
+#                     (c) A HEAP UNDER-ALLOCATION FROM A PASS THAT NEVER TOUCHED
+#                     THE LINE. `alloca(n * sizeof(*(McdUserTriangle *)0))` came
+#                     out `n * 0x18` — i386's 24, HALF of LP64's 48. ★★ Editing
+#                     the file at all made a LATER pass, which accepts edits
+#                     ALL-OR-NOTHING PER FILE, fail byte-identity on its bundle
+#                     and DROP THE WHOLE THING, good repairs included.
+#                     ★★ THE GENERAL LESSON: AN EARLY PASS'S EXTRA EDIT CAN
+#                     SILENTLY DELETE A LATER PASS'S REPAIRS. Nothing reports it;
+#                     the signature is NON-DETERMINISM — one binary giving
+#                     a0d45750bf40 (K=1933) and 766866acdb8a (K=1351) against the
+#                     control's c31ed77b7323 (K=1396).
+#
+#                     ⚠ IxSphereTriList.c is QUARANTINED in this pass, bisected
+#                     file by file: the other eight are byte-identical twice and
+#                     adding it alone reinstates the non-determinism. It also
+#                     shows a rule limit — A DISPLACEMENT MATCH IS NOT A TYPE
+#                     MATCH: `(float *)(p + 0x30)` is byte 48, which IS
+#                     triangleListGenerator, and the site derefs a FLOAT while
+#                     the field is a function pointer.
+#                     ⚠ Census 30 -> 40 -> 30: the repairs emit fbits through a
+#                     NAMED FIELD rather than `*(MeU32 *)`, and the rule now
+#                     recognises that spelling AND measures the field at both
+#                     widths. STILL OPEN: 30 census sites, McdBatch 3
+#                     (elementTable needs a WIDTH change) and IxSphereTriList 3.
+#
 # LP64-SLOT-TYPES     2026-09-02  ★★★ THE CENSUS'S TWO NAMED REAL DEFECTS ARE
 #                     REPAIRED AND ITS TWO DOC-VS-CODE GAPS ARE CLOSED.
 #                         truncation census   UNEXPLAINED 38 -> 30

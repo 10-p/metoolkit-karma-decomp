@@ -2245,7 +2245,7 @@ void kd_writeLambdaToFile(char *filename,MeReal *lambda,int num_elts)
                     
   iVar7 = 0;
   iVar3 = MeOpen(filename,1);
-  printf("-- writing kea output data (lambda) to file %s\n",*(undefined4 *)((char *)gDebug + 0x1c));
+  printf("-- writing kea output data (lambda) to file %s\n",*(undefined4 *)(&((McdConvexMesh *)gDebug)->mHull.edgeIndex));
   iVar4 = sprintf(buf,"%s\n","lambda");
   MeWrite(iVar3,buf,iVar4);
   if (num_elts != 0) {
@@ -2309,7 +2309,7 @@ kd_keaFunctions__checkPrintDebugInput
   MeReal *pMVar4;
   int *piVar5;
   
-  if ((*(int *)((char *)gDebug + 0) != 0) && (*(int *)((char *)gDebug + 0x20) == *(int *)((char *)gDebug + 0x24))) {
+  if ((*(int *)((char *)gDebug + 0) != 0) && (*(int *)(&((McdConvexMesh *)gDebug)->mHull.numVertex) == *(int *)(&((McdConvexMesh *)gDebug)->mHull.numFace))) {
     pMVar2 = &parameters;
     pMVar3 = &constraints;
     kd_writeKeaInputToFile((constraints),(parameters),blist,num_bodies);

@@ -1514,17 +1514,17 @@ int kd_McdSphylTriangleListIntersect(McdModelPair *p,McdIntersectResult *result)
   relPos[0] = tmp[2] * pfVar7[2] + tmp[1] * pfVar7[1] + tmp[0] * *pfVar7;
   relPos[1] = tmp[2] * pfVar7[6] + tmp[1] * pfVar7[5] + tmp[0] * pfVar7[4];
   relPos[2] = tmp[2] * pfVar7[10] + tmp[1] * pfVar7[9] + tmp[0] * pfVar7[8];
-  pMVar1 = (*(MeU32 *)((char *)pMVar9 + ((int)((char *)&((struct McdTriangleList *)0)->triangleMaxCount - (char *)0))));
+  pMVar1 = ((McdTriangleList *)pMVar9)->triangleMaxCount;
   iVar3 = -((kd_iptr)pMVar1 * 0x18 + 0xfU & (0xfffffff0 | ~(kd_uptr)0xffffffffU));
-  (*(McdGeometryID *)((char *)pMVar9 + ((int)((char *)&((struct McdTriangleList *)0)->list - (char *)0)))) = (McdGeometryID)(kd_alloca_iVar3 = (char *)alloca((size_t)(pMVar1) * (int)sizeof(*(McdUserTriangle *)0) + 0 + ((int)(sizeof(void *) / 8) * (9 * (int)sizeof(void *)))) + ((int)(sizeof(void *) / 8) * (9 * (int)sizeof(void *))));
+  ((McdTriangleList *)pMVar9)->list = (McdGeometryID)(kd_alloca_iVar3 = (char *)alloca((size_t)(pMVar1) * 0x18 + 0 + ((int)(sizeof(void *) / 8) * (9 * (int)sizeof(void *)))) + ((int)(sizeof(void *) / 8) * (9 * (int)sizeof(void *))));
   *(McdGeometryID *)((kd_iptr)(kd_frameslot_tmp_iVar3_m20)) = pMVar1;
   *(float *)((kd_iptr)&fStackY_70) =
        *(float *)((kd_iptr)pvVar8 + ((int)((char *)&((McdSphyl *)0)->mRadius - (char *)0))) + *(float *)((kd_iptr)pvVar8 + ((int)((char *)&((McdSphyl *)0)->mHalfHeight - (char *)0))) + eps;
   *(MeReal **)((kd_iptr)aiStackY_80 + (3 * (int)sizeof(void *))) = relPos;
-  *(McdGeometryID *)((kd_iptr)aiStackY_80 + (2 * (int)sizeof(void *))) = (*(McdGeometryID *)((char *)pMVar9 + ((int)((char *)&((struct McdTriangleList *)0)->list - (char *)0))));
+  *(McdGeometryID *)((kd_iptr)aiStackY_80 + (2 * (int)sizeof(void *))) = ((McdTriangleList *)pMVar9)->list;
   pMVar9 = trilistGeom;
   *(McdModelPair **)((kd_iptr)aiStackY_80 + (1 * (int)sizeof(void *))) = p;
-  pcVar2 = (code *)(*(kd_uptr *)((char *)pMVar9 + ((int)((char *)&((struct McdTriangleList *)0)->triangleListGenerator - (char *)0))));
+  pcVar2 = (code *)((McdTriangleList *)pMVar9)->triangleListGenerator;
   *(undefined4 *)((kd_iptr)aiStackY_80) = 0x137af;
   iVar10 = (*(int (*)(void *, void *, void *, float, int))pcVar2)(*(void **)((kd_iptr)aiStackY_80 + (1 * (int)sizeof(void *))),
                      *(void **)((kd_iptr)aiStackY_80 + (2 * (int)sizeof(void *))),
@@ -1557,7 +1557,7 @@ int kd_McdSphylTriangleListIntersect(McdModelPair *p,McdIntersectResult *result)
           pMVar9 = trilistGeom;
           *(MeReal **)((kd_iptr)aiStackY_80 + (3 * (int)sizeof(void *))) = relAxis;
           *(MeReal **)((kd_iptr)aiStackY_80 + (2 * (int)sizeof(void *))) = relPos;
-          *(McdGeometryID *)((kd_iptr)aiStackY_80 + (1 * (int)sizeof(void *))) = (*(McdGeometryID *)((char *)pMVar9 + ((int)((char *)&((struct McdTriangleList *)0)->list - (char *)0))));
+          *(McdGeometryID *)((kd_iptr)aiStackY_80 + (1 * (int)sizeof(void *))) = ((McdTriangleList *)pMVar9)->list;
           *(undefined4 *)((kd_iptr)aiStackY_80) = 0x139dc;
           GenerateTriangleContact
                     (*(McdUserTriangle **)((kd_iptr)aiStackY_80 + (1 * (int)sizeof(void *))),
@@ -1567,7 +1567,7 @@ int kd_McdSphylTriangleListIntersect(McdModelPair *p,McdIntersectResult *result)
                      *(MeVector4 **)(&(*kd_argslot_ffffff98)),*(MeReal *)((kd_iptr)aMStack_64),
                      *(McdIntersectResult **)((kd_iptr)aMStack_64 + (1 * (int)sizeof(void *))));
           puVar12 = (undefined1 *)kd_alloca_iVar3;
-          local_5c = (int)sizeof(McdUserTriangle);
+          local_5c = 0x18;
         }
         MVar5 = eps;
         *(McdIntersectResult **)(puVar12 + -(1 * (int)sizeof(void *))) = result;
@@ -1587,7 +1587,7 @@ int kd_McdSphylTriangleListIntersect(McdModelPair *p,McdIntersectResult *result)
                    *(MeReal **)(puVar12 + -(6 * (int)sizeof(void *))),*(MeReal *)(puVar12 + -(5 * (int)sizeof(void *))),
                    *(MeReal *)(puVar12 + -(4 * (int)sizeof(void *))),*(MeVector4 **)(puVar12 + -(3 * (int)sizeof(void *))),
                    *(MeReal *)(puVar12 + -(2 * (int)sizeof(void *))),*(McdIntersectResult **)(puVar12 + -(1 * (int)sizeof(void *))));
-        local_5c = local_5c + (int)sizeof(McdUserTriangle);
+        local_5c = local_5c + 0x18;
         puVar13 = puVar12;
       }
       MVar5 = eps;
@@ -1607,7 +1607,7 @@ int kd_McdSphylTriangleListIntersect(McdModelPair *p,McdIntersectResult *result)
                  *(MeReal *)(puVar13 + -(4 * (int)sizeof(void *))),*(MeVector4 **)(puVar13 + -(3 * (int)sizeof(void *))),
                  *(MeReal *)(puVar13 + -(2 * (int)sizeof(void *))),*(McdIntersectResult **)(puVar13 + -(1 * (int)sizeof(void *))));
       iVar10 = iVar10 + -1;
-      local_5c = local_5c + (int)sizeof(McdUserTriangle);
+      local_5c = local_5c + 0x18;
       if (iVar10 == 0) goto LAB_0001394c;
     }
     do {
@@ -1679,7 +1679,7 @@ int kd_McdSphylTriangleListIntersect(McdModelPair *p,McdIntersectResult *result)
                  *(MeReal *)(puVar13 + -(4 * (int)sizeof(void *))),*(MeVector4 **)(puVar13 + -(3 * (int)sizeof(void *))),
                  *(MeReal *)(puVar13 + -(2 * (int)sizeof(void *))),*(McdIntersectResult **)(puVar13 + -(1 * (int)sizeof(void *))));
       iVar10 = iVar10 + -4;
-      local_5c = local_5c + 4 * (int)sizeof(McdUserTriangle);
+      local_5c = local_5c + 0x60;
     } while (iVar10 != 0);
   }
 LAB_0001394c:

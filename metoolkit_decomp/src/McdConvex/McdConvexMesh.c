@@ -260,7 +260,7 @@ McdGeometry * kd_McdConvexMeshCreate(McdFramework *frame,McdConvexHull *poly,MeR
   kd_MeBoundingSphereCalc2
             ((McdCnvVertex *)(*(kd_uptr *)((char *)pMVar1 + ((int)((char *)&((McdConvexMesh *)0)->mHull.vertex - (char *)0)))),((McdConvexMesh *)pMVar1)->mHull.numVertex,(MeReal *)&((McdConvexMesh *)pMVar1)->mBoundingSphereCenter[0],
              (MeReal *)(pMVar1 + 3));
-  *(MeReal *)&(*(MeU32 *)((char *)pMVar1 + ((int)((char *)&((McdConvexMesh *)0)->mBoundingSphereRadius - (char *)0)))) = (fatness + *(float *)&(((McdConvexMesh *)pMVar1)->mBoundingSphereRadius));
+  *(MeReal *)&((McdConvexMesh *)pMVar1)->mBoundingSphereRadius = (fatness + *(float *)&(((McdConvexMesh *)pMVar1)->mBoundingSphereRadius));
   return pMVar1;
 }
 
@@ -291,7 +291,7 @@ kd_McdConvexMeshCreateHull
     kd_MeBoundingSphereCalc2
               ((McdCnvVertex *)(*(kd_uptr *)((char *)pMVar2 + ((int)((char *)&((McdConvexMesh *)0)->mHull.vertex - (char *)0)))),((McdConvexMesh *)pMVar2)->mHull.numVertex,(MeReal *)&((McdConvexMesh *)pMVar2)->mBoundingSphereCenter[0]
                ,(MeReal *)(pMVar2 + 3));
-    *(MeReal *)&(*(MeU32 *)((char *)pMVar2 + ((int)((char *)&((McdConvexMesh *)0)->mBoundingSphereRadius - (char *)0)))) = (fatnessRadius + *(float *)&(((McdConvexMesh *)pMVar2)->mBoundingSphereRadius));
+    *(MeReal *)&((McdConvexMesh *)pMVar2)->mBoundingSphereRadius = (fatnessRadius + *(float *)&(((McdConvexMesh *)pMVar2)->mBoundingSphereRadius));
   }
   return pMVar2;
 }

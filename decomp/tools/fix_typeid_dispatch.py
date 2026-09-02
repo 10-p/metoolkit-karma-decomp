@@ -138,6 +138,16 @@ def offset_at(tag, fp, inc, bits, cache):
     return cache[key]
 
 
+def field_size(tag, fp, inc, bits, cache):
+    """sizeof of `((TAG *)0)->FP` at `bits`, or None."""
+    key = ('sz', tag, fp, bits)
+    if key not in cache:
+        v = probe('char kd_probe[sizeof(((%s *)0)->%s) + 1];\n'
+                  'int kd_force = &kd_probe;\n' % (tag, fp), inc, bits, _SZ)
+        cache[key] = (int(v) - 1) if v else None
+    return cache[key]
+
+
 def type_compatible(t1, f1, t2, f2, inc, cache):
     """Do two candidate fields have the SAME C type?
 
@@ -512,20 +522,252 @@ def region_fn(text, start):
     return m.group(1) if m and m.start() == start else None
 
 
-def evidence(region, rel, blks, base, disp, fnname, ifdisp={}):
+try:
+    import amd64_oracle                                     # noqa: E402
+except Exception:                                           # pragma: no cover
+    amd64_oracle = None
+
+_ORACLE = {}
+_LLP64 = {}
+
+
+def llp64_safe(tag, inc):
+    """Is `tag`'s layout the SAME in the shipped Windows build as on Linux?
+
+    ⚠⚠ THE SHIPPED 64-BIT BUILD IS LLP64, NOT LP64 — `amd64_oracle`'s own header
+    says so and it is the one thing that invalidates this whole evidence source
+    when ignored. MSVC's `long` is FOUR bytes; Linux's is eight. A struct holding
+    one is a different size and shape in the two, so its Windows displacements
+    are NOT Linux's LP64 offsets:
+
+        sizeof(MdtBody)   i386 576   win64 696   linux64 704
+
+    Asked of two compilers rather than assumed: if MinGW and gcc -m64 agree on
+    `sizeof(tag)`, the layouts coincide and the oracle may speak for Linux. If
+    they disagree the tag is UNCONFIRMABLE and the site declines — which is what
+    `fix_index_layout.oracle_confirm` already does, and this pass had been
+    silently skipping.
+
+    ⚠⚠ THE SIZE IS READ OUT OF `-S` OUTPUT, NOT OUT OF A DIAGNOSTIC. The
+    `int x = &array;` trick every other probe here uses makes gcc print
+    `char (*)[48]`; MinGW answers `initializer element is not computable at load
+    time` and prints no type at all, so every tag measured as "unconfirmable"
+    and this whole evidence source switched itself off — silently, and in the
+    safe direction, which is exactly how it would never have been noticed.
+    `.comm`/`.space`/`.zero` carries the number on every target."""
+    if tag in _LLP64:
+        return _LLP64[tag]
+    os.makedirs(WORK, exist_ok=True)
+    src = os.path.join(WORK, 'llp.c')
+    open(src, 'w').write(HEAD + 'char kd_size_probe[sizeof(%s)];\n' % tag)
+    sizes = []
+    for cc in (['gcc', '-m64'], ['x86_64-w64-mingw32-gcc']):
+        r = subprocess.run(cc + ['-DLINUX'] + includes(inc)
+                           + ['-w', '-S', '-o', '-', src],
+                           capture_output=True, text=True)
+        m = re.search(r'\.(?:comm|space|zero)\s+(?:[._a-zA-Z]*kd_size_probe\s*,\s*)?(\d+)',
+                      r.stdout)
+        sizes.append(int(m.group(1)) if m else None)
+    _LLP64[tag] = (sizes[0] is not None and sizes[0] == sizes[1])
+    return _LLP64[tag]
+
+
+def oracle_disps(fnname):
+    """(displacements, symbol) MathEngine's own x86-64 build uses in `fnname`.
+
+    ★★ THE EVIDENCE THE i386 GATE CANNOT SUPPLY. `CLAUDE.md` warns that
+    byte-identity cannot validate a TYPE, and six defects have proved it. The
+    SDK drop ships a 64-bit build of these sources, and `amd64_oracle` already
+    reads it — this pass had simply never asked.
+
+    Measured on `McdBoxMaximumPointNew`, which has NO caller in this corpus and
+    NO enclosing type-id branch, so every other rule here declines it:
+
+        mulss 0x20 / 0x24 / 0x28      =  McdBox::mR[0..2] at LP64 (32/36/40)
+
+    while the recovery reads 0x10/0x14/0x18. Nothing is inferred.
+
+    ⚠ Matched as a SUBSTRING: C symbols are plain but C++ ones are MSVC-mangled
+    (`?McdBoxMaximumPointNew@@YAXPEAU_McdGeometryInstance@@QEBMQEAM@Z`), so an
+    exact-key lookup finds half of them."""
+    if amd64_oracle is None or not fnname:
+        return None
+    if fnname in _ORACLE:
+        return _ORACLE[fnname]
+    try:
+        sym, lines = amd64_oracle.find_function(fnname)
+    except SystemExit:
+        _ORACLE[fnname] = None
+        return None
+    hits = amd64_oracle.field_displacements(lines) if lines else set()
+    _ORACLE[fnname] = (hits, sym) if hits else None
+    return _ORACLE[fnname]
+
+
+def oracle_type(fnname, offs, types, inc, cache32, offcache):
+    """The one geometry type whose LP64 layout matches the shipped amd64 build.
+
+    `fix_derived_fields` declines `McdGjkMaximumPoint` because "38 concrete
+    type(s) fit [16, 44]" at i386. Only some of them also put those fields where
+    the amd64 binary reaches for them.
+
+    ⚠ EVERY offset must map and EVERY resulting LP64 offset must appear. A
+    partial match is not a match, and a function the oracle does not contain
+    returns None — which declines rather than guesses.
+
+    ⚠ SEVERAL CANDIDATES AGREEING ON THE BYTE IS AN ANSWER, NOT A TIE. `McdNull`,
+    `McdBox` and `McdCylinder` all put three floats at 16/20/24 and all move them
+    to 32/36/40, so the ADDRESS is not in doubt and only the spelling is; the
+    tie-break is the oracle's own mangled symbol, which is MathEngine's naming
+    and not this project's."""
+    got = oracle_disps(fnname)
+    if not got or not offs:
+        return None
+    disps, sym = got
+    winners = []
+    for tid, tag in sorted(types.items()):
+        if not llp64_safe(tag, inc):
+            continue                    # LLP64: this tag's win64 layout is not Linux's
+        fps = field_paths(tag, inc, cache32)
+        shape, ok = [], True
+        for o in sorted(offs):
+            fp = fps.get(o)
+            o64 = offset_at(tag, fp, inc, 64, offcache) if fp else None
+            if o64 is None:
+                ok = False
+                break
+            shape.append((fp, o64))
+        if ok and shape and {o64 for _f, o64 in shape} <= disps:
+            winners.append((tid, tag, tuple(shape)))
+    if not winners:
+        return None
+    if len({tuple(o for _f, o in w[2]) for w in winners}) != 1:
+        return None                     # they disagree on which BYTE — no answer
+    if len({w[2] for w in winners}) == 1:
+        return winners[0][0], winners[0][1]
+    named = [w for w in winners if w[1] in (sym or '')]
+    return (named[0][0], named[0][1]) if len(named) == 1 else None
+
+
+def compiles_at_m64(fn, text, inc):
+    """Does this candidate COMPILE at LP64 at all?
+
+    ⚠⚠ THE i386 BACKSTOP CANNOT ANSWER THIS, AND A GUARDED REPAIR MAKES IT
+    STRUCTURALLY BLIND. `#if __SIZEOF_POINTER__ == 4` keeps the ORIGINAL text on
+    the i386 side, so byte-identity passes by construction while the `#else`
+    branch is whatever was proposed — including, measured 2026-09-02,
+    `((McdTriangleList *)t)->list)->mRefCtAndID`, a member `McdUserTriangle` does
+    not have. The pipeline reported `145 object(s), 0 byte difference(s)` and then
+    failed to build at all.
+
+    So every accepted edit is compiled at -m64 as well. It is not a semantic
+    check — a wrong FIELD of the right width still compiles — but it is the one
+    thing byte-identity provably cannot do, and it is two seconds."""
+    d = os.path.join(WORK, 'm64')
+    os.makedirs(d, exist_ok=True)
+    src = os.path.join(d, fn)
+    open(src, 'w').write(text)
+    return subprocess.run(
+        ['gcc', '-m64', '-O2', '-fno-strict-aliasing', '-std=gnu99', '-w',
+         '-Wno-int-conversion', '-Wno-incompatible-pointer-types', '-DLINUX',
+         '-I' + os.path.join(kd_paths.MD, 'include')] + includes(inc)
+        + ['-c', '-o', os.devnull, src], capture_output=True).returncode == 0
+
+
+# ⚠⚠ A STATEMENT ANOTHER PASS HAS ALREADY REPAIRED IS OFF LIMITS, AND THIS COST
+# A HEAP OVERFLOW. This pass runs early; `fix_baked_sizeof`, `fix_element_stride`
+# and `fix_literal_offsets` run around it and key on the SHAPE of the expression
+# they are going to fix. Rewriting `((char *)g + offsetof(T,f))` into `g->f`
+# removes their anchor, so their repair never happens and the raw i386 literal
+# survives:
+#
+#   before   alloca(trilistgeom->triangleMaxCount * (int)sizeof(*(McdUserTriangle *)0))
+#   after    alloca(((McdTriangleList *)trilistgeom)->triangleMaxCount * 0x18)
+#
+# `sizeof(McdUserTriangle)` is 24 at i386 and 48 at LP64, so that allocates HALF
+# the triangle list and the physics goes non-deterministic — measured, twice, as
+# two different ktrace hashes from one binary. Neither the acceptance gate nor
+# the -m64 compile check can see it; only the trace against the 32-bit control
+# can. So: if the statement already contains an offsetof idiom or a `sizeof`,
+# somebody else owns it.
+REPAIRED = re.compile(r'-\s*\(char \*\)0\)|\bsizeof\s*\(|\bKD_OFFSET\b')
+
+
+def already_repaired(text, pos):
+    """Is the statement containing `pos` already in a repaired (portable) form?"""
+    a = text.rfind(';', 0, pos) + 1
+    b = text.find(';', pos)
+    return bool(REPAIRED.search(text[a:b if b > 0 else len(text)]))
+
+
+# ⚠⚠ QUARANTINE, WITH THE MEASUREMENT THAT PUT IT HERE.
+#
+# `IxSphereTriList.c` is excluded from this pass's NEW evidence sources. Landing
+# its repairs makes the LP64 build NON-DETERMINISTIC — two runs of one binary
+# gave ktrace md5 a0d45750bf40 (K=1933) and 766866acdb8a (K=1351) where the
+# 32-bit control is c31ed77b7323 (K=1396) — while the other eight files this
+# pass touches are byte-identical to that control, twice, with it excluded.
+#
+# TWO THINGS ARE WRONG THERE AND ONLY ONE IS THIS PASS'S:
+#
+#   1. `(float *)((kd_iptr)pvVar21 + 0x30)` is matched as
+#      `McdTriangleList::triangleListGenerator`, which is byte 48 at i386 — the
+#      right BYTE and the wrong TYPE: the site dereferences it as a FLOAT and
+#      the field is a function pointer. A displacement match is not a type match.
+#   2. `alloca(n * (int)sizeof(*(McdUserTriangle *)0))` comes out as `n * 0x18`.
+#      That is 24 — `sizeof(McdUserTriangle)` at i386 and HALF of it at LP64, so
+#      the triangle list is under-allocated and the physics runs on a heap
+#      overrun. ★ THIS PASS DOES NOT WRITE THAT LINE. Editing the file at all
+#      makes a LATER pass, which accepts its edits ALL-OR-NOTHING PER FILE, fail
+#      byte-identity on its bundle and drop the whole thing — taking its good
+#      `sizeof` repair with it.
+#
+# So the hazard is a pipeline INTERACTION, not a bad rule, and fixing it properly
+# means making that acceptance per-edit rather than per-file. Until then this one
+# file is left to the passes that already handle it correctly.
+#
+# ⚠ Neither the i386 acceptance test (145/145, 0 byte differences) nor the -m64
+# compile check can see any of this. The ktrace against the 32-bit control is
+# what caught it, and it is why that run is not optional before landing.
+QUARANTINE = {'IxSphereTriList.c'}
+
+
+def evidence(region, rel, blks, base, disp, fnname, ifdisp={}, types=None):
     """Every geometry type id that can reach this site, and which one names the
     field. -> ((ids, first), None)  or  (None, reason).
 
-    Three sources, in the order they are believed — and each is a STATEMENT in
-    the source, not an inference about it:
+    The sources, in the order they are believed — and each is a STATEMENT in
+    the source or in a shipped binary, not an inference about it:
 
+      0  an explicit cast of the SAME base to a concrete geometry type,
+         already present in this function
       1  a type-id branch on the site's own base                    TYPEVAR
       2  a type-id branch on the INSTANCE whose geometry the base is
          (`b = McdGeometryInstanceGetGeometry(ins)` + `v = (byte)ins->
          mGeometry->mRefCtAndID`)                                   TYPEVAR_INS
       3  the file-local dispatcher that can only reach this function
-         for one type                                               dispatch_ids
+         for one type                                    dispatch_ids/if_dispatch_ids
+      4  (in main, last) the shipped amd64 build's own displacements  oracle_type
     """
+    # (0) ★ THE FILE ALREADY SAYS SO. An earlier pass, or Ghidra itself, has
+    # written `((McdTriangleList *)pMVar1)` against this very base somewhere in
+    # this function — often in the SAME STATEMENT as the unrepaired half:
+    #
+    #   *(float *)&pMVar1[1].mRefCtAndID = ((McdTriangleList *)pMVar1)->center[0] * 0.5;
+    #   ^ i386 byte 16, unrepaired          ^ the very same field, already named
+    #
+    # Nothing is inferred, so it is tried first. ⚠ The cast must name a GEOMETRY
+    # type: a cast to anything else says nothing about which concrete geometry
+    # this base is.
+    if types:
+        tags = {t for t in re.findall(
+            r'\(\s*(\w+)\s*\*\s*\)\s*%s\b' % re.escape(base), region)
+            if t in set(types.values())}
+        if len(tags) == 1:
+            tag = next(iter(tags))
+            for tid, name in sorted(types.items()):
+                if name == tag:
+                    return ([tid], tid), None
     for pat in TYPEVAR:
         for t in pat.finditer(region):
             if t.group('b') == base:
@@ -610,7 +852,7 @@ def main():
                       r'(?P<f>' + '|'.join(base_fields) + r')\b')
 
     fixed = declined = 0
-    notes, declines = [], []
+    notes, declines, oracle_used = [], [], []
     for fn in sorted(os.listdir(srcdir)):
         if not fn.endswith('.c') or not os.path.exists(
                 os.path.join(build, fn[:-2] + '.o')):
@@ -619,24 +861,46 @@ def main():
         text = open(path, errors='ignore').read()
         if not SITE.search(text) and not OFFSITE.search(text):
             continue
+        if fn in QUARANTINE:
+            continue
         disp = dispatch_ids(text)
         ifdisp = if_dispatch_ids(text)
 
         edits = []
         for m in SITE.finditer(text):
             base = m.group('base')
+            if already_repaired(text, m.start()):
+                continue
+            # ⚠ `X->list[1].next` IS NOT A GEOMETRY WALK. The site pattern sees a
+            # bare identifier followed by `[k].FIELD`, which `list` satisfies —
+            # but it is a MEMBER of an already-typed object, and
+            # `((McdTriangleList *)p)->list[1]` gets its stride from the compiler
+            # at both widths. Three of those were the whole decline list.
+            if re.search(r'(?:->|\.)\s*$', text[max(0, m.start() - 3):m.start()]):
+                continue
             rs, re_ = region_bounds(text, m.start())
             region = text[rs:re_]
             rel = m.start() - rs
             blks = blocks(region)
             fnname = region_fn(text, rs)
 
-            got, why = evidence(region, rel, blks, base, disp, fnname, ifdisp)
+            got, why = evidence(region, rel, blks, base, disp, fnname, ifdisp, types)
             if got is None:
-                declined += 1
-                declines.append('%-26s +%-4d %s' % (fn, m.start(), why))
-                continue
-            ids, first = got
+                # (5) the shipped 64-bit build, for the BASE[k].FIELD shape too:
+                # gather the i386 bytes this base is read at and ask which
+                # geometry layout the amd64 binary reaches for.
+                offs = {int(s2.group('k')) * bsz + boff[s2.group('f')]
+                        for s2 in SITE.finditer(region) if s2.group('base') == base}
+                won = oracle_type(fnname, offs, types, inc, cache32, offcache)
+                if not won:
+                    declined += 1
+                    declines.append('%-26s +%-4d %s' % (fn, m.start(), why))
+                    continue
+                ids, first = [won[0]], won[0]
+                oracle_used.append('%-26s %-16s %s  <- shipped amd64 build'
+                                   % (fn, won[1], sorted(offs)))
+            else:
+                ids, first = got
 
             off = int(m.group('k')) * bsz + boff[m.group('f')]
             # ⚠ EVERY REACHING TYPE MUST AGREE ON THE FIELD — its NAME, its C
@@ -686,9 +950,21 @@ def main():
             #      32-bit word IS that load, and at LP64 it zero-extends into
             #      the low half of the pointer, which is exactly where
             #      `*(float *)&` looks on little-endian.
-            reps = ['((%s *)%s)->%s' % (tag, base, fp),
-                    'KD_FBITS(((%s *)%s)->%s)' % (tag, base, fp),
-                    '(*(unsigned int *)&((%s *)%s)->%s)' % (tag, base, fp)]
+            # ⚠⚠ (b) AND (c) ARE FOUR-BYTE SPELLINGS AND MUST NOT TOUCH AN
+            # EIGHT-BYTE FIELD. `*(unsigned int *)&x->elementTable` is
+            # byte-identical at i386 — where a pointer IS four bytes — and
+            # TRUNCATES it at LP64. That is invisible to the acceptance gate and
+            # to the -m64 compile check, and it crashed `McdAggregateCreate` the
+            # first time a new evidence source made this shape reachable on a
+            # pointer field. So they are offered only for a field that measures
+            # four bytes at BOTH widths, which is the same check `count-to-id`
+            # makes and for the same reason.
+            fsz32 = field_size(tag, fp, inc, 32, offcache)
+            fsz64 = field_size(tag, fp, inc, 64, offcache)
+            reps = ['((%s *)%s)->%s' % (tag, base, fp)]
+            if fsz32 == 4 and fsz64 == 4:
+                reps += ['KD_FBITS(((%s *)%s)->%s)' % (tag, base, fp),
+                         '(*(unsigned int *)&((%s *)%s)->%s)' % (tag, base, fp)]
             edits.append((m.start(), m.end(), reps,
                           '%-26s %-16s [%s].%-13s +%-3d ids %-9s -> %s'
                           % (fn, tag, m.group('k'), m.group('f'), off,
@@ -703,29 +979,41 @@ def main():
         # the match is untouched for the same reason.
         for m in OFFSITE.finditer(text):
             base = m.group('base')
+            if already_repaired(text, m.start()):
+                continue
             rs, re_ = region_bounds(text, m.start())
             region = text[rs:re_]
             rel = m.start() - rs
             blks = blocks(region)
             fnname = region_fn(text, rs)
 
-            got, why = evidence(region, rel, blks, base, disp, fnname, ifdisp)
+            got, why = evidence(region, rel, blks, base, disp, fnname, ifdisp, types)
             if got is None:
-                # ⚠ SILENCE HERE WOULD BE THE BUG. OFFSITE matches baked offsets
-                # against every kind of base in the corpus, so reporting all of
-                # them is noise — but a base that IS a geometry and still has no
-                # type evidence is a site this pass looked at and could not
-                # repair, and it has to say so. `McdBoxMaximumPointNew` is one:
-                # nothing in the corpus calls it and no branch encloses it, so
-                # its three box reads stay wrong at LP64 and are recorded rather
-                # than quietly skipped.
-                if any(g.group('b') == base
-                       for pat in GEOM_OF for g in pat.finditer(region)):
-                    declined += 1
-                    declines.append('%-26s +%-4d geometry base %s: %s'
-                                    % (fn, m.start(), base, why))
-                continue
-            ids, first = got
+                # (5) LAST RESORT: the shipped 64-bit build. Gather every i386
+                # offset used against this base in this function and ask which
+                # geometry type's LP64 layout the amd64 binary actually reaches
+                # for. This is what closes a site with no caller and no branch.
+                offs = {int(o.group('off'), 0) for o in OFFSITE.finditer(region)
+                        if o.group('base') == base and int(o.group('off'), 0) >= bsz}
+                won = oracle_type(fnname, offs, types, inc, cache32, offcache)
+                if won:
+                    ids, first = [won[0]], won[0]
+                    oracle_used.append('%-26s %-16s %s  <- shipped amd64 build'
+                                       % (fn, won[1], sorted(offs)))
+                else:
+                    # ⚠ SILENCE HERE WOULD BE THE BUG. OFFSITE matches baked
+                    # offsets against every kind of base in the corpus, so
+                    # reporting all of them is noise — but a base that IS a
+                    # geometry and still has no type evidence is a site this
+                    # pass looked at and could not repair, and it has to say so.
+                    if any(g.group('b') == base
+                           for pat in GEOM_OF for g in pat.finditer(region)):
+                        declined += 1
+                        declines.append('%-26s +%-4d geometry base %s: %s'
+                                        % (fn, m.start(), base, why))
+                    continue
+            else:
+                ids, first = got
 
             off = int(m.group('off'), 0)
             # ⚠ ONLY THE CONCRETE TYPE'S OWN FIELDS. An offset inside
@@ -767,22 +1055,37 @@ def main():
         for start, end, reps, note in sorted(edits, key=lambda e: -e[0]):
             for rep in reps:
                 cand = text[:start] + rep + text[end:]
-                if compiles_identically(fn, cand, build, inc):
+                if compiles_identically(fn, cand, build, inc) \
+                        and compiles_at_m64(fn, cand, inc):
                     text = cand
                     fixed += 1
                     notes.append(note)
                     break
             else:
+                # ⚠⚠ NO `#if __SIZEOF_POINTER__` FALLBACK HERE, DELIBERATELY.
+                # `fix_setter_typed_slot` uses one on a single hand-checked site
+                # and it is validated by ktrace; applied WHOLESALE by this pass
+                # it failed twice in one session. It is LINE-based and C is not,
+                # so a statement spanning lines came out with an EMPTY i386
+                # branch — and because the guard puts the original text on the
+                # i386 side, byte-identity passes BY CONSTRUCTION and neither
+                # that gate nor the -m64 compile check can see any of it. A site
+                # that needs its LOAD WIDTH changed is `fix_narrow_loads`' work;
+                # here it declines and says so.
                 declined += 1
-                declines.append('%s  — no spelling reproduced the i386 object' % note)
+                declines.append('%s  — no spelling reproduced the i386 object '
+                                '(a width change, not an offset change)' % note)
         if fixed > n0:
             open(path, 'w').write(text)
 
     print('fix_typeid_dispatch:')
     print('  repaired (i386 byte-identical)                : %d' % fixed)
-    print('  declined (reported, not guessed)              : %d' % declined)
     for n in notes:
         print('     ' + n)
+    print('  of those, typed by the shipped amd64 build    : %d' % len(oracle_used))
+    for o in oracle_used:
+        print('     ' + o)
+    print('  declined (reported, not guessed)              : %d' % declined)
     for d in declines:
         print('     - ' + d)
     return 0

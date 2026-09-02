@@ -229,6 +229,25 @@ def slot_types(srcdir, inc):
     return out
 
 
+def compiles_at_m64(fn, text, inc):
+    """Does this candidate COMPILE at LP64 at all?
+
+    ⚠⚠ i386 BYTE-IDENTITY CANNOT ANSWER THIS, and a `#if __SIZEOF_POINTER__`
+    guard makes it structurally blind: the i386 branch is the ORIGINAL text, so
+    the gate passes by construction while the `#else` branch is whatever was
+    proposed. `fix_typeid_dispatch` shipped an uncompilable LP64 branch past a
+    `145 object(s), 0 byte difference(s)` report exactly that way."""
+    d = os.path.join(WORK, 'm64')
+    os.makedirs(d, exist_ok=True)
+    src = os.path.join(d, fn)
+    open(src, 'w').write(text)
+    return subprocess.run(
+        ['gcc', '-m64', '-O2', '-fno-strict-aliasing', '-std=gnu99', '-w',
+         '-Wno-int-conversion', '-Wno-incompatible-pointer-types', '-DLINUX',
+         '-I' + os.path.join(kd_paths.MD, 'include')] + includes(inc)
+        + ['-c', '-o', os.devnull, src], capture_output=True).returncode == 0
+
+
 def main():
     srcdir, build = sys.argv[1], sys.argv[2]
     root = sys.argv[3] if len(sys.argv) > 3 else kd_paths.METOOLKIT_DIR
@@ -320,7 +339,8 @@ def main():
         for start, end, reps, note in sorted(edits, key=lambda e: -e[0]):
             for rep in reps:
                 cand = text[:start] + rep + text[end:]
-                if compiles_identically(fn, cand, build, inc):
+                if compiles_identically(fn, cand, build, inc) \
+                        and compiles_at_m64(fn, cand, inc):
                     text = cand
                     fixed += 1
                     notes.append(note)
@@ -348,7 +368,8 @@ def main():
                     guarded = ('#if __SIZEOF_POINTER__ == 4\n%s\n#else\n%s\n#endif'
                                % (line, fixed_line))
                     cand = text[:ls] + guarded + text[le:]
-                    if compiles_identically(fn, cand, build, inc):
+                    if compiles_identically(fn, cand, build, inc) \
+                        and compiles_at_m64(fn, cand, inc):
                         text = cand
                         fixed += 1
                         notes.append(note + '   [#if __SIZEOF_POINTER__ guard: '

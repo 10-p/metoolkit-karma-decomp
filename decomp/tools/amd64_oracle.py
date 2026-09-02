@@ -110,6 +110,51 @@ def extract():
     return _CACHE
 
 
+# ★ THE CHECK BUILD, AND IT IS THE BETTER ORACLE FOR LAYOUT.
+# `lib.chk/win_amd64_whidbey_single/*.obj` are ALSO real pe-x86-64 (magic `6486`,
+# unlike the LTCG `.obj` beside the release archives) and they are UNOPTIMISED —
+# one function per COMDAT, every struct access a literal displacement, and
+# nothing folded or inlined. That matters for the layout question specifically:
+#
+#   McdBoxMaximumPointNew   release .lib   touches 0,4,8,16,20,24,32,36,40,48,…
+#                           check .obj     touches 32,36,40
+#
+# The release build's set is so rich that several candidate structs fit it and
+# the answer becomes ambiguous; the check build names exactly the three floats
+# the source reads. Prefer it, and fall back to the archives for anything the
+# check directory does not carry.
+CHKDIR = os.environ.get(
+    'KD_AMD64_CHK',
+    os.path.join(kd_paths.METOOLKIT_DIR, 'lib.chk', 'win_amd64_whidbey_single'))
+_CHK = {}
+
+
+def extract_chk():
+    """{member-stem: path} for the unoptimised check build, if it is present."""
+    if _CHK or not os.path.isdir(CHKDIR):
+        return _CHK
+    for m in sorted(os.listdir(CHKDIR)):
+        if m.endswith('.obj'):
+            _CHK[m[:-4]] = os.path.join(CHKDIR, m)
+    return _CHK
+
+
+def find_function(fnname):
+    """(symbol, lines) for `fnname` as a SUBSTRING, check build first.
+
+    ⚠ SUBSTRING, NOT AN EXACT KEY: C symbols are plain but C++ ones are
+    MSVC-mangled (`?McdBoxMaximumPointNew@@YAXPEAU_McdGeometryInstance@@QEBMQEAM@Z`),
+    so `find()`'s exact lookup answers for about half the corpus."""
+    for table in (extract_chk(), extract()):
+        for stem, path in sorted(table.items()):
+            if '/' in stem:
+                continue
+            for name, lines in disasm(path).items():
+                if fnname in name:
+                    return name, lines
+    return None, None
+
+
 def disasm(objpath):
     """objdump -d, split into {function-name: [lines]}."""
     r = subprocess.run(['objdump', '-d', objpath], capture_output=True, text=True)
@@ -227,6 +272,27 @@ def displacements(lines):
         if ' lea ' in ' ' + body:
             continue
         for m in DISP.finditer(body):
+            out.add(int(m.group(1), 16))
+    return out
+
+
+def field_displacements(lines):
+    """`displacements`, minus the ones that are not struct fields at all.
+
+    ⚠ THE STACK BASES SWAMP AN UNOPTIMISED BUILD. `displacements()` accepts any
+    `%r..` base, which is right for the release archives where locals live in
+    registers — but the CHECK build spills everything, so `0x20(%rsp)` and
+    `0x8(%rbp)` outnumber the real field reads and the set stops discriminating
+    between candidate structs. `%rip` is the literal pool. None of the three can
+    be a field of an object, so none of them belongs in a layout answer."""
+    out = set()
+    for l in lines:
+        body = l.split('\t')[-1] if '\t' in l else l
+        if ' lea ' in ' ' + body:
+            continue
+        for m in re.finditer(r'(?:^|[\s,])(?:0x)?([0-9a-f]+)\(%(r[a-z0-9]+)\)', body):
+            if m.group(2) in ('rsp', 'rbp', 'rip'):
+                continue
             out.add(int(m.group(1), 16))
     return out
 

@@ -349,9 +349,28 @@ def statement(lines, i):
 NEAR = []          # near-miss reasons for the site being classified, cleared per site
 
 
+# `(*(unsigned int *)&((McdCylinder *)g)->mSphereRadius) = (…ID)KD_FBITS(x);`
+# — the same class as FBITS_TO_U32 with the destination written as a NAMED FIELD
+# through a four-byte lvalue instead of `*(MeU32 *)`. `fix_typeid_dispatch` emits
+# this spelling, and only ever for a field it has MEASURED at four bytes at both
+# widths, so nothing can widen or truncate into it. Verified here rather than
+# taken on trust: the field is measured again below.
+FBITS_TO_FIELD = re.compile(
+    r'\(\s*\*\s*\(\s*unsigned int\s*\*\s*\)\s*&\s*\(\s*\(\s*(?P<tag>\w+)\s*\*\s*\)'
+    r'\s*\w+\s*\)\s*->\s*(?P<path>\w+(?:\s*\[\s*\d+\s*\])?(?:\s*\.\s*\w+)*)\s*\)\s*=')
+
+
 def classify(stmt, line, region='', what='', text='', inc=''):
     if FBITS.search(stmt) and FBITS_TO_U32.match(line):
         return 'fbits-to-4byte'
+    if FBITS.search(stmt) and inc:
+        m = FBITS_TO_FIELD.search(stmt)
+        if m:
+            path = re.sub(r'\s+', '', m.group('path'))
+            cast = '%s *' % m.group('tag')
+            if (_field_size(cast, path, inc, 32) == 4
+                    and _field_size(cast, path, inc, 64) == 4):
+                return 'fbits-to-4byte'
     if MEDICT.search(stmt) or SORTKEY.search(stmt):
         return 'medict-key'
     m = CALL_RHS.search(stmt)

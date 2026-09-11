@@ -19,6 +19,10 @@ BIN="${1:?usage: ons_smoke.sh <binary> <label> [seconds]}"
 LABEL="${2:?label}"
 SECS="${3:-300}"
 kd_require_ut2004 UT2004_RUN_DIR || exit 2
+# ⚠ THE VIRTUAL SCREEN MUST BE AT LEAST THE PINNED VIEWPORT (1280x720). Linux/SDL2 tolerates a window
+# larger than the X screen; wine's GDI does not, and the win32 Pixomatic exe died with a NATIVE segfault
+# three frames in on a 640x480 Xvfb (ufront 2.58, 2026-09-11) — and ran 40/40 frames on 1280x720 with
+# a trace byte-identical to its -NULLRENDERER run. A screen mismatch reads exactly like a driver bug.
 RUN="$UT2004_RUN_DIR"
 MAP="${ONS_MAP:-ONS-Torlan}"
 GAME="Onslaught.ONSOnslaughtGame"
@@ -65,10 +69,10 @@ URL="$MAP?game=$GAME?TimeLimit=0?bAutoNumBots=True?QuickStart=True?bPlayerMustBe
 if [ "$IS_PE" = 1 ]; then
     # WINEDEBUG=-all keeps wine's own chatter out of a log this script greps for `Critical Error`.
     WINEDEBUG="${WINEDEBUG:--all}" timeout --signal=TERM "$SECS" \
-        xvfb-run -a -s "-screen 0 640x480x24" \
+        xvfb-run -a -s "-screen 0 1280x720x24" \
         wine "./ons-smoke-${LABEL}.exe" "$URL" "$RENDERER" -nohomedir > "$LOG" 2>&1
 else
-    timeout --signal=TERM "$SECS" xvfb-run -a -s "-screen 0 640x480x24" \
+    timeout --signal=TERM "$SECS" xvfb-run -a -s "-screen 0 1280x720x24" \
         "./ons-smoke-${LABEL}.bin" "$URL" "$RENDERER" -nohomedir > "$LOG" 2>&1
 fi
 rc=$?

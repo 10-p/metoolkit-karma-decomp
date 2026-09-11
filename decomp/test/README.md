@@ -76,12 +76,16 @@ TO, on a real map, against the 32-bit control — the same recovered sources at 
 only variable is the pointer width.
 
 ```bash
-# 1. the oracle, from the build that links the shipped archives
+# 1. the gate: a candidate against THE CONTROL — the engine's `native-sse` preset (32-bit, SSE float
+#    math, no Pixomatic; ufront 2.58). ⚠ NOT `build-native`: that is x87 and yields 81b06b0cf715,
+#    never the reference c31ed77b7323 — this file said `build-native` until 2.58 and it cost a false
+#    failure. Run the reference arm first, every session.
+KD_FRAMES=40 KD_CONTACTS=1 KD_GAME=Onslaught.ONSOnslaughtGame \
+  ./test/ut2004/ktrace_gate.sh $UT2004_ENGINE_DIR/build-native64/Source/SDLLaunch/ut2004.bin \
+                               $UT2004_ENGINE_DIR/build-native-sse/Source/SDLLaunch/ut2004.bin
+# 2. a candidate on its own
 KD_FRAMES=600 KD_GAME=Onslaught.ONSOnslaughtGame \
-  ./test/ut2004/ktrace_gate.sh $BIN $UT2004_ENGINE_DIR/build-native/Source/SDLLaunch/ut2004-pixo.bin
-# 2. the candidate
-KD_FRAMES=600 KD_GAME=Onslaught.ONSOnslaughtGame \
-  ./test/ut2004/ktrace_run.sh $UT2004_ENGINE_DIR/build-native/Source/SDLLaunch/ut2004-pixo.bin cand 120
+  ./test/ut2004/ktrace_run.sh $UT2004_ENGINE_DIR/build-native64/Source/SDLLaunch/ut2004.bin cand 120
 # 3. read it
 python3 test/standalone/ktrace_diff.py  /tmp/ktrace-legacy600.csv /tmp/ktrace-cand.csv   # per body
 python3 test/standalone/ktrace_score.py /tmp/ktrace-legacy600.csv /tmp/ktrace-cand.csv   # MATCH / N MISMATCH
@@ -92,6 +96,27 @@ python3 test/standalone/ktrace_score.py /tmp/ktrace-legacy600.csv /tmp/ktrace-ca
 ./test/ut2004/ktrace_subst.sh keep-mcd ALL '^@Mcd'  # keep OUR Mcd, take the rest from theirs
 ./test/ut2004/ktrace_subst.sh fwd      NONE McdSphere McdTriangleList
 ```
+
+**`ktrace_run.sh` knobs added in ufront 2.58.** `KD_RENDERER` overrides the renderer switch (default
+`-SOFTWARERENDERER`; `-NULLRENDERER` is the renderer-independence control and the right choice for a
+Windows build, which has no GLES). `KD_WINE` names the wine loader for a `.exe` candidate. ⚠ **A 32-bit
+`.exe` cannot run under the box's default `wine`** (wow64-only, exit 53 "could not load wow64.dll") —
+the 2.54 note "ut2004-pixo.exe does not run under wine" was that loader, not the game. Use the i386
+loader with a win32 prefix:
+
+```bash
+KD_WINE=/usr/lib/i386-linux-gnu/wine/wine WINEARCH=win32 WINEPREFIX=~/.wine-ut2004-w32 \
+WINESERVER=/usr/lib/i386-linux-gnu/wine/wineserver WINEDLLOVERRIDES="mscoree=d;mshtml=d" \
+KD_RENDERER=-NULLRENDERER ./test/ut2004/ktrace_run.sh .../build-windows/Source/SDLLaunch/ut2004-pixo.exe w32 300
+```
+
+Measured 2026-09-11: the win32 Pixomatic exe traces `test-karma-1` at 600 body rows / K=1396 under that
+loader, MATCH 15/15 against the Linux x87 build, first difference 2e-21 (libm).
+
+**The web arm exists too.** `packages/e2e/tools/ktrace-probe.cjs` in the ufront monorepo drives the
+shipped wasm through the launcher form with `-KTRACECONSOLE` and writes the same CSV. Measured 2026-09-11
+against the shipping `-O3` wasm: 600 / 1396, self-consistent, 13 of 15 bodies bit-identical to the
+reference over 40 frames, the two vehicles first differing at frame 13 by < 2e-6 — the reference class.
 
 ⚠⚠ **AND NEITHER IS THE VIEWPORT — `ktrace_run.sh` RE-PINS IT BEFORE EVERY RUN.** The engine
 **writes `WindowedViewportX/Y` back into `System/UT2004.ini` on exit**, so a single run that came

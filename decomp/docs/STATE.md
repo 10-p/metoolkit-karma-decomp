@@ -3,6 +3,43 @@
 Where the recovery is, what is decided, and what is a trap. **Newest first.** This is the file to
 read before resuming; `../HANDOVER.md` is the depth behind it and `../proven.txt` is the evidence.
 
+## 2026-09-11 — ufront 2.58: the `-O2` divergence is DIAGNOSED (one file, one GCC pass); the pin stays
+
+**Karma `8f56c59` + this commit, engine-ut2004 2.58, ufront 2.58.** Full evidence in `../proven.txt`
+`O2-VRP-FLATTENED-INDEX`. The short form:
+
+```
+what diverged     -O2 on the recovered C: 600 body rows / K=1396 / c31ed77b7323  ->  543 / 1074
+where             MdtKea/keaCalcIworldandNonInertialForceandVhmf_vanilla.c, the two 3x3 loops (78-103)
+why               m1[0][iVar9 + k] with iVar9 = 0,3,6 on `MeReal m1[3][3]` — a flattened 2-D subscript
+                  past the inner array. GCC's VRP cuts each loop to ONE iteration ("iteration 1 invokes
+                  undefined behavior", hidden by -w). Rows 2-3 of invIworld are never written.
+how it was found  complement bisect over all 146 files with the engine's UT_KARMA_O2_FILES knob, verdict
+                  from the Scorpion's frame-1 row (the only constrained body in the first solve)
+what fixes it     -O1, -Og, -O2 -fno-tree-vrp; or the 10 subscripts respelled ((MeReal *)m1)[k]:
+                  ALL 146 files at -O2 -> c31ed77b7323. The wasm object of the respelling is
+                  byte-identical under the shipping -O3 -g0, so the web cannot change.
+what does not     -fwrapv, -ftrivial-auto-var-init=zero, -fno-inline, -fno-tree-dse, -ffp-contract=off,
+                  -fno-ipa-*, -fno-aggressive-loop-optimizations (the cut is VRP's own), -fno-strict-aliasing
+the oracle        lib.chk/win_amd64_whidbey_single/…_vanilla.obj: `cmpl $3` twelve times — 3 iterations
+the web           MEASURED for the first time with contacts: the shipped -O3 wasm is 600/1396, self-
+                  consistent, 13/15 bodies bit-identical to the reference, vehicles first differ at
+                  frame 13 by < 2e-6. Clang does not draw GCC's inference. Never broken.
+the benefit       none measurable: ONS-Torlan, 6 bots, 600 fixed frames, NULLRENDERER — 3.6 s (-O2,
+                  repaired) vs 3.7 s (pinned -O0)
+decision          the engine keeps the -O0 pin (owner). The repair is one post-pass over one pattern
+                  (this file 10 sites, MdtBcl.c 9, ReadWriteKeaInputToFile.c 1) whenever it is wanted.
+```
+
+★ **Three harness facts, each of which cost a wrong reading this year:** the ktrace control is the
+engine's `native-sse` preset and nothing else (`build-native` is x87); a 32-bit `.exe` needs the i386
+wine loader (`KD_WINE`) — the default `wine` exits 53 and reads as "does not run"; and the Xvfb
+screen must be at least the pinned 1280x720 viewport — on 640x480, wine's GDI dies three frames in
+with a native segfault that reads exactly like a renderer bug.
+
+★ **A gate that names this class:** compile at `-O2` with `-Waggressive-loop-optimizations` and
+without `-w`, and grep for "invokes undefined behavior". `-w` is what hid the one warning GCC had.
+
 > **Provenance.** Everything below the 2.44 entry was written in the ufront monorepo's
 > `docs/migration/STATE.md` between 2026-08-28 and 2026-08-29, while the recovery still lived on
 > `engine-ut2004`'s `karma/decompile` branch. It moved here verbatim in stage 2.44 so the project

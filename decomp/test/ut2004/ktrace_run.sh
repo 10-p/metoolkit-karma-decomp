@@ -23,6 +23,10 @@ LABEL="${2:?label}"
 SECS="${3:-90}"
 MAP="${4:-test-karma-1}"
 kd_require_ut2004 UT2004_RUN_DIR || exit 2
+# ⚠ THE VIRTUAL SCREEN MUST BE AT LEAST THE PINNED VIEWPORT (1280x720). Linux/SDL2 tolerates a window
+# larger than the X screen; wine's GDI does not, and the win32 Pixomatic exe died with a NATIVE segfault
+# three frames in on a 640x480 Xvfb (ufront 2.58, 2026-09-11) — and ran 40/40 frames on 1280x720 with
+# a trace byte-identical to its -NULLRENDERER run. A screen mismatch reads exactly like a driver bug.
 RUN="$UT2004_RUN_DIR"
 GAME="${KD_GAME:-XGame.xDeathMatch}"
 FPS="${KD_FPS:-30}"
@@ -34,6 +38,17 @@ EXTRA="${KD_EXTRA:-}"
 # than appending, because appending `?NumBots=1` after `?NumBots=0` leaves two of the same
 # option in one URL and which one wins is not a thing to find out by accident.
 URLOPTS="${KD_URLOPTS:-?NumBots=0?QuickStart=True?bPlayerMustBeReady=False}"
+# KD_RENDERER overrides the renderer switch (default -SOFTWARERENDERER, see the header). Use it for the
+# renderer-independence control (-NULLRENDERER: same physics, no picture) and for a Windows build,
+# where -GL4ESRENDERER does not exist and Pixomatic is the GPU-free renderer.
+RENDERER="${KD_RENDERER:--SOFTWARERENDERER}"
+# KD_WINE names the wine loader for a `.exe` candidate (default `wine`). ⚠ On this box the default
+# `wine` is wow64-only and exits 53 on every 32-bit exe ("could not load wow64.dll"); a 32-bit
+# candidate needs the i386 loader with a win32 prefix, e.g.
+#   KD_WINE=/usr/lib/i386-linux-gnu/wine/wine WINEARCH=win32 WINEPREFIX=~/.wine-ut2004-w32 \
+#   WINESERVER=/usr/lib/i386-linux-gnu/wine/wineserver
+# (ufront 2.58 — the 2.54 note "ut2004-pixo.exe does not run under wine" was this loader, not the game).
+WINE="${KD_WINE:-wine}"
 
 CSV="/tmp/ktrace-${LABEL}.csv"
 LOG="/tmp/ktrace-${LABEL}.log"
@@ -51,7 +66,7 @@ LOG="/tmp/ktrace-${LABEL}.log"
 # distinguishes them, and it is why the Windows target is validated here and not there.
 case "$BIN" in
     *.exe)
-        command -v wine >/dev/null || { echo "$LABEL: no wine on PATH"; exit 2; }
+        command -v "$WINE" >/dev/null || { echo "$LABEL: no wine loader: $WINE (set KD_WINE)"; exit 2; }
         IS_PE=1; EXT=exe ;;
     *)  IS_PE=0; EXT=bin ;;
 esac
@@ -105,15 +120,15 @@ echo "=== $LABEL: $MAP for ${SECS}s at ${FPS} fixed fps -> $CSV ==="
 KCSV="$CSV"
 [ "$IS_PE" = 1 ] && KCSV="Z:$(echo "$CSV" | tr '/' '\\')"
 LAUNCH="./ktrace-${LABEL}.${EXT}"
-[ "$IS_PE" = 1 ] && LAUNCH="wine $LAUNCH"
+[ "$IS_PE" = 1 ] && LAUNCH="$WINE $LAUNCH"
 # KD_LAUNCH_PREFIX lets a caller put something in front of the binary — `setarch
 # --addr-no-randomize` is the one that matters, and `stack_shift.sh` sets it so its measurement
 # varies the ONE thing it claims to vary. Empty by default; a normal ktrace run is unaffected.
 WINEDEBUG="${WINEDEBUG:--all}" timeout --signal=TERM "$SECS" \
-    xvfb-run -a -s "-screen 0 640x480x24" \
+    xvfb-run -a -s "-screen 0 1280x720x24" \
     ${KD_LAUNCH_PREFIX:-} $LAUNCH \
     "${MAP}?game=${GAME}?TimeLimit=0${URLOPTS}${EXTRA}" \
-    -SOFTWARERENDERER -nohomedir \
+    $RENDERER -nohomedir \
     "-FIXEDFPS=${FPS}" "-KTRACE=${KCSV}" "-KTRACEEVERY=${EVERY}" "-KTRACEFRAMES=${FRAMES}" \
     ${KD_BONES:+-KTRACEBONES} ${KD_CONTACTS:+-KTRACECONTACTS} \
     > "$LOG" 2>&1

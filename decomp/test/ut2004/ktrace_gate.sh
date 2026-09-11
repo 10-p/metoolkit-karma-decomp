@@ -3,9 +3,16 @@
 #
 #   ktrace_gate.sh <candidate-binary> [control-binary]
 #
-#   UT2004_RUN_DIR=/tmp/kd_runkt \
-#     ./decomp/test/ut2004/ktrace_gate.sh /tmp/kd_b64/Source/SDLLaunch/ut2004.bin \
-#                                         /tmp/kd_b32_sse/Source/SDLLaunch/ut2004-pixo.bin
+#   UT2004_RUN_DIR=$HOME/karma-run \
+#     ./decomp/test/ut2004/ktrace_gate.sh $UT2004_ENGINE_DIR/build-native64/Source/SDLLaunch/ut2004.bin \
+#                                         $UT2004_ENGINE_DIR/build-native-sse/Source/SDLLaunch/ut2004.bin
+#
+# ★ THE CONTROL IS THE ENGINE'S `native-sse` PRESET (ufront 2.58) — `cmake --preset native-sse` in
+# engine-ut2004 — and nothing else. It is the only 32-bit configuration that caches `-msse2
+# -mfpmath=sse`; `native` is x87 and yields 81b06b0cf715, never the reference. Before 2.58 the SSE
+# flags were passed by hand and never reached the cache, so the on-disk "control" directories were
+# SSE binaries sitting in x87 build trees: one rebuild would have silently regressed them. Note the
+# binary is `ut2004.bin` (no Pixomatic), not `ut2004-pixo.bin`.
 #
 # WHY THIS EXISTS, AND WHY IT IS NOT ANOTHER ONE-OFF.
 #

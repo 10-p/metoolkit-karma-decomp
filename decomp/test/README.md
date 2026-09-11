@@ -59,7 +59,9 @@ harnesses at a tree they were never measuring, and every one would still pass.
 ONS_MAP=ONS-Adara ONS_RENDERER=-OPENGLRENDERER ./test/ut2004/ons_smoke.sh ...
 ```
 
-Exit 0 = survived, 1 = crashed or died early. **ONS is the gametype that spawns VEHICLES**, and
+Exit 0 = survived, 1 = crashed or died early. A `.exe` runs under `wine`; `KD_WINE` names the loader
+(a 32-bit `.exe` needs `/usr/lib/i386-linux-gnu/wine/wine` with a `WINEARCH=win32` prefix — see
+`ktrace_run.sh`, ufront 2.58). **ONS is the gametype that spawns VEHICLES**, and
 vehicles plus ragdolls are most of what Karma exists for; a DM map exercises almost none of it.
 This is the gate that caught `McdGjkFaceQueueInit` writing float bit patterns into
 `_McdGjkFace.fi[]` — a fault the 51/51 browser suite could not see, because that suite is almost

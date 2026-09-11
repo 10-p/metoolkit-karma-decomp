@@ -48,7 +48,10 @@ LOG="/tmp/ons-${LABEL}.log"
 # produced two "engine UI bugs" that were neither (see ../../docs/STATE.md, the poisoned run tree).
 case "$BIN" in
     *.exe)
-        command -v wine >/dev/null || { echo "$LABEL: no wine on PATH"; exit 2; }
+        # KD_WINE names the loader (default `wine`); a 32-bit .exe needs the i386 loader with a win32
+        # prefix — see ktrace_run.sh, which documents the trap (ufront 2.58).
+        WINE="${KD_WINE:-wine}"
+        command -v "$WINE" >/dev/null || { echo "$LABEL: no wine loader: $WINE (set KD_WINE)"; exit 2; }
         IS_PE=1; EXT=exe
         RENDERER="${ONS_RENDERER:--OPENGLRENDERER}"
         ;;
@@ -70,7 +73,7 @@ if [ "$IS_PE" = 1 ]; then
     # WINEDEBUG=-all keeps wine's own chatter out of a log this script greps for `Critical Error`.
     WINEDEBUG="${WINEDEBUG:--all}" timeout --signal=TERM "$SECS" \
         xvfb-run -a -s "-screen 0 1280x720x24" \
-        wine "./ons-smoke-${LABEL}.exe" "$URL" "$RENDERER" -nohomedir > "$LOG" 2>&1
+        "$WINE" "./ons-smoke-${LABEL}.exe" "$URL" "$RENDERER" -nohomedir > "$LOG" 2>&1
 else
     timeout --signal=TERM "$SECS" xvfb-run -a -s "-screen 0 1280x720x24" \
         "./ons-smoke-${LABEL}.bin" "$URL" "$RENDERER" -nohomedir > "$LOG" 2>&1

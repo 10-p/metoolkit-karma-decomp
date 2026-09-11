@@ -484,11 +484,11 @@ static bool McdVanillaOverlapOBBTri
       uVar12 = 1 << ((byte)iVar15 & 0x1f) & 3;
       local_f8 = (sbyte)uVar12;
       uVar17 = 1 << local_f8 & 3;
-      fVar2 = (edge[uVar11][uVar12] * (*edge)[local_e4 + uVar17] -
-              edge[uVar11][uVar17] * (*edge)[local_e4 + uVar12]) * 0.5;
+      fVar2 = (edge[uVar11][uVar12] * ((MeReal *)*edge)[local_e4 + uVar17] -
+              edge[uVar11][uVar17] * ((MeReal *)*edge)[local_e4 + uVar12]) * 0.5;
       fVar1 = sqE[i] - *pfVar18 * *pfVar18;
-      fVar3 = ((*edge)[local_e4 + uVar17] * (*inTri->vertices[i])[uVar12] -
-              (*edge)[local_e4 + uVar12] * (*inTri->vertices[i])[uVar17]) + fVar2;
+      fVar3 = (((MeReal *)*edge)[local_e4 + uVar17] * (*inTri->vertices[i])[uVar12] -
+              ((MeReal *)*edge)[local_e4 + uVar12] * (*inTri->vertices[i])[uVar17]) + fVar2;
       fVar2 = ABS(fVar2);
       if (eps * eps * sqE[i] < fVar1) {
                     
@@ -884,9 +884,9 @@ static void McdVanillaAddTriBoxSegmentPoints
   uVar14 = 1 << (sbyte)uVar13 & 3;
   pMVar9 = dn.v + uVar13;
   *pMVar12 = 0.0;
-  *pMVar9 = (*edge)[uVar14];
+  *pMVar9 = ((MeReal *)*edge)[uVar14];
   pMVar15 = dn.v + uVar14;
-  *pMVar15 = -(*edge)[uVar13];
+  *pMVar15 = -((MeReal *)*edge)[uVar13];
   x[0].v[0] = dn.v[0];
   x[0].v[1] = dn.v[1];
   x[0].v[2] = dn.v[2];

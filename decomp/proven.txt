@@ -24,14 +24,28 @@
 #                                       reference. Complement bisect over all 146 files
 #                                       names this one alone; the file at -O2 -fno-tree-vrp
 #                                       with the rest pinned: the reference.
-#                       the repair      the 10 subscripts respelled `((MeReal *)m1)[k]`:
-#                                       ALL 146 files at -O2 -> c31ed77b7323, byte-identical.
-#                                       Under the shipping wasm flags (-O3 -g0) the repaired
-#                                       object is BYTE-IDENTICAL to the original, so the
-#                                       web cannot change. Not landed as a post-pass yet —
-#                                       the engine keeps the -O0 pin (owner's call) and
-#                                       measured -O2 Karma buys nothing on ONS-Torlan/6 bots
-#                                       (600 fixed frames: 3.6 s vs 3.7 s).
+#                       the repair      LANDED 2026-09-11 as tools/fix_flattened_index.py, the
+#                                       last post-pass in lp64_pipeline.sh. It respells the row-0
+#                                       walk through the decayed pointer `((T *)NAME)[k]` (and the
+#                                       row-pointer spelling `((T *)*P)[k]`). 35 sites in 5 files:
+#                                       kea (10), MdtBcl (12), IxBoxTriList, McdGjk, ReadWrite.
+#                       ⚠ THIS PASS IS THE ONE NON-NO-OP. Fixing a -O2 miscompile IS a -O2 codegen
+#                                       change, and gcc lays the raw `[0][..]` form out differently
+#                                       even at -O0 (a multiply-by-zero the decay drops), so the
+#                                       NATIVE gcc object changes at every -O. What it MUST preserve
+#                                       is the WEB: the wasm32/clang object is byte-identical (the
+#                                       pass's mandatory gate), and the shipped wasm relinks to the
+#                                       exact published hash 24fe20ebe450. The native change is
+#                                       re-validated BEHAVIOURALLY, not by bytes: after landing,
+#                                       native64 traces c31ed77b7323, win64 at the libm floor, the
+#                                       linux32 x87 Pixomatic build 3e89814bb10c + a 300 s smoke,
+#                                       run-standalone 12/12. The i386 acceptance in lp64_pipeline
+#                                       reads $DST/.flattened_index_repaired and expects exactly
+#                                       those files to differ (3 changed the -O2 object, 2 were
+#                                       no-ops there) while every other object stays byte-identical.
+#                                       ★ The owner accepted the native re-gate to lift the UB; the
+#                                       -O0 native pin STAYS regardless (measured -O2 Karma buys
+#                                       nothing on ONS-Torlan/6 bots: 3.6 s vs 3.7 s).
 #                       the oracle      lib.chk/win_amd64_whidbey_single/keaCalcIworldandNonInertialForceandVhmf_vanilla.obj
 #                                       compares its counters to 3 twelve times: 3 iterations.
 #                       the class       the same flattened shape is in MdtBcl.c (9 sites) and

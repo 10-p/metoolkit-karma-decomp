@@ -3,6 +3,33 @@
 Where the recovery is, what is decided, and what is a trap. **Newest first.** This is the file to
 read before resuming; `../HANDOVER.md` is the depth behind it and `../proven.txt` is the evidence.
 
+## 2026-09-11 (later) — the UB is LIFTED: `fix_flattened_index.py` lands; the -O0 pin still stays
+
+**karma this commit, engine-ut2004 unchanged (it fetches decomp `main` unpinned), ufront 2.58 addendum.**
+The owner asked to lift the undefined behaviour after seeing that it is **not** byte-neutral on native
+(only on the web). Landed as `tools/fix_flattened_index.py`, the last post-pass in `lp64_pipeline.sh`.
+
+```
+what           the row-0 flattened walk `m1[0][iVar9+k]` respelled `((MeReal *)m1)[iVar9+k]`
+where          35 sites in 5 files: kea (10), MdtBcl (12), IxBoxTriList, McdGjk, ReadWriteKeaInputToFile
+the web        MANDATORY gate: wasm32/clang object byte-identical (all 5). The existing build-wasm-perf,
+               with the 5 repaired sources swapped in, relinks to the EXACT published hash 24fe20ebe450 —
+               byte-identical end to end. So the 61/61 ut2004 sweep and the published tree still stand.
+the native     the gcc object DELIBERATELY changes at every -O (that IS the fix). Re-validated behaviourally:
+               native64 c31ed77b7323 · win64 libm floor · linux32 x87 Pixomatic 3e89814bb10c + 300 s smoke ·
+               run-standalone 12/12 · lp64_pipeline i386 acceptance: 145 objects, 0 unexpected byte diffs,
+               3 flattened-index files changed the -O2 object + 2 were no-ops there.
+the pin        STAYS. Native/Windows still compile the recovered C at -O0 (the change is behaviour-preserving
+               there); -O2 Karma still buys nothing measured. Lifting the UB is source hygiene + a landmine
+               removed for any future -O2 native build, at the price of the native re-gate above.
+```
+
+★ **THE ACCEPTANCE GATE LEARNED A CARVE-OUT, VISIBLY.** Every other pass is an i386 no-op and the
+`-O2` acceptance enforces it; this one cannot be (fixing a `-O2` miscompile is a `-O2` codegen change),
+so it writes `$DST/.flattened_index_repaired` and the acceptance expects exactly those files to differ.
+Two of the five (McdGjk, ReadWrite) turned out byte-identical at `-O2` anyway — the decay was a no-op
+there — which the gate reports rather than hides. See `proven.txt` `O2-VRP-FLATTENED-INDEX`.
+
 ## 2026-09-11 — ufront 2.58: the `-O2` divergence is DIAGNOSED (one file, one GCC pass); the pin stays
 
 **Karma `8f56c59` + this commit, engine-ut2004 2.58, ufront 2.58.** Full evidence in `../proven.txt`

@@ -146,7 +146,7 @@ void kd_writeMdtKeaBodyIndexPairArrayToFile(int file,char *desc,int num_elts,int
         }
         uVar8 = (uint)bVar2;
         uVar7 = uVar8 + 1;
-        iVar4 = sprintf(buf,"%d\n",(*array)[uVar8]);
+        iVar4 = sprintf(buf,"%d\n",((int *)*array)[uVar8]);
         MeWrite(file,buf,iVar4);
         uVar6 = extraout_EDX_00;
       }
@@ -159,9 +159,9 @@ void kd_writeMdtKeaBodyIndexPairArrayToFile(int file,char *desc,int num_elts,int
       }
     }
     do {
-      iVar4 = sprintf(buf,"%d\n",(*array)[uVar7]);
+      iVar4 = sprintf(buf,"%d\n",((int *)*array)[uVar7]);
       MeWrite(file,buf,iVar4);
-      iVar4 = sprintf(buf,"%d\n",(*array)[uVar7 + 1]);
+      iVar4 = sprintf(buf,"%d\n",((int *)*array)[uVar7 + 1]);
       MeWrite(file,buf,iVar4);
       iVar4 = sprintf(buf,"%d\n",array[1][uVar7]);
       MeWrite(file,buf,iVar4);

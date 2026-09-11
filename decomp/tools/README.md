@@ -2464,6 +2464,29 @@ $GHIDRA_HOME/support/analyzeHeadless \
 > minute.
 
 
+### `fix_flattened_index.py` — a 2-D array's ROW 0 walked past its inner bound (the -O2 divergence)
+
+```bash
+python3 tools/fix_flattened_index.py /tmp/kd_lp64/allobj /tmp/kd_build $MT   # runs LAST in lp64_pipeline
+```
+
+Ghidra renders the original's linear walk over a matrix as `m1[0][iVar9 + k]` with `iVar9 = 0,3,6`
+on `MeReal m1[3][3]` — indices 3..8 are outside `m1[0]`, undefined in C, and GCC's `-O2` value-range
+propagation folds the enclosing loop to one iteration on the strength of it. That, alone, was the
+whole `-O2` divergence of the recovered Karma (kea file; ufront 2.58, `proven.txt`
+`O2-VRP-FLATTENED-INDEX`). The pass respells the subscript through the decayed pointer,
+`((MeReal *)m1)[k]` (and the row-pointer form `((MeReal *)*P)[k]`), which is the same address with
+the per-row bound stripped.
+
+⚠⚠ **THIS IS THE ONE PASS THAT IS NOT AN i386 NO-OP, ON PURPOSE.** Fixing a `-O2` miscompile *is* a
+`-O2` codegen change, and gcc even lays the raw form out differently at `-O0`, so the **native**
+object changes at every `-O`. Its MANDATORY gate is the **web**: the wasm32/clang object must stay
+byte-identical (the shipped wasm relinks to the same hash), and it declines any file that fails
+that. The native change is re-validated **behaviourally** by ufront's ktrace gate (`c31ed77b7323`),
+not by bytes. It writes `$DST/.flattened_index_repaired`, and `lp64_pipeline.sh`'s i386 acceptance
+reads that manifest and expects exactly those files to differ while every other object stays a
+byte-for-byte no-op. Scope: bare-name local 2-D arrays and `(*P)[j]` row pointers, row-0 walk only.
+
 ### `fix_slot_pointer_walk.py` — a pointer parked in a FABRICATED stack aggregate
 
 ```bash

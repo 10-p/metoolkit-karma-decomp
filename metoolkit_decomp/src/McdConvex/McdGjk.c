@@ -683,7 +683,7 @@ void kd_McdGjkUpdateDeltaCache(McdGjkSimplex *s)
     do {
       if ((bj & uVar5) != 0) {
         uVar3 = uVar2 | bj;
-        s->delta[uVar3][iVar1] = (*local_64)[0] - (*paMVar4)[local_60 + iVar1];
+        s->delta[uVar3][iVar1] = (*local_64)[0] - ((MeReal *)*paMVar4)[local_60 + iVar1];
         s->delta[uVar3][j] = *(float *)((kd_iptr)paMVar4 + iVar1 * 0x14) - paMVar4[iVar1][j];
         uVar6 = 1;
         k = 0;
@@ -697,14 +697,14 @@ void kd_McdGjkUpdateDeltaCache(McdGjkSimplex *s)
               s->delta[uVar5][iVar1] =
                    (*(float *)((kd_iptr)*paMVar4 + local_58) - paMVar4[k][iVar1]) *
                    s->delta[bj | uVar6][k] +
-                   ((*paMVar4)[local_60 + k] - (*paMVar4)[local_60 + iVar1]) *
+                   (((MeReal *)*paMVar4)[local_60 + k] - ((MeReal *)*paMVar4)[local_60 + iVar1]) *
                    s->delta[bj | uVar6][j];
               s->delta[uVar5][j] =
                    (paMVar4[iVar1][k] - paMVar4[iVar1][j]) * s->delta[uVar2 | uVar6][iVar1] +
                    (*(float *)((kd_iptr)*paMVar4 + local_58) - paMVar4[k][j]) *
                    s->delta[uVar2 | uVar6][k];
               s->delta[uVar5][k] =
-                   (*(float *)((kd_iptr)*paMVar4 + local_5c) - (*paMVar4)[local_60 + k]) *
+                   (*(float *)((kd_iptr)*paMVar4 + local_5c) - ((MeReal *)*paMVar4)[local_60 + k]) *
                    s->delta[uVar3][j] +
                    (paMVar4[iVar1][j] - paMVar4[iVar1][k]) * s->delta[uVar3][iVar1];
               uVar5 = s->bits;

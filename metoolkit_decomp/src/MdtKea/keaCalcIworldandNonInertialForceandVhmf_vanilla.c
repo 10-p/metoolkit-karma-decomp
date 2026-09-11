@@ -81,29 +81,29 @@ kd_keaFunctions_Vanilla__calcIworldandNonInertialForceandVhmf
           iVar7 = iVar7 + 1;
           fVar3 = pMVar6->R2[0];
           pMVar6 = (MdtKeaTransformation *)(pMVar6->R0 + 1);
-          m1[0][iVar9] = fVar3 * pMVar5->invI2[0] +
+          ((MeReal *)m1)[iVar9] = fVar3 * pMVar5->invI2[0] +
                          fVar2 * pMVar5->invI1[0] + fVar1 * pMVar5->invI0[0];
-          m1[0][iVar9 + 1] =
+          ((MeReal *)m1)[iVar9 + 1] =
                fVar3 * pMVar5->invI2[1] + fVar1 * pMVar5->invI0[1] + fVar2 * pMVar5->invI1[1];
-          m1[0][iVar9 + 2] =
+          ((MeReal *)m1)[iVar9 + 2] =
                fVar3 * pMVar5->invI2[2] + fVar1 * pMVar5->invI0[2] + fVar2 * pMVar5->invI1[2];
           iVar9 = iVar9 + 3;
         } while (iVar7 < 3);
         iVar9 = 0;
         iVar7 = 0;
         do {
-          fVar1 = m1[0][iVar7];
-          fVar2 = m1[0][iVar7 + 1];
-          fVar3 = m1[0][iVar7 + 2];
+          fVar1 = ((MeReal *)m1)[iVar7];
+          fVar2 = ((MeReal *)m1)[iVar7 + 1];
+          fVar3 = ((MeReal *)m1)[iVar7 + 2];
           iVar9 = iVar9 + 1;
-          m2[0][iVar7] = fVar3 * tlist->R2[0] + fVar2 * tlist->R1[0] + fVar1 * tlist->R0[0];
-          m2[0][iVar7 + 1] = fVar3 * tlist->R2[1] + fVar1 * tlist->R0[1] + fVar2 * tlist->R1[1];
-          m2[0][iVar7 + 2] = fVar3 * tlist->R2[2] + fVar1 * tlist->R0[2] + fVar2 * tlist->R1[2];
+          ((MeReal *)m2)[iVar7] = fVar3 * tlist->R2[0] + fVar2 * tlist->R1[0] + fVar1 * tlist->R0[0];
+          ((MeReal *)m2)[iVar7 + 1] = fVar3 * tlist->R2[1] + fVar1 * tlist->R0[1] + fVar2 * tlist->R1[1];
+          ((MeReal *)m2)[iVar7 + 2] = fVar3 * tlist->R2[2] + fVar1 * tlist->R0[2] + fVar2 * tlist->R1[2];
           iVar7 = iVar7 + 3;
         } while (iVar9 < 3);
         iVar7 = 0;
         do {
-          pMVar8->invI0[iVar7] = m2[0][iVar7];
+          pMVar8->invI0[iVar7] = ((MeReal *)m2)[iVar7];
           pMVar8->invI1[iVar7] = m2[1][iVar7];
           pMVar8->invI2[iVar7] = m2[2][iVar7];
           iVar7 = iVar7 + 1;

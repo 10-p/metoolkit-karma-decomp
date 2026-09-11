@@ -6720,9 +6720,9 @@ void kd_MdtBclAddRPROJoint(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
   iVar25 = 3;
   do {
     iVar24 = iVar24 + 2;
-    GEt[0][iVar25] = GEt[0][iVar25] * 0.5;
-    GEt[0][iVar25 + 1] = GEt[0][iVar25 + 1] * 0.5;
-    GEt[0][iVar25 + 2] = GEt[0][iVar25 + 2] * 0.5;
+    ((MeReal *)GEt)[iVar25] = ((MeReal *)GEt)[iVar25] * 0.5;
+    ((MeReal *)GEt)[iVar25 + 1] = ((MeReal *)GEt)[iVar25 + 1] * 0.5;
+    ((MeReal *)GEt)[iVar25 + 2] = ((MeReal *)GEt)[iVar25 + 2] * 0.5;
     GEt[1][iVar25] = GEt[1][iVar25] * 0.5;
     GEt[1][iVar25 + 1] = GEt[1][iVar25 + 1] * 0.5;
     GEt[1][iVar25 + 2] = GEt[1][iVar25 + 2] * 0.5;
@@ -6737,14 +6737,14 @@ void kd_MdtBclAddRPROJoint(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
     if (iVar24 < 0) {
       iVar24 = iVar19 + 6;
     }
-    *(MeReal *)((kd_iptr)*clist->Jstore + iVar19 * 4 + (iVar24 >> 2) * 0xb0 + 0x3c) = GEt[0][local_244];
+    *(MeReal *)((kd_iptr)*clist->Jstore + iVar19 * 4 + (iVar24 >> 2) * 0xb0 + 0x3c) = ((MeReal *)GEt)[local_244];
     iVar19 = clist->num_rows_inc_padding + iVar25;
     iVar24 = iVar19 + 3;
     if (iVar24 < 0) {
       iVar24 = iVar19 + 6;
     }
     *(MeReal *)((kd_iptr)*clist->Jstore + iVar19 * 4 + (iVar24 >> 2) * 0xb0 + 0x4c) =
-         GEt[0][local_244 + 1];
+         ((MeReal *)GEt)[local_244 + 1];
     iVar19 = clist->num_rows_inc_padding + iVar25;
     iVar24 = iVar19 + 3;
     if (iVar24 < 0) {
@@ -6752,7 +6752,7 @@ void kd_MdtBclAddRPROJoint(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
     }
     iVar25 = iVar25 + 1;
     *(MeReal *)((kd_iptr)*clist->Jstore + iVar19 * 4 + (iVar24 >> 2) * 0xb0 + 0x5c) =
-         GEt[0][local_244 + 2];
+         ((MeReal *)GEt)[local_244 + 2];
     local_244 = local_244 + 3;
   } while (iVar25 < 3);
   if (*(int *)((kd_iptr)constraint + ((int)((char *)&((struct MdtRPROJoint *)0)->head.bodyindex[1] - (char *)0))) != -1) {
@@ -6766,14 +6766,14 @@ void kd_MdtBclAddRPROJoint(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
         iVar24 = iVar19 + 6;
       }
       *(float *)((kd_iptr)*clist->Jstore + iVar19 * 4 + (iVar24 >> 2) * 0xb0 + 0x9c) =
-           -GEt[0][local_240];
+           -((MeReal *)GEt)[local_240];
       iVar19 = clist->num_rows_inc_padding + iVar25;
       iVar24 = iVar19 + 3;
       if (iVar24 < 0) {
         iVar24 = iVar19 + 6;
       }
       *(float *)((kd_iptr)*clist->Jstore + iVar19 * 4 + 0xac + (iVar24 >> 2) * 0xb0) =
-           -GEt[0][local_240 + 1];
+           -((MeReal *)GEt)[local_240 + 1];
       iVar19 = clist->num_rows_inc_padding + iVar25;
       iVar24 = iVar19 + 3;
       if (iVar24 < 0) {
@@ -6781,7 +6781,7 @@ void kd_MdtBclAddRPROJoint(MdtKeaConstraints *clist,void *constraint,MdtKeaTrans
       }
       iVar25 = iVar25 + 1;
       *(float *)((kd_iptr)*clist->Jstore + iVar19 * 4 + 0xbc + (iVar24 >> 2) * 0xb0) =
-           -GEt[0][local_240 + 2];
+           -((MeReal *)GEt)[local_240 + 2];
       local_240 = local_240 + 3;
     } while (iVar25 < 3);
   }

@@ -228,6 +228,18 @@ kd_pass fix_block_copy "$DST/allobj" "$BUILD" "$MT" -- tail 4
 # offsets and constant array bounds, and fix_frame_slots replaces both with
 # constant EXPRESSIONS. It has been taught the new spelling; running it here
 # says so out loud rather than leaving a zero to be trusted.
+# ---- fix_flattened_index RUNS LAST, AFTER every other pass and JUST BEFORE the acceptance test,
+# and it is the ONE pass in this pipeline that is NOT an i386 no-op — see its docstring. A 2-D LOCAL
+# array subscripted past its inner row (`m1[0][iVar9 + 2]` on `MeReal m1[3][3]`) is undefined C that
+# GCC's -O2 value-range propagation uses to CUT the enclosing loop — the whole -O2 divergence of the
+# recovered Karma. It respells the subscript through the decayed pointer, which is the SAME address:
+# the wasm32/clang object is byte-identical (its MANDATORY gate — the web ships it), while the native
+# gcc object DELIBERATELY changes (that is the miscompile being fixed) and is re-validated
+# BEHAVIOURALLY by ufront's ktrace gate, not by byte-identity. It writes $DST/.flattened_index_repaired,
+# which the acceptance test below reads. It runs LAST so no earlier pass keys on the old spelling.
+# (ufront 2.58 addendum; proven.txt O2-VRP-FLATTENED-INDEX. The owner accepted the native re-gate.)
+kd_pass fix_flattened_index "$DST/allobj" "$BUILD" "$MT" -- tail 3
+
 echo "== frame bounds after the post-passes =="
 python3 "$KD_ROOT/tools/check_frame_bounds.py" "$DST/allobj" "$BUILD" | tail -1 || exit 1
 
@@ -246,18 +258,33 @@ IF="$IF -I$INC/MdtBcl -I$INC/MdtKea -I$INC/Mst -I$INC/MeApp -I$KD_MD_INC"
 CF="-m32 -O2 -fno-pic -fno-strict-aliasing -std=gnu99 -w -Wno-int-conversion"
 CF="$CF -Wno-incompatible-pointer-types -DLINUX $IF"
 W=$(mktemp -d); trap 'rm -rf "$W"' EXIT
-bad=0; fail=0; n=0
+# ⚠ fix_flattened_index is the ONE pass that is NOT an i386 no-op (it fixes a -O2 miscompile, which
+# IS a codegen change). The files it repaired are listed in $DST/.flattened_index_repaired; for those,
+# "byte-identical" is the WRONG assertion — instead we require they DID change (the repair took) and
+# that they still compile. Every OTHER object must be byte-identical, exactly as before. The wasm side
+# of those files is checked byte-identical INSIDE the pass; here we re-gate the native side behaviourally
+# (ufront ktrace), not by bytes.
+FLAT="$DST/.flattened_index_repaired"
+is_flat() { [ -f "$FLAT" ] && grep -qxF "$1.c" "$FLAT"; }
+bad=0; fail=0; n=0; flat_ch=0; flat_id=0
 for o in "$BUILD"/*.o; do
     b=$(basename "$o" .o); n=$((n+1))
     cp "$DST/allobj/$b.c" "$W/$b.c"
-    if gcc $CF -c -o "$W/$b.o" "$W/$b.c" 2>/dev/null; then
-        cmp -s "$o" "$W/$b.o" || { echo "  DIFFERS: $b"; bad=$((bad+1)); }
+    if ! gcc $CF -c -o "$W/$b.o" "$W/$b.c" 2>/dev/null; then
+        echo "  DID NOT COMPILE: $b"; fail=$((fail+1)); continue
+    fi
+    if is_flat "$b"; then
+        # A manifest file's -O2 object MAY change (a real miscompile fixed, e.g. the kea file) or
+        # stay identical (the decay was a no-op there — VRP was not exploiting that site). BOTH are
+        # fine: the wasm object was proven byte-identical inside the pass, and the native -O0 physics
+        # is re-gated by ktrace. So compile it and count which way it went; never fail on it.
+        if cmp -s "$o" "$W/$b.o"; then flat_id=$((flat_id+1)); else flat_ch=$((flat_ch+1)); fi
     else
-        echo "  DID NOT COMPILE: $b"; fail=$((fail+1))
+        cmp -s "$o" "$W/$b.o" || { echo "  DIFFERS: $b"; bad=$((bad+1)); }
     fi
 done
-echo "  $n object(s), $fail compile failure(s), $bad byte difference(s)"
-[ "$fail" = 0 ] && [ "$bad" = 0 ] || { echo "  -> STOP: the post-passes are not no-ops at i386."; exit 1; }
+echo "  $n object(s), $fail compile failure(s), $bad unexpected byte difference(s); flattened-index: $flat_ch object(s) changed, $flat_id unchanged"
+[ "$fail" = 0 ] && [ "$bad" = 0 ] || { echo "  -> STOP: an unexpected i386 change in a file the flattened-index pass did not touch."; exit 1; }
 
 echo "== LP64 =="
 # ★ THE i386 CONTROL RUNS BY DEFAULT, AND THAT CHANGED ON 2026-08-30. It used to

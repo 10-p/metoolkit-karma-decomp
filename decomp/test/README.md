@@ -641,7 +641,9 @@ start-inside path copies an uninitialised local into `distance` and `normal`, an
 A candidate that leaves undefined a field the REFERENCE writes fails: that is what reading a field at
 the wrong offset looks like.
 
-Measured on the tree before the generator learnt the line-segment registry, then after (x86-64):
+Measured on the tree before the generator learnt the line-segment registry, then after (x86-64). The
+"before" counts are one run's: the broken capsule's radius is an address, and another run of the same
+tree read 17,076 / aggregate 5,088 + sphyl 12,323. The "after" counts do not move.
 
 ```
 before   25,515 cases off the shipped library where the i386 control is not — every sphyl category,

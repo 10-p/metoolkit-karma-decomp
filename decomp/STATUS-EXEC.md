@@ -57,6 +57,19 @@ web artefact         sha256 6a380872… — the file the 55/55 suite passed on
 
 ---
 
+## Found 2026-11-16 by the line-segment gate
+
+**Repaired: every 64-bit build's ragdoll traces.** `IxSphylLineSegment` read the capsule's radius and
+half-height at their 32-bit offsets, so on native x86-64, Win64 and Android every trace against a
+ragdoll tested a capsule whose radius was an address. The generator now reads the registry that types
+it; `test/standalone/lineseg_lp64.sh` is the gate. 32-bit and web: unchanged, byte for byte.
+
+**Open, in code the game enters, at every width including the web — not repaired here, because the
+repair changes the web artefact.** `IxAggregateLineSegment` compares a float against a double literal
+of FLT_MAX and so reports a hit for every ragdoll bone a trace misses (distance FLT_MAX, no position);
+nine more sites compare a float sentinel the same way. Details and the site list:
+`docs/STATE.md`, 2026-11-16. MathEngine's own library does not do this.
+
 ## What is still open — and all of it is BEYOND UT2004
 
 None of the following affects the game. They are listed so that "complete" is a precise claim and

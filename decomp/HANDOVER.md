@@ -1380,6 +1380,12 @@ python3 tools/layout_check.py /tmp/kd_out/allobj /tmp/kd_build
 # in the build. Not a wasm-only concern — it changed a CONTACT COUNT on i386.
 python3 tools/spill_scan.py /tmp/kd_out/allobj /tmp/kd_build lab/allobj
 
+# every line-segment function at LP64, against the SHIPPED archives with a stated x87/SSE
+# tolerance and against the same source at i386 with none. The only gate here that TRACES:
+# USkeletalMesh::LineCheck calls these for every shot at a ragdoll, and IxSphylLineSegment read
+# the capsule at its i386 offsets past every other gate. proven.txt LP64-LINESEG-REGISTRATION.
+./test/standalone/lineseg_lp64.sh
+
 # and CHECK 2, the deliverable: a metoolkit with NO shipped member in it. §12.
 ./test/standalone/make_dropin_metoolkit.sh /tmp/kd_build ../metoolkit \
         $UT2004_RUN_DIR/dropin-metoolkit

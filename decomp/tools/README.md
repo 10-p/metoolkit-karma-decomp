@@ -588,6 +588,30 @@ registration of the same function then indexed `None[0]`. Nothing had ever been 
 times until the ConvexMesh family started being typed — `McdNullIntersect` is registered against
 every type there is.
 
+★★ **THE FRAMEWORK HAS A SECOND REGISTRY, AND NOTHING READ IT** — `McdFrameworkSetLineSegInteraction`,
+one geometry per call instead of a pair:
+
+```c
+McdSphylLineSegmentRegisterInteraction(McdFramework *frame)
+    McdFrameworkSetLineSegInteraction(frame, 5, kd_IxSphylLineSegment);
+```
+
+A line-segment function is handed the MODEL (`IxSphylLineSegment(McdModelID model, ...)`), so its
+`McdModelGetGeometry(model)` is the registered type. `lineseg_types()` reads that registry exactly as
+`pair_types()` reads the other — the type id and each geometry's `GetTypeId()` — and types all seven
+line-segment functions (eight registrations: `IxAggregateLineSegment` is registered twice for id 8,
+which is not a conflict). It has its own self-check (`IxSphylLineSegment` → `McdSphyl`,
+`IxBoxLineSegment` → `McdBox`), because an empty table reads exactly like "nothing to type".
+
+What it closed: `IxSphylLineSegment` read `mRadius`/`mHalfHeight` at `+0x10/+0x14`, which at LP64 are
+the low halves of `_McdGeometry`'s `prev`/`next` pointers. MathEngine's own amd64 build reads them at
+`0x20(%r12)`/`0x24(%r12)` (`amd64_oracle.py --function IxSphylLineSegment`). That function answers
+every zero-extent trace against a ragdoll capsule — 151 of the 206 bone shapes in UT2004's `.ka` files
+are sphyls — so every 64-bit build shot ragdolls with a capsule whose radius was an address.
+`fix_literal_offsets.py` had said so on every run (`IxSphylLineSegment: pvVar9 reads as _McdGeometry
+but 2 of its 2 offsets do not land — declined`) and nothing acted on a decline. The gate that now
+sees it is `test/standalone/lineseg_lp64.sh`.
+
 ### `assoc_scan.py` — where the association defect can hide
 
 Ghidra prints a right-leaning float `+` chain flat, C parses it left-leaning, and float addition is
@@ -1149,6 +1173,18 @@ instance came back NULL and the struct copy two lines later faulted on address 0
 `+ 4` is `mTM`, 4 here and 8 there. Confirmed against MathEngine's own amd64 build, which reads
 `mov 0x48(%rdi),%rbp` and `mov 0x8(%rcx),%rdx` at those two sites. The type may now sit on the line
 above, provided `MEAPI` opens the next one.
+
+★ **AND THE ONE-GEOMETRY REGISTRATION — the rule after the pair rule.** For a function
+`interaction_types.lineseg_types()` names, the variable assigned `McdModelGetGeometry(<its first
+parameter>)` — or a plain copy of one — is the registered geometry, gated by the same all-offsets-land
+test. ⚠ **Every assignment to that variable must be one of those**, or it is declined and reported:
+`IxConvexMeshLineSegment` reassigns its geometry variable from `McdConvexMeshGetPolyhedron`, after which
+it holds an `McdConvexHull`, and typing it by its first assignment would be a guess. Measured on the raw
+recovery, the pass alone: 963 → **982** rewritten, 742 → **723** out of scope, declines unchanged at 13.
+The 19 are all `IxSphylLineSegment` (16 `mHalfHeight`, 3 `mRadius`); no other file changes, because the
+other six line-segment functions read their geometry through accessors (`McdBoxGetRadii`,
+`McdSphereGetRadius`, `McdCylinderGetRadius`) or were already typed (`McdAggregate.c` registers its
+geometry).
 
 ### `fix_typeid_dispatch.py` — the same field, in a function that dispatches on the type id
 

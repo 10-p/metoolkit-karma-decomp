@@ -130,6 +130,10 @@ The recovered objects are held to the shipped library, not to a style guide:
 - **LP64** — `lp64_pipeline.sh` runs three physics scenes at 64-bit pointer
   width and every trajectory first differs at the float floor (9.0e-10, 1.9e-09,
   2.2e-07 against an i386 control).
+- **Line segments** — `lineseg_lp64.sh` drives every registered line-segment
+  function (what a trace against a ragdoll calls) at 64-bit pointer width over
+  122,500 seeded cases, against the shipped archives and bit for bit against the
+  same source at i386.
 - **Live** — a full UT2004 Onslaught match against a metoolkit with every
   shipped member deleted, and the browser build's whole E2E suite.
 

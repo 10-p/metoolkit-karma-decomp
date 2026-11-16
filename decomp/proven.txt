@@ -1,3 +1,73 @@
+# LP64-LINESEG-REGISTRATION 2026-11-16 ★★ EVERY SHOT AT A RAGDOLL CAPSULE, ON EVERY 64-BIT BUILD.
+#                     IxSphylLineSegment read McdSphyl::mRadius and mHalfHeight at their i386
+#                     offsets +0x10/+0x14. At LP64 those are bytes 16..23 of _McdGeometry, the
+#                     low halves of its `prev` and `next` POINTERS, so the capsule's radius was
+#                     an address read as a float. USkeletalMesh::LineCheck reaches it for every
+#                     zero-extent trace against a ragdoll (every UT2004 ragdoll bone is an
+#                     McdAggregate, so through IxAggregateLineSegment), and 151 of the 206
+#                     primitives in UT2004's .ka files are sphyls. Native x86-64, Win64 and
+#                     Android arm64/x86_64 shot corpses with garbage capsules; i386 and wasm32
+#                     could not (the two layouts agree there).
+#                       the oracle      MathEngine's amd64 build reads them at 0x20(%r12) and
+#                                       0x24(%r12) (amd64_oracle.py --function IxSphylLineSegment).
+#                       why it shipped  fix_literal_offsets REPORTED it, on every run: "IxSphyl
+#                                       LineSegment: pvVar9 reads as _McdGeometry but 2 of its 2
+#                                       offsets do not land — declined". Every typing rule missed
+#                                       it for a correct reason — McdModelGetGeometry returns the
+#                                       BASE class, an Ix* object registers no geometry, and the
+#                                       pair rule LP64-ADDRESS-DEPENDENT added reads only
+#                                       McdFrameworkSetInteractions and p->model1/2. The framework
+#                                       has a SECOND registry, McdFrameworkSetLineSegInteraction
+#                                       (frame, typeId, fn), one geometry per call, and nothing read
+#                                       it. That fix closed these same two fields in
+#                                       McdSphylPlaneIntersect; this is the half it could not reach.
+#                       why no gate saw no scene traces; difftest_pair drives PAIRS at i386; ktrace
+#                                       follows bodies, never traces; and the census counted two
+#                                       Onslaught matches whose function set this decline sat
+#                                       outside.
+#                       the repair      interaction_types.lineseg_types() reads the registry (type
+#                                       id + each geometry's GetTypeId(), nothing inferred; its own
+#                                       self-check), and fix_literal_offsets types the variable
+#                                       assigned McdModelGetGeometry(<model parameter>), declining
+#                                       one with any other assignment (IxConvexMeshLineSegment
+#                                       reassigns its to the hull). All seven line-segment functions
+#                                       are typed; only the sphyl had raw offsets left: 19 sites
+#                                       (16 mHalfHeight, 3 mRadius), nothing else in 145 files moves.
+#                       evidence        the new gate test/standalone/lineseg_lp64.sh, 122,500 cases:
+#                                       before, 25,515 cases differ from the shipped library where
+#                                       the i386 control does not, and the control differs from LP64
+#                                       in aggregate 16,763 + sphyl 15,593 and NOTHING ELSE; after,
+#                                       0 and bit-identical in every defined field — x86-64 gcc,
+#                                       aarch64 gcc (-ffp-contract=off, qemu) and Win64 (mingw,
+#                                       wine) alike. i386 acceptance 145 / 0 / 0 before and after;
+#                                       wasm32 146/146 objects byte-identical (-O2 -g0 and the
+#                                       shipping -O3 -g0 -pthread); the changed object byte-identical
+#                                       for i386 x87/SSE at -O0 and -O2, Win32 mingw and Android
+#                                       armv7. lp64_pipeline PASS both, identical rows; ktrace
+#                                       c31ed77b7323 both; ons_smoke 300 s PASS both.
+#                       in the game     engine-ut2004 native64, DM, 12 bots, InstaGib, every ragdoll
+#                                       trace re-solved exactly from the bone shapes (a local diag
+#                                       branch; hits whose distance is still FLT_MAX counted apart):
+#                                       before, 128 of 825 traces from the game and 470,846 of
+#                                       850,995 probe traces disagreed with the true geometry and no
+#                                       bullet pushed a corpse; after, 0 of 704 and 0 of 1,039, probe
+#                                       0 and 1 (one unexplained case in 852,453) — the shipped
+#                                       library's own profile (0 of 717 and 0 of 791, probe 0 of
+#                                       554,886 and 0 of 732,780).
+#                     ★ AND THE GATE FOUND TWO THINGS IT DOES NOT OWN, BOTH AT EVERY WIDTH, WASM
+#                     INCLUDED, PINNED IN test/baselines.sh, NOT FIXED (they change the web bytes):
+#                       IxAggregateLineSegment ends `return (uint)(overlap->distance !=
+#                                       3.4028235e+38);` — a DOUBLE literal; MathEngine compares the
+#                                       float against the FLOAT constant 0x7f7fffff (fcomps
+#                                       .rodata.cst4). FLT_MAX promoted never equals it, so every
+#                                       aggregate that hits nothing reports a hit at distance FLT_MAX
+#                                       with no position or normal — 478 of 704 game traces in the
+#                                       match above. The same spelling compares a float sentinel in
+#                                       nine more places (STATE.md lists them).
+#                       the convex hull kd_convexhull.c differs from qhull on two cases of 17,500;
+#                                       with MathEngine's qhull archive linked into the same recovered
+#                                       build all 17,500 agree.
+#
 # O2-VRP-FLATTENED-INDEX 2026-09-11 ★★ THE -O2 DIVERGENCE IS ONE FILE, AND IT IS NAMED.
 #                     Since ufront 2.55b the engine pins every metoolkit_decomp
 #                     target to -O0 on native/Windows because -O2 changed the

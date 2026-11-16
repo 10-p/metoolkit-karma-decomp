@@ -19,6 +19,9 @@ web (wasm32) ships 55/55 · linux 32 + 64 · windows x64 · android arm64 + armv
 i386 acceptance 145/145, 0 byte differences   ·   run-standalone 12/12
 LP64 trajectory byte-identical to the 32-bit control (c31ed77b7323, K=1396), self-consistent
 execution census: 660 functions entered, 111 of 147 objects — open defects in that set: ZERO
+
+2026-11-16: 64-bit ragdoll traces repaired (IxSphylLineSegment, LP64-LINESEG-REGISTRATION) ·
+run-standalone 13/13 with lineseg-lp64 · an all-width aggregate defect found and left open (STATE.md)
 ```
 
 ⚠ **"COMPLETE FOR UT2004" IS A PRECISE CLAIM, NOT A VAGUE ONE, AND THE DIFFERENCE MATTERS.** This
@@ -102,6 +105,14 @@ These have each cost this project real time. They are not hypothetical.
   "substituted and ran cleanly : 140" is a CRASH count, not bit-identity — `pass` increments in
   all three branches including `[ diverg]`. This project quoted it as bit-identity once and a
   bisect had to catch it.
+- **A pass's DECLINE is a finding, not a no-op.** `fix_literal_offsets` printed "IxSphylLineSegment:
+  pvVar9 reads as _McdGeometry but 2 of its 2 offsets do not land — declined" on every run, and every
+  64-bit build shipped ragdoll capsules whose radius was an address until a gate that TRACES measured
+  it (`lineseg_lp64.sh`; `proven.txt` `LP64-LINESEG-REGISTRATION`). Read the decline list in
+  `KD_PASSLOG` when a pass's count moves.
+- **Ghidra prints a FLOAT constant as a DOUBLE literal.** `float_x != 3.4028235e+38` promotes to double
+  and FLT_MAX never equals it, so `IxAggregateLineSegment` reports a hit on every miss — at every width,
+  web included. Open, not repaired: `docs/STATE.md` 2026-11-16 lists all ten sites.
 - **Per-object gates are blind to integration defects.** `difftest_pair.sh` substitutes the
   interaction object and links the GEOMETRY objects from the shipped library, so a broken
   `McdSphereGetRadius` is never in the loop. "145 objects pass" is a statement about 145

@@ -1157,6 +1157,79 @@ def main():
                         % (fn, func, v, n, tag,
                            sum(1 for o in offs if o not in paths), len(offs)))
 
+    # ---- AND THE FRAMEWORK'S OTHER REGISTRY: ONE GEOMETRY, NOT A PAIR. A
+    # line-segment function is installed per type —
+    #
+    #     McdFrameworkSetLineSegInteraction(frame, 5, kd_IxSphylLineSegment);
+    #
+    # — and is handed the MODEL: `IxSphylLineSegment(McdModelID model, ...)`. So
+    # `pvVar9 = McdModelGetGeometry(model)` is an McdSphyl, and its `+0x10/+0x14`
+    # are `mRadius`/`mHalfHeight`: 16/20 here, 32/36 at LP64. Every rule above
+    # missed it, each for a correct reason — the callee returns the base
+    # `_McdGeometry` (on which neither offset lands, so it DECLINED and said so),
+    # an `Ix*` object registers no geometry, and the pair rule wants
+    # `McdFrameworkSetInteractions` and `p->model1`. The site stayed at i386,
+    # and at LP64 the capsule's radius was the low half of `_McdGeometry::prev`:
+    # every zero-extent trace against a ragdoll capsule, on every 64-bit build.
+    #
+    # `interaction_types.lineseg_types` reads the registry; this types the one
+    # variable that holds the model's geometry. ⚠ EVERY ASSIGNMENT to it must be
+    # `McdModelGetGeometry(<the model parameter>)` or a plain copy of such a
+    # variable: Ghidra reuses names, and `IxConvexMeshLineSegment` reassigns its
+    # geometry variable from `McdConvexMeshGetPolyhedron`, after which it holds
+    # an `McdConvexHull`. Such a variable is declined and reported, never typed
+    # by its first assignment. Gated by the same all-offsets-land test.
+    lsegs = interaction_types.lineseg_types(texts)[0]
+    if {'IxSphylPrimitives.c', 'IxPrimitiveLineSegment.c'} <= set(texts):
+        interaction_types.lineseg_selfcheck(lsegs)        # an empty table must not read as "clean"
+    for fn, text in texts.items():
+        for b in BANNER.finditer(text):
+            func = re.sub(r'^kd_', '', b.group(1))
+            tag = lsegs.get(func)
+            if not tag:
+                continue
+            region = region_of(text, b.start())
+            params = signature_params(region)
+            if not params or not params[0]:
+                continue
+            geom = re.compile(r'(?m)^[ \t]*(?P<v>[A-Za-z_]\w*)\s*=\s*(?:\([^)]*\)\s*)?'
+                              r'(?:kd_)?McdModelGetGeometry\s*\(\s*' + re.escape(params[0])
+                              + r'\s*\)\s*;')
+            holds = {m.group('v') for m in geom.finditer(region)}
+            for _ in range(2):            # one hop of plain copies, as in the pair rule
+                for m in re.finditer(r'(?m)^[ \t]*(?P<v>[A-Za-z_]\w*)\s*=\s*'
+                                     r'(?P<w>[A-Za-z_]\w*)\s*;', region):
+                    if m.group('w') in holds:
+                        holds.add(m.group('v'))
+            for v in sorted(holds):
+                if (fn, b.group(1), v) in opaque_var:
+                    continue
+                assigns = re.findall(r'(?<![\w.>])' + re.escape(v)
+                                     + r'\s*(?:[-+*/%|&^]|<<|>>)?=(?!=)', region)
+                known = len([1 for m in geom.finditer(region) if m.group('v') == v]) + len(
+                    [1 for m in re.finditer(r'(?m)^[ \t]*' + re.escape(v) + r'\s*=\s*'
+                                            r'(?P<w>[A-Za-z_]\w*)\s*;', region)
+                     if m.group('w') in holds])
+                offs = {int(m.group('off'), 0) for m in all_sites(region)
+                        if m.group('base') == v}
+                if not offs:
+                    continue
+                if len(assigns) != known:
+                    notes_early.append(
+                        '%-26s %s: %s holds the %s registered for this line-segment '
+                        'function but is assigned %d other time(s) — declined'
+                        % (fn, func, v, tag, len(assigns) - known))
+                    continue
+                paths = offsets_of(tag, inc, cache)
+                if all(o in paths for o in offs):
+                    opaque_var[(fn, b.group(1), v)] = tag
+                else:
+                    notes_early.append(
+                        '%-26s %s: %s is the model\'s geometry, which the line-segment '
+                        'registration says is an %s, but %d of its %d offsets do not land '
+                        '— declined' % (fn, func, v, tag,
+                                        sum(1 for o in offs if o not in paths), len(offs)))
+
     fixed = declined = skipped = 0
     notes_early += [m for k, m in sorted(pending.items()) if k not in opaque_var]
     notes = list(notes_early)

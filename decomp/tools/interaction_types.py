@@ -50,6 +50,25 @@ are `McdTriangleList`'s (type 6, the SECOND). Both agree with
 WHAT IT DOES NOT COVER. A function registered for two different pairs is
 dropped rather than arbitrated, and so is one whose type id names no geometry in
 this corpus. Both are reported.
+
+★ AND THE FRAMEWORK HAS A SECOND REGISTRY, FOR ONE GEOMETRY, WHICH NOTHING
+READ. A line-segment function is installed per type, not per pair:
+
+    McdSphylLineSegmentRegisterInteraction(McdFramework *frame)
+        McdFrameworkSetLineSegInteraction(frame, 5, kd_IxSphylLineSegment);
+
+and receives the model itself — `IxSphylLineSegment(McdModelID model, ...)`,
+whose `McdModelGetGeometry(model)` is therefore an `McdSphyl`. The pair table
+cannot see it (no `McdFrameworkSetInteractions`, no `p->model1`), the per-file
+registration rule gives up on an `Ix*` object, and the callee's declared return
+type is the base `_McdGeometry`, on which `+0x10/+0x14` land nowhere. So
+`IxSphylLineSegment` kept `mRadius`/`mHalfHeight` at their i386 offsets, which
+at LP64 are the low halves of `_McdGeometry`'s `prev`/`next` POINTERS: every
+zero-extent trace against a ragdoll capsule on every 64-bit build tested a
+capsule whose radius was an address. `lineseg_types()` reads that registry the
+same way `pair_types()` reads the other — the type id and each geometry's
+`GetTypeId()`, nothing inferred — and covers all eight line-segment functions,
+not one. See ../proven.txt LP64-LINESEG-REGISTRATION.
 """
 import os
 import re
@@ -67,6 +86,9 @@ SETINT = re.compile(r'McdFrameworkSetInteractions\s*\(\s*[^,]+,\s*(?P<a>\d+)\s*,
 # every function installed into the McdInteractions struct in the same function
 INSTALL = re.compile(r'interactions\s*\.\s*\w+\s*=\s*(?:\([^)]*\)\s*)?'
                      r'(?P<fn>[A-Za-z_]\w*)\s*;')
+# the one-geometry registry: `McdFrameworkSetLineSegInteraction(frame, 5, kd_IxSphylLineSegment)`
+SETLINESEG = re.compile(r'McdFrameworkSetLineSegInteraction\s*\(\s*[^,]+,\s*(?P<id>\d+)\s*,'
+                        r'\s*(?:\([^)]*\)\s*)?(?P<fn>[A-Za-z_]\w*)\s*\)')
 
 
 def region_of(text, pos):
@@ -153,6 +175,40 @@ def pair_types(texts):
     return {k: v for k, v in out.items() if v}, dropped
 
 
+def lineseg_types(texts):
+    """line-segment function -> the tag of the ONE geometry it is registered for.
+
+    The same evidence as `pair_types`, from the framework's other registry:
+    `McdFrameworkSetLineSegInteraction(frame, 5, kd_IxSphylLineSegment)` and
+    `McdSphylGetTypeId()` returning 5. Every registration is in the
+    `Mcd<Type>LineSegmentRegisterInteraction` of the object that defines the
+    function, and the function's first parameter is the MODEL whose geometry it
+    tests — `fix_literal_offsets.py` takes it from there.
+
+    ⚠ `McdAggregate.c` registers `IxAggregateLineSegment` TWICE, both for id 8,
+    from `McdAggregateRegisterInteractions` and `McdAggregateGenericRegister
+    Interactions`. Same id, same answer: not a conflict. A function registered
+    for two DIFFERENT ids is dropped and reported, as in `pair_types`."""
+    ids = type_ids(texts)
+    out, dropped = {}, {}
+    for text in texts.values():
+        for s in SETLINESEG.finditer(text):
+            fn = re.sub(r'^kd_', '', s.group('fn'))
+            tag = ids.get(int(s.group('id')))
+            if not tag:
+                dropped[fn] = 'type id %s names no geometry in this corpus' % s.group('id')
+                continue
+            prev = out.get(fn, tag)
+            if prev is None:
+                continue
+            if prev != tag:
+                dropped[fn] = 'registered for %s and %s' % (prev, tag)
+                out[fn] = None
+            elif fn not in dropped:
+                out[fn] = tag
+    return {k: v for k, v in out.items() if v}, dropped
+
+
 def load(srcdir, build=None):
     texts = {}
     for fn in sorted(os.listdir(srcdir)):
@@ -171,6 +227,8 @@ def load(srcdir, build=None):
 # for.
 SELFCHECK = [('McdSphylPlaneIntersect', ('McdSphyl', 'McdPlane')),
              ('McdBoxTriangleListIntersect', ('McdBox', 'McdTriangleList'))]
+# and for the one-geometry registry: the function the table exists for, and one from another object
+SELFCHECK_LINESEG = [('IxSphylLineSegment', 'McdSphyl'), ('IxBoxLineSegment', 'McdBox')]
 
 
 def checked(srcdir, build=None):
@@ -183,6 +241,18 @@ def checked(srcdir, build=None):
                  + '; '.join('%s read %r (want %r)' % (f, g, w) for f, w, g in bad)
                  + '\n  The registration table is not measuring anything.')
     return pairs, dropped
+
+
+def lineseg_selfcheck(lsegs):
+    """Exit unless the line-segment table reads the two facts it was written for. A regex that stops
+    matching returns an EMPTY table, every caller then declines, and that reads exactly like "nothing
+    to type" — which is how `IxSphylLineSegment` stayed at its i386 offsets in the first place."""
+    bad = [(f, w, lsegs.get(f)) for f, w in SELFCHECK_LINESEG if lsegs.get(f) != w]
+    if bad:
+        sys.exit('interaction_types: LINE-SEGMENT SELF-CHECK FAILED — '
+                 + '; '.join('%s read %r (want %r)' % (f, g, w) for f, w, g in bad)
+                 + '\n  The line-segment registration table is not measuring anything.')
+    return lsegs
 
 
 def main():
@@ -199,7 +269,14 @@ def main():
         print('  dropped (registered for more than one pair) : %d' % len(dropped))
         for f, why in sorted(dropped.items()):
             print('     %-34s %s' % (f, why))
+    lsegs, ldropped = lineseg_types(texts)
+    print('  line-segment functions typed by their registration : %d' % len(lsegs))
+    for f, t in sorted(lsegs.items()):
+        print('     %-34s model    %s' % (f, t))
+    for f, why in sorted(ldropped.items()):
+        print('     %-34s DROPPED: %s' % (f, why))
     checked(srcdir)
+    lineseg_selfcheck(lsegs)
     print('  self-check ok')
     return 0
 

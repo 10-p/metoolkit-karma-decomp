@@ -1805,25 +1805,25 @@ int kd_IxSphylLineSegment(McdModelID model,MeReal *inOrig,MeReal *inDest,
   bVar8 = false;
   fVar2 = fVar4 * pfVar10[8] + fVar6 * pfVar10[9] + fVar5 * pfVar10[10];
   bVar7 = false;
-  if (lOrig[2] < *(float *)((kd_iptr)pvVar9 + 0x14)) {
-    if (-*(float *)((kd_iptr)pvVar9 + 0x14) <= lOrig[2]) {
-      fVar1 = *(float *)((kd_iptr)pvVar9 + 0x14);
+  if (lOrig[2] < *(float *)((kd_iptr)pvVar9 + ((int)((char *)&((McdSphyl *)0)->mHalfHeight - (char *)0)))) {
+    if (-*(float *)((kd_iptr)pvVar9 + ((int)((char *)&((McdSphyl *)0)->mHalfHeight - (char *)0))) <= lOrig[2]) {
+      fVar1 = *(float *)((kd_iptr)pvVar9 + ((int)((char *)&((McdSphyl *)0)->mHalfHeight - (char *)0)));
       bVar3 = fVar1 <= fVar2;
       if (bVar3) {
-        fVar1 = *(float *)((kd_iptr)pvVar9 + 0x14);
+        fVar1 = *(float *)((kd_iptr)pvVar9 + ((int)((char *)&((McdSphyl *)0)->mHalfHeight - (char *)0)));
       }
       goto joined_r0x00014225;
     }
     bVar7 = true;
-    if ((-*(float *)((kd_iptr)pvVar9 + 0x14) <= fVar2) &&
-       (bVar8 = true, *(float *)((kd_iptr)pvVar9 + 0x14) <= fVar2)) {
+    if ((-*(float *)((kd_iptr)pvVar9 + ((int)((char *)&((McdSphyl *)0)->mHalfHeight - (char *)0))) <= fVar2) &&
+       (bVar8 = true, *(float *)((kd_iptr)pvVar9 + ((int)((char *)&((McdSphyl *)0)->mHalfHeight - (char *)0))) <= fVar2)) {
       bVar3 = true;
     }
   }
   else {
     bVar3 = true;
-    if (fVar2 < *(float *)((kd_iptr)pvVar9 + 0x14)) {
-      fVar1 = *(float *)((kd_iptr)pvVar9 + 0x14);
+    if (fVar2 < *(float *)((kd_iptr)pvVar9 + ((int)((char *)&((McdSphyl *)0)->mHalfHeight - (char *)0)))) {
+      fVar1 = *(float *)((kd_iptr)pvVar9 + ((int)((char *)&((McdSphyl *)0)->mHalfHeight - (char *)0)));
 joined_r0x00014225:
       bVar8 = true;
       if (fVar2 < -fVar1) {
@@ -1841,27 +1841,27 @@ joined_r0x00014225:
   mag = MeVector3Normalize(dir);
   uVar12 = 0;
   if (bVar3) {
-    sp[2] = *(MeReal *)((kd_iptr)pvVar9 + 0x14);
-    uVar11 = kd_LineSphere(sp,*(MeReal *)((kd_iptr)pvVar9 + 0x10),lOrig,dir,mag,&tmpInfo);
+    sp[2] = *(MeReal *)((kd_iptr)pvVar9 + ((int)((char *)&((McdSphyl *)0)->mHalfHeight - (char *)0)));
+    uVar11 = kd_LineSphere(sp,*(MeReal *)((kd_iptr)pvVar9 + ((int)((char *)&((McdSphyl *)0)->mRadius - (char *)0))),lOrig,dir,mag,&tmpInfo);
     uVar12 = 0;
     if (uVar11 != 0) {
-      uVar12 = uVar11 & (tmpInfo.position[2] < *(float *)((kd_iptr)pvVar9 + 0x14)) - 1;
+      uVar12 = uVar11 & (tmpInfo.position[2] < *(float *)((kd_iptr)pvVar9 + ((int)((char *)&((McdSphyl *)0)->mHalfHeight - (char *)0)))) - 1;
     }
   }
   if ((bVar7) && (uVar12 == 0)) {
-    sp[2] = -*(MeReal *)((kd_iptr)pvVar9 + 0x14);
-    uVar11 = kd_LineSphere(sp,*(MeReal *)((kd_iptr)pvVar9 + 0x10),lOrig,dir,mag,&tmpInfo);
+    sp[2] = -*(MeReal *)((kd_iptr)pvVar9 + ((int)((char *)&((McdSphyl *)0)->mHalfHeight - (char *)0)));
+    uVar11 = kd_LineSphere(sp,*(MeReal *)((kd_iptr)pvVar9 + ((int)((char *)&((McdSphyl *)0)->mRadius - (char *)0))),lOrig,dir,mag,&tmpInfo);
     uVar12 = 0;
     if (uVar11 != 0) {
-      uVar12 = uVar11 & (-*(float *)((kd_iptr)pvVar9 + 0x14) < tmpInfo.position[2]) - 1;
+      uVar12 = uVar11 & (-*(float *)((kd_iptr)pvVar9 + ((int)((char *)&((McdSphyl *)0)->mHalfHeight - (char *)0))) < tmpInfo.position[2]) - 1;
     }
   }
   if (bVar8) {
     if (uVar12 != 0) goto LAB_00013e7a;
                     
-    fVar2 = *(float *)((kd_iptr)pvVar9 + 0x10);
+    fVar2 = *(float *)((kd_iptr)pvVar9 + ((int)((char *)&((McdSphyl *)0)->mRadius - (char *)0)));
     if (((fVar2 * fVar2 < lOrig[0] * lOrig[0] + lOrig[1] * lOrig[1]) ||
-        (*(float *)((kd_iptr)pvVar9 + 0x14) < lOrig[2])) || (lOrig[2] < -*(float *)((kd_iptr)pvVar9 + 0x14))
+        (*(float *)((kd_iptr)pvVar9 + ((int)((char *)&((McdSphyl *)0)->mHalfHeight - (char *)0))) < lOrig[2])) || (lOrig[2] < -*(float *)((kd_iptr)pvVar9 + ((int)((char *)&((McdSphyl *)0)->mHalfHeight - (char *)0))))
        ) {
                     
       fVar5 = dir[0] * dir[0] + dir[1] * dir[1];
@@ -1873,8 +1873,8 @@ joined_r0x00014225:
                     
         fVar2 = (-fVar4 - SQRT(fVar2)) / (fVar5 + fVar5);
         fVar4 = fVar2 * dir[2] + lOrig[2];
-        if (((0.0 < fVar2) && ((fVar2 < mag && (fVar4 <= *(float *)((kd_iptr)pvVar9 + 0x14))))) &&
-           (-*(float *)((kd_iptr)pvVar9 + 0x14) <= fVar4)) {
+        if (((0.0 < fVar2) && ((fVar2 < mag && (fVar4 <= *(float *)((kd_iptr)pvVar9 + ((int)((char *)&((McdSphyl *)0)->mHalfHeight - (char *)0))))))) &&
+           (-*(float *)((kd_iptr)pvVar9 + ((int)((char *)&((McdSphyl *)0)->mHalfHeight - (char *)0))) <= fVar4)) {
           tmpInfo.position[0] = dir[0] * fVar2 + lOrig[0];
           tmpInfo.position[1] = dir[1] * fVar2 + lOrig[1];
           tmpInfo.normal[2] = 0.0;

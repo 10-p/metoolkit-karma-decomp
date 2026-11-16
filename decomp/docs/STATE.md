@@ -3,6 +3,112 @@
 Where the recovery is, what is decided, and what is a trap. **Newest first.** This is the file to
 read before resuming; `../HANDOVER.md` is the depth behind it and `../proven.txt` is the evidence.
 
+## 2026-11-16 — LP64: the framework's second registry, and the first gate here that traces
+
+**karma this commit; engine-ut2004 unchanged (it fetches decomp `main` unpinned); the web artefact is
+byte-identical.** Every zero-extent trace against a ragdoll capsule on every 64-bit build — native
+x86-64, Win64, Android arm64 and x86_64 — tested a capsule whose radius was an address. Full record:
+`../proven.txt` `LP64-LINESEG-REGISTRATION`.
+
+```
+what           IxSphylLineSegment read McdSphyl::mRadius / mHalfHeight at +0x10/+0x14, their i386
+               offsets: the low halves of _McdGeometry's prev/next POINTERS at LP64. MathEngine's
+               amd64 build reads 0x20(%r12) / 0x24(%r12).
+who calls it   USkeletalMesh::LineCheck, for each ragdoll bone. Bones are McdAggregates of the .ka
+               primitives (151 of 206 are sphyls), so IxAggregateLineSegment -> IxSphylLineSegment:
+               every shot at a corpse, every trace that crosses one.
+why it stayed  fix_literal_offsets declined it on every run, in its own words, and a decline is
+               not a failure. The callee returns the base class; an Ix* object registers no
+               geometry; the pair rule reads McdFrameworkSetInteractions only. The framework's
+               other registry, McdFrameworkSetLineSegInteraction(frame, id, fn), was read by nothing.
+the repair     interaction_types.lineseg_types() + one rule in fix_literal_offsets: all seven
+               line-segment functions typed from their registration; 19 sites rewritten, all in
+               this function. metoolkit_decomp/src: one file, 18 lines.
+i386           acceptance 145 objects, 0 compile failures, 0 unexpected byte differences (before
+               and after); the changed object also byte-identical for i386 x87 and SSE at -O0 and
+               -O2, Win32 mingw and Android armv7 clang
+wasm32         146/146 objects byte-identical before vs after, under -O2 -g0 and under the
+               shipping -O3 -g0 -pthread -DNO_SSE_SUPPORT=1
+LP64 gates     lp64_pipeline PASS before and after, identical rows; ktrace c31ed77b7323 (600 rows,
+               K=1396) before and after, byte-identical to native-sse; ons_smoke 300 s PASS both;
+               dropin_gap 0
+the new gate   lineseg_lp64.sh, 122,500 cases: before FAIL (25,515 cases off the shipped library
+               where the i386 control is not; the control names aggregate and sphyl and nothing
+               else); after PASS, bit-identical to the control in every defined field — x86-64,
+               aarch64 (-ffp-contract=off, qemu) and Win64 (mingw, wine)
+in the game    native64, DM, 12 bots, InstaGib, 240 s, each ragdoll trace re-solved exactly from the
+               bone shapes (a local diag branch, not merged). Hit/miss against the true geometry,
+               traces from the game / probe traces through every bone, two runs per arm:
+                 before          128 of 825      /  470,846 of 850,995    (0 bullets pushed a corpse)
+                 after       0 of 704, 0 of 1,039 /  0 of 487,611, 1 of 852,453       (9 and 7 pushed)
+                 shipped i386 0 of 717, 0 of 791  /  0 of 554,886, 0 of 732,780       (6 and 9 pushed)
+               Hits whose distance is still FLT_MAX are counted apart (the aggregate defect below):
+               478 and 749 game traces after the repair, 0 on MathEngine's library. The one
+               after-fix probe case (no real hit where the truth enters a bone by 0.018) is
+               unexplained; the gate's aggregate cases are bit-identical to i386.
+```
+
+★ **THE NEW GATE IS THE FIRST THING HERE THAT TRACES.** `test/standalone/lineseg_lp64.sh` drives every
+registered line-segment function the way the engine does, at LP64 against MathEngine's shipped archives
+(x87 against SSE: a stated tolerance) and against the same source at i386 (none). It is in
+`run-standalone.sh`. On the old tree the i386 control named the sphyl and the aggregate and nothing else.
+
+⚠ **THE BROKEN CAPSULE WAS NOT EVEN WRONG CONSISTENTLY.** The radius was an address: one build hit every
+`random` case, the next none. In the game 470,846 of 850,995 probe lines through the bones were wrong
+and not one bullet pushed a corpse in 240 s, against 6 and 9 on MathEngine's library. One run of
+anything that traces capsules says nothing about this class; the bit-exact control comparison does,
+every time.
+
+⚠ **"DECLINED-BUT-UNREPAIRED IN THE ENTERED SET: 0" DID NOT COVER THIS.** The census behind that line
+counted the functions two Onslaught matches entered; a DM match with hitscan bots enters
+IxSphylLineSegment hundreds of times a minute. A decline in a function the measured matches did not
+enter sat outside the set the census closed.
+
+⚠⚠ **OPEN, IN CODE THE GAME ENTERS, AT EVERY WIDTH, WASM INCLUDED — found by the new gate, not fixed
+(a fix changes the web artefact, so it needs its own E2E and the owner's word).** Pinned in
+`test/baselines.sh` so it cannot move unnoticed:
+
+```
+IxAggregateLineSegment   return (uint)(overlap->distance != 3.4028235e+38);
+                         Ghidra printed MathEngine's FLOAT constant 0x7f7fffff (fcomps .rodata.cst4)
+                         as a DOUBLE literal. FLT_MAX promoted never equals it: every aggregate that
+                         hits nothing reports a hit at distance FLT_MAX, position and normal unwritten.
+                         In the match above 478 of 704 traces near a corpse came back that way (0 on
+                         MathEngine's library). LineCheck then returns the corpse with Time =
+                         FLT_MAX/length, and ULevel::SingleLineCheck takes the lowest Time without a
+                         Time <= 1 test — so a trace with no other hit returns the corpse.
+the same spelling        IxSphylPrimitives.c:2133 (GenerateTriangleContact, `== 3.4028235e+38`, never
+(a float sentinel        true), McdContact.c:341, MdtMainLoop.c:1143, IxBoxBox.c:440, IxBoxSphere.c:254,
+compared as double)      IxCylinderLineSegment.c:84, IxSphylPrimitives.c:683, 786, 1370 — each differs
+                         from MathEngine exactly when the value IS the ±FLT_MAX sentinel.
+                         McdPlaneIntersect.c:134 `== -999.0` is exact and fine.
+kd_convexhull.c          two of 17,500 convex cases miss qhull's hull by 0.004; with MathEngine's qhull
+                         linked into the same recovered build all agree.
+```
+
+⚠ **LP64 SWEEP — the same mistake class across the tree, after the repair.** A scan of every literal
+offset left in the post-passed tree, attributed to its base (declaration, assignments, callee return
+types), with each struct field measured at -m32 and -m64: 267 are float/vector/matrix element offsets,
+the rest char/int arrays, Ghidra stack aggregates, float-only private records, or fields that do not
+move. What does move, all in code UT2004 never reaches (each offset measured with offsetof at -m32
+and -m64; reachability from the engine's call sites and the .ka files):
+
+```
+MdtBodyDestroyContacts   constraint `tag` read at 0xb0 (176; 288 at LP64) — no caller, engine or Karma
+DrawPartitionContacts    MdtContactGroup::first 356 -> 472, MdtContact::nextContact 476 -> 592 — only
+                         from MdtWorldStep's debug draw; the engine steps with its own KDynStep
+MdtWorldStepSafeTime     dict walk spelled MdtPartitionOutput::bodies (20/32) for MeDictNode::data
+                         (20/40) — a post-pass mis-typing i386 cannot see — and MdtBody::safeTime raw
+                         at 568 (696); the engine uses its own KWorldStepSafeTime
+.ka primitive record     Handle_GeometryPrimitive_1_0 stores the vertex pointer at +0x10 after the
+                         capacity at +0x14: at LP64 the pointer overwrites the capacity, AddVertex_1_0
+                         never resizes, the second vertex overruns. Only convex .ka primitives with
+                         vertex lists reach it; UT2004's .ka files hold sphyls and spheres only
+MeFAssetCreateCopy       a stack region read at the i386 stride; only via MeAssetDBCreateCopy /
+                         InsertCopy, which the engine never calls
+MdtLOD CompareImportance +0x15c, in MdtLOD's known never-entered set
+```
+
 ## 2026-09-11 (later) — the UB is LIFTED: `fix_flattened_index.py` lands; the -O0 pin still stays
 
 **karma this commit, engine-ut2004 unchanged (it fetches decomp `main` unpinned), ufront 2.58 addendum.**

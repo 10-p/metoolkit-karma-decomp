@@ -571,6 +571,114 @@ reports. **Take five, and read the site list.**
 See `../proven.txt` `LP64-ONE-REMAIN` for the full accounting, and the `LP64-*` entries for each
 class closed.
 
+### `lineseg_lp64.sh` — every line-segment intersection, at LP64, against the SHIPPED library
+
+```bash
+./test/standalone/lineseg_lp64.sh                                     # the product tree, ~1 min
+KD_LINESEG_SRC=/tmp/kd_lp64/allobj ./test/standalone/lineseg_lp64.sh  # a post-passed generator tree
+KD_LINESEG_N=10000 ./test/standalone/lineseg_lp64.sh                  # cases per category (2500)
+KD_LINESEG_OPT=-O0 ./test/standalone/lineseg_lp64.sh                  # the candidate at the native pin
+KD_KEEP=1 ./test/standalone/lineseg_lp64.sh                           # keep the three outputs
+# another 64-bit ABI: the reference and the i386 control are always built here
+KD_CC64=x86_64-w64-mingw32-gcc KD_RUN64=wine KD_LDFLAGS64=-static KD_LIBS64="-lstdc++ -lm -lws2_32" \
+  ./test/standalone/lineseg_lp64.sh                                 # WINEPREFIX/HOME of your choosing
+KD_CC64=aarch64-linux-gnu-gcc KD_RUN64="qemu-aarch64 -L /usr/aarch64-linux-gnu" ./test/standalone/lineseg_lp64.sh
+# Android: the NDK's own clang, a static bionic executable (x86_64 runs on the host, arm64 under qemu)
+KD_CC64=$NDK_BIN/aarch64-linux-android24-clang KD_LIBS64="-lc++abi -lm" KD_LDFLAGS64=-static \
+  KD_RUN64=qemu-aarch64 ./test/standalone/lineseg_lp64.sh
+KD_CFLAGS64=-ffp-contract=off ...    # extra candidate flags: no FMA contraction on arm64, so the
+                                     # i386 control comparison stays exact there too
+```
+
+`USkeletalMesh::LineCheck` answers every zero-extent trace against a ragdoll — every shot at a corpse —
+by asking each bone's geometry for its line-segment function and calling it. **Nothing else here calls
+those functions at LP64**: the scenes collide bodies and never trace them, `difftest_pair.sh` drives
+PAIR interactions at i386, `ktrace` follows bodies, and the i386 acceptance test is blind to layout by
+construction. `IxSphylLineSegment` read the capsule's radius and half-height at their i386 offsets
+`0x10/0x14` — the low halves of `_McdGeometry`'s `prev`/`next` pointers at LP64 — through all of them.
+See `../proven.txt` `LP64-LINESEG-REGISTRATION`.
+
+`lineseg_lp64.c` drives all seven registered line-segment functions (sphere, box, plane, cylinder,
+sphyl, convex mesh, aggregate) through the engine's own call — `McdGeometryGetLineSegIntersectFnPtr`,
+then `fn(model, start, end, &res)` — over 2,500 seeded cases in each of seven categories: `random`,
+`start-inside`, `end-inside`, `through`, `grazing` (1/64 and 1/1024 of the local scale either side of a
+support plane), `axis-parallel` (the model turned by a signed permutation, so the segment is EXACTLY
+axis-parallel in the local frame, zero components and all) and `degenerate` (zero length outside and
+inside, 1e-3 of the bound, and 100× the bound — a shot from across a room). Three builds:
+
+```
+ref   -m32, linked against lib.rel/linux_single_gcc3.2      MathEngine's shipped library: the reference
+c64   the product at LP64, the product's flags, -O2          the candidate
+c32   the product at -m32 -msse2 -mfpmath=sse, same flags    the pointer-width control
+```
+
+`lineseg_compare.py` gives the verdict, by three rules:
+
+- **c64 against ref, with a tolerance.** The shipped code is x87 from gcc 3.2, rounded to float only
+  where that compiler spilled; the candidate rounds every operation (SSE). Position and distance within
+  **1e-3 Karma units** (0.05 Unreal units), each normal component within **1e-2**. Measured on every
+  passing case: position ≤ 5.1e-4, distance ≤ 5.6e-4, normal ≤ 4.4e-3, except on the aggregate's
+  100-unit segments, where x87 and SSE part in the cancellation of the capsule caps' line-sphere solve
+  and reach 8.9e-4 / 1.0e-3 / 8.5e-3 — at the tolerance, which is why 73 distances there just cross it
+  (below). ⚠ That this is noise and not a defect is MEASURED: the recovered sources rebuilt for i386 with
+  x87 and the acceptance flags still differ from the shipped archives in the last bits on 9–70 % of
+  cases per geometry, so no float model makes ref bit-reproducible. Hit/miss must agree on every case
+  except a **knife edge**: a segment whose deepest penetration into the TRUE shape is within 1e-4 of
+  zero. The harness computes that depth itself, in double precision, from the geometry it created —
+  never from Karma — so a broken capsule (wrong at depths of the order of its radius) cannot hide there.
+- **A difference the i386 control reproduces is not this gate's.** It is the recovery at every width,
+  wasm32 included, and `../test/baselines.sh` `KD_BASE_LINESEG` pins it per geometry and category at
+  the default case count, in both directions. A difference the control does NOT reproduce is pointer
+  width and always fails.
+- **c64 against c32, exactly.** The same source with the same SSE arithmetic: only the pointer width is
+  left, so every field the function writes must be bit-identical, and so must which fields it writes.
+
+★ **A FIELD THE FUNCTION DOES NOT WRITE IS NOT COMPARED, AND THE HARNESS MEASURES WHICH ONES THOSE ARE.**
+Each case runs twice with the result struct and the stack beneath the call filled with two different
+patterns; a field that differs depends on memory the function never wrote. Shipped Karma's sphyl
+start-inside path copies an uninitialised local into `distance` and `normal`, and the box leaves
+`normal` alone when the start is inside — 2,176 distances and 11,154 normals in the default case set.
+A candidate that leaves undefined a field the REFERENCE writes fails: that is what reading a field at
+the wrong offset looks like.
+
+Measured on the tree before the generator learnt the line-segment registry, then after (x86-64):
+
+```
+before   25,515 cases off the shipped library where the i386 control is not — every sphyl category,
+         and the aggregates (each has a sphyl child)
+         c64 vs c32: aggregate 16,763 + sphyl 15,593 differ; box/convex/cylinder/plane/sphere 0 —
+                     the control names the two geometries and nothing else
+after    0 off the shipped library where the control is not; shared 4,667 = the baseline
+         c64 vs c32: BIT-IDENTICAL in every defined field, all 122,500 cases
+         the same on aarch64 (-ffp-contract=off, qemu-aarch64) and Win64 (mingw, wine)
+```
+
+⚠⚠ **THE SHARED DIFFERENCES ARE TWO DEFECTS THIS GATE FOUND AND DOES NOT OWN** (`baselines.sh` says
+which case is which). Most are `IxAggregateLineSegment`'s return value, `distance != 3.4028235e+38`:
+a DOUBLE literal where MathEngine compares the float against the FLOAT constant `0x7f7fffff`, so every
+aggregate that hits nothing reports a hit at distance FLT_MAX — at every width, the web included. Two
+convex cases are the hull replacement: `kd_convexhull.c` is not qhull, and with MathEngine's qhull
+archive linked into the same recovered build all 17,500 convex cases agree. See `../docs/STATE.md`.
+
+⚠ **AND THE BROKEN BUILD WAS NOT EVEN WRONG CONSISTENTLY.** The capsule's radius was an address, so one
+build hit all 2,500 `random` cases and the next none. One run of anything that traces capsules says
+nothing about this class; the control comparison does, every time.
+
+⚠ **HOW TO READ ANOTHER COMPILER.** The control is gcc; "pointer width" holds for a gcc candidate
+without FMA. Two other effects look like it and are not:
+
+- **FMA.** aarch64 gcc and the NDK contract `a*b+c` by default. On the aggregate's 100-unit segments,
+  already at the tolerance, 19 distances move across it and the shared count moves with them. Run the
+  same ABI with `KD_CFLAGS64=-ffp-contract=off`: aarch64 then PASSES, bit-identical to the control.
+- **clang and MathEngine's uninitialised reads.** The NDK's clang turns the sphyl's uninitialised
+  start-inside `distance`/`normal` into a stable register value that no stack poison can reveal, and
+  inside an aggregate that value picks the winning child. Measured on the NDK legs: EVERY difference
+  from the control is on a segment that starts inside (Android x86_64 491 of 491, arm64 without FMA
+  4,944 of 4,944, by category or by Karma's own start-inside answer); not one segment that starts
+  outside differs. The same compiler at 32 bits shows the same class — Android armv7, run as the
+  candidate (`KD_RUN64=qemu-arm`, in a pid namespace: 32-bit bionic aborts above pid 65535), has 165
+  such cases with 4-byte pointers. That is the shipped UB, not layout.
+
 ---
 
 ## Bisecting — when an object is known to be wrong

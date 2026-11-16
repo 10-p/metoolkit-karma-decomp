@@ -196,6 +196,12 @@ fi
 run hull "the convex-hull replacement against the contract the shipped one meets" -- \
     "$KD_T_STD/hull_ab.sh"
 
+# Every line-segment function the framework registers — every shot at a ragdoll — at LP64 against the
+# SHIPPED library, and bit-identical to the same source at i386. Nothing else in this tier traces at all,
+# which is how IxSphylLineSegment kept its i386 offsets past every gate (proven.txt LP64-LINESEG-REGISTRATION).
+run lineseg-lp64 "every line-segment intersection at LP64, against the shipped library" -- \
+    "$KD_T_STD/lineseg_lp64.sh"
+
 # --- summary ----------------------------------------------------------------
 printf '\n\033[1m== run-standalone ==\033[0m\n'
 printf '  %d passed, %d failed, %d skipped\n' "$pass" "$fail" "$skip"

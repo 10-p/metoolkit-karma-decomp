@@ -61,3 +61,31 @@ scene_ragdoll           144  1  140  4  MdtPartition
 # ⚠ scene_chain and scene_boxes_on_plane link MdtPartition FINE and only the
 # ragdoll does not, which is worth knowing before chasing it: the failure is
 # scene-dependent, not a property of the object alone.
+
+# --- lineseg_lp64.sh, the default case set ----------------------------------
+# "<geometry> <category> <cases>": differences from the SHIPPED library that the
+# i386 SSE control reproduces case for case — the recovered source at EVERY
+# pointer width, wasm32 included, so not this gate's question. Anything not
+# listed must be 0. Asserted only at the case count on the first line.
+#
+#   aggregate random / axis-parallel / degenerate: 2419 / 1219 / 953 of them are
+#     hit/miss, and every one is IxAggregateLineSegment's return value:
+#         return (uint)(overlap->distance != 3.4028235e+38);
+#     a DOUBLE literal. MathEngine compares the float against the FLOAT constant
+#     0x7f7fffff (`fcomps .rodata.cst4`); promoted to double, FLT_MAX is
+#     3.4028234663852886e38 and never equals it, so the recovery reports a hit on
+#     every miss, with the distance still FLT_MAX and no position or normal.
+#   aggregate degenerate 73 + end-inside 1: distances 1e-3 apart at 14-100 Karma
+#     units of range (x87 against SSE in the cap's line-sphere cancellation; one
+#     grazed child resolved differently, 0.31), and one normal where two children
+#     are hit at the same point.
+#   convex random 2: the hull is kd_convexhull.c, not qhull; with MathEngine's
+#     qhull archive linked into the same recovered build both cases agree.
+KD_BASE_LINESEG="
+cases-per-category 2500
+aggregate random         2419
+aggregate end-inside        1
+aggregate axis-parallel  1219
+aggregate degenerate     1026
+convex    random            2
+"

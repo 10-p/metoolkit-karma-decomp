@@ -56,7 +56,7 @@ fi
 # --- preconditions ----------------------------------------------------------
 # The recovery is an INPUT to most of this tier, and regenerating it is 95
 # seconds we should not spend implicitly — say what to run instead of failing
-# thirteen gates with the same cause.
+# fourteen gates with the same cause.
 if [ ! -d "$SRC" ] || [ ! -d "$KD_BUILD" ]; then
     cat <<EOT
 run-standalone: no recovery to gate.
@@ -201,6 +201,12 @@ run hull "the convex-hull replacement against the contract the shipped one meets
 # which is how IxSphylLineSegment kept its i386 offsets past every gate (proven.txt LP64-LINESEG-REGISTRATION).
 run lineseg-lp64 "every line-segment intersection at LP64, against the shipped library" -- \
     "$KD_T_STD/lineseg_lp64.sh"
+
+# The comparisons against a float sentinel (MEINFINITY, McdSpace's 1e25f), driven with the operand AT the
+# sentinel through each entry point whose result rests on one. Ghidra prints those constants as doubles,
+# and read as doubles they report a hit on every aggregate or McdSpace miss.
+run float-sentinel "every float-sentinel comparison at the sentinel, against the shipped library" -- \
+    "$KD_T_STD/float_sentinel.sh"
 
 # --- summary ----------------------------------------------------------------
 printf '\n\033[1m== run-standalone ==\033[0m\n'

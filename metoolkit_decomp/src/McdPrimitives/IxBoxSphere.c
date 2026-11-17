@@ -251,7 +251,7 @@ LAB_0001053a:
       MVar8 = -1.0;
       fVar1 = ABS(inROBB->v[0] - inPos->v[0]);
       MVar7 = 1.0;
-      if (fVar1 < 3.4028235e+38) {
+      if (fVar1 < 3.4028235e+38f) {
         best = 0;
         MVar6 = MVar8;
         fVar2 = fVar1;

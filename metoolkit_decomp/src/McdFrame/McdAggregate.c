@@ -885,7 +885,7 @@ int kd_IxAggregateLineSegment
       puVar12 = (undefined4 *)((_McdGeometryInstance *)puVar12)->next;
     } while (i < iVar10);
   }
-  return (uint)(overlap->distance != 3.4028235e+38);
+  return (uint)(overlap->distance != 3.4028235e+38f);
 }
 
 /* ---- McdAggregateGenericRegisterInteractions (exported as kd_McdAggregateGenericRegisterInteractions, asm label "McdAggregateGenericRegisterInteractions") ---- */

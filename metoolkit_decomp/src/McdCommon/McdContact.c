@@ -338,7 +338,7 @@ int kd_McdContactSimplify(MeReal *normal,McdContact *inContacts,int inNumContact
         if (uVar20 < 2) {
           fVar21 = inContacts->separation;
           pMVar26 = inContacts;
-          if (3.4028235e+38 <= fVar21) {
+          if (3.4028235e+38f <= fVar21) {
             fVar21 = 3.4028235e+38;
             pMVar26 = pMVar23;
           }

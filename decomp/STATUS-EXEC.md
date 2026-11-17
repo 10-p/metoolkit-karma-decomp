@@ -64,11 +64,13 @@ half-height at their 32-bit offsets, so on native x86-64, Win64 and Android ever
 ragdoll tested a capsule whose radius was an address. The generator now reads the registry that types
 it; `test/standalone/lineseg_lp64.sh` is the gate. 32-bit and web: unchanged, byte for byte.
 
-**Open, in code the game enters, at every width including the web — not repaired here, because the
-repair changes the web artefact.** `IxAggregateLineSegment` compares a float against a double literal
-of FLT_MAX and so reports a hit for every ragdoll bone a trace misses (distance FLT_MAX, no position);
-nine more sites compare a float sentinel the same way. Details and the site list:
-`docs/STATE.md`, 2026-11-16. MathEngine's own library does not do this.
+**Repaired 2026-11-17, at every width including the web: a trace that misses a ragdoll bone is a
+miss again.** `IxAggregateLineSegment` compared a float against a double literal of FLT_MAX and so
+reported a hit for every bone a trace missed (distance FLT_MAX, no position); McdSpace's line-segment
+queries did the same with their `1e25` sentinel, and ten more comparisons read a float sentinel the
+same way. The generator now spells each as the float the shipped instruction reads;
+`test/standalone/float_sentinel.sh` drives them at the sentinel against MathEngine's library. The web
+artefact changes in nine objects, in those comparisons only. Details: `docs/STATE.md`, 2026-11-17.
 
 ## What is still open — and all of it is BEYOND UT2004
 
@@ -104,6 +106,11 @@ proven inert rather than modelled.
 **6. Two truncation-census rows are closed as "near-miss"** (`MdtPartition` 143, `keaDebug` 665/684)
 because a whole-function rule cannot separate two live ranges of one Ghidra local. The live-range
 guard added on 2026-09-02 is the tool to revisit them with. Both are in code the game does not enter.
+
+**7. McdSpace's line-segment queries fault at 64-bit.** They walk the space's `CxSmallSortRep` list
+with the 32-bit element size (`0x98`, four sites in `McdSpace.c`). UT2004 never enters McdSpace (the
+execution census: 0 of its 34 functions over an Onslaught and a DeathMatch match); the engine has its
+own broadphase. `test/standalone/float_sentinel.sh` reports its McdSpace cases at 64-bit as not run.
 
 ---
 

@@ -680,7 +680,7 @@ int kd_McdSphylBoxIntersect(McdModelPair *p,McdIntersectResult *result)
     uVar2 = ((int)uVar11 >> 2 & 1U) + 4;
     fVar3 = si[uVar2];
     fVar4 = 3.4028235e+38;
-    if ((fVar3 <= 3.4028235e+38) && (s <= fVar3)) {
+    if ((fVar3 <= 3.4028235e+38f) && (s <= fVar3)) {
       uVar13 = uVar2;
       fVar4 = fVar3;
     }
@@ -783,7 +783,7 @@ LAB_00011567:
           fVar3 = *(float *)((kd_iptr)pvVar9 + ((int)((char *)&((McdSphyl *)0)->mHalfHeight - (char *)0)));
           fVar4 = -3.4028235e+38;
           fVar6 = ABS(relPos[0]) - (ABS(relAxis[0]) * fVar3 + *(float *)((kd_iptr)pvVar10 + ((int)((char *)&((McdBox *)0)->mR[0] - (char *)0))));
-          if ((-3.4028235e+38 < fVar6) && (fVar4 = fVar6, relPos[0] <= 0.0)) {
+          if ((-3.4028235e+38f < fVar6) && (fVar4 = fVar6, relPos[0] <= 0.0)) {
             sepSign = -1.0;
           }
           fVar6 = ABS(relPos[1]) - (ABS(relAxis[1]) * fVar3 + *(float *)((kd_iptr)pvVar10 + ((int)((char *)&((McdBox *)0)->mR[1] - (char *)0))));
@@ -1367,7 +1367,7 @@ LAB_00012a54:
               fVar22 = (roots[0] * fVar5 + fVar6) - cylZ;
               fVar3 = SQRT(fVar3 * fVar3 + fVar20 * fVar20) - *(float *)((kd_iptr)pvVar15 + ((int)((char *)&((McdCylinder *)0)->mR - (char *)0)));
               fVar3 = fVar3 * fVar3 + fVar22 * fVar22;
-              if (fVar3 < 3.4028235e+38) {
+              if (fVar3 < 3.4028235e+38f) {
                 rootN = 0;
                 rootDist2 = fVar3;
               }
@@ -2130,7 +2130,7 @@ static void GenerateTriangleContact
       if (0.0 <= fVar4) {
         if (bVar8) goto LAB_00014d50;
 LAB_00014d6b:
-        if (fVar27 == 3.4028235e+38) goto LAB_00014d86;
+        if (fVar27 == 3.4028235e+38f) goto LAB_00014d86;
         if ((((bVar8) && (ds0 == 0.0)) && (bVar28)) && (ds0 = s0i - s0, 6.250001e-08 < ds0 * ds0)) {
           triDim = 2;
           iVar32 = -1;

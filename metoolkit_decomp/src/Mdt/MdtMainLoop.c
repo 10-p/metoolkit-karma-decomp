@@ -1140,7 +1140,7 @@ MeReal kd_MdtPartitionGetSafeTime(MdtPartitionOutput *po,int i)
     if (1 < uVar5) {
       if (2 < uVar5) {
         fVar2 = ppMVar3[iVar4]->safeTime;
-        if (3.4028235e+38 <= fVar2) {
+        if (3.4028235e+38f <= fVar2) {
           fVar2 = 3.4028235e+38;
         }
         iVar4 = iVar4 + 1;

@@ -467,7 +467,7 @@ int kd_McdSpaceGetLineSegFirstIntersection
       local_48 = local_48 + 0x98;
     } while ((iVar8 < iVar1) && (iValidModelCount < iVar1 - iVar2));
   }
-  return (uint)(outResult->distance < 1e+25);
+  return (uint)(outResult->distance < 1e+25f);
 }
 
 /* ---- McdSpaceGetLineSegFirstEnabledIntersection (exported as kd_McdSpaceGetLineSegFirstEnabledIntersection, asm label "McdSpaceGetLineSegFirstEnabledIntersection") ---- */
@@ -526,7 +526,7 @@ int kd_McdSpaceGetLineSegFirstEnabledIntersection
       local_48 = local_48 + 0x98;
     } while ((iVar8 < iVar1) && (iValidModelCount < iVar1 - iVar2));
   }
-  return (uint)(outResult->distance < 1e+25);
+  return (uint)(outResult->distance < 1e+25f);
 }
 
 /* ---- McdSpaceRemoveModel (exported as kd_McdSpaceRemoveModel, asm label "McdSpaceRemoveModel") ---- */

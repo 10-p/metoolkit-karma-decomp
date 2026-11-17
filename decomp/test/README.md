@@ -650,17 +650,23 @@ before   25,515 cases off the shipped library where the i386 control is not — 
          and the aggregates (each has a sphyl child)
          c64 vs c32: aggregate 16,763 + sphyl 15,593 differ; box/convex/cylinder/plane/sphere 0 —
                      the control names the two geometries and nothing else
-after    0 off the shipped library where the control is not; shared 4,667 = the baseline
+after    0 off the shipped library where the control is not; shared 4,667 = the baseline then
          c64 vs c32: BIT-IDENTICAL in every defined field, all 122,500 cases
          the same on aarch64 (-ffp-contract=off, qemu-aarch64) and Win64 (mingw, wine)
+then the float-sentinel repair (the aggregate's return value):
+         shared 4,667 -> 77 (aggregate random 2,419 -> 0, axis-parallel 1,219 -> 0, degenerate
+         1,026 -> 74); everything else unchanged, c64 still bit-identical to c32
 ```
 
-⚠⚠ **THE SHARED DIFFERENCES ARE TWO DEFECTS THIS GATE FOUND AND DOES NOT OWN** (`baselines.sh` says
-which case is which). Most are `IxAggregateLineSegment`'s return value, `distance != 3.4028235e+38`:
-a DOUBLE literal where MathEngine compares the float against the FLOAT constant `0x7f7fffff`, so every
-aggregate that hits nothing reports a hit at distance FLT_MAX — at every width, the web included. Two
-convex cases are the hull replacement: `kd_convexhull.c` is not qhull, and with MathEngine's qhull
-archive linked into the same recovered build all 17,500 convex cases agree. See `../docs/STATE.md`.
+⚠⚠ **THE SHARED DIFFERENCES ARE 77, AND `baselines.sh` SAYS WHICH CASE IS WHICH.** 74 aggregate cases
+are x87 against SSE on the 100-unit shots plus one (`degenerate #2291`) where MathEngine's aggregate
+drops a hit its own sphyl child reports; two convex cases are the hull replacement (`kd_convexhull.c`
+is not qhull; with MathEngine's qhull archive linked into the same recovered build all 17,500 convex
+cases agree). Until the float-sentinel repair there were 4,665: `IxAggregateLineSegment` ended
+`distance != 3.4028235e+38`, a DOUBLE literal where MathEngine compares the float against the FLOAT
+constant `0x7f7fffff`, and reported a hit at distance FLT_MAX for every aggregate that hits nothing —
+at every width, the web included. The baseline now holds zero aggregate hit/miss cases outside those,
+so that defect coming back fails this gate. See `../docs/STATE.md`.
 
 ⚠ **AND THE BROKEN BUILD WAS NOT EVEN WRONG CONSISTENTLY.** The capsule's radius was an address, so one
 build hit all 2,500 `random` cases and the next none. One run of anything that traces capsules says
@@ -680,6 +686,54 @@ without FMA. Two other effects look like it and are not:
   outside differs. The same compiler at 32 bits shows the same class — Android armv7, run as the
   candidate (`KD_RUN64=qemu-arm`, in a pid namespace: 32-bit bionic aborts above pid 65535), has 165
   such cases with 4-byte pointers. That is the shipped UB, not layout.
+
+### `float_sentinel.sh` — the float-sentinel comparisons, driven at the sentinel, against the SHIPPED library
+
+```bash
+./test/standalone/float_sentinel.sh                                       # the product tree, ~1 min
+KD_SENTINEL_SRC=/tmp/kd_lp64/allobj ./test/standalone/float_sentinel.sh   # a post-passed generator tree
+KD_MD=<another checkout>/metoolkit_decomp ./test/standalone/float_sentinel.sh   # another product tree
+KD_KEEP=1 ./test/standalone/float_sentinel.sh                             # keep the binaries and outputs
+# another 64-bit ABI for the candidate, exactly as lineseg_lp64.sh takes it
+KD_CC64=x86_64-w64-mingw32-gcc KD_RUN64=wine KD_LDFLAGS64=-static KD_LIBS64="-lstdc++ -lm -lws2_32" \
+  ./test/standalone/float_sentinel.sh
+```
+
+Ghidra prints a float constant as an unsuffixed decimal, and C reads that as a DOUBLE: MEINFINITY
+comes out as `3.4028235e+38`, promoted FLT_MAX never equals it, and a test for "still the sentinel"
+is never true. `ghidra_clean.type_float_sentinel_comparisons` spells those comparisons as floats
+(`../tools/README.md`); this gate drives each entry point whose RESULT rests on one, with the operand
+at exactly the sentinel, and compares what the caller sees with MathEngine's archives. Same three
+builds and the same two-pattern poisoning as `lineseg_lp64.sh` (`ref` shipped -m32, `c32` product
+-m32 SSE, `c64` product LP64); `float_sentinel_compare.py` wants `ret` exact, every value the
+reference defines within 1e-3, and c64 bit-identical to c32.
+
+```
+case                      the comparison                         what the defect looked like
+aggregate-miss/-hit       IxAggregateLineSegment  != MEINFINITY   a miss returned 1 (a hit at FLT_MAX)
+space-first-*             McdSpace  distance < 1e25f              a miss returned 1
+space-enabled-*           the same, with an enable callback       a miss, or a rejected hit, returned 1
+simplify-all-infinite     McdContactSimplify  MEINFINITY <= sep   3 contacts at FLT_MAX returned 2, not 0
+safetime-*                MdtPartitionGetSafeTime                 none: both readings return FLT_MAX
+boxbox-giant              McdVanillaOverlapOBBs  <= -MEINFINITY   the contact normal's axis
+sphylbox-giant            McdSphylBoxIntersect  -MEINFINITY <     the contact normal's sign
+```
+
+The two `-giant` cases give a box half-extents of FLT_MAX through `McdBoxGetRadii` — the shipped
+library's own pointer to them, since `McdBoxCreate` halves a full length and cannot reach FLT_MAX.
+Absurd geometry, chosen because an axis separation of exactly -FLT_MAX is the only input that reaches
+those comparisons' sentinel. `safetime-*` is the control: a comparison that differs at the sentinel
+whose function returns the same value either way, so it passes on both trees.
+
+⚠ **THE `space-*` CASES DO NOT RUN AT LP64**, and the comparator prints `NOT RUN` rather than a pass:
+McdSpace's line-segment queries step the space's `CxSmallSortRep` list at its i386 size (`0x98`) and
+fault at 64-bit — a pointer-width defect of their own, in an object UT2004 never enters
+(`../docs/STATE.md`).
+
+Measured on the tree before the generator typed the sentinels, then after: before **FAIL**, 11
+differences — aggregate-miss (c32, c64), the four McdSpace misses (c32), simplify-all-infinite (c32,
+c64), boxbox-giant and sphylbox-giant (c32, c64); after **PASS**, 0 differences, the five McdSpace
+cases at LP64 reported as not run.
 
 ---
 

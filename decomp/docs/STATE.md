@@ -3,6 +3,124 @@
 Where the recovery is, what is decided, and what is a trap. **Newest first.** This is the file to
 read before resuming; `../HANDOVER.md` is the depth behind it and `../proven.txt` is the evidence.
 
+## 2026-11-17 — float sentinels: the generator takes the constant's width from the shipped instruction
+
+**karma this commit; engine-ut2004 unchanged (it fetches decomp `main` unpinned); the web artefact
+CHANGES — nine wasm32 objects, in the rewritten comparisons only.** A trace that misses a ragdoll bone
+is a miss again, at every width. Full record: `../proven.txt` `FLOAT-SENTINEL-COMPARISONS`.
+
+```
+the cause      Ghidra prints a floating constant as the shortest decimal that reproduces it at its own
+               size and never with a suffix: MEINFINITY (0x7f7fffff) is `3.4028235e+38`. ghidra_clean
+               copied the text, so C read every such constant as a DOUBLE. Stores are unaffected (the
+               conversion rounds back); a comparison promotes the float and the two readings disagree at
+               exactly one operand value — the constant. A sentinel is that value by construction.
+the defect     IxAggregateLineSegment `return distance != 3.4028235e+38` was always 1: every bone a trace
+               missed came back as a hit at FLT_MAX with no position or normal. McdSpace's two
+               line-segment queries did the same with `1e+25` (1e25f is 9.9999996e24 < 1e25).
+the repair     ghidra_clean.type_float_sentinel_comparisons: a comparison against a literal the float does
+               not reproduce, in a function that also STORES that constant, is spelled as the float the
+               shipped function holds — its bits read at 4 bytes from .rodata* or moved as a 32-bit
+               immediate, the value never read at 8. Both ways or neither raises.
+the diff       metoolkit_decomp/src: 9 files, 13 lines, one `f` each:
+                 McdAggregate 888 `!=`   McdSpace 470, 529 `< 1e+25`   McdContact 341   MdtMainLoop 1143
+                 IxBoxBox 440   IxBoxSphere 254   IxCylinderLineSegment 84   McdGjk 839 `<= 1e-06`
+                 IxSphylPrimitives 683, 786, 1370, 2133
+               (the 2026-11-16 ten, McdSpace's two, and McdGjk's maxd seed). MeFGeometryFromMesh, which
+               does not compile, carries a 14th in the raw recovery.
+left as is     212 threshold comparisons (a constant compared, never stored) and every arithmetic use of
+               an inexact literal: the shipped code reads most of those constants at 4 bytes too, but the
+               double reading only moves a boundary off one float value or a result by its last bit, and
+               a change there changes every web object that has one. Not this repair's question.
+```
+
+★ **WHY THE ACCEPTANCE TEST NEVER SAW IT.** `lp64_pipeline.sh`'s i386 acceptance compares the post-passed
+tree with the RAW recovery, both compiled by the same gcc from the same literal — it certifies that the
+post-passes are i386 no-ops and has never compared anything with MathEngine's bytes. No recovered object
+is byte-identical to its shipped counterpart, before or after (gcc 15 -O2 against gcc 3.2); what this
+changes is the compare's operand, `fldl .rodata.cst8` -> `flds .rodata.cst4`, which is MathEngine's.
+
+```
+per site       measured over all 2^32 float operands, the old and new spellings differ at exactly the
+               sentinel at 11 sites; at IxSphylPrimitives 683 (`<= FLT_MAX`) and McdGjk 839 (`<= 1e-06`,
+               whose float lies just below 1e-06, so `<=` agrees) at no float operand at all.
+the new gate   test/standalone/float_sentinel.sh — each entry point whose result rests on one of them,
+               with the operand AT the sentinel, against the shipped archives (ref -m32, c32, c64):
+                 before FAIL, 11 differences: aggregate-miss ret 1 for 0 (c32, c64); McdSpace first/
+                        enabled miss and a rejected hit ret 1 for 0 (c32); McdContactSimplify, three
+                        contacts at FLT_MAX, ret 2 for 0 (c32, c64); McdVanillaOverlapOBBs and
+                        McdSphylBoxIntersect with a box of half-extent FLT_MAX, the normal's axis / sign
+                 after  PASS, 0 differences — x86-64, Win64 (mingw, wine), aarch64 (qemu) and Android
+                        arm64 (NDK clang, static bionic, qemu) alike
+               MdtPartitionGetSafeTime is the control: it returns FLT_MAX either way, both trees pass.
+no case        IxBoxSphere 254 — an output differs only when all six face distances are FLT_MAX, where
+                 MathEngine indexes with an uninitialised local (measured: the shipped library faults)
+               IxCylinderLineSegment 84 — the branch rewrites s with the FLT_MAX it already holds, and the
+                 normal it sets is read only when s < 1, after something else has set it
+               IxSphylPrimitives 1370 — needs a squared root distance of exactly FLT_MAX
+               IxSphylPrimitives 2133 — needs an edge 1.8e19 units away; x87 and SSE part on the overflow
+                 before the comparison
+               683, 1143 and McdGjk 839 — no output can differ (above)
+what the game  KD_CENSUS, native64, ONS-Torlan (8 bots) + DM-Rankin (12 bots, InstaGib), 240 s each:
+enters           IxAggregateLineSegment 1,011 + 6,371 · McdContactSimplify 6.3 M · McdVanillaOverlapOBBs
+                 12,071 (ONS) · GenerateTriangleContact 13.8 M · McdGjkMain 50 k entries. Never entered:
+                 McdSpace (all 34 functions), MdtPartitionGetSafeTime, McdVanillaOverlapOBBSphere,
+                 IxCylinderLineSegment, McdSphylBoxIntersect, McdSphylCylinderIntersect. Of the entered
+                 five only the aggregate's sentinel is reachable with UT2004's geometry.
+i386           acceptance 145 objects, 0 compile failures, 0 unexpected byte differences before and
+               after (flattened-index 3 changed / 2 unchanged, as before). Against the old recovery the
+               nine objects change at -O2 and 136 do not; in each the compare's constant goes from
+               `fldl .rodata.cst8` to `flds .rodata.cst4`, and the folded `mov $0x1,%eax` of the
+               aggregate's and McdSpace's miss paths becomes `xor %eax,%eax`.
+wasm32         9 of 146 objects change under -O2 -g0 and under the shipping -O3 -g0 -pthread
+               -DNO_SSE_SUPPORT=1 (a control compile of one tree against itself: 146/146 identical).
+               In each, the change is the comparison (f64.promote_f32 + f64.const + f64.cmp -> f32.const
+               + f32.cmp), a folded constant it no longer allows (`i32.const 1` on the aggregate's and
+               McdSpace's miss paths), and the locals and blocks around them; every float arithmetic,
+               load, store and call count is unchanged except one more f32.load (the aggregate reads the
+               distance it used to fold away).
+lineseg_lp64   shared with the i386 control 4,667 -> 77; baselines.sh tightened to 77 (main FAILS it,
+               the repair PASSES). One degenerate case (#2291, a 68-unit shot) stays shared: MathEngine's
+               aggregate misses a hit its own sphyl child reports when asked alone; the candidate's answer
+               is the same before and after. NDK arm64 keeps its documented clang class (4,944 start-
+               inside cases, 124 off the library) before and after alike.
+lp64_pipeline  PASS before and after; the post-pass logs, the acceptance line and every LP64 row identical
+               but one: scene_ragdoll, no sanitizer, against the PLAIN i386 x87 build — first difference
+               at step 1, 8.3e-05 before and 1.3e-04 after, each the same in 3 of 3 runs.
+               Measured, not argued: the plain x87 LP64 trace and both -ffloat-store traces (i386 and LP64)
+               are byte-identical before and after; only the plain i386 x87 build moves, and swapping the
+               objects one at a time names IxSphylPrimitives alone. The arithmetic is unchanged; the
+               rewritten compares change where gcc's i386 x87 code spills an 80-bit intermediate in that
+               object, which is the excess-precision noise this row exists to show (lp64_run.sh header).
+standalone     run-standalone 13 passed before (main's own gates), 14 passed after, 0 skipped either
+               side (wasm-check and ptrwidth ran); substitute and difftest at the recorded counts on both
+ut2004 tier    ktrace c31ed77b7323 (600 rows, K=1396) before and after: self-consistent and byte-identical
+               to the native-sse control. ons_smoke 300 s PASS both. dropin_gap 0 both.
+in the game    engine-ut2004 (main + the -RAGTRACEDIAG diagnostic, a local branch), DM-Rankin, 12 bots,
+               InstaGib, spectating, -NULLRENDERER, 240 s, two runs per arm; every ragdoll trace re-solved
+               exactly from the bone shapes. "false" = a hit whose distance is still FLT_MAX:
+                                   game traces: false / real hits      probe traces: false
+                 native64  before  186 of 308, 203 of 339               29,632 / 27,211
+                           after     0 of 330,   0 of 316               0 / 0
+                 native-sse before 212 of 335, 351 of 504               17,912 / 18,813
+                           after     0 of 385,   0 of 420               0 / 0
+                 legacy-karma        0 of 479,   0 of 411               0 / 0    (MathEngine's library)
+                 web (wasm-perf, headless Chromium, GPU via ANGLE/Vulkan, the same match, 420 s):
+                           before  326 of 496, 284 of 479                7,471 / 6,340
+                           after     0 of 682,   0 of 463                0 / 0
+               Real hits are the same before and after: in every arm, MathEngine's included, 0-3 traces a
+               run disagree with the true geometry on segments 0.0003-0.07 from the surface (legacy-karma's
+               probe the farthest), and the hit distances match the truth as before.
+the recursion  the Zoom InstaGib repro (DM-1on1-Roughinery, 25 bots), native64 with both Karma fixes, own
+               Xvfb, 200 s each: 0 of 10 runs reached "Infinite script recursion"; every run started the
+               match and six played it to the frag limit. Informative only: the trigger is Epic's script.
+```
+
+⚠ **FOUND ON THE WAY, NOT REPAIRED: McdSpace's line-segment queries FAULT AT LP64.** They walk the space's
+`CxSmallSortRep` list with the i386 element size (`local_48 += 0x98`, and `it->it * 0x98` in the iterator)
+— four sites in `McdSpace.c`. `float_sentinel.sh` reports its McdSpace cases at LP64 as NOT RUN rather
+than passing them. UT2004 never enters McdSpace (above); `../STATUS-EXEC.md` item 7.
+
 ## 2026-11-16 — LP64: the framework's second registry, and the first gate here that traces
 
 **karma this commit; engine-ut2004 unchanged (it fetches decomp `main` unpinned); the web artefact is

@@ -20,8 +20,9 @@ i386 acceptance 145/145, 0 byte differences   ·   run-standalone 12/12
 LP64 trajectory byte-identical to the 32-bit control (c31ed77b7323, K=1396), self-consistent
 execution census: 660 functions entered, 111 of 147 objects — open defects in that set: ZERO
 
-2026-11-16: 64-bit ragdoll traces repaired (IxSphylLineSegment, LP64-LINESEG-REGISTRATION) ·
-run-standalone 13/13 with lineseg-lp64 · an all-width aggregate defect found and left open (STATE.md)
+2026-11-16: 64-bit ragdoll traces repaired (IxSphylLineSegment, LP64-LINESEG-REGISTRATION)
+2026-11-17: float sentinels compared as floats at every width, web included (FLOAT-SENTINEL-COMPARISONS):
+            a missed ragdoll bone is a miss again · run-standalone 14 gates with float-sentinel
 ```
 
 ⚠ **"COMPLETE FOR UT2004" IS A PRECISE CLAIM, NOT A VAGUE ONE, AND THE DIFFERENCE MATTERS.** This
@@ -111,8 +112,14 @@ These have each cost this project real time. They are not hypothetical.
   it (`lineseg_lp64.sh`; `proven.txt` `LP64-LINESEG-REGISTRATION`). Read the decline list in
   `KD_PASSLOG` when a pass's count moves.
 - **Ghidra prints a FLOAT constant as a DOUBLE literal.** `float_x != 3.4028235e+38` promotes to double
-  and FLT_MAX never equals it, so `IxAggregateLineSegment` reports a hit on every miss — at every width,
-  web included. Open, not repaired: `docs/STATE.md` 2026-11-16 lists all ten sites.
+  and FLT_MAX never equals it, so `IxAggregateLineSegment` reported a hit on every miss — at every width,
+  web included — and McdSpace's line-segment queries did the same with `1e+25`. `ghidra_clean`'s
+  `type_float_sentinel_comparisons` now spells a comparison against a constant the same function STORES
+  as the float the shipped instruction reads (13 sites); `test/standalone/float_sentinel.sh` drives them
+  at the sentinel. ⚠ It deliberately leaves the THRESHOLD comparisons (a constant compared, never stored:
+  212) and every arithmetic use reading as doubles: there the double moves a comparison's boundary off
+  one float value, or a product's last bit, and a change would touch the web artefact of every object
+  that has one. A stored sentinel the shipped code holds both ways stops the regeneration; read it.
 - **Per-object gates are blind to integration defects.** `difftest_pair.sh` substitutes the
   interaction object and links the GEOMETRY objects from the shipped library, so a broken
   `McdSphereGetRadius` is never in the loop. "145 objects pass" is a statement about 145

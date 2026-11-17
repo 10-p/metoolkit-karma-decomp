@@ -836,7 +836,7 @@ LAB_000113eb:
       v_bits = 0;
       do {
         uVar8 = McdGjkBinarySubset[s->bits][iVar5];
-        if (((iVar5 != 0) || (maxd <= 1e-06)) || ((uVar8 | s->next_bit) != 0xf)) {
+        if (((iVar5 != 0) || (maxd <= 1e-06f)) || ((uVar8 | s->next_bit) != 0xf)) {
           iVar6 = kd_McdGjkComputeNextVector(u,uVar8,0,s);
           if ((iVar6 != 0) && ((MVar10 = MeVector3Normalize(u), v_bits == 0 || (MVar10 <= v_len))))
           {

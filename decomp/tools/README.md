@@ -148,6 +148,27 @@ against real diagnostics. Use this to debug a rule, not to produce a build input
 > **Read the rule, then RUN it.** Six rules have looked correct and silently declined; reading alone
 > has a 0/6 record here. Call the rule directly on the offending line.
 
+**Float constants come out of Ghidra as doubles, and one pre-pass types the ones that matter.**
+Ghidra prints a floating constant as the shortest decimal that reproduces it at its own size and never
+with a suffix — MEINFINITY, the float `0x7f7fffff`, is `3.4028235e+38` — and this tool copies that
+text through, so C reads every such constant as the nearest DOUBLE to the decimal. Stores and
+arguments are unaffected (the conversion rounds back to the same float). A comparison against an
+inexact one is not: the float operand is promoted, and the two readings disagree at exactly one
+operand value, the float constant. `type_float_sentinel_comparisons` rewrites the comparisons where
+the operand can BE that value — the function also stores the constant, so it is a sentinel — and takes
+the constant's width from the shipped function: the float's bit pattern read at four bytes (an x87
+`s`-suffixed operand on `.rodata*`, or a 32-bit immediate) and the value never read at eight. A
+sentinel the shipped code holds only as a double is left as written; one it holds both ways or not at
+all stops the run. It prints, per object, how many it spelled as float, how many it left as doubles,
+and how many threshold comparisons (constant compared, never stored) it left alone.
+
+```
+python3 -c 'import sys; sys.path.insert(0, "tools"); import ghidra_clean as g; \
+  t = open("../metoolkit_decomp/src/McdFrame/McdAggregate.c").read(); \
+  print(g.type_float_sentinel_comparisons("../lab/allobj/McdAggregate.o", t)[1:])'
+#   -> (0, 0, 0) on the repaired tree: nothing left to rewrite
+```
+
 ### `gen_prelude.py` — the per-object prelude, read out of the binary
 
 Imports (with demangled signatures and `KD_MANGLED` asm labels), file-scope statics with values read

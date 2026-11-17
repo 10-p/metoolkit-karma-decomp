@@ -81,7 +81,7 @@ int kd_IxCylinderLineSegment
                     
       if (1e-06 < ABS(fVar10)) {
         fVar4 = (fVar15 - fVar9) / fVar10;
-        if (((0.0 <= fVar4) && (fVar4 < 3.4028235e+38)) &&
+        if (((0.0 <= fVar4) && (fVar4 < 3.4028235e+38f)) &&
            (fVar3 = fVar4 * fVar1 + fVar2, fVar5 = fVar4 * fVar7 + fVar8,
            fVar5 * fVar5 + fVar3 * fVar3 <= fVar14)) {
           normal.v[2] = 1.0;

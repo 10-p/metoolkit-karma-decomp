@@ -1,3 +1,80 @@
+# FLOAT-SENTINEL-COMPARISONS 2026-11-17 ★★ A TRACE THAT MISSES A RAGDOLL BONE IS A MISS, AT EVERY WIDTH.
+#                     Ghidra prints a floating constant as the shortest decimal that reproduces it at
+#                     its own size, never with a suffix: MEINFINITY, the float 0x7f7fffff, is printed
+#                     `3.4028235e+38`, and ghidra_clean copied the text through. C reads it as a
+#                     DOUBLE. A store converts back to the same float; a comparison promotes the float
+#                     operand, and the two readings disagree at exactly one operand value — the float
+#                     constant itself. For a SENTINEL that value is the common case:
+#                       the defect      IxAggregateLineSegment seeds overlap->distance with MEINFINITY
+#                                       and returns `distance != 3.4028235e+38`: always 1, so every
+#                                       ragdoll bone a trace missed came back as a hit at FLT_MAX with
+#                                       no position or normal (USkeletalMesh::LineCheck keeps the
+#                                       nearest, and ULevel::SingleLineCheck takes the lowest Time
+#                                       without a Time <= 1 test). gcc -O2 i386 folded the no-child path
+#                                       to `mov $1,%eax`; clang wasm32 folded the whole return to
+#                                       `i32.const 1`. MathEngine: `flds 0x1c(%ebx); fcomps
+#                                       .rodata.cst4+4`. McdSpaceGetLineSegFirst[Enabled]Intersection
+#                                       did the same with `1e+25` (the float 1e25f is 9.9999996e24, so
+#                                       `distance < 1e+25` held on every miss, a hit the enable callback
+#                                       rejected included) — not in the 2026-11-16 list, which looked
+#                                       for FLT_MAX.
+#                       the repair      ghidra_clean.type_float_sentinel_comparisons: a comparison
+#                                       against an unsuffixed literal the float does not reproduce
+#                                       exactly, in a function that also STORES that constant, gets the
+#                                       `f` suffix — when the SHIPPED function holds the float's bits at
+#                                       four bytes (an x87 `s` operand on .rodata*, or a 32-bit
+#                                       immediate, which is how IxSphylPrimitives' -FLT_MAX reaches its
+#                                       `fcom`) and never reads the value at eight. Both or neither
+#                                       raises. 13 sites, 9 objects, nothing else in the tree moves
+#                                       (MeFGeometryFromMesh, which does not compile, has a 14th).
+#                                       Left as written, deliberately: 212 THRESHOLD comparisons
+#                                       (a constant compared and never stored; the double reading moves
+#                                       the boundary off one float value) and every arithmetic use.
+#                       per site        exhaustive over all 2^32 float operands, the old and new
+#                                       spellings differ at exactly the sentinel at 11 sites and nowhere
+#                                       at IxSphylPrimitives 683 (`<= FLT_MAX`) and McdGjk 839
+#                                       (`<= 1e-06`, the float rounds down). Function-level, against the
+#                                       shipped library (test/standalone/float_sentinel.sh, new):
+#                                       aggregate, both McdSpace queries, McdContactSimplify (three
+#                                       contacts at FLT_MAX: 2 for 0), McdVanillaOverlapOBBs and
+#                                       McdSphylBoxIntersect (a box of half-extent FLT_MAX: the normal's
+#                                       axis, and its sign) FAIL before (11 differences) and PASS after;
+#                                       MdtPartitionGetSafeTime returns FLT_MAX either way (control).
+#                                       No case can reach IxBoxSphere 254 (an output differs only when
+#                                       all six face distances are FLT_MAX, where MathEngine indexes with
+#                                       an uninitialised local — measured: it faults),
+#                                       IxCylinderLineSegment 84 (it rewrites s with the value it already
+#                                       holds; the normal it sets is never read), IxSphylPrimitives 1370
+#                                       (a squared distance of exactly FLT_MAX) or 2133 (an edge 1.8e19
+#                                       units away, where x87 and SSE part on overflow first).
+#                       i386            acceptance 145 / 0 / 0 before and after (flattened-index 3
+#                                       changed, 2 unchanged, as before). The nine objects change against the
+#                                       old recovery and are byte-identical to nothing MathEngine
+#                                       shipped either side (gcc 15 against gcc 3.2: no recovered object
+#                                       ever was; the acceptance test compares the post-passed tree with
+#                                       the raw recovery). The compare's operand now is MathEngine's:
+#                                       `fldl .rodata.cst8` -> `flds .rodata.cst4`.
+#                       wasm32          9 of 146 objects change, under -O2 -g0 and under the shipping
+#                                       -O3 -g0 -pthread -DNO_SSE_SUPPORT=1; every float arithmetic,
+#                                       load, store and call count is unchanged except one f32.load
+#                                       (the aggregate now reads the distance it used to fold away).
+#                       gates           lineseg_lp64 shared 4,667 -> 77 (baselines.sh tightened: main
+#                                       FAILS it, the repair passes); x86-64, Win64 (mingw, wine) and
+#                                       aarch64 (-ffp-contract=off, qemu) bit-identical to the i386
+#                                       control; the NDK arm64 leg reads its documented clang class
+#                                       (4,944 start-inside cases) before and after alike.
+#                                       lp64_pipeline PASS both; run-standalone 13/13 before, 14/14
+#                                       after (float-sentinel the 14th); ktrace c31ed77b7323 both,
+#                                       byte-identical to native-sse; ons_smoke 300 s PASS both;
+#                                       dropin_gap 0 both.
+#                       in the game     engine-ut2004 with the -RAGTRACEDIAG diagnostic (a local
+#                                       branch), DM-Rankin, 12 bots, InstaGib, two runs per arm; hits
+#                                       whose distance is still FLT_MAX against all game traces at
+#                                       ragdolls: native64 186/308 and 203/339 -> 0/330 and 0/316;
+#                                       native-sse 212/335 and 351/504 -> 0/385 and 0/420; web wasm-perf
+#                                       326/496 and 284/479 -> 0/682 and 0/463; legacy-karma (MathEngine)
+#                                       0/479 and 0/411. Real hits against the true geometry unchanged.
+#
 # LP64-LINESEG-REGISTRATION 2026-11-16 ★★ EVERY SHOT AT A RAGDOLL CAPSULE, ON EVERY 64-BIT BUILD.
 #                     IxSphylLineSegment read McdSphyl::mRadius and mHalfHeight at their i386
 #                     offsets +0x10/+0x14. At LP64 those are bytes 16..23 of _McdGeometry, the

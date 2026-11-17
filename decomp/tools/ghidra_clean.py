@@ -5619,6 +5619,174 @@ def restore_float_text(text, obj, locals_table):
     return text, n
 
 
+# A floating literal as Ghidra prints it, sign included: no suffix, so C reads it as a DOUBLE.
+_SENTINEL_LIT = r'-?(?:\d+\.\d*|\.\d+|\d+(?=[eE]))(?:[eE][+-]?\d+)?'
+_SENTINEL_CMP = r'(?:==|!=|<=|>=|<(?![<=])|>(?![>=]))'
+# `<lit> OP` and `OP <lit>`; whether the literal is a WHOLE operand is checked at the match.
+_SENTINEL_LEFT = re.compile(r'(?<![\w.])(' + _SENTINEL_LIT + r')(?![\w.])[ \t]*' + _SENTINEL_CMP)
+_SENTINEL_RIGHT = re.compile(_SENTINEL_CMP + r'[ \t]*(' + _SENTINEL_LIT + r')(?![\w.])')
+# A store of a literal: `lvalue = <lit>;` — a plain assignment, not a comparison or `+=`.
+_SENTINEL_STORE = re.compile(r'(?<![=!<>+\-*/%&|^])=[ \t]*(' + _SENTINEL_LIT + r')[ \t]*;')
+# x87 memory operands and the width their AT&T suffix reads: `flds`/`fcomps` 4 bytes, `fldl` 8.
+_X87_MEM_WIDTH = re.compile(r'^f(?:ld|st|stp|add|sub|subr|mul|div|divr|com|comp)([sl])$')
+
+
+def _f32_bits(v):
+    """The IEEE single nearest `v`, as its 32-bit pattern; None when it overflows."""
+    try:
+        return struct.unpack('<I', struct.pack('<f', v))[0]
+    except OverflowError:
+        return None
+
+
+def _float_constant_widths(obj, fn):
+    """How the SHIPPED function holds its floating constants, or None if it cannot be located.
+
+    Returns (four, eight, imm): the 32-bit patterns x87 instructions read from `.rodata*` at
+    four bytes (`flds`, `fcomps`, `fadds`, ...), the 64-bit patterns read at eight (`fldl`,
+    `fcompl`, ...), and every 32-bit immediate the function moves — gcc materialises a float it
+    stores, or keeps in a stack slot, as an integer move of the float's bits."""
+    for name, lo, hi in function_extents(obj):
+        if name != fn:
+            continue
+        out = subprocess.run(['objdump', '-dr', '--no-show-raw-insn', '--start-address',
+                              hex(lo), '--stop-address', hex(hi), obj],
+                             capture_output=True, text=True).stdout
+        lines = out.splitlines()
+        sections, four, eight, imm = {}, set(), set(), set()
+        for i, line in enumerate(lines):
+            m = re.match(r'^\s*[0-9a-f]+:\t(\S+)[ \t]*(.*)$', line)
+            if not m:
+                continue
+            mnem, ops = m.group(1), m.group(2)
+            imm.update(int(x, 16) for x in re.findall(r'\$0x([0-9a-f]{1,8})\b', ops))
+            w = _X87_MEM_WIDTH.match(mnem)
+            reloc = re.search(r'R_386_32\s+(\.rodata\S*)',
+                              lines[i + 1] if i + 1 < len(lines) else '')
+            disp = re.match(r'(0x[0-9a-f]+|\d+)(?![(\w])', ops)
+            if not (w and reloc and disp):
+                continue
+            sec = reloc.group(1)
+            if sec not in sections:
+                sections[sec] = _section_bytes(obj, sec)
+            data, off = sections[sec], int(disp.group(1), 0)
+            size = 4 if w.group(1) == 's' else 8
+            if off + size <= len(data):
+                (four if size == 4 else eight).add(
+                    struct.unpack('<I' if size == 4 else '<Q', data[off:off + size])[0])
+        return four, eight, imm
+    return None
+
+
+def _whole_operand_after(region, end):
+    """Does the literal ending at `end` end its operand — no arithmetic follows it?"""
+    rest = region[end:].lstrip(' \t\n')
+    return rest[:1] in (')', ';', ',', '?', ':') or rest[:2] in ('&&', '||')
+
+
+def _whole_operand_before(region, start):
+    """Does the literal starting at `start` begin its operand — no arithmetic precedes it?"""
+    head = region[:start].rstrip(' \t\n')
+    return (head[-1:] in ('(', ',', '?', ':', '!', '=') or head[-2:] in ('&&', '||')
+            or re.search(r'\breturn$', head) is not None)
+
+
+def type_float_sentinel_comparisons(obj, text):
+    """`distance != 3.4028235e+38` compares a FLOAT sentinel, so it is spelled `3.4028235e+38f`.
+
+    Ghidra prints a floating constant as the shortest decimal that reproduces it at its OWN size
+    and never with a suffix: MathEngine's MEINFINITY, the float 0x7f7fffff, comes out as
+    `3.4028235e+38`. C reads an unsuffixed literal as a double, and the nearest double to that
+    decimal is not the float. A store is unaffected (the conversion back rounds to the same
+    float), and so is a comparison against a constant the decimal reproduces exactly (`-999.0`).
+    A COMPARISON against an inexact one is not: the float operand is promoted, and promoted
+    FLT_MAX never equals 3.4028235e+38, so `!=` is always true and `<` admits FLT_MAX itself.
+
+    That difference sits at exactly one operand value, the float constant, and the rule rewrites
+    the comparisons where the operand can hold it: the SENTINEL tests, where the same function
+    also stores the constant. `IxAggregateLineSegment` seeds `overlap->distance` with MEINFINITY
+    and returns `distance != MEINFINITY`; read as a double that reports a hit on every miss. A
+    comparison against a constant the function never stores is a threshold — the double reading
+    moves its boundary off a float the computation would have to land on exactly — and is
+    counted, not rewritten.
+
+    The constant's type comes from the SHIPPED function, not from the text: it must hold that
+    float's bit pattern at four bytes (an x87 `s`-suffixed operand on `.rodata*`, or a 32-bit
+    immediate) and must not hold the value at eight bytes (an `l`-suffixed operand). A function
+    that holds it only at eight bytes compared a double, and its literal is already right. One
+    that cannot be located, or holds the value both ways or not at all, RAISES: the sentinel is
+    there in the text and the object cannot say which comparison the original made.
+
+    Returns (text, rewritten, thresholds, doubles)."""
+    if not obj:
+        return text, 0, 0, 0
+    out, n, thresholds, doubles, declined = [], 0, 0, 0, []
+    for fn, region in _split_definitions(text):
+        if not fn:
+            out.append(region)
+            continue
+        sites = []
+        for m in list(_SENTINEL_LEFT.finditer(region)) + list(_SENTINEL_RIGHT.finditer(region)):
+            s, e = m.start(1), m.end(1)
+            lit = m.group(1)
+            if lit.startswith('-') and _ends_an_operand(region[:s]):
+                lit, s = lit[1:], s + 1      # a binary minus, not the literal's sign
+            if m.re is _SENTINEL_LEFT and not _whole_operand_before(region, s):
+                continue
+            if m.re is _SENTINEL_RIGHT and not _whole_operand_after(region, e):
+                continue
+            v = float(lit)
+            bits = _f32_bits(v)
+            if bits is None or struct.unpack('<f', struct.pack('<I', bits))[0] == v:
+                continue                     # exact: the double reading IS the float
+            sites.append((s, e, lit, bits))
+        if not sites:
+            out.append(region)
+            continue
+        stored = {_f32_bits(float(x)) for x in _SENTINEL_STORE.findall(region)}
+        keep = []
+        for s, e, lit, bits in sites:
+            if bits not in stored:
+                thresholds += 1
+                continue
+            keep.append((s, e, lit, bits))
+        if not keep:
+            out.append(region)
+            continue
+        widths = _float_constant_widths(obj, fn)
+        if widths is None:
+            declined += ['%s: %s (function not in the object)' % (fn, lit) for _s, _e, lit, _b in keep]
+            out.append(region)
+            continue
+        four, eight, imm = widths
+        edits = []
+        for s, e, lit, bits in keep:
+            as_double = {struct.unpack('<Q', struct.pack('<d', float(lit)))[0],
+                         struct.unpack('<Q', struct.pack('<d', struct.unpack(
+                             '<f', struct.pack('<I', bits))[0]))[0]}
+            held_double = (as_double & eight
+                           or any((d >> 32) in imm and (d & 0xffffffff) in imm
+                                  for d in as_double if d & 0xffffffff))
+            held_float = bits in four or bits in imm
+            if held_float and not held_double:
+                edits.append((s, e))
+            elif held_double and not held_float:
+                doubles += 1
+            else:
+                declined.append('%s: %s (shipped code holds it %s)' % (
+                    fn, lit, 'both ways' if held_float else 'nowhere'))
+        for s, e in sorted(set(edits), reverse=True):
+            region = region[:e] + 'f' + region[e:]
+            n += 1
+        out.append(region)
+    if declined:
+        raise SystemExit(
+            'type_float_sentinel_comparisons: %s — a sentinel comparison whose constant width the '
+            'shipped code does not settle:\n  %s\n  Read the comparison against the disassembly '
+            '(objdump -dr) before deciding its literal.' % (os.path.basename(obj), '\n  '.join(declined)))
+    return ''.join(out), n, thresholds, doubles
+
+
 def materialise_shifted_frame(text, obj, locals_table):
     r"""Give an alloca'd frame real storage, instead of a twelve-byte local.
 
@@ -8681,6 +8849,8 @@ def main():
     body_text, n_ashift = drop_argslot_shift(body_text)
     body_text, n_ftext = restore_float_text(
         body_text, args.object, read_ghidra_locals(args.input))
+    body_text, n_fsent, n_fthresh, n_fdouble = type_float_sentinel_comparisons(
+        args.object, body_text)
     data_block, n_data = materialise_data_refs(args.object, body_text)
     abs_block, n_abs = resolve_absolute_data_refs(args.object, body_text)
     data_block = abs_block + data_block
@@ -8808,6 +8978,10 @@ def main():
     if n_ftext:
         print(f'  {n_ftext} float expression site(s) repaired (spill rounding / '
               f'add-chain association)')
+    if n_fsent or n_fthresh or n_fdouble:
+        print(f'  {n_fsent} float sentinel comparison(s) spelled as float; '
+              f'{n_fdouble} left as a double (the shipped code compares one); '
+              f'{n_fthresh} threshold comparison(s) against an inexact literal left as written')
     if n_uscore:
         print(f'  {n_uscore} undeclared `_local` reference(s) bound to their declaration')
     if n_fltload:

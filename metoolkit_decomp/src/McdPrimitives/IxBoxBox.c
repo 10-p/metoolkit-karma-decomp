@@ -437,7 +437,7 @@ static bool McdVanillaOverlapOBBs
   fVar4 = ABS(fVar6) -
           (arot.row[0].v.v[0] * fVar1 + inR1->v[0] + arot.row[1].v.v[0] * fVar2 +
           arot.row[2].v.v[0] * fVar3);
-  if (fVar4 <= -3.4028235e+38) {
+  if (fVar4 <= -3.4028235e+38f) {
 LAB_000110bd:
     fVar6 = inT12->row[3].v.v[1];
     fVar4 = ABS(fVar6) -

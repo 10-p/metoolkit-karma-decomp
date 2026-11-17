@@ -1386,6 +1386,11 @@ python3 tools/spill_scan.py /tmp/kd_out/allobj /tmp/kd_build lab/allobj
 # the capsule at its i386 offsets past every other gate. proven.txt LP64-LINESEG-REGISTRATION.
 ./test/standalone/lineseg_lp64.sh
 
+# every comparison against a float sentinel (MEINFINITY, McdSpace's 1e25f), driven with the operand AT
+# the sentinel through its public entry point, against the shipped archives. Read as doubles they
+# reported a hit on every aggregate and McdSpace miss. proven.txt FLOAT-SENTINEL-COMPARISONS.
+./test/standalone/float_sentinel.sh
+
 # and CHECK 2, the deliverable: a metoolkit with NO shipped member in it. §12.
 ./test/standalone/make_dropin_metoolkit.sh /tmp/kd_build ../metoolkit \
         $UT2004_RUN_DIR/dropin-metoolkit
@@ -1433,8 +1438,10 @@ looks exactly like a rule that declines. The `undeclared` pattern is already own
 | **`fix_printf_extra_args`** | `sprintf(b, "%s", x, extraout_EDX)` — gcc's padding word | the format string literal's own arity |
 | **`fix_undeclared_underscore_local`** | `_iVar3` used where only `iVar3` is declared | the declared name having no other use in the function |
 | **`initialise_unmodelled_locals`** | `unaff_ESI` read on a path that never assigns it | nothing — there was no information in the register to preserve |
+| **`type_float_sentinel_comparisons`** | `distance != 3.4028235e+38` — a float sentinel compared as a DOUBLE | a store of the same constant in the function + the shipped operand's width (`fcomps .rodata.cst4`, a 32-bit immediate; never an `l`-suffixed load) |
 
-The last EIGHT are new on 2026-08-25 and none of them needs a diagnostic: the evidence is
+The eight from `fix_vptr_store` to `initialise_unmodelled_locals` are new on 2026-08-25, and
+`type_float_sentinel_comparisons` on 2026-11-17. None of them needs a diagnostic: the evidence is
 in the object file, so there is no reason to wait for GCC to complain.
 
 **`restore_float_text` is the one to read before adding another.** Its defects produce no

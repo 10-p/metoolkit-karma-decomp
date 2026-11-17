@@ -68,24 +68,29 @@ scene_ragdoll           144  1  140  4  MdtPartition
 # pointer width, wasm32 included, so not this gate's question. Anything not
 # listed must be 0. Asserted only at the case count on the first line.
 #
-#   aggregate random / axis-parallel / degenerate: 2419 / 1219 / 953 of them are
-#     hit/miss, and every one is IxAggregateLineSegment's return value:
-#         return (uint)(overlap->distance != 3.4028235e+38);
-#     a DOUBLE literal. MathEngine compares the float against the FLOAT constant
-#     0x7f7fffff (`fcomps .rodata.cst4`); promoted to double, FLT_MAX is
-#     3.4028234663852886e38 and never equals it, so the recovery reports a hit on
-#     every miss, with the distance still FLT_MAX and no position or normal.
 #   aggregate degenerate 73 + end-inside 1: distances 1e-3 apart at 14-100 Karma
 #     units of range (x87 against SSE in the cap's line-sphere cancellation; one
 #     grazed child resolved differently, 0.31), and one normal where two children
 #     are hit at the same point.
+#   aggregate degenerate #2291: a 68-unit shot that truly enters the sphyl child
+#     0.209 deep. The recovery reports the hit at 33.972; MathEngine's aggregate
+#     returns a miss, while its own sphyl child, asked alone with fresh input
+#     arrays, hits at 33.971. The candidate's answer is the same before and after
+#     the float-sentinel repair; it was counted with the return-value cases below
+#     until those were repaired.
 #   convex random 2: the hull is kd_convexhull.c, not qhull; with MathEngine's
 #     qhull archive linked into the same recovered build both cases agree.
+#
+# ★ ZERO aggregate hit/miss cases otherwise. IxAggregateLineSegment ended
+#   `return distance != 3.4028235e+38;` — a DOUBLE literal, which promoted FLT_MAX
+#   never equals — and reported a hit on every miss: 2419 random, 1219
+#   axis-parallel and 952 degenerate cases here. ghidra_clean's
+#   type_float_sentinel_comparisons spells it as the float it is
+#   (proven.txt FLOAT-SENTINEL-COMPARISONS); a hit/miss case in any of those
+#   categories is that defect back.
 KD_BASE_LINESEG="
 cases-per-category 2500
-aggregate random         2419
 aggregate end-inside        1
-aggregate axis-parallel  1219
-aggregate degenerate     1026
+aggregate degenerate       74
 convex    random            2
 "

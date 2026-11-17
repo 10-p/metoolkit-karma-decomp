@@ -17,8 +17,9 @@ __all__ = [
     'ROOT', 'REPO', 'MD', 'MD_INC', 'MD_SRC',
     'METOOLKIT_DIR', 'MT_INC', 'MT_LIB', 'MT_LIB_SUBDIR',
     'AMD64_LIB', 'LAB_DIR', 'DUMP_DIR', 'OBJ_DIR', 'PROTOS',
-    'OUT_SRC', 'OUT', 'BUILD', 'NDK_BIN', 'includes',
+    'OUT_SRC', 'OUT', 'BUILD', 'NDK_BIN', 'EMSDK', 'EMCC', 'LLVM_NM', 'includes',
     'ut2004', 'require_ut2004', 'require_metoolkit', 'require_lab',
+    'require_emcc', 'require_llvm_nm',
 ]
 
 
@@ -113,6 +114,45 @@ def _ndk_bin():
 
 
 NDK_BIN = _ndk_bin()
+
+
+def _emsdk():
+    """emsdk's root: $EMSDK first (emsdk_env.sh and CI's setup-emsdk export it),
+    then ~/emsdk. The first that holds an emcc wins; '' when neither does."""
+    for root in (os.environ.get('EMSDK'), os.path.expanduser('~/emsdk')):
+        if root and os.path.isfile(os.path.join(root, 'upstream', 'emscripten', 'emcc')):
+            return root
+    return ''
+
+
+# The wasm32 compiler. The web ships what emcc makes of the product, so the passes
+# that must not change it compile with it. ⚠ An empty answer is never a skip:
+# emcc is an INPUT TO REPAIRS (a pass that declined its sites for want of it
+# would build a different tree), so callers use require_emcc().
+EMSDK = _emsdk()
+EMCC = os.path.join(EMSDK, 'upstream', 'emscripten', 'emcc') if EMSDK else ''
+# emsdk's own llvm-nm. The system one cannot read wasm objects.
+LLVM_NM = os.path.join(EMSDK, 'upstream', 'bin', 'llvm-nm') if EMSDK else ''
+
+
+def _require_emsdk_tool(path, who, what):
+    if path and os.path.isfile(path):
+        return path
+    raise SystemExit(
+        '%s: no %s — looked in $EMSDK (%s) and %s.\n'
+        '  The wasm32 gates need it and do not skip. Install emsdk 5.0.7, the version\n'
+        '  the product ships with, and source its emsdk_env.sh or set EMSDK.\n'
+        % (who, what, os.environ.get('EMSDK') or 'unset', os.path.expanduser('~/emsdk')))
+
+
+def require_emcc(who):
+    """emcc's path, or exit naming where it looked."""
+    return _require_emsdk_tool(EMCC, who, 'emcc')
+
+
+def require_llvm_nm(who):
+    """emsdk's llvm-nm, or exit naming where it looked."""
+    return _require_emsdk_tool(LLVM_NM, who, "emsdk's llvm-nm")
 
 
 def includes(inc=None):

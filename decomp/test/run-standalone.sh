@@ -97,13 +97,12 @@ run code-call-check "no call to something that is not code" -- \
     python3 "$KD_ROOT/tools/code_call_check.py" "$SRC"
 
 # --- portability ------------------------------------------------------------
-if [ -f "$HOME/emsdk/emsdk_env.sh" ]; then
-    run wasm-check "all of it compiles for wasm32 — the actual goal" -- \
-        "$KD_T_STD/wasm_check.sh" "$SRC" "$KD_BUILD" "$METOOLKIT_DIR"
-else
-    # A missing emsdk is a missing toolchain, not a failure of this repository.
-    skipped wasm-check "no emsdk at ~/emsdk"
-fi
+# ⚠ NO SKIP HERE, UNLIKE ptrwidth BELOW. emsdk is already required by
+# lp64_pipeline.sh, whose wasm-gated passes are inputs to the tree, so a machine
+# that can produce what this tier gates has emcc. wasm_check.sh finds it through
+# the shim ($EMSDK, then ~/emsdk) and FAILS, naming both, when neither has it.
+run wasm-check "all of it compiles for wasm32 — the actual goal" -- \
+    "$KD_T_STD/wasm_check.sh" "$SRC" "$KD_BUILD" "$METOOLKIT_DIR"
 
 if [ -n "$KD_NDK" ] && [ -x "$KD_NDK/aarch64-linux-android21-clang" ]; then
     run ptrwidth "pointer truncation, as a compile-time diagnostic — no arm64 hardware needed" -- \

@@ -50,8 +50,11 @@ import os
 import subprocess
 import sys
 
-# emsdk's llvm-nm. The system one cannot read wasm objects.
-NM = os.path.expanduser('~/emsdk/upstream/bin/llvm-nm')
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import kd_paths                                             # noqa: E402
+
+# emsdk's llvm-nm ($EMSDK, then ~/emsdk). The system one cannot read wasm objects.
+NM = kd_paths.LLVM_NM
 
 
 def nm_archive(path):
@@ -93,8 +96,7 @@ def main():
         if not os.path.exists(p):
             sys.exit(f'not found: {p}\n'
                      '(this needs a BUILT wasm-karmadecomp-* tree; see BUILD.md)')
-    if not os.path.exists(NM):
-        sys.exit(f'not found: {NM} — source ~/emsdk/emsdk_env.sh, or install emsdk')
+    kd_paths.require_llvm_nm('wasm_members')
 
     members = nm_archive(archive)
     linked = nm_wasm(wasm)

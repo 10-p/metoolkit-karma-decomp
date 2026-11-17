@@ -1,9 +1,9 @@
 name: gates
 
 # The standalone tier, on every push. The contract this enforces is the one the
-# repository claims: a bare clone, nothing installed, no game, no engine
-# checkout. If a change breaks that, it breaks here rather than on somebody
-# else's machine three weeks later.
+# repository claims: a bare clone, no game, no engine checkout, nothing but the
+# toolchains installed below. If a change breaks that, it breaks here rather
+# than on somebody else's machine three weeks later.
 #
 # ⚠ WHAT THIS CANNOT COVER, and it is most of what matters. Every gate here is a
 # per-object comparison or an offline physics scene. None of them runs UT2004,
@@ -40,6 +40,18 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y gcc-multilib g++-multilib binutils \
                                   gcc-mingw-w64-x86-64
+
+      # And emsdk, which is not optional for the same reason MinGW is not. The
+      # web ships what emcc makes of the product, so three post-passes compare
+      # each repair's wasm32 object against the source it replaces, and
+      # wasm_check builds the whole set. Without emcc those passes would decline
+      # their sites and build a DIFFERENT tree, so they exit instead. The tools
+      # find it at $EMSDK (exported here; lib/kd-paths.sh, tools/kd_paths.py).
+      # 5.0.7 is the version the product ships with, as engine-ut2004 builds it.
+      - uses: emscripten-core/setup-emsdk@v16
+        with:
+          version: 5.0.7
+          actions-cache-folder: emsdk-cache
 
       - name: The hard gates
         run: |

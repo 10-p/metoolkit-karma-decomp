@@ -73,7 +73,7 @@ HERE = kd_paths.MD
 WORK = '/tmp/kd_flatidx'
 MANIFEST = '.flattened_index_repaired'      # written beside the allobj dir; read by lp64_pipeline
 
-EMCC = os.path.join(os.path.expanduser('~'), 'emsdk', 'upstream', 'emscripten', 'emcc')
+EMCC = kd_paths.EMCC                # $EMSDK, then ~/emsdk; main() requires it
 
 # shape A/B:  NAME[i][j]  — NAME a BARE identifier; j bracket-free
 SITE = re.compile(
@@ -128,8 +128,6 @@ def _obj(fn, text, inc, cc, opt):
     if cc == 'gcc':
         cmd = ['gcc', '-m32', '-fno-pic'] + common
     else:
-        if not os.path.exists(EMCC):
-            return None
         cmd = [EMCC, '-g0'] + common
     if subprocess.run(cmd, capture_output=True).returncode:
         return None
@@ -212,9 +210,8 @@ def main():
     root = sys.argv[3] if len(sys.argv) > 3 else kd_paths.METOOLKIT_DIR
     inc = os.path.join(root, 'include')
     self_check()
-    if not os.path.exists(EMCC):
-        sys.exit('fix_flattened_index: emcc not found at %s — the wasm gate (the web is what this '
-                 'pass must not change) cannot run.' % EMCC)
+    # the wasm gate (the web is what this pass must not change) cannot run without emcc
+    kd_paths.require_emcc('fix_flattened_index')
 
     fixed = declined = skipped = in_bounds = 0
     repaired_files = []

@@ -39,6 +39,8 @@ the commit body. A gate that cannot be bypassed gets deleted instead.
 
 `.github/workflows/gates.yml` runs the standalone tier on every push: the four
 hard gates, then `decomp/test/run-standalone.sh`. It needs `gcc-multilib` (the
-whole project is `-m32`) and it does **not** have the Android NDK, so
-`ptrwidth_check` reports SKIP there rather than failing — a missing toolchain is
-not a defect in this repository.
+whole project is `-m32`), MinGW-w64 (`fix_baked_sizeof`'s LLP64 sizes) and
+emsdk 5.0.7 (the wasm32 gates, found at `$EMSDK`). Those three are inputs to the
+tree or wasm gates, so a missing one FAILS. It does **not** have the Android NDK,
+so `ptrwidth_check` reports SKIP there rather than failing — its result is not
+an input to anything.

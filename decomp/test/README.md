@@ -7,8 +7,9 @@ for when something is wrong.
 ## Two tiers, and the split is not cosmetic
 
 ```
-test/standalone/   runs from a bare clone. Nothing installed, no game, no engine
-                   checkout, no environment set. This is the tier CI runs.
+test/standalone/   runs from a bare clone. No game, no engine checkout, no
+                   environment set; only the toolchains CI installs (gcc-multilib,
+                   MinGW-w64, emsdk at $EMSDK or ~/emsdk). This is the tier CI runs.
 test/ut2004/       needs the GAME — a built binary, a run tree, map assets.
                    Fails loudly with the variable it wants; never guesses a path.
 ```
@@ -328,7 +329,13 @@ Compiles everything for wasm32 and diffs the exported symbols against the native
 
 ```bash
 ./test/standalone/wasm_check.sh /tmp/kd_out/allobj /tmp/kd_build $MT
+EMSDK=/path/to/emsdk ./test/standalone/wasm_check.sh /tmp/kd_out/allobj /tmp/kd_build $MT
 ```
+
+emcc and emsdk's `llvm-nm` come from `lib/kd-paths.sh`: `$EMSDK` first, then `~/emsdk`. With
+neither it **fails** and names both; `run-standalone.sh` runs it unconditionally. It does not skip
+the way `ptrwidth` does on a missing NDK, because `lp64_pipeline.sh` cannot build the tree this
+tier gates without emcc in the first place.
 
 ### `ptrwidth_check.sh` — the pointer-width gate, no arm64 hardware needed
 
@@ -458,7 +465,8 @@ sanitized rows are a memory-safety check and are the wrong reference for the num
 ⚠ **`KD_KEEP=1` EXISTS BECAUSE THE SUMMARY IS A LIST OF SITES AND DIAGNOSING ONE NEEDS THE
 REPORT.** The work directory was deleted on exit, so the addresses, the allocation and the
 registers — the only things that identify a *truncated pointer* as opposed to a wrong offset —
-went with it.
+went with it. A **dirty i386 control** prints its first report in full before it stops, because
+that stop is the one a CI runner hits with no way to rerun under `KD_KEEP`.
 
 ⚠ **A CLEAN SANITIZER IS NOT A PASS, AND THIS GATE USED TO SAY IT WAS.** Every scene returns
 non-zero when its OWN verdict fails: `scene_ragdoll` exits 1 on "BLOWN UP", bodies past 1e3.

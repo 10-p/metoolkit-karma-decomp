@@ -71,7 +71,8 @@ lab/                    the Ghidra dumps + the 153 shipped objects the tools rea
 - **Paths come from the shim, never from `..` arithmetic.** Shell sources
   `decomp/lib/kd-paths.sh`; Python imports `decomp/tools/kd_paths.py`. Both find the root by
   walking up for a marker, so a file can move without breaking. Anything needing UT2004 calls
-  `kd_require_ut2004` and fails loudly rather than guessing.
+  `kd_require_ut2004` and fails loudly rather than guessing. emcc and emsdk's llvm-nm come from
+  the shim too (`$EMSDK`, then `~/emsdk`), and a wasm gate without them fails, never skips.
 - **A harness that needs the game lives in `decomp/test/ut2004/`, everything else in
   `decomp/test/standalone/`.** The standalone tier must run from a bare clone with no
   environment set; that is what CI checks.
@@ -140,7 +141,7 @@ one byte difference on a change that is byte-identical under the real flags.
 ```bash
 # the whole recovery, from a bare clone, no environment needed
 python3 decomp/tools/recover.py --out-dir /tmp/kd_out --build-dir /tmp/kd_build   # ~95 s
-./decomp/test/standalone/lp64_pipeline.sh                                        # post-passes + gates
+./decomp/test/standalone/lp64_pipeline.sh       # post-passes + gates; needs emsdk at $EMSDK or ~/emsdk
 python3 decomp/tools/split_libraries.py /tmp/kd_lp64/allobj                       # refresh the product
 
 ./decomp/test/run-standalone.sh          # every gate that needs nothing but this repo

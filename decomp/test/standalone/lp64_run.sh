@@ -129,7 +129,15 @@ if [ "${KD_SKIP_CONTROL:-}" != 1 ]; then
             # verdict flipped run to run on a coin toss.
             echo $? > "$W/ctl_$cn.rc"
             ce=$(grep -c "ERROR: AddressSanitizer" "$W/ctl_$cn.err")
-            [ "$ce" -eq 0 ] || { echo "  CONTROL $cn: $ce error(s) at i386 <- THE CONTROL IS DIRTY; nothing below is attributable to pointer width"; exit 2; }
+            if [ "$ce" -ne 0 ]; then
+                echo "  CONTROL $cn: $ce error(s) at i386 <- THE CONTROL IS DIRTY; nothing below is attributable to pointer width"
+                # ⚠ NAME THE SITE. The work directory is deleted on exit, and on
+                # a CI runner there is no KD_KEEP to rerun with, so a count alone
+                # is a finding nobody can act on. The first report, in full.
+                sed -n '/ERROR: AddressSanitizer/,/^SUMMARY: AddressSanitizer/p' "$W/ctl_$cn.err" \
+                    | head -60 | sed 's/^/      /'
+                exit 2
+            fi
         else
             echo "  CONTROL  $cn could not be built — treat its row as unattributed"
         fi

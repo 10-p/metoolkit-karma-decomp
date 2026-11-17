@@ -108,8 +108,10 @@ export KD_OUT_SRC KD_BUILD
 # external toolchain, so there is no in-repo default — discovered from the
 # standard NDK variables rather than pinned to one version. The old pinned r30
 # path stopped existing on an NDK upgrade and the failure read like a compiler
-# bug rather than a missing directory. Empty is a legitimate answer; the one
-# harness that wants it SKIPS rather than fails.
+# bug rather than a missing directory. Empty is an answer only to ptrwidth_check,
+# which SKIPS; fix_ptrwidth, fix_narrow_pointers and fix_narrow_loads repair
+# what this clang diagnoses, so they exit without it. ⚠ For the same reason its
+# VERSION is an input to the tree.
 # ---------------------------------------------------------------------------
 if [ -z "${KD_NDK:-}" ]; then
     for _kd_r in "${ANDROID_NDK_HOME:-}" "${ANDROID_NDK_ROOT:-}" "${NDK_HOME:-}"; do
@@ -131,6 +133,39 @@ fi
 KD_NDK="${KD_NDK:-}"
 unset _kd_r _kd_sdk _kd_v
 export KD_NDK
+
+# ---------------------------------------------------------------------------
+# emsdk: the wasm32 compiler. The web ships what emcc makes of the product, so
+# the post-passes that must not change it (fix_flattened_index,
+# fix_global_array_index, fix_word_indexed_struct) and wasm_check.sh compile
+# with it. $EMSDK first, which is what emsdk_env.sh and CI's setup-emsdk
+# export, then ~/emsdk; the first that holds an emcc wins.
+#
+# ⚠ EMPTY MEANS NONE WAS FOUND, AND NOTHING THAT NEEDS IT MAY READ THAT AS A
+# SKIP. kd_require_emsdk fails loudly. emcc is an INPUT TO REPAIRS: a pass that
+# declined its sites for want of it would build a DIFFERENT tree behind a clean
+# summary line, and every later gate would measure that.
+# ---------------------------------------------------------------------------
+KD_EMSDK=""
+for _kd_e in "${EMSDK:-}" "$HOME/emsdk"; do
+    if [ -n "$_kd_e" ] && [ -x "$_kd_e/upstream/emscripten/emcc" ]; then
+        KD_EMSDK="$_kd_e"; break
+    fi
+done
+unset _kd_e
+KD_EMCC="${KD_EMSDK:+$KD_EMSDK/upstream/emscripten/emcc}"
+KD_LLVM_NM="${KD_EMSDK:+$KD_EMSDK/upstream/bin/llvm-nm}"
+export KD_EMSDK KD_EMCC KD_LLVM_NM
+
+# kd_require_emsdk — assert emcc and emsdk's llvm-nm (the system one cannot read
+# wasm objects) are there, or say where it looked and what to do.
+kd_require_emsdk() {
+    [ -n "$KD_EMSDK" ] && [ -x "$KD_EMCC" ] && [ -x "$KD_LLVM_NM" ] && return 0
+    echo "  no emsdk: looked in \$EMSDK (${EMSDK:-unset}) and $HOME/emsdk." >&2
+    echo "  The wasm32 gates need it and do not skip. Install emsdk 5.0.7, the" >&2
+    echo "  version the product ships with, and source its emsdk_env.sh or set EMSDK." >&2
+    return 2
+}
 
 # ---------------------------------------------------------------------------
 # UT2004. NO DEFAULTS ON PURPOSE — this repository does not own a game install,

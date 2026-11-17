@@ -2187,7 +2187,7 @@ type.
 
 ```bash
 python3 tools/fix_word_indexed_struct.py /tmp/kd_lp64/allobj /tmp/kd_build $MT
-#   -> fix_word_indexed_struct: 3 site(s) rewritten, 0 declined
+#   -> fix_word_indexed_struct: 24 site(s) rewritten, 0 declined
 ```
 
 `McdCache` comes out of a pool as a `void *`, Ghidra types the local `undefined4 *`, and every
@@ -2244,7 +2244,7 @@ spelling, which emcc accepts.
 
 ⚠ **emcc IS REQUIRED.** It comes from `kd_paths` (`$EMSDK`, then `~/emsdk`) and the pass exits
 without it. Declining instead would be a different tree behind a clean summary: with no emcc every
-candidate fails the wasm comparison, so the three sites above decline and nothing downstream notices.
+candidate fails the wasm comparison, so every site declines and nothing downstream notices.
 
 ### `fix_align_masks.py` — an alignment mask frozen at 32 bits
 

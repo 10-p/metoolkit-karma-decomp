@@ -10,7 +10,7 @@ unchanged.** `gates.yml` had been red on every `main` push since 2026-09-02, so 
 "LP64 pipeline + i386 acceptance" had run in CI since then, `lineseg-lp64` included.
 
 ```
-the failure    fix_flattened_index: "emcc not found at /home/runner/emsdk/..." The runner never
+the failure    fix_flattened_index: "emcc not found at $HOME/emsdk/..." The runner never
                installed Emscripten, and four tools built ~/emsdk by hand instead of asking the shim.
 the repair     gates.yml installs emsdk 5.0.7 (setup-emsdk@v16, as engine-ut2004's web job does);
                kd-paths.sh / kd_paths.py resolve $EMSDK, then ~/emsdk (KD_EMCC, KD_LLVM_NM,
@@ -18,8 +18,8 @@ the repair     gates.yml installs emsdk 5.0.7 (setup-emsdk@v16, as engine-ut2004
                llvm-nm user takes them from there and exits, naming both places, without them.
 behind it, 1   fix_global_array_index and fix_word_indexed_struct DECLINED every site when emcc was
                missing. The runner logged "0 occurrence(s) repaired, 3 declined" and "0 site(s)
-               rewritten, 4 declined" where the generator's answer is 3 and 3: a different tree behind
-               a clean summary. Both require emcc now, as fix_flattened_index already did, and
+               rewritten, 4 declined" where the generator's answer is 3 and 24: a different tree
+               behind a clean summary. Both require emcc now, as fix_flattened_index already did, and
                run-standalone runs wasm-check instead of skipping it on a missing ~/emsdk.
 behind it, 2   THE TOOLCHAIN IS AN INPUT TO THE TREE. The post-passes accept a repair by byte-identity
                under the gcc that runs them, and widen what the NDK's clang diagnoses. ubuntu-24.04's

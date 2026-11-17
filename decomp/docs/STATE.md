@@ -33,12 +33,15 @@ behind it, 3   On ubuntu-26.04 everything up to the standalone tier passed — i
                LP64 PASS, the product check "146 sources across 14 libraries, all match" — and
                lineseg-lp64 failed: 46,426 cases off the i386 control in the last bits, in every
                geometry; 19 off the shipped library; the aggregate's shared count 988, not 1026. The
-               image installs Ubuntu's amd64v3 builds, whose 64-bit code has FMA, so the candidate
-               contracts a*b+c where the control cannot. Reproduced here case for case with
+               image installs Ubuntu's amd64v3 builds, and its gcc defaults to -march=x86-64-v3 (i686
+               at -m32), which has FMA, so the candidate contracts a*b+c where the control cannot. Reproduced here case for case with
                KD_CFLAGS64=-march=x86-64-v3, and adding -ffp-contract=off reads PASS, bit-identical:
                the gate's own reading for a contracting compiler (test/README.md, "FMA"). CI sets
                KD_CFLAGS64=-ffp-contract=off for the standalone tier; the gate prints whether each
                build has FMA, and lp64_pipeline.sh prints gcc's default -march.
+green          run 44172713587 (ubuntu-26.04): every step passes. i386 acceptance 145 objects, 0 byte
+               differences; LP64 PASS; product check all match; run-standalone 13 passed, 0 failed,
+               0 skipped, ptrwidth and wasm-check included; metoolkit_decomp and its dummy build.
 the other      ubuntu-24.04 WITH emsdk (run 44164064867): the gcc 13 tree passes the i386 acceptance
 toolchain      145/145 and is broken at LP64. Plain scene_chain and scene_ragdoll SIGSEGV at row 0,
                boxes SIGILL at row 34, ASan names MdtUpdatePartitions (MdtPartition.c:266), and the

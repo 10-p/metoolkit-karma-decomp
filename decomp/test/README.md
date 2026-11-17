@@ -684,7 +684,8 @@ without FMA. Two other effects look like it and are not:
   An x86-64 candidate with FMA does the same: `KD_CFLAGS64=-march=x86-64-v3` reads 19 cases off the
   shipped library, the aggregate's shared count 988 against 1026, and 46,426 last-bit differences from
   the control across every geometry; adding `-ffp-contract=off` reads PASS, bit-identical. The
-  `ubuntu-26.04` runner image installs Ubuntu's amd64v3 builds and read exactly that, so CI sets
+  `ubuntu-26.04` runner image installs Ubuntu's amd64v3 builds, its gcc defaults to `-march=x86-64-v3`,
+  and it read exactly that, so CI sets
   `KD_CFLAGS64=-ffp-contract=off` for the standalone tier. The gate prints `FMA available: c64 … c32 …`
   under `== building ==`, and `lp64_pipeline.sh` prints gcc's default `-march`.
 - **clang and MathEngine's uninitialised reads.** The NDK's clang turns the sphyl's uninitialised

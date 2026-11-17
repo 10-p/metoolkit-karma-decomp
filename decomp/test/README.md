@@ -681,6 +681,12 @@ without FMA. Two other effects look like it and are not:
 - **FMA.** aarch64 gcc and the NDK contract `a*b+c` by default. On the aggregate's 100-unit segments,
   already at the tolerance, 19 distances move across it and the shared count moves with them. Run the
   same ABI with `KD_CFLAGS64=-ffp-contract=off`: aarch64 then PASSES, bit-identical to the control.
+  An x86-64 candidate with FMA does the same: `KD_CFLAGS64=-march=x86-64-v3` reads 19 cases off the
+  shipped library, the aggregate's shared count 988 against 1026, and 46,426 last-bit differences from
+  the control across every geometry; adding `-ffp-contract=off` reads PASS, bit-identical. The
+  `ubuntu-26.04` runner image installs Ubuntu's amd64v3 builds and read exactly that, so CI sets
+  `KD_CFLAGS64=-ffp-contract=off` for the standalone tier. The gate prints `FMA available: c64 … c32 …`
+  under `== building ==`, and `lp64_pipeline.sh` prints gcc's default `-march`.
 - **clang and MathEngine's uninitialised reads.** The NDK's clang turns the sphyl's uninitialised
   start-inside `distance`/`normal` into a stable register value that no stack poison can reveal, and
   inside an aggregate that value picks the winning child. Measured on the NDK legs: EVERY difference

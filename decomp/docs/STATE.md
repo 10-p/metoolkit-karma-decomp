@@ -29,7 +29,33 @@ behind it, 2   THE TOOLCHAIN IS AN INPUT TO THE TREE. The post-passes accept a r
                job runs ubuntu-26.04 now — gcc 15.2, MinGW-w64 13.2 and Python 3.14, this box's — and
                installs NDK r28c (28.2.13676358), pinned with KD_NDK over the image's default 27.3.
                lp64_pipeline.sh prints all four tools at the top of its log.
+behind it, 3   On ubuntu-26.04 everything up to the standalone tier passed — i386 acceptance 145/145,
+               LP64 PASS, the product check "146 sources across 14 libraries, all match" — and
+               lineseg-lp64 failed: 46,426 cases off the i386 control in the last bits, in every
+               geometry; 19 off the shipped library; the aggregate's shared count 988, not 1026. The
+               image installs Ubuntu's amd64v3 builds, whose 64-bit code has FMA, so the candidate
+               contracts a*b+c where the control cannot. Reproduced here case for case with
+               KD_CFLAGS64=-march=x86-64-v3, and adding -ffp-contract=off reads PASS, bit-identical:
+               the gate's own reading for a contracting compiler (test/README.md, "FMA"). CI sets
+               KD_CFLAGS64=-ffp-contract=off for the standalone tier; the gate prints whether each
+               build has FMA, and lp64_pipeline.sh prints gcc's default -march.
+the other      ubuntu-24.04 WITH emsdk (run 44164064867): the gcc 13 tree passes the i386 acceptance
+toolchain      145/145 and is broken at LP64. Plain scene_chain and scene_ragdoll SIGSEGV at row 0,
+               boxes SIGILL at row 34, ASan names MdtUpdatePartitions (MdtPartition.c:266), and the
+               plain i386 control of scene_chain segfaults too. The gate did its job on a tree that is
+               not the product; on the pinned toolchain the same pipeline reads PASS.
 ```
+
+⚠ **THE 2026-09-02 OPEN ITEM BELOW, "the i386 ASan CONTROL is dirty on the runner", DID NOT REPRODUCE.**
+The gcc 13 run above reads `CONTROL same sources at i386 + ASan: 0 error(s) on 3 scene(s)`, and so does
+the pinned toolchain. The 09-02 tree was a third one (no emcc, so `fix_word_indexed_struct` declined
+everything, and no `fix_flattened_index` yet), and its report was never kept. If it comes back,
+`lp64_run.sh` now prints the first report of a dirty control in full. gcc-13 is no longer installed on
+this box, so the 09-02 advice to reproduce it here no longer applies.
+
+⚠ **WHAT THE gcc 13 TREE DOES NOT SAY.** It is not the product, so its crashes are not a finding about
+`metoolkit_decomp/`. They do say the generator cannot be re-run on another compiler and trusted: that
+tree compiles, passes every i386 gate, and only the LP64 harness sees it.
 
 ## 2026-11-16 — LP64: the framework's second registry, and the first gate here that traces
 

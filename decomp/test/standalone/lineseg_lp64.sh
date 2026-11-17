@@ -83,6 +83,13 @@ build_product() {   # <dir> <compiler> [flags...] — every source, $J at a time
 }
 
 echo "== building =="
+# ⚠ SAY WHETHER A BUILD CAN CONTRACT a*b+c. c64 against c32 is exact only while both do the same SSE
+# arithmetic, and a compiler that targets FMA by default (aarch64; an x86-64-v3 gcc such as Ubuntu's
+# amd64v3 build) contracts unless told not to. That reads as thousands of last-bit differences in
+# every geometry, which is not pointer width; KD_CFLAGS64=-ffp-contract=off is the reading.
+kd_fma() { "$@" -dM -E -x c /dev/null 2>/dev/null | grep -q '__FP_FAST_FMAF\b' && echo yes || echo no; }
+# shellcheck disable=SC2086
+echo "  FMA available: c64 $(kd_fma "$CC64" ${KD_CFLAGS64:-}) (KD_CFLAGS64='${KD_CFLAGS64:-}'), c32 $(kd_fma gcc -m32 -msse2 -mfpmath=sse)"
 mkdir -p "$W/ref"
 gcc -m32 -msse2 -mfpmath=sse $HF -no-pie -o "$W/ref/run" "$KD_T_STD/lineseg_lp64.c" \
     -Wl,--start-group "$KD_MT_LIB"/*.a -Wl,--end-group -lstdc++ -lm 2>"$W/ref.err" \

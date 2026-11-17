@@ -118,7 +118,21 @@ jobs:
         run: python3 decomp/tools/split_libraries.py /tmp/kd_lp64/allobj --check
 
       # With KD_NDK set above, ptrwidth_check runs here rather than skipping.
+      #
+      # ⚠ KD_CFLAGS64 IS THE ONE PLACE THIS RUNNER'S gcc DIFFERS FROM THE
+      # GENERATOR'S, AND IT IS NOT THE VERSION. The image installs Ubuntu's
+      # amd64v3 builds, whose 64-bit code has FMA, so lineseg-lp64's candidate
+      # contracts a*b+c where the i386 control cannot: 46,426 cases differ from
+      # the control in the last bits, in every geometry, which is not pointer
+      # width. A -march=x86-64-v3 candidate on the generator's machine reads
+      # the same, case for case. The product is generated, and the gate's
+      # baselines were measured, with the plain amd64 gcc, which cannot contract.
+      # -ffp-contract=off is the gate's own reading for a contracting compiler
+      # (decomp/test/README.md, lineseg_lp64.sh); lp64_pipeline.sh prints the
+      # default -march and the gate prints whether FMA is available.
       - name: Standalone tier
+        env:
+          KD_CFLAGS64: -ffp-contract=off
         run: ./decomp/test/run-standalone.sh
 
       - name: metoolkit_decomp builds, and so does its dummy

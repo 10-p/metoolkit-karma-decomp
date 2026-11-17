@@ -10,8 +10,11 @@
 set -uo pipefail
 . "$(cd "$(dirname "$0")" && pwd)/../../lib/kd-paths.sh"
 SRC="${1:-$KD_OUT_SRC/allobj}"; NATIVE="${2:-$KD_BUILD}"; MT="${3:-$METOOLKIT_DIR}"
-source ~/emsdk/emsdk_env.sh >/dev/null 2>&1 || { echo "no emsdk"; exit 1; }
-NM=~/emsdk/upstream/bin/llvm-nm
+# emcc and emsdk's llvm-nm from the shim ($EMSDK, then ~/emsdk). Missing is a
+# FAILURE, not a skip: this is a wasm32 gate.
+kd_require_emsdk || exit 2
+EMCC="$KD_EMCC"
+NM="$KD_LLVM_NM"
 INC="$MT/include"
 OUT=$(mktemp -d); trap 'rm -rf "$OUT"' EXIT
 # ⚠ THE PRODUCT'S HEADERS, NOT THIS DIRECTORY'S. kd_compat.h / kd_karma.h /
@@ -28,7 +31,7 @@ for c in "$SRC"/*.c; do
     b=$(basename "$c" .c)
     [ -f "$NATIVE/$b.o" ] || continue          # only what the native build accepted
     # No -m32: wasm32 is already 32-bit and emcc rejects the flag.
-    if emcc -O2 -fno-strict-aliasing -std=gnu99 -w -Wno-int-conversion \
+    if "$EMCC" -O2 -fno-strict-aliasing -std=gnu99 -w -Wno-int-conversion \
             -Wno-incompatible-pointer-types -DLINUX $IFLAGS \
             -c -o "$OUT/$b.o" "$c" 2>"$OUT/$b.err"; then
         ok=$((ok+1))

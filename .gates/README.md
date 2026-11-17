@@ -39,6 +39,14 @@ the commit body. A gate that cannot be bypassed gets deleted instead.
 
 `.github/workflows/gates.yml` runs the standalone tier on every push: the four
 hard gates, then `decomp/test/run-standalone.sh`. It needs `gcc-multilib` (the
-whole project is `-m32`) and it does **not** have the Android NDK, so
-`ptrwidth_check` reports SKIP there rather than failing — a missing toolchain is
-not a defect in this repository.
+whole project is `-m32`), MinGW-w64 (`fix_baked_sizeof`'s LLP64 sizes), the
+Android NDK (the clang diagnostics `fix_ptrwidth` repairs) and emsdk 5.0.7 (the
+wasm32 gates, found at `$EMSDK`). Each is an input to the tree or to a wasm gate,
+so a missing one FAILS. Only `ptrwidth_check` may SKIP on a missing NDK, because
+its result is not an input to anything; in CI it runs.
+
+⚠ **The versions matter, not just the presence.** The post-passes accept a repair
+by byte-identity under the gcc that runs them, so another gcc builds another tree
+(ubuntu-24.04's gcc 13: 187 derived-field repairs where gcc 15 makes 189). The
+job runs `ubuntu-26.04` and pins the NDK; the header of `gates.yml` lists the
+toolchain the product is generated with.

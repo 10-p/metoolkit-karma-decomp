@@ -52,7 +52,16 @@ kd_paths.METOOLKIT_DIR   kd_paths.MT_INC   kd_paths.MT_LIB   kd_paths.AMD64_LIB
 kd_paths.MD              kd_paths.MD_INC   kd_paths.MD_SRC
 kd_paths.LAB_DIR         kd_paths.DUMP_DIR kd_paths.OBJ_DIR  kd_paths.PROTOS
 kd_paths.require_metoolkit()  kd_paths.require_lab()  kd_paths.require_ut2004('assets')
+kd_paths.EMSDK  kd_paths.EMCC  kd_paths.LLVM_NM          # $EMSDK first, then ~/emsdk
+kd_paths.require_emcc('who')  kd_paths.require_llvm_nm('who')
 ```
+
+⚠ **emsdk is found, never assumed, and its absence is fatal, never a skip.** The wasm-gated passes
+(`fix_flattened_index`, `fix_global_array_index`, `fix_word_indexed_struct`) and `wasm_members.py`
+call `require_emcc` / `require_llvm_nm`, which exit naming both places they looked. emcc is an
+input to repairs: a pass that declined its sites for want of it would build a different tree behind
+a clean summary line. The shell half exports the same as `KD_EMSDK` / `KD_EMCC` / `KD_LLVM_NM` and
+`kd_require_emsdk`. CI installs emsdk 5.0.7, the version the product ships with.
 
 `decomp/lib/kd-paths.sh` is the shell half and every name agrees. **Do not hardcode a path and do
 not compute one with `..` arithmetic.** Before stage 2.44 half the harnesses resolved the SDK as
@@ -680,12 +689,15 @@ XML-output and unused-constraint objects §3b retires.
 > nothing and every member scores zero — a measurement artefact that reads exactly like a
 > catastrophic finding. It was the tool's own first output. Point it at a `*-debug` tree.
 
+`llvm-nm` is emsdk's (the system one cannot read wasm objects), found through `kd_paths`:
+`$EMSDK`, then `~/emsdk`.
+
 ---
 
 ## The arm64 post-passes — NOT part of the 95-second pipeline
 
-They need the NDK, they **edit in place**, and §4's output is not arm64-correct source until they
-have run. **Run them on a copy**, in this order — or just use `test/standalone/lp64_pipeline.sh`, which does
+They need the NDK, three of them need emsdk (`$EMSDK` or `~/emsdk`, and they exit without it),
+they **edit in place**, and §4's output is not arm64-correct source until they have run. **Run them on a copy**, in this order — or just use `test/standalone/lp64_pipeline.sh`, which does
 the copy, every pass, the acceptance test and the harness in the right order.
 
 ```bash
@@ -1840,7 +1852,8 @@ repairs. Two for two, read off a binary.
 
 The repair is the element, not the byte: `(char *)&NAME + K` → `(char *)&NAME[K / 4]`, a no-op at
 i386 and at wasm32 by construction and `K/4 * 8` at LP64. Both gates are run per site (gcc `-m32`
-byte-identity **and** an emcc self-comparison), because gcc alone does not certify the web.
+byte-identity **and** an emcc self-comparison), because gcc alone does not certify the web. emcc
+comes from `kd_paths` and is required: without it the pass exits rather than declining all three.
 
 ⚠ **THE ARRAY TEST IS NOT OPTIONAL, AND `MeProfile_linux.c` IS WHY.** It carries six sites of the
 same shape — `(char *)&frameTime + 0x4` through `+ 0x14`, and `(char *)&clockSpeed + 0x4` — and
@@ -2195,7 +2208,7 @@ type.
 
 ```bash
 python3 tools/fix_word_indexed_struct.py /tmp/kd_lp64/allobj /tmp/kd_build $MT
-#   -> fix_word_indexed_struct: 3 site(s) rewritten, 0 declined
+#   -> fix_word_indexed_struct: 24 site(s) rewritten, 0 declined
 ```
 
 `McdCache` comes out of a pool as a `void *`, Ghidra types the local `undefined4 *`, and every
@@ -2249,6 +2262,10 @@ not need the opaque form do not get it, and the log says which was used (`[membe
 offset `8k` at LP64, and `sizeof` 4 here and 8 there — otherwise `[k]` in pointer units addresses
 something else. `McdUserTriangle::flags` is an `MeU32`, fails the width test, and keeps the member
 spelling, which emcc accepts.
+
+⚠ **emcc IS REQUIRED.** It comes from `kd_paths` (`$EMSDK`, then `~/emsdk`) and the pass exits
+without it. Declining instead would be a different tree behind a clean summary: with no emcc every
+candidate fails the wasm comparison, so every site declines and nothing downstream notices.
 
 ### `fix_align_masks.py` — an alignment mask frozen at 32 bits
 
@@ -2539,7 +2556,8 @@ the per-row bound stripped.
 `-O2` codegen change, and gcc even lays the raw form out differently at `-O0`, so the **native**
 object changes at every `-O`. Its MANDATORY gate is the **web**: the wasm32/clang object must stay
 byte-identical (the shipped wasm relinks to the same hash), and it declines any file that fails
-that. The native change is re-validated **behaviourally** by ufront's ktrace gate (`c31ed77b7323`),
+that. emcc comes from `kd_paths` (`$EMSDK`, then `~/emsdk`); with neither, the pass exits before
+touching a file. The native change is re-validated **behaviourally** by ufront's ktrace gate (`c31ed77b7323`),
 not by bytes. It writes `$DST/.flattened_index_repaired`, and `lp64_pipeline.sh`'s i386 acceptance
 reads that manifest and expects exactly those files to differ while every other object stays a
 byte-for-byte no-op. Scope: bare-name local 2-D arrays and `(*P)[j]` row pointers, row-0 walk only.

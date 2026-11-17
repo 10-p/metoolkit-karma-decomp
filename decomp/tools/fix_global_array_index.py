@@ -107,7 +107,7 @@ CFLAGS = ['-m32', '-O2', '-fno-pic', '-fno-strict-aliasing', '-std=gnu99',
           '-w', '-Wno-int-conversion', '-Wno-incompatible-pointer-types',
           '-DLINUX']
 
-EMCC = os.path.join(os.path.expanduser('~'), 'emsdk', 'upstream', 'emscripten', 'emcc')
+EMCC = kd_paths.EMCC      # $EMSDK, then ~/emsdk; main() requires it
 
 # `(char *)&NAME + 0x3c`  /  `(char *)&NAME + 60`
 SITE = re.compile(r'\(char \*\)&(?P<n>\w+) \+ (?P<k>0x[0-9a-fA-F]+|\d+)\b')
@@ -171,9 +171,11 @@ def wasm_unchanged(fn, before, after, inc):
     that is byte-identical under one and not the other (proven.txt
     LP64-TWO-COMPILERS). The web artifact ships, so gcc alone does not certify.
     There is no wasm baseline to diff against, so this compares the candidate
-    against the text it replaces. If emcc is missing the site DECLINES."""
-    if not os.path.exists(EMCC):
-        return False
+    against the text it replaces.
+
+    ⚠ emcc IS REQUIRED, NOT OPTIONAL: main() exits without it. Declining every
+    site when it is missing would repair nothing here and build a DIFFERENT tree
+    behind a clean summary line, which every later gate would then measure."""
     d = os.path.join(WORK, 'wasm')
     os.makedirs(d, exist_ok=True)
     objs = []
@@ -212,6 +214,7 @@ def main():
     srcdir, build = sys.argv[1], sys.argv[2]
     root = sys.argv[3] if len(sys.argv) > 3 else kd_paths.METOOLKIT_DIR
     inc = os.path.join(root, 'include')
+    kd_paths.require_emcc('fix_global_array_index')
 
     oracle = oracle_text(inc)
 

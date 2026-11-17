@@ -61,6 +61,25 @@ kd_pass() {   # kd_pass <tool> [args...] [-- head|tail N]
 }
 
 [ -d "$SRC/allobj" ] || { echo "  no recovery at $SRC — run tools/recover.py first"; exit 2; }
+
+# ---- THE TOOLCHAIN IS AN INPUT TO THE TREE, SO NAME IT. Every repair below is accepted by
+# byte-identity under THIS gcc, the NDK's clang diagnostics choose what fix_ptrwidth and its
+# neighbours widen, and emcc gates the passes that must not move the web. Another version of any
+# of them can build a different tree from the same recovery, which split_libraries --check then
+# reports as a product that is out of date. These lines say which tree this run can build; the
+# header of .github/workflows/gates.yml names the versions the product is generated with. gcc's
+# DEFAULT -march is part of it: an x86-64-v3 default (Ubuntu's amd64v3 builds) has FMA, so a*b+c
+# contracts in any 64-bit SSE build that does not say otherwise.
+# emsdk is checked HERE rather than when its first pass runs, ten minutes in.
+kd_require_emsdk || exit 2
+kd_march() { gcc "$@" -Q --help=target 2>/dev/null | sed -n 's/^[[:space:]]*-march=[[:space:]]*//p' | head -1; }
+echo "== toolchain =="
+echo "  gcc     $(gcc --version | head -1)"
+echo "  march   $(kd_march) by default, $(kd_march -m32) at -m32"
+echo "  mingw   $(x86_64-w64-mingw32-gcc --version 2>/dev/null | head -1)"
+echo "  ndk     ${KD_NDK:-none} $("$KD_NDK/clang" --version 2>/dev/null | head -1)"
+echo "  emcc    $("$KD_EMCC" --version 2>/dev/null | head -1)"
+
 rm -rf "$DST" && cp -a "$SRC" "$DST" || exit 2
 echo "== post-passes on a COPY ($DST) =="
 kd_pass fix_baked_sizeof "$DST/allobj" "$BUILD" "$MT"

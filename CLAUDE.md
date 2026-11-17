@@ -72,7 +72,8 @@ lab/                    the Ghidra dumps + the 153 shipped objects the tools rea
 - **Paths come from the shim, never from `..` arithmetic.** Shell sources
   `decomp/lib/kd-paths.sh`; Python imports `decomp/tools/kd_paths.py`. Both find the root by
   walking up for a marker, so a file can move without breaking. Anything needing UT2004 calls
-  `kd_require_ut2004` and fails loudly rather than guessing.
+  `kd_require_ut2004` and fails loudly rather than guessing. emcc and emsdk's llvm-nm come from
+  the shim too (`$EMSDK`, then `~/emsdk`), and a wasm gate without them fails, never skips.
 - **A harness that needs the game lives in `decomp/test/ut2004/`, everything else in
   `decomp/test/standalone/`.** The standalone tier must run from a bare clone with no
   environment set; that is what CI checks.
@@ -90,6 +91,12 @@ These have each cost this project real time. They are not hypothetical.
 - **Split from `/tmp/kd_lp64`, not `/tmp/kd_out`.** The raw recovery encodes i386 struct
   *layouts*. Using it is not a visible mistake: it builds, every 32-bit target is byte-identical,
   every i386 gate passes, and only the 64-bit ABIs are wrong.
+- **The tree is a function of the TOOLCHAIN, not only of the generator.** The post-passes accept
+  each repair by byte-identity under the local gcc and widen what the NDK's clang diagnoses, so
+  another gcc or NDK builds another tree from the same recovery: gcc 13 repairs 187 derived fields
+  where gcc 15 repairs 189, and its tree passes every i386 gate and segfaults at LP64. The product
+  is generated with gcc 15.2, NDK r28c, MinGW-w64 13.2 and emsdk 5.0.7; `lp64_pipeline.sh` prints
+  all four and `gates.yml` pins them.
 - **`--build-dir` is not optional.** It defaults to `/tmp/kd_build`, which is the baseline the
   acceptance test compares against — a run that forgets it overwrites what it was about to be
   measured against.
@@ -147,7 +154,7 @@ one byte difference on a change that is byte-identical under the real flags.
 ```bash
 # the whole recovery, from a bare clone, no environment needed
 python3 decomp/tools/recover.py --out-dir /tmp/kd_out --build-dir /tmp/kd_build   # ~95 s
-./decomp/test/standalone/lp64_pipeline.sh                                        # post-passes + gates
+./decomp/test/standalone/lp64_pipeline.sh       # post-passes + gates; needs emsdk at $EMSDK or ~/emsdk
 python3 decomp/tools/split_libraries.py /tmp/kd_lp64/allobj                       # refresh the product
 
 ./decomp/test/run-standalone.sh          # every gate that needs nothing but this repo

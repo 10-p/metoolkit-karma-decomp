@@ -120,6 +120,62 @@ the recursion  the Zoom InstaGib repro (DM-1on1-Roughinery, 25 bots), native64 w
 `CxSmallSortRep` list with the i386 element size (`local_48 += 0x98`, and `it->it * 0x98` in the iterator)
 — four sites in `McdSpace.c`. `float_sentinel.sh` reports its McdSpace cases at LP64 as NOT RUN rather
 than passing them. UT2004 never enters McdSpace (above); `../STATUS-EXEC.md` item 7.
+## 2026-11-17 — CI is green: the runner had no emsdk, and ran a toolchain that builds another tree
+
+**CI and tooling only. `metoolkit_decomp/` and `metoolkit/` unchanged; the generator's output
+unchanged.** `gates.yml` had been red on every `main` push since 2026-09-02, so nothing after
+"LP64 pipeline + i386 acceptance" had run in CI since then, `lineseg-lp64` included.
+
+```
+the failure    fix_flattened_index: "emcc not found at $HOME/emsdk/..." The runner never
+               installed Emscripten, and four tools built ~/emsdk by hand instead of asking the shim.
+the repair     gates.yml installs emsdk 5.0.7 (setup-emsdk@v16, as engine-ut2004's web job does);
+               kd-paths.sh / kd_paths.py resolve $EMSDK, then ~/emsdk (KD_EMCC, KD_LLVM_NM,
+               kd_require_emsdk / EMCC, LLVM_NM, require_emcc, require_llvm_nm); every emcc and
+               llvm-nm user takes them from there and exits, naming both places, without them.
+behind it, 1   fix_global_array_index and fix_word_indexed_struct DECLINED every site when emcc was
+               missing. The runner logged "0 occurrence(s) repaired, 3 declined" and "0 site(s)
+               rewritten, 4 declined" where the generator's answer is 3 and 24: a different tree
+               behind a clean summary. Both require emcc now, as fix_flattened_index already did, and
+               run-standalone runs wasm-check instead of skipping it on a missing ~/emsdk.
+behind it, 2   THE TOOLCHAIN IS AN INPUT TO THE TREE. The post-passes accept a repair by byte-identity
+               under the gcc that runs them, and widen what the NDK's clang diagnoses. ubuntu-24.04's
+               gcc 13 repairs 187 derived fields where gcc 15 repairs 189, and the tree drifts from
+               there (fix_typeid_dispatch 66 / 65, fix_index_layout declines 15 / 14 ...), so "the
+               product is what the generator produces" could never have passed on that runner. The
+               job runs ubuntu-26.04 now — gcc 15.2, MinGW-w64 13.2 and Python 3.14, this box's — and
+               installs NDK r28c (28.2.13676358), pinned with KD_NDK over the image's default 27.3.
+               lp64_pipeline.sh prints all four tools at the top of its log.
+behind it, 3   On ubuntu-26.04 everything up to the standalone tier passed — i386 acceptance 145/145,
+               LP64 PASS, the product check "146 sources across 14 libraries, all match" — and
+               lineseg-lp64 failed: 46,426 cases off the i386 control in the last bits, in every
+               geometry; 19 off the shipped library; the aggregate's shared count 988, not 1026. The
+               image installs Ubuntu's amd64v3 builds, and its gcc defaults to -march=x86-64-v3 (i686
+               at -m32), which has FMA, so the candidate contracts a*b+c where the control cannot. Reproduced here case for case with
+               KD_CFLAGS64=-march=x86-64-v3, and adding -ffp-contract=off reads PASS, bit-identical:
+               the gate's own reading for a contracting compiler (test/README.md, "FMA"). CI sets
+               KD_CFLAGS64=-ffp-contract=off for the standalone tier; the gate prints whether each
+               build has FMA, and lp64_pipeline.sh prints gcc's default -march.
+green          run 44172713587 (ubuntu-26.04): every step passes. i386 acceptance 145 objects, 0 byte
+               differences; LP64 PASS; product check all match; run-standalone 13 passed, 0 failed,
+               0 skipped, ptrwidth and wasm-check included; metoolkit_decomp and its dummy build.
+the other      ubuntu-24.04 WITH emsdk (run 44164064867): the gcc 13 tree passes the i386 acceptance
+toolchain      145/145 and is broken at LP64. Plain scene_chain and scene_ragdoll SIGSEGV at row 0,
+               boxes SIGILL at row 34, ASan names MdtUpdatePartitions (MdtPartition.c:266), and the
+               plain i386 control of scene_chain segfaults too. The gate did its job on a tree that is
+               not the product; on the pinned toolchain the same pipeline reads PASS.
+```
+
+⚠ **THE 2026-09-02 OPEN ITEM BELOW, "the i386 ASan CONTROL is dirty on the runner", DID NOT REPRODUCE.**
+The gcc 13 run above reads `CONTROL same sources at i386 + ASan: 0 error(s) on 3 scene(s)`, and so does
+the pinned toolchain. The 09-02 tree was a third one (no emcc, so `fix_word_indexed_struct` declined
+everything, and no `fix_flattened_index` yet), and its report was never kept. If it comes back,
+`lp64_run.sh` now prints the first report of a dirty control in full. gcc-13 is no longer installed on
+this box, so the 09-02 advice to reproduce it here no longer applies.
+
+⚠ **WHAT THE gcc 13 TREE DOES NOT SAY.** It is not the product, so its crashes are not a finding about
+`metoolkit_decomp/`. They do say the generator cannot be re-run on another compiler and trusted: that
+tree compiles, passes every i386 gate, and only the LP64 harness sees it.
 
 ## 2026-11-16 — LP64: the framework's second registry, and the first gate here that traces
 

@@ -161,7 +161,7 @@ def compiles_identically(fn, text, build, inc):
     return open(ref, 'rb').read() == open(obj, 'rb').read()
 
 
-EMCC = os.path.join(os.path.expanduser('~'), 'emsdk', 'upstream', 'emscripten', 'emcc')
+EMCC = kd_paths.EMCC      # $EMSDK, then ~/emsdk; main() requires it
 
 
 def wasm_unchanged(fn, before, after, inc):
@@ -176,9 +176,10 @@ def wasm_unchanged(fn, before, after, inc):
 
     There is no wasm baseline to compare against, so this compares the candidate
     against the source it replaces — a no-op check that needs nothing but emcc.
-    If emcc is missing the site is DECLINED, not assumed."""
-    if not os.path.exists(EMCC):
-        return False
+
+    ⚠ emcc IS REQUIRED, NOT OPTIONAL: main() exits without it. Declining every
+    site when it is missing would repair nothing here and build a DIFFERENT tree
+    behind a clean summary line, which every later gate would then measure."""
     d = os.path.join(WORK, 'wasm')
     os.makedirs(d, exist_ok=True)
     objs = []
@@ -394,6 +395,7 @@ def main():
     srcdir, build = sys.argv[1], sys.argv[2]
     root = sys.argv[3] if len(sys.argv) > 3 else kd_paths.METOOLKIT_DIR
     inc = os.path.join(root, 'include')
+    kd_paths.require_emcc('fix_word_indexed_struct')
     cache = {}
 
     # ---- THE SELF-CHECK. An empty path map declines every site and prints a

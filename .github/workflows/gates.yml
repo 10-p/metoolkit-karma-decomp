@@ -1,9 +1,9 @@
 name: gates
 
 # The standalone tier, on every push. The contract this enforces is the one the
-# repository claims: a bare clone, nothing installed, no game, no engine
-# checkout. If a change breaks that, it breaks here rather than on somebody
-# else's machine three weeks later.
+# repository claims: a bare clone, no game, no engine checkout, nothing but the
+# toolchains installed below. If a change breaks that, it breaks here rather
+# than on somebody else's machine three weeks later.
 #
 # ⚠ WHAT THIS CANNOT COVER, and it is most of what matters. Every gate here is a
 # per-object comparison or an offline physics scene. None of them runs UT2004,
@@ -19,7 +19,22 @@ on:
 
 jobs:
   standalone:
-    runs-on: ubuntu-24.04
+    # ⚠ THE RUNNER IS PART OF THE TOOLCHAIN, AND THE TOOLCHAIN IS AN INPUT TO THE
+    # TREE. The post-passes accept each repair by byte-identity under the gcc that
+    # runs them, and the NDK clang's diagnostics choose what fix_ptrwidth and its
+    # neighbours widen, so the same recovery yields a different tree under another
+    # gcc or NDK, and "The product is what the generator produces" then fails for
+    # a reason that is not a defect. Measured on ubuntu-24.04's gcc 13:
+    # fix_derived_fields repairs 187 sites where gcc 15 repairs 189, and the tree
+    # drifts from there. So this job runs the toolchain the checked-in product is
+    # generated with, and pins each piece:
+    #   gcc 15.2         Ubuntu 26.04's, with its multilib
+    #   MinGW-w64 13.2   Ubuntu 26.04's
+    #   NDK r28c         28.2.13676358, installed below (the image's default is 27.3)
+    #   emsdk 5.0.7      the version the product ships with
+    # lp64_pipeline.sh prints all four. Regenerating the product with another
+    # version is a decision, and it moves the pin here in the same commit.
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v4
 
@@ -40,6 +55,33 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y gcc-multilib g++-multilib binutils \
                                   gcc-mingw-w64-x86-64
+
+      # The NDK, whose aarch64 clang fix_ptrwidth, fix_narrow_pointers and
+      # fix_narrow_loads read diagnostics from. The image ships several and the
+      # shim would take $ANDROID_NDK_HOME, the image's default, so KD_NDK names
+      # the one the product is generated with. It also lets ptrwidth_check run
+      # in the standalone tier instead of skipping.
+      - name: Android NDK r28c
+        run: |
+          set -euo pipefail
+          ndk="$ANDROID_HOME/ndk/28.2.13676358"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;28.2.13676358" \
+              > "$RUNNER_TEMP/sdkmanager.log" || { cat "$RUNNER_TEMP/sdkmanager.log"; exit 1; }
+          bin="$ndk/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          test -x "$bin/aarch64-linux-android21-clang"
+          echo "KD_NDK=$bin" >> "$GITHUB_ENV"
+
+      # And emsdk, which is not optional for the same reason MinGW is not. The
+      # web ships what emcc makes of the product, so three post-passes compare
+      # each repair's wasm32 object against the source it replaces, and
+      # wasm_check builds the whole set. Without emcc those passes would decline
+      # their sites and build a DIFFERENT tree, so they exit instead. The tools
+      # find it at $EMSDK (exported here; lib/kd-paths.sh, tools/kd_paths.py).
+      # 5.0.7 is the version the product ships with, as engine-ut2004 builds it.
+      - uses: emscripten-core/setup-emsdk@v16
+        with:
+          version: 5.0.7
+          actions-cache-folder: emsdk-cache
 
       - name: The hard gates
         run: |
@@ -75,9 +117,24 @@ jobs:
       - name: The product is what the generator produces
         run: python3 decomp/tools/split_libraries.py /tmp/kd_lp64/allobj --check
 
-      # No Android NDK on the runner, so ptrwidth_check reports SKIP. A missing
-      # toolchain is not a defect in this repository.
+      # With KD_NDK set above, ptrwidth_check runs here rather than skipping.
+      #
+      # ⚠ KD_CFLAGS64 IS THE ONE PLACE THIS RUNNER'S gcc DIFFERS FROM THE
+      # GENERATOR'S, AND IT IS NOT THE VERSION. The image installs Ubuntu's
+      # amd64v3 builds and its gcc defaults to -march=x86-64-v3, which has FMA
+      # (lp64_pipeline.sh prints "march x86-64-v3 by default, i686 at -m32"),
+      # so lineseg-lp64's 64-bit candidate contracts a*b+c where the i386
+      # control cannot: 46,426 cases differ from
+      # the control in the last bits, in every geometry, which is not pointer
+      # width. A -march=x86-64-v3 candidate on the generator's machine reads
+      # the same, case for case. The product is generated, and the gate's
+      # baselines were measured, with the plain amd64 gcc, which cannot contract.
+      # -ffp-contract=off is the gate's own reading for a contracting compiler
+      # (decomp/test/README.md, lineseg_lp64.sh); lp64_pipeline.sh prints the
+      # default -march and the gate prints whether FMA is available.
       - name: Standalone tier
+        env:
+          KD_CFLAGS64: -ffp-contract=off
         run: ./decomp/test/run-standalone.sh
 
       - name: metoolkit_decomp builds, and so does its dummy

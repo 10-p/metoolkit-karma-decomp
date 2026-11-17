@@ -9,7 +9,8 @@ for when something is wrong.
 ```
 test/standalone/   runs from a bare clone. No game, no engine checkout, no
                    environment set; only the toolchains CI installs (gcc-multilib,
-                   MinGW-w64, emsdk at $EMSDK or ~/emsdk). This is the tier CI runs.
+                   MinGW-w64, the Android NDK, emsdk at $EMSDK or ~/emsdk), at the
+                   versions gates.yml pins. This is the tier CI runs.
 test/ut2004/       needs the GAME — a built binary, a run tree, map assets.
                    Fails loudly with the variable it wants; never guesses a path.
 ```

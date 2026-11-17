@@ -111,7 +111,9 @@ export KD_OUT_SRC KD_BUILD
 # bug rather than a missing directory. Empty is an answer only to ptrwidth_check,
 # which SKIPS; fix_ptrwidth, fix_narrow_pointers and fix_narrow_loads repair
 # what this clang diagnoses, so they exit without it. ⚠ For the same reason its
-# VERSION is an input to the tree.
+# VERSION is an input to the tree, and CI sets KD_NDK to the one the product is
+# generated with (.github/workflows/gates.yml) instead of taking the image's
+# $ANDROID_NDK_HOME.
 # ---------------------------------------------------------------------------
 if [ -z "${KD_NDK:-}" ]; then
     for _kd_r in "${ANDROID_NDK_HOME:-}" "${ANDROID_NDK_ROOT:-}" "${NDK_HOME:-}"; do

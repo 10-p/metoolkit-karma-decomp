@@ -90,6 +90,11 @@ These have each cost this project real time. They are not hypothetical.
 - **Split from `/tmp/kd_lp64`, not `/tmp/kd_out`.** The raw recovery encodes i386 struct
   *layouts*. Using it is not a visible mistake: it builds, every 32-bit target is byte-identical,
   every i386 gate passes, and only the 64-bit ABIs are wrong.
+- **The tree is a function of the TOOLCHAIN, not only of the generator.** The post-passes accept
+  each repair by byte-identity under the local gcc and widen what the NDK's clang diagnoses, so
+  another gcc or NDK builds another tree from the same recovery: gcc 13 repairs 187 derived fields
+  where gcc 15 repairs 189. The product is generated with gcc 15.2, NDK r28c, MinGW-w64 13.2 and
+  emsdk 5.0.7; `lp64_pipeline.sh` prints all four and `gates.yml` pins them.
 - **`--build-dir` is not optional.** It defaults to `/tmp/kd_build`, which is the baseline the
   acceptance test compares against — a run that forgets it overwrites what it was about to be
   measured against.

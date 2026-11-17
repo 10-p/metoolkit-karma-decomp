@@ -66,7 +66,8 @@ kd_pass() {   # kd_pass <tool> [args...] [-- head|tail N]
 # byte-identity under THIS gcc, the NDK's clang diagnostics choose what fix_ptrwidth and its
 # neighbours widen, and emcc gates the passes that must not move the web. Another version of any
 # of them can build a different tree from the same recovery, which split_libraries --check then
-# reports as a product that is out of date. These four lines say which tree this run can build.
+# reports as a product that is out of date. These four lines say which tree this run can build;
+# the header of .github/workflows/gates.yml names the versions the product is generated with.
 # emsdk is checked HERE rather than when its first pass runs, ten minutes in.
 kd_require_emsdk || exit 2
 echo "== toolchain =="

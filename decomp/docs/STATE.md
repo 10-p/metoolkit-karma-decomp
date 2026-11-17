@@ -3,6 +3,34 @@
 Where the recovery is, what is decided, and what is a trap. **Newest first.** This is the file to
 read before resuming; `../HANDOVER.md` is the depth behind it and `../proven.txt` is the evidence.
 
+## 2026-11-17 — CI is green: the runner had no emsdk, and ran a toolchain that builds another tree
+
+**CI and tooling only. `metoolkit_decomp/` and `metoolkit/` unchanged; the generator's output
+unchanged.** `gates.yml` had been red on every `main` push since 2026-09-02, so nothing after
+"LP64 pipeline + i386 acceptance" had run in CI since then, `lineseg-lp64` included.
+
+```
+the failure    fix_flattened_index: "emcc not found at /home/runner/emsdk/..." The runner never
+               installed Emscripten, and four tools built ~/emsdk by hand instead of asking the shim.
+the repair     gates.yml installs emsdk 5.0.7 (setup-emsdk@v16, as engine-ut2004's web job does);
+               kd-paths.sh / kd_paths.py resolve $EMSDK, then ~/emsdk (KD_EMCC, KD_LLVM_NM,
+               kd_require_emsdk / EMCC, LLVM_NM, require_emcc, require_llvm_nm); every emcc and
+               llvm-nm user takes them from there and exits, naming both places, without them.
+behind it, 1   fix_global_array_index and fix_word_indexed_struct DECLINED every site when emcc was
+               missing. The runner logged "0 occurrence(s) repaired, 3 declined" and "0 site(s)
+               rewritten, 4 declined" where the generator's answer is 3 and 3: a different tree behind
+               a clean summary. Both require emcc now, as fix_flattened_index already did, and
+               run-standalone runs wasm-check instead of skipping it on a missing ~/emsdk.
+behind it, 2   THE TOOLCHAIN IS AN INPUT TO THE TREE. The post-passes accept a repair by byte-identity
+               under the gcc that runs them, and widen what the NDK's clang diagnoses. ubuntu-24.04's
+               gcc 13 repairs 187 derived fields where gcc 15 repairs 189, and the tree drifts from
+               there (fix_typeid_dispatch 66 / 65, fix_index_layout declines 15 / 14 ...), so "the
+               product is what the generator produces" could never have passed on that runner. The
+               job runs ubuntu-26.04 now — gcc 15.2, MinGW-w64 13.2 and Python 3.14, this box's — and
+               installs NDK r28c (28.2.13676358), pinned with KD_NDK over the image's default 27.3.
+               lp64_pipeline.sh prints all four tools at the top of its log.
+```
+
 ## 2026-11-16 — LP64: the framework's second registry, and the first gate here that traces
 
 **karma this commit; engine-ut2004 unchanged (it fetches decomp `main` unpinned); the web artefact is
